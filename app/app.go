@@ -111,7 +111,7 @@ import (
 
 	"github.com/ovrclk/akash/x/icaauth"
 	icaauthkeeper "github.com/ovrclk/akash/x/icaauth/keeper"
-	icaauthtypes "github.com/ovrclk/akash/x/icaauth/types"
+	icaauthtypes "github.com/ovrclk/akash/x/icaauth/types/v1beta2"
 
 	// unnamed import of statik for swagger UI support
 	_ "github.com/ovrclk/akash/client/docs/statik"

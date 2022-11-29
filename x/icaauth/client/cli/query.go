@@ -5,13 +5,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
 
-	"github.com/ovrclk/akash/x/icaauth/types"
+	typesv1beta2 "github.com/ovrclk/akash/x/icaauth/types/v1beta2"
 )
 
 // GetQueryCmd creates and returns the icaauth query command
 func GetQueryCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:                        types.ModuleName,
+		Use:                        typesv1beta2.ModuleName,
 		Short:                      "Querying commands for the icaatuh module",
 		DisableFlagParsing:         true,
 		SuggestionsMinimumDistance: 2,
@@ -33,10 +33,10 @@ func getInterchainAccountCmd() *cobra.Command {
 				return err
 			}
 
-			queryClient := types.NewQueryClient(clientCtx)
+			queryClient := typesv1beta2.NewQueryClient(clientCtx)
 			res, err := queryClient.InterchainAccountFromAddress(
 				cmd.Context(),
-				&types.QueryInterchainAccountFromAddressRequest{
+				&typesv1beta2.QueryInterchainAccountFromAddressRequest{
 					Owner:        args[1],
 					ConnectionId: args[0],
 				},

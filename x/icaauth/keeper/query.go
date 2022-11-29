@@ -9,11 +9,11 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	icatypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/types"
 
-	"github.com/ovrclk/akash/x/icaauth/types"
+	typesv1beta2 "github.com/ovrclk/akash/x/icaauth/types/v1beta2"
 )
 
 // InterchainAccountFromAddress implements the Query/InterchainAccountFromAddress gRPC method
-func (k Keeper) InterchainAccountFromAddress(goCtx context.Context, req *types.QueryInterchainAccountFromAddressRequest) (*types.QueryInterchainAccountFromAddressResponse, error) {
+func (k Keeper) InterchainAccountFromAddress(goCtx context.Context, req *typesv1beta2.QueryInterchainAccountFromAddressRequest) (*typesv1beta2.QueryInterchainAccountFromAddressResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	portID, err := icatypes.NewControllerPortID(req.Owner)
@@ -26,7 +26,7 @@ func (k Keeper) InterchainAccountFromAddress(goCtx context.Context, req *types.Q
 		return nil, status.Errorf(codes.NotFound, "no account found for portID %s", portID)
 	}
 
-	return &types.QueryInterchainAccountFromAddressResponse{
+	return &typesv1beta2.QueryInterchainAccountFromAddressResponse{
 		InterchainAccountAddress: addr,
 	}, nil
 }

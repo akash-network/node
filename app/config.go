@@ -35,18 +35,19 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
+
 	ica "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts"
 	icacontrollertypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/controller/types"
 	icahosttypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/host/types"
-	transfer "github.com/cosmos/ibc-go/v3/modules/apps/transfer"
+	"github.com/cosmos/ibc-go/v3/modules/apps/transfer"
 	ibctransfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 	ibc "github.com/cosmos/ibc-go/v3/modules/core"
 	ibcclient "github.com/cosmos/ibc-go/v3/modules/core/02-client/client"
 	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 
 	appparams "github.com/ovrclk/akash/app/params"
-	icaauth "github.com/ovrclk/akash/x/icaauth"
-	icaauthtypes "github.com/ovrclk/akash/x/icaauth/types"
+	"github.com/ovrclk/akash/x/icaauth"
+	icaauthtypes "github.com/ovrclk/akash/x/icaauth/types/v1beta2"
 )
 
 var (

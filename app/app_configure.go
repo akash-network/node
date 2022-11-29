@@ -18,6 +18,7 @@ import (
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
+
 	icatypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/types"
 	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
@@ -31,6 +32,7 @@ import (
 	"github.com/ovrclk/akash/x/escrow"
 	ekeeper "github.com/ovrclk/akash/x/escrow/keeper"
 	escrowtypes "github.com/ovrclk/akash/x/escrow/types/v1beta2"
+	icaauthtypes "github.com/ovrclk/akash/x/icaauth/types/v1beta2"
 	"github.com/ovrclk/akash/x/inflation"
 	inflationtypes "github.com/ovrclk/akash/x/inflation/types/v1beta2"
 	"github.com/ovrclk/akash/x/market"
@@ -38,8 +40,6 @@ import (
 	markettypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 	"github.com/ovrclk/akash/x/provider"
 	providertypes "github.com/ovrclk/akash/x/provider/types/v1beta2"
-
-	icaauthtypes "github.com/ovrclk/akash/x/icaauth/types"
 )
 
 func akashModuleBasics() []module.AppModuleBasic {

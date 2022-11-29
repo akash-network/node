@@ -10,32 +10,32 @@ import (
 	channeltypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
 	host "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 
-	"github.com/ovrclk/akash/x/icaauth/types"
+	typesv1beta2 "github.com/ovrclk/akash/x/icaauth/types/v1beta2"
 )
 
-var _ types.MsgServer = msgServer{}
+var _ typesv1beta2.MsgServer = msgServer{}
 
 type msgServer struct {
 	Keeper
 }
 
 // NewMsgServerImpl creates and returns a new types.MsgServer, fulfilling the icaauth Msg service interface
-func NewMsgServerImpl(keeper Keeper) types.MsgServer {
+func NewMsgServerImpl(keeper Keeper) typesv1beta2.MsgServer {
 	return &msgServer{Keeper: keeper}
 }
 
 // RegisterAccount implements types.MsgServer
-func (k msgServer) RegisterAccount(goCtx context.Context, msg *types.MsgRegisterAccount) (*types.MsgRegisterAccountResponse, error) {
+func (k msgServer) RegisterAccount(goCtx context.Context, msg *typesv1beta2.MsgRegisterAccount) (*typesv1beta2.MsgRegisterAccountResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	if err := k.icaControllerKeeper.RegisterInterchainAccount(ctx, msg.ConnectionId, msg.Owner); err != nil {
 		return nil, err
 	}
 
-	return &types.MsgRegisterAccountResponse{}, nil
+	return &typesv1beta2.MsgRegisterAccountResponse{}, nil
 }
 
 // SubmitTx implements types.MsgServer
-func (k msgServer) SubmitTx(goCtx context.Context, msg *types.MsgSubmitTx) (*types.MsgSubmitTxResponse, error) {
+func (k msgServer) SubmitTx(goCtx context.Context, msg *typesv1beta2.MsgSubmitTx) (*typesv1beta2.MsgSubmitTxResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	// get the new controller port id
@@ -73,5 +73,5 @@ func (k msgServer) SubmitTx(goCtx context.Context, msg *types.MsgSubmitTx) (*typ
 		return nil, err
 	}
 
-	return &types.MsgSubmitTxResponse{}, nil
+	return &typesv1beta2.MsgSubmitTxResponse{}, nil
 }

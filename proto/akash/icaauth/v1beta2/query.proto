@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package akash.icaauth;
+package akash.icaauth.v1beta2;
 
-option go_package = "github.com/ovrclk/akash/x/icaauth/types";
+option go_package = "github.com/ovrclk/akash/x/icaauth/types/v1beta2";
 
 import "gogoproto/gogo.proto";
 
