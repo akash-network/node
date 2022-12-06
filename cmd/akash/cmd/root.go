@@ -2,11 +2,13 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
+
+	"github.com/rs/zerolog"
+	"github.com/spf13/cast"
+	"github.com/spf13/cobra"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -27,11 +29,7 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
-	"github.com/rs/zerolog"
-	"github.com/spf13/cast"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
+
 	tmcfg "github.com/tendermint/tendermint/config"
 	tmcli "github.com/tendermint/tendermint/libs/cli"
 	"github.com/tendermint/tendermint/libs/log"
@@ -40,42 +38,8 @@ import (
 	"github.com/ovrclk/akash/app"
 	ecmd "github.com/ovrclk/akash/events/cmd"
 	"github.com/ovrclk/akash/sdkutil"
+	utilcli "github.com/ovrclk/akash/util/cli"
 )
-
-func bindFlags(cmd *cobra.Command, v *viper.Viper, envPrefixes []string) error {
-	var err error
-
-	cmd.Flags().VisitAll(func(f *pflag.Flag) {
-		// Environment variables can't have dashes in them, so bind them to their equivalent
-		// keys with underscores, e.g. --favorite-color to STING_FAVORITE_COLOR
-		for _, prefix := range envPrefixes {
-			err = v.BindEnv(f.Name, fmt.Sprintf("%s_%s", prefix, strings.ToUpper(strings.ReplaceAll(f.Name, "-", "_"))))
-			if err != nil {
-				return
-			}
-		}
-
-		err = v.BindPFlag(f.Name, f)
-		if err != nil {
-			return
-		}
-
-		// Apply the viper config value to the flag when the flag is not set and viper has a value
-		if !f.Changed && v.IsSet(f.Name) {
-			val := v.Get(f.Name)
-			err = cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
-			if err != nil {
-				return
-			}
-		}
-	})
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
 
 // NewRootCmd creates a new root command for akash. It is called once in the
 // main function.
@@ -98,13 +62,7 @@ func NewRootCmd() (*cobra.Command, params.EncodingConfig) {
 // GetPersistentPreRunE persistent prerun hook for root command
 func GetPersistentPreRunE(encodingConfig params.EncodingConfig, envPrefixes []string) func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, _ []string) error {
-		if err := server.InterceptConfigsPreRunHandler(cmd, "", nil); err != nil {
-			return err
-		}
-
-		ctx := server.GetServerContextFromCmd(cmd)
-
-		if err := bindFlags(cmd, ctx.Viper, envPrefixes); err != nil {
+		if err := utilcli.InterceptConfigsPreRunHandler(cmd, envPrefixes, false, "", nil); err != nil {
 			return err
 		}
 
