@@ -35,10 +35,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-
-	ica "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts"
-	icacontrollertypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/controller/types"
-	icahosttypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/host/types"
 	"github.com/cosmos/ibc-go/v3/modules/apps/transfer"
 	ibctransfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 	ibc "github.com/cosmos/ibc-go/v3/modules/core"
@@ -46,8 +42,6 @@ import (
 	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 
 	appparams "github.com/ovrclk/akash/app/params"
-	"github.com/ovrclk/akash/x/icaauth"
-	icaauthtypes "github.com/ovrclk/akash/x/icaauth/types/v1beta2"
 )
 
 var (
@@ -83,8 +77,6 @@ var (
 			evidence.AppModuleBasic{},
 			transfer.AppModuleBasic{},
 			vesting.AppModuleBasic{},
-			ica.AppModuleBasic{},
-			icaauth.AppModuleBasic{},
 		},
 			// akash
 			akashModuleBasics()...,
@@ -122,11 +114,8 @@ func kvStoreKeys() map[string]*sdk.KVStoreKey {
 			ibchost.StoreKey,
 			upgradetypes.StoreKey,
 			evidencetypes.StoreKey,
-			icacontrollertypes.StoreKey,
 			ibctransfertypes.StoreKey,
 			capabilitytypes.StoreKey,
-			icaauthtypes.StoreKey,
-			icahosttypes.StoreKey,
 		},
 			akashKVStoreKeys()...,
 		)...,
