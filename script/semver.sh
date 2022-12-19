@@ -201,7 +201,6 @@ function command-get {
 
     if [[ "$#" -ne "2" ]] || [[ -z "$1" ]] || [[ -z "$2" ]]; then
         usage-help
-        exit 0
     fi
 
     part="$1"
