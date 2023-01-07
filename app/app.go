@@ -74,10 +74,10 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmos "github.com/tendermint/tendermint/libs/os"
 
-	"github.com/ovrclk/akash/x/audit"
-	"github.com/ovrclk/akash/x/cert"
-	escrowkeeper "github.com/ovrclk/akash/x/escrow/keeper"
-	"github.com/ovrclk/akash/x/inflation"
+	"github.com/akash-network/node/x/audit"
+	"github.com/akash-network/node/x/cert"
+	escrowkeeper "github.com/akash-network/node/x/escrow/keeper"
+	"github.com/akash-network/node/x/inflation"
 
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/version"
@@ -100,12 +100,12 @@ import (
 	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 	ibckeeper "github.com/cosmos/ibc-go/v3/modules/core/keeper"
 
-	dkeeper "github.com/ovrclk/akash/x/deployment/keeper"
-	mkeeper "github.com/ovrclk/akash/x/market/keeper"
-	pkeeper "github.com/ovrclk/akash/x/provider/keeper"
+	dkeeper "github.com/akash-network/node/x/deployment/keeper"
+	mkeeper "github.com/akash-network/node/x/market/keeper"
+	pkeeper "github.com/akash-network/node/x/provider/keeper"
 
 	// unnamed import of statik for swagger UI support
-	_ "github.com/ovrclk/akash/client/docs/statik"
+	_ "github.com/akash-network/node/client/docs/statik"
 )
 
 const (

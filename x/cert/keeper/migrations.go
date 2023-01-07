@@ -1,8 +1,8 @@
 package keeper
 
 import (
+	v015 "github.com/akash-network/node/x/cert/legacy/v015"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	v015 "github.com/ovrclk/akash/x/cert/legacy/v015"
 )
 
 // Migrator is a struct for handling in-place store migrations.

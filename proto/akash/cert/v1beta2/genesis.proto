@@ -4,7 +4,7 @@ package akash.cert.v1beta2;
 import "akash/cert/v1beta2/cert.proto";
 import "gogoproto/gogo.proto";
 
-option go_package = "github.com/ovrclk/akash/x/cert/types/v1beta2";
+option go_package = "github.com/akash-network/node/x/cert/types/v1beta2";
 
 // GenesisCertificate defines certificate entry at genesis
 message GenesisCertificate {

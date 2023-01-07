@@ -1,9 +1,9 @@
 package market
 
 import (
+	"github.com/akash-network/node/x/market/keeper"
+	types "github.com/akash-network/node/x/market/types/v1beta2"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/ovrclk/akash/x/market/keeper"
-	types "github.com/ovrclk/akash/x/market/types/v1beta2"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 

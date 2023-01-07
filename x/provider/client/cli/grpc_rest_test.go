@@ -12,9 +12,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkrest "github.com/cosmos/cosmos-sdk/types/rest"
 
-	"github.com/ovrclk/akash/testutil"
-	"github.com/ovrclk/akash/x/provider/client/cli"
-	types "github.com/ovrclk/akash/x/provider/types/v1beta2"
+	"github.com/akash-network/node/testutil"
+	"github.com/akash-network/node/x/provider/client/cli"
+	types "github.com/akash-network/node/x/provider/types/v1beta2"
 )
 
 type GRPCRestTestSuite struct {

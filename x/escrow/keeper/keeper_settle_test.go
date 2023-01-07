@@ -3,8 +3,8 @@ package keeper
 import (
 	"testing"
 
+	types "github.com/akash-network/node/x/escrow/types/v1beta2"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	types "github.com/ovrclk/akash/x/escrow/types/v1beta2"
 	"github.com/stretchr/testify/assert"
 )
 

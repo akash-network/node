@@ -5,8 +5,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/ovrclk/akash/x/audit/keeper"
-	types "github.com/ovrclk/akash/x/audit/types/v1beta2"
+	"github.com/akash-network/node/x/audit/keeper"
+	types "github.com/akash-network/node/x/audit/types/v1beta2"
 )
 
 type msgServer struct {

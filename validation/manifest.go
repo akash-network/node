@@ -7,13 +7,13 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/ovrclk/akash/sdl/util"
+	"github.com/akash-network/node/sdl/util"
 
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 
-	manifest "github.com/ovrclk/akash/manifest/v2beta1"
-	types "github.com/ovrclk/akash/types/v1beta2"
-	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
+	manifest "github.com/akash-network/node/manifest/v2beta1"
+	types "github.com/akash-network/node/types/v1beta2"
+	dtypes "github.com/akash-network/node/x/deployment/types/v1beta2"
 )
 
 var (

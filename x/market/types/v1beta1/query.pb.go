@@ -6,11 +6,11 @@ package v1beta1
 import (
 	context "context"
 	fmt "fmt"
+	v1beta1 "github.com/akash-network/node/x/escrow/types/v1beta1"
 	query "github.com/cosmos/cosmos-sdk/types/query"
 	_ "github.com/gogo/protobuf/gogoproto"
 	grpc1 "github.com/gogo/protobuf/grpc"
 	proto "github.com/gogo/protobuf/proto"
-	v1beta1 "github.com/ovrclk/akash/x/escrow/types/v1beta1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"

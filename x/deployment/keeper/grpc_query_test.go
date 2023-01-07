@@ -2,10 +2,11 @@ package keeper_test
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"math"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/stretchr/testify/require"
 
@@ -13,13 +14,13 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 
-	"github.com/ovrclk/akash/app"
-	"github.com/ovrclk/akash/testutil"
-	"github.com/ovrclk/akash/testutil/state"
-	"github.com/ovrclk/akash/x/deployment/keeper"
-	types "github.com/ovrclk/akash/x/deployment/types/v1beta2"
-	ekeeper "github.com/ovrclk/akash/x/escrow/keeper"
-	etypes "github.com/ovrclk/akash/x/escrow/types/v1beta2"
+	"github.com/akash-network/node/app"
+	"github.com/akash-network/node/testutil"
+	"github.com/akash-network/node/testutil/state"
+	"github.com/akash-network/node/x/deployment/keeper"
+	types "github.com/akash-network/node/x/deployment/types/v1beta2"
+	ekeeper "github.com/akash-network/node/x/escrow/keeper"
+	etypes "github.com/akash-network/node/x/escrow/types/v1beta2"
 )
 
 type grpcTestSuite struct {

@@ -3,9 +3,10 @@ package cli
 import (
 	"context"
 	"fmt"
+
+	testutilcli "github.com/akash-network/node/testutil/cli"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdktest "github.com/cosmos/cosmos-sdk/testutil"
-	testutilcli "github.com/ovrclk/akash/testutil/cli"
 )
 
 // TxCreateServerExec is used for testing create server certificate tx

@@ -2,13 +2,14 @@ package cli_test
 
 import (
 	"fmt"
-	"github.com/ovrclk/akash/testutil"
-	"github.com/ovrclk/akash/x/cert/client/cli"
+	"testing"
 
-	certerrors "github.com/ovrclk/akash/x/cert/errors"
+	"github.com/akash-network/node/testutil"
+	"github.com/akash-network/node/x/cert/client/cli"
+
+	certerrors "github.com/akash-network/node/x/cert/errors"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"testing"
 )
 
 const testHost = "foobar.dev"

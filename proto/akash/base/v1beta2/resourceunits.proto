@@ -5,7 +5,7 @@ import "gogoproto/gogo.proto";
 import "akash/base/v1beta2/resource.proto";
 import "akash/base/v1beta2/endpoint.proto";
 
-option go_package = "github.com/ovrclk/akash/types/v1beta2";
+option go_package = "github.com/akash-network/node/types/v1beta2";
 
 // ResourceUnits describes all available resources types for deployment/node etc
 // if field is nil resource is not present in the given data-structure
