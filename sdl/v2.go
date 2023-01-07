@@ -9,11 +9,11 @@ import (
 
 	"github.com/pkg/errors"
 
-	manifest "github.com/ovrclk/akash/manifest/v2beta1"
+	manifest "github.com/akash-network/node/manifest/v2beta1"
 
-	sdlutil "github.com/ovrclk/akash/sdl/util"
-	types "github.com/ovrclk/akash/types/v1beta2"
-	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
+	sdlutil "github.com/akash-network/node/sdl/util"
+	types "github.com/akash-network/node/types/v1beta2"
+	dtypes "github.com/akash-network/node/x/deployment/types/v1beta2"
 )
 
 const (

@@ -13,17 +13,17 @@ import (
 
 	tmrpc "github.com/tendermint/tendermint/rpc/core/types"
 
-	"github.com/ovrclk/akash/client/broadcaster"
-	amodule "github.com/ovrclk/akash/x/audit"
-	atypes "github.com/ovrclk/akash/x/audit/types/v1beta2"
-	cmodule "github.com/ovrclk/akash/x/cert"
-	ctypes "github.com/ovrclk/akash/x/cert/types/v1beta2"
-	dmodule "github.com/ovrclk/akash/x/deployment"
-	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
-	mmodule "github.com/ovrclk/akash/x/market"
-	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
-	pmodule "github.com/ovrclk/akash/x/provider"
-	ptypes "github.com/ovrclk/akash/x/provider/types/v1beta2"
+	"github.com/akash-network/node/client/broadcaster"
+	amodule "github.com/akash-network/node/x/audit"
+	atypes "github.com/akash-network/node/x/audit/types/v1beta2"
+	cmodule "github.com/akash-network/node/x/cert"
+	ctypes "github.com/akash-network/node/x/cert/types/v1beta2"
+	dmodule "github.com/akash-network/node/x/deployment"
+	dtypes "github.com/akash-network/node/x/deployment/types/v1beta2"
+	mmodule "github.com/akash-network/node/x/market"
+	mtypes "github.com/akash-network/node/x/market/types/v1beta2"
+	pmodule "github.com/akash-network/node/x/provider"
+	ptypes "github.com/akash-network/node/x/provider/types/v1beta2"
 )
 
 var (

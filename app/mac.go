@@ -8,7 +8,7 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	ibctransfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 
-	escrowtypes "github.com/ovrclk/akash/x/escrow/types/v1beta2"
+	escrowtypes "github.com/akash-network/node/x/escrow/types/v1beta2"
 )
 
 func MacPerms() map[string][]string {

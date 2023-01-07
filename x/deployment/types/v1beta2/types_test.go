@@ -9,12 +9,12 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 
-	"github.com/ovrclk/akash/sdkutil"
-	"github.com/ovrclk/akash/testutil"
-	akashtypes "github.com/ovrclk/akash/types/v1beta2"
-	atypes "github.com/ovrclk/akash/x/audit/types/v1beta2"
+	"github.com/akash-network/node/sdkutil"
+	"github.com/akash-network/node/testutil"
+	akashtypes "github.com/akash-network/node/types/v1beta2"
+	atypes "github.com/akash-network/node/x/audit/types/v1beta2"
 
-	types "github.com/ovrclk/akash/x/deployment/types/v1beta2"
+	types "github.com/akash-network/node/x/deployment/types/v1beta2"
 )
 
 type gStateTest struct {

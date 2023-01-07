@@ -8,7 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/ovrclk/akash/sdkutil"
+	"github.com/akash-network/node/sdkutil"
 	"github.com/stretchr/testify/require"
 )
 

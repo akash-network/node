@@ -2,15 +2,16 @@ package v1beta2_test
 
 import (
 	"fmt"
-	_ "github.com/ovrclk/akash/testutil"
 	"testing"
+
+	_ "github.com/akash-network/node/testutil"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ovrclk/akash/sdkutil"
-	types "github.com/ovrclk/akash/x/provider/types/v1beta2"
+	"github.com/akash-network/node/sdkutil"
+	types "github.com/akash-network/node/x/provider/types/v1beta2"
 )
 
 var (

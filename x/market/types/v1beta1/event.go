@@ -6,8 +6,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
 
-	"github.com/ovrclk/akash/sdkutil"
-	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta1"
+	"github.com/akash-network/node/sdkutil"
+	dtypes "github.com/akash-network/node/x/deployment/types/v1beta1"
 )
 
 const (

@@ -1,8 +1,8 @@
 package provider
 
 import (
-	"github.com/ovrclk/akash/x/provider/keeper"
-	types "github.com/ovrclk/akash/x/provider/types/v1beta2"
+	"github.com/akash-network/node/x/provider/keeper"
+	types "github.com/akash-network/node/x/provider/types/v1beta2"
 )
 
 const (

@@ -6,8 +6,8 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
-	types "github.com/ovrclk/akash/types/v1beta2"
-	ptypes "github.com/ovrclk/akash/x/provider/types/v1beta2"
+	types "github.com/akash-network/node/types/v1beta2"
+	ptypes "github.com/akash-network/node/x/provider/types/v1beta2"
 )
 
 var (

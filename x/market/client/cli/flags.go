@@ -6,8 +6,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	dcli "github.com/ovrclk/akash/x/deployment/client/cli"
-	types "github.com/ovrclk/akash/x/market/types/v1beta2"
+	dcli "github.com/akash-network/node/x/deployment/client/cli"
+	types "github.com/akash-network/node/x/market/types/v1beta2"
 )
 
 var (

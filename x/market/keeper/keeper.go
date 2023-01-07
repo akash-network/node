@@ -1,12 +1,12 @@
 package keeper
 
 import (
+	dtypes "github.com/akash-network/node/x/deployment/types/v1beta2"
+	"github.com/akash-network/node/x/market/keeper/keys"
+	types "github.com/akash-network/node/x/market/types/v1beta2"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
-	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
-	"github.com/ovrclk/akash/x/market/keeper/keys"
-	types "github.com/ovrclk/akash/x/market/types/v1beta2"
 	"github.com/pkg/errors"
 )
 

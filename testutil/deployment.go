@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"testing"
 
-	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
+	dtypes "github.com/akash-network/node/x/deployment/types/v1beta2"
 )
 
 // sum256Seed provides a consistent sha256 value for initial Deployment.Version

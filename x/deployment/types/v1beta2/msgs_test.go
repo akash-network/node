@@ -3,9 +3,9 @@ package v1beta2_test
 import (
 	"testing"
 
+	"github.com/akash-network/node/testutil"
+	types "github.com/akash-network/node/x/deployment/types/v1beta2"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/ovrclk/akash/testutil"
-	types "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 	"github.com/stretchr/testify/require"
 )
 

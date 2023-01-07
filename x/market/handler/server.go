@@ -8,10 +8,10 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	atypes "github.com/ovrclk/akash/x/audit/types/v1beta2"
-	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
-	types "github.com/ovrclk/akash/x/market/types/v1beta2"
-	ptypes "github.com/ovrclk/akash/x/provider/types/v1beta2"
+	atypes "github.com/akash-network/node/x/audit/types/v1beta2"
+	dtypes "github.com/akash-network/node/x/deployment/types/v1beta2"
+	types "github.com/akash-network/node/x/market/types/v1beta2"
+	ptypes "github.com/akash-network/node/x/provider/types/v1beta2"
 )
 
 type msgServer struct {

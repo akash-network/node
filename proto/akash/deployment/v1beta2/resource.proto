@@ -5,7 +5,7 @@ import "gogoproto/gogo.proto";
 import "akash/base/v1beta2/resourceunits.proto";
 import "cosmos/base/v1beta1/coin.proto";
 
-option go_package = "github.com/ovrclk/akash/x/deployment/types/v1beta2";
+option go_package = "github.com/akash-network/node/x/deployment/types/v1beta2";
 
 // Resource stores unit, total count and price of resource
 message Resource {

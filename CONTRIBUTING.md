@@ -28,7 +28,7 @@ This is just a short list of ideas, if you have other ideas for contributing ple
 
 #### I've found a typo
 
-* A Pull Request is not necessary. Raise an [Issue](https://github.com/ovrclk/akash/issues) and we'll fix it as soon as we can.
+* A Pull Request is not necessary. Raise an [Issue](https://github.com/akash-network/node/issues) and we'll fix it as soon as we can.
 
 #### I have a (great) idea
 
@@ -326,7 +326,7 @@ There is a forum which you are welcome to join to discuss Akash Network, Kuberne
 
 ### Roadmap
 
-* Browse open issues in [overclock/akash](https://github.com/ovrclk/akash/issues)
+* Browse open issues in [overclock/akash](https://github.com/akash-network/node/issues)
 
 ## License
 

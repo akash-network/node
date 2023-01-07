@@ -1,8 +1,8 @@
 package deployment
 
 import (
-	"github.com/ovrclk/akash/x/deployment/keeper"
-	types "github.com/ovrclk/akash/x/deployment/types/v1beta2"
+	"github.com/akash-network/node/x/deployment/keeper"
+	types "github.com/akash-network/node/x/deployment/types/v1beta2"
 )
 
 const (
