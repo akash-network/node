@@ -1,8 +1,8 @@
 package query
 
 import (
+	types "github.com/akash-network/node/x/deployment/types/v1beta2"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
-	types "github.com/ovrclk/akash/x/deployment/types/v1beta2"
 )
 
 // Client interface

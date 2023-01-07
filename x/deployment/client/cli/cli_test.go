@@ -11,7 +11,7 @@ import (
 	bankcli "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
-	clitestutil "github.com/ovrclk/akash/testutil/cli"
+	clitestutil "github.com/akash-network/node/testutil/cli"
 
 	"github.com/stretchr/testify/suite"
 
@@ -19,10 +19,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/testutil/network"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/ovrclk/akash/testutil"
-	ccli "github.com/ovrclk/akash/x/cert/client/cli"
-	"github.com/ovrclk/akash/x/deployment/client/cli"
-	types "github.com/ovrclk/akash/x/deployment/types/v1beta2"
+	"github.com/akash-network/node/testutil"
+	ccli "github.com/akash-network/node/x/cert/client/cli"
+	"github.com/akash-network/node/x/deployment/client/cli"
+	types "github.com/akash-network/node/x/deployment/types/v1beta2"
 )
 
 type IntegrationTestSuite struct {

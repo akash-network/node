@@ -6,11 +6,11 @@ package v1beta2
 import (
 	context "context"
 	fmt "fmt"
+	github_com_ovrclk_akash_types_v1beta2 "github.com/akash-network/node/types/v1beta2"
+	v1beta2 "github.com/akash-network/node/types/v1beta2"
 	_ "github.com/gogo/protobuf/gogoproto"
 	grpc1 "github.com/gogo/protobuf/grpc"
 	proto "github.com/gogo/protobuf/proto"
-	github_com_ovrclk_akash_types_v1beta2 "github.com/ovrclk/akash/types/v1beta2"
-	v1beta2 "github.com/ovrclk/akash/types/v1beta2"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -87,7 +87,7 @@ func (m *ProviderInfo) GetWebsite() string {
 type MsgCreateProvider struct {
 	Owner      string                                           `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner" yaml:"owner"`
 	HostURI    string                                           `protobuf:"bytes,2,opt,name=host_uri,json=hostUri,proto3" json:"host_uri" yaml:"host_uri"`
-	Attributes github_com_ovrclk_akash_types_v1beta2.Attributes `protobuf:"bytes,3,rep,name=attributes,proto3,castrepeated=github.com/ovrclk/akash/types/v1beta2.Attributes" json:"attributes" yaml:"attributes"`
+	Attributes github_com_ovrclk_akash_types_v1beta2.Attributes `protobuf:"bytes,3,rep,name=attributes,proto3,castrepeated=github.com/akash-network/node/types/v1beta2.Attributes" json:"attributes" yaml:"attributes"`
 	Info       ProviderInfo                                     `protobuf:"bytes,4,opt,name=info,proto3" json:"info" yaml:"info"`
 }
 
@@ -193,7 +193,7 @@ var xxx_messageInfo_MsgCreateProviderResponse proto.InternalMessageInfo
 type MsgUpdateProvider struct {
 	Owner      string                                           `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner" yaml:"owner"`
 	HostURI    string                                           `protobuf:"bytes,2,opt,name=host_uri,json=hostUri,proto3" json:"host_uri" yaml:"host_uri"`
-	Attributes github_com_ovrclk_akash_types_v1beta2.Attributes `protobuf:"bytes,3,rep,name=attributes,proto3,castrepeated=github.com/ovrclk/akash/types/v1beta2.Attributes" json:"attributes" yaml:"attributes"`
+	Attributes github_com_ovrclk_akash_types_v1beta2.Attributes `protobuf:"bytes,3,rep,name=attributes,proto3,castrepeated=github.com/akash-network/node/types/v1beta2.Attributes" json:"attributes" yaml:"attributes"`
 	Info       ProviderInfo                                     `protobuf:"bytes,4,opt,name=info,proto3" json:"info" yaml:"info"`
 }
 
@@ -381,7 +381,7 @@ var xxx_messageInfo_MsgDeleteProviderResponse proto.InternalMessageInfo
 type Provider struct {
 	Owner      string                                           `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner" yaml:"owner"`
 	HostURI    string                                           `protobuf:"bytes,2,opt,name=host_uri,json=hostUri,proto3" json:"host_uri" yaml:"host_uri"`
-	Attributes github_com_ovrclk_akash_types_v1beta2.Attributes `protobuf:"bytes,3,rep,name=attributes,proto3,castrepeated=github.com/ovrclk/akash/types/v1beta2.Attributes" json:"attributes" yaml:"attributes"`
+	Attributes github_com_ovrclk_akash_types_v1beta2.Attributes `protobuf:"bytes,3,rep,name=attributes,proto3,castrepeated=github.com/akash-network/node/types/v1beta2.Attributes" json:"attributes" yaml:"attributes"`
 	Info       ProviderInfo                                     `protobuf:"bytes,4,opt,name=info,proto3" json:"info" yaml:"info"`
 }
 

@@ -3,15 +3,15 @@ package sdl
 import (
 	"testing"
 
-	"github.com/ovrclk/akash/validation"
+	"github.com/akash-network/node/validation"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 
-	manifest "github.com/ovrclk/akash/manifest/v2beta1"
-	"github.com/ovrclk/akash/types/unit"
-	atypes "github.com/ovrclk/akash/types/v1beta2"
+	manifest "github.com/akash-network/node/manifest/v2beta1"
+	"github.com/akash-network/node/types/unit"
+	atypes "github.com/akash-network/node/types/v1beta2"
 )
 
 func TestV2Expose(t *testing.T) {

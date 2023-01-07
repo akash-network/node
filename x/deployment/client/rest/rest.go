@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/akash-network/node/x/deployment/query"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/types/rest"
 	"github.com/gorilla/mux"
-	"github.com/ovrclk/akash/x/deployment/query"
 )
 
 // RegisterRoutes registers all query routes

@@ -7,7 +7,7 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/pkg/errors"
 
-	types "github.com/ovrclk/akash/types/v1beta2"
+	types "github.com/akash-network/node/types/v1beta2"
 )
 
 const (

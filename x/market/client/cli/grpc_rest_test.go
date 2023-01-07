@@ -16,12 +16,12 @@ import (
 	sdkrest "github.com/cosmos/cosmos-sdk/types/rest"
 	bankcli "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
 
-	"github.com/ovrclk/akash/testutil"
-	ccli "github.com/ovrclk/akash/x/cert/client/cli"
-	dcli "github.com/ovrclk/akash/x/deployment/client/cli"
-	"github.com/ovrclk/akash/x/market/client/cli"
-	types "github.com/ovrclk/akash/x/market/types/v1beta2"
-	pcli "github.com/ovrclk/akash/x/provider/client/cli"
+	"github.com/akash-network/node/testutil"
+	ccli "github.com/akash-network/node/x/cert/client/cli"
+	dcli "github.com/akash-network/node/x/deployment/client/cli"
+	"github.com/akash-network/node/x/market/client/cli"
+	types "github.com/akash-network/node/x/market/types/v1beta2"
+	pcli "github.com/akash-network/node/x/provider/client/cli"
 )
 
 type GRPCRestTestSuite struct {

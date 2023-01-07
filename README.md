@@ -1,10 +1,10 @@
 # Akash - Decentralized Serverless Network
 
-![tests](https://github.com/ovrclk/akash/workflows/tests/badge.svg)
-![simulations](https://github.com/ovrclk/akash/workflows/simulation-tests/badge.svg)
+![tests](https://github.com/akash-network/node/workflows/tests/badge.svg)
+![simulations](https://github.com/akash-network/node/workflows/simulation-tests/badge.svg)
 [![codecov](https://codecov.io/github/ovrclk/akash/coverage.svg?branch=master)](https://codecov.io/github/ovrclk/akash?branch=master)
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/ovrclk/akash)](https://goreportcard.com/report/github.com/ovrclk/akash)
+[![Go Report Card](https://goreportcard.com/badge/github.com/akash-network/node)](https://goreportcard.com/report/github.com/akash-network/node)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 [![Akash](_docs/img/logo-label-black.svg "Akash")](#overview)
@@ -56,7 +56,7 @@ Windows | amd64 | ⚠️ **Experimental**
 
 # Installing
 
-The [latest](https://github.com/ovrclk/akash/releases/latest) binary release can be installed with [Homebrew](https://brew.sh/):
+The [latest](https://github.com/akash-network/node/releases/latest) binary release can be installed with [Homebrew](https://brew.sh/):
 
 ```sh
 $ brew tap ovrclk/tap
@@ -82,7 +82,7 @@ Akash is written in Golang and is Apache 2.0 licensed - contributions are welcom
 To become a contributor, please see the guide on [contributing](CONTRIBUTING.md)
 
 ## Development environment
-[This doc](https://github.com/ovrclk/akash/blob/master/_docs/development-environment.md) guides through setting up local development environment
+[This doc](https://github.com/akash-network/node/blob/master/_docs/development-environment.md) guides through setting up local development environment
 
 Akash is developed and tested with [golang 1.16.0+](https://golang.org/). 
 Building requires a working [golang](https://golang.org/) installation, a properly set `GOPATH`, and `$GOPATH/bin` present in `$PATH`.

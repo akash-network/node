@@ -67,8 +67,8 @@ docker-image:
 		-e STRIP_FLAGS="$(GORELEASER_STRIP_FLAGS)" \
 		-e LINKMODE="$(GO_LINKMODE)" \
 		-v /var/run/docker.sock:/var/run/docker.sock \
-		-v `pwd`:/go/src/github.com/ovrclk/akash \
-		-w /go/src/github.com/ovrclk/akash \
+		-v `pwd`:/go/src/github.com/akash-network/node \
+		-w /go/src/github.com/akash-network/node \
 		$(GORELEASER_IMAGE) \
 		-f .goreleaser-docker.yaml \
 		--debug=$(GORELEASER_DEBUG) \

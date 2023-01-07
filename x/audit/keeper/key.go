@@ -7,7 +7,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	types "github.com/ovrclk/akash/x/audit/types/v1beta2"
+	types "github.com/akash-network/node/x/audit/types/v1beta2"
 )
 
 func providerKey(id types.ProviderID) []byte {

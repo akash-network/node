@@ -5,7 +5,7 @@ import "gogoproto/gogo.proto";
 import "akash/deployment/v1beta2/groupid.proto";
 import "akash/deployment/v1beta2/groupspec.proto";
 
-option go_package = "github.com/ovrclk/akash/x/deployment/types/v1beta2";
+option go_package = "github.com/akash-network/node/x/deployment/types/v1beta2";
 
 // Group stores group id, state and specifications of group
 message Group {

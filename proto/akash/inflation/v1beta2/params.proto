@@ -2,7 +2,7 @@ syntax = "proto3";
 package akash.inflation.v1beta2;
 import "gogoproto/gogo.proto";
 
-option go_package = "github.com/ovrclk/akash/x/inflation/types/v1beta2";
+option go_package = "github.com/akash-network/node/x/inflation/types/v1beta2";
 
 // Params defines the parameters for the x/deployment package
 message Params {

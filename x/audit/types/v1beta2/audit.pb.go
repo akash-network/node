@@ -6,11 +6,11 @@ package v1beta2
 import (
 	context "context"
 	fmt "fmt"
+	github_com_ovrclk_akash_types_v1beta2 "github.com/akash-network/node/types/v1beta2"
+	v1beta2 "github.com/akash-network/node/types/v1beta2"
 	_ "github.com/gogo/protobuf/gogoproto"
 	grpc1 "github.com/gogo/protobuf/grpc"
 	proto "github.com/gogo/protobuf/proto"
-	github_com_ovrclk_akash_types_v1beta2 "github.com/ovrclk/akash/types/v1beta2"
-	v1beta2 "github.com/ovrclk/akash/types/v1beta2"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -34,7 +34,7 @@ const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 type Provider struct {
 	Owner      string                                           `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner" yaml:"owner"`
 	Auditor    string                                           `protobuf:"bytes,2,opt,name=auditor,proto3" json:"auditor" yaml:"auditor"`
-	Attributes github_com_ovrclk_akash_types_v1beta2.Attributes `protobuf:"bytes,4,rep,name=attributes,proto3,castrepeated=github.com/ovrclk/akash/types/v1beta2.Attributes" json:"attributes" yaml:"attributes"`
+	Attributes github_com_ovrclk_akash_types_v1beta2.Attributes `protobuf:"bytes,4,rep,name=attributes,proto3,castrepeated=github.com/akash-network/node/types/v1beta2.Attributes" json:"attributes" yaml:"attributes"`
 }
 
 func (m *Provider) Reset()         { *m = Provider{} }
@@ -95,7 +95,7 @@ func (m *Provider) GetAttributes() github_com_ovrclk_akash_types_v1beta2.Attribu
 type AuditedAttributes struct {
 	Owner      string                                           `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner" yaml:"owner"`
 	Auditor    string                                           `protobuf:"bytes,2,opt,name=auditor,proto3" json:"auditor" yaml:"auditor"`
-	Attributes github_com_ovrclk_akash_types_v1beta2.Attributes `protobuf:"bytes,3,rep,name=attributes,proto3,castrepeated=github.com/ovrclk/akash/types/v1beta2.Attributes" json:"attributes" yaml:"attributes"`
+	Attributes github_com_ovrclk_akash_types_v1beta2.Attributes `protobuf:"bytes,3,rep,name=attributes,proto3,castrepeated=github.com/akash-network/node/types/v1beta2.Attributes" json:"attributes" yaml:"attributes"`
 }
 
 func (m *AuditedAttributes) Reset()         { *m = AuditedAttributes{} }
@@ -254,7 +254,7 @@ func (m *AttributesFilters) GetOwners() []string {
 type MsgSignProviderAttributes struct {
 	Owner      string                                           `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner" yaml:"owner"`
 	Auditor    string                                           `protobuf:"bytes,2,opt,name=auditor,proto3" json:"auditor" yaml:"auditor"`
-	Attributes github_com_ovrclk_akash_types_v1beta2.Attributes `protobuf:"bytes,3,rep,name=attributes,proto3,castrepeated=github.com/ovrclk/akash/types/v1beta2.Attributes" json:"attributes" yaml:"attributes"`
+	Attributes github_com_ovrclk_akash_types_v1beta2.Attributes `protobuf:"bytes,3,rep,name=attributes,proto3,castrepeated=github.com/akash-network/node/types/v1beta2.Attributes" json:"attributes" yaml:"attributes"`
 }
 
 func (m *MsgSignProviderAttributes) Reset()         { *m = MsgSignProviderAttributes{} }

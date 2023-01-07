@@ -8,7 +8,7 @@ FROM golang:alpine AS build-env
 ENV PACKAGES curl make git libc-dev bash gcc linux-headers eudev-dev python2
 
 # Set working directory for the build
-WORKDIR /go/src/github.com/ovrclk/akash
+WORKDIR /go/src/github.com/akash-network/node
 
 # Add source files
 COPY . .

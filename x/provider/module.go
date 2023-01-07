@@ -21,14 +21,14 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	mkeeper "github.com/ovrclk/akash/x/market/keeper"
-	"github.com/ovrclk/akash/x/provider/client/cli"
-	"github.com/ovrclk/akash/x/provider/client/rest"
-	"github.com/ovrclk/akash/x/provider/handler"
-	"github.com/ovrclk/akash/x/provider/keeper"
-	"github.com/ovrclk/akash/x/provider/simulation"
-	v1beta1types "github.com/ovrclk/akash/x/provider/types/v1beta1"
-	types "github.com/ovrclk/akash/x/provider/types/v1beta2"
+	mkeeper "github.com/akash-network/node/x/market/keeper"
+	"github.com/akash-network/node/x/provider/client/cli"
+	"github.com/akash-network/node/x/provider/client/rest"
+	"github.com/akash-network/node/x/provider/handler"
+	"github.com/akash-network/node/x/provider/keeper"
+	"github.com/akash-network/node/x/provider/simulation"
+	v1beta1types "github.com/akash-network/node/x/provider/types/v1beta1"
+	types "github.com/akash-network/node/x/provider/types/v1beta2"
 )
 
 var (

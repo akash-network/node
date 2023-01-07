@@ -1,5 +1,5 @@
 FROM debian:bullseye
-LABEL "org.opencontainers.image.source"="https://github.com/ovrclk/akash"
+LABEL "org.opencontainers.image.source"="https://github.com/akash-network/node"
 
 COPY ./akash /bin/
 

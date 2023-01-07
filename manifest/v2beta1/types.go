@@ -3,7 +3,8 @@ package v2beta1
 import (
 	"errors"
 	"fmt"
-	types "github.com/ovrclk/akash/types/v1beta2"
+
+	types "github.com/akash-network/node/types/v1beta2"
 	corev1 "k8s.io/api/core/v1"
 )
 

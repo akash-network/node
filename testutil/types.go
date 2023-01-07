@@ -21,8 +21,8 @@ import (
 	tmrand "github.com/tendermint/tendermint/libs/rand"
 	dbm "github.com/tendermint/tm-db"
 
-	"github.com/ovrclk/akash/app"
-	types "github.com/ovrclk/akash/types/v1beta2"
+	"github.com/akash-network/node/app"
+	types "github.com/akash-network/node/types/v1beta2"
 )
 
 func RandRangeInt(min, max int) int {

@@ -5,9 +5,9 @@ package v1beta1
 
 import (
 	fmt "fmt"
+	v1beta1 "github.com/akash-network/node/x/deployment/types/v1beta1"
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
-	v1beta1 "github.com/ovrclk/akash/x/deployment/types/v1beta1"
 	io "io"
 	math "math"
 	math_bits "math/bits"

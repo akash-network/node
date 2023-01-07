@@ -7,8 +7,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
 
-	dpath "github.com/ovrclk/akash/x/deployment/query"
-	types "github.com/ovrclk/akash/x/market/types/v1beta2"
+	dpath "github.com/akash-network/node/x/deployment/query"
+	types "github.com/akash-network/node/x/market/types/v1beta2"
 )
 
 const (
