@@ -8,10 +8,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
 
-	"github.com/ovrclk/akash/cmd/common"
-	"github.com/ovrclk/akash/sdkutil"
-	dcli "github.com/ovrclk/akash/x/deployment/client/cli"
-	types "github.com/ovrclk/akash/x/market/types/v1beta2"
+	"github.com/akash-network/node/cmd/common"
+	"github.com/akash-network/node/sdkutil"
+	dcli "github.com/akash-network/node/x/deployment/client/cli"
+	types "github.com/akash-network/node/x/market/types/v1beta2"
 )
 
 // GetTxCmd returns the transaction commands for market module

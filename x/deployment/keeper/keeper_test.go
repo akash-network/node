@@ -7,10 +7,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ovrclk/akash/testutil"
-	"github.com/ovrclk/akash/testutil/state"
-	"github.com/ovrclk/akash/x/deployment/keeper"
-	types "github.com/ovrclk/akash/x/deployment/types/v1beta2"
+	"github.com/akash-network/node/testutil"
+	"github.com/akash-network/node/testutil/state"
+	"github.com/akash-network/node/x/deployment/keeper"
+	types "github.com/akash-network/node/x/deployment/types/v1beta2"
 )
 
 func Test_Create(t *testing.T) {

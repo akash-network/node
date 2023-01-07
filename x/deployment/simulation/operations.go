@@ -15,10 +15,10 @@ import (
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
 
-	appparams "github.com/ovrclk/akash/app/params"
-	sdlv1 "github.com/ovrclk/akash/sdl"
-	"github.com/ovrclk/akash/x/deployment/keeper"
-	types "github.com/ovrclk/akash/x/deployment/types/v1beta2"
+	appparams "github.com/akash-network/node/app/params"
+	sdlv1 "github.com/akash-network/node/sdl"
+	"github.com/akash-network/node/x/deployment/keeper"
+	types "github.com/akash-network/node/x/deployment/types/v1beta2"
 )
 
 // Simulation operation weights constants

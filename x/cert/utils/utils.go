@@ -4,12 +4,13 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	certerrors "github.com/ovrclk/akash/x/cert/errors"
 	"io"
 	"time"
 
+	certerrors "github.com/akash-network/node/x/cert/errors"
+
+	ctypes "github.com/akash-network/node/x/cert/types/v1beta2"
 	"github.com/cosmos/cosmos-sdk/client"
-	ctypes "github.com/ovrclk/akash/x/cert/types/v1beta2"
 )
 
 // LoadAndQueryCertificateForAccount wraps LoadAndQueryPEMForAccount and tls.X509KeyPair

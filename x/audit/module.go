@@ -21,13 +21,13 @@ import (
 	"github.com/gogo/protobuf/grpc"
 	"github.com/pkg/errors"
 
-	"github.com/ovrclk/akash/x/audit/client/cli"
-	"github.com/ovrclk/akash/x/audit/client/rest"
-	"github.com/ovrclk/akash/x/audit/handler"
-	"github.com/ovrclk/akash/x/audit/keeper"
-	v1beta1types "github.com/ovrclk/akash/x/audit/types/v1beta1"
-	types "github.com/ovrclk/akash/x/audit/types/v1beta2"
-	pkeeper "github.com/ovrclk/akash/x/provider/keeper"
+	"github.com/akash-network/node/x/audit/client/cli"
+	"github.com/akash-network/node/x/audit/client/rest"
+	"github.com/akash-network/node/x/audit/handler"
+	"github.com/akash-network/node/x/audit/keeper"
+	v1beta1types "github.com/akash-network/node/x/audit/types/v1beta1"
+	types "github.com/akash-network/node/x/audit/types/v1beta2"
+	pkeeper "github.com/akash-network/node/x/provider/keeper"
 )
 
 var (

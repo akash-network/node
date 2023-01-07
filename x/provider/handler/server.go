@@ -7,10 +7,10 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/pkg/errors"
 
-	mkeeper "github.com/ovrclk/akash/x/market/keeper"
-	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
-	"github.com/ovrclk/akash/x/provider/keeper"
-	types "github.com/ovrclk/akash/x/provider/types/v1beta2"
+	mkeeper "github.com/akash-network/node/x/market/keeper"
+	mtypes "github.com/akash-network/node/x/market/types/v1beta2"
+	"github.com/akash-network/node/x/provider/keeper"
+	types "github.com/akash-network/node/x/provider/types/v1beta2"
 )
 
 var (

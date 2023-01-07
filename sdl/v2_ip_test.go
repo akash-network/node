@@ -3,9 +3,10 @@ package sdl
 import (
 	"bytes"
 	"fmt"
-	types "github.com/ovrclk/akash/types/v1beta2"
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	types "github.com/akash-network/node/types/v1beta2"
+	"github.com/stretchr/testify/require"
 )
 
 func findFirstIPEndpoint(t *testing.T, endpoints []types.Endpoint) types.Endpoint {

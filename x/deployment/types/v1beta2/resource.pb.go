@@ -5,10 +5,10 @@ package v1beta2
 
 import (
 	fmt "fmt"
+	v1beta2 "github.com/akash-network/node/types/v1beta2"
 	types "github.com/cosmos/cosmos-sdk/types"
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
-	v1beta2 "github.com/ovrclk/akash/types/v1beta2"
 	io "io"
 	math "math"
 	math_bits "math/bits"

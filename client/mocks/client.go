@@ -3,8 +3,8 @@
 package mocks
 
 import (
-	client "github.com/ovrclk/akash/client"
-	broadcaster "github.com/ovrclk/akash/client/broadcaster"
+	client "github.com/akash-network/node/client"
+	broadcaster "github.com/akash-network/node/client/broadcaster"
 
 	context "context"
 

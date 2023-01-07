@@ -7,12 +7,12 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
+	"github.com/akash-network/node/testutil"
+	"github.com/akash-network/node/x/provider/client/cli"
+	types "github.com/akash-network/node/x/provider/types/v1beta2"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/testutil/network"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/ovrclk/akash/testutil"
-	"github.com/ovrclk/akash/x/provider/client/cli"
-	types "github.com/ovrclk/akash/x/provider/types/v1beta2"
 )
 
 type IntegrationTestSuite struct {

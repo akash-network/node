@@ -10,10 +10,10 @@ import (
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/ovrclk/akash/cmd/common"
-	cmdcommon "github.com/ovrclk/akash/cmd/common"
-	"github.com/ovrclk/akash/events"
-	"github.com/ovrclk/akash/pubsub"
+	"github.com/akash-network/node/cmd/common"
+	cmdcommon "github.com/akash-network/node/cmd/common"
+	"github.com/akash-network/node/events"
+	"github.com/akash-network/node/pubsub"
 )
 
 // EventCmd prints out events in real time

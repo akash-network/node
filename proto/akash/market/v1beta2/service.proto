@@ -3,7 +3,7 @@ package akash.market.v1beta2;
 
 import "akash/market/v1beta2/bid.proto";
 import "akash/market/v1beta2/lease.proto";
-option go_package = "github.com/ovrclk/akash/x/market/types/v1beta2";
+option go_package = "github.com/akash-network/node/x/market/types/v1beta2";
 
 // Msg defines the market Msg service
 service Msg {

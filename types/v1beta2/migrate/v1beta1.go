@@ -1,8 +1,8 @@
 package migrate
 
 import (
-	"github.com/ovrclk/akash/types/v1beta1"
-	"github.com/ovrclk/akash/types/v1beta2"
+	"github.com/akash-network/node/types/v1beta1"
+	"github.com/akash-network/node/types/v1beta2"
 )
 
 func ResourceValueFromV1Beta1(from v1beta1.ResourceValue) v1beta2.ResourceValue {

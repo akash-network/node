@@ -3,12 +3,12 @@ package keeper_test
 import (
 	"testing"
 
+	"github.com/akash-network/node/testutil"
+	"github.com/akash-network/node/testutil/state"
+	"github.com/akash-network/node/x/escrow/keeper"
+	"github.com/akash-network/node/x/escrow/keeper/mocks"
+	types "github.com/akash-network/node/x/escrow/types/v1beta2"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/ovrclk/akash/testutil"
-	"github.com/ovrclk/akash/testutil/state"
-	"github.com/ovrclk/akash/x/escrow/keeper"
-	"github.com/ovrclk/akash/x/escrow/keeper/mocks"
-	types "github.com/ovrclk/akash/x/escrow/types/v1beta2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
