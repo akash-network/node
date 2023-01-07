@@ -1,7 +1,7 @@
 package v1beta2
 
 import (
-	etypes "github.com/ovrclk/akash/x/escrow/types/v1beta2"
+	etypes "github.com/akash-network/node/x/escrow/types/v1beta2"
 )
 
 const (

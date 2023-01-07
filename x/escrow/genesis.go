@@ -5,9 +5,9 @@ import (
 	"github.com/pkg/errors"
 	abci "github.com/tendermint/tendermint/abci/types"
 
-	"github.com/ovrclk/akash/x/escrow/keeper"
+	"github.com/akash-network/node/x/escrow/keeper"
 
-	types "github.com/ovrclk/akash/x/escrow/types/v1beta2"
+	types "github.com/akash-network/node/x/escrow/types/v1beta2"
 )
 
 // ValidateGenesis does validation check of the Genesis and returns error incase of failure

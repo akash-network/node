@@ -9,11 +9,11 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	"github.com/ovrclk/akash/sdkutil"
-	akashtypes "github.com/ovrclk/akash/types/v1beta2"
-	atypes "github.com/ovrclk/akash/types/v1beta2"
-	types "github.com/ovrclk/akash/x/audit/types/v1beta2"
-	ptypes "github.com/ovrclk/akash/x/provider/types/v1beta2"
+	"github.com/akash-network/node/sdkutil"
+	akashtypes "github.com/akash-network/node/types/v1beta2"
+	atypes "github.com/akash-network/node/types/v1beta2"
+	types "github.com/akash-network/node/x/audit/types/v1beta2"
+	ptypes "github.com/akash-network/node/x/provider/types/v1beta2"
 )
 
 // GetTxCmd returns the transaction commands for audit module

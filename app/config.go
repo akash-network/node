@@ -41,7 +41,7 @@ import (
 	ibcclient "github.com/cosmos/ibc-go/v3/modules/core/02-client/client"
 	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 
-	appparams "github.com/ovrclk/akash/app/params"
+	appparams "github.com/akash-network/node/app/params"
 )
 
 var (

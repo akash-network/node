@@ -21,13 +21,13 @@ import (
 	"github.com/gogo/protobuf/grpc"
 	"github.com/pkg/errors"
 
-	"github.com/ovrclk/akash/x/escrow/client/cli"
-	"github.com/ovrclk/akash/x/escrow/client/rest"
-	"github.com/ovrclk/akash/x/escrow/keeper"
-	"github.com/ovrclk/akash/x/escrow/query"
+	"github.com/akash-network/node/x/escrow/client/cli"
+	"github.com/akash-network/node/x/escrow/client/rest"
+	"github.com/akash-network/node/x/escrow/keeper"
+	"github.com/akash-network/node/x/escrow/query"
 
-	v1beta1types "github.com/ovrclk/akash/x/escrow/types/v1beta1"
-	types "github.com/ovrclk/akash/x/escrow/types/v1beta2"
+	v1beta1types "github.com/akash-network/node/x/escrow/types/v1beta1"
+	types "github.com/akash-network/node/x/escrow/types/v1beta2"
 )
 
 var (

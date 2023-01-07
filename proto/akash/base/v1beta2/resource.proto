@@ -5,7 +5,7 @@ import "gogoproto/gogo.proto";
 import "akash/base/v1beta2/attribute.proto";
 import "akash/base/v1beta2/resourcevalue.proto";
 
-option go_package = "github.com/ovrclk/akash/types/v1beta2";
+option go_package = "github.com/akash-network/node/types/v1beta2";
 
 // CPU stores resource units and cpu config attributes
 message CPU {

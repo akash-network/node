@@ -7,7 +7,7 @@ import (
 	sdktest "github.com/cosmos/cosmos-sdk/testutil"
 	clitestutil "github.com/cosmos/cosmos-sdk/testutil/cli"
 
-	types "github.com/ovrclk/akash/x/market/types/v1beta2"
+	types "github.com/akash-network/node/x/market/types/v1beta2"
 )
 
 // XXX: WHY TF DON'T THESE RETURN OBJECTS

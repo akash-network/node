@@ -1,9 +1,9 @@
 package keeper
 
 import (
+	types "github.com/akash-network/node/x/escrow/types/v1beta2"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	types "github.com/ovrclk/akash/x/escrow/types/v1beta2"
 	"github.com/pkg/errors"
 )
 

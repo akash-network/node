@@ -5,12 +5,12 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	akashtypes "github.com/ovrclk/akash/types/v1beta1"
+	akashtypes "github.com/akash-network/node/types/v1beta1"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/ovrclk/akash/testutil"
-	types "github.com/ovrclk/akash/x/deployment/types/v1beta1"
+	"github.com/akash-network/node/testutil"
+	types "github.com/akash-network/node/x/deployment/types/v1beta1"
 )
 
 func TestZeroValueGroupSpec(t *testing.T) {

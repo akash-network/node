@@ -4,8 +4,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	"github.com/ovrclk/akash/x/audit/keeper"
-	types "github.com/ovrclk/akash/x/audit/types/v1beta2"
+	"github.com/akash-network/node/x/audit/keeper"
+	types "github.com/akash-network/node/x/audit/types/v1beta2"
 )
 
 // NewHandler returns a handler for "provider" type messages.

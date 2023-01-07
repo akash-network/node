@@ -1,8 +1,8 @@
 package migrate
 
 import (
-	"github.com/ovrclk/akash/x/market/types/v1beta1"
-	"github.com/ovrclk/akash/x/market/types/v1beta2"
+	"github.com/akash-network/node/x/market/types/v1beta1"
+	"github.com/akash-network/node/x/market/types/v1beta2"
 )
 
 func LeaseIDToV1beta1(from v1beta1.LeaseID) v1beta2.LeaseID {

@@ -9,7 +9,7 @@ import "akash/deployment/v1beta2/group.proto";
 import "akash/deployment/v1beta2/groupid.proto";
 import "akash/escrow/v1beta2/types.proto";
 
-option go_package = "github.com/ovrclk/akash/x/deployment/types/v1beta2";
+option go_package = "github.com/akash-network/node/x/deployment/types/v1beta2";
 
 // Query defines the gRPC querier service
 service Query {

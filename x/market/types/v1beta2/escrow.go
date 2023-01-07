@@ -7,8 +7,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
-	etypes "github.com/ovrclk/akash/x/escrow/types/v1beta2"
+	dtypes "github.com/akash-network/node/x/deployment/types/v1beta2"
+	etypes "github.com/akash-network/node/x/escrow/types/v1beta2"
 )
 
 const (

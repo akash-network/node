@@ -1,8 +1,8 @@
 package audit
 
 import (
-	"github.com/ovrclk/akash/x/audit/keeper"
-	types "github.com/ovrclk/akash/x/audit/types/v1beta2"
+	"github.com/akash-network/node/x/audit/keeper"
+	types "github.com/akash-network/node/x/audit/types/v1beta2"
 )
 
 const (

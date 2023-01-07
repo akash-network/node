@@ -4,10 +4,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	v015 "github.com/ovrclk/akash/util/legacy/v015"
-	"github.com/ovrclk/akash/x/deployment/types/v1beta1"
-	types "github.com/ovrclk/akash/x/deployment/types/v1beta2"
-	"github.com/ovrclk/akash/x/deployment/types/v1beta2/migrate"
+	v015 "github.com/akash-network/node/util/legacy/v015"
+	"github.com/akash-network/node/x/deployment/types/v1beta1"
+	types "github.com/akash-network/node/x/deployment/types/v1beta2"
+	"github.com/akash-network/node/x/deployment/types/v1beta2/migrate"
 )
 
 // MigrateStore performs in-place store migrations from v0.14 to v0.15. The

@@ -1,13 +1,13 @@
 package v1beta1
 
 import (
-	fmt "fmt"
+	"fmt"
 	"strconv"
 	"strings"
 
+	dtypes "github.com/akash-network/node/x/deployment/types/v1beta1"
+	etypes "github.com/akash-network/node/x/escrow/types/v1beta1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta1"
-	etypes "github.com/ovrclk/akash/x/escrow/types/v1beta1"
 )
 
 const (

@@ -3,7 +3,7 @@ package testutil
 import (
 	"testing"
 
-	atypes "github.com/ovrclk/akash/x/audit/types/v1beta2"
+	atypes "github.com/akash-network/node/x/audit/types/v1beta2"
 )
 
 func AuditedProvider(t testing.TB) (atypes.ProviderID, atypes.Provider) {
