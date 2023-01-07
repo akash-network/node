@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
-	types "github.com/ovrclk/akash/x/deployment/types/v1beta2"
+	types "github.com/akash-network/node/x/deployment/types/v1beta2"
 )
 
 const (

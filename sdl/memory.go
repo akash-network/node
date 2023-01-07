@@ -5,7 +5,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	types "github.com/ovrclk/akash/types/v1beta2"
+	types "github.com/akash-network/node/types/v1beta2"
 )
 
 type v2MemoryAttributes types.Attributes

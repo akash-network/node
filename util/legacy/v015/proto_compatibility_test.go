@@ -3,16 +3,16 @@ package v015_test
 import (
 	"testing"
 
+	"github.com/akash-network/node/app"
+	types "github.com/akash-network/node/types/v1beta1"
+	dtypesv1beta1 "github.com/akash-network/node/x/deployment/types/v1beta1"
+	dtypes "github.com/akash-network/node/x/deployment/types/v1beta2"
+	etypesv1beta1 "github.com/akash-network/node/x/escrow/types/v1beta1"
+	etypes "github.com/akash-network/node/x/escrow/types/v1beta2"
+	mtypesv1beta1 "github.com/akash-network/node/x/market/types/v1beta1"
+	mtypes "github.com/akash-network/node/x/market/types/v1beta2"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/ovrclk/akash/app"
-	types "github.com/ovrclk/akash/types/v1beta1"
-	dtypesv1beta1 "github.com/ovrclk/akash/x/deployment/types/v1beta1"
-	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
-	etypesv1beta1 "github.com/ovrclk/akash/x/escrow/types/v1beta1"
-	etypes "github.com/ovrclk/akash/x/escrow/types/v1beta2"
-	mtypesv1beta1 "github.com/ovrclk/akash/x/market/types/v1beta1"
-	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 	"github.com/stretchr/testify/require"
 )
 

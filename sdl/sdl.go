@@ -12,9 +12,9 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	manifest "github.com/ovrclk/akash/manifest/v2beta1"
-	"github.com/ovrclk/akash/validation"
-	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
+	manifest "github.com/akash-network/node/manifest/v2beta1"
+	"github.com/akash-network/node/validation"
+	dtypes "github.com/akash-network/node/x/deployment/types/v1beta2"
 )
 
 var (

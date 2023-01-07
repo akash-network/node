@@ -4,8 +4,8 @@ package util_test
 // import (
 // 	"testing"
 //
-// 	manifest "github.com/ovrclk/akash/manifest/v2beta1"
-// 	atypes "github.com/ovrclk/akash/types/v1beta2"
+// 	manifest "github.com/akash-network/node/manifest/v2beta1"
+// 	atypes "github.com/akash-network/node/types/v1beta2"
 // 	"github.com/stretchr/testify/require"
 //
 // 	"github.com/ovrclk/provider-services/cluster/util"

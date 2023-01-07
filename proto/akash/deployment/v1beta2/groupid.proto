@@ -3,7 +3,7 @@ package akash.deployment.v1beta2;
 
 import "gogoproto/gogo.proto";
 
-option go_package = "github.com/ovrclk/akash/x/deployment/types/v1beta2";
+option go_package = "github.com/akash-network/node/x/deployment/types/v1beta2";
 
 // GroupID stores owner, deployment sequence number and group sequence number
 message GroupID {

@@ -3,8 +3,8 @@ package v1beta1
 import (
 	"fmt"
 
+	"github.com/akash-network/node/validation/constants"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/ovrclk/akash/validation/constants"
 	"github.com/pkg/errors"
 )
 

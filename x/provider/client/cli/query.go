@@ -3,10 +3,10 @@ package cli
 import (
 	"context"
 
+	types "github.com/akash-network/node/x/provider/types/v1beta2"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	types "github.com/ovrclk/akash/x/provider/types/v1beta2"
 	"github.com/spf13/cobra"
 )
 

@@ -1,3 +1,4 @@
+project_name: node
 env:
   - GO111MODULE=on
   - CGO_ENABLED=1
@@ -101,7 +102,7 @@ universal_binaries:
       - akash-darwin-amd64
       - akash-darwin-arm64
     replace: true
-    name_template: "{{.ProjectName}}"
+    name_template: "akash"
 archives:
   - id: w/version
     builds:
@@ -110,7 +111,7 @@ archives:
       - akash-linux-arm64
       - akash-windows-amd64
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    wrap_in_directory: true
+    wrap_in_directory: false
     format: zip
     files:
       - none*
@@ -121,7 +122,7 @@ archives:
       - akash-linux-arm64
       - akash-windows-amd64
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
-    wrap_in_directory: true
+    wrap_in_directory: false
     format: zip
     files:
       - none*
@@ -141,9 +142,9 @@ dockers:
       - --label=org.opencontainers.image.created={{ time "2006-01-02T15:04:05Z07:00" }}
       - --label=org.opencontainers.image.revision={{ .FullCommit }}
     image_templates:
-      - 'ghcr.io/ovrclk/{{ .ProjectName }}:{{ .ShortCommit }}-amd64'
-      - 'ghcr.io/ovrclk/{{ .ProjectName }}:{{ .Version }}-amd64'
-      - 'ghcr.io/ovrclk/{{ .ProjectName }}:{{if eq .Env.STABLE "true"}}stable{{else}}latest{{end}}-amd64'
+      - 'ghcr.io/akash-network/{{ .ProjectName }}:{{ .ShortCommit }}-amd64'
+      - 'ghcr.io/akash-network/{{ .ProjectName }}:{{ .Version }}-amd64'
+      - 'ghcr.io/akash-network/{{ .ProjectName }}:{{if eq .Env.STABLE "true"}}stable{{else}}latest{{end}}-amd64'
   - dockerfile: _build/Dockerfile.akash
     use: buildx
     goarch: arm64
@@ -158,22 +159,22 @@ dockers:
       - --label=org.opencontainers.image.created={{ time "2006-01-02T15:04:05Z07:00" }}
       - --label=org.opencontainers.image.revision={{ .FullCommit }}
     image_templates:
-      - 'ghcr.io/ovrclk/{{ .ProjectName }}:{{ .ShortCommit }}-arm64'
-      - 'ghcr.io/ovrclk/{{ .ProjectName }}:{{ .Version }}-arm64'
-      - 'ghcr.io/ovrclk/{{ .ProjectName }}:{{if eq .Env.STABLE "true"}}stable{{else}}latest{{end}}-arm64'
+      - 'ghcr.io/akash-network/{{ .ProjectName }}:{{ .ShortCommit }}-arm64'
+      - 'ghcr.io/akash-network/{{ .ProjectName }}:{{ .Version }}-arm64'
+      - 'ghcr.io/akash-network/{{ .ProjectName }}:{{if eq .Env.STABLE "true"}}stable{{else}}latest{{end}}-arm64'
 docker_manifests:
-  - name_template: ghcr.io/ovrclk/{{ .ProjectName }}:{{ .ShortCommit }}
+  - name_template: ghcr.io/akash-network/{{ .ProjectName }}:{{ .ShortCommit }}
     image_templates:
-      - ghcr.io/ovrclk/{{ .ProjectName }}:{{ .ShortCommit }}-amd64
-      - ghcr.io/ovrclk/{{ .ProjectName }}:{{ .ShortCommit }}-arm64
-  - name_template: ghcr.io/ovrclk/{{ .ProjectName }}:{{ .Version }}
+      - ghcr.io/akash-network/{{ .ProjectName }}:{{ .ShortCommit }}-amd64
+      - ghcr.io/akash-network/{{ .ProjectName }}:{{ .ShortCommit }}-arm64
+  - name_template: ghcr.io/akash-network/{{ .ProjectName }}:{{ .Version }}
     image_templates:
-      - ghcr.io/ovrclk/{{ .ProjectName }}:{{ .Version }}-amd64
-      - ghcr.io/ovrclk/{{ .ProjectName }}:{{ .Version }}-arm64
-  - name_template: ghcr.io/ovrclk/{{ .ProjectName }}:latest
+      - ghcr.io/akash-network/{{ .ProjectName }}:{{ .Version }}-amd64
+      - ghcr.io/akash-network/{{ .ProjectName }}:{{ .Version }}-arm64
+  - name_template: ghcr.io/akash-network/{{ .ProjectName }}:latest
     image_templates:
-      - ghcr.io/ovrclk/{{ .ProjectName }}:latest-amd64
-      - ghcr.io/ovrclk/{{ .ProjectName }}:latest-arm64
+      - ghcr.io/akash-network/{{ .ProjectName }}:latest-amd64
+      - ghcr.io/akash-network/{{ .ProjectName }}:latest-arm64
 
 nfpms:
   - id: w/version
@@ -196,8 +197,8 @@ nfpms:
 
 release:
   github:
-    owner: ovrclk
-    name: akash
+    owner: akash-network
+    name: node
   prerelease: auto
   mode: replace
   draft: false

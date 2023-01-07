@@ -10,15 +10,16 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	sdkclient "github.com/cosmos/cosmos-sdk/client"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	certerrors "github.com/ovrclk/akash/x/cert/errors"
-	types "github.com/ovrclk/akash/x/cert/types/v1beta2"
 	"io"
 	"math/big"
 	"net"
 	"os"
 	"time"
+
+	certerrors "github.com/akash-network/node/x/cert/errors"
+	types "github.com/akash-network/node/x/cert/types/v1beta2"
+	sdkclient "github.com/cosmos/cosmos-sdk/client"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 var (

@@ -1,8 +1,8 @@
 package cli
 
 import (
+	types "github.com/akash-network/node/x/market/types/v1beta2"
 	"github.com/cosmos/cosmos-sdk/client"
-	types "github.com/ovrclk/akash/x/market/types/v1beta2"
 	"github.com/spf13/cobra"
 )
 

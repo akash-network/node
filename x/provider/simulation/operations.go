@@ -14,10 +14,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/simulation"
 	"github.com/pkg/errors"
 
-	appparams "github.com/ovrclk/akash/app/params"
-	"github.com/ovrclk/akash/x/provider/config"
-	"github.com/ovrclk/akash/x/provider/keeper"
-	types "github.com/ovrclk/akash/x/provider/types/v1beta2"
+	appparams "github.com/akash-network/node/app/params"
+	"github.com/akash-network/node/x/provider/config"
+	"github.com/akash-network/node/x/provider/keeper"
+	types "github.com/akash-network/node/x/provider/types/v1beta2"
 )
 
 // Simulation operation weights constants

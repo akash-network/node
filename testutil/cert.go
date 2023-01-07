@@ -17,10 +17,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ovrclk/akash/client/mocks"
-	types "github.com/ovrclk/akash/x/cert/types/v1beta2"
+	"github.com/akash-network/node/client/mocks"
+	types "github.com/akash-network/node/x/cert/types/v1beta2"
 
-	certutils "github.com/ovrclk/akash/x/cert/utils"
+	certutils "github.com/akash-network/node/x/cert/utils"
 )
 
 type TestCertificate struct {

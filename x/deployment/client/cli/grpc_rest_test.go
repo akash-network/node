@@ -13,10 +13,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkrest "github.com/cosmos/cosmos-sdk/types/rest"
 
-	"github.com/ovrclk/akash/testutil"
-	ccli "github.com/ovrclk/akash/x/cert/client/cli"
-	"github.com/ovrclk/akash/x/deployment/client/cli"
-	types "github.com/ovrclk/akash/x/deployment/types/v1beta2"
+	"github.com/akash-network/node/testutil"
+	ccli "github.com/akash-network/node/x/cert/client/cli"
+	"github.com/akash-network/node/x/deployment/client/cli"
+	types "github.com/akash-network/node/x/deployment/types/v1beta2"
 )
 
 type GRPCRestTestSuite struct {

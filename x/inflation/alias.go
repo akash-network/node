@@ -1,8 +1,8 @@
 package inflation
 
 import (
-	"github.com/ovrclk/akash/x/inflation/keeper"
-	types "github.com/ovrclk/akash/x/inflation/types/v1beta2"
+	"github.com/akash-network/node/x/inflation/keeper"
+	types "github.com/akash-network/node/x/inflation/types/v1beta2"
 )
 
 const (

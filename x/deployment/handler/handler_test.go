@@ -2,11 +2,12 @@ package handler_test
 
 import (
 	"crypto/sha256"
-	"github.com/ovrclk/akash/sdl"
 	"testing"
 	"time"
 
-	"github.com/ovrclk/akash/x/deployment/handler"
+	"github.com/akash-network/node/sdl"
+
+	"github.com/akash-network/node/x/deployment/handler"
 
 	sdktestdata "github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -16,12 +17,12 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ovrclk/akash/testutil"
-	"github.com/ovrclk/akash/testutil/state"
-	"github.com/ovrclk/akash/x/deployment/handler/mocks"
-	"github.com/ovrclk/akash/x/deployment/keeper"
-	types "github.com/ovrclk/akash/x/deployment/types/v1beta2"
-	mkeeper "github.com/ovrclk/akash/x/market/keeper"
+	"github.com/akash-network/node/testutil"
+	"github.com/akash-network/node/testutil/state"
+	"github.com/akash-network/node/x/deployment/handler/mocks"
+	"github.com/akash-network/node/x/deployment/keeper"
+	types "github.com/akash-network/node/x/deployment/types/v1beta2"
+	mkeeper "github.com/akash-network/node/x/market/keeper"
 )
 
 type testSuite struct {
