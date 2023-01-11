@@ -4,9 +4,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 
-	"github.com/ovrclk/akash/x/audit/keeper"
+	"github.com/akash-network/node/x/audit/keeper"
 
-	types "github.com/ovrclk/akash/x/audit/types/v1beta2"
+	types "github.com/akash-network/node/x/audit/types/v1beta2"
 )
 
 // ValidateGenesis does validation check of the Genesis and returns error incase of failure

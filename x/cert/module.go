@@ -20,12 +20,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/pkg/errors"
 
-	"github.com/ovrclk/akash/x/cert/client/cli"
-	"github.com/ovrclk/akash/x/cert/handler"
-	"github.com/ovrclk/akash/x/cert/keeper"
-	"github.com/ovrclk/akash/x/cert/simulation"
-	v1beta1types "github.com/ovrclk/akash/x/cert/types/v1beta1"
-	types "github.com/ovrclk/akash/x/cert/types/v1beta2"
+	"github.com/akash-network/node/x/cert/client/cli"
+	"github.com/akash-network/node/x/cert/handler"
+	"github.com/akash-network/node/x/cert/keeper"
+	"github.com/akash-network/node/x/cert/simulation"
+	v1beta1types "github.com/akash-network/node/x/cert/types/v1beta1"
+	types "github.com/akash-network/node/x/cert/types/v1beta2"
 )
 
 var (

@@ -35,10 +35,10 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	dbm "github.com/tendermint/tm-db"
 
-	"github.com/ovrclk/akash/app"
-	ecmd "github.com/ovrclk/akash/events/cmd"
-	"github.com/ovrclk/akash/sdkutil"
-	utilcli "github.com/ovrclk/akash/util/cli"
+	"github.com/akash-network/node/app"
+	ecmd "github.com/akash-network/node/events/cmd"
+	"github.com/akash-network/node/sdkutil"
+	utilcli "github.com/akash-network/node/util/cli"
 )
 
 // NewRootCmd creates a new root command for akash. It is called once in the

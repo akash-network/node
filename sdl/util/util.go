@@ -7,10 +7,10 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	manifest "github.com/ovrclk/akash/manifest/v2beta1"
+	manifest "github.com/akash-network/node/manifest/v2beta1"
 
-	atypes "github.com/ovrclk/akash/types/v1beta2"
-	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
+	atypes "github.com/akash-network/node/types/v1beta2"
+	mtypes "github.com/akash-network/node/x/market/types/v1beta2"
 
 	uuid "github.com/satori/go.uuid"
 )

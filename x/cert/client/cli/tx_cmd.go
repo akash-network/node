@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
+	types "github.com/akash-network/node/x/cert/types/v1beta2"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
-	types "github.com/ovrclk/akash/x/cert/types/v1beta2"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

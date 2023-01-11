@@ -1,9 +1,10 @@
 package metrics
 
 import (
-	"github.com/ovrclk/akash/util/runner"
-	"github.com/prometheus/client_golang/prometheus"
 	"time"
+
+	"github.com/akash-network/node/util/runner"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 const SuccessLabel = "success"

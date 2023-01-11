@@ -4,8 +4,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
 
-	"github.com/ovrclk/akash/x/deployment/keeper"
-	types "github.com/ovrclk/akash/x/deployment/types/v1beta2"
+	"github.com/akash-network/node/x/deployment/keeper"
+	types "github.com/akash-network/node/x/deployment/types/v1beta2"
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 

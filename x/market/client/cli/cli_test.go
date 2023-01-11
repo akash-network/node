@@ -16,14 +16,14 @@ import (
 	bankcli "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
-	"github.com/ovrclk/akash/testutil"
-	ccli "github.com/ovrclk/akash/x/cert/client/cli"
-	dcli "github.com/ovrclk/akash/x/deployment/client/cli"
-	dtypes "github.com/ovrclk/akash/x/deployment/types/v1beta2"
-	"github.com/ovrclk/akash/x/market/client/cli"
-	types "github.com/ovrclk/akash/x/market/types/v1beta2"
-	pcli "github.com/ovrclk/akash/x/provider/client/cli"
-	ptypes "github.com/ovrclk/akash/x/provider/types/v1beta2"
+	"github.com/akash-network/node/testutil"
+	ccli "github.com/akash-network/node/x/cert/client/cli"
+	dcli "github.com/akash-network/node/x/deployment/client/cli"
+	dtypes "github.com/akash-network/node/x/deployment/types/v1beta2"
+	"github.com/akash-network/node/x/market/client/cli"
+	types "github.com/akash-network/node/x/market/types/v1beta2"
+	pcli "github.com/akash-network/node/x/provider/client/cli"
+	ptypes "github.com/akash-network/node/x/provider/types/v1beta2"
 )
 
 type IntegrationTestSuite struct {

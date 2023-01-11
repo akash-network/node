@@ -12,12 +12,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/authz"
 	"github.com/pkg/errors"
 
-	"github.com/ovrclk/akash/cmd/common"
-	"github.com/ovrclk/akash/sdkutil"
-	"github.com/ovrclk/akash/sdl"
-	"github.com/ovrclk/akash/validation/constants"
-	cutils "github.com/ovrclk/akash/x/cert/utils"
-	types "github.com/ovrclk/akash/x/deployment/types/v1beta2"
+	"github.com/akash-network/node/cmd/common"
+	"github.com/akash-network/node/sdkutil"
+	"github.com/akash-network/node/sdl"
+	"github.com/akash-network/node/validation/constants"
+	cutils "github.com/akash-network/node/x/cert/utils"
+	types "github.com/akash-network/node/x/deployment/types/v1beta2"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"

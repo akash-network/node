@@ -3,7 +3,7 @@ package akash.base.v1beta2;
 
 import "gogoproto/gogo.proto";
 
-option go_package = "github.com/ovrclk/akash/types/v1beta2";
+option go_package = "github.com/akash-network/node/types/v1beta2";
 
 // Unit stores cpu, memory and storage metrics
 message ResourceValue {

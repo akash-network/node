@@ -1,12 +1,13 @@
 package keys_test
 
 import (
-	_ "github.com/ovrclk/akash/testutil"
-	"github.com/ovrclk/akash/x/market/keeper/keys"
-	types "github.com/ovrclk/akash/x/market/types/v1beta2"
+	"testing"
+
+	_ "github.com/akash-network/node/testutil"
+	"github.com/akash-network/node/x/market/keeper/keys"
+	types "github.com/akash-network/node/x/market/types/v1beta2"
 
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestKeysAndSecondaryKeysFilter(t *testing.T) {

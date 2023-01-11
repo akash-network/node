@@ -4,8 +4,8 @@ import (
 	"encoding/hex"
 	"strconv"
 
+	"github.com/akash-network/node/sdkutil"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/ovrclk/akash/sdkutil"
 )
 
 const (

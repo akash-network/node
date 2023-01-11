@@ -8,9 +8,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	"github.com/ovrclk/akash/sdkutil"
-	"github.com/ovrclk/akash/x/provider/config"
-	types "github.com/ovrclk/akash/x/provider/types/v1beta2"
+	"github.com/akash-network/node/sdkutil"
+	"github.com/akash-network/node/x/provider/config"
+	types "github.com/akash-network/node/x/provider/types/v1beta2"
 )
 
 // GetTxCmd returns the transaction commands for provider module

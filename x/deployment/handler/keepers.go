@@ -3,11 +3,11 @@ package handler
 import (
 	"time"
 
+	types "github.com/akash-network/node/x/deployment/types/v1beta2"
+	etypes "github.com/akash-network/node/x/escrow/types/v1beta2"
+	mtypes "github.com/akash-network/node/x/market/types/v1beta2"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
-	types "github.com/ovrclk/akash/x/deployment/types/v1beta2"
-	etypes "github.com/ovrclk/akash/x/escrow/types/v1beta2"
-	mtypes "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
 // MarketKeeper Interface includes market methods

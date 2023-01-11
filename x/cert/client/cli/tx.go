@@ -4,15 +4,16 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	sdkclient "github.com/cosmos/cosmos-sdk/client"
-	"github.com/ovrclk/akash/sdkutil"
-	certerrors "github.com/ovrclk/akash/x/cert/errors"
-	types "github.com/ovrclk/akash/x/cert/types/v1beta2"
-	"github.com/ovrclk/akash/x/cert/utils"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"math/big"
 	"time"
+
+	"github.com/akash-network/node/sdkutil"
+	certerrors "github.com/akash-network/node/x/cert/errors"
+	types "github.com/akash-network/node/x/cert/types/v1beta2"
+	"github.com/akash-network/node/x/cert/utils"
+	sdkclient "github.com/cosmos/cosmos-sdk/client"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 const (

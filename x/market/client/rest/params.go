@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"strconv"
 
+	drest "github.com/akash-network/node/x/deployment/client/rest"
+	"github.com/akash-network/node/x/market/query"
+	types "github.com/akash-network/node/x/market/types/v1beta2"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	drest "github.com/ovrclk/akash/x/deployment/client/rest"
-	"github.com/ovrclk/akash/x/market/query"
-	types "github.com/ovrclk/akash/x/market/types/v1beta2"
 )
 
 // OrderIDFromRequest returns OrderID from parsing request

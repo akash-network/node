@@ -5,7 +5,7 @@ package akash.deployment.v1beta2;
 import "gogoproto/gogo.proto";
 import "cosmos/base/v1beta1/coin.proto";
 
-option go_package = "github.com/ovrclk/akash/x/deployment/types/v1beta2";
+option go_package = "github.com/akash-network/node/x/deployment/types/v1beta2";
 
 // Params defines the parameters for the x/deployment package
 message Params {

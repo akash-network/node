@@ -3,8 +3,8 @@ package v1beta1
 import (
 	"fmt"
 
+	types "github.com/akash-network/node/types/v1beta1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	types "github.com/ovrclk/akash/types/v1beta1"
 	"github.com/pkg/errors"
 )
 

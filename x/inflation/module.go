@@ -11,9 +11,9 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 
-	"github.com/ovrclk/akash/x/inflation/keeper"
-	"github.com/ovrclk/akash/x/inflation/simulation"
-	types "github.com/ovrclk/akash/x/inflation/types/v1beta2"
+	"github.com/akash-network/node/x/inflation/keeper"
+	"github.com/akash-network/node/x/inflation/simulation"
+	types "github.com/akash-network/node/x/inflation/types/v1beta2"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
