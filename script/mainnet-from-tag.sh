@@ -9,4 +9,4 @@ if [[ $# -ne 1 ]]; then
 	exit 1
 fi
 
-[[ $(($("${SCRIPT_DIR}"/semver.sh get minor "$1") % 2)) -eq 0 ]] && echo true || echo false
+[[ $(($("${SCRIPT_DIR}"/semver.sh get minor "$1") % 2)) -eq 0 ]] && exit 0 && exit 1
