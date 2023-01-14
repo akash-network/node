@@ -27,8 +27,8 @@ fi
 to_tag=$1
 
 # s1
-is_mainnet=$("${SCRIPT_DIR}"/mainnet-from-tag.sh "$to_tag")
-if [[ $is_mainnet == false ]]; then
+# shellcheck disable=SC1073
+if ! "${SCRIPT_DIR}"/mainnet-from-tag.sh "$to_tag" ; then
 	version_rel="^[v|V]?(0|[1-9][0-9]*)\\.(\\d*[13579])\\.(0|[1-9][0-9]*)$"
 	version_prerel="^[v|V]?(0|[1-9][0-9]*)\\.(\\d*[13579])\\.(0|[1-9][0-9]*)(\\-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$"
 else

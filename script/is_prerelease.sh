@@ -9,4 +9,4 @@ if [[ $# -ne 1 ]]; then
 	exit 1
 fi
 
-[[ -n $("${SCRIPT_DIR}"/semver.sh get prerel "$1") ]] && echo true || echo false
+[[ -n $("${SCRIPT_DIR}"/semver.sh get prerel "$1") ]] && exit 0 || exit 1

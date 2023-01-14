@@ -32,8 +32,5 @@ jobs:
         run: echo "RELEASE_TAG=v$(./script/semver.sh bump patch $(git describe --tags --abbrev=0))" >> $GITHUB_ENV
       - name: git tag
         run: git tag -a ${{ env.RELEASE_TAG }} -m ${{ env.RELEASE_TAG }}
-      - name: detect network from tag
-        run: echo "MAINNET=$(./script/mainnet-from-tag.sh ${{ env.RELEASE_TAG }})" >> $GITHUB_ENV
-      - run: echo "Building for MAINNET=${{ env.MAINNET }}"
       - name: release dry-run
         run: make release
