@@ -27,9 +27,6 @@ jobs:
         uses: docker/setup-buildx-action@v2
       - name: release version
         run: echo "RELEASE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
-      - name: detect network from release
-        run: echo "MAINNET=$(./script/mainnet-from-tag.sh ${{ env.RELEASE_TAG }} && echo 'true' && echo 'false')" >> $GITHUB_ENV
-      - run: echo "Building for MAINNET=${{ env.MAINNET }}"
       - if: (github.ref == 'refs/heads/master') || (github.ref == 'refs/heads/mainnet/main')
         name: release dry-run GORELEASER_SKIP_VALIDATE=true
         run: make release-dry-run GORELEASER_SKIP_VALIDATE=true
