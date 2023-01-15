@@ -39,16 +39,8 @@ GORELEASER_STRIP_FLAGS ?=
 
 ifeq ($(IS_MAINNET), true)
 	ifeq ($(IS_PREREL), false)
-		GORELEASER_HOMEBREW_NAME   := akash
-		GORELEASER_HOMEBREW_CUSTOM :=
 		IS_STABLE                  := true
-	else
-		GORELEASER_HOMEBREW_NAME   := akash-test
-		GORELEASER_HOMEBREW_CUSTOM := keg_only :unneeded, \"This is testnet release. Run brew install ovrclk/tap/akash to install mainnet version\"
 	endif
-else
-	GORELEASER_HOMEBREW_NAME       := akash-edge
-	GORELEASER_HOMEBREW_CUSTOM     := keg_only :unneeded, \"This is edgenet release. Run brew install ovrclk/tap/akash to install mainnet version\"
 endif
 
 GORELEASER_BUILD_VARS := \
