@@ -91,8 +91,6 @@ release: modvendor gen-changelog
 		-e BUILD_VARS="$(GORELEASER_BUILD_VARS)" \
 		-e STRIP_FLAGS="$(GORELEASER_STRIP_FLAGS)" \
 		-e LINKMODE="$(GO_LINKMODE)" \
-		-e HOMEBREW_NAME="$(GORELEASER_HOMEBREW_NAME)" \
-		-e HOMEBREW_CUSTOM="$(GORELEASER_HOMEBREW_CUSTOM)" \
 		-e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
 		-e GORELEASER_CURRENT_TAG="$(RELEASE_TAG)" \
 		-v /var/run/docker.sock:/var/run/docker.sock \
