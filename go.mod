@@ -147,13 +147,13 @@ replace (
 
 	// dragonberry path
 	github.com/confio/ics23/go => github.com/cosmos/cosmos-sdk/ics23/go v0.8.0
-	github.com/cosmos/ledger-cosmos-go => github.com/ovrclk/ledger-go/cosmos v0.14.0
+	github.com/cosmos/ledger-cosmos-go => github.com/akash-network/ledger-go/cosmos v0.14.0
 
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
-	github.com/tendermint/tendermint => github.com/ovrclk/tendermint v0.34.21-akash.2
+	github.com/tendermint/tendermint => github.com/akash-network/tendermint v0.34.21-akash.2
 
 	github.com/zondax/hid => github.com/troian/hid v0.11.0
-	github.com/zondax/ledger-go => github.com/ovrclk/ledger-go v0.14.0
+	github.com/zondax/ledger-go => github.com/akash-network/ledger-go v0.14.0
 
 	google.golang.org/grpc => google.golang.org/grpc v1.33.2
 )

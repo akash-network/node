@@ -3,16 +3,16 @@ version: "2.0"
 
 services:
   web:
-    image: quay.io/ovrclk/demo-app
+    image: ghcr.io/akash-network/demo-app
     expose:
       - port: 80
         to:
           - global: true
             ip: "meow"
         accept:
-          - test.localhost         
+          - test.localhost
   anotherweb:
-    image: quay.io/ovrclk/demo-app
+    image: ghcr.io/akash-network/demo-app
     expose:
       - port: 80
         to:

@@ -363,7 +363,7 @@ func NewApp(
 			crisis.NewAppModule(&app.keeper.crisis, skipGenesisInvariants),
 			gov.NewAppModule(appCodec, app.keeper.gov, app.keeper.acct, app.keeper.bank),
 			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct),
-			// todo ovrclk/engineering#603
+			// todo akash-network/support#4
 			// mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct, nil),
 			slashing.NewAppModule(appCodec, app.keeper.slashing, app.keeper.acct, app.keeper.bank, app.keeper.staking),
 			distr.NewAppModule(appCodec, app.keeper.distr, app.keeper.acct, app.keeper.bank, app.keeper.staking),
@@ -410,7 +410,7 @@ func NewApp(
 			capability.NewAppModule(appCodec, *app.keeper.cap),
 			gov.NewAppModule(appCodec, app.keeper.gov, app.keeper.acct, app.keeper.bank),
 			mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct),
-			// todo ovrclk/engineering#603
+			// todo akash-network/support#4
 			// mint.NewAppModule(appCodec, app.keeper.mint, app.keeper.acct, nil),
 			staking.NewAppModule(appCodec, app.keeper.staking, app.keeper.acct, app.keeper.bank),
 			distr.NewAppModule(appCodec, app.keeper.distr, app.keeper.acct, app.keeper.bank, app.keeper.staking),

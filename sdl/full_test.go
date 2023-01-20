@@ -11,7 +11,7 @@ func TestFull(t *testing.T) {
 version: "2.0"
 services:
   web:
-    image: quay.io/ovrclk/demo-app
+    image: ghcr.io/akash-network/demo-app
     expose:
     - port: 80
       as: 80
