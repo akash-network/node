@@ -19,8 +19,6 @@ DOCKER_CLANG          := $(DOCKER_RUN) tendermintdev/docker-build-proto
 GOLANGCI_LINT_RUN     := $(GOLANGCI_LINT) run
 LINT                   = $(GOLANGCI_LINT_RUN) ./... --disable-all --deadline=5m --enable
 
-TEST_DOCKER_REPO      := ovrclk/akashtest
-
 GORELEASER_CONFIG     ?= .goreleaser.yaml
 
 GIT_HEAD_COMMIT_LONG  := $(shell git log -1 --format='%H')

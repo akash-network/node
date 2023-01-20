@@ -276,7 +276,7 @@ The Members Team are contributors who are well-known to the community with a tra
 Members Team Perks:
 * access to a private Slack channel
 * profile posted on the Team page of the Akash website
-* membership of the GitHub organizations ovrclk
+* membership of the GitHub organizations Akash-Network
 
 Upon request and subject to availability:
 * 1:1 coaching & mentorship

@@ -2,7 +2,7 @@
 
 ![tests](https://github.com/akash-network/node/workflows/tests/badge.svg)
 ![simulations](https://github.com/akash-network/node/workflows/simulation-tests/badge.svg)
-[![codecov](https://codecov.io/github/ovrclk/akash/coverage.svg?branch=master)](https://codecov.io/github/ovrclk/akash?branch=master)
+[![codecov](https://codecov.io/github/akash-network/node/coverage.svg?branch=master)](https://codecov.io/github/akash-network/node?branch=master)
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/akash-network/node)](https://goreportcard.com/report/github.com/akash-network/node)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
@@ -40,7 +40,7 @@ The easiest way to get started with Akash is by following the [Quick Start Guide
 ## Official blog and documentation
 
 - Read the documentation: [docs.akash.network](https://docs.akash.network)
-- Send a PR or raise an issue for the docs [ovrclk/docs](https://github.com/ovrclk/docs)
+- Send a PR or raise an issue for the docs [akash-network/docs](https://github.com/akash-network/docs)
 - Read latest news and tutorials on the [Official Blog](https://blog.akash.network)
 
 # Supported platforms
@@ -59,20 +59,20 @@ Windows | amd64 | ⚠️ **Experimental**
 The [latest](https://github.com/akash-network/node/releases/latest) binary release can be installed with [Homebrew](https://brew.sh/):
 
 ```sh
-$ brew tap ovrclk/tap
+$ brew tap akash-network/tap
 $ brew install akash
 ```
 
 Or [GoDownloader](https://github.com/goreleaser/godownloader):
 
 ```sh
-$ curl -sSfL https://raw.githubusercontent.com/ovrclk/akash/master/godownloader.sh | sh
+$ curl -sSfL https://raw.githubusercontent.com/akash-network/node/master/install.sh | sh
 ```
 
 Or install a specific version with [GoDownloader](https://github.com/goreleaser/godownloader)
 
 ```sh
-$ curl -sSfL https://raw.githubusercontent.com/ovrclk/akash/master/godownloader.sh | sh -s -- v0.7.8
+$ curl -sSfL https://raw.githubusercontent.com/akash-network/node/master/install | sh -s -- v0.22.0
 ```
 
 # Roadmap and contributing

@@ -2,7 +2,7 @@
 version: "2.0"
 services:
   web:
-    image: ovrclk/e2e-test
+    image: ghcr.io/akash-network/demo-app
     expose:
       - port: 8080
         as: 80
@@ -13,7 +13,7 @@ services:
     params:
       storage:
         data:
-          mount: /var/lib/e2e-test
+          mount: /var/lib/demo-app
 profiles:
   compute:
     web:

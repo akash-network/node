@@ -24,7 +24,7 @@ sudo apt install -y jq curl wget build-essentials ca-certificates npm direnv gcc
 ```
 
 ## Direnv
-Both [akash](https://github.com/akash-network/node) [provider-services](https://github.com/ovrclk/provider-services) are extensively using `direnv` to setup and seamlessly update environment
+Both [akash](https://github.com/akash-network/node) [provider-services](https://github.com/akash-network/provider) are extensively using `direnv` to setup and seamlessly update environment
 while traversing across various directories. It is especially handy for running `provider-services` examples.
 
 You may enable auto allow by whitelisting specific directories in `direnv.toml`.

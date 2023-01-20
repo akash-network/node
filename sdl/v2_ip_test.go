@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"testing"
 
-	types "github.com/akash-network/node/types/v1beta2"
 	"github.com/stretchr/testify/require"
+
+	types "github.com/akash-network/node/types/v1beta2"
 )
 
 func findFirstIPEndpoint(t *testing.T, endpoints []types.Endpoint) types.Endpoint {
@@ -176,7 +177,7 @@ version: "2.0"
 
 services:
   web:
-    image: quay.io/ovrclk/demo-app
+    image: ghcr.io/akash-network/demo-app
     expose:
       - port: 80
         to:
