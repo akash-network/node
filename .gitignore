@@ -26,3 +26,7 @@ coverage.txt
 /.docker-creds
 
 /tmp-swagger-gen
+
+# go workspaces
+go.work
+go.work.sum
