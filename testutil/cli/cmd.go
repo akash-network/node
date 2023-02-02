@@ -38,7 +38,7 @@ func ExecTestCLICmd(ctx context.Context, clientCtx client.Context, cmd *cobra.Co
 	return out, nil
 }
 
-// this function is a gentle response to inappropriate approach of cli test utils
+// ValidateTxSuccessful is a gentle response to inappropriate approach of cli test utils
 // send transaction may fail and calling cli routine won't know about it
 func ValidateTxSuccessful(t testing.TB, cctx client.Context, data []byte) {
 	t.Helper()

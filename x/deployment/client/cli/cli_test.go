@@ -8,7 +8,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	bankcli "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
+	banktestutil "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	clitestutil "github.com/akash-network/node/testutil/cli"
@@ -19,18 +19,17 @@ import (
 	"github.com/cosmos/cosmos-sdk/testutil/network"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+
 	"github.com/akash-network/node/testutil"
 	ccli "github.com/akash-network/node/x/cert/client/cli"
 	"github.com/akash-network/node/x/deployment/client/cli"
-	types "github.com/akash-network/node/x/deployment/types/v1beta2"
 )
 
 type IntegrationTestSuite struct {
 	suite.Suite
-
-	cfg     network.Config
-	network *network.Network
-
+	cfg       network.Config
+	network   *network.Network
 	keyFunder keyring.Info
 }
 
@@ -56,7 +55,8 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	// Initialize funder keys with coins
 	s.keyFunder, err = val.ClientCtx.Keyring.Key("keyFoo")
 	s.Require().NoError(err)
-	res, err := bankcli.MsgSendExec(
+
+	res, err := banktestutil.MsgSendExec(
 		val.ClientCtx,
 		val.Address,
 		s.keyFunder.GetAddress(),
@@ -280,17 +280,6 @@ func (s *IntegrationTestSuite) TestGroup() {
 	s.Require().Equal(types.GroupClosed, group.State)
 }
 
-func (s *IntegrationTestSuite) getAccountBalance(address sdk.AccAddress) sdk.Int {
-	cctxJSON := s.network.Validators[0].ClientCtx.WithOutputFormat("json")
-	res, err := bankcli.QueryBalancesExec(cctxJSON, address)
-	s.Require().NoError(err)
-	var balRes banktypes.QueryAllBalancesResponse
-	err = cctxJSON.Codec.UnmarshalJSON(res.Bytes(), &balRes)
-	s.Require().NoError(err)
-
-	return balRes.Balances.AmountOf(s.cfg.BondDenom)
-}
-
 func (s *IntegrationTestSuite) TestFundedDeployment() {
 	// setup
 	val := s.network.Validators[0]
@@ -313,7 +302,6 @@ func (s *IntegrationTestSuite) TestFundedDeployment() {
 		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 		fmt.Sprintf("--dseq=%v", deploymentID.DSeq),
 		fmt.Sprintf("--depositor-account=%s", s.keyFunder.GetAddress().String()),
 	)
@@ -339,6 +327,8 @@ func (s *IntegrationTestSuite) TestFundedDeployment() {
 	clitestutil.ValidateTxSuccessful(s.T(), val.ClientCtx, res.Bytes())
 	prevFunderBal = s.getAccountBalance(s.keyFunder.GetAddress())
 
+	ownerBal := s.getAccountBalance(val.Address)
+
 	// Creating deployment paid by funder's account should work now
 	res, err = cli.TxCreateDeploymentExec(
 		val.ClientCtx,
@@ -359,7 +349,11 @@ func (s *IntegrationTestSuite) TestFundedDeployment() {
 	curFunderBal := s.getAccountBalance(s.keyFunder.GetAddress())
 	s.Require().Equal(prevFunderBal.Sub(types.DefaultDeploymentMinDeposit.Amount), curFunderBal)
 	prevFunderBal = curFunderBal
-	prevOwnerBal := s.getAccountBalance(val.Address)
+
+	// owner's balance should be deducted correctly
+	curOwnerBal := s.getAccountBalance(val.Address)
+	s.Require().Equal(ownerBal.SubRaw(20), curOwnerBal)
+	ownerBal = curOwnerBal
 
 	// depositing additional funds from the owner's account should work
 	res, err = cli.TxDepositDeploymentExec(
@@ -377,9 +371,10 @@ func (s *IntegrationTestSuite) TestFundedDeployment() {
 	clitestutil.ValidateTxSuccessful(s.T(), val.ClientCtx, res.Bytes())
 
 	// owner's balance should be deducted correctly
-	curOwnerBal := s.getAccountBalance(val.Address)
-	s.Require().Equal(prevOwnerBal.Sub(types.DefaultDeploymentMinDeposit.Amount).SubRaw(20), curOwnerBal)
-	prevOwnerBal = curOwnerBal
+	curOwnerBal = s.getAccountBalance(val.Address)
+	s.Require().Equal(ownerBal.Sub(types.DefaultDeploymentMinDeposit.Amount).SubRaw(20), curOwnerBal)
+	// s.Require().Equal(prevOwnerBal.Sub(types.DefaultDeploymentMinDeposit.Amount), curOwnerBal)
+	ownerBal = curOwnerBal
 
 	// depositing additional funds from the funder's account should work
 	res, err = cli.TxDepositDeploymentExec(
@@ -401,7 +396,6 @@ func (s *IntegrationTestSuite) TestFundedDeployment() {
 	curFunderBal = s.getAccountBalance(s.keyFunder.GetAddress())
 	s.Require().Equal(prevFunderBal.Sub(types.DefaultDeploymentMinDeposit.Amount), curFunderBal)
 	prevFunderBal = curFunderBal
-	// prevOwnerBal = s.getAccountBalance(val.Address)
 
 	// revoke the authorization given to the deployment owner by the funder
 	res, err = cli.TxRevokeAuthorizationExec(
@@ -436,7 +430,7 @@ func (s *IntegrationTestSuite) TestFundedDeployment() {
 
 	// funder's balance shouldn't be deducted
 	s.Require().Equal(prevFunderBal, s.getAccountBalance(s.keyFunder.GetAddress()))
-	prevOwnerBal = s.getAccountBalance(val.Address)
+	ownerBal = s.getAccountBalance(val.Address)
 
 	// closing the deployment should return the funds and balance in escrow to the funder and
 	// owner's account
@@ -453,9 +447,19 @@ func (s *IntegrationTestSuite) TestFundedDeployment() {
 	s.Require().NoError(s.network.WaitForNextBlock())
 	clitestutil.ValidateTxSuccessful(s.T(), val.ClientCtx, res.Bytes())
 	s.Require().Equal(prevFunderBal.Add(types.DefaultDeploymentMinDeposit.Amount.MulRaw(2)), s.getAccountBalance(s.keyFunder.GetAddress()))
-	s.Require().Equal(prevOwnerBal.Add(types.DefaultDeploymentMinDeposit.Amount).SubRaw(20), s.getAccountBalance(val.Address))
+	s.Require().Equal(ownerBal.Add(types.DefaultDeploymentMinDeposit.Amount).SubRaw(20), s.getAccountBalance(val.Address))
 }
 
 func TestIntegrationTestSuite(t *testing.T) {
 	suite.Run(t, new(IntegrationTestSuite))
+}
+
+func (s *IntegrationTestSuite) getAccountBalance(address sdk.AccAddress) sdk.Int {
+	cctxJSON := s.network.Validators[0].ClientCtx.WithOutputFormat("json")
+	res, err := banktestutil.QueryBalancesExec(cctxJSON, address)
+	s.Require().NoError(err)
+	var balRes banktypes.QueryAllBalancesResponse
+	err = cctxJSON.Codec.UnmarshalJSON(res.Bytes(), &balRes)
+	s.Require().NoError(err)
+	return balRes.Balances.AmountOf(s.cfg.BondDenom)
 }

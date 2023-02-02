@@ -14,9 +14,10 @@ import (
 	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 
+	types "github.com/akash-network/akash-api/go/node/market/v1beta3"
+
 	appparams "github.com/akash-network/node/app/params"
 	keepers "github.com/akash-network/node/x/market/handler"
-	types "github.com/akash-network/node/x/market/types/v1beta2"
 )
 
 // Simulation operation weights constants

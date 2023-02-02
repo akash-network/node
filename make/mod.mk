@@ -6,7 +6,7 @@ deps-install:
 
 .PHONY: deps-tidy
 deps-tidy:
-	$(GO) mod tidy -compat=1.17
+	$(GO) mod tidy
 
 .PHONY: deps-vendor
 deps-vendor:
@@ -18,13 +18,4 @@ modsensure: deps-tidy deps-vendor
 .PHONY: modvendor
 modvendor: $(MODVENDOR) modsensure
 	@echo "vendoring non-go files..."
-	$(MODVENDOR) -copy="**/*.proto" -include=\
-github.com/cosmos/cosmos-sdk/proto,\
-github.com/cosmos/cosmos-sdk/third_party/proto,\
-github.com/cosmos/ibc-go/v3/proto
-	$(MODVENDOR) -copy="**/*.h **/*.c" -include=\
-github.com/zondax/hid
-	$(MODVENDOR) -copy="**/swagger.yaml" -include=\
-github.com/cosmos/cosmos-sdk/client/docs
-	$(MODVENDOR) -copy="**/*.go.txt **/*.sh" -include=\
-k8s.io/code-generator
+	$(MODVENDOR) -copy="**/*.h **/*.c" -include=github.com/zondax/hid

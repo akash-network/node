@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
 
-	"github.com/akash-network/node/types/unit"
+	"github.com/akash-network/akash-api/go/node/types/unit"
 )
 
 func TestCPUQuantity(t *testing.T) {

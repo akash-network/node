@@ -3,12 +3,14 @@ package inflation
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"github.com/akash-network/node/x/inflation/keeper"
-	types "github.com/akash-network/node/x/inflation/types/v1beta2"
 	abci "github.com/tendermint/tendermint/abci/types"
+
+	types "github.com/akash-network/akash-api/go/node/inflation/v1beta3"
+
+	"github.com/akash-network/node/x/inflation/keeper"
 )
 
-// ValidateGenesis does validation check of the Genesis and return error incase of failure
+// ValidateGenesis does validation check of the Genesis and return error in case of failure
 func ValidateGenesis(data *types.GenesisState) error {
 	return data.Params.Validate()
 }

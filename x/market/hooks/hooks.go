@@ -1,10 +1,12 @@
 package hooks
 
 import (
-	dtypes "github.com/akash-network/node/x/deployment/types/v1beta2"
-	etypes "github.com/akash-network/node/x/escrow/types/v1beta2"
-	mtypes "github.com/akash-network/node/x/market/types/v1beta2"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+	etypes "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
+
+	mtypes "github.com/akash-network/akash-api/go/node/market/v1beta3"
 )
 
 type Hooks interface {

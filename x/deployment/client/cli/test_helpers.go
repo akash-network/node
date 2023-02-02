@@ -9,8 +9,9 @@ import (
 	clitestutil "github.com/cosmos/cosmos-sdk/testutil/cli"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+
 	testutilcli "github.com/akash-network/node/testutil/cli"
-	types "github.com/akash-network/node/x/deployment/types/v1beta2"
 )
 
 const key string = types.StoreKey

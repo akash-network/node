@@ -4,9 +4,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
+	types "github.com/akash-network/akash-api/go/node/provider/v1beta3"
+
 	mkeeper "github.com/akash-network/node/x/market/keeper"
 	"github.com/akash-network/node/x/provider/keeper"
-	types "github.com/akash-network/node/x/provider/types/v1beta2"
 )
 
 // NewHandler returns a handler for "provider" type messages.

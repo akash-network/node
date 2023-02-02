@@ -3,15 +3,14 @@ package sdl
 import (
 	"testing"
 
-	"github.com/akash-network/node/validation"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 
-	manifest "github.com/akash-network/node/manifest/v2beta1"
-	"github.com/akash-network/node/types/unit"
-	atypes "github.com/akash-network/node/types/v1beta2"
+	manifest "github.com/akash-network/akash-api/go/manifest/v2beta2"
+
+	"github.com/akash-network/akash-api/go/node/types/unit"
+	atypes "github.com/akash-network/akash-api/go/node/types/v1beta3"
 )
 
 func TestV2Expose(t *testing.T) {
@@ -32,9 +31,113 @@ func TestV2Expose(t *testing.T) {
 
 const (
 	randCPU     uint64 = 100
+	randGPU     uint64 = 1
 	randMemory  uint64 = 128 * unit.Mi
 	randStorage uint64 = 1 * unit.Gi
 )
+
+func Test_v1_Parse_simple_gpu(t *testing.T) {
+	sdl, err := ReadFile("./_testdata/simple-gpu.yaml")
+	require.NoError(t, err)
+
+	groups, err := sdl.DeploymentGroups()
+	require.NoError(t, err)
+	assert.Len(t, groups, 1)
+
+	group := groups[0]
+	assert.Len(t, group.GetResources(), 1)
+
+	assert.Equal(t, atypes.Attribute{
+		Key:   "region",
+		Value: "us-west",
+	}, group.Requirements.Attributes[0])
+
+	assert.Len(t, group.GetResources(), 1)
+
+	assert.Equal(t, atypes.Resources{
+		Count: 2,
+		Resources: atypes.ResourceUnits{
+			CPU: &atypes.CPU{
+				Units: atypes.NewResourceValue(randCPU),
+			},
+			GPU: &atypes.GPU{
+				Units: atypes.NewResourceValue(randGPU),
+			},
+			Memory: &atypes.Memory{
+				Quantity: atypes.NewResourceValue(randMemory),
+			},
+			Storage: atypes.Volumes{
+				{
+					Name:     "default",
+					Quantity: atypes.NewResourceValue(randStorage),
+				},
+			},
+			Endpoints: []atypes.Endpoint{
+				{
+					Kind: atypes.Endpoint_SHARED_HTTP,
+				},
+				{
+					Kind: atypes.Endpoint_RANDOM_PORT,
+				},
+			},
+		},
+	}, group.GetResources()[0])
+
+	mani, err := sdl.Manifest()
+	require.NoError(t, err)
+
+	assert.Len(t, mani.GetGroups(), 1)
+
+	expectedHosts := make([]string, 1)
+	expectedHosts[0] = "ahostname.com"
+	assert.Equal(t, manifest.Group{
+		Name: "westcoast",
+		Services: []manifest.Service{
+			{
+				Name:  "web",
+				Image: "nginx",
+				Resources: atypes.ResourceUnits{
+					CPU: &atypes.CPU{
+						Units: atypes.NewResourceValue(100),
+					},
+					GPU: &atypes.GPU{
+						Units: atypes.NewResourceValue(1),
+					},
+					Memory: &atypes.Memory{
+						Quantity: atypes.NewResourceValue(128 * unit.Mi),
+					},
+					Storage: atypes.Volumes{
+						{
+							Name:     "default",
+							Quantity: atypes.NewResourceValue(1 * unit.Gi),
+						},
+					},
+				},
+				Count: 2,
+				Expose: []manifest.ServiceExpose{
+					{Port: 80, Global: true, Proto: manifest.TCP, Hosts: expectedHosts,
+						HTTPOptions: manifest.ServiceExposeHTTPOptions{
+							MaxBodySize: 1048576,
+							ReadTimeout: 60000,
+							SendTimeout: 60000,
+							NextTries:   3,
+							NextTimeout: 0,
+							NextCases:   []string{"error", "timeout"},
+						}},
+					{Port: 12345, Global: true, Proto: manifest.UDP,
+						HTTPOptions: manifest.ServiceExposeHTTPOptions{
+							MaxBodySize: 1048576,
+							ReadTimeout: 60000,
+							SendTimeout: 60000,
+							NextTries:   3,
+							NextTimeout: 0,
+							NextCases:   []string{"error", "timeout"},
+						}},
+				},
+			},
+		},
+	}, mani.GetGroups()[0])
+}
 
 func TestV2Parse_Deployments(t *testing.T) {
 	sdl1, err := ReadFile("../x/deployment/testdata/deployment.yaml")
@@ -75,7 +178,7 @@ func Test_V2_Cross_Validates(t *testing.T) {
 	// following is ture
 	// 1. Cross validation logic is wrong
 	// 2. The DeploymentGroups() & Manifest() code do not agree with one another
-	err = validation.ValidateManifestWithGroupSpecs(&m, dgroups)
+	err = manifest.ValidateManifestWithGroupSpecs(&m, dgroups)
 	require.NoError(t, err)
 
 	// Repeat the same test with another file
@@ -88,7 +191,7 @@ func Test_V2_Cross_Validates(t *testing.T) {
 
 	// This is a single document producing both the manifest & deployment groups
 	// These should always agree with each other
-	err = validation.ValidateManifestWithGroupSpecs(&m, dgroups)
+	err = manifest.ValidateManifestWithGroupSpecs(&m, dgroups)
 	require.NoError(t, err)
 
 	// Repeat the same test with another file
@@ -101,7 +204,7 @@ func Test_V2_Cross_Validates(t *testing.T) {
 
 	// This is a single document producing both the manifest & deployment groups
 	// These should always agree with each other
-	err = validation.ValidateManifestWithGroupSpecs(&m, dgroups)
+	err = manifest.ValidateManifestWithGroupSpecs(&m, dgroups)
 	require.NoError(t, err)
 
 }

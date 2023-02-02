@@ -1,10 +1,11 @@
 package keeper
 
 import (
-	types "github.com/akash-network/node/x/escrow/types/v1beta2"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
+
+	types "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
 )
 
 type AccountHook func(sdk.Context, types.Account)

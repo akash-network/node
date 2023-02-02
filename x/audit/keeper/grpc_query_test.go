@@ -10,10 +10,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	types "github.com/akash-network/akash-api/go/node/audit/v1beta3"
+
 	"github.com/akash-network/node/app"
 	"github.com/akash-network/node/testutil"
 	"github.com/akash-network/node/x/audit/keeper"
-	types "github.com/akash-network/node/x/audit/types/v1beta2"
 )
 
 type grpcTestSuite struct {

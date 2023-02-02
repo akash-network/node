@@ -22,22 +22,23 @@ import (
 	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 
+	audittypes "github.com/akash-network/akash-api/go/node/audit/v1beta3"
+	certtypes "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+	deploymenttypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+	escrowtypes "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
+	inflationtypes "github.com/akash-network/akash-api/go/node/inflation/v1beta3"
+	markettypes "github.com/akash-network/akash-api/go/node/market/v1beta3"
+	providertypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
+
 	"github.com/akash-network/node/x/audit"
-	audittypes "github.com/akash-network/node/x/audit/types/v1beta2"
 	"github.com/akash-network/node/x/cert"
-	certtypes "github.com/akash-network/node/x/cert/types/v1beta2"
 	"github.com/akash-network/node/x/deployment"
-	deploymenttypes "github.com/akash-network/node/x/deployment/types/v1beta2"
 	"github.com/akash-network/node/x/escrow"
 	ekeeper "github.com/akash-network/node/x/escrow/keeper"
-	escrowtypes "github.com/akash-network/node/x/escrow/types/v1beta2"
 	"github.com/akash-network/node/x/inflation"
-	inflationtypes "github.com/akash-network/node/x/inflation/types/v1beta2"
 	"github.com/akash-network/node/x/market"
 	mhooks "github.com/akash-network/node/x/market/hooks"
-	markettypes "github.com/akash-network/node/x/market/types/v1beta2"
 	"github.com/akash-network/node/x/provider"
-	providertypes "github.com/akash-network/node/x/provider/types/v1beta2"
 )
 
 func akashModuleBasics() []module.AppModuleBasic {
@@ -72,7 +73,6 @@ func akashSubspaces(k paramskeeper.Keeper) paramskeeper.Keeper {
 }
 
 func (app *AkashApp) setAkashKeepers() {
-
 	app.keeper.escrow = ekeeper.NewKeeper(
 		app.appCodec,
 		app.keys[escrow.StoreKey],
@@ -122,7 +122,6 @@ func (app *AkashApp) setAkashKeepers() {
 
 func (app *AkashApp) akashAppModules() []module.AppModule {
 	return []module.AppModule{
-
 		escrow.NewAppModule(
 			app.appCodec,
 			app.keeper.escrow,
@@ -248,7 +247,6 @@ func (app *AkashApp) akashInitGenesisOrder() []string {
 		minttypes.ModuleName,
 		crisistypes.ModuleName,
 		ibchost.ModuleName,
-		genutiltypes.ModuleName,
 		evidencetypes.ModuleName,
 		transfertypes.ModuleName,
 		cert.ModuleName,
@@ -257,6 +255,7 @@ func (app *AkashApp) akashInitGenesisOrder() []string {
 		provider.ModuleName,
 		market.ModuleName,
 		inflation.ModuleName,
+		genutiltypes.ModuleName,
 	}
 }
 

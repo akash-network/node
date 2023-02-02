@@ -8,9 +8,10 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	"github.com/akash-network/node/sdkutil"
+	types "github.com/akash-network/akash-api/go/node/provider/v1beta3"
+
+	"github.com/akash-network/node/client/broadcaster"
 	"github.com/akash-network/node/x/provider/config"
-	types "github.com/akash-network/node/x/provider/types/v1beta2"
 )
 
 // GetTxCmd returns the transaction commands for provider module
@@ -57,7 +58,7 @@ func cmdCreate(key string) *cobra.Command {
 				return err
 			}
 
-			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -93,7 +94,7 @@ func cmdUpdate(key string) *cobra.Command {
 				return err
 			}
 
-			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 

@@ -8,11 +8,12 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	dtypes "github.com/akash-network/node/x/deployment/types/v1beta2"
-	types "github.com/akash-network/node/x/market/types/v1beta2"
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
+
+	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+	types "github.com/akash-network/akash-api/go/node/market/v1beta3"
 )
 
 // Querier is used as Keeper will have duplicate methods if used directly, and gRPC names take precedence over keeper

@@ -13,10 +13,11 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkrest "github.com/cosmos/cosmos-sdk/types/rest"
 
+	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
 	"github.com/akash-network/node/testutil"
+	atypes "github.com/akash-network/node/types"
 	ccli "github.com/akash-network/node/x/cert/client/cli"
 	"github.com/akash-network/node/x/deployment/client/cli"
-	types "github.com/akash-network/node/x/deployment/types/v1beta2"
 )
 
 type GRPCRestTestSuite struct {
@@ -88,7 +89,7 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 	out := &types.QueryDeploymentsResponse{}
 	err = val.ClientCtx.Codec.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
-	s.Require().Len(out.Deployments, 1, "Deployment Create Failed")
+	s.Require().Len(out.Deployments, 1, "Cert Create Failed")
 	deployments := out.Deployments
 	s.Require().Equal(val.Address.String(), deployments[0].Deployment.DeploymentID.Owner)
 
@@ -108,14 +109,15 @@ func (s *GRPCRestTestSuite) TestGetDeployments() {
 	}{
 		{
 			"get deployments without filters",
-			fmt.Sprintf("%s/akash/deployment/v1beta2/deployments/list", val.APIAddress),
+			fmt.Sprintf("%s/akash/deployment/%s/deployments/list", val.APIAddress, atypes.ProtoAPIVersion),
 			false,
 			deployment,
 			1,
 		},
 		{
 			"get deployments with filters",
-			fmt.Sprintf("%s/akash/deployment/v1beta2/deployments/list?filters.owner=%s", val.APIAddress,
+			fmt.Sprintf("%s/akash/deployment/%s/deployments/list?filters.owner=%s", val.APIAddress,
+				atypes.ProtoAPIVersion,
 				deployment.Deployment.DeploymentID.Owner),
 			false,
 			deployment,
@@ -123,7 +125,7 @@ func (s *GRPCRestTestSuite) TestGetDeployments() {
 		},
 		{
 			"get deployments with wrong state filter",
-			fmt.Sprintf("%s/akash/deployment/v1beta2/deployments/list?filters.state=%s", val.APIAddress,
+			fmt.Sprintf("%s/akash/deployment/%s/deployments/list?filters.state=%s", val.APIAddress, atypes.ProtoAPIVersion,
 				types.DeploymentStateInvalid.String()),
 			true,
 			types.QueryDeploymentResponse{},
@@ -131,8 +133,8 @@ func (s *GRPCRestTestSuite) TestGetDeployments() {
 		},
 		{
 			"get deployments with two filters",
-			fmt.Sprintf("%s/akash/deployment/v1beta2/deployments/list?filters.state=%s&filters.dseq=%d",
-				val.APIAddress, deployment.Deployment.State.String(), deployment.Deployment.DeploymentID.DSeq),
+			fmt.Sprintf("%s/akash/deployment/%s/deployments/list?filters.state=%s&filters.dseq=%d",
+				val.APIAddress, atypes.ProtoAPIVersion, deployment.Deployment.State.String(), deployment.Deployment.DeploymentID.DSeq),
 			false,
 			deployment,
 			1,
@@ -172,28 +174,34 @@ func (s *GRPCRestTestSuite) TestGetDeployment() {
 	}{
 		{
 			"get deployment with empty input",
-			fmt.Sprintf("%s/akash/deployment/v1beta2/deployments/info", val.APIAddress),
+			fmt.Sprintf("%s/akash/deployment/%s/deployments/info", val.APIAddress, atypes.ProtoAPIVersion),
 			true,
 			types.QueryDeploymentResponse{},
 		},
 		{
 			"get deployment with invalid input",
-			fmt.Sprintf("%s/akash/deployment/v1beta2/deployments/info?id.owner=%s", val.APIAddress,
+			fmt.Sprintf("%s/akash/deployment/%s/deployments/info?id.owner=%s", val.APIAddress,
+				atypes.ProtoAPIVersion,
 				deployment.Deployment.DeploymentID.Owner),
 			true,
 			types.QueryDeploymentResponse{},
 		},
 		{
 			"deployment not found",
-			fmt.Sprintf("%s/akash/deployment/v1beta2/deployments/info?id.owner=%s&id.dseq=%d", val.APIAddress,
-				deployment.Deployment.DeploymentID.Owner, 249),
+			fmt.Sprintf("%s/akash/deployment/%s/deployments/info?id.owner=%s&id.dseq=%d", val.APIAddress,
+				atypes.ProtoAPIVersion,
+				deployment.Deployment.DeploymentID.Owner,
+				249),
 			true,
 			types.QueryDeploymentResponse{},
 		},
 		{
 			"valid get deployment request",
-			fmt.Sprintf("%s/akash/deployment/v1beta2/deployments/info?id.owner=%s&id.dseq=%d",
-				val.APIAddress, deployment.Deployment.DeploymentID.Owner, deployment.Deployment.DeploymentID.DSeq),
+			fmt.Sprintf("%s/akash/deployment/%s/deployments/info?id.owner=%s&id.dseq=%d",
+				val.APIAddress,
+				atypes.ProtoAPIVersion,
+				deployment.Deployment.DeploymentID.Owner,
+				deployment.Deployment.DeploymentID.DSeq),
 			false,
 			deployment,
 		},
@@ -232,28 +240,35 @@ func (s *GRPCRestTestSuite) TestGetGroup() {
 	}{
 		{
 			"get group with empty input",
-			fmt.Sprintf("%s/akash/deployment/v1beta2/groups/info", val.APIAddress),
+			fmt.Sprintf("%s/akash/deployment/%s/groups/info", val.APIAddress, atypes.ProtoAPIVersion),
 			true,
 			types.Group{},
 		},
 		{
 			"get group with invalid input",
-			fmt.Sprintf("%s/akash/deployment/v1beta2/groups/info?id.owner=%s", val.APIAddress,
+			fmt.Sprintf("%s/akash/deployment/%s/groups/info?id.owner=%s", val.APIAddress,
+				atypes.ProtoAPIVersion,
 				group.GroupID.Owner),
 			true,
 			types.Group{},
 		},
 		{
 			"group not found",
-			fmt.Sprintf("%s/akash/deployment/v1beta2/groups/info?id.owner=%s&id.dseq=%d", val.APIAddress,
-				group.GroupID.Owner, 249),
+			fmt.Sprintf("%s/akash/deployment/%s/groups/info?id.owner=%s&id.dseq=%d", val.APIAddress,
+				atypes.ProtoAPIVersion,
+				group.GroupID.Owner,
+				249),
 			true,
 			types.Group{},
 		},
 		{
 			"valid get group request",
-			fmt.Sprintf("%s/akash/deployment/v1beta2/groups/info?id.owner=%s&id.dseq=%d&id.gseq=%d",
-				val.APIAddress, group.GroupID.Owner, group.GroupID.DSeq, group.GroupID.GSeq),
+			fmt.Sprintf("%s/akash/deployment/%s/groups/info?id.owner=%s&id.dseq=%d&id.gseq=%d",
+				val.APIAddress,
+				atypes.ProtoAPIVersion,
+				group.GroupID.Owner,
+				group.GroupID.DSeq,
+				group.GroupID.GSeq),
 			false,
 			group,
 		},

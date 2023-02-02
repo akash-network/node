@@ -1,18 +1,12 @@
 package util
 
 import (
-	"encoding/base32"
 	"math"
-	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	manifest "github.com/akash-network/node/manifest/v2beta1"
-
-	atypes "github.com/akash-network/node/types/v1beta2"
-	mtypes "github.com/akash-network/node/x/market/types/v1beta2"
-
-	uuid "github.com/satori/go.uuid"
+	manifest "github.com/akash-network/akash-api/go/manifest/v2beta2"
+	atypes "github.com/akash-network/akash-api/go/node/types/v1beta3"
 )
 
 func ShouldBeIngress(expose manifest.ServiceExpose) bool {
@@ -48,18 +42,18 @@ func ComputeCommittedResources(factor float64, rv atypes.ResourceValue) atypes.R
 	return result
 }
 
-func AllHostnamesOfManifestGroup(mgroup manifest.Group) []string {
-	allHostnames := make([]string, 0)
-	for _, service := range mgroup.Services {
-		for _, expose := range service.Expose {
-			allHostnames = append(allHostnames, expose.Hosts...)
-		}
-	}
+// func AllHostnamesOfManifestGroup(mgroup manifest.Group) []string {
+// 	allHostnames := make([]string, 0)
+// 	for _, service := range mgroup.Services {
+// 		for _, expose := range service.Expose {
+// 			allHostnames = append(allHostnames, expose.Hosts...)
+// 		}
+// 	}
+//
+// 	return allHostnames
+// }
 
-	return allHostnames
-}
-
-func IngressHost(lid mtypes.LeaseID, svcName string) string {
-	uid := uuid.NewV5(uuid.NamespaceDNS, lid.String()+svcName).Bytes()
-	return strings.ToLower(base32.HexEncoding.WithPadding(base32.NoPadding).EncodeToString(uid))
-}
+// func IngressHost(lid mtypes.LeaseID, svcName string) string {
+// 	uid := uuid.NewV5(uuid.NamespaceDNS, lid.String()+svcName).Bytes()
+// 	return strings.ToLower(base32.HexEncoding.WithPadding(base32.NoPadding).EncodeToString(uid))
+// }

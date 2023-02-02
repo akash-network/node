@@ -3,19 +3,21 @@ package events
 import (
 	"context"
 
-	atypes "github.com/akash-network/node/x/audit/types/v1beta2"
+	"golang.org/x/sync/errgroup"
 
-	"github.com/akash-network/node/pubsub"
-	"github.com/akash-network/node/sdkutil"
-	dtypes "github.com/akash-network/node/x/deployment/types/v1beta2"
-	mtypes "github.com/akash-network/node/x/market/types/v1beta2"
-	ptypes "github.com/akash-network/node/x/provider/types/v1beta2"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmclient "github.com/tendermint/tendermint/rpc/client"
 	ctypes "github.com/tendermint/tendermint/rpc/core/types"
 	tmtmtypes "github.com/tendermint/tendermint/types"
-	"golang.org/x/sync/errgroup"
+
+	atypes "github.com/akash-network/akash-api/go/node/audit/v1beta3"
+	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+	mtypes "github.com/akash-network/akash-api/go/node/market/v1beta3"
+	ptypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
+	"github.com/akash-network/akash-api/go/sdkutil"
+
+	"github.com/akash-network/node/pubsub"
 )
 
 // Publish events using tm buses to clients. Waits on context

@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"fmt"
 
-	types "github.com/akash-network/node/x/provider/types/v1beta2"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	types "github.com/akash-network/akash-api/go/node/provider/v1beta3"
 )
 
 type (

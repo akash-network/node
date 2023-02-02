@@ -7,7 +7,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/address"
 
-	types "github.com/akash-network/node/x/cert/types/v1beta2"
+	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
 )
 
 const (

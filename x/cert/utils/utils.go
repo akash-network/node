@@ -9,8 +9,9 @@ import (
 
 	certerrors "github.com/akash-network/node/x/cert/errors"
 
-	ctypes "github.com/akash-network/node/x/cert/types/v1beta2"
 	"github.com/cosmos/cosmos-sdk/client"
+
+	ctypes "github.com/akash-network/akash-api/go/node/cert/v1beta3"
 )
 
 // LoadAndQueryCertificateForAccount wraps LoadAndQueryPEMForAccount and tls.X509KeyPair
