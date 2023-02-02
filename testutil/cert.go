@@ -17,8 +17,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 
+	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+
 	"github.com/akash-network/node/client/mocks"
-	types "github.com/akash-network/node/x/cert/types/v1beta2"
 
 	certutils "github.com/akash-network/node/x/cert/utils"
 )

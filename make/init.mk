@@ -48,7 +48,7 @@ GOLANG_VERSION               ?= 1.16.1
 STATIK_VERSION               ?= v0.1.7
 GIT_CHGLOG_VERSION           ?= v0.15.1
 MODVENDOR_VERSION            ?= v0.3.0
-MOCKERY_VERSION              ?= 2.12.1
+MOCKERY_VERSION              ?= 2.20.2
 
 # ==== Build tools version tracking ====
 # <TOOL>_VERSION_FILE points to the marker file for the installed version.

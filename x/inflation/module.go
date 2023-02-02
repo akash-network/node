@@ -4,23 +4,23 @@ import (
 	"encoding/json"
 	"math/rand"
 
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/codec"
-	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
-	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
-
-	"github.com/akash-network/node/x/inflation/keeper"
-	"github.com/akash-network/node/x/inflation/simulation"
-	types "github.com/akash-network/node/x/inflation/types/v1beta2"
-
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/codec"
+	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/module"
 	sim "github.com/cosmos/cosmos-sdk/types/simulation"
 	abci "github.com/tendermint/tendermint/abci/types"
+
+	types "github.com/akash-network/akash-api/go/node/inflation/v1beta3"
+
+	"github.com/akash-network/node/x/inflation/keeper"
+	"github.com/akash-network/node/x/inflation/simulation"
 )
 
 // type check to ensure the interface is properly implemented
@@ -44,7 +44,9 @@ func (AppModuleBasic) Name() string {
 func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {}
 
 // RegisterInterfaces registers the module's interface types
-func (b AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) {}
+func (b AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
+
+}
 
 // DefaultGenesis returns default genesis state as raw bytes for the inflation
 // module.

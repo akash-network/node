@@ -1,7 +1,7 @@
 package v015
 
 import (
-	types "github.com/akash-network/node/x/audit/types/v1beta2"
+	types "github.com/akash-network/akash-api/go/node/audit/v1beta2"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	v043 "github.com/cosmos/cosmos-sdk/x/distribution/legacy/v043"
 )

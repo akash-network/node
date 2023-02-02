@@ -1,9 +1,10 @@
 package simulation
 
 import (
-	types "github.com/akash-network/node/x/deployment/types/v1beta2"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+
+	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
 )
 
 var minDeposit = sdk.NewInt64Coin("stake", 1)

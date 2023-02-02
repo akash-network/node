@@ -17,11 +17,11 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
 	"github.com/akash-network/node/testutil"
 	"github.com/akash-network/node/testutil/state"
 	"github.com/akash-network/node/x/deployment/handler/mocks"
 	"github.com/akash-network/node/x/deployment/keeper"
-	types "github.com/akash-network/node/x/deployment/types/v1beta2"
 	mkeeper "github.com/akash-network/node/x/market/keeper"
 )
 

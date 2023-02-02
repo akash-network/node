@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	types "github.com/akash-network/node/x/audit/types/v1beta2"
+	types "github.com/akash-network/akash-api/go/node/audit/v1beta3"
 )
 
 // Querier is used as Keeper will have duplicate methods if used directly, and gRPC names take precedence over keeper

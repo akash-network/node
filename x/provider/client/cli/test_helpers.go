@@ -3,10 +3,11 @@ package cli
 import (
 	"fmt"
 
-	types "github.com/akash-network/node/x/provider/types/v1beta2"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdktest "github.com/cosmos/cosmos-sdk/testutil"
 	clitestutil "github.com/cosmos/cosmos-sdk/testutil/cli"
+
+	types "github.com/akash-network/akash-api/go/node/provider/v1beta3"
 )
 
 const key string = types.StoreKey

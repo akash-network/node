@@ -1,10 +1,13 @@
 package simulation
 
 import (
-	keepers "github.com/akash-network/node/x/market/handler"
-	types "github.com/akash-network/node/x/market/types/v1beta2"
-	ptypes "github.com/akash-network/node/x/provider/types/v1beta2"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	types "github.com/akash-network/akash-api/go/node/market/v1beta3"
+
+	ptypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
+
+	keepers "github.com/akash-network/node/x/market/handler"
 )
 
 func getOrdersWithState(ctx sdk.Context, ks keepers.Keepers, state types.Order_State) []types.Order {

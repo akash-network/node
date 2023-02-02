@@ -1,11 +1,12 @@
 package v015
 
 import (
-	v015 "github.com/akash-network/node/util/legacy/v015"
-	"github.com/akash-network/node/x/escrow/types/v1beta1"
-	types "github.com/akash-network/node/x/escrow/types/v1beta2"
+	"github.com/akash-network/akash-api/go/node/escrow/v1beta1"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	types "github.com/akash-network/akash-api/go/node/escrow/v1beta2"
+	v015 "github.com/akash-network/node/util/legacy/v015"
 )
 
 // MigrateStore performs in-place store migrations from v0.14 to v0.15. The

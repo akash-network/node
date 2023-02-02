@@ -21,8 +21,9 @@ import (
 	tmrand "github.com/tendermint/tendermint/libs/rand"
 	dbm "github.com/tendermint/tm-db"
 
+	types "github.com/akash-network/akash-api/go/node/types/v1beta3"
+
 	"github.com/akash-network/node/app"
-	types "github.com/akash-network/node/types/v1beta2"
 )
 
 func RandRangeInt(min, max int) int {
@@ -50,6 +51,9 @@ func ResourceUnits(_ testing.TB) types.ResourceUnits {
 		},
 		Memory: &types.Memory{
 			Quantity: types.NewResourceValue(RandMemoryQuantity()),
+		},
+		GPU: &types.GPU{
+			Units: types.NewResourceValue(uint64(RandGPUUnits())),
 		},
 		Storage: types.Volumes{
 			types.Storage{
@@ -102,7 +106,6 @@ func DefaultConfig() network.Config {
 
 		replacementV := json.RawMessage(stringDataAfter)
 		genesisState[k] = replacementV
-
 	}
 
 	return network.Config{

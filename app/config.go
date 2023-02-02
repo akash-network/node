@@ -92,10 +92,12 @@ func ModuleBasics() module.BasicManager {
 // MakeEncodingConfig creates an EncodingConfig for testing
 func MakeEncodingConfig() simparams.EncodingConfig {
 	encodingConfig := appparams.MakeEncodingConfig()
+
 	std.RegisterLegacyAminoCodec(encodingConfig.Amino)
 	std.RegisterInterfaces(encodingConfig.InterfaceRegistry)
 	mbasics.RegisterLegacyAminoCodec(encodingConfig.Amino)
 	mbasics.RegisterInterfaces(encodingConfig.InterfaceRegistry)
+
 	return encodingConfig
 }
 

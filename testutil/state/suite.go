@@ -7,19 +7,23 @@ import (
 	"github.com/stretchr/testify/mock"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 
+	atypes "github.com/akash-network/akash-api/go/node/audit/v1beta3"
+
+	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+	etypes "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
+
+	mtypes "github.com/akash-network/akash-api/go/node/market/v1beta3"
+
+	ptypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
+
 	"github.com/akash-network/node/app"
 	akeeper "github.com/akash-network/node/x/audit/keeper"
-	atypes "github.com/akash-network/node/x/audit/types/v1beta2"
 	dkeeper "github.com/akash-network/node/x/deployment/keeper"
-	dtypes "github.com/akash-network/node/x/deployment/types/v1beta2"
 	ekeeper "github.com/akash-network/node/x/escrow/keeper"
 	emocks "github.com/akash-network/node/x/escrow/keeper/mocks"
-	etypes "github.com/akash-network/node/x/escrow/types/v1beta2"
 	mhooks "github.com/akash-network/node/x/market/hooks"
 	mkeeper "github.com/akash-network/node/x/market/keeper"
-	mtypes "github.com/akash-network/node/x/market/types/v1beta2"
 	pkeeper "github.com/akash-network/node/x/provider/keeper"
-	ptypes "github.com/akash-network/node/x/provider/types/v1beta2"
 )
 
 // TestSuite encapsulates a functional Akash nodes data stores for

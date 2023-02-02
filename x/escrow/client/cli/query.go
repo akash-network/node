@@ -11,12 +11,14 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
+	deploymentTypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+	types "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
+
+	marketTypes "github.com/akash-network/akash-api/go/node/market/v1beta3"
+
 	netutil "github.com/akash-network/node/util/network"
 	"github.com/akash-network/node/x/deployment/client/cli"
-	deploymentTypes "github.com/akash-network/node/x/deployment/types/v1beta2"
 	"github.com/akash-network/node/x/escrow/client/util"
-	types "github.com/akash-network/node/x/escrow/types/v1beta2"
-	marketTypes "github.com/akash-network/node/x/market/types/v1beta2"
 )
 
 func GetQueryCmd() *cobra.Command {

@@ -14,13 +14,14 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 
+	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+	etypes "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
+
 	"github.com/akash-network/node/app"
 	"github.com/akash-network/node/testutil"
 	"github.com/akash-network/node/testutil/state"
 	"github.com/akash-network/node/x/deployment/keeper"
-	types "github.com/akash-network/node/x/deployment/types/v1beta2"
 	ekeeper "github.com/akash-network/node/x/escrow/keeper"
-	etypes "github.com/akash-network/node/x/escrow/types/v1beta2"
 )
 
 type grpcTestSuite struct {

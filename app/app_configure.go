@@ -22,22 +22,29 @@ import (
 	transfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
 	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
 
+	audittypes "github.com/akash-network/akash-api/go/node/audit/v1beta3"
+	certtypes "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+	deploymenttypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+	escrowtypes "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
+	agovtypes "github.com/akash-network/akash-api/go/node/gov/v1beta3"
+	inflationtypes "github.com/akash-network/akash-api/go/node/inflation/v1beta3"
+	markettypes "github.com/akash-network/akash-api/go/node/market/v1beta3"
+	providertypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
+	astakingtypes "github.com/akash-network/akash-api/go/node/staking/v1beta3"
+
 	"github.com/akash-network/node/x/audit"
-	audittypes "github.com/akash-network/node/x/audit/types/v1beta2"
 	"github.com/akash-network/node/x/cert"
-	certtypes "github.com/akash-network/node/x/cert/types/v1beta2"
 	"github.com/akash-network/node/x/deployment"
-	deploymenttypes "github.com/akash-network/node/x/deployment/types/v1beta2"
 	"github.com/akash-network/node/x/escrow"
 	ekeeper "github.com/akash-network/node/x/escrow/keeper"
-	escrowtypes "github.com/akash-network/node/x/escrow/types/v1beta2"
+	agov "github.com/akash-network/node/x/gov"
+	agovkeeper "github.com/akash-network/node/x/gov/keeper"
 	"github.com/akash-network/node/x/inflation"
-	inflationtypes "github.com/akash-network/node/x/inflation/types/v1beta2"
 	"github.com/akash-network/node/x/market"
 	mhooks "github.com/akash-network/node/x/market/hooks"
-	markettypes "github.com/akash-network/node/x/market/types/v1beta2"
 	"github.com/akash-network/node/x/provider"
-	providertypes "github.com/akash-network/node/x/provider/types/v1beta2"
+	astaking "github.com/akash-network/node/x/staking"
+	astakingkeeper "github.com/akash-network/node/x/staking/keeper"
 )
 
 func akashModuleBasics() []module.AppModuleBasic {
@@ -49,6 +56,8 @@ func akashModuleBasics() []module.AppModuleBasic {
 		audit.AppModuleBasic{},
 		cert.AppModuleBasic{},
 		inflation.AppModuleBasic{},
+		agov.AppModuleBasic{},
+		astaking.AppModuleBasic{},
 	}
 }
 
@@ -61,6 +70,8 @@ func akashKVStoreKeys() []string {
 		audit.StoreKey,
 		cert.StoreKey,
 		inflation.StoreKey,
+		agov.StoreKey,
+		astaking.StoreKey,
 	}
 }
 
@@ -68,11 +79,13 @@ func akashSubspaces(k paramskeeper.Keeper) paramskeeper.Keeper {
 	k.Subspace(deployment.ModuleName)
 	k.Subspace(market.ModuleName)
 	k.Subspace(inflation.ModuleName)
+	k.Subspace(agov.ModuleName)
+	k.Subspace(astaking.ModuleName)
+
 	return k
 }
 
 func (app *AkashApp) setAkashKeepers() {
-
 	app.keeper.escrow = ekeeper.NewKeeper(
 		app.appCodec,
 		app.keys[escrow.StoreKey],
@@ -118,11 +131,22 @@ func (app *AkashApp) setAkashKeepers() {
 		app.keys[inflation.StoreKey],
 		app.GetSubspace(inflation.ModuleName),
 	)
+
+	app.keeper.agov = agovkeeper.NewKeeper(
+		app.appCodec,
+		app.keys[agov.StoreKey],
+		app.GetSubspace(agov.ModuleName),
+	)
+
+	app.keeper.astaking = astakingkeeper.NewKeeper(
+		app.appCodec,
+		app.keys[astaking.StoreKey],
+		app.GetSubspace(astaking.ModuleName),
+	)
 }
 
 func (app *AkashApp) akashAppModules() []module.AppModule {
 	return []module.AppModule{
-
 		escrow.NewAppModule(
 			app.appCodec,
 			app.keeper.escrow,
@@ -168,6 +192,16 @@ func (app *AkashApp) akashAppModules() []module.AppModule {
 			app.appCodec,
 			app.keeper.inflation,
 		),
+
+		astaking.NewAppModule(
+			app.appCodec,
+			app.keeper.astaking,
+		),
+
+		agov.NewAppModule(
+			app.appCodec,
+			app.keeper.agov,
+		),
 	}
 }
 
@@ -180,6 +214,7 @@ func (app *AkashApp) akashBeginBlockModules() []string {
 		paramstypes.ModuleName,
 		deploymenttypes.ModuleName,
 		govtypes.ModuleName,
+		agovtypes.ModuleName,
 		providertypes.ModuleName,
 		certtypes.ModuleName,
 		markettypes.ModuleName,
@@ -196,6 +231,7 @@ func (app *AkashApp) akashBeginBlockModules() []string {
 		slashingtypes.ModuleName,
 		evidencetypes.ModuleName,
 		stakingtypes.ModuleName,
+		astakingtypes.ModuleName,
 		transfertypes.ModuleName,
 		ibchost.ModuleName,
 	}
@@ -206,7 +242,9 @@ func (app *AkashApp) akashEndBlockModules() []string {
 	return []string{
 		crisistypes.ModuleName,
 		govtypes.ModuleName,
+		agovtypes.ModuleName,
 		stakingtypes.ModuleName,
+		astakingtypes.ModuleName,
 		upgradetypes.ModuleName,
 		capabilitytypes.ModuleName,
 		banktypes.ModuleName,
@@ -248,7 +286,6 @@ func (app *AkashApp) akashInitGenesisOrder() []string {
 		minttypes.ModuleName,
 		crisistypes.ModuleName,
 		ibchost.ModuleName,
-		genutiltypes.ModuleName,
 		evidencetypes.ModuleName,
 		transfertypes.ModuleName,
 		cert.ModuleName,
@@ -257,6 +294,9 @@ func (app *AkashApp) akashInitGenesisOrder() []string {
 		provider.ModuleName,
 		market.ModuleName,
 		inflation.ModuleName,
+		agov.ModuleName,
+		astaking.ModuleName,
+		genutiltypes.ModuleName,
 	}
 }
 
@@ -288,6 +328,14 @@ func (app *AkashApp) akashSimModules() []module.AppModuleSimulation {
 
 		inflation.NewAppModuleSimulation(
 			app.keeper.inflation,
+		),
+
+		agov.NewAppModuleSimulation(
+			app.keeper.agov,
+		),
+
+		astaking.NewAppModuleSimulation(
+			app.keeper.astaking,
 		),
 	}
 }

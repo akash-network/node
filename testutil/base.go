@@ -7,8 +7,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/tendermint/tendermint/libs/rand"
 
-	types "github.com/akash-network/node/types/v1beta2"
-	dtypes "github.com/akash-network/node/x/deployment/types/v1beta2"
+	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+	types "github.com/akash-network/akash-api/go/node/types/v1beta3"
 )
 
 func init() {
@@ -67,6 +67,12 @@ func RandCPUUnits() uint {
 	return RandRangeUint(
 		dtypes.GetValidationConfig().MinUnitCPU,
 		dtypes.GetValidationConfig().MaxUnitCPU)
+}
+
+func RandGPUUnits() uint {
+	return RandRangeUint(
+		dtypes.GetValidationConfig().MinUnitGPU,
+		dtypes.GetValidationConfig().MaxUnitGPU)
 }
 
 func RandMemoryQuantity() uint64 {

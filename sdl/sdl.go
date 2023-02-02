@@ -6,15 +6,14 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/blang/semver"
+	"github.com/blang/semver/v4"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	manifest "github.com/akash-network/node/manifest/v2beta1"
-	"github.com/akash-network/node/validation"
-	dtypes "github.com/akash-network/node/x/deployment/types/v1beta2"
+	manifest "github.com/akash-network/akash-api/go/manifest/v2beta2"
+	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
 )
 
 var (
@@ -111,7 +110,7 @@ func Read(buf []byte) (SDL, error) {
 		return nil, err
 	}
 
-	if err := validation.ValidateManifest(m); err != nil {
+	if err := manifest.ValidateManifest(m); err != nil {
 		return nil, err
 	}
 

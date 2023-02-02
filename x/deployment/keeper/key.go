@@ -4,11 +4,10 @@ import (
 	"bytes"
 	"encoding/binary"
 
-	"github.com/akash-network/node/sdkutil"
-
 	"github.com/cosmos/cosmos-sdk/types/address"
 
-	types "github.com/akash-network/node/x/deployment/types/v1beta2"
+	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+	"github.com/akash-network/akash-api/go/sdkutil"
 )
 
 func deploymentKey(id types.DeploymentID) []byte {

@@ -16,10 +16,12 @@ import (
 	"os"
 	"time"
 
-	certerrors "github.com/akash-network/node/x/cert/errors"
-	types "github.com/akash-network/node/x/cert/types/v1beta2"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+
+	certerrors "github.com/akash-network/node/x/cert/errors"
 )
 
 var (

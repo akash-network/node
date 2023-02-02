@@ -20,12 +20,14 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/pkg/errors"
 
+	"github.com/akash-network/akash-api/go/node/cert/v1beta1"
+	"github.com/akash-network/akash-api/go/node/cert/v1beta2"
+	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+
 	"github.com/akash-network/node/x/cert/client/cli"
 	"github.com/akash-network/node/x/cert/handler"
 	"github.com/akash-network/node/x/cert/keeper"
 	"github.com/akash-network/node/x/cert/simulation"
-	v1beta1types "github.com/akash-network/node/x/cert/types/v1beta1"
-	types "github.com/akash-network/node/x/cert/types/v1beta2"
 )
 
 var (
@@ -52,7 +54,8 @@ func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 // RegisterInterfaces registers the module's interface types
 func (b AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 	types.RegisterInterfaces(registry)
-	v1beta1types.RegisterInterfaces(registry)
+	v1beta2.RegisterInterfaces(registry)
+	v1beta1.RegisterInterfaces(registry)
 }
 
 // DefaultGenesis returns default genesis state as raw bytes for the provider
@@ -147,10 +150,10 @@ func (am AppModule) RegisterServices(cfg module.Configurator) {
 	types.RegisterMsgServer(cfg.MsgServer(), handler.NewMsgServerImpl(am.keeper))
 	types.RegisterQueryServer(cfg.QueryServer(), am.keeper.Querier())
 
-	m := keeper.NewMigrator(am.keeper)
-	if err := cfg.RegisterMigration(types.ModuleName, 1, m.Migrate1to2); err != nil {
-		panic(err)
-	}
+	// m := keeper.NewMigrator(am.keeper)
+	// if err := cfg.RegisterMigration(types.ModuleName, 1, m.Migrate1to2); err != nil {
+	// 	panic(err)
+	// }
 }
 
 // BeginBlock performs no-op
@@ -197,6 +200,7 @@ func NewAppModuleSimulation(k keeper.Keeper) AppModuleSimulation {
 }
 
 // AppModuleSimulation functions
+
 // GenerateGenesisState creates a randomized GenState of the staking module.
 func (AppModuleSimulation) GenerateGenesisState(simState *module.SimulationState) {
 	simulation.RandomizedGenState(simState)

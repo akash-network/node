@@ -15,13 +15,15 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 
+	v1beta1types "github.com/akash-network/akash-api/go/node/deployment/v1beta1"
+	v1beta2types "github.com/akash-network/akash-api/go/node/deployment/v1beta2"
+	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+
 	"github.com/akash-network/node/x/deployment/client/cli"
 	"github.com/akash-network/node/x/deployment/client/rest"
 	"github.com/akash-network/node/x/deployment/handler"
 	"github.com/akash-network/node/x/deployment/keeper"
 	"github.com/akash-network/node/x/deployment/simulation"
-	v1beta1types "github.com/akash-network/node/x/deployment/types/v1beta1"
-	types "github.com/akash-network/node/x/deployment/types/v1beta2"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -56,6 +58,7 @@ func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 // RegisterInterfaces registers the module's interface types
 func (b AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 	types.RegisterInterfaces(registry)
+	v1beta2types.RegisterInterfaces(registry)
 	v1beta1types.RegisterInterfaces(registry)
 }
 
@@ -154,10 +157,10 @@ func (am AppModule) RegisterServices(cfg module.Configurator) {
 	querier := am.keeper.NewQuerier()
 	types.RegisterQueryServer(cfg.QueryServer(), querier)
 
-	m := keeper.NewMigrator(am.keeper)
-	if err := cfg.RegisterMigration(types.ModuleName, 1, m.Migrate1to2); err != nil {
-		panic(err)
-	}
+	// m := keeper.NewMigrator(am.keeper)
+	// if err := cfg.RegisterMigration(types.ModuleName, 1, m.Migrate1to2); err != nil {
+	// 	panic(err)
+	// }
 }
 
 // BeginBlock performs no-op

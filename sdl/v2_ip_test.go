@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	types "github.com/akash-network/node/types/v1beta2"
+	types "github.com/akash-network/akash-api/go/node/types/v1beta3"
 )
 
 func findFirstIPEndpoint(t *testing.T, endpoints []types.Endpoint) types.Endpoint {
