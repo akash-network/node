@@ -8,5 +8,5 @@ import (
 // non-constant random seed for math/rand functions
 
 func init() {
-	rand.Seed(time.Now().Unix())
+	rand.Seed(time.Now().Unix()) // nolint: staticcheck
 }
