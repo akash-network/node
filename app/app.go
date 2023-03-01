@@ -100,6 +100,8 @@ import (
 	"github.com/akash-network/node/x/inflation"
 	mkeeper "github.com/akash-network/node/x/market/keeper"
 	pkeeper "github.com/akash-network/node/x/provider/keeper"
+	astakingkeeper "github.com/akash-network/node/x/staking/keeper"
+
 	// unnamed import of statik for swagger UI support
 	_ "github.com/akash-network/node/client/docs/statik"
 )
@@ -159,6 +161,7 @@ type AkashApp struct {
 		audit      audit.Keeper
 		cert       cert.Keeper
 		inflation  inflation.Keeper
+		astaking   astakingkeeper.IKeeper
 	}
 
 	mm *module.Manager
@@ -446,7 +449,8 @@ func NewApp(
 			SignModeHandler: encodingConfig.TxConfig.SignModeHandler(),
 			SigGasConsumer:  ante.DefaultSigVerificationGasConsumer,
 		},
-		CDC: app.appCodec,
+		CDC:            app.appCodec,
+		AStakingKeeper: app.keeper.astaking,
 	}
 
 	handler, err := NewAnteHandler(anteOpts)
