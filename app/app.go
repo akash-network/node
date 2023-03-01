@@ -439,14 +439,17 @@ func NewApp(
 	app.SetInitChainer(app.InitChainer)
 	app.SetBeginBlocker(app.BeginBlocker)
 
-	anteOpts := ante.HandlerOptions{
-		AccountKeeper:   app.keeper.acct,
-		BankKeeper:      app.keeper.bank,
-		SignModeHandler: encodingConfig.TxConfig.SignModeHandler(),
-		SigGasConsumer:  ante.DefaultSigVerificationGasConsumer,
+	anteOpts := HandlerOptions{
+		HandlerOptions: ante.HandlerOptions{
+			AccountKeeper:   app.keeper.acct,
+			BankKeeper:      app.keeper.bank,
+			SignModeHandler: encodingConfig.TxConfig.SignModeHandler(),
+			SigGasConsumer:  ante.DefaultSigVerificationGasConsumer,
+		},
+		CDC: app.appCodec,
 	}
 
-	handler, err := ante.NewAnteHandler(anteOpts)
+	handler, err := NewAnteHandler(anteOpts)
 	if err != nil {
 		panic(err)
 	}
