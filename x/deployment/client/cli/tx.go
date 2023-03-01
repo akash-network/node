@@ -7,20 +7,21 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/x/authz"
-	"github.com/pkg/errors"
-
-	"github.com/akash-network/node/cmd/common"
-	"github.com/akash-network/node/sdkutil"
-	"github.com/akash-network/node/sdl"
-	"github.com/akash-network/node/validation/constants"
-	cutils "github.com/akash-network/node/x/cert/utils"
-	types "github.com/akash-network/node/x/deployment/types/v1beta2"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/spf13/cobra"
+	"github.com/cosmos/cosmos-sdk/x/authz"
+
+	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+	"github.com/akash-network/akash-api/go/node/types/constants"
+
+	"github.com/akash-network/node/client/broadcaster"
+	"github.com/akash-network/node/cmd/common"
+	"github.com/akash-network/node/sdl"
+	cutils "github.com/akash-network/node/x/cert/utils"
 )
 
 var (
@@ -123,7 +124,7 @@ func cmdCreate(key string) *cobra.Command {
 				return err
 			}
 
-			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -167,7 +168,7 @@ func cmdDeposit(key string) *cobra.Command {
 				Depositor: depositorAcc,
 			}
 
-			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -196,7 +197,7 @@ func cmdClose(key string) *cobra.Command {
 
 			msg := &types.MsgCloseDeployment{ID: id}
 
-			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -264,7 +265,7 @@ func cmdUpdate(key string) *cobra.Command {
 				Version: version,
 			}
 
-			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -314,7 +315,7 @@ func cmdGroupClose(_ string) *cobra.Command {
 				return err
 			}
 
-			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -350,7 +351,7 @@ func cmdGroupPause(_ string) *cobra.Command {
 				return err
 			}
 
-			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -386,7 +387,7 @@ func cmdGroupStart(_ string) *cobra.Command {
 				return err
 			}
 
-			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -457,7 +458,7 @@ Examples:
 				return err
 			}
 
-			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -494,7 +495,7 @@ Example:
 			msgTypeURL := types.DepositDeploymentAuthorization{}.MsgTypeURL()
 			msg := authz.NewMsgRevoke(granter, grantee, msgTypeURL)
 
-			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), &msg)
+			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), &msg)
 		},
 	}
 

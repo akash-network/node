@@ -1,5 +1,7 @@
 COVER_PACKAGES = $(shell go list ./... | grep -v mock | paste -sd, -)
 
+TEST_MODULE ?= ./...
+
 ###############################################################################
 ###                           Misc tests                                    ###
 ###############################################################################
@@ -14,15 +16,15 @@ shellcheck:
 
 .PHONY: test
 test:
-	$(GO) test -tags=$(BUILD_MAINNET) -timeout 300s ./...
+	$(GO) test -timeout 300s ./...
 
 .PHONY: test-nocache
 test-nocache:
-	$(GO) test -tags=$(BUILD_MAINNET) -count=1 ./...
+	$(GO) test -count=1 ./...
 
 .PHONY: test-full
 test-full:
-	$(GO) test -tags=$(BUILD_TAGS) -race ./...
+	$(GO) test -v -tags=$(BUILD_TAGS) $(TEST_MODULE)
 
 .PHONY: test-coverage
 test-coverage:

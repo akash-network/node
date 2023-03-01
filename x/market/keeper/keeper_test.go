@@ -8,11 +8,12 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+	types "github.com/akash-network/akash-api/go/node/market/v1beta3"
+
 	"github.com/akash-network/node/testutil"
 	"github.com/akash-network/node/testutil/state"
-	dtypes "github.com/akash-network/node/x/deployment/types/v1beta2"
 	"github.com/akash-network/node/x/market/keeper"
-	types "github.com/akash-network/node/x/market/types/v1beta2"
 )
 
 func Test_CreateOrder(t *testing.T) {

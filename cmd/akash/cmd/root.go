@@ -35,9 +35,10 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	dbm "github.com/tendermint/tm-db"
 
+	"github.com/akash-network/akash-api/go/sdkutil"
+
 	"github.com/akash-network/node/app"
 	ecmd "github.com/akash-network/node/events/cmd"
-	"github.com/akash-network/node/sdkutil"
 	utilcli "github.com/akash-network/node/util/cli"
 )
 

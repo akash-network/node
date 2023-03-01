@@ -4,8 +4,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	types "github.com/akash-network/node/x/inflation/types/v1beta2"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
+
+	types "github.com/akash-network/akash-api/go/node/inflation/v1beta3"
 )
 
 type IKeeper interface {

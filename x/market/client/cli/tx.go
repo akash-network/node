@@ -8,10 +8,11 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
 
+	types "github.com/akash-network/akash-api/go/node/market/v1beta3"
+
+	"github.com/akash-network/node/client/broadcaster"
 	"github.com/akash-network/node/cmd/common"
-	"github.com/akash-network/node/sdkutil"
 	dcli "github.com/akash-network/node/x/deployment/client/cli"
-	types "github.com/akash-network/node/x/market/types/v1beta2"
 )
 
 // GetTxCmd returns the transaction commands for market module
@@ -85,7 +86,7 @@ func cmdBidCreate(key string) *cobra.Command {
 				return err
 			}
 
-			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -121,7 +122,7 @@ func cmdBidClose(key string) *cobra.Command {
 				return err
 			}
 
-			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -170,7 +171,7 @@ func cmdLeaseCreate(key string) *cobra.Command {
 				return err
 			}
 
-			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -205,7 +206,7 @@ func cmdLeaseWithdraw(key string) *cobra.Command {
 				return err
 			}
 
-			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -240,7 +241,7 @@ func cmdLeaseClose(key string) *cobra.Command {
 				return err
 			}
 
-			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 

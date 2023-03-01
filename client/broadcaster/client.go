@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/akash-network/node/sdkutil"
-
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
@@ -37,12 +35,12 @@ func NewClient(cctx sdkclient.Context, txf tx.Factory, info keyring.Info) Client
 }
 
 func (c *simpleClient) Broadcast(_ context.Context, msgs ...sdk.Msg) error {
-	txf, err := sdkutil.PrepareFactory(c.cctx, c.txf)
+	txf, err := PrepareFactory(c.cctx, c.txf)
 	if err != nil {
 		return err
 	}
 
-	response, err := doBroadcast(c.cctx, txf, c.info.GetName(), msgs...)
+	response, err := c.doBroadcast(c.cctx, txf, c.info.GetName(), msgs...)
 	if err != nil {
 		return err
 	}
@@ -53,7 +51,7 @@ func (c *simpleClient) Broadcast(_ context.Context, msgs ...sdk.Msg) error {
 	return nil
 }
 
-func doBroadcast(cctx sdkclient.Context, txf tx.Factory, keyName string, msgs ...sdk.Msg) (*sdk.TxResponse, error) {
+func (c *simpleClient) doBroadcast(cctx sdkclient.Context, txf tx.Factory, keyName string, msgs ...sdk.Msg) (*sdk.TxResponse, error) {
 	txn, err := tx.BuildUnsignedTx(txf, msgs...)
 	if err != nil {
 		return nil, err

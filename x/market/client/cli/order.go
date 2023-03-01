@@ -3,10 +3,11 @@ package cli
 import (
 	"context"
 
-	types "github.com/akash-network/node/x/market/types/v1beta2"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
+
+	types "github.com/akash-network/akash-api/go/node/market/v1beta3"
 )
 
 func cmdGetOrders() *cobra.Command {

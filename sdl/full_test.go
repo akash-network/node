@@ -31,6 +31,8 @@ profiles:
           units: 0.1
           attributes:
             arch: amd64
+        gpu:
+          units: 1
         memory:
           size: 16Mi
         storage:

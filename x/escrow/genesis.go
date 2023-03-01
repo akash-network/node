@@ -7,10 +7,10 @@ import (
 
 	"github.com/akash-network/node/x/escrow/keeper"
 
-	types "github.com/akash-network/node/x/escrow/types/v1beta2"
+	types "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
 )
 
-// ValidateGenesis does validation check of the Genesis and returns error incase of failure
+// ValidateGenesis does validation check of the Genesis and returns error in case of failure
 func ValidateGenesis(data *types.GenesisState) error {
 
 	amap := make(map[types.AccountID]types.Account, len(data.Accounts))

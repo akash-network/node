@@ -11,7 +11,7 @@ cache: $(AKASH_DEVCACHE)
 $(PROTOC_VERSION_FILE): $(AKASH_DEVCACHE)
 	@echo "installing protoc compiler v$(PROTOC_VERSION) ..."
 	rm -f $(PROTOC)
-	(cd /tmp; \
+	()(cd /tmp; \
 	curl -sOL "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${PROTOC_ZIP}"; \
 	unzip -oq ${PROTOC_ZIP} -d $(AKASH_DEVCACHE) bin/protoc; \
 	unzip -oq ${PROTOC_ZIP} -d $(AKASH_DEVCACHE) 'include/*'; \
@@ -85,26 +85,6 @@ $(GOLANGCI_LINT_VERSION_FILE): $(AKASH_DEVCACHE)
 	mkdir -p "$(dir $@)"
 	touch $@
 $(GOLANGCI_LINT): $(GOLANGCI_LINT_VERSION_FILE)
-
-$(NPM):
-ifeq (, $(shell which $(NPM) 2>/dev/null))
-	$(error "npm installation required")
-endif
-
-$(SWAGGER_COMBINE): $(AKASH_DEVCACHE) $(NPM)
-ifeq (, $(shell which swagger-combine 2>/dev/null))
-	@echo "Installing swagger-combine..."
-	npm install swagger-combine --prefix $(AKASH_DEVCACHE_NODE_MODULES)
-	chmod +x $(SWAGGER_COMBINE)
-else
-	@echo "swagger-combine already installed; skipping..."
-endif
-
-$(PROTOC_SWAGGER_GEN): $(AKASH_DEVCACHE)
-ifeq (, $(shell which protoc-gen-swagger 2>/dev/null))
-	@echo "installing protoc-gen-swagger $(PROTOC_SWAGGER_GEN_VERSION) ..."
-	GOBIN=$(AKASH_DEVCACHE_BIN) $(GO) install github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger@$(PROTOC_SWAGGER_GEN_VERSION)
-endif
 
 cache-clean:
 	rm -rf $(AKASH_DEVCACHE)

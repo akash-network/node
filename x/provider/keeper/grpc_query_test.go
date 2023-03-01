@@ -6,14 +6,16 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/cosmos/cosmos-sdk/baseapp"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
+
+	types "github.com/akash-network/akash-api/go/node/provider/v1beta3"
+
 	"github.com/akash-network/node/app"
 	"github.com/akash-network/node/testutil"
 	"github.com/akash-network/node/testutil/state"
 	"github.com/akash-network/node/x/provider/keeper"
-	types "github.com/akash-network/node/x/provider/types/v1beta2"
-	"github.com/cosmos/cosmos-sdk/baseapp"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 )
 
 type grpcTestSuite struct {

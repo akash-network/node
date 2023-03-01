@@ -7,10 +7,11 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 
+	types "github.com/akash-network/akash-api/go/node/provider/v1beta3"
+
 	"github.com/akash-network/node/testutil"
 	"github.com/akash-network/node/testutil/state"
 	"github.com/akash-network/node/x/provider/keeper"
-	types "github.com/akash-network/node/x/provider/types/v1beta2"
 )
 
 func TestProviderCreate(t *testing.T) {

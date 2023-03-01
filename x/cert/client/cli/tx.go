@@ -7,13 +7,15 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/akash-network/node/sdkutil"
-	certerrors "github.com/akash-network/node/x/cert/errors"
-	types "github.com/akash-network/node/x/cert/types/v1beta2"
-	"github.com/akash-network/node/x/cert/utils"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+
+	"github.com/akash-network/node/client/broadcaster"
+	certerrors "github.com/akash-network/node/x/cert/errors"
+	"github.com/akash-network/node/x/cert/utils"
 )
 
 const (
@@ -146,7 +148,7 @@ func doPublishCmd(cmd *cobra.Command) error {
 
 	}
 
-	return sdkutil.BroadcastTX(cmd.Context(), cctx, cmd.Flags(), msg)
+	return broadcaster.BroadcastTX(cmd.Context(), cctx, cmd.Flags(), msg)
 }
 
 func doRevokeCmd(cmd *cobra.Command) error {
@@ -207,5 +209,5 @@ func doRevokeCmd(cmd *cobra.Command) error {
 		},
 	}
 
-	return sdkutil.BroadcastTX(cmd.Context(), cctx, cmd.Flags(), msg)
+	return broadcaster.BroadcastTX(cmd.Context(), cctx, cmd.Flags(), msg)
 }

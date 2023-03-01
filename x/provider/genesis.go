@@ -1,13 +1,15 @@
 package provider
 
 import (
-	"github.com/akash-network/node/x/provider/keeper"
-	types "github.com/akash-network/node/x/provider/types/v1beta2"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	abci "github.com/tendermint/tendermint/abci/types"
+
+	types "github.com/akash-network/akash-api/go/node/provider/v1beta3"
+
+	"github.com/akash-network/node/x/provider/keeper"
 )
 
-// ValidateGenesis does validation check of the Genesis and returns error incase of failure
+// ValidateGenesis does validation check of the Genesis and returns error in case of failure
 func ValidateGenesis(data *types.GenesisState) error {
 	return nil
 }

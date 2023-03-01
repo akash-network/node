@@ -1,7 +1,6 @@
 package keeper
 
 import (
-	v015 "github.com/akash-network/node/x/market/legacy/v015"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
@@ -17,5 +16,6 @@ func NewMigrator(k IKeeper) Migrator {
 
 // Migrate1to2 migrates from version 1 to 2.
 func (m Migrator) Migrate1to2(ctx sdk.Context) error {
-	return v015.MigrateStore(ctx, m.keeper.skey, m.keeper.cdc)
+	// return v015.MigrateStore(ctx, m.keeper.skey, m.keeper.cdc)
+	return nil
 }

@@ -3,9 +3,10 @@ package keeper
 import (
 	"testing"
 
-	types "github.com/akash-network/node/x/escrow/types/v1beta2"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/assert"
+
+	types "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
 )
 
 const denom = "uakt"

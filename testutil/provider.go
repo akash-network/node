@@ -3,7 +3,7 @@ package testutil
 import (
 	"testing"
 
-	ptypes "github.com/akash-network/node/x/provider/types/v1beta2"
+	ptypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
 )
 
 func Provider(t testing.TB) ptypes.Provider {

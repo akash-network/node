@@ -3,32 +3,34 @@ package sdl
 import (
 	"sort"
 
-	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
 	types "github.com/akash-network/akash-api/go/node/types/v1beta3"
 )
 
-type v2CPUAttributes types.Attributes
+type v2GPUAttributes types.Attributes
 
-type v2ResourceCPU struct {
-	Units      cpuQuantity     `yaml:"units"`
+type v2ResourceGPU struct {
+	Units      gpuQuantity     `yaml:"units"`
 	Attributes v2CPUAttributes `yaml:"attributes,omitempty"`
 }
 
-func (sdl *v2CPUAttributes) UnmarshalYAML(node *yaml.Node) error {
-	var attr v2CPUAttributes
+func (sdl *v2GPUAttributes) UnmarshalYAML(node *yaml.Node) error {
+	var attr v2GPUAttributes
 
 	for i := 0; i+1 < len(node.Content); i += 2 {
 		var value string
-		switch node.Content[i].Value {
-		case "arch":
-			if err := node.Content[i+1].Decode(&value); err != nil {
-				return err
-			}
-		default:
-			return errors.Errorf("unsupported cpu attribute \"%s\"", node.Content[i].Value)
+		if err := node.Content[i+1].Decode(&value); err != nil {
+			return err
 		}
+		// switch node.Content[i].Value {
+		// case "arch":
+		// 	if err := node.Content[i+1].Decode(&value); err != nil {
+		// 		return err
+		// 	}
+		// default:
+		// 	return errors.Errorf("unsupported cpu attribute \"%s\"", node.Content[i].Value)
+		// }
 
 		attr = append(attr, types.Attribute{
 			Key:   node.Content[i].Value,

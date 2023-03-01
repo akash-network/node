@@ -6,14 +6,23 @@ import (
 	"fmt"
 	"math/rand"
 
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/codec"
-	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
-	"github.com/cosmos/cosmos-sdk/types/module"
-	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
+
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/codec"
+	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/module"
+	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
+	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	abci "github.com/tendermint/tendermint/abci/types"
+
+	v1beta1types "github.com/akash-network/akash-api/go/node/market/v1beta1"
+	v1beta2types "github.com/akash-network/akash-api/go/node/market/v1beta2"
+	types "github.com/akash-network/akash-api/go/node/market/v1beta3"
 
 	akeeper "github.com/akash-network/node/x/audit/keeper"
 	ekeeper "github.com/akash-network/node/x/escrow/keeper"
@@ -22,13 +31,6 @@ import (
 	"github.com/akash-network/node/x/market/handler"
 	"github.com/akash-network/node/x/market/keeper"
 	"github.com/akash-network/node/x/market/simulation"
-	v1beta1types "github.com/akash-network/node/x/market/types/v1beta1"
-	types "github.com/akash-network/node/x/market/types/v1beta2"
-
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
-	abci "github.com/tendermint/tendermint/abci/types"
 )
 
 var (
@@ -55,6 +57,7 @@ func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 // RegisterInterfaces registers the module's interface types
 func (b AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 	types.RegisterInterfaces(registry)
+	v1beta2types.RegisterInterfaces(registry)
 	v1beta1types.RegisterInterfaces(registry)
 }
 
@@ -65,7 +68,7 @@ func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
 }
 
 // ValidateGenesis validation check of the Genesis
-func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, config client.TxEncodingConfig, bz json.RawMessage) error {
+func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, _ client.TxEncodingConfig, bz json.RawMessage) error {
 	var data types.GenesisState
 	err := cdc.UnmarshalJSON(bz, &data)
 	if err != nil {
@@ -137,7 +140,7 @@ func (AppModule) Name() string {
 }
 
 // RegisterInvariants registers module invariants
-func (am AppModule) RegisterInvariants(ir sdk.InvariantRegistry) {}
+func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
 
 // Route returns the message routing key for the market module.
 func (am AppModule) Route() sdk.Route {
@@ -171,7 +174,7 @@ func (am AppModule) BeginBlock(_ sdk.Context, _ abci.RequestBeginBlock) {}
 
 // EndBlock returns the end blocker for the market module. It returns no validator
 // updates.
-func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
+func (am AppModule) EndBlock(_ sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
 	return []abci.ValidatorUpdate{}
 }
 
@@ -201,7 +204,7 @@ type AppModuleSimulation struct {
 	akeeper govtypes.AccountKeeper
 }
 
-// NewAppModule creates a new AppModuleSimulation instance
+// NewAppModuleSimulation creates a new AppModuleSimulation instance
 func NewAppModuleSimulation(
 	keeper keeper.IKeeper,
 	akeeper govtypes.AccountKeeper,
@@ -233,12 +236,12 @@ func (AppModuleSimulation) ProposalContents(_ module.SimulationState) []simtypes
 }
 
 // RandomizedParams creates randomized staking param changes for the simulator.
-func (AppModuleSimulation) RandomizedParams(r *rand.Rand) []simtypes.ParamChange {
+func (AppModuleSimulation) RandomizedParams(_ *rand.Rand) []simtypes.ParamChange {
 	return nil
 }
 
 // RegisterStoreDecoder registers a decoder for staking module's types
-func (AppModuleSimulation) RegisterStoreDecoder(sdr sdk.StoreDecoderRegistry) {
+func (AppModuleSimulation) RegisterStoreDecoder(_ sdk.StoreDecoderRegistry) {
 	// sdr[StoreKey] = simulation.DecodeStore
 }
 

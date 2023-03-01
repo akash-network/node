@@ -3,12 +3,14 @@ package keeper
 import (
 	"sort"
 
-	akashtypes "github.com/akash-network/node/types/v1beta2"
-	atypes "github.com/akash-network/node/types/v1beta2"
-	types "github.com/akash-network/node/x/audit/types/v1beta2"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+
+	types "github.com/akash-network/akash-api/go/node/audit/v1beta3"
+
+	akashtypes "github.com/akash-network/akash-api/go/node/types/v1beta3"
+	atypes "github.com/akash-network/akash-api/go/node/types/v1beta3"
 )
 
 // TODO: use interfaces for keepers, queriers

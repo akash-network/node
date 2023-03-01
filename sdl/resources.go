@@ -1,14 +1,32 @@
 package sdl
 
 import (
-	types "github.com/akash-network/node/types/v1beta2"
+	types "github.com/akash-network/akash-api/go/node/types/v1beta3"
 )
 
 type v2ComputeResources struct {
 	CPU     *v2ResourceCPU         `yaml:"cpu"`
+	GPU     *v2ResourceGPU         `yaml:"gpu,omitempty"`
 	Memory  *v2ResourceMemory      `yaml:"memory"`
 	Storage v2ResourceStorageArray `yaml:"storage"`
 }
+
+// func (sdl *v2ComputeResources) UnmarshalYAML(node *yaml.Node) error {
+// 	res := v2ComputeResources{}
+//
+// 	if err := node.Decode(&res); err != nil {
+// 		return err
+// 	}
+//
+// 	if res.GPU == nil {
+// 		res.GPU = &v2ResourceGPU {
+// 			Units: 0,
+// 		}
+// 	}
+//
+// 	*sdl = res
+// 	return nil
+// }
 
 func (sdl *v2ComputeResources) toDGroupResourceUnits() types.ResourceUnits {
 	if sdl == nil {
@@ -16,12 +34,21 @@ func (sdl *v2ComputeResources) toDGroupResourceUnits() types.ResourceUnits {
 	}
 
 	var units types.ResourceUnits
+
 	if sdl.CPU != nil {
 		units.CPU = &types.CPU{
 			Units:      types.NewResourceValue(uint64(sdl.CPU.Units)),
 			Attributes: types.Attributes(sdl.CPU.Attributes),
 		}
 	}
+
+	if sdl.GPU != nil {
+		units.GPU = &types.GPU{
+			Units:      types.NewResourceValue(uint64(sdl.GPU.Units)),
+			Attributes: types.Attributes(sdl.GPU.Attributes),
+		}
+	}
+
 	if sdl.Memory != nil {
 		units.Memory = &types.Memory{
 			Quantity:   types.NewResourceValue(uint64(sdl.Memory.Quantity)),
@@ -50,6 +77,13 @@ func toManifestResources(res *v2ComputeResources) types.ResourceUnits {
 			Units: types.NewResourceValue(uint64(res.CPU.Units)),
 		}
 	}
+
+	if res.GPU != nil {
+		units.GPU = &types.GPU{
+			Units: types.NewResourceValue(uint64(res.GPU.Units)),
+		}
+	}
+
 	if res.Memory != nil {
 		units.Memory = &types.Memory{
 			Quantity: types.NewResourceValue(uint64(res.Memory.Quantity)),

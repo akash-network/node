@@ -6,8 +6,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
 	"github.com/akash-network/node/x/deployment/query"
-	types "github.com/akash-network/node/x/deployment/types/v1beta2"
 )
 
 // DeploymentIDFromRequest returns DeploymentID from parsing request

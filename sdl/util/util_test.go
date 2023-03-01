@@ -5,9 +5,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	manifest "github.com/akash-network/node/manifest/v2beta1"
+	manifest "github.com/akash-network/akash-api/go/manifest/v2beta2"
+	atypes "github.com/akash-network/akash-api/go/node/types/v1beta3"
+
 	"github.com/akash-network/node/sdl/util"
-	atypes "github.com/akash-network/node/types/v1beta2"
 )
 
 func TestShouldBeIngress(t *testing.T) {

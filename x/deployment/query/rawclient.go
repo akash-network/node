@@ -3,8 +3,9 @@ package query
 import (
 	"fmt"
 
-	types "github.com/akash-network/node/x/deployment/types/v1beta2"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
+
+	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
 )
 
 // RawClient interface

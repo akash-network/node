@@ -13,17 +13,21 @@ import (
 
 	tmrpc "github.com/tendermint/tendermint/rpc/core/types"
 
+	atypes "github.com/akash-network/akash-api/go/node/audit/v1beta3"
+
+	ctypes "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+
+	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+	mtypes "github.com/akash-network/akash-api/go/node/market/v1beta3"
+
+	ptypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
+
 	"github.com/akash-network/node/client/broadcaster"
 	amodule "github.com/akash-network/node/x/audit"
-	atypes "github.com/akash-network/node/x/audit/types/v1beta2"
 	cmodule "github.com/akash-network/node/x/cert"
-	ctypes "github.com/akash-network/node/x/cert/types/v1beta2"
 	dmodule "github.com/akash-network/node/x/deployment"
-	dtypes "github.com/akash-network/node/x/deployment/types/v1beta2"
 	mmodule "github.com/akash-network/node/x/market"
-	mtypes "github.com/akash-network/node/x/market/types/v1beta2"
 	pmodule "github.com/akash-network/node/x/provider"
-	ptypes "github.com/akash-network/node/x/provider/types/v1beta2"
 )
 
 var (
