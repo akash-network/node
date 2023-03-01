@@ -1,4 +1,4 @@
-name: standardize-yaml
+name: tools
 on:
   push:
     branches: [master]

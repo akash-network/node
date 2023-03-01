@@ -1,4 +1,4 @@
-name: conventional commits
+name: tools
 
 on:
   pull_request:

@@ -1,4 +1,4 @@
-name: "Stale Reaper"
+name: github
 on:
   schedule:
   - cron: "0 0 * * *"
