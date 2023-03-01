@@ -10,9 +10,10 @@ import (
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 	dbm "github.com/tendermint/tm-db"
 
+	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+
 	"github.com/akash-network/node/testutil"
 	"github.com/akash-network/node/x/cert/keeper"
-	types "github.com/akash-network/node/x/cert/types/v1beta2"
 )
 
 func TestCertKeeperCreate(t *testing.T) {

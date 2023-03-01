@@ -1,13 +1,15 @@
 package keeper
 
 import (
-	dtypes "github.com/akash-network/node/x/deployment/types/v1beta2"
-	"github.com/akash-network/node/x/market/keeper/keys"
-	types "github.com/akash-network/node/x/market/types/v1beta2"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	"github.com/pkg/errors"
+
+	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+	types "github.com/akash-network/akash-api/go/node/market/v1beta3"
+
+	"github.com/akash-network/node/x/market/keeper/keys"
 )
 
 // TODO: use interface for all keepers, queriers

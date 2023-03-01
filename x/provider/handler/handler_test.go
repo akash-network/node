@@ -9,14 +9,15 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
+	types "github.com/akash-network/akash-api/go/node/provider/v1beta3"
+
+	akashtypes "github.com/akash-network/akash-api/go/node/types/v1beta3"
+
 	"github.com/akash-network/node/testutil"
 	"github.com/akash-network/node/testutil/state"
-	akashtypes "github.com/akash-network/node/types/v1beta2"
 	mkeeper "github.com/akash-network/node/x/market/keeper"
 	"github.com/akash-network/node/x/provider/handler"
-
 	"github.com/akash-network/node/x/provider/keeper"
-	types "github.com/akash-network/node/x/provider/types/v1beta2"
 )
 
 const (

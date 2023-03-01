@@ -9,11 +9,11 @@ import (
 
 	"github.com/pkg/errors"
 
-	manifest "github.com/akash-network/node/manifest/v2beta1"
+	manifest "github.com/akash-network/akash-api/go/manifest/v2beta2"
+	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+	types "github.com/akash-network/akash-api/go/node/types/v1beta3"
 
 	sdlutil "github.com/akash-network/node/sdl/util"
-	types "github.com/akash-network/node/types/v1beta2"
-	dtypes "github.com/akash-network/node/x/deployment/types/v1beta2"
 )
 
 const (
@@ -138,8 +138,8 @@ func (ho v2HTTPOptions) asManifest() (manifest.ServiceExposeHTTPOptions, error) 
 }
 
 type v2Expose struct {
-	Port        uint16
-	As          uint16
+	Port        uint32
+	As          uint32
 	Proto       string        `yaml:"proto,omitempty"`
 	To          []v2ExposeTo  `yaml:"to,omitempty"`
 	Accept      v2Accept      `yaml:"accept"`
@@ -236,7 +236,7 @@ func (sdl *v2) DeploymentGroups() ([]*dtypes.GroupSpec, error) {
 		for _, placementName := range v2DeploymentPlacementNames(depl) {
 			svcdepl := depl[placementName]
 
-			// at this moment compute, infra and price have been check for existence
+			// at this moment compute, infra and price have been checked for existence
 			compute := sdl.Profiles.Compute[svcdepl.Profile]
 			infra := sdl.Profiles.Placement[placementName]
 			price := infra.Pricing[svcdepl.Profile]

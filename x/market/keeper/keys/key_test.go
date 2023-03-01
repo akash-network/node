@@ -3,9 +3,10 @@ package keys_test
 import (
 	"testing"
 
+	types "github.com/akash-network/akash-api/go/node/market/v1beta3"
+
 	_ "github.com/akash-network/node/testutil"
 	"github.com/akash-network/node/x/market/keeper/keys"
-	types "github.com/akash-network/node/x/market/types/v1beta2"
 
 	"github.com/stretchr/testify/require"
 )

@@ -3,11 +3,12 @@ package cli
 import (
 	"context"
 
-	types "github.com/akash-network/node/x/provider/types/v1beta2"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
+
+	types "github.com/akash-network/akash-api/go/node/provider/v1beta3"
 )
 
 // GetQueryCmd returns the transaction commands for the provider module

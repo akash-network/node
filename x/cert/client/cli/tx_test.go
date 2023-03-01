@@ -7,9 +7,10 @@ import (
 	"github.com/akash-network/node/testutil"
 	"github.com/akash-network/node/x/cert/client/cli"
 
-	certerrors "github.com/akash-network/node/x/cert/errors"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+
+	certerrors "github.com/akash-network/node/x/cert/errors"
 )
 
 const testHost = "foobar.dev"

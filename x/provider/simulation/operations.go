@@ -14,10 +14,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/simulation"
 	"github.com/pkg/errors"
 
+	types "github.com/akash-network/akash-api/go/node/provider/v1beta3"
+
 	appparams "github.com/akash-network/node/app/params"
 	"github.com/akash-network/node/x/provider/config"
 	"github.com/akash-network/node/x/provider/keeper"
-	types "github.com/akash-network/node/x/provider/types/v1beta2"
 )
 
 // Simulation operation weights constants

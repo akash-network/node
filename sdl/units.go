@@ -7,7 +7,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/akash-network/node/types/unit"
+	"github.com/akash-network/akash-api/go/node/types/unit"
 )
 
 var (
@@ -40,6 +40,8 @@ var unitSuffixes = []struct {
 // CPU shares.  One CPUQuantity = 1/1000 of a CPU
 type cpuQuantity uint32
 
+type gpuQuantity uint64
+
 func (u *cpuQuantity) UnmarshalYAML(node *yaml.Node) error {
 	sval := node.Value
 	if strings.HasSuffix(sval, "m") {
@@ -64,6 +66,19 @@ func (u *cpuQuantity) UnmarshalYAML(node *yaml.Node) error {
 	}
 
 	*u = cpuQuantity(val)
+
+	return nil
+}
+
+func (u *gpuQuantity) UnmarshalYAML(node *yaml.Node) error {
+	sval := node.Value
+
+	val, err := strconv.ParseUint(sval, 10, 64)
+	if err != nil {
+		return err
+	}
+
+	*u = gpuQuantity(val)
 
 	return nil
 }

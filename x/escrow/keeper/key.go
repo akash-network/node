@@ -3,7 +3,7 @@ package keeper
 import (
 	"bytes"
 
-	types "github.com/akash-network/node/x/escrow/types/v1beta2"
+	types "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
 )
 
 func accountKey(id types.AccountID) []byte {

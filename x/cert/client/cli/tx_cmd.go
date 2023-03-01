@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	types "github.com/akash-network/node/x/cert/types/v1beta2"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/server"
@@ -13,6 +12,8 @@ import (
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
 )
 
 func cmdGenerate() *cobra.Command {

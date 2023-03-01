@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/binary"
 
-	"github.com/akash-network/node/sdkutil"
-	dtypes "github.com/akash-network/node/x/deployment/types/v1beta2"
-	types "github.com/akash-network/node/x/market/types/v1beta2"
 	"github.com/cosmos/cosmos-sdk/types/address"
+
+	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+	types "github.com/akash-network/akash-api/go/node/market/v1beta3"
+	"github.com/akash-network/akash-api/go/sdkutil"
 )
 
 func filterToPrefix(prefix []byte, owner string, dseq uint64, gseq, oseq uint32, provider string) ([]byte, error) {

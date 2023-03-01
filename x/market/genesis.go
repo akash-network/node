@@ -1,10 +1,12 @@
 package market
 
 import (
-	"github.com/akash-network/node/x/market/keeper"
-	types "github.com/akash-network/node/x/market/types/v1beta2"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	abci "github.com/tendermint/tendermint/abci/types"
+
+	types "github.com/akash-network/akash-api/go/node/market/v1beta3"
+
+	"github.com/akash-network/node/x/market/keeper"
 )
 
 // ValidateGenesis does validation check of the Genesis

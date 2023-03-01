@@ -3,17 +3,23 @@ package v015_test
 import (
 	"testing"
 
-	"github.com/akash-network/node/app"
-	types "github.com/akash-network/node/types/v1beta1"
-	dtypesv1beta1 "github.com/akash-network/node/x/deployment/types/v1beta1"
-	dtypes "github.com/akash-network/node/x/deployment/types/v1beta2"
-	etypesv1beta1 "github.com/akash-network/node/x/escrow/types/v1beta1"
-	etypes "github.com/akash-network/node/x/escrow/types/v1beta2"
-	mtypesv1beta1 "github.com/akash-network/node/x/market/types/v1beta1"
-	mtypes "github.com/akash-network/node/x/market/types/v1beta2"
+	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta2"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
+
+	dtypesv1beta1 "github.com/akash-network/akash-api/go/node/deployment/v1beta1"
+
+	etypesv1beta1 "github.com/akash-network/akash-api/go/node/escrow/v1beta1"
+
+	etypes "github.com/akash-network/akash-api/go/node/escrow/v1beta2"
+	mtypes "github.com/akash-network/akash-api/go/node/market/v1beta2"
+
+	mtypesv1beta1 "github.com/akash-network/akash-api/go/node/market/v1beta1"
+
+	types "github.com/akash-network/akash-api/go/node/types/v1beta1"
+
+	"github.com/akash-network/node/app"
 )
 
 var (

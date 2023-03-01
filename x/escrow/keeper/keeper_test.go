@@ -3,14 +3,16 @@ package keeper_test
 import (
 	"testing"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	types "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
+
 	"github.com/akash-network/node/testutil"
 	"github.com/akash-network/node/testutil/state"
 	"github.com/akash-network/node/x/escrow/keeper"
 	"github.com/akash-network/node/x/escrow/keeper/mocks"
-	types "github.com/akash-network/node/x/escrow/types/v1beta2"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_AccountCreate(t *testing.T) {

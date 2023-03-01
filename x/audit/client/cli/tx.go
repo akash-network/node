@@ -9,11 +9,12 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	"github.com/akash-network/node/sdkutil"
-	akashtypes "github.com/akash-network/node/types/v1beta2"
-	atypes "github.com/akash-network/node/types/v1beta2"
-	types "github.com/akash-network/node/x/audit/types/v1beta2"
-	ptypes "github.com/akash-network/node/x/provider/types/v1beta2"
+	types "github.com/akash-network/akash-api/go/node/audit/v1beta3"
+	ptypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
+	akashtypes "github.com/akash-network/akash-api/go/node/types/v1beta3"
+	atypes "github.com/akash-network/akash-api/go/node/types/v1beta3"
+
+	"github.com/akash-network/node/client/broadcaster"
 )
 
 // GetTxCmd returns the transaction commands for audit module
@@ -85,7 +86,7 @@ func cmdCreateProviderAttributes() *cobra.Command {
 				return err
 			}
 
-			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 
@@ -125,7 +126,7 @@ func cmdDeleteProviderAttributes() *cobra.Command {
 				return err
 			}
 
-			return sdkutil.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
 		},
 	}
 

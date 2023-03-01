@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	testutilcli "github.com/akash-network/node/testutil/cli"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdktest "github.com/cosmos/cosmos-sdk/testutil"
+
+	testutilcli "github.com/akash-network/node/testutil/cli"
 )
 
-// TxCreateServerExec is used for testing create server certificate tx
+// TxGenerateServerExec is used for testing create server certificate tx
 func TxGenerateServerExec(ctx context.Context, clientCtx client.Context, from fmt.Stringer, host string, extraArgs ...string) (sdktest.BufferWriter, error) {
 	var args []string
 
@@ -21,7 +22,7 @@ func TxGenerateServerExec(ctx context.Context, clientCtx client.Context, from fm
 	return testutilcli.ExecTestCLICmd(ctx, clientCtx, cmdGenerateServer(), args...)
 }
 
-// TxCreateClientExec is used for testing create client certificate tx
+// TxGenerateClientExec is used for testing create client certificate tx
 func TxGenerateClientExec(ctx context.Context, clientCtx client.Context, from fmt.Stringer, extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
 		fmt.Sprintf("--from=%s", from.String()),
@@ -31,7 +32,7 @@ func TxGenerateClientExec(ctx context.Context, clientCtx client.Context, from fm
 	return testutilcli.ExecTestCLICmd(ctx, clientCtx, cmdGenerateClient(), args...)
 }
 
-// TxCreateServerExec is used for testing create server certificate tx
+// TxPublishServerExec is used for testing create server certificate tx
 func TxPublishServerExec(ctx context.Context, clientCtx client.Context, from fmt.Stringer, extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
 		fmt.Sprintf("--from=%s", from.String()),
@@ -41,7 +42,7 @@ func TxPublishServerExec(ctx context.Context, clientCtx client.Context, from fmt
 	return testutilcli.ExecTestCLICmd(ctx, clientCtx, cmdPublishServer(), args...)
 }
 
-// TxCreateClientExec is used for testing create client certificate tx
+// TxPublishClientExec is used for testing create client certificate tx
 func TxPublishClientExec(ctx context.Context, clientCtx client.Context, from fmt.Stringer, extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
 		fmt.Sprintf("--from=%s", from.String()),
@@ -51,7 +52,7 @@ func TxPublishClientExec(ctx context.Context, clientCtx client.Context, from fmt
 	return testutilcli.ExecTestCLICmd(ctx, clientCtx, cmdPublishClient(), args...)
 }
 
-// TxCreateServerExec is used for testing create server certificate tx
+// TxRevokeServerExec is used for testing create server certificate tx
 func TxRevokeServerExec(ctx context.Context, clientCtx client.Context, from fmt.Stringer, extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
 		fmt.Sprintf("--from=%s", from.String()),
@@ -61,7 +62,7 @@ func TxRevokeServerExec(ctx context.Context, clientCtx client.Context, from fmt.
 	return testutilcli.ExecTestCLICmd(ctx, clientCtx, cmdRevokeServer(), args...)
 }
 
-// TxCreateClientExec is used for testing create client certificate tx
+// TxRevokeClientExec is used for testing create client certificate tx
 func TxRevokeClientExec(ctx context.Context, clientCtx client.Context, from fmt.Stringer, extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
 		fmt.Sprintf("--from=%s", from.String()),
@@ -69,4 +70,20 @@ func TxRevokeClientExec(ctx context.Context, clientCtx client.Context, from fmt.
 
 	args = append(args, extraArgs...)
 	return testutilcli.ExecTestCLICmd(ctx, clientCtx, cmdRevokeClient(), args...)
+}
+
+// QueryCertificatesExec is used for testing certificates query
+func QueryCertificatesExec(clientCtx client.Context, extraArgs ...string) (sdktest.BufferWriter, error) {
+	return testutilcli.ExecTestCLICmd(context.Background(), clientCtx, cmdGetCertificates(), extraArgs...)
+}
+
+// QueryCertificateExec is used for testing certificate query
+func QueryCertificateExec(clientCtx client.Context, owner string, extraArgs ...string) (sdktest.BufferWriter, error) {
+	args := []string{
+		fmt.Sprintf("--owner=%s", owner),
+	}
+
+	args = append(args, extraArgs...)
+
+	return testutilcli.ExecTestCLICmd(context.Background(), clientCtx, cmdGetCertificates(), args...)
 }
