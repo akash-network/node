@@ -97,6 +97,7 @@ import (
 	"github.com/akash-network/node/x/cert"
 	dkeeper "github.com/akash-network/node/x/deployment/keeper"
 	escrowkeeper "github.com/akash-network/node/x/escrow/keeper"
+	agovkeeper "github.com/akash-network/node/x/gov/keeper"
 	"github.com/akash-network/node/x/inflation"
 	mkeeper "github.com/akash-network/node/x/market/keeper"
 	pkeeper "github.com/akash-network/node/x/provider/keeper"
@@ -162,6 +163,7 @@ type AkashApp struct {
 		cert       cert.Keeper
 		inflation  inflation.Keeper
 		astaking   astakingkeeper.IKeeper
+		agov       agovkeeper.IKeeper
 	}
 
 	mm *module.Manager
@@ -451,6 +453,8 @@ func NewApp(
 		},
 		CDC:            app.appCodec,
 		AStakingKeeper: app.keeper.astaking,
+		GovKeeper:      &app.keeper.gov,
+		AGovKeeper:     app.keeper.agov,
 	}
 
 	handler, err := NewAnteHandler(anteOpts)

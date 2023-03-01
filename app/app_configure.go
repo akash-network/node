@@ -35,6 +35,8 @@ import (
 	"github.com/akash-network/node/x/deployment"
 	"github.com/akash-network/node/x/escrow"
 	ekeeper "github.com/akash-network/node/x/escrow/keeper"
+	agov "github.com/akash-network/node/x/gov"
+	agovkeeper "github.com/akash-network/node/x/gov/keeper"
 	"github.com/akash-network/node/x/inflation"
 	"github.com/akash-network/node/x/market"
 	mhooks "github.com/akash-network/node/x/market/hooks"
@@ -53,6 +55,7 @@ func akashModuleBasics() []module.AppModuleBasic {
 		cert.AppModuleBasic{},
 		inflation.AppModuleBasic{},
 		astaking.AppModuleBasic{},
+		agov.AppModuleBasic{},
 	}
 }
 
@@ -66,6 +69,7 @@ func akashKVStoreKeys() []string {
 		cert.StoreKey,
 		inflation.StoreKey,
 		astaking.StoreKey,
+		agov.StoreKey,
 	}
 }
 
@@ -74,6 +78,7 @@ func akashSubspaces(k paramskeeper.Keeper) paramskeeper.Keeper {
 	k.Subspace(market.ModuleName)
 	k.Subspace(inflation.ModuleName)
 	k.Subspace(astaking.ModuleName)
+	k.Subspace(agov.ModuleName)
 
 	return k
 }
@@ -130,6 +135,12 @@ func (app *AkashApp) setAkashKeepers() {
 		app.keys[astaking.StoreKey],
 		app.GetSubspace(astaking.ModuleName),
 	)
+
+	app.keeper.agov = agovkeeper.NewKeeper(
+		app.appCodec,
+		app.keys[agov.StoreKey],
+		app.GetSubspace(agov.ModuleName),
+	)
 }
 
 func (app *AkashApp) akashAppModules() []module.AppModule {
@@ -184,6 +195,11 @@ func (app *AkashApp) akashAppModules() []module.AppModule {
 			app.appCodec,
 			app.keeper.astaking,
 		),
+
+		agov.NewAppModule(
+			app.appCodec,
+			app.keeper.agov,
+		),
 	}
 }
 
@@ -196,6 +212,7 @@ func (app *AkashApp) akashBeginBlockModules() []string {
 		paramstypes.ModuleName,
 		deploymenttypes.ModuleName,
 		govtypes.ModuleName,
+		agov.ModuleName,
 		providertypes.ModuleName,
 		certtypes.ModuleName,
 		markettypes.ModuleName,
@@ -223,6 +240,7 @@ func (app *AkashApp) akashEndBlockModules() []string {
 	return []string{
 		crisistypes.ModuleName,
 		govtypes.ModuleName,
+		agov.ModuleName,
 		stakingtypes.ModuleName,
 		astaking.ModuleName,
 		upgradetypes.ModuleName,
@@ -275,6 +293,7 @@ func (app *AkashApp) akashInitGenesisOrder() []string {
 		market.ModuleName,
 		inflation.ModuleName,
 		astaking.ModuleName,
+		agov.ModuleName,
 		genutiltypes.ModuleName,
 	}
 }
@@ -311,6 +330,10 @@ func (app *AkashApp) akashSimModules() []module.AppModuleSimulation {
 
 		astaking.NewAppModuleSimulation(
 			app.keeper.astaking,
+		),
+
+		agov.NewAppModuleSimulation(
+			app.keeper.agov,
 		),
 	}
 }
