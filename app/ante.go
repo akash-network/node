@@ -5,8 +5,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
+	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 
 	"github.com/akash-network/node/app/decorators"
+	agovkeeper "github.com/akash-network/node/x/gov/keeper"
 	astakingkeeper "github.com/akash-network/node/x/staking/keeper"
 )
 
@@ -15,6 +17,8 @@ type HandlerOptions struct {
 	ante.HandlerOptions
 	CDC            codec.BinaryCodec
 	AStakingKeeper astakingkeeper.IKeeper
+	GovKeeper      *govkeeper.Keeper
+	AGovKeeper     agovkeeper.IKeeper
 }
 
 // NewAnteHandler returns an AnteHandler that checks and increments sequence
@@ -41,6 +45,14 @@ func NewAnteHandler(options HandlerOptions) (sdk.AnteHandler, error) {
 		return nil, sdkerrors.Wrap(sdkerrors.ErrLogic, "custom akash staking keeper is required for ante builder")
 	}
 
+	if options.GovKeeper == nil {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrLogic, "akash governance keeper is required for ante builder")
+	}
+
+	if options.AGovKeeper == nil {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrLogic, "custom akash governance keeper is required for ante builder")
+	}
+
 	anteDecorators := []sdk.AnteDecorator{
 		ante.NewSetUpContextDecorator(), // outermost AnteDecorator. SetUpContext must be called first
 		ante.NewRejectExtensionOptionsDecorator(),
@@ -56,6 +68,7 @@ func NewAnteHandler(options HandlerOptions) (sdk.AnteHandler, error) {
 		ante.NewSigVerificationDecorator(options.AccountKeeper, options.SignModeHandler),
 		ante.NewIncrementSequenceDecorator(options.AccountKeeper),
 		decorators.NewMinCommissionDecorator(options.CDC, options.AStakingKeeper),
+		decorators.NewGovPreventSpamDecorator(options.CDC, *options.GovKeeper, options.AGovKeeper),
 	}
 
 	return sdk.ChainAnteDecorators(anteDecorators...), nil
