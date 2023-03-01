@@ -26,7 +26,7 @@ $(error go version $(GO_MOD_VERSION) from go.mod does not match GO_MIN_REQUIRED=
 endif
 
 ifneq (0, $(__IS_GO_UPTODATE))
-$(error invalid go$(DETECTED_GO_VERSION) version. installed must be >= $(GO_MIN_REQUIRED))
+$(error invalid go$(DETECTED_GO_VERSION) version. installed must be == $(GO_MIN_REQUIRED))
 else
 $(info using go$(DETECTED_GO_VERSION))
 endif
@@ -43,7 +43,7 @@ PROTOC_VERSION               ?= 3.13.0
 PROTOC_GEN_GOCOSMOS_VERSION  ?= v0.3.1
 GRPC_GATEWAY_VERSION         := $(shell $(GO) list -mod=readonly -m -f '{{ .Version }}' github.com/grpc-ecosystem/grpc-gateway)
 PROTOC_SWAGGER_GEN_VERSION   := $(GRPC_GATEWAY_VERSION)
-GOLANGCI_LINT_VERSION        ?= v1.50.0
+GOLANGCI_LINT_VERSION        ?= v1.51.2
 GOLANG_VERSION               ?= 1.16.1
 STATIK_VERSION               ?= v0.1.7
 GIT_CHGLOG_VERSION           ?= v0.15.1
