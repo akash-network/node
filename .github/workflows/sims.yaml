@@ -1,4 +1,4 @@
-name: simulation-tests
+name: tests
 on:
   push:
     branches:
@@ -13,7 +13,7 @@ env:
   MAINNET: ${{ github.ref == 'refs/heads/mainnet/main' || github.base_ref == 'refs/heads/mainnet/main' }}
 
 jobs:
-  cleanup-runs:
+  sim-cleanup-runs:
     runs-on: ubuntu-latest
     if: github.ref != 'refs/heads/master' && github.ref != 'refs/heads/mainnet/main'
     steps:
@@ -21,7 +21,7 @@ jobs:
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
-  test-sim-nondeterminism:
+  sim-nondeterminism:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -35,7 +35,7 @@ jobs:
       - name: test-sim-nondeterminism
         run: make test-sim-nondeterminism
 
-  test-sim-import-export:
+  sim-import-export:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -49,7 +49,7 @@ jobs:
       - name: test-sim-import-export
         run: make test-sim-import-export
 
-  test-sim-after-import:
+  sim-after-import:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -63,7 +63,7 @@ jobs:
       - name: test-sim-after-import
         run: make test-sim-after-import
 
-  test-sim-fullapp:
+  sim-fullapp:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3

@@ -1,4 +1,4 @@
-name: macos
+name: tests
 
 defaults:
   run:
@@ -15,7 +15,7 @@ env:
   MAINNET: ${{ github.ref == 'refs/heads/mainnet/main'}}
 
 jobs:
-  build-bins:
+  macos-bins:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3

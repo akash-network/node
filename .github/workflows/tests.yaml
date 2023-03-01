@@ -7,11 +7,7 @@ on:
       - master
       - mainnet/main
 
-env:
-  MAINNET: ${{ github.ref == 'refs/heads/mainnet/main' || github.base_ref == 'refs/heads/mainnet/main' }}
-
 jobs:
-
   build-bins:
     runs-on: ubuntu-latest
     steps:
