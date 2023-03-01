@@ -39,6 +39,8 @@ import (
 	"github.com/akash-network/node/x/market"
 	mhooks "github.com/akash-network/node/x/market/hooks"
 	"github.com/akash-network/node/x/provider"
+	astaking "github.com/akash-network/node/x/staking"
+	astakingkeeper "github.com/akash-network/node/x/staking/keeper"
 )
 
 func akashModuleBasics() []module.AppModuleBasic {
@@ -50,6 +52,7 @@ func akashModuleBasics() []module.AppModuleBasic {
 		audit.AppModuleBasic{},
 		cert.AppModuleBasic{},
 		inflation.AppModuleBasic{},
+		astaking.AppModuleBasic{},
 	}
 }
 
@@ -62,6 +65,7 @@ func akashKVStoreKeys() []string {
 		audit.StoreKey,
 		cert.StoreKey,
 		inflation.StoreKey,
+		astaking.StoreKey,
 	}
 }
 
@@ -69,6 +73,8 @@ func akashSubspaces(k paramskeeper.Keeper) paramskeeper.Keeper {
 	k.Subspace(deployment.ModuleName)
 	k.Subspace(market.ModuleName)
 	k.Subspace(inflation.ModuleName)
+	k.Subspace(astaking.ModuleName)
+
 	return k
 }
 
@@ -117,6 +123,12 @@ func (app *AkashApp) setAkashKeepers() {
 		app.appCodec,
 		app.keys[inflation.StoreKey],
 		app.GetSubspace(inflation.ModuleName),
+	)
+
+	app.keeper.astaking = astakingkeeper.NewKeeper(
+		app.appCodec,
+		app.keys[astaking.StoreKey],
+		app.GetSubspace(astaking.ModuleName),
 	)
 }
 
@@ -167,10 +179,15 @@ func (app *AkashApp) akashAppModules() []module.AppModule {
 			app.appCodec,
 			app.keeper.inflation,
 		),
+
+		astaking.NewAppModule(
+			app.appCodec,
+			app.keeper.astaking,
+		),
 	}
 }
 
-// akashEndBlockModules returns all end block modules.
+// akashBeginBlockModules returns all end block modules.
 func (app *AkashApp) akashBeginBlockModules() []string {
 	return []string{
 		upgradetypes.ModuleName,
@@ -195,6 +212,7 @@ func (app *AkashApp) akashBeginBlockModules() []string {
 		slashingtypes.ModuleName,
 		evidencetypes.ModuleName,
 		stakingtypes.ModuleName,
+		astaking.ModuleName,
 		transfertypes.ModuleName,
 		ibchost.ModuleName,
 	}
@@ -206,6 +224,7 @@ func (app *AkashApp) akashEndBlockModules() []string {
 		crisistypes.ModuleName,
 		govtypes.ModuleName,
 		stakingtypes.ModuleName,
+		astaking.ModuleName,
 		upgradetypes.ModuleName,
 		capabilitytypes.ModuleName,
 		banktypes.ModuleName,
@@ -255,6 +274,7 @@ func (app *AkashApp) akashInitGenesisOrder() []string {
 		provider.ModuleName,
 		market.ModuleName,
 		inflation.ModuleName,
+		astaking.ModuleName,
 		genutiltypes.ModuleName,
 	}
 }
@@ -287,6 +307,10 @@ func (app *AkashApp) akashSimModules() []module.AppModuleSimulation {
 
 		inflation.NewAppModuleSimulation(
 			app.keeper.inflation,
+		),
+
+		astaking.NewAppModuleSimulation(
+			app.keeper.astaking,
 		),
 	}
 }

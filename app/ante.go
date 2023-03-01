@@ -5,12 +5,16 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
+
+	"github.com/akash-network/node/app/decorators"
+	astakingkeeper "github.com/akash-network/node/x/staking/keeper"
 )
 
 // HandlerOptions extends the SDK's AnteHandler options
 type HandlerOptions struct {
 	ante.HandlerOptions
-	CDC codec.BinaryCodec
+	CDC            codec.BinaryCodec
+	AStakingKeeper astakingkeeper.IKeeper
 }
 
 // NewAnteHandler returns an AnteHandler that checks and increments sequence
@@ -33,6 +37,10 @@ func NewAnteHandler(options HandlerOptions) (sdk.AnteHandler, error) {
 		return nil, sdkerrors.Wrap(sdkerrors.ErrLogic, "sig gas consumer handler is required for ante builder")
 	}
 
+	if options.AStakingKeeper == nil {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrLogic, "custom akash staking keeper is required for ante builder")
+	}
+
 	anteDecorators := []sdk.AnteDecorator{
 		ante.NewSetUpContextDecorator(), // outermost AnteDecorator. SetUpContext must be called first
 		ante.NewRejectExtensionOptionsDecorator(),
@@ -47,6 +55,7 @@ func NewAnteHandler(options HandlerOptions) (sdk.AnteHandler, error) {
 		ante.NewSigGasConsumeDecorator(options.AccountKeeper, options.SigGasConsumer),
 		ante.NewSigVerificationDecorator(options.AccountKeeper, options.SignModeHandler),
 		ante.NewIncrementSequenceDecorator(options.AccountKeeper),
+		decorators.NewMinCommissionDecorator(options.CDC, options.AStakingKeeper),
 	}
 
 	return sdk.ChainAnteDecorators(anteDecorators...), nil
