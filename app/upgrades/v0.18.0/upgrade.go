@@ -2,6 +2,8 @@
 package v0_18_0 // nolint revive
 
 import (
+	"fmt"
+
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
@@ -24,7 +26,6 @@ func init() {
 
 type upgrade struct {
 	*apptypes.App
-	icaModule ica.AppModule
 }
 
 var _ apptypes.IUpgrade = (*upgrade)(nil)
@@ -34,12 +35,9 @@ func initUpgrade(app *apptypes.App) (apptypes.IUpgrade, error) {
 		App: app,
 	}
 
-	val, err := apptypes.FindStructField[ica.AppModule](&app.Modules.Cosmos, "ICAModule")
-	if err != nil {
-		return nil, err
+	if _, exists := up.MM.Modules[icatypes.ModuleName]; !exists {
+		return nil, fmt.Errorf("module %s has not been initialized", icatypes.ModuleName) // nolint: goerr113
 	}
-
-	up.icaModule = val
 
 	return up, nil
 }
@@ -57,7 +55,7 @@ func (up *upgrade) StoreLoader() *storetypes.StoreUpgrades {
 
 func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 	return func(ctx sdk.Context, plan upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
-		fromVM[icatypes.ModuleName] = up.icaModule.ConsensusVersion()
+		fromVM[icatypes.ModuleName] = up.MM.Modules[icatypes.ModuleName].ConsensusVersion()
 
 		// create ICS27 Controller submodule params
 		// enable the controller chain
@@ -73,7 +71,7 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 
 		ctx.Logger().Info("start to init interchainaccount module...")
 		// initialize ICS27 module
-		up.icaModule.InitModule(ctx, controllerParams, hostParams)
+		up.MM.Modules[icatypes.ModuleName].(ica.AppModule).InitModule(ctx, controllerParams, hostParams)
 
 		ctx.Logger().Info("start to run module migrations...")
 

@@ -45,11 +45,6 @@ type IUpgrade interface {
 
 type UpgradeInitFn func(*App) (IUpgrade, error)
 
-type AppModules struct {
-	Cosmos struct{}
-	Akash  struct{}
-}
-
 type AppKeepers struct {
 	Cosmos struct {
 		Acct                 authkeeper.AccountKeeper
@@ -86,7 +81,6 @@ type AppKeepers struct {
 
 type App struct {
 	Keepers      AppKeepers
-	Modules      AppModules
 	Configurator module.Configurator
 	MM           *module.Manager
 }
@@ -115,7 +109,9 @@ func FindStructField[C any](obj interface{}, fieldName string) (C, error) {
 
 	field := rValue.Elem().FieldByName(fieldName)
 	if !field.IsValid() {
-		return *new(C), fmt.Errorf("interface `%s` does not have the field `%s`", rValue.Type(), fieldName) // nolint: goerr113
+		return *new(C), fmt.Errorf("interface `%s` does not have the field `%s`", // nolint: goerr113
+			rValue.Type(),
+			fieldName)
 	}
 
 	res, valid := field.Interface().(C)
