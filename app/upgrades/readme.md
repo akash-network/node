@@ -2,6 +2,10 @@
 
 ## Upgrades history
 
+### v0.22.0
+ - enable min initial deposit check for all new proposals
+ - upgrade validators with commission < %5
+ 
 ### v0.20.0
  - disable and remove Cosmos Inter Chain Accounts (ICA) due to issues discovered post v0.18.0
  
