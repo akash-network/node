@@ -8,9 +8,11 @@ import (
 	apptypes "github.com/akash-network/node/app/types"
 
 	// nolint: revive
-	_ "github.com/akash-network/node/app/upgrades/akash_v0.15.0_cosmos_v0.44.x"
+	_ "github.com/akash-network/node/app/upgrades/v0.22.0"
 	// nolint: revive
 	_ "github.com/akash-network/node/app/upgrades/v0.20.0"
+	// nolint: revive
+	_ "github.com/akash-network/node/app/upgrades/akash_v0.15.0_cosmos_v0.44.x"
 )
 
 func (app *AkashApp) registerUpgradeHandlers() error {
@@ -28,6 +30,7 @@ func (app *AkashApp) registerUpgradeHandlers() error {
 
 		app.Keepers.Cosmos.Upgrade.SetUpgradeHandler(name, upgrade.UpgradeHandler())
 		if storeUpgrades := upgrade.StoreLoader(); storeUpgrades != nil && upgradeInfo.Name == name {
+			app.Logger().Info(fmt.Sprintf("applying store upgrades for `%s`", name))
 			app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, storeUpgrades))
 		}
 	}
