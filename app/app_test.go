@@ -18,7 +18,7 @@ func TestAppExport(t *testing.T) {
 		db, nil, true, 0, map[int64]bool{}, DefaultHome, OptsWithGenesisTime(0))
 
 	for acc := range MacPerms() {
-		require.Equal(t, !allowedReceivingModAcc[acc], app1.keeper.bank.BlockedAddr(app1.keeper.acct.GetModuleAddress(acc)),
+		require.Equal(t, !allowedReceivingModAcc[acc], app1.Keepers.Cosmos.Bank.BlockedAddr(app1.Keepers.Cosmos.Acct.GetModuleAddress(acc)),
 			"ensure that blocked addresses are properly set in bank keeper")
 	}
 

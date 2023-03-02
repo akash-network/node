@@ -84,59 +84,62 @@ func akashSubspaces(k paramskeeper.Keeper) paramskeeper.Keeper {
 }
 
 func (app *AkashApp) setAkashKeepers() {
-	app.keeper.escrow = ekeeper.NewKeeper(
+	app.Keepers.Akash.Escrow = ekeeper.NewKeeper(
 		app.appCodec,
 		app.keys[escrow.StoreKey],
-		app.keeper.bank,
+		app.Keepers.Cosmos.Bank,
 	)
 
-	app.keeper.deployment = deployment.NewKeeper(
+	app.Keepers.Akash.Deployment = deployment.NewKeeper(
 		app.appCodec,
 		app.keys[deployment.StoreKey],
 		app.GetSubspace(deployment.ModuleName),
-		app.keeper.escrow,
+		app.Keepers.Akash.Escrow,
 	)
 
-	app.keeper.market = market.NewKeeper(
+	app.Keepers.Akash.Market = market.NewKeeper(
 		app.appCodec,
 		app.keys[market.StoreKey],
 		app.GetSubspace(market.ModuleName),
-		app.keeper.escrow,
+		app.Keepers.Akash.Escrow,
 	)
 
-	hook := mhooks.New(app.keeper.deployment, app.keeper.market)
+	hook := mhooks.New(
+		app.Keepers.Akash.Deployment,
+		app.Keepers.Akash.Market,
+	)
 
-	app.keeper.escrow.AddOnAccountClosedHook(hook.OnEscrowAccountClosed)
-	app.keeper.escrow.AddOnPaymentClosedHook(hook.OnEscrowPaymentClosed)
+	app.Keepers.Akash.Escrow.AddOnAccountClosedHook(hook.OnEscrowAccountClosed)
+	app.Keepers.Akash.Escrow.AddOnPaymentClosedHook(hook.OnEscrowPaymentClosed)
 
-	app.keeper.provider = provider.NewKeeper(
+	app.Keepers.Akash.Provider = provider.NewKeeper(
 		app.appCodec,
 		app.keys[provider.StoreKey],
 	)
 
-	app.keeper.audit = audit.NewKeeper(
+	app.Keepers.Akash.Audit = audit.NewKeeper(
 		app.appCodec,
 		app.keys[audit.StoreKey],
 	)
 
-	app.keeper.cert = cert.NewKeeper(
+	app.Keepers.Akash.Cert = cert.NewKeeper(
 		app.appCodec,
 		app.keys[cert.StoreKey],
 	)
 
-	app.keeper.inflation = inflation.NewKeeper(
+	app.Keepers.Akash.Inflation = inflation.NewKeeper(
 		app.appCodec,
 		app.keys[inflation.StoreKey],
 		app.GetSubspace(inflation.ModuleName),
 	)
 
-	app.keeper.astaking = astakingkeeper.NewKeeper(
+	app.Keepers.Akash.Staking = astakingkeeper.NewKeeper(
 		app.appCodec,
 		app.keys[astaking.StoreKey],
 		app.GetSubspace(astaking.ModuleName),
 	)
 
-	app.keeper.agov = agovkeeper.NewKeeper(
+	app.Keepers.Akash.Gov = agovkeeper.NewKeeper(
 		app.appCodec,
 		app.keys[agov.StoreKey],
 		app.GetSubspace(agov.ModuleName),
@@ -147,58 +150,58 @@ func (app *AkashApp) akashAppModules() []module.AppModule {
 	return []module.AppModule{
 		escrow.NewAppModule(
 			app.appCodec,
-			app.keeper.escrow,
+			app.Keepers.Akash.Escrow,
 		),
 
 		deployment.NewAppModule(
 			app.appCodec,
-			app.keeper.deployment,
-			app.keeper.market,
-			app.keeper.escrow,
-			app.keeper.bank,
-			app.keeper.authz,
+			app.Keepers.Akash.Deployment,
+			app.Keepers.Akash.Market,
+			app.Keepers.Akash.Escrow,
+			app.Keepers.Cosmos.Bank,
+			app.Keepers.Cosmos.Authz,
 		),
 
 		market.NewAppModule(
 			app.appCodec,
-			app.keeper.market,
-			app.keeper.escrow,
-			app.keeper.audit,
-			app.keeper.deployment,
-			app.keeper.provider,
-			app.keeper.bank,
+			app.Keepers.Akash.Market,
+			app.Keepers.Akash.Escrow,
+			app.Keepers.Akash.Audit,
+			app.Keepers.Akash.Deployment,
+			app.Keepers.Akash.Provider,
+			app.Keepers.Cosmos.Bank,
 		),
 
 		provider.NewAppModule(
 			app.appCodec,
-			app.keeper.provider,
-			app.keeper.bank,
-			app.keeper.market,
+			app.Keepers.Akash.Provider,
+			app.Keepers.Cosmos.Bank,
+			app.Keepers.Akash.Market,
 		),
 
 		audit.NewAppModule(
 			app.appCodec,
-			app.keeper.audit,
+			app.Keepers.Akash.Audit,
 		),
 
 		cert.NewAppModule(
 			app.appCodec,
-			app.keeper.cert,
+			app.Keepers.Akash.Cert,
 		),
 
 		inflation.NewAppModule(
 			app.appCodec,
-			app.keeper.inflation,
+			app.Keepers.Akash.Inflation,
 		),
 
 		astaking.NewAppModule(
 			app.appCodec,
-			app.keeper.astaking,
+			app.Keepers.Akash.Staking,
 		),
 
 		agov.NewAppModule(
 			app.appCodec,
-			app.keeper.agov,
+			app.Keepers.Akash.Gov,
 		),
 	}
 }
@@ -301,39 +304,39 @@ func (app *AkashApp) akashInitGenesisOrder() []string {
 func (app *AkashApp) akashSimModules() []module.AppModuleSimulation {
 	return []module.AppModuleSimulation{
 		deployment.NewAppModuleSimulation(
-			app.keeper.deployment,
-			app.keeper.acct,
-			app.keeper.bank,
+			app.Keepers.Akash.Deployment,
+			app.Keepers.Cosmos.Acct,
+			app.Keepers.Cosmos.Bank,
 		),
 
 		market.NewAppModuleSimulation(
-			app.keeper.market,
-			app.keeper.acct,
-			app.keeper.deployment,
-			app.keeper.provider,
-			app.keeper.bank,
+			app.Keepers.Akash.Market,
+			app.Keepers.Cosmos.Acct,
+			app.Keepers.Akash.Deployment,
+			app.Keepers.Akash.Provider,
+			app.Keepers.Cosmos.Bank,
 		),
 
 		provider.NewAppModuleSimulation(
-			app.keeper.provider,
-			app.keeper.acct,
-			app.keeper.bank,
+			app.Keepers.Akash.Provider,
+			app.Keepers.Cosmos.Acct,
+			app.Keepers.Cosmos.Bank,
 		),
 
 		cert.NewAppModuleSimulation(
-			app.keeper.cert,
+			app.Keepers.Akash.Cert,
 		),
 
 		inflation.NewAppModuleSimulation(
-			app.keeper.inflation,
+			app.Keepers.Akash.Inflation,
 		),
 
 		astaking.NewAppModuleSimulation(
-			app.keeper.astaking,
+			app.Keepers.Akash.Staking,
 		),
 
 		agov.NewAppModuleSimulation(
-			app.keeper.agov,
+			app.Keepers.Akash.Gov,
 		),
 	}
 }
