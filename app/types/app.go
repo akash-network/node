@@ -1,6 +1,7 @@
 package types
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -36,6 +37,10 @@ import (
 
 var (
 	upgrades = map[string]UpgradeInitFn{}
+)
+
+var (
+	ErrEmptyFieldName = errors.New("empty field name")
 )
 
 type IUpgrade interface {
@@ -101,6 +106,9 @@ func GetUpgradesList() map[string]UpgradeInitFn {
 // and has the defined member field, if error is nil, the given
 // fieldName exists and is accessible with reflect.
 func FindStructField[C any](obj interface{}, fieldName string) (C, error) {
+	if fieldName == "" {
+		return *new(C), ErrEmptyFieldName
+	}
 	rValue := reflect.ValueOf(obj)
 
 	if rValue.Type().Kind() != reflect.Ptr {
