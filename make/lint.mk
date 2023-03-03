@@ -1,4 +1,4 @@
-SUBLINTERS = deadcode \
+SUBLINTERS = unused \
 			misspell \
 			goerr113 \
 			gofmt \
