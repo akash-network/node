@@ -99,12 +99,14 @@ func GetUpgradesList() map[string]UpgradeInitFn {
 
 // FindStructField if an interface is either a struct or a pointer to a struct
 // and has the defined member field, if error is nil, the given
-// FieldName exists and is accessible with reflect.
+// fieldName exists and is accessible with reflect.
 func FindStructField[C any](obj interface{}, fieldName string) (C, error) {
 	rValue := reflect.ValueOf(obj)
 
 	if rValue.Type().Kind() != reflect.Ptr {
-		return *new(C), fmt.Errorf("obj is not a pointer") // nolint: goerr113
+		pValue := reflect.New(reflect.TypeOf(obj))
+		pValue.Elem().Set(rValue)
+		rValue = pValue
 	}
 
 	field := rValue.Elem().FieldByName(fieldName)
