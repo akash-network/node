@@ -12,7 +12,7 @@ type v2GPUAttributes types.Attributes
 
 type v2ResourceGPU struct {
 	Units      gpuQuantity     `yaml:"units"`
-	Attributes v2CPUAttributes `yaml:"attributes,omitempty"`
+	Attributes v2GPUAttributes `yaml:"attributes,omitempty"`
 }
 
 func (sdl *v2GPUAttributes) UnmarshalYAML(node *yaml.Node) error {
