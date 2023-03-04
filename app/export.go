@@ -25,7 +25,6 @@ import (
 func (app *AkashApp) ExportAppStateAndValidators(
 	forZeroHeight bool, jailAllowedAddrs []string,
 ) (servertypes.ExportedApp, error) {
-
 	// as if they could withdraw from the start of the next block
 	ctx := app.NewContext(true, tmproto.Header{Height: app.LastBlockHeight()})
 
@@ -121,7 +120,6 @@ func (app *AkashApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllowedAddrs 
 		feePool := app.Keepers.Cosmos.Distr.GetFeePool(ctx)
 		feePool.CommunityPool = feePool.CommunityPool.Add(scraps...)
 		app.Keepers.Cosmos.Distr.SetFeePool(ctx, feePool)
-
 		app.Keepers.Cosmos.Distr.Hooks().AfterValidatorCreated(ctx, val.GetOperator())
 		return false
 	})
