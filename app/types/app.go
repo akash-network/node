@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
@@ -37,15 +38,26 @@ import (
 
 var (
 	upgrades = map[string]UpgradeInitFn{}
+	forks    = map[int64]IFork{}
 )
 
 var (
 	ErrEmptyFieldName = errors.New("empty field name")
 )
 
+// IUpgrade defines an interface to run a SoftwareUpgradeProposal
 type IUpgrade interface {
 	StoreLoader() *storetypes.StoreUpgrades
 	UpgradeHandler() upgradetypes.UpgradeHandler
+}
+
+// IFork defines an interface for a non-software upgrade proposal Hard Fork at a given height to implement.
+// There is one time code that can be added for the start of the Fork, in `BeginForkLogic`.
+// Any other change in the code should be height-gated, if the goal is to have old and new binaries
+// to be compatible prior to the upgrade height.
+type IFork interface {
+	Name() string
+	BeginForkLogic(sdk.Context, *AppKeepers)
 }
 
 type UpgradeInitFn func(*App) (IUpgrade, error)
@@ -98,8 +110,20 @@ func RegisterUpgrade(name string, fn UpgradeInitFn) {
 	upgrades[name] = fn
 }
 
+func RegisterFork(height int64, fork IFork) {
+	if _, exists := forks[height]; exists {
+		panic(fmt.Sprintf("fork \"%s\" for height %d already registered", fork.Name(), height))
+	}
+
+	forks[height] = fork
+}
+
 func GetUpgradesList() map[string]UpgradeInitFn {
 	return upgrades
+}
+
+func GetForksList() map[int64]IFork {
+	return forks
 }
 
 // FindStructField if an interface is either a struct or a pointer to a struct
