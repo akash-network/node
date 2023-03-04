@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -502,8 +503,13 @@ func (app *AkashApp) InitChainer(ctx sdk.Context, req abci.RequestInitChain) abc
 }
 
 // BeginBlocker is a function in which application updates every begin block
-func (app *AkashApp) BeginBlocker(
-	ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
+func (app *AkashApp) BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
+	if fork, exists := apptypes.GetForksList()[ctx.BlockHeight()]; exists {
+		app.Logger().Info(fmt.Sprintf("found hard-fork %s for current height %d. Applying...", fork.Name(), ctx.BlockHeight()))
+		fork.BeginForkLogic(ctx, &app.Keepers)
+		app.Logger().Info(fmt.Sprintf("hard-fork %s applied successfully at height %d", fork.Name(), ctx.BlockHeight()))
+	}
+
 	return app.MM.BeginBlock(ctx, req)
 }
 
