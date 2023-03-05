@@ -24,6 +24,7 @@ import (
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	ibctransferkeeper "github.com/cosmos/ibc-go/v3/modules/apps/transfer/keeper"
 	ibckeeper "github.com/cosmos/ibc-go/v3/modules/core/keeper"
+	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/akash-network/node/x/audit"
 	"github.com/akash-network/node/x/cert"
@@ -60,7 +61,7 @@ type IFork interface {
 	BeginForkLogic(sdk.Context, *AppKeepers)
 }
 
-type UpgradeInitFn func(*App) (IUpgrade, error)
+type UpgradeInitFn func(log.Logger, *App) (IUpgrade, error)
 
 type AppKeepers struct {
 	Cosmos struct {

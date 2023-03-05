@@ -10,6 +10,7 @@ import (
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	ibcconnectiontypes "github.com/cosmos/ibc-go/v3/modules/core/03-connection/types"
 	ibckeeper "github.com/cosmos/ibc-go/v3/modules/core/keeper"
+	"github.com/tendermint/tendermint/libs/log"
 
 	apptypes "github.com/akash-network/node/app/types"
 )
@@ -29,7 +30,7 @@ type upgrade struct {
 
 var _ apptypes.IUpgrade = (*upgrade)(nil)
 
-func initUpgrade(app *apptypes.App) (apptypes.IUpgrade, error) {
+func initUpgrade(_ log.Logger, app *apptypes.App) (apptypes.IUpgrade, error) {
 	up := &upgrade{
 		App: app,
 	}

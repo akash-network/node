@@ -21,7 +21,7 @@ func (app *AkashApp) registerUpgradeHandlers() error {
 
 	for name, fn := range apptypes.GetUpgradesList() {
 		app.Logger().Info(fmt.Sprintf("initializing upgrade `%s`", name))
-		upgrade, err := fn(&app.App)
+		upgrade, err := fn(app.Logger(), &app.App)
 		if err != nil {
 			return fmt.Errorf("unable to unitialize upgrade `%s`: %w", name, err)
 		}
