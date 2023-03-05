@@ -12,6 +12,7 @@ import (
 	icacontrollertypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/controller/types"
 	icahosttypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/host/types"
 	icatypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/types"
+	"github.com/tendermint/tendermint/libs/log"
 
 	apptypes "github.com/akash-network/node/app/types"
 )
@@ -30,7 +31,7 @@ type upgrade struct {
 
 var _ apptypes.IUpgrade = (*upgrade)(nil)
 
-func initUpgrade(app *apptypes.App) (apptypes.IUpgrade, error) {
+func initUpgrade(_ log.Logger, app *apptypes.App) (apptypes.IUpgrade, error) {
 	up := &upgrade{
 		App: app,
 	}
