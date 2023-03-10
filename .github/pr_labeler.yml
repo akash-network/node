@@ -1,0 +1,18 @@
+"C:x/audit":
+  - x/audit/**/*
+"C:x/cert":
+  - x/cert/**/*
+"C:x/deployment":
+  - x/deployment/**/*
+"C:x/escrow":
+  - x/escrow/**/*
+"C:x/gov":
+  - x/gov/**/*
+"C:x/inflation":
+  - x/inflation/**/*
+"C:x/market":
+  - x/market/**/*
+"C:x/provider":
+  - x/provider/**/*
+"C:x/staking":
+  - x/staking/**/*
