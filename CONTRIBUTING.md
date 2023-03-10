@@ -57,79 +57,13 @@ Every effort will be made to work with contributors who do not follow the proces
 
 #### Paperwork for Pull Requests
 
-Please read this whole guide and make sure you agree to the Developer Certificate of Origin (DCO) agreement (included below):
+Ensure that you base and target your PR on the `master` branch.
+All feature additions and all bug fixes must be targeted against main. Exception is for bug fixes which are only related to a released version. In that case, the related bug fix PRs must target against the release branch.
+If needed, we backport a commit from main to a release branch (excluding consensus breaking feature, API breaking and similar).
 
-* See guidelines on commit messages (below)
-* Sign-off your commits (`git commit --signoff` or `-s`)
-* Complete the whole template for issues and pull requests
-* [Reference addressed issues](https://help.github.com/articles/closing-issues-using-keywords/) in the PR description & commit messages - use 'Fixes #IssueNo'
-* Always give instructions for testing
-* Provide us CLI commands and output or screenshots where you can
+#### Testing
 
-##### Commit messages
-
-The first line of the commit message is the *subject*, this should be followed by a blank line and then a message describing the intent and purpose of the commit.
-The first line MUST comply with conventional commits approach.
-```
-<type>[optional scope]: <description>
-
-[body]
-```
-
-The type field MUST be one of the following:
-```
-fix, feat, build, chore, ci, docs, style, refactor, perf, test
-```
-
-The body MAY include module/list of modules it affects.
-```
-feat: read akash config from some config system
-
-cmd/akash
-```
-The specification can be found [here](https://www.conventionalcommits.org/en/v1.0.0/#specification).
-
-* When you run `git commit` make sure you sign-off the commit by typing `git commit --signoff` or `git commit -s`
-* The commit subject-line should start with an uppercase letter
-* The commit subject-line should not exceed 72 characters in length
-* The commit subject-line should not end with punctuation (., etc)
-
-> Note: please do not use the GitHub suggestions feature, since it will not allow your commits to be signed-off.
-
-When giving a commit body:
-* Leave a blank line after the subject-line
-* Make sure all lines are wrapped to 72 characters
-
-Here's an example that would be accepted:
-
-```
-keys: add import and export functions (#386)
-
-add display public key only for key show add display private key only
-for key show new command `key import` add import private key import private
-key when running providers
-
-Signed-off-by: Greg Osuri <me@gregosuri.com>
-```
-
-Some invalid examples:
-
-```
-(feat) Add page about X to documentation
-```
-
-> This example does not follow the convention by adding a custom scheme of `(feat)`
-
-```
-Update the documentation for page X so including fixing A, B, C and D and F.
-```
-
-> This example will be truncated in the GitHub UI and via `git log --oneline`
-
-
-If you would like to ammend your commit follow this guide: [Git: Rewriting History](https://git-scm.com/book/en/v2/Git-Tools-Rewriting-History)
-
-#### Unit testing with Golang
+Tests can be executed by running `make test` at the top level of the Cosmos SDK repository.
 
 Please follow style guide on [this blog post](https://blog.alexellis.io/golang-writing-unit-tests/) from [The Go Programming Language](https://www.amazon.co.uk/Programming-Language-Addison-Wesley-Professional-Computing/dp/0134190440)
 
