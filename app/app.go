@@ -8,6 +8,9 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/cosmos/cosmos-sdk/x/feegrant"
+	feegrantkeeper "github.com/cosmos/cosmos-sdk/x/feegrant/keeper"
+	feegrantmodule "github.com/cosmos/cosmos-sdk/x/feegrant/module"
 	"github.com/gorilla/mux"
 	"github.com/rakyll/statik/fs"
 	"github.com/spf13/cast"
@@ -201,6 +204,12 @@ func NewApp(
 	// add authz keeper
 	app.Keepers.Cosmos.Authz = authzkeeper.NewKeeper(app.keys[authzkeeper.StoreKey], appCodec, app.MsgServiceRouter())
 
+	app.Keepers.Cosmos.FeeGrant = feegrantkeeper.NewKeeper(
+		appCodec,
+		keys[feegrant.StoreKey],
+		app.Keepers.Cosmos.Acct,
+	)
+
 	app.Keepers.Cosmos.Bank = bankkeeper.NewBaseKeeper(
 		appCodec,
 		app.keys[banktypes.StoreKey],
@@ -347,6 +356,7 @@ func NewApp(
 			genutil.NewAppModule(app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Staking, app.BaseApp.DeliverTx, encodingConfig.TxConfig),
 			auth.NewAppModule(appCodec, app.Keepers.Cosmos.Acct, nil),
 			authzmodule.NewAppModule(appCodec, app.Keepers.Cosmos.Authz, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank, app.interfaceRegistry),
+			feegrantmodule.NewAppModule(appCodec, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank, app.Keepers.Cosmos.FeeGrant, app.interfaceRegistry),
 			vesting.NewAppModule(app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank),
 			bank.NewAppModule(appCodec, app.Keepers.Cosmos.Bank, app.Keepers.Cosmos.Acct),
 			capability.NewAppModule(appCodec, *app.Keepers.Cosmos.Cap),
@@ -397,6 +407,7 @@ func NewApp(
 			auth.NewAppModule(appCodec, app.Keepers.Cosmos.Acct, authsims.RandomGenesisAccounts),
 			authzmodule.NewAppModule(appCodec, app.Keepers.Cosmos.Authz, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank, app.interfaceRegistry),
 			bank.NewAppModule(appCodec, app.Keepers.Cosmos.Bank, app.Keepers.Cosmos.Acct),
+			feegrantmodule.NewAppModule(appCodec, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank, app.Keepers.Cosmos.FeeGrant, app.interfaceRegistry),
 			capability.NewAppModule(appCodec, *app.Keepers.Cosmos.Cap),
 			gov.NewAppModule(appCodec, app.Keepers.Cosmos.Gov, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank),
 			mint.NewAppModule(appCodec, app.Keepers.Cosmos.Mint, app.Keepers.Cosmos.Acct),

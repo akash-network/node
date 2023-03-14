@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/tendermint/tendermint/libs/log"
+
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
@@ -15,6 +17,7 @@ import (
 	crisiskeeper "github.com/cosmos/cosmos-sdk/x/crisis/keeper"
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	evidencekeeper "github.com/cosmos/cosmos-sdk/x/evidence/keeper"
+	feegrantkeeper "github.com/cosmos/cosmos-sdk/x/feegrant/keeper"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	mintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
@@ -24,7 +27,6 @@ import (
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	ibctransferkeeper "github.com/cosmos/ibc-go/v3/modules/apps/transfer/keeper"
 	ibckeeper "github.com/cosmos/ibc-go/v3/modules/core/keeper"
-	"github.com/tendermint/tendermint/libs/log"
 
 	"github.com/akash-network/node/x/audit"
 	"github.com/akash-network/node/x/cert"
@@ -67,6 +69,7 @@ type AppKeepers struct {
 	Cosmos struct {
 		Acct                 authkeeper.AccountKeeper
 		Authz                authzkeeper.Keeper
+		FeeGrant             feegrantkeeper.Keeper
 		Bank                 bankkeeper.Keeper
 		Cap                  *capabilitykeeper.Keeper
 		Staking              stakingkeeper.Keeper
