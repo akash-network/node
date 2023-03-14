@@ -10,6 +10,7 @@ import (
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	evidencetypes "github.com/cosmos/cosmos-sdk/x/evidence/types"
+	"github.com/cosmos/cosmos-sdk/x/feegrant"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
@@ -235,6 +236,7 @@ func (app *AkashApp) akashBeginBlockModules() []string {
 		astaking.ModuleName,
 		transfertypes.ModuleName,
 		ibchost.ModuleName,
+		feegrant.ModuleName,
 	}
 }
 
@@ -267,6 +269,7 @@ func (app *AkashApp) akashEndBlockModules() []string {
 		evidencetypes.ModuleName,
 		transfertypes.ModuleName,
 		ibchost.ModuleName,
+		feegrant.ModuleName,
 	}
 }
 
@@ -289,6 +292,7 @@ func (app *AkashApp) akashInitGenesisOrder() []string {
 		ibchost.ModuleName,
 		evidencetypes.ModuleName,
 		transfertypes.ModuleName,
+		feegrant.ModuleName,
 		cert.ModuleName,
 		escrow.ModuleName,
 		deployment.ModuleName,
