@@ -20,6 +20,8 @@ import (
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	"github.com/cosmos/cosmos-sdk/x/evidence"
 	evidencetypes "github.com/cosmos/cosmos-sdk/x/evidence/types"
+	"github.com/cosmos/cosmos-sdk/x/feegrant"
+	feegrantmodule "github.com/cosmos/cosmos-sdk/x/feegrant/module"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
@@ -77,6 +79,7 @@ var (
 			evidence.AppModuleBasic{},
 			transfer.AppModuleBasic{},
 			vesting.AppModuleBasic{},
+			feegrantmodule.AppModuleBasic{},
 		},
 			// akash
 			akashModuleBasics()...,
@@ -105,6 +108,7 @@ func kvStoreKeys() map[string]*sdk.KVStoreKey {
 	return sdk.NewKVStoreKeys(
 		append([]string{
 			authtypes.StoreKey,
+			feegrant.StoreKey,
 			authzkeeper.StoreKey,
 			banktypes.StoreKey,
 			stakingtypes.StoreKey,
