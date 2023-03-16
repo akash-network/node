@@ -16,10 +16,11 @@ import (
 	"os"
 	"time"
 
-	sdkclient "github.com/cosmos/cosmos-sdk/client"
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	"go.step.sm/crypto/pemutil"
 
 	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+	sdkclient "github.com/cosmos/cosmos-sdk/client"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	certerrors "github.com/akash-network/node/x/cert/errors"
 )
@@ -182,7 +183,7 @@ func (kpm *keyPairManager) generateImpl(notBefore, notAfter time.Time, domains [
 	}
 
 	var blk *pem.Block
-	blk, err = x509.EncryptPEMBlock(rand.Reader, types.PemBlkTypeECPrivateKey, keyDer, kpm.passwordBytes, x509.PEMCipherAES256) // nolint: staticcheck
+	blk, err = pemutil.EncryptPKCS8PrivateKey(rand.Reader, keyDer, kpm.passwordBytes, x509.PEMCipherAES256)
 	if err != nil {
 		return fmt.Errorf("could not encrypt private key as PEM: %w", err)
 	}
@@ -254,8 +255,7 @@ func (kpm *keyPairManager) readImpl(fin io.Reader) ([]byte, []byte, []byte, erro
 	}
 
 	var privKeyPlaintext []byte
-	// fixme #1182
-	if privKeyPlaintext, err = x509.DecryptPEMBlock(block, kpm.passwordBytes); err != nil { // nolint: staticcheck
+	if privKeyPlaintext, err = pemutil.DecryptPEMBlock(block, kpm.passwordBytes); err != nil { // nolint: staticcheck
 		return nil, nil, nil, fmt.Errorf("%w: failed decrypting x509 block with private key", err)
 	}
 
