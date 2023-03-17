@@ -49,7 +49,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   homebrew:
     runs-on: ubuntu-latest
-    needs: [ goreleaser ]
+    needs: [ publish ]
     steps:
       - uses: actions/checkout@v3
         with:
