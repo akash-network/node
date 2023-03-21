@@ -31,7 +31,7 @@ func cmdGenerate() *cobra.Command {
 	return cmd
 }
 
-func addGenerateflags(cmd *cobra.Command) error {
+func addGenerateFlags(cmd *cobra.Command) error {
 	cmd.Flags().String(flagStart, "", "certificate is not valid before this date. default current timestamp. RFC3339")
 	if err := viper.BindPFlag(flagStart, cmd.Flags().Lookup(flagStart)); err != nil {
 		return err
@@ -59,7 +59,7 @@ func cmdGenerateClient() *cobra.Command {
 		SilenceUsage:               true,
 		Args:                       cobra.ExactArgs(0),
 	}
-	err := addGenerateflags(cmd)
+	err := addGenerateFlags(cmd)
 	if err != nil {
 		panic(err)
 	}
@@ -76,7 +76,7 @@ func cmdGenerateServer() *cobra.Command {
 		SilenceUsage:               true,
 		Args:                       cobra.MinimumNArgs(1),
 	}
-	err := addGenerateflags(cmd)
+	err := addGenerateFlags(cmd)
 	if err != nil {
 		panic(err)
 	}
