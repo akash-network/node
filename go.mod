@@ -34,7 +34,7 @@ replace (
 	// use cosmos fork of keyring
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
 	// use akash version of cosmos ledger api
-	github.com/cosmos/ledger-cosmos-go => github.com/akash-network/ledger-go/cosmos v0.14.0
+	github.com/cosmos/ledger-cosmos-go => github.com/akash-network/ledger-go/cosmos v0.14.3
 	// dgrijalva/jwt-go is deprecated and doesn't receive security updates.
 	// TODO: remove it: https://github.com/cosmos/cosmos-sdk/issues/13134
 	github.com/dgrijalva/jwt-go => github.com/golang-jwt/jwt/v4 v4.4.2
@@ -47,8 +47,8 @@ replace (
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	// use cometBFT system fork of tendermint with akash patches
 	github.com/tendermint/tendermint => github.com/akash-network/cometbft v0.34.27-akash
-	github.com/zondax/hid => github.com/troian/hid v0.11.0
-	github.com/zondax/ledger-go => github.com/akash-network/ledger-go v0.14.0
+	github.com/zondax/hid => github.com/troian/hid v0.13.1
+	github.com/zondax/ledger-go => github.com/akash-network/ledger-go v0.14.3
 	// latest grpc doesn't work with with cosmos-sdk modified proto compiler, so we need to enforce
 	// the following version across all dependencies.
 	google.golang.org/grpc => google.golang.org/grpc v1.33.2

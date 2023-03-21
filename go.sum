@@ -101,10 +101,10 @@ github.com/akash-network/akash-api v0.0.9 h1:nmQu1W6dWOWtZQErwaj0+rjmFgHswM2rlTL
 github.com/akash-network/akash-api v0.0.9/go.mod h1:SLd6MslFPTo9VnpWCzZVPRiZgGZcwyRwYGjv9aK8FPw=
 github.com/akash-network/cometbft v0.34.27-akash h1:V1dApDOr8Ee7BJzYyQ7Z9VBtrAul4+baMeA6C49dje0=
 github.com/akash-network/cometbft v0.34.27-akash/go.mod h1:BcCbhKv7ieM0KEddnYXvQZR+pZykTKReJJYf7YC7qhw=
-github.com/akash-network/ledger-go v0.14.0 h1:yuPlcC3QQYGE2wf/5FZQXXfw68kWO8srbadx2NU/vEU=
-github.com/akash-network/ledger-go v0.14.0/go.mod h1:/VvYUunOmwkxig4LjNaSfvMSEyVs3UcaMgr78zL96ZA=
-github.com/akash-network/ledger-go/cosmos v0.14.0 h1:vzgQ268KgvwKQBPSYvDp1To6eLJCeYYVf1OE68izTxc=
-github.com/akash-network/ledger-go/cosmos v0.14.0/go.mod h1:6GB6QT+mWZkfAY/GkMSq6BRt0KWse8aBj39G8WFimPQ=
+github.com/akash-network/ledger-go v0.14.2 h1:WUdJjTHBFOvFn5hlBAoxgd5lrNBcKGrPlzRbRIagMEU=
+github.com/akash-network/ledger-go v0.14.2/go.mod h1:NfsjfFvno9Kaq6mfpsKz4sqjnAVVEsVsnBJfKB4ueAs=
+github.com/akash-network/ledger-go/cosmos v0.14.2 h1:Z7LV+yJPjYXaul7oaocFNYYHYfp5yaHtwjZlBJR6Ek8=
+github.com/akash-network/ledger-go/cosmos v0.14.2/go.mod h1:SjAfheQTE4rWk0ir+wjbOWxwj8nc8E4AZ08NdsvYG24=
 github.com/alecthomas/participle/v2 v2.0.0-alpha7 h1:cK4vjj0VSgb3lN1nuKA5F7dw+1s1pWBe5bx7nNCnN+c=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
