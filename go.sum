@@ -101,10 +101,10 @@ github.com/akash-network/akash-api v0.0.9 h1:nmQu1W6dWOWtZQErwaj0+rjmFgHswM2rlTL
 github.com/akash-network/akash-api v0.0.9/go.mod h1:SLd6MslFPTo9VnpWCzZVPRiZgGZcwyRwYGjv9aK8FPw=
 github.com/akash-network/cometbft v0.34.27-akash h1:V1dApDOr8Ee7BJzYyQ7Z9VBtrAul4+baMeA6C49dje0=
 github.com/akash-network/cometbft v0.34.27-akash/go.mod h1:BcCbhKv7ieM0KEddnYXvQZR+pZykTKReJJYf7YC7qhw=
-github.com/akash-network/ledger-go v0.14.2 h1:WUdJjTHBFOvFn5hlBAoxgd5lrNBcKGrPlzRbRIagMEU=
-github.com/akash-network/ledger-go v0.14.2/go.mod h1:NfsjfFvno9Kaq6mfpsKz4sqjnAVVEsVsnBJfKB4ueAs=
-github.com/akash-network/ledger-go/cosmos v0.14.2 h1:Z7LV+yJPjYXaul7oaocFNYYHYfp5yaHtwjZlBJR6Ek8=
-github.com/akash-network/ledger-go/cosmos v0.14.2/go.mod h1:SjAfheQTE4rWk0ir+wjbOWxwj8nc8E4AZ08NdsvYG24=
+github.com/akash-network/ledger-go v0.14.3 h1:LCEFkTfgGA2xFMN2CtiKvXKE7dh0QSM77PJHCpSkaAo=
+github.com/akash-network/ledger-go v0.14.3/go.mod h1:NfsjfFvno9Kaq6mfpsKz4sqjnAVVEsVsnBJfKB4ueAs=
+github.com/akash-network/ledger-go/cosmos v0.14.3 h1:bEI9jLHM+Lm55idi4RfJlDez4/rVJs7E1MT0U2whYqI=
+github.com/akash-network/ledger-go/cosmos v0.14.3/go.mod h1:SjAfheQTE4rWk0ir+wjbOWxwj8nc8E4AZ08NdsvYG24=
 github.com/alecthomas/participle/v2 v2.0.0-alpha7 h1:cK4vjj0VSgb3lN1nuKA5F7dw+1s1pWBe5bx7nNCnN+c=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
@@ -1018,8 +1018,8 @@ github.com/tinylib/msgp v1.1.5/go.mod h1:eQsjooMTnV42mHu917E26IogZ2930nFyBQdofk1
 github.com/tklauser/go-sysconf v0.3.5/go.mod h1:MkWzOF4RMCshBAMXuhXJs64Rte09mITnppBXY/rYEFI=
 github.com/tklauser/numcpus v0.2.2/go.mod h1:x3qojaO3uyYt0i56EW/VUYs7uBvdl2fkfZFu0T9wgjM=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
-github.com/troian/hid v0.11.0 h1:g6flpECGJoCH1BPHAzrmDeHoxVT37iivAtSKGA2RxAw=
-github.com/troian/hid v0.11.0/go.mod h1:n6adloQ1876oEXZr6fFsthy4FDHxwJhh7QYQspm30Ds=
+github.com/troian/hid v0.13.2 h1:O7PWZQm5YGyg0nVvknFVLVrNTPillz4ZXvxJOtoyteE=
+github.com/troian/hid v0.13.2/go.mod h1:n6adloQ1876oEXZr6fFsthy4FDHxwJhh7QYQspm30Ds=
 github.com/ttacon/chalk v0.0.0-20160626202418-22c06c80ed31/go.mod h1:onvgF043R+lC5RZ8IT9rBXDaEDnpnw/Cl+HFiw+v/7Q=
 github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926/go.mod h1:9ESjWnEqriFuLhtthL60Sar/7RFoluCcXsuvEwTV5KM=
 github.com/tyler-smith/go-bip39 v1.0.1-0.20181017060643-dbb3b84ba2ef/go.mod h1:sJ5fKU0s6JVwZjjcUEX2zFOnvq0ASQ2K9Zr6cf67kNs=
