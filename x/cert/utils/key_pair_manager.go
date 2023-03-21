@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -29,6 +30,7 @@ var (
 	errCertificateNotFoundInPEM = fmt.Errorf("%w: certificate not found in PEM", certerrors.ErrCertificate)
 	errPrivateKeyNotFoundInPEM  = fmt.Errorf("%w: private key not found in PEM", certerrors.ErrCertificate)
 	errPublicKeyNotFoundInPEM   = fmt.Errorf("%w: public key not found in PEM", certerrors.ErrCertificate)
+	errUnsupportedEncryptedPEM  = errors.New("unsupported encrypted PEM")
 )
 
 type KeyPairManager interface {
@@ -42,21 +44,28 @@ type KeyPairManager interface {
 }
 
 type keyPairManager struct {
-	addr          sdk.AccAddress
-	passwordBytes []byte
-	homeDir       string
+	addr           sdk.AccAddress
+	passwordBytes  []byte
+	passwordLegacy []byte
+	homeDir        string
 }
 
 func NewKeyPairManager(cctx sdkclient.Context, fromAddress sdk.AccAddress) (KeyPairManager, error) {
-	sig, _, err := cctx.Keyring.SignByAddress(fromAddress, fromAddress.Bytes())
+	sig, _, err := cctx.Keyring.SignByAddress(fromAddress, []byte(fromAddress.String()))
 	if err != nil {
 		return nil, err
 	}
 
+	// ignore error if ledger device is being used
+	// due to its jsonparser not liking bech address sent as data in binary format
+	// if test or file keyring used it will allow to decode old private keys for the mTLS cert
+	sigLegacy, _, _ := cctx.Keyring.SignByAddress(fromAddress, fromAddress.Bytes())
+
 	return &keyPairManager{
-		addr:          fromAddress,
-		passwordBytes: sig,
-		homeDir:       cctx.HomeDir,
+		addr:           fromAddress,
+		passwordBytes:  sig,
+		passwordLegacy: sigLegacy,
+		homeDir:        cctx.HomeDir,
 	}, nil
 }
 
@@ -255,7 +264,23 @@ func (kpm *keyPairManager) readImpl(fin io.Reader) ([]byte, []byte, []byte, erro
 	}
 
 	var privKeyPlaintext []byte
-	if privKeyPlaintext, err = pemutil.DecryptPEMBlock(block, kpm.passwordBytes); err != nil { // nolint: staticcheck
+
+	// nolint: gocritic
+	if block.Headers["Proc-Type"] == "4,ENCRYPTED" {
+		// nolint: staticcheck
+		privKeyPlaintext, err = x509.DecryptPEMBlock(block, kpm.passwordBytes)
+		if errors.Is(err, x509.IncorrectPasswordError) {
+			// nolint: staticcheck
+			privKeyPlaintext, err = x509.DecryptPEMBlock(block, kpm.passwordLegacy)
+		}
+		// PKCS#8 header defined in RFC7468 section 11
+	} else if block.Type == "ENCRYPTED PRIVATE KEY" {
+		privKeyPlaintext, err = pemutil.DecryptPKCS8PrivateKey(block.Bytes, kpm.passwordBytes)
+	} else {
+		return nil, nil, nil, errUnsupportedEncryptedPEM
+	}
+
+	if err != nil {
 		return nil, nil, nil, fmt.Errorf("%w: failed decrypting x509 block with private key", err)
 	}
 
