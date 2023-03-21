@@ -79,7 +79,7 @@ $(MOCKERY): $(MOCKERY_VERSION_FILE)
 
 $(GOLANGCI_LINT_VERSION_FILE): $(AKASH_DEVCACHE)
 	@echo "installing golangci-lint $(GOLANGCI_LINT_VERSION) ..."
-	rm -f $(MOCKERY)
+	rm -f $(GOLANGCI_LINT)
 	GOBIN=$(AKASH_DEVCACHE_BIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 	rm -rf "$(dir $@)"
 	mkdir -p "$(dir $@)"
