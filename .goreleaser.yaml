@@ -113,6 +113,7 @@ archives:
     name_template: "akash_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: false
     format: zip
+    rlcp: true
     files:
       - none*
   - id: wo/version
@@ -124,6 +125,7 @@ archives:
     name_template: "akash_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: false
     format: zip
+    rlcp: true
     files:
       - none*
 
