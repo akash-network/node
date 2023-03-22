@@ -36,6 +36,10 @@ ifeq ($(IS_MAINNET), true)
 	endif
 endif
 
+ifneq (,$(findstring cgotrace,$(BUILD_OPTIONS)))
+	BUILD_TAGS := $(BUILD_TAGS),cgotrace
+endif
+
 GORELEASER_BUILD_VARS := \
 -X github.com/cosmos/cosmos-sdk/version.Name=akash \
 -X github.com/cosmos/cosmos-sdk/version.AppName=akash \
