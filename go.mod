@@ -3,10 +3,10 @@ module github.com/akash-network/node
 go 1.20
 
 require (
-	github.com/akash-network/akash-api v0.0.9
+	github.com/akash-network/akash-api v0.0.10
 	github.com/blang/semver/v4 v4.0.0
 	github.com/boz/go-lifecycle v0.1.0
-	github.com/cosmos/cosmos-sdk v0.45.15-rc.0.0.20230310103933-1c967b8e9322
+	github.com/cosmos/cosmos-sdk v0.45.15
 	github.com/cosmos/ibc-go/v3 v3.4.0
 	github.com/gogo/protobuf v1.3.3
 	github.com/gorilla/mux v1.8.0
