@@ -11,23 +11,6 @@ type v2ComputeResources struct {
 	Storage v2ResourceStorageArray `yaml:"storage"`
 }
 
-// func (sdl *v2ComputeResources) UnmarshalYAML(node *yaml.Node) error {
-// 	res := v2ComputeResources{}
-//
-// 	if err := node.Decode(&res); err != nil {
-// 		return err
-// 	}
-//
-// 	if res.GPU == nil {
-// 		res.GPU = &v2ResourceGPU {
-// 			Units: 0,
-// 		}
-// 	}
-//
-// 	*sdl = res
-// 	return nil
-// }
-
 func (sdl *v2ComputeResources) toDGroupResourceUnits() types.ResourceUnits {
 	if sdl == nil {
 		return types.ResourceUnits{}
@@ -46,6 +29,10 @@ func (sdl *v2ComputeResources) toDGroupResourceUnits() types.ResourceUnits {
 		units.GPU = &types.GPU{
 			Units:      types.NewResourceValue(uint64(sdl.GPU.Units)),
 			Attributes: types.Attributes(sdl.GPU.Attributes),
+		}
+	} else {
+		units.GPU = &types.GPU{
+			Units: types.NewResourceValue(0),
 		}
 	}
 
@@ -81,6 +68,10 @@ func toManifestResources(res *v2ComputeResources) types.ResourceUnits {
 	if res.GPU != nil {
 		units.GPU = &types.GPU{
 			Units: types.NewResourceValue(uint64(res.GPU.Units)),
+		}
+	} else {
+		units.GPU = &types.GPU{
+			Units: types.NewResourceValue(0),
 		}
 	}
 
