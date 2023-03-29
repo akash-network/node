@@ -233,6 +233,9 @@ func Test_v1_Parse_simple(t *testing.T) {
 			CPU: &atypes.CPU{
 				Units: atypes.NewResourceValue(randCPU),
 			},
+			GPU: &atypes.GPU{
+				Units: atypes.NewResourceValue(0),
+			},
 			Memory: &atypes.Memory{
 				Quantity: atypes.NewResourceValue(randMemory),
 			},
@@ -269,6 +272,9 @@ func Test_v1_Parse_simple(t *testing.T) {
 				Resources: atypes.ResourceUnits{
 					CPU: &atypes.CPU{
 						Units: atypes.NewResourceValue(100),
+					},
+					GPU: &atypes.GPU{
+						Units: atypes.NewResourceValue(0),
 					},
 					Memory: &atypes.Memory{
 						Quantity: atypes.NewResourceValue(128 * unit.Mi),
