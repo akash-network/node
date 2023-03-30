@@ -4,18 +4,16 @@ on:
     branches:
       - master
       - mainnet/main
+      - develop
   pull_request:
     branches:
       - master
       - mainnet/main
-
-env:
-  MAINNET: ${{ github.ref == 'refs/heads/mainnet/main' || github.base_ref == 'refs/heads/mainnet/main' }}
+      - develop
 
 jobs:
   sim-cleanup-runs:
     runs-on: ubuntu-latest
-    if: github.ref != 'refs/heads/master' && github.ref != 'refs/heads/mainnet/main'
     steps:
       - uses: rokroskar/workflow-run-cleanup-action@master
         env:
