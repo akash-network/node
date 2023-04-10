@@ -23,7 +23,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - run: git fetch --prune --unshallow
       - uses: c-py/action-dotenv-to-setenv@v3
         with:
           env-file: .env
@@ -37,7 +36,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - run: git fetch --prune --unshallow
       - uses: c-py/action-dotenv-to-setenv@v3
         with:
           env-file: .env
@@ -51,7 +49,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - run: git fetch --prune --unshallow
       - uses: c-py/action-dotenv-to-setenv@v3
         with:
           env-file: .env
@@ -65,7 +62,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - run: git fetch --prune --unshallow
       - uses: c-py/action-dotenv-to-setenv@v3
         with:
           env-file: .env
