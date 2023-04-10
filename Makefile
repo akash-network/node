@@ -32,7 +32,7 @@ IS_STABLE             ?= false
 
 GO_LINKMODE            ?= external
 GO_MOD                 ?= readonly
-BUILD_TAGS             ?= osusergo,netgo,ledger,static_build
+BUILD_TAGS             ?= osusergo,netgo,ledger
 GORELEASER_STRIP_FLAGS ?=
 
 ifeq ($(IS_MAINNET), true)
