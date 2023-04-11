@@ -24,6 +24,7 @@ func (m DepositDeploymentAuthorization) MsgTypeURL() string {
 
 // Accept implements Authorization.Accept.
 func (m DepositDeploymentAuthorization) Accept(_ sdk.Context, msg sdk.Msg) (authz.AcceptResponse, error) {
+	// save grant
 	mDepositDeployment, ok := msg.(*MsgDepositDeployment)
 	if !ok {
 		return authz.AcceptResponse{}, sdkerrors.ErrInvalidType.Wrap("type mismatch")

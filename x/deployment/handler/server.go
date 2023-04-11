@@ -110,6 +110,7 @@ func (ms msgServer) authorizeDeposit(ctx sdk.Context, owner, depositor sdk.AccAd
 
 	// find the DepositDeploymentAuthorization given to the owner by the depositor and check
 	// acceptance
+	// HERE
 	msg := &types.MsgDepositDeployment{Amount: deposit}
 	authorization, expiration := ms.authzKeeper.GetCleanAuthorization(ctx, owner, depositor, sdk.MsgTypeURL(msg))
 	if authorization == nil {
