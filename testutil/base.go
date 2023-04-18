@@ -9,19 +9,15 @@ import (
 
 	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
 	types "github.com/akash-network/akash-api/go/node/types/v1beta3"
-)
 
-func init() {
-	config := sdk.GetConfig()
-	config.SetBech32PrefixForAccount(BechPrefix, BechPrefix)
-	config.Seal()
-}
+	// ensure sdkutil.init() to seal SDK config for the tests
+	_ "github.com/akash-network/akash-api/go/sdkutil"
+)
 
 // CoinDenom provides ability to create coins in test functions and
 // pass them into testutil functionality.
 const (
-	CoinDenom  = "uakt"
-	BechPrefix = "akash"
+	CoinDenom = "uakt"
 )
 
 // Name generates a random name with the given prefix

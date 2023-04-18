@@ -3,7 +3,7 @@ module github.com/akash-network/node
 go 1.20
 
 require (
-	github.com/akash-network/akash-api v0.0.10
+	github.com/akash-network/akash-api v0.0.12
 	github.com/blang/semver/v4 v4.0.0
 	github.com/boz/go-lifecycle v0.1.0
 	github.com/cosmos/cosmos-sdk v0.45.15
@@ -33,6 +33,7 @@ require (
 replace (
 	// use cosmos fork of keyring
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
+
 	// use akash version of cosmos ledger api
 	github.com/cosmos/ledger-cosmos-go => github.com/akash-network/ledger-go/cosmos v0.14.3
 	// dgrijalva/jwt-go is deprecated and doesn't receive security updates.

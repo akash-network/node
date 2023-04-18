@@ -35,8 +35,6 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 	dbm "github.com/tendermint/tm-db"
 
-	"github.com/akash-network/akash-api/go/sdkutil"
-
 	"github.com/akash-network/node/app"
 	ecmd "github.com/akash-network/node/events/cmd"
 	utilcli "github.com/akash-network/node/util/cli"
@@ -102,7 +100,6 @@ func Execute(rootCmd *cobra.Command, envPrefix string) error {
 }
 
 func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
-	sdkutil.InitSDKConfig()
 	rootCmd.AddCommand(
 		rpc.StatusCommand(),
 		ecmd.EventCmd(),
