@@ -8,48 +8,6 @@ $(AKASH_DEVCACHE):
 	mkdir -p $(AKASH_DEVCACHE)/run
 cache: $(AKASH_DEVCACHE)
 
-$(PROTOC_VERSION_FILE): $(AKASH_DEVCACHE)
-	@echo "installing protoc compiler v$(PROTOC_VERSION) ..."
-	rm -f $(PROTOC)
-	()(cd /tmp; \
-	curl -sOL "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${PROTOC_ZIP}"; \
-	unzip -oq ${PROTOC_ZIP} -d $(AKASH_DEVCACHE) bin/protoc; \
-	unzip -oq ${PROTOC_ZIP} -d $(AKASH_DEVCACHE) 'include/*'; \
-	rm -f ${PROTOC_ZIP})
-	rm -rf "$(dir $@)"
-	mkdir -p "$(dir $@)"
-	touch $@
-$(PROTOC): $(PROTOC_VERSION_FILE)
-
-$(PROTOC_GEN_GOCOSMOS_VERSION_FILE): $(AKASH_DEVCACHE) modvendor
-	@echo "installing protoc-gen-gocosmos $(PROTOC_GEN_GOCOSMOS_VERSION) ..."
-	rm -f $(PROTOC_GEN_GOCOSMOS)
-	GOBIN=$(AKASH_DEVCACHE_BIN) $(GO) install $(ROOT_DIR)/vendor/github.com/regen-network/cosmos-proto/protoc-gen-gocosmos
-	rm -rf "$(dir $@)"
-	mkdir -p "$(dir $@)"
-	touch $@
-$(PROTOC_GEN_GOCOSMOS): $(PROTOC_GEN_GOCOSMOS_VERSION_FILE)
-
-$(GRPC_GATEWAY_VERSION_FILE): $(AKASH_DEVCACHE)
-	@echo "Installing protoc-gen-grpc-gateway $(GRPC_GATEWAY_VERSION) ..."
-	rm -f $(GRPC_GATEWAY)
-	curl -o "${AKASH_DEVCACHE_BIN}/protoc-gen-grpc-gateway" -L \
-	"https://github.com/grpc-ecosystem/grpc-gateway/releases/download/${GRPC_GATEWAY_VERSION}/${GRPC_GATEWAY_BIN}"
-	chmod +x "$(AKASH_DEVCACHE_BIN)/protoc-gen-grpc-gateway"
-	rm -rf "$(dir $@)"
-	mkdir -p "$(dir $@)"
-	touch $@
-$(GRPC_GATEWAY): $(GRPC_GATEWAY_VERSION_FILE)
-
-$(STATIK_VERSION_FILE): $(AKASH_DEVCACHE)
-	@echo "Installing statik $(STATIK_VERSION) ..."
-	rm -f $(STATIK)
-	GOBIN=$(AKASH_DEVCACHE_BIN) $(GO) install github.com/rakyll/statik@$(STATIK_VERSION)
-	rm -rf "$(dir $@)"
-	mkdir -p "$(dir $@)"
-	touch $@
-$(STATIK): $(STATIK_VERSION_FILE)
-
 $(MODVENDOR_VERSION_FILE): $(AKASH_DEVCACHE)
 	@echo "installing modvendor $(MODVENDOR_VERSION) ..."
 	rm -f $(MODVENDOR)
@@ -85,6 +43,15 @@ $(GOLANGCI_LINT_VERSION_FILE): $(AKASH_DEVCACHE)
 	mkdir -p "$(dir $@)"
 	touch $@
 $(GOLANGCI_LINT): $(GOLANGCI_LINT_VERSION_FILE)
+
+$(STATIK_VERSION_FILE): $(AKASH_DEVCACHE)
+	@echo "Installing statik $(STATIK_VERSION) ..."
+	rm -f $(STATIK)
+	GOBIN=$(AKASH_DEVCACHE_BIN) $(GO) install github.com/rakyll/statik@$(STATIK_VERSION)
+	rm -rf "$(dir $@)"
+	mkdir -p "$(dir $@)"
+	touch $@
+$(STATIK): $(STATIK_VERSION_FILE)
 
 cache-clean:
 	rm -rf $(AKASH_DEVCACHE)
