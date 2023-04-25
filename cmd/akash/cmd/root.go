@@ -100,6 +100,9 @@ func Execute(rootCmd *cobra.Command, envPrefix string) error {
 }
 
 func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
+	debugCmd := debug.Cmd()
+	debugCmd.AddCommand(ConvertBech32Cmd())
+
 	rootCmd.AddCommand(
 		rpc.StatusCommand(),
 		ecmd.EventCmd(),
@@ -113,7 +116,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
 		genutilcli.ValidateGenesisCmd(app.ModuleBasics()),
 		AddGenesisAccountCmd(app.DefaultHome),
 		tmcli.NewCompletionCmd(rootCmd, true),
-		debug.Cmd(),
+		debugCmd,
 	)
 
 	rootCmd.SetOut(rootCmd.OutOrStdout())
