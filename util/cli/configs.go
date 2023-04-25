@@ -22,7 +22,8 @@ import (
 )
 
 const (
-	FlagLogColor = "log_color"
+	FlagLogColor     = "log_color"
+	FlagLogTimestamp = "log_timestamp"
 )
 
 var (
@@ -39,7 +40,13 @@ var (
 // is used to read and parse the application configuration. Command handlers can
 // fetch the server Context to get the Tendermint configuration or to get access
 // to Viper.
-func InterceptConfigsPreRunHandler(cmd *cobra.Command, envPrefixes []string, allowEmptyEnv bool, customAppConfigTemplate string, customAppConfig interface{}) error {
+func InterceptConfigsPreRunHandler(
+	cmd *cobra.Command,
+	envPrefixes []string,
+	allowEmptyEnv bool,
+	customAppConfigTemplate string,
+	customAppConfig interface{},
+) error {
 	if len(envPrefixes) == 0 {
 		return ErrEmptyEnvPrefix
 	}
@@ -54,6 +61,7 @@ func InterceptConfigsPreRunHandler(cmd *cobra.Command, envPrefixes []string, all
 	if err := serverCtx.Viper.BindPFlags(cmd.PersistentFlags()); err != nil {
 		return err
 	}
+
 	serverCtx.Viper.SetEnvPrefix(envPrefixes[0])
 	serverCtx.Viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
 	serverCtx.Viper.AllowEmptyEnv(allowEmptyEnv)
@@ -64,35 +72,67 @@ func InterceptConfigsPreRunHandler(cmd *cobra.Command, envPrefixes []string, all
 	if err != nil {
 		return err
 	}
-
-	// return value is a tendermint configuration object
 	serverCtx.Config = cfg
-	if err = bindFlags(cmd, serverCtx.Viper, envPrefixes); err != nil {
+
+	logTimeFmt, err := parseTimestampFormat(serverCtx.Viper.GetString(FlagLogTimestamp))
+	if err != nil {
 		return err
 	}
 
-	var logWriter io.Writer
-	if strings.ToLower(serverCtx.Viper.GetString(flags.FlagLogFormat)) == tmcfg.LogFormatPlain {
-		if serverCtx.Viper.GetBool(FlagLogColor) {
-			logWriter = zerolog.ConsoleWriter{Out: os.Stdout}
-		} else {
-			logWriter = zerolog.New(os.Stdout)
-		}
-	} else {
-		logWriter = os.Stdout
-	}
-
 	logLvlStr := serverCtx.Viper.GetString(flags.FlagLogLevel)
+	serverCtx.Viper.GetString(flags.FlagLogLevel)
 	logLvl, err := zerolog.ParseLevel(logLvlStr)
 	if err != nil {
 		return fmt.Errorf("failed to parse log level (%s): %w", logLvlStr, err)
 	}
 
-	serverCtx.Logger = server.ZeroLogWrapper{
-		Logger: zerolog.New(logWriter).Level(logLvl).With().Timestamp().Logger(),
+	logWriter := io.Writer(os.Stdout)
+
+	if strings.ToLower(serverCtx.Viper.GetString(flags.FlagLogFormat)) == tmcfg.LogFormatPlain {
+		cl := zerolog.ConsoleWriter{
+			Out:        os.Stdout,
+			NoColor:    !serverCtx.Viper.GetBool(FlagLogColor),
+			TimeFormat: logTimeFmt,
+		}
+
+		if logTimeFmt == "" {
+			cl.PartsExclude = []string{
+				zerolog.TimestampFieldName,
+			}
+		}
+		logWriter = cl
+	}
+
+	logger := zerolog.New(logWriter).Level(logLvl)
+
+	if logTimeFmt != "" {
+		logger = logger.With().Timestamp().Logger()
+	}
+
+	serverCtx.Logger = server.ZeroLogWrapper{Logger: logger}
+
+	if len(envPrefixes) > 1 {
+		if err = bindFlags(cmd, serverCtx.Viper, envPrefixes[1:]); err != nil {
+			return err
+		}
 	}
 
 	return server.SetCmdServerContext(cmd, serverCtx)
+}
+
+func parseTimestampFormat(val string) (string, error) {
+	switch val {
+	case "":
+		return "", nil
+	case "rfc3339":
+		return time.RFC3339, nil
+	case "rfc3339nano":
+		return time.RFC3339Nano, nil
+	case "kitchen":
+		return time.Kitchen, nil
+	}
+
+	return "", fmt.Errorf("invalid timestamp format (%s)", val)
 }
 
 func bindFlags(cmd *cobra.Command, v *viper.Viper, envPrefixes []string) error {

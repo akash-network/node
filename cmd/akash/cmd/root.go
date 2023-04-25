@@ -96,6 +96,7 @@ func Execute(rootCmd *cobra.Command, envPrefix string) error {
 	rootCmd.PersistentFlags().String(flags.FlagLogLevel, zerolog.InfoLevel.String(), "The logging level (trace|debug|info|warn|error|fatal|panic)")
 	rootCmd.PersistentFlags().String(flags.FlagLogFormat, tmcfg.LogFormatPlain, "The logging format (json|plain)")
 	rootCmd.PersistentFlags().Bool(utilcli.FlagLogColor, false, "Pretty logging output. Applied only when log_format=plain")
+	rootCmd.PersistentFlags().String(utilcli.FlagLogTimestamp, "", "Add timestamp prefix to the logs (rfc3339|rfc3339nano|kitchen)")
 
 	executor := tmcli.PrepareBaseCmd(rootCmd, envPrefix, app.DefaultHome)
 	return executor.ExecuteContext(ctx)
