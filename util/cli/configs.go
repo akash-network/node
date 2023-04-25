@@ -9,14 +9,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/server"
-	"github.com/cosmos/cosmos-sdk/server/config"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+
 	tmcfg "github.com/tendermint/tendermint/config"
+
+	"github.com/cosmos/cosmos-sdk/client/flags"
+	"github.com/cosmos/cosmos-sdk/server"
+	"github.com/cosmos/cosmos-sdk/server/config"
+)
+
+const (
+	FlagLogColor = "log_color"
 )
 
 var (
@@ -67,9 +73,13 @@ func InterceptConfigsPreRunHandler(cmd *cobra.Command, envPrefixes []string, all
 
 	var logWriter io.Writer
 	if strings.ToLower(serverCtx.Viper.GetString(flags.FlagLogFormat)) == tmcfg.LogFormatPlain {
-		logWriter = zerolog.ConsoleWriter{Out: os.Stderr}
+		if serverCtx.Viper.GetBool(FlagLogColor) {
+			logWriter = zerolog.ConsoleWriter{Out: os.Stdout}
+		} else {
+			logWriter = zerolog.New(os.Stdout)
+		}
 	} else {
-		logWriter = os.Stderr
+		logWriter = os.Stdout
 	}
 
 	logLvlStr := serverCtx.Viper.GetString(flags.FlagLogLevel)
