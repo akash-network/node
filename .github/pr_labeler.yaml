@@ -16,3 +16,14 @@
   - x/provider/**/*
 "C:x/staking":
   - x/staking/**/*
+"C:CLI":
+  - cmd/**/*
+  - x/*/client/cli/*
+"Type: Build":
+  - Makefile
+  - Dockerfile
+  - script/*
+  - make/*
+  - .goreleaser*
+"Type: CI":
+  - .github/**/*
