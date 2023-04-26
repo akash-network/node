@@ -37,6 +37,8 @@ var (
 )
 
 // QueryClient interface includes query clients of deployment, market and provider modules
+//
+//go:generate mockery --name QueryClient --output ./mocks
 type QueryClient interface {
 	dtypes.QueryClient
 	mtypes.QueryClient
@@ -46,6 +48,8 @@ type QueryClient interface {
 }
 
 // Client interface pre-defined with query and tx interfaces
+//
+//go:generate mockery --name Client --output ./mocks
 type Client interface {
 	Query() QueryClient
 	Tx() broadcaster.Client

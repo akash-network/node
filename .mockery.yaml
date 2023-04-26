@@ -1,0 +1,5 @@
+quiet: False
+inpackage: False
+with-expecter: True
+keeptree: True
+case: underscore

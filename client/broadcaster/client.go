@@ -16,6 +16,7 @@ var (
 	ErrBroadcastTx = errors.New("broadcast tx error")
 )
 
+//go:generate mockery --name Client --output ./mocks
 type Client interface {
 	Broadcast(ctx context.Context, msgs ...sdk.Msg) error
 }
