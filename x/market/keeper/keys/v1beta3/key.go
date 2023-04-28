@@ -1,4 +1,4 @@
-package keys
+package v1beta3
 
 import (
 	"bytes"

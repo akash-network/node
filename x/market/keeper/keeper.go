@@ -1,21 +1,23 @@
 package keeper
 
 import (
+	"github.com/pkg/errors"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
-	"github.com/pkg/errors"
 
 	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
 	types "github.com/akash-network/akash-api/go/node/market/v1beta3"
 
-	"github.com/akash-network/node/x/market/keeper/keys"
+	keys "github.com/akash-network/node/x/market/keeper/keys/v1beta3"
 )
 
 // TODO: use interface for all keepers, queriers
 type IKeeper interface {
 	NewQuerier() Querier
 	Codec() codec.BinaryCodec
+	StoreKey() sdk.StoreKey
 	CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.GroupSpec) (types.Order, error)
 	CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAddress, price sdk.DecCoin) (types.Bid, error)
 	CreateLease(ctx sdk.Context, bid types.Bid)
@@ -70,6 +72,11 @@ func (k Keeper) NewQuerier() Querier {
 // Codec returns keeper codec
 func (k Keeper) Codec() codec.BinaryCodec {
 	return k.cdc
+}
+
+// StoreKey returns store key
+func (k Keeper) StoreKey() sdk.StoreKey {
+	return k.skey
 }
 
 // CreateOrder creates a new order with given group id and specifications. It returns created order

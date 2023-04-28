@@ -1,22 +1,19 @@
-package v015_test
+package v0_15_0_test
 
 import (
 	"testing"
 
-	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta2"
-	"github.com/cosmos/cosmos-sdk/codec"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 
-	dtypesv1beta1 "github.com/akash-network/akash-api/go/node/deployment/v1beta1"
+	"github.com/cosmos/cosmos-sdk/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	etypesv1beta1 "github.com/akash-network/akash-api/go/node/escrow/v1beta1"
-
-	etypes "github.com/akash-network/akash-api/go/node/escrow/v1beta2"
-	mtypes "github.com/akash-network/akash-api/go/node/market/v1beta2"
-
-	mtypesv1beta1 "github.com/akash-network/akash-api/go/node/market/v1beta1"
-
+	dv1beta1 "github.com/akash-network/akash-api/go/node/deployment/v1beta1"
+	dv1beta2 "github.com/akash-network/akash-api/go/node/deployment/v1beta2"
+	ev1beta1 "github.com/akash-network/akash-api/go/node/escrow/v1beta1"
+	ev1beta2 "github.com/akash-network/akash-api/go/node/escrow/v1beta2"
+	mv1beta1 "github.com/akash-network/akash-api/go/node/market/v1beta1"
+	mv1beta2 "github.com/akash-network/akash-api/go/node/market/v1beta2"
 	types "github.com/akash-network/akash-api/go/node/types/v1beta1"
 
 	"github.com/akash-network/node/app"
@@ -27,35 +24,35 @@ var (
 )
 
 func TestDeployment_DeploymentProto_IsCompatible(t *testing.T) {
-	oldProto := dtypesv1beta1.Deployment{
-		DeploymentID: dtypesv1beta1.DeploymentID{Owner: "A", DSeq: 1},
-		State:        dtypesv1beta1.DeploymentActive,
+	oldProto := dv1beta1.Deployment{
+		DeploymentID: dv1beta1.DeploymentID{Owner: "A", DSeq: 1},
+		State:        dv1beta1.DeploymentActive,
 		Version:      []byte{1, 2, 3, 4},
 		CreatedAt:    5,
 	}
 
-	expectedProto := dtypes.Deployment{
-		DeploymentID: dtypes.DeploymentID{Owner: "A", DSeq: 1},
-		State:        dtypes.DeploymentActive,
+	expectedProto := dv1beta2.Deployment{
+		DeploymentID: dv1beta2.DeploymentID{Owner: "A", DSeq: 1},
+		State:        dv1beta2.DeploymentActive,
 		Version:      []byte{1, 2, 3, 4},
 		CreatedAt:    5,
 	}
 
-	var actualProto dtypes.Deployment
+	var actualProto dv1beta2.Deployment
 	cdc.MustUnmarshal(cdc.MustMarshal(&oldProto), &actualProto)
 	require.Equal(t, expectedProto, actualProto)
 	require.Equal(t, cdc.MustMarshal(&oldProto), cdc.MustMarshal(&expectedProto))
 }
 
 func TestDeployment_GroupProto_IsNotCompatible(t *testing.T) {
-	oldProto := dtypesv1beta1.Group{
-		GroupID: dtypesv1beta1.GroupID{
+	oldProto := dv1beta1.Group{
+		GroupID: dv1beta1.GroupID{
 			Owner: "A",
 			DSeq:  1,
 			GSeq:  2,
 		},
-		State: dtypesv1beta1.GroupOpen,
-		GroupSpec: dtypesv1beta1.GroupSpec{
+		State: dv1beta1.GroupOpen,
+		GroupSpec: dv1beta1.GroupSpec{
 			Name: "A",
 			Requirements: types.PlacementRequirements{
 				SignedBy: types.SignedBy{
@@ -67,7 +64,7 @@ func TestDeployment_GroupProto_IsNotCompatible(t *testing.T) {
 					Value: "a",
 				}},
 			},
-			Resources: []dtypesv1beta1.Resource{{
+			Resources: []dv1beta1.Resource{{
 				Resources: types.ResourceUnits{
 					CPU: &types.CPU{
 						Units: types.ResourceValue{Val: sdk.NewInt(1)},
@@ -99,13 +96,13 @@ func TestDeployment_GroupProto_IsNotCompatible(t *testing.T) {
 		CreatedAt: 5,
 	}
 
-	var actualProto dtypes.Group
+	var actualProto dv1beta2.Group
 	require.Error(t, cdc.Unmarshal(cdc.MustMarshal(&oldProto), &actualProto)) // it doesn't unmarshal
 }
 
 func TestEscrow_AccountProto_IsNotCompatible(t *testing.T) {
-	oldProto := etypesv1beta1.Account{
-		ID: etypesv1beta1.AccountID{
+	oldProto := ev1beta1.Account{
+		ID: ev1beta1.AccountID{
 			Scope: "a",
 			XID:   "a",
 		},
@@ -116,8 +113,8 @@ func TestEscrow_AccountProto_IsNotCompatible(t *testing.T) {
 		SettledAt:   2,
 	}
 
-	expectedProto := etypes.Account{
-		ID: etypes.AccountID{
+	expectedProto := ev1beta2.Account{
+		ID: ev1beta2.AccountID{
 			Scope: "a",
 			XID:   "a",
 		},
@@ -130,15 +127,15 @@ func TestEscrow_AccountProto_IsNotCompatible(t *testing.T) {
 		Funds:       sdk.DecCoin{},
 	}
 
-	var actualProto etypes.Account
+	var actualProto ev1beta2.Account
 	cdc.MustUnmarshal(cdc.MustMarshal(&oldProto), &actualProto)                      // although it unmarshalls
 	require.NotEqual(t, expectedProto, actualProto)                                  // but the result isn't equal
 	require.NotEqual(t, cdc.MustMarshal(&oldProto), cdc.MustMarshal(&expectedProto)) // neither is marshalled bytes
 }
 
 func TestEscrow_PaymentProto_IsNotCompatible(t *testing.T) {
-	oldProto := etypesv1beta1.Payment{
-		AccountID: etypesv1beta1.AccountID{
+	oldProto := ev1beta1.Payment{
+		AccountID: ev1beta1.AccountID{
 			Scope: "a",
 			XID:   "a",
 		},
@@ -150,8 +147,8 @@ func TestEscrow_PaymentProto_IsNotCompatible(t *testing.T) {
 		Withdrawn: sdk.NewCoin("uakt", sdk.NewInt(1)),
 	}
 
-	expectedProto := etypes.FractionalPayment{
-		AccountID: etypes.AccountID{
+	expectedProto := ev1beta2.FractionalPayment{
+		AccountID: ev1beta2.AccountID{
 			Scope: "a",
 			XID:   "a",
 		},
@@ -163,88 +160,88 @@ func TestEscrow_PaymentProto_IsNotCompatible(t *testing.T) {
 		Withdrawn: sdk.NewCoin("uakt", sdk.NewInt(1)),
 	}
 
-	var actualProto etypes.FractionalPayment
+	var actualProto ev1beta2.FractionalPayment
 	cdc.MustUnmarshal(cdc.MustMarshal(&oldProto), &actualProto)                      // although it unmarshalls
 	require.NotEqual(t, expectedProto, actualProto)                                  // but the result isn't equal
 	require.NotEqual(t, cdc.MustMarshal(&oldProto), cdc.MustMarshal(&expectedProto)) // neither is marshalled bytes
 }
 
 func TestMarket_BidProto_IsNotCompatible(t *testing.T) {
-	oldProto := mtypesv1beta1.Bid{
-		BidID: mtypesv1beta1.BidID{
+	oldProto := mv1beta1.Bid{
+		BidID: mv1beta1.BidID{
 			Owner:    "a",
 			DSeq:     1,
 			GSeq:     2,
 			OSeq:     3,
 			Provider: "a",
 		},
-		State:     mtypesv1beta1.BidActive,
+		State:     mv1beta1.BidActive,
 		Price:     sdk.NewCoin("uakt", sdk.NewInt(1)),
 		CreatedAt: 1,
 	}
 
-	expectedProto := mtypes.Bid{
-		BidID: mtypes.BidID{
+	expectedProto := mv1beta2.Bid{
+		BidID: mv1beta2.BidID{
 			Owner:    "a",
 			DSeq:     1,
 			GSeq:     2,
 			OSeq:     3,
 			Provider: "a",
 		},
-		State:     mtypes.BidActive,
+		State:     mv1beta2.BidActive,
 		Price:     sdk.NewDecCoin("uakt", sdk.NewInt(1)),
 		CreatedAt: 1,
 	}
 
-	var actualProto mtypes.Bid
+	var actualProto mv1beta2.Bid
 	cdc.MustUnmarshal(cdc.MustMarshal(&oldProto), &actualProto)                      // although it unmarshalls
 	require.NotEqual(t, expectedProto, actualProto)                                  // but the result isn't equal
 	require.NotEqual(t, cdc.MustMarshal(&oldProto), cdc.MustMarshal(&expectedProto)) // neither is marshalled bytes
 }
 
 func TestMarket_LeaseProto_IsNotCompatible(t *testing.T) {
-	oldProto := mtypesv1beta1.Lease{
-		LeaseID: mtypesv1beta1.LeaseID{
+	oldProto := mv1beta1.Lease{
+		LeaseID: mv1beta1.LeaseID{
 			Owner:    "a",
 			DSeq:     1,
 			GSeq:     2,
 			OSeq:     3,
 			Provider: "a",
 		},
-		State:     mtypesv1beta1.LeaseActive,
+		State:     mv1beta1.LeaseActive,
 		Price:     sdk.NewCoin("uakt", sdk.NewInt(1)),
 		CreatedAt: 1,
 	}
 
-	expectedProto := mtypes.Lease{
-		LeaseID: mtypes.LeaseID{
+	expectedProto := mv1beta2.Lease{
+		LeaseID: mv1beta2.LeaseID{
 			Owner:    "a",
 			DSeq:     1,
 			GSeq:     2,
 			OSeq:     3,
 			Provider: "a",
 		},
-		State:     mtypes.LeaseActive,
+		State:     mv1beta2.LeaseActive,
 		Price:     sdk.NewDecCoin("uakt", sdk.NewInt(1)),
 		CreatedAt: 1,
 	}
 
-	var actualProto mtypes.Lease
+	var actualProto mv1beta2.Lease
 	cdc.MustUnmarshal(cdc.MustMarshal(&oldProto), &actualProto)                      // although it unmarshalls
 	require.NotEqual(t, expectedProto, actualProto)                                  // but the result isn't equal
 	require.NotEqual(t, cdc.MustMarshal(&oldProto), cdc.MustMarshal(&expectedProto)) // neither is marshalled bytes
 }
 
 func TestMarket_OrderProto_IsNotCompatible(t *testing.T) {
-	oldProto := mtypesv1beta1.Order{
-		OrderID: mtypesv1beta1.OrderID{
+	oldProto := mv1beta1.Order{
+		OrderID: mv1beta1.OrderID{
 			Owner: "a",
 			DSeq:  1,
 			GSeq:  2,
 			OSeq:  3,
 		},
-		State: mtypesv1beta1.OrderActive,
-		Spec: dtypesv1beta1.GroupSpec{
+		State: mv1beta1.OrderActive,
+		Spec: dv1beta1.GroupSpec{
 			Name: "A",
 			Requirements: types.PlacementRequirements{
 				SignedBy: types.SignedBy{
@@ -256,7 +253,7 @@ func TestMarket_OrderProto_IsNotCompatible(t *testing.T) {
 					Value: "a",
 				}},
 			},
-			Resources: []dtypesv1beta1.Resource{{
+			Resources: []dv1beta1.Resource{{
 				Resources: types.ResourceUnits{
 					CPU: &types.CPU{
 						Units: types.ResourceValue{Val: sdk.NewInt(1)},
@@ -288,6 +285,6 @@ func TestMarket_OrderProto_IsNotCompatible(t *testing.T) {
 		CreatedAt: 1,
 	}
 
-	var actualProto mtypes.Order
+	var actualProto mv1beta2.Order
 	require.Error(t, cdc.Unmarshal(cdc.MustMarshal(&oldProto), &actualProto)) // it doesn't unmarshal
 }

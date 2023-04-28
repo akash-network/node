@@ -12,6 +12,8 @@ type AccountHook func(sdk.Context, types.Account)
 type PaymentHook func(sdk.Context, types.FractionalPayment)
 
 type Keeper interface {
+	Codec() codec.BinaryCodec
+	StoreKey() sdk.StoreKey
 	AccountCreate(ctx sdk.Context, id types.AccountID, owner, depositor sdk.AccAddress, deposit sdk.Coin) error
 	AccountDeposit(ctx sdk.Context, id types.AccountID, depositor sdk.AccAddress, amount sdk.Coin) error
 	AccountSettle(ctx sdk.Context, id types.AccountID) (bool, error)
@@ -48,6 +50,15 @@ type keeper struct {
 		onAccountClosed []AccountHook
 		onPaymentClosed []PaymentHook
 	}
+}
+
+func (k *keeper) Codec() codec.BinaryCodec {
+	return k.cdc
+}
+
+// StoreKey returns store key
+func (k *keeper) StoreKey() sdk.StoreKey {
+	return k.skey
 }
 
 func (k *keeper) AccountCreate(ctx sdk.Context, id types.AccountID, owner, depositor sdk.AccAddress, deposit sdk.Coin) error {

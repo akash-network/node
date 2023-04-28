@@ -11,6 +11,7 @@ import (
 )
 
 type IKeeper interface {
+	StoreKey() sdk.StoreKey
 	Codec() codec.BinaryCodec
 	GetDeployment(ctx sdk.Context, id types.DeploymentID) (types.Deployment, bool)
 	GetGroup(ctx sdk.Context, id types.GroupID) (types.Group, bool)
@@ -61,6 +62,10 @@ func (k Keeper) NewQuerier() Querier {
 // Codec returns keeper codec
 func (k Keeper) Codec() codec.BinaryCodec {
 	return k.cdc
+}
+
+func (k Keeper) StoreKey() sdk.StoreKey {
+	return k.skey
 }
 
 // GetDeployment returns deployment details with provided DeploymentID

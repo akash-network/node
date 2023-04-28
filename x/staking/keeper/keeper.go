@@ -10,6 +10,7 @@ import (
 
 type IKeeper interface {
 	Codec() codec.BinaryCodec
+	StoreKey() sdk.StoreKey
 	SetParams(ctx sdk.Context, params types.Params) error
 	GetParams(ctx sdk.Context) (params types.Params)
 	MinCommissionRate(ctx sdk.Context) sdk.Dec
@@ -38,6 +39,10 @@ func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey, pspace paramtypes.Subsp
 // Codec returns keeper codec
 func (k Keeper) Codec() codec.BinaryCodec {
 	return k.cdc
+}
+
+func (k Keeper) StoreKey() sdk.StoreKey {
+	return k.skey
 }
 
 func (k Keeper) MinCommissionRate(ctx sdk.Context) sdk.Dec {

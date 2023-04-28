@@ -3,8 +3,6 @@ package keeper
 import (
 	"context"
 
-	"github.com/akash-network/node/x/market/keeper/keys"
-
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -14,6 +12,8 @@ import (
 
 	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
 	types "github.com/akash-network/akash-api/go/node/market/v1beta3"
+
+	keys "github.com/akash-network/node/x/market/keeper/keys/v1beta3"
 )
 
 // Querier is used as Keeper will have duplicate methods if used directly, and gRPC names take precedence over keeper

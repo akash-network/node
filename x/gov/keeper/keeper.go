@@ -10,6 +10,7 @@ import (
 
 type IKeeper interface {
 	Codec() codec.BinaryCodec
+	StoreKey() sdk.StoreKey
 	SetDepositParams(ctx sdk.Context, params types.DepositParams) error
 	GetDepositParams(ctx sdk.Context) (params types.DepositParams)
 }
@@ -37,6 +38,10 @@ func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey, pspace paramtypes.Subsp
 // Codec returns keeper codec
 func (k Keeper) Codec() codec.BinaryCodec {
 	return k.cdc
+}
+
+func (k Keeper) StoreKey() sdk.StoreKey {
+	return k.skey
 }
 
 // SetDepositParams sets the deployment parameters to the paramspace.

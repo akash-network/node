@@ -9,6 +9,7 @@ import (
 
 type IKeeper interface {
 	Codec() codec.BinaryCodec
+	StoreKey() sdk.StoreKey
 	Get(ctx sdk.Context, id sdk.Address) (types.Provider, bool)
 	Create(ctx sdk.Context, provider types.Provider) error
 	WithProviders(ctx sdk.Context, fn func(types.Provider) bool)
@@ -38,6 +39,11 @@ func (k Keeper) NewQuerier() Querier {
 // Codec returns keeper codec
 func (k Keeper) Codec() codec.BinaryCodec {
 	return k.cdc
+}
+
+// StoreKey returns store key
+func (k Keeper) StoreKey() sdk.StoreKey {
+	return k.skey
 }
 
 // Get returns a provider with given provider id

@@ -21,6 +21,7 @@ import (
 	"github.com/gogo/protobuf/grpc"
 	"github.com/pkg/errors"
 
+	"github.com/akash-network/node/migrations/consensus"
 	"github.com/akash-network/node/x/escrow/client/cli"
 	"github.com/akash-network/node/x/escrow/client/rest"
 	"github.com/akash-network/node/x/escrow/keeper"
@@ -159,10 +160,11 @@ func (am AppModule) RegisterServices(cfg module.Configurator) {
 	querier := keeper.NewQuerier(am.keeper)
 	types.RegisterQueryServer(cfg.QueryServer(), querier)
 
-	m := keeper.NewMigrator(am.keeper)
-	if err := cfg.RegisterMigration(types.ModuleName, 1, m.Migrate1to2); err != nil {
-		panic(err)
-	}
+	consensus.ModuleMigrations(ModuleName, am.keeper, func(name string, forVersion uint64, handler module.MigrationHandler) {
+		if err := cfg.RegisterMigration(name, forVersion, handler); err != nil {
+			panic(err)
+		}
+	})
 }
 
 // RegisterQueryService registers a GRPC query service to respond to the
@@ -198,7 +200,7 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 
 // ConsensusVersion implements module.AppModule#ConsensusVersion
 func (am AppModule) ConsensusVersion() uint64 {
-	return 2
+	return consensus.ModuleVersion(ModuleName)
 }
 
 // ____________________________________________________________________________

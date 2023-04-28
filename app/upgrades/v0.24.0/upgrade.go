@@ -4,12 +4,16 @@ package v0_24_0 // nolint revive
 import (
 	"fmt"
 
+	"github.com/akash-network/akash-api/go/node/escrow/v1beta3"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/feegrant"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	"github.com/tendermint/tendermint/libs/log"
+
+	agovtypes "github.com/akash-network/akash-api/go/node/gov/v1beta3"
+	astakingtypes "github.com/akash-network/akash-api/go/node/staking/v1beta3"
 
 	apptypes "github.com/akash-network/node/app/types"
 	agov "github.com/akash-network/node/x/gov"
@@ -34,7 +38,7 @@ var _ apptypes.IUpgrade = (*upgrade)(nil)
 func initUpgrade(log log.Logger, app *apptypes.App) (apptypes.IUpgrade, error) {
 	up := &upgrade{
 		App: app,
-		log: log.With("upgrade/v0.22.0"),
+		log: log.With(fmt.Sprintf("upgrade/%s", UpgradeName)),
 	}
 
 	if _, exists := up.MM.Modules[agov.ModuleName]; !exists {
@@ -62,20 +66,28 @@ func (up *upgrade) StoreLoader() *storetypes.StoreUpgrades {
 
 func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 	return func(ctx sdk.Context, plan upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
-		ctx.Logger().Info("start to run module migrations...")
-		fromVM[feegrant.ModuleName] = up.MM.Modules[feegrant.ModuleName].ConsensusVersion()
-		fromVM[astaking.ModuleName] = up.MM.Modules[astaking.ModuleName].ConsensusVersion()
-		fromVM[agov.ModuleName] = up.MM.Modules[agov.ModuleName].ConsensusVersion()
-
-		if err := up.patchValidatorsCommission(ctx); err != nil {
+		ctx.Logger().Info("initializing parameters in astaking module...")
+		if err := up.Keepers.Akash.Staking.SetParams(ctx, astakingtypes.DefaultParams()); err != nil {
 			return nil, err
 		}
 
+		ctx.Logger().Info("initializing parameters in agov module...")
+		if err := up.Keepers.Akash.Gov.SetDepositParams(ctx, agovtypes.DefaultDepositParams()); err != nil {
+			return nil, err
+		}
+
+		if err := up.enforceMinValidatorCommission(ctx); err != nil {
+			return nil, err
+		}
+
+		up.patchDanglingEscrowPayments(ctx)
+
+		ctx.Logger().Info("starting module migrations...")
 		return up.MM.RunMigrations(ctx, up.Configurator, fromVM)
 	}
 }
 
-func (up *upgrade) patchValidatorsCommission(ctx sdk.Context) error {
+func (up *upgrade) enforceMinValidatorCommission(ctx sdk.Context) error {
 	minRate := up.Keepers.Akash.Staking.MinCommissionRate(ctx)
 
 	validators := up.Keepers.Cosmos.Staking.GetAllValidators(ctx)
@@ -108,4 +120,34 @@ func (up *upgrade) patchValidatorsCommission(ctx sdk.Context) error {
 	}
 
 	return nil
+}
+
+func (up *upgrade) patchDanglingEscrowPayments(ctx sdk.Context) {
+	up.Keepers.Akash.Escrow.WithPayments(ctx, func(payment v1beta3.FractionalPayment) bool {
+		acc, _ := up.Keepers.Akash.Escrow.GetAccount(ctx, payment.AccountID)
+		if (payment.State == v1beta3.PaymentOpen && acc.State != v1beta3.AccountOpen) ||
+			(payment.State == v1beta3.PaymentOverdrawn && acc.State != v1beta3.AccountOverdrawn) {
+
+			up.log.Info(
+				fmt.Sprintf("payment id state `%s:%s` does not match account state `%s:%s`. forcing payment state to %[4]s",
+					payment.PaymentID,
+					payment.State,
+					acc.ID,
+					acc.State,
+				),
+			)
+
+			switch acc.State {
+			case v1beta3.AccountOpen:
+				payment.State = v1beta3.PaymentOpen
+			case v1beta3.AccountClosed:
+				payment.State = v1beta3.PaymentClosed
+			case v1beta3.AccountOverdrawn:
+				payment.State = v1beta3.PaymentOverdrawn
+			}
+		}
+
+		up.Keepers.Akash.Escrow.SavePayment(ctx, payment)
+		return true
+	})
 }

@@ -25,6 +25,7 @@ import (
 	v1beta2types "github.com/akash-network/akash-api/go/node/audit/v1beta2"
 	types "github.com/akash-network/akash-api/go/node/audit/v1beta3"
 
+	"github.com/akash-network/node/migrations/consensus"
 	"github.com/akash-network/node/x/audit/client/cli"
 	"github.com/akash-network/node/x/audit/client/rest"
 	"github.com/akash-network/node/x/audit/handler"
@@ -163,10 +164,11 @@ func (am AppModule) RegisterServices(cfg module.Configurator) {
 	querier := keeper.Querier{Keeper: am.keeper}
 	types.RegisterQueryServer(cfg.QueryServer(), querier)
 
-	m := keeper.NewMigrator(am.keeper)
-	if err := cfg.RegisterMigration(types.ModuleName, 1, m.Migrate1to2); err != nil {
-		panic(err)
-	}
+	consensus.ModuleMigrations(ModuleName, am.keeper, func(name string, forVersion uint64, handler module.MigrationHandler) {
+		if err := cfg.RegisterMigration(name, forVersion, handler); err != nil {
+			panic(err)
+		}
+	})
 }
 
 // RegisterQueryService registers a GRPC query service to respond to the
@@ -202,7 +204,7 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 
 // ConsensusVersion implements module.AppModule#ConsensusVersion
 func (am AppModule) ConsensusVersion() uint64 {
-	return 2
+	return consensus.ModuleVersion(ModuleName)
 }
 
 // ____________________________________________________________________________
@@ -222,6 +224,7 @@ func NewAppModuleSimulation(k keeper.Keeper, pkeeper pkeeper.Keeper) AppModuleSi
 }
 
 // AppModuleSimulation functions
+
 // GenerateGenesisState creates a randomized GenState of the staking module.
 func (AppModuleSimulation) GenerateGenesisState(simState *module.SimulationState) {
 	// simulation.RandomizedGenState(simState)

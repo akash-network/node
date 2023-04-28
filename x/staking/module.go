@@ -19,6 +19,7 @@ import (
 
 	types "github.com/akash-network/akash-api/go/node/staking/v1beta3"
 
+	"github.com/akash-network/node/migrations/consensus"
 	"github.com/akash-network/node/x/staking/keeper"
 	"github.com/akash-network/node/x/staking/simulation"
 )
@@ -124,7 +125,12 @@ func (am AppModule) LegacyQuerierHandler(_ *codec.LegacyAmino) sdk.Querier {
 }
 
 // RegisterServices registers the module's services
-func (am AppModule) RegisterServices(_ module.Configurator) {
+func (am AppModule) RegisterServices(cfg module.Configurator) {
+	consensus.ModuleMigrations(ModuleName, am.keeper, func(name string, forVersion uint64, handler module.MigrationHandler) {
+		if err := cfg.RegisterMigration(name, forVersion, handler); err != nil {
+			panic(err)
+		}
+	})
 }
 
 // BeginBlock performs no-op
@@ -153,7 +159,7 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 
 // ConsensusVersion implements module.AppModule#ConsensusVersion
 func (am AppModule) ConsensusVersion() uint64 {
-	return 2
+	return consensus.ModuleVersion(ModuleName)
 }
 
 // ____________________________________________________________________________
