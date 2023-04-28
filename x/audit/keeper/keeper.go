@@ -39,6 +39,11 @@ func (k Keeper) Codec() codec.BinaryCodec {
 	return k.cdc
 }
 
+// StoreKey returns store key
+func (k Keeper) StoreKey() sdk.StoreKey {
+	return k.skey
+}
+
 // GetProviderByAuditor returns a provider with given auditor and owner id
 func (k Keeper) GetProviderByAuditor(ctx sdk.Context, id types.ProviderID) (types.Provider, bool) {
 	store := ctx.KVStore(k.skey)

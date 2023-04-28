@@ -1,5 +1,5 @@
-// Package akash_v0_15_0_cosmos_v0_44_x
-package akash_v0_15_0_cosmos_v0_44_x // nolint revive
+// Package v0_15_0
+package v0_15_0 // nolint revive
 
 import (
 	inflationtypes "github.com/akash-network/akash-api/go/node/inflation/v1beta3"

@@ -1,18 +1,17 @@
-package keys_test
+package v1beta2_test
 
 import (
 	"testing"
 
-	types "github.com/akash-network/akash-api/go/node/market/v1beta3"
+	"github.com/stretchr/testify/require"
+
+	types "github.com/akash-network/akash-api/go/node/market/v1beta2"
 
 	_ "github.com/akash-network/node/testutil"
-	"github.com/akash-network/node/x/market/keeper/keys"
-
-	"github.com/stretchr/testify/require"
+	keys "github.com/akash-network/node/x/market/keeper/keys/v1beta2"
 )
 
 func TestKeysAndSecondaryKeysFilter(t *testing.T) {
-
 	filter := types.LeaseFilters{
 		Owner:    "akash104fq56d9attl4m709h7mgx9lwqklnh05fhy5nu",
 		DSeq:     1,

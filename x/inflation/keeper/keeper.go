@@ -10,6 +10,8 @@ import (
 )
 
 type IKeeper interface {
+	Codec() codec.BinaryCodec
+	StoreKey() sdk.StoreKey
 	GetParams(ctx sdk.Context) (params types.Params)
 	SetParams(ctx sdk.Context, params types.Params)
 }
@@ -33,6 +35,15 @@ func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey, pspace paramtypes.Subsp
 		cdc:    cdc,
 		pspace: pspace,
 	}
+}
+
+// Codec returns keeper codec
+func (k Keeper) Codec() codec.BinaryCodec {
+	return k.cdc
+}
+
+func (k Keeper) StoreKey() sdk.StoreKey {
+	return k.skey
 }
 
 // GetParams returns the total set of deployment parameters.

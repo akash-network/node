@@ -11,6 +11,7 @@ import (
 type Keeper interface {
 	Querier() types.QueryServer
 	Codec() codec.BinaryCodec
+	StoreKey() sdk.StoreKey
 	CreateCertificate(sdk.Context, sdk.Address, []byte, []byte) error
 	RevokeCertificate(sdk.Context, types.CertID) error
 	GetCertificateByID(ctx sdk.Context, id types.CertID) (types.CertificateResponse, bool)
@@ -40,6 +41,11 @@ func (k keeper) Querier() types.QueryServer {
 // Codec returns keeper codec
 func (k keeper) Codec() codec.BinaryCodec {
 	return k.cdc
+}
+
+// StoreKey returns store key
+func (k keeper) StoreKey() sdk.StoreKey {
+	return k.skey
 }
 
 func (k keeper) CreateCertificate(ctx sdk.Context, owner sdk.Address, crt []byte, pubkey []byte) error {

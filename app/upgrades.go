@@ -8,11 +8,13 @@ import (
 	apptypes "github.com/akash-network/node/app/types"
 
 	// nolint: revive
+	_ "github.com/akash-network/node/migrations"
+	// nolint: revive
 	_ "github.com/akash-network/node/app/upgrades/v0.24.0"
 	// nolint: revive
 	_ "github.com/akash-network/node/app/upgrades/v0.20.0"
 	// nolint: revive
-	_ "github.com/akash-network/node/app/upgrades/akash_v0.15.0_cosmos_v0.44.x"
+	_ "github.com/akash-network/node/app/upgrades/v0.15.0"
 )
 
 func (app *AkashApp) registerUpgradeHandlers() error {
