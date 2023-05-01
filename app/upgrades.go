@@ -5,16 +5,9 @@ import (
 
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 
-	apptypes "github.com/akash-network/node/app/types"
-
+	utypes "github.com/akash-network/node/upgrades/types"
 	// nolint: revive
-	_ "github.com/akash-network/node/migrations"
-	// nolint: revive
-	_ "github.com/akash-network/node/app/upgrades/v0.24.0"
-	// nolint: revive
-	_ "github.com/akash-network/node/app/upgrades/v0.20.0"
-	// nolint: revive
-	_ "github.com/akash-network/node/app/upgrades/v0.15.0"
+	_ "github.com/akash-network/node/upgrades"
 )
 
 func (app *AkashApp) registerUpgradeHandlers() error {
@@ -23,7 +16,7 @@ func (app *AkashApp) registerUpgradeHandlers() error {
 		return err
 	}
 
-	for name, fn := range apptypes.GetUpgradesList() {
+	for name, fn := range utypes.GetUpgradesList() {
 		app.Logger().Info(fmt.Sprintf("initializing upgrade `%s`", name))
 		upgrade, err := fn(app.Logger(), &app.App)
 		if err != nil {

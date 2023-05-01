@@ -9,14 +9,14 @@ import (
 
 	cv1beta2 "github.com/akash-network/akash-api/go/node/cert/v1beta2"
 
-	"github.com/akash-network/node/migrations/consensus"
+	utypes "github.com/akash-network/node/upgrades/types"
 )
 
 type certMigrations struct {
-	consensus.Migrator
+	utypes.Migrator
 }
 
-func newCertMigration(m consensus.Migrator) consensus.Migration {
+func newCertMigration(m utypes.Migrator) utypes.Migration {
 	return certMigrations{Migrator: m}
 }
 

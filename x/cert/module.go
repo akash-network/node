@@ -24,7 +24,7 @@ import (
 	"github.com/akash-network/akash-api/go/node/cert/v1beta2"
 	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
 
-	"github.com/akash-network/node/migrations/consensus"
+	utypes "github.com/akash-network/node/upgrades/types"
 	"github.com/akash-network/node/x/cert/client/cli"
 	"github.com/akash-network/node/x/cert/handler"
 	"github.com/akash-network/node/x/cert/keeper"
@@ -151,7 +151,7 @@ func (am AppModule) RegisterServices(cfg module.Configurator) {
 	types.RegisterMsgServer(cfg.MsgServer(), handler.NewMsgServerImpl(am.keeper))
 	types.RegisterQueryServer(cfg.QueryServer(), am.keeper.Querier())
 
-	consensus.ModuleMigrations(ModuleName, am.keeper, func(name string, forVersion uint64, handler module.MigrationHandler) {
+	utypes.ModuleMigrations(ModuleName, am.keeper, func(name string, forVersion uint64, handler module.MigrationHandler) {
 		if err := cfg.RegisterMigration(name, forVersion, handler); err != nil {
 			panic(err)
 		}
@@ -184,7 +184,7 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 
 // ConsensusVersion implements module.AppModule#ConsensusVersion
 func (am AppModule) ConsensusVersion() uint64 {
-	return consensus.ModuleVersion(ModuleName)
+	return utypes.ModuleVersion(ModuleName)
 }
 
 // ____________________________________________________________________________

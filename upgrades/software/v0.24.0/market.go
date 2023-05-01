@@ -11,14 +11,14 @@ import (
 	mv1beta2 "github.com/akash-network/akash-api/go/node/market/v1beta2"
 	mv1beta3 "github.com/akash-network/akash-api/go/node/market/v1beta3"
 
-	"github.com/akash-network/node/migrations/consensus"
+	utypes "github.com/akash-network/node/upgrades/types"
 )
 
 type marketMigrations struct {
-	consensus.Migrator
+	utypes.Migrator
 }
 
-func newMarketMigration(m consensus.Migrator) consensus.Migration {
+func newMarketMigration(m utypes.Migrator) utypes.Migration {
 	return marketMigrations{Migrator: m}
 }
 
@@ -30,7 +30,7 @@ func (m marketMigrations) GetHandler() sdkmodule.MigrationHandler {
 func (m marketMigrations) handler(ctx sdk.Context) error {
 	store := ctx.KVStore(m.StoreKey())
 
-	err := consensus.MigrateValue(store, m.Codec(), mv1beta3.OrderPrefix(), migrateOrder)
+	err := utypes.MigrateValue(store, m.Codec(), mv1beta3.OrderPrefix(), migrateOrder)
 
 	if err != nil {
 		return err

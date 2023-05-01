@@ -6,32 +6,32 @@ import (
 	"fmt"
 	"math/rand"
 
+	"github.com/gorilla/mux"
+	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+
+	abci "github.com/tendermint/tendermint/abci/types"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	sim "github.com/cosmos/cosmos-sdk/types/simulation"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
-	"github.com/gorilla/mux"
-	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 
 	v1beta1types "github.com/akash-network/akash-api/go/node/deployment/v1beta1"
 	v1beta2types "github.com/akash-network/akash-api/go/node/deployment/v1beta2"
 	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
 
-	"github.com/akash-network/node/migrations/consensus"
+	utypes "github.com/akash-network/node/upgrades/types"
 	"github.com/akash-network/node/x/deployment/client/cli"
 	"github.com/akash-network/node/x/deployment/client/rest"
 	"github.com/akash-network/node/x/deployment/handler"
 	"github.com/akash-network/node/x/deployment/keeper"
 	"github.com/akash-network/node/x/deployment/simulation"
-
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
-
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	sim "github.com/cosmos/cosmos-sdk/types/simulation"
-	abci "github.com/tendermint/tendermint/abci/types"
 )
 
 // type check to ensure the interface is properly implemented
@@ -158,7 +158,7 @@ func (am AppModule) RegisterServices(cfg module.Configurator) {
 	querier := am.keeper.NewQuerier()
 	types.RegisterQueryServer(cfg.QueryServer(), querier)
 
-	consensus.ModuleMigrations(ModuleName, am.keeper, func(name string, forVersion uint64, handler module.MigrationHandler) {
+	utypes.ModuleMigrations(ModuleName, am.keeper, func(name string, forVersion uint64, handler module.MigrationHandler) {
 		if err := cfg.RegisterMigration(name, forVersion, handler); err != nil {
 			panic(err)
 		}
@@ -191,7 +191,7 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 
 // ConsensusVersion implements module.AppModule#ConsensusVersion
 func (am AppModule) ConsensusVersion() uint64 {
-	return consensus.ModuleVersion(ModuleName)
+	return utypes.ModuleVersion(ModuleName)
 }
 
 // AppModuleSimulation implements an application simulation module for the deployment module.

@@ -9,14 +9,14 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkmodule "github.com/cosmos/cosmos-sdk/types/module"
 
-	"github.com/akash-network/node/migrations/consensus"
+	utypes "github.com/akash-network/node/upgrades/types"
 )
 
 type deploymentMigrations struct {
-	consensus.Migrator
+	utypes.Migrator
 }
 
-func newDeploymentMigration(m consensus.Migrator) consensus.Migration {
+func newDeploymentMigration(m utypes.Migrator) utypes.Migration {
 	return deploymentMigrations{Migrator: m}
 }
 
@@ -31,7 +31,7 @@ func (m deploymentMigrations) handler(ctx sdk.Context) error {
 	migratePrefixBech32AddrBytes(store, dv1beta1.DeploymentPrefix())
 	migratePrefixBech32AddrBytes(store, dv1beta1.GroupPrefix())
 
-	err := consensus.MigrateValue(store, m.Codec(), dv1beta1.GroupPrefix(), migrateDeploymentGroup)
+	err := utypes.MigrateValue(store, m.Codec(), dv1beta1.GroupPrefix(), migrateDeploymentGroup)
 	if err != nil {
 		return err
 	}
