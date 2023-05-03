@@ -1,6 +1,9 @@
 package inflation
 
 import (
+	"encoding/json"
+
+	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/akash-network/node/x/inflation/keeper"
@@ -33,4 +36,16 @@ func ExportGenesis(ctx sdk.Context, k keeper.IKeeper) *types.GenesisState {
 	return &types.GenesisState{
 		Params: params,
 	}
+}
+
+// GetGenesisStateFromAppState returns x/inflation GenesisState given raw application
+// genesis state.
+func GetGenesisStateFromAppState(cdc codec.JSONCodec, appState map[string]json.RawMessage) *types.GenesisState {
+	var genesisState types.GenesisState
+
+	if appState[ModuleName] != nil {
+		cdc.MustUnmarshalJSON(appState[ModuleName], &genesisState)
+	}
+
+	return &genesisState
 }

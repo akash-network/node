@@ -1,6 +1,9 @@
 package deployment
 
 import (
+	"encoding/json"
+
+	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
 
@@ -9,7 +12,7 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 )
 
-// ValidateGenesis does validation check of the Genesis and return error incase of failure
+// ValidateGenesis does validation check of the Genesis and return error in case of failure
 func ValidateGenesis(data *types.GenesisState) error {
 	for _, record := range data.Deployments {
 		if err := record.Deployment.ID().Validate(); err != nil {
@@ -55,4 +58,16 @@ func ExportGenesis(ctx sdk.Context, k keeper.IKeeper) *types.GenesisState {
 		Deployments: records,
 		Params:      params,
 	}
+}
+
+// GetGenesisStateFromAppState returns x/deployment GenesisState given raw application
+// genesis state.
+func GetGenesisStateFromAppState(cdc codec.JSONCodec, appState map[string]json.RawMessage) *types.GenesisState {
+	var genesisState types.GenesisState
+
+	if appState[ModuleName] != nil {
+		cdc.MustUnmarshalJSON(appState[ModuleName], &genesisState)
+	}
+
+	return &genesisState
 }
