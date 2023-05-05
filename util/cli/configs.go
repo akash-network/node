@@ -111,10 +111,8 @@ func InterceptConfigsPreRunHandler(
 
 	serverCtx.Logger = server.ZeroLogWrapper{Logger: logger}
 
-	if len(envPrefixes) > 1 {
-		if err = bindFlags(cmd, serverCtx.Viper, envPrefixes[1:]); err != nil {
-			return err
-		}
+	if err = bindFlags(cmd, serverCtx.Viper, envPrefixes); err != nil {
+		return err
 	}
 
 	return server.SetCmdServerContext(cmd, serverCtx)
