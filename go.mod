@@ -9,8 +9,10 @@ require (
 	github.com/cosmos/cosmos-sdk v0.45.15
 	github.com/cosmos/ibc-go/v3 v3.4.0
 	github.com/gogo/protobuf v1.3.3
+	github.com/google/go-github/v52 v52.0.0
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0
+	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.14.0
@@ -26,6 +28,8 @@ require (
 	github.com/tendermint/tm-db v0.6.7
 	github.com/theckman/yacspin v0.13.12
 	go.step.sm/crypto v0.26.0
+	golang.org/x/mod v0.8.0
+	golang.org/x/oauth2 v0.7.0
 	golang.org/x/sync v0.1.0
 	google.golang.org/grpc v1.53.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -66,6 +70,7 @@ require (
 	github.com/ChainSafe/go-schnorrkel v0.0.0-20200405005733-88cbf1b4c40d // indirect
 	github.com/DataDog/zstd v1.5.0 // indirect
 	github.com/HdrHistogram/hdrhistogram-go v1.1.2 // indirect
+	github.com/ProtonMail/go-crypto v0.0.0-20230217124315-7d5c6f04bbb8 // indirect
 	github.com/Workiva/go-datastructures v1.0.53 // indirect
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -73,6 +78,7 @@ require (
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/cloudflare/circl v1.3.1 // indirect
 	github.com/cockroachdb/errors v1.9.1 // indirect
 	github.com/cockroachdb/logtags v0.0.0-20230118201751-21c54148d20b // indirect
 	github.com/cockroachdb/pebble v0.0.0-20220817183557-09c6e030a677 // indirect
@@ -112,6 +118,7 @@ require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/btree v1.1.2 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
+	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/orderedcode v0.0.1 // indirect
 	github.com/gorilla/handlers v1.5.1 // indirect
@@ -167,12 +174,13 @@ require (
 	github.com/zondax/hid v0.9.1 // indirect
 	github.com/zondax/ledger-go v0.14.1 // indirect
 	go.etcd.io/bbolt v1.3.6 // indirect
-	golang.org/x/crypto v0.6.0 // indirect
+	golang.org/x/crypto v0.7.0 // indirect
 	golang.org/x/exp v0.0.0-20221019170559-20944726eadf // indirect
-	golang.org/x/net v0.7.0 // indirect
-	golang.org/x/sys v0.5.0 // indirect
-	golang.org/x/term v0.5.0 // indirect
-	golang.org/x/text v0.7.0 // indirect
+	golang.org/x/net v0.9.0 // indirect
+	golang.org/x/sys v0.7.0 // indirect
+	golang.org/x/term v0.7.0 // indirect
+	golang.org/x/text v0.9.0 // indirect
+	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20230209215440-0dfe4f8abfcc // indirect
 	google.golang.org/protobuf v1.28.2-0.20220831092852-f930b1dc76e8 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
