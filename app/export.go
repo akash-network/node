@@ -5,6 +5,8 @@ import (
 	"log"
 	"math/rand"
 
+	"github.com/spf13/viper"
+
 	abci "github.com/tendermint/tendermint/abci/types"
 	logger "github.com/tendermint/tendermint/libs/log"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
@@ -17,7 +19,6 @@ import (
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	"github.com/cosmos/cosmos-sdk/x/staking"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/spf13/viper"
 )
 
 // ExportAppStateAndValidators exports the state of the application for a genesis
