@@ -36,6 +36,7 @@ import (
 	dbm "github.com/tendermint/tm-db"
 
 	"github.com/akash-network/node/app"
+	"github.com/akash-network/node/cmd/akash/cmd/testnetify"
 	ecmd "github.com/akash-network/node/events/cmd"
 	"github.com/akash-network/node/sdkutil"
 	utilcli "github.com/akash-network/node/util/cli"
@@ -104,6 +105,10 @@ func Execute(rootCmd *cobra.Command, envPrefix string) error {
 
 func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
 	sdkutil.InitSDKConfig()
+
+	debugCmd := debug.Cmd()
+	debugCmd.AddCommand(testnetify.Cmd())
+
 	rootCmd.AddCommand(
 		rpc.StatusCommand(),
 		ecmd.EventCmd(),

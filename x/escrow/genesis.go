@@ -1,12 +1,16 @@
 package escrow
 
 import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	"encoding/json"
+
 	"github.com/pkg/errors"
+
+	"github.com/cosmos/cosmos-sdk/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	abci "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/akash-network/node/x/escrow/keeper"
-
 	types "github.com/akash-network/node/x/escrow/types/v1beta2"
 )
 
@@ -91,4 +95,16 @@ func ExportGenesis(ctx sdk.Context, k keeper.Keeper) *types.GenesisState {
 // module.
 func DefaultGenesisState() *types.GenesisState {
 	return &types.GenesisState{}
+}
+
+// GetGenesisStateFromAppState returns x/deployment GenesisState given raw application
+// genesis state.
+func GetGenesisStateFromAppState(cdc codec.JSONCodec, appState map[string]json.RawMessage) *types.GenesisState {
+	var genesisState types.GenesisState
+
+	if appState[ModuleName] != nil {
+		cdc.MustUnmarshalJSON(appState[ModuleName], &genesisState)
+	}
+
+	return &genesisState
 }

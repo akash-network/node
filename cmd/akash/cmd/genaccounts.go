@@ -132,10 +132,12 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 				return errors.Errorf("cannot add account at existing address %s", addr)
 			}
 
-			// Add the new account to the set of genesis accounts and sanitize the
-			// accounts afterwards.
-			accs = append(accs, genAccount)
 			accs = authtypes.SanitizeGenesisAccounts(accs)
+			lAccountNumber := accs[len(accs)-1].GetAccountNumber()
+			// sdk always returns nil
+			_ = genAccount.SetAccountNumber(lAccountNumber + 1)
+
+			accs = append(accs, genAccount)
 
 			genAccs, err := authtypes.PackAccounts(accs)
 			if err != nil {
