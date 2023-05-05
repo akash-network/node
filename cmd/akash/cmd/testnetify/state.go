@@ -974,9 +974,7 @@ func (ga *GenesisState) ensureActiveSet(cdc codec.Codec) error {
 				Power:   power,
 			})
 
-		}
-
-		if val.IsBonded() {
+		} else if val.IsBonded() {
 			sVals[i].Status = stakingtypes.Unbonding
 			coins := sdk.NewCoins(sdk.NewCoin("uakt", val.DelegatorShares.RoundInt()))
 			err := ga.DecreaseBalances(cdc, ga.moduleAddresses.bondedPool, coins)

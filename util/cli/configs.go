@@ -130,7 +130,7 @@ func parseTimestampFormat(val string) (string, error) {
 		return time.Kitchen, nil
 	}
 
-	return "", fmt.Errorf("invalid timestamp format (%s)", val)
+	return "", fmt.Errorf("invalid timestamp format (%s)", val) // nolint: goerr113
 }
 
 func bindFlags(cmd *cobra.Command, v *viper.Viper, envPrefixes []string) error {
