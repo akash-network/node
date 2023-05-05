@@ -1,44 +1,42 @@
 // Package v0_24_0
-package v0_24_0 // nolint revive
+// nolint revive
+package v0_24_0
 
 import (
 	"fmt"
 
-	"github.com/akash-network/akash-api/go/node/escrow/v1beta3"
+	"github.com/tendermint/tendermint/libs/log"
+
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/feegrant"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-	"github.com/tendermint/tendermint/libs/log"
 
-	agovtypes "github.com/akash-network/akash-api/go/node/gov/v1beta3"
+	"github.com/akash-network/akash-api/go/node/escrow/v1beta3"
 	astakingtypes "github.com/akash-network/akash-api/go/node/staking/v1beta3"
 
 	apptypes "github.com/akash-network/node/app/types"
+	utypes "github.com/akash-network/node/upgrades/types"
 	agov "github.com/akash-network/node/x/gov"
 	astaking "github.com/akash-network/node/x/staking"
 )
 
 const (
-	UpgradeName = "v0.24.0"
+	upgradeName = "v0.24.0"
 )
-
-func init() {
-	apptypes.RegisterUpgrade(UpgradeName, initUpgrade)
-}
 
 type upgrade struct {
 	*apptypes.App
 	log log.Logger
 }
 
-var _ apptypes.IUpgrade = (*upgrade)(nil)
+var _ utypes.IUpgrade = (*upgrade)(nil)
 
-func initUpgrade(log log.Logger, app *apptypes.App) (apptypes.IUpgrade, error) {
+func initUpgrade(log log.Logger, app *apptypes.App) (utypes.IUpgrade, error) {
 	up := &upgrade{
 		App: app,
-		log: log.With(fmt.Sprintf("upgrade/%s", UpgradeName)),
+		log: log.With(fmt.Sprintf("upgrade/%s", upgradeName)),
 	}
 
 	if _, exists := up.MM.Modules[agov.ModuleName]; !exists {
@@ -66,13 +64,9 @@ func (up *upgrade) StoreLoader() *storetypes.StoreUpgrades {
 
 func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 	return func(ctx sdk.Context, plan upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
+		// initializing akash staking module here so enforceMinValidatorCommission below can use params
 		ctx.Logger().Info("initializing parameters in astaking module...")
 		if err := up.Keepers.Akash.Staking.SetParams(ctx, astakingtypes.DefaultParams()); err != nil {
-			return nil, err
-		}
-
-		ctx.Logger().Info("initializing parameters in agov module...")
-		if err := up.Keepers.Akash.Gov.SetDepositParams(ctx, agovtypes.DefaultDepositParams()); err != nil {
 			return nil, err
 		}
 

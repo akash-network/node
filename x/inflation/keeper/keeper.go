@@ -25,7 +25,6 @@ type Keeper struct {
 
 // NewKeeper creates and returns an instance for deployment keeper
 func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey, pspace paramtypes.Subspace) IKeeper {
-
 	if !pspace.HasKeyTable() {
 		pspace = pspace.WithKeyTable(types.ParamKeyTable())
 	}

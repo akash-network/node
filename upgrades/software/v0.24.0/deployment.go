@@ -10,14 +10,14 @@ import (
 	dv1beta2 "github.com/akash-network/akash-api/go/node/deployment/v1beta2"
 	dmigrate "github.com/akash-network/akash-api/go/node/deployment/v1beta3/migrate"
 
-	"github.com/akash-network/node/migrations/consensus"
+	utypes "github.com/akash-network/node/upgrades/types"
 )
 
 type deploymentMigrations struct {
-	consensus.Migrator
+	utypes.Migrator
 }
 
-func newDeploymentMigration(m consensus.Migrator) consensus.Migration {
+func newDeploymentMigration(m utypes.Migrator) utypes.Migration {
 	return deploymentMigrations{Migrator: m}
 }
 
@@ -29,7 +29,7 @@ func (m deploymentMigrations) GetHandler() sdkmodule.MigrationHandler {
 func (m deploymentMigrations) handler(ctx sdk.Context) error {
 	store := ctx.KVStore(m.StoreKey())
 
-	err := consensus.MigrateValue(store, m.Codec(), dv1beta2.GroupPrefix(), migrateDeploymentGroup)
+	err := utypes.MigrateValue(store, m.Codec(), dv1beta2.GroupPrefix(), migrateDeploymentGroup)
 
 	if err != nil {
 		return err

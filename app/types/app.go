@@ -5,10 +5,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/tendermint/tendermint/libs/log"
-
-	storetypes "github.com/cosmos/cosmos-sdk/store/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
@@ -24,46 +20,23 @@ import (
 	slashingkeeper "github.com/cosmos/cosmos-sdk/x/slashing/keeper"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	upgradekeeper "github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
-	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	ibctransferkeeper "github.com/cosmos/ibc-go/v3/modules/apps/transfer/keeper"
 	ibckeeper "github.com/cosmos/ibc-go/v3/modules/core/keeper"
 
-	"github.com/akash-network/node/x/audit"
-	"github.com/akash-network/node/x/cert"
+	akeeper "github.com/akash-network/node/x/audit/keeper"
+	ckeeper "github.com/akash-network/node/x/cert/keeper"
 	dkeeper "github.com/akash-network/node/x/deployment/keeper"
 	escrowkeeper "github.com/akash-network/node/x/escrow/keeper"
 	agovkeeper "github.com/akash-network/node/x/gov/keeper"
-	"github.com/akash-network/node/x/inflation"
+	ikeeper "github.com/akash-network/node/x/inflation/keeper"
 	mkeeper "github.com/akash-network/node/x/market/keeper"
 	pkeeper "github.com/akash-network/node/x/provider/keeper"
 	astakingkeeper "github.com/akash-network/node/x/staking/keeper"
 )
 
 var (
-	upgrades = map[string]UpgradeInitFn{}
-	forks    = map[int64]IFork{}
-)
-
-var (
 	ErrEmptyFieldName = errors.New("empty field name")
 )
-
-// IUpgrade defines an interface to run a SoftwareUpgradeProposal
-type IUpgrade interface {
-	StoreLoader() *storetypes.StoreUpgrades
-	UpgradeHandler() upgradetypes.UpgradeHandler
-}
-
-// IFork defines an interface for a non-software upgrade proposal Hard Fork at a given height to implement.
-// There is one time code that can be added for the start of the Fork, in `BeginForkLogic`.
-// Any other change in the code should be height-gated, if the goal is to have old and new binaries
-// to be compatible prior to the upgrade height.
-type IFork interface {
-	Name() string
-	BeginForkLogic(sdk.Context, *AppKeepers)
-}
-
-type UpgradeInitFn func(log.Logger, *App) (IUpgrade, error)
 
 type AppKeepers struct {
 	Cosmos struct {
@@ -92,9 +65,9 @@ type AppKeepers struct {
 		Deployment dkeeper.IKeeper
 		Market     mkeeper.IKeeper
 		Provider   pkeeper.IKeeper
-		Audit      audit.Keeper
-		Cert       cert.Keeper
-		Inflation  inflation.Keeper
+		Audit      akeeper.Keeper
+		Cert       ckeeper.Keeper
+		Inflation  ikeeper.IKeeper
 		Staking    astakingkeeper.IKeeper
 		Gov        agovkeeper.IKeeper
 	}
@@ -104,30 +77,6 @@ type App struct {
 	Keepers      AppKeepers
 	Configurator module.Configurator
 	MM           *module.Manager
-}
-
-func RegisterUpgrade(name string, fn UpgradeInitFn) {
-	if _, exists := upgrades[name]; exists {
-		panic(fmt.Sprintf("upgrade \"%s\" already registered", name))
-	}
-
-	upgrades[name] = fn
-}
-
-func RegisterFork(height int64, fork IFork) {
-	if _, exists := forks[height]; exists {
-		panic(fmt.Sprintf("fork \"%s\" for height %d already registered", fork.Name(), height))
-	}
-
-	forks[height] = fork
-}
-
-func GetUpgradesList() map[string]UpgradeInitFn {
-	return upgrades
-}
-
-func GetForksList() map[int64]IFork {
-	return forks
 }
 
 // FindStructField if an interface is either a struct or a pointer to a struct

@@ -95,6 +95,7 @@ import (
 	ibckeeper "github.com/cosmos/ibc-go/v3/modules/core/keeper"
 
 	apptypes "github.com/akash-network/node/app/types"
+	utypes "github.com/akash-network/node/upgrades/types"
 
 	// unnamed import of statik for swagger UI support
 	_ "github.com/akash-network/node/client/docs/statik"
@@ -515,10 +516,10 @@ func (app *AkashApp) InitChainer(ctx sdk.Context, req abci.RequestInitChain) abc
 
 // BeginBlocker is a function in which application updates every begin block
 func (app *AkashApp) BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
-	if fork, exists := apptypes.GetForksList()[ctx.BlockHeight()]; exists {
-		app.Logger().Info(fmt.Sprintf("found hard-fork %s for current height %d. Applying...", fork.Name(), ctx.BlockHeight()))
-		fork.BeginForkLogic(ctx, &app.Keepers)
-		app.Logger().Info(fmt.Sprintf("hard-fork %s applied successfully at height %d", fork.Name(), ctx.BlockHeight()))
+	if patch, exists := utypes.GetHeightPatchesList()[ctx.BlockHeight()]; exists {
+		app.Logger().Info(fmt.Sprintf("found patch %s for current height %d. applying...", patch.Name(), ctx.BlockHeight()))
+		patch.Begin(ctx, &app.Keepers)
+		app.Logger().Info(fmt.Sprintf("patch %s applied successfully at height %d", patch.Name(), ctx.BlockHeight()))
 	}
 
 	return app.MM.BeginBlock(ctx, req)

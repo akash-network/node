@@ -1,5 +1,6 @@
 // Package v0_15_0
-package v0_15_0 // nolint revive
+// nolint revive
+package v0_15_0
 
 import (
 	inflationtypes "github.com/akash-network/akash-api/go/node/inflation/v1beta3"
@@ -13,24 +14,21 @@ import (
 	"github.com/tendermint/tendermint/libs/log"
 
 	apptypes "github.com/akash-network/node/app/types"
+	utypes "github.com/akash-network/node/upgrades/types"
 )
 
 const (
 	upgradeName = "akash_v0.15.0_cosmos_v0.44.x"
 )
 
-func init() {
-	apptypes.RegisterUpgrade(upgradeName, initUpgrade)
-}
-
 type upgrade struct {
 	*apptypes.App
 	ibc *ibckeeper.Keeper
 }
 
-var _ apptypes.IUpgrade = (*upgrade)(nil)
+var _ utypes.IUpgrade = (*upgrade)(nil)
 
-func initUpgrade(_ log.Logger, app *apptypes.App) (apptypes.IUpgrade, error) {
+func initUpgrade(_ log.Logger, app *apptypes.App) (utypes.IUpgrade, error) {
 	up := &upgrade{
 		App: app,
 	}

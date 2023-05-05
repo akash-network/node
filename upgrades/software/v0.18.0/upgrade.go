@@ -1,36 +1,41 @@
-// Package v0_20_0
-package v0_20_0 // nolint revive
+// Package v0_18_0
+// nolint revive
+package v0_18_0
 
 import (
+	"fmt"
+
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
+	ica "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts"
 	icacontrollertypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/controller/types"
 	icahosttypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/host/types"
 	icatypes "github.com/cosmos/ibc-go/v3/modules/apps/27-interchain-accounts/types"
 	"github.com/tendermint/tendermint/libs/log"
 
 	apptypes "github.com/akash-network/node/app/types"
+	utypes "github.com/akash-network/node/upgrades/types"
 )
 
 const (
-	upgradeName = "v0.20.0"
+	upgradeName = "v0.18.0"
 )
-
-func init() {
-	apptypes.RegisterUpgrade(upgradeName, initUpgrade)
-}
 
 type upgrade struct {
 	*apptypes.App
 }
 
-var _ apptypes.IUpgrade = (*upgrade)(nil)
+var _ utypes.IUpgrade = (*upgrade)(nil)
 
-func initUpgrade(_ log.Logger, app *apptypes.App) (apptypes.IUpgrade, error) {
+func initUpgrade(_ log.Logger, app *apptypes.App) (utypes.IUpgrade, error) {
 	up := &upgrade{
 		App: app,
+	}
+
+	if _, exists := up.MM.Modules[icatypes.ModuleName]; !exists {
+		return nil, fmt.Errorf("module %s has not been initialized", icatypes.ModuleName) // nolint: goerr113
 	}
 
 	return up, nil
@@ -38,7 +43,7 @@ func initUpgrade(_ log.Logger, app *apptypes.App) (apptypes.IUpgrade, error) {
 
 func (up *upgrade) StoreLoader() *storetypes.StoreUpgrades {
 	upgrades := &storetypes.StoreUpgrades{
-		Deleted: []string{
+		Added: []string{
 			icacontrollertypes.StoreKey,
 			icahosttypes.StoreKey,
 		},
@@ -49,9 +54,23 @@ func (up *upgrade) StoreLoader() *storetypes.StoreUpgrades {
 
 func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 	return func(ctx sdk.Context, plan upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
-		ctx.Logger().Info("start to roll-back interchainaccount module...")
+		fromVM[icatypes.ModuleName] = up.MM.Modules[icatypes.ModuleName].ConsensusVersion()
 
-		delete(fromVM, icatypes.ModuleName)
+		// create ICS27 Controller submodule params
+		// enable the controller chain
+		controllerParams := icacontrollertypes.Params{ControllerEnabled: true}
+
+		// create ICS27 Host submodule params
+		hostParams := icahosttypes.Params{
+			// enable the host chain
+			HostEnabled: true,
+			// allowing the all messages
+			AllowMessages: []string{"*"},
+		}
+
+		ctx.Logger().Info("start to init interchainaccount module...")
+		// initialize ICS27 module
+		up.MM.Modules[icatypes.ModuleName].(ica.AppModule).InitModule(ctx, controllerParams, hostParams)
 
 		ctx.Logger().Info("start to run module migrations...")
 

@@ -10,14 +10,14 @@ import (
 	ev1beta1 "github.com/akash-network/akash-api/go/node/escrow/v1beta1"
 	ev1beta2 "github.com/akash-network/akash-api/go/node/escrow/v1beta2"
 
-	"github.com/akash-network/node/migrations/consensus"
+	utypes "github.com/akash-network/node/upgrades/types"
 )
 
 type escrowMigrations struct {
-	consensus.Migrator
+	utypes.Migrator
 }
 
-func newEscrowMigration(m consensus.Migrator) consensus.Migration {
+func newEscrowMigration(m utypes.Migrator) utypes.Migration {
 	return escrowMigrations{Migrator: m}
 }
 
@@ -29,12 +29,12 @@ func (m escrowMigrations) GetHandler() sdkmodule.MigrationHandler {
 func (m escrowMigrations) handler(ctx sdk.Context) error {
 	store := ctx.KVStore(m.StoreKey())
 
-	err := consensus.MigrateValue(store, m.Codec(), ev1beta2.AccountKeyPrefix(), migrateAccount)
+	err := utypes.MigrateValue(store, m.Codec(), ev1beta2.AccountKeyPrefix(), migrateAccount)
 	if err != nil {
 		return err
 	}
 
-	err = consensus.MigrateValue(store, m.Codec(), ev1beta2.PaymentKeyPrefix(), migratePayment)
+	err = utypes.MigrateValue(store, m.Codec(), ev1beta2.PaymentKeyPrefix(), migratePayment)
 	if err != nil {
 		return err
 	}

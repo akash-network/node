@@ -13,15 +13,15 @@ import (
 	mv1beta1 "github.com/akash-network/akash-api/go/node/market/v1beta1"
 	mv1beta2 "github.com/akash-network/akash-api/go/node/market/v1beta2"
 
-	"github.com/akash-network/node/migrations/consensus"
+	utypes "github.com/akash-network/node/upgrades/types"
 	keys "github.com/akash-network/node/x/market/keeper/keys/v1beta2"
 )
 
 type marketMigrations struct {
-	consensus.Migrator
+	utypes.Migrator
 }
 
-func newMarketMigration(m consensus.Migrator) consensus.Migration {
+func newMarketMigration(m utypes.Migrator) utypes.Migration {
 	return marketMigrations{Migrator: m}
 }
 
@@ -46,17 +46,17 @@ func (m marketMigrations) handler(ctx sdk.Context) error {
 	}
 
 	// Migrate protobuf
-	err = consensus.MigrateValue(store, m.Codec(), mv1beta1.OrderPrefix(), migrateOrder)
+	err = utypes.MigrateValue(store, m.Codec(), mv1beta1.OrderPrefix(), migrateOrder)
 	if err != nil {
 		return err
 	}
 
-	err = consensus.MigrateValue(store, m.Codec(), mv1beta1.BidPrefix(), migrateBid)
+	err = utypes.MigrateValue(store, m.Codec(), mv1beta1.BidPrefix(), migrateBid)
 	if err != nil {
 		return err
 	}
 
-	err = consensus.MigrateValue(store, m.Codec(), mv1beta1.LeasePrefix(), migrateLease)
+	err = utypes.MigrateValue(store, m.Codec(), mv1beta1.LeasePrefix(), migrateLease)
 	if err != nil {
 		return err
 	}

@@ -32,13 +32,16 @@ import (
 	providertypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
 
 	"github.com/akash-network/node/x/audit"
+	akeeper "github.com/akash-network/node/x/audit/keeper"
 	"github.com/akash-network/node/x/cert"
+	ckeeper "github.com/akash-network/node/x/cert/keeper"
 	"github.com/akash-network/node/x/deployment"
 	"github.com/akash-network/node/x/escrow"
 	ekeeper "github.com/akash-network/node/x/escrow/keeper"
 	agov "github.com/akash-network/node/x/gov"
 	agovkeeper "github.com/akash-network/node/x/gov/keeper"
 	"github.com/akash-network/node/x/inflation"
+	ikeeper "github.com/akash-network/node/x/inflation/keeper"
 	"github.com/akash-network/node/x/market"
 	mhooks "github.com/akash-network/node/x/market/hooks"
 	"github.com/akash-network/node/x/provider"
@@ -118,17 +121,17 @@ func (app *AkashApp) setAkashKeepers() {
 		app.keys[provider.StoreKey],
 	)
 
-	app.Keepers.Akash.Audit = audit.NewKeeper(
+	app.Keepers.Akash.Audit = akeeper.NewKeeper(
 		app.appCodec,
 		app.keys[audit.StoreKey],
 	)
 
-	app.Keepers.Akash.Cert = cert.NewKeeper(
+	app.Keepers.Akash.Cert = ckeeper.NewKeeper(
 		app.appCodec,
 		app.keys[cert.StoreKey],
 	)
 
-	app.Keepers.Akash.Inflation = inflation.NewKeeper(
+	app.Keepers.Akash.Inflation = ikeeper.NewKeeper(
 		app.appCodec,
 		app.keys[inflation.StoreKey],
 		app.GetSubspace(inflation.ModuleName),

@@ -7,14 +7,14 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/address"
 	sdkmodule "github.com/cosmos/cosmos-sdk/types/module"
 
-	"github.com/akash-network/node/migrations/consensus"
+	utypes "github.com/akash-network/node/upgrades/types"
 )
 
 type providerMigrations struct {
-	consensus.Migrator
+	utypes.Migrator
 }
 
-func newProviderMigration(m consensus.Migrator) consensus.Migration {
+func newProviderMigration(m utypes.Migrator) utypes.Migration {
 	return providerMigrations{Migrator: m}
 }
 

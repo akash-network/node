@@ -9,14 +9,14 @@ import (
 
 	av1beta2 "github.com/akash-network/akash-api/go/node/audit/v1beta2"
 
-	"github.com/akash-network/node/migrations/consensus"
+	utypes "github.com/akash-network/node/upgrades/types"
 )
 
 type auditMigrations struct {
-	consensus.Migrator
+	utypes.Migrator
 }
 
-func newAuditMigration(m consensus.Migrator) consensus.Migration {
+func newAuditMigration(m utypes.Migrator) utypes.Migration {
 	return auditMigrations{Migrator: m}
 }
 
