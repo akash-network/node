@@ -35,22 +35,27 @@ type testSuite struct {
 	authzKeeper handler.AuthzKeeper
 	depositor   string
 	handler     sdk.Handler
+
+	defaultDeposit sdk.Coin
 }
 
 func setupTestSuite(t *testing.T) *testSuite {
 	ssuite := state.SetupTestSuite(t)
+
+	defaultDeposit, err := types.DefaultParams().MinDepositFor("uakt")
+	require.NoError(t, err)
 
 	depositor := testutil.AccAddress(t)
 	authzKeeper := &mocks.AuthzKeeper{}
 	authzKeeper.
 		On("GetCleanAuthorization", mock.Anything, mock.Anything, depositor, sdk.MsgTypeURL(&types.MsgDepositDeployment{})).
 		Return(&types.DepositDeploymentAuthorization{
-			SpendLimit: types.DefaultDeploymentMinDeposit.Add(types.DefaultDeploymentMinDeposit),
+			SpendLimit: defaultDeposit.Add(defaultDeposit),
 		}, time.Time{}).
 		Once().
 		On("GetCleanAuthorization", mock.Anything, mock.Anything, depositor, sdk.MsgTypeURL(&types.MsgDepositDeployment{})).
 		Return(&types.DepositDeploymentAuthorization{
-			SpendLimit: types.DefaultDeploymentMinDeposit,
+			SpendLimit: defaultDeposit,
 		}, time.Time{}).
 		Once().
 		On("GetCleanAuthorization", mock.Anything, mock.Anything,
@@ -66,13 +71,14 @@ func setupTestSuite(t *testing.T) *testSuite {
 		Return(nil)
 
 	suite := &testSuite{
-		TestSuite:   ssuite,
-		t:           t,
-		ctx:         ssuite.Context(),
-		mkeeper:     ssuite.MarketKeeper(),
-		dkeeper:     ssuite.DeploymentKeeper(),
-		authzKeeper: authzKeeper,
-		depositor:   depositor.String(),
+		TestSuite:      ssuite,
+		t:              t,
+		ctx:            ssuite.Context(),
+		mkeeper:        ssuite.MarketKeeper(),
+		dkeeper:        ssuite.DeploymentKeeper(),
+		authzKeeper:    authzKeeper,
+		depositor:      depositor.String(),
+		defaultDeposit: defaultDeposit,
 	}
 
 	suite.handler = handler.NewHandler(suite.dkeeper, suite.mkeeper, ssuite.EscrowKeeper(),
@@ -98,7 +104,7 @@ func TestCreateDeployment(t *testing.T) {
 	msg := &types.MsgCreateDeployment{
 		ID:        deployment.ID(),
 		Groups:    make([]types.GroupSpec, 0, len(groups)),
-		Deposit:   types.DefaultDeploymentMinDeposit,
+		Deposit:   suite.defaultDeposit,
 		Depositor: deployment.ID().Owner,
 	}
 
@@ -144,7 +150,7 @@ func TestCreateDeploymentEmptyGroups(t *testing.T) {
 
 	msg := &types.MsgCreateDeployment{
 		ID:      deployment.ID(),
-		Deposit: types.DefaultDeploymentMinDeposit,
+		Deposit: suite.defaultDeposit,
 	}
 
 	res, err := suite.handler(suite.ctx, msg)
@@ -188,7 +194,7 @@ func TestUpdateDeploymentExisting(t *testing.T) {
 		ID:        deployment.ID(),
 		Groups:    msgGroups,
 		Version:   testutil.DefaultDeploymentVersion[:],
-		Deposit:   types.DefaultDeploymentMinDeposit,
+		Deposit:   suite.defaultDeposit,
 		Depositor: deployment.ID().Owner,
 	}
 
@@ -261,7 +267,7 @@ func TestCloseDeploymentExisting(t *testing.T) {
 	msg := &types.MsgCreateDeployment{
 		ID:        deployment.ID(),
 		Groups:    make([]types.GroupSpec, 0, len(groups)),
-		Deposit:   types.DefaultDeploymentMinDeposit,
+		Deposit:   suite.defaultDeposit,
 		Depositor: deployment.ID().Owner,
 	}
 
@@ -325,7 +331,7 @@ func TestFundedDeployment(t *testing.T) {
 	msg := &types.MsgCreateDeployment{
 		ID:        deployment.ID(),
 		Groups:    make([]types.GroupSpec, 0, len(groups)),
-		Deposit:   types.DefaultDeploymentMinDeposit,
+		Deposit:   suite.defaultDeposit,
 		Depositor: suite.depositor,
 	}
 
@@ -353,7 +359,7 @@ func TestFundedDeployment(t *testing.T) {
 	// deposit additional amount from the owner
 	depositMsg := &types.MsgDepositDeployment{
 		ID:        deployment.ID(),
-		Amount:    types.DefaultDeploymentMinDeposit,
+		Amount:    suite.defaultDeposit,
 		Depositor: deployment.ID().Owner,
 	}
 	res, err = suite.handler(suite.ctx, depositMsg)
@@ -371,7 +377,7 @@ func TestFundedDeployment(t *testing.T) {
 	// deposit additional amount from the depositor
 	depositMsg1 := &types.MsgDepositDeployment{
 		ID:        deployment.ID(),
-		Amount:    types.DefaultDeploymentMinDeposit,
+		Amount:    suite.defaultDeposit,
 		Depositor: suite.depositor,
 	}
 	res, err = suite.handler(suite.ctx, depositMsg1)
@@ -389,7 +395,7 @@ func TestFundedDeployment(t *testing.T) {
 	// depositing additional amount from a random depositor should fail
 	depositMsg2 := &types.MsgDepositDeployment{
 		ID:        deployment.ID(),
-		Amount:    types.DefaultDeploymentMinDeposit,
+		Amount:    suite.defaultDeposit,
 		Depositor: testutil.AccAddress(t).String(),
 	}
 	res, err = suite.handler(suite.ctx, depositMsg2)

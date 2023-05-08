@@ -8,6 +8,7 @@ import (
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 
 	atypes "github.com/akash-network/akash-api/go/node/audit/v1beta3"
+	ttypes "github.com/akash-network/akash-api/go/node/take/v1beta3"
 
 	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
 	etypes "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
@@ -24,6 +25,7 @@ import (
 	mhooks "github.com/akash-network/node/x/market/hooks"
 	mkeeper "github.com/akash-network/node/x/market/keeper"
 	pkeeper "github.com/akash-network/node/x/provider/keeper"
+	tkeeper "github.com/akash-network/node/x/take/keeper"
 )
 
 // TestSuite encapsulates a functional Akash nodes data stores for
@@ -37,6 +39,7 @@ type TestSuite struct {
 }
 
 type Keepers struct {
+	Take       tkeeper.IKeeper
 	Escrow     ekeeper.Keeper
 	Audit      akeeper.IKeeper
 	Market     mkeeper.IKeeper
@@ -68,8 +71,13 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 	if keepers.Audit == nil {
 		keepers.Audit = akeeper.NewKeeper(atypes.ModuleCdc, app.GetKey(atypes.StoreKey))
 	}
+
+	if keepers.Take == nil {
+		keepers.Take = tkeeper.NewKeeper(ttypes.ModuleCdc, app.GetKey(ttypes.StoreKey), app.GetSubspace(ttypes.ModuleName))
+	}
+
 	if keepers.Escrow == nil {
-		keepers.Escrow = ekeeper.NewKeeper(etypes.ModuleCdc, app.GetKey(etypes.StoreKey), keepers.Bank)
+		keepers.Escrow = ekeeper.NewKeeper(etypes.ModuleCdc, app.GetKey(etypes.StoreKey), keepers.Bank, keepers.Take)
 	}
 	if keepers.Market == nil {
 		keepers.Market = mkeeper.NewKeeper(mtypes.ModuleCdc, app.GetKey(mtypes.StoreKey), app.GetSubspace(mtypes.ModuleName), keepers.Escrow)

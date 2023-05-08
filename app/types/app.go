@@ -32,6 +32,7 @@ import (
 	mkeeper "github.com/akash-network/node/x/market/keeper"
 	pkeeper "github.com/akash-network/node/x/provider/keeper"
 	astakingkeeper "github.com/akash-network/node/x/staking/keeper"
+	tkeeper "github.com/akash-network/node/x/take/keeper"
 )
 
 var ErrEmptyFieldName = errors.New("empty field name")
@@ -61,6 +62,7 @@ type AppKeepers struct {
 	Akash struct {
 		Escrow     escrowkeeper.Keeper
 		Deployment dkeeper.IKeeper
+		Take       tkeeper.IKeeper
 		Market     mkeeper.IKeeper
 		Provider   pkeeper.IKeeper
 		Audit      akeeper.Keeper

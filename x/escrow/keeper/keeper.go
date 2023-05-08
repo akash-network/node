@@ -34,11 +34,12 @@ type Keeper interface {
 	SavePayment(sdk.Context, types.FractionalPayment)
 }
 
-func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey, bkeeper BankKeeper) Keeper {
+func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey, bkeeper BankKeeper, tkeeper TakeKeeper) Keeper {
 	return &keeper{
 		cdc:     cdc,
 		skey:    skey,
 		bkeeper: bkeeper,
+		tkeeper: tkeeper,
 	}
 }
 
@@ -46,6 +47,7 @@ type keeper struct {
 	cdc     codec.BinaryCodec
 	skey    sdk.StoreKey
 	bkeeper BankKeeper
+	tkeeper TakeKeeper
 
 	hooks struct {
 		onAccountClosed []AccountHook
@@ -532,22 +534,35 @@ func (k *keeper) paymentWithdraw(ctx sdk.Context, obj *types.FractionalPayment) 
 		return err
 	}
 
-	// Only run a withdrawal if there is at least 1 uakt to withdraw
-	if obj.Balance.Amount.LT(sdk.NewDec(1)) {
+	rawEarnings := sdk.NewCoin(obj.Balance.Denom, obj.Balance.Amount.RoundInt())
+
+	if rawEarnings.Amount.IsZero() {
 		return nil
 	}
 
-	// Get the integer part that can actually be withdrawn
-	withdrawalAmount := obj.Balance.Amount.TruncateInt()
-	withdrawal := sdk.NewCoin(obj.Balance.Denom, withdrawalAmount)
-
-	if err := k.bkeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, owner, sdk.NewCoins(withdrawal)); err != nil {
-		ctx.Logger().Error("payment withdraw", "err", err, "account", obj.AccountID, "payment", obj.PaymentID)
+	earnings, fee, err := k.tkeeper.SubtractFees(ctx, rawEarnings)
+	if err != nil {
 		return err
 	}
 
-	obj.Withdrawn = obj.Withdrawn.Add(withdrawal)
-	obj.Balance = obj.Balance.Sub(sdk.NewDecCoinFromCoin(withdrawal))
+	if !fee.IsZero() {
+		if err := k.bkeeper.SendCoinsFromModuleToModule(ctx, types.ModuleName, "community", sdk.NewCoins(fee)); err != nil {
+			ctx.Logger().Error("payment withdraw - fees", "err", err, "account", obj.AccountID, "payment", obj.PaymentID)
+			return err
+		}
+	}
+
+	if !earnings.IsZero() {
+		if err := k.bkeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, owner, sdk.NewCoins(earnings)); err != nil {
+			ctx.Logger().Error("payment withdraw - earnings", "err", err, "account", obj.AccountID, "payment", obj.PaymentID)
+			return err
+		}
+	}
+
+	total := earnings.Add(fee)
+
+	obj.Withdrawn = obj.Withdrawn.Add(total)
+	obj.Balance = obj.Balance.Sub(sdk.NewDecCoinFromCoin(total))
 
 	k.savePayment(ctx, obj)
 	return nil

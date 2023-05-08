@@ -3,7 +3,8 @@
         "added": [
             "agov",
             "astaking",
-            "feegrant"
+            "feegrant",
+            "take"
         ]
     },
     "migrations": {

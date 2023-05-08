@@ -13,6 +13,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/feegrant"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 
+	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
 	"github.com/akash-network/akash-api/go/node/escrow/v1beta3"
 	astakingtypes "github.com/akash-network/akash-api/go/node/staking/v1beta3"
 
@@ -20,6 +21,7 @@ import (
 	utypes "github.com/akash-network/node/upgrades/types"
 	agov "github.com/akash-network/node/x/gov"
 	astaking "github.com/akash-network/node/x/staking"
+	atake "github.com/akash-network/node/x/take"
 )
 
 const (
@@ -47,6 +49,10 @@ func initUpgrade(log log.Logger, app *apptypes.App) (utypes.IUpgrade, error) {
 		return nil, fmt.Errorf("module %s has not been initialized", astaking.ModuleName) // nolint: goerr113
 	}
 
+	if _, exists := up.MM.Modules[atake.ModuleName]; !exists {
+		return nil, fmt.Errorf("module %s has not been initialized", atake.ModuleName) // nolint: goerr113
+	}
+
 	return up, nil
 }
 
@@ -56,6 +62,7 @@ func (up *upgrade) StoreLoader() *storetypes.StoreUpgrades {
 			feegrant.StoreKey,
 			agov.StoreKey,
 			astaking.StoreKey,
+			atake.StoreKey,
 		},
 	}
 
@@ -77,6 +84,10 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 		up.patchDanglingEscrowPayments(ctx)
 
 		ctx.Logger().Info("starting module migrations...")
+
+		// migrate to new deployment params schema
+		up.App.Keepers.Akash.Deployment.SetParams(ctx, dtypes.DefaultParams())
+
 		return up.MM.RunMigrations(ctx, up.Configurator, fromVM)
 	}
 }

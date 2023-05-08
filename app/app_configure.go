@@ -30,6 +30,7 @@ import (
 	inflationtypes "github.com/akash-network/akash-api/go/node/inflation/v1beta3"
 	markettypes "github.com/akash-network/akash-api/go/node/market/v1beta3"
 	providertypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
+	taketypes "github.com/akash-network/akash-api/go/node/take/v1beta3"
 
 	"github.com/akash-network/node/x/audit"
 	akeeper "github.com/akash-network/node/x/audit/keeper"
@@ -47,10 +48,13 @@ import (
 	"github.com/akash-network/node/x/provider"
 	astaking "github.com/akash-network/node/x/staking"
 	astakingkeeper "github.com/akash-network/node/x/staking/keeper"
+	"github.com/akash-network/node/x/take"
+	tkeeper "github.com/akash-network/node/x/take/keeper"
 )
 
 func akashModuleBasics() []module.AppModuleBasic {
 	return []module.AppModuleBasic{
+		take.AppModuleBasic{},
 		escrow.AppModuleBasic{},
 		deployment.AppModuleBasic{},
 		market.AppModuleBasic{},
@@ -65,6 +69,7 @@ func akashModuleBasics() []module.AppModuleBasic {
 
 func akashKVStoreKeys() []string {
 	return []string{
+		take.StoreKey,
 		escrow.StoreKey,
 		deployment.StoreKey,
 		market.StoreKey,
@@ -83,15 +88,22 @@ func akashSubspaces(k paramskeeper.Keeper) paramskeeper.Keeper {
 	k.Subspace(inflation.ModuleName)
 	k.Subspace(astaking.ModuleName)
 	k.Subspace(agov.ModuleName)
-
+	k.Subspace(take.ModuleName)
 	return k
 }
 
 func (app *AkashApp) setAkashKeepers() {
+	app.Keepers.Akash.Take = tkeeper.NewKeeper(
+		app.appCodec,
+		app.keys[take.StoreKey],
+		app.GetSubspace(take.ModuleName),
+	)
+
 	app.Keepers.Akash.Escrow = ekeeper.NewKeeper(
 		app.appCodec,
 		app.keys[escrow.StoreKey],
 		app.Keepers.Cosmos.Bank,
+		app.Keepers.Akash.Take,
 	)
 
 	app.Keepers.Akash.Deployment = deployment.NewKeeper(
@@ -152,6 +164,11 @@ func (app *AkashApp) setAkashKeepers() {
 
 func (app *AkashApp) akashAppModules() []module.AppModule {
 	return []module.AppModule{
+		take.NewAppModule(
+			app.appCodec,
+			app.Keepers.Akash.Take,
+		),
+
 		escrow.NewAppModule(
 			app.appCodec,
 			app.Keepers.Akash.Escrow,
@@ -230,6 +247,7 @@ func (app *AkashApp) akashBeginBlockModules() []string {
 		inflationtypes.ModuleName,
 		authtypes.ModuleName,
 		authz.ModuleName,
+		taketypes.ModuleName,
 		escrowtypes.ModuleName,
 		minttypes.ModuleName,
 		distrtypes.ModuleName,
@@ -265,6 +283,7 @@ func (app *AkashApp) akashEndBlockModules() []string {
 		inflationtypes.ModuleName,
 		authtypes.ModuleName,
 		authz.ModuleName,
+		taketypes.ModuleName,
 		escrowtypes.ModuleName,
 		minttypes.ModuleName,
 		distrtypes.ModuleName,
@@ -297,6 +316,7 @@ func (app *AkashApp) akashInitGenesisOrder() []string {
 		transfertypes.ModuleName,
 		feegrant.ModuleName,
 		cert.ModuleName,
+		taketypes.ModuleName,
 		escrow.ModuleName,
 		deployment.ModuleName,
 		provider.ModuleName,
@@ -310,6 +330,10 @@ func (app *AkashApp) akashInitGenesisOrder() []string {
 
 func (app *AkashApp) akashSimModules() []module.AppModuleSimulation {
 	return []module.AppModuleSimulation{
+		take.NewAppModuleSimulation(
+			app.Keepers.Akash.Take,
+		),
+
 		deployment.NewAppModuleSimulation(
 			app.Keepers.Akash.Deployment,
 			app.Keepers.Cosmos.Acct,

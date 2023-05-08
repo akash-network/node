@@ -40,7 +40,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 
 	cfg := testutil.DefaultConfig()
 	cfg.NumValidators = 1
-	// cfg.EnableLogging = true
+	cfg.EnableLogging = true
 
 	s.cfg = cfg
 	s.network = network.New(s.T(), cfg)
@@ -349,7 +349,8 @@ func (s *IntegrationTestSuite) Test3QueryLeasesAndCloseBid() {
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+		fmt.Sprintf("--gas=auto"),
+		"--gas-adjustment=1.5",
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())

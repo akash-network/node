@@ -269,12 +269,15 @@ func createLease(t testing.TB, suite *state.TestSuite) types.LeaseID {
 	owner, err := sdk.AccAddressFromBech32(bid.ID().Owner)
 	require.NoError(t, err)
 
+	defaultDeposit, err := dtypes.DefaultParams().MinDepositFor("uakt")
+	require.NoError(t, err)
+
 	err = suite.EscrowKeeper().AccountCreate(
 		ctx,
 		dtypes.EscrowAccountForDeployment(bid.ID().DeploymentID()),
 		owner,
 		owner,
-		dtypes.DefaultDeploymentMinDeposit,
+		defaultDeposit,
 	)
 	require.NoError(t, err)
 
