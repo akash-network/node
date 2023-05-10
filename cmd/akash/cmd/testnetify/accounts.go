@@ -1,8 +1,6 @@
 package testnetify
 
 import (
-	"fmt"
-
 	"github.com/theckman/yacspin"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -19,7 +17,7 @@ func (ga *GenesisState) modifyAccounts(sp *yacspin.Spinner, cdc codec.Codec, cfg
 		}
 	}
 
-	sp.Message(fmt.Sprintf("added new accounts"))
+	sp.Message("added new accounts")
 
 	return nil
 }

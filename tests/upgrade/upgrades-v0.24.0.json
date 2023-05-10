@@ -1,0 +1,23 @@
+{
+    "modules": {
+        "added": [
+            "agov",
+            "astaking",
+            "feegrant"
+        ]
+    },
+    "migrations": {
+        "deployment": {
+            "from": "2",
+            "to": "3"
+        },
+        "market": {
+            "from": "2",
+            "to": "3"
+        },
+        "transfer": {
+            "from": "1",
+            "to": "2"
+        }
+    }
+}

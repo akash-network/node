@@ -1,0 +1,41 @@
+{
+    "chain_id": "localakash",
+    "accounts": {
+        "add": [
+            {
+                "address": "{{ (ds "account_address") }}",
+                "pubkey": {{ (ds "account_pubkey") }},
+                "coins": [
+                    "2000000000000000uakt"
+                ]
+            }
+        ]
+    },
+    "validators": {
+        "add": [
+            {
+                "name": "upgrade-tester",
+                "pubkey": {{ (ds "validator_pubkey") }},
+                "rates": {
+                    "rate": "0.05",
+                    "maxRate": "0.8",
+                    "maxChangeRate": "0.1"
+                },
+                "bonded": true,
+                "delegators": [
+                    {
+                        "address": "{{ (ds "account_address") }}",
+                        "coins": [
+                            "1950000000000000uakt"
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "gov": {
+        "voting_params": {
+            "voting_period": "60s"
+        }
+    }
+}
