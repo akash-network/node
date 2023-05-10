@@ -1,6 +1,11 @@
 UNAME_OS              := $(shell uname -s)
 UNAME_ARCH            := $(shell uname -m)
 
+# certain targets need to use bash
+# detect where bash is installed
+# use akash-node-ready target as example
+BASH_PATH := $(shell which bash)
+
 ifeq (, $(shell which direnv))
 $(warning "No direnv in $(PATH), consider installing. https://direnv.net")
 endif
@@ -48,6 +53,7 @@ STATIK_VERSION               ?= v0.1.7
 GIT_CHGLOG_VERSION           ?= v0.15.1
 MODVENDOR_VERSION            ?= v0.3.0
 MOCKERY_VERSION              ?= 2.24.0
+COSMOVISOR_VERSION           ?= v1.4.0
 
 # ==== Build tools version tracking ====
 # <TOOL>_VERSION_FILE points to the marker file for the installed version.
@@ -56,7 +62,8 @@ MODVENDOR_VERSION_FILE           := $(AKASH_DEVCACHE_VERSIONS)/modvendor/$(MODVE
 GIT_CHGLOG_VERSION_FILE          := $(AKASH_DEVCACHE_VERSIONS)/git-chglog/$(GIT_CHGLOG_VERSION)
 MOCKERY_VERSION_FILE             := $(AKASH_DEVCACHE_VERSIONS)/mockery/v$(MOCKERY_VERSION)
 GOLANGCI_LINT_VERSION_FILE       := $(AKASH_DEVCACHE_VERSIONS)/golangci-lint/$(GOLANGCI_LINT_VERSION)
-STATIK_VERSION_FILE                  := $(AKASH_DEVCACHE_VERSIONS)/statik/$(STATIK_VERSION)
+STATIK_VERSION_FILE              := $(AKASH_DEVCACHE_VERSIONS)/statik/$(STATIK_VERSION)
+COSMOVISOR_VERSION_FILE          := $(AKASH_DEVCACHE_VERSIONS)/cosmovisor/$(COSMOVISOR_VERSION)
 
 # ==== Build tools executables ====
 MODVENDOR                        := $(AKASH_DEVCACHE_BIN)/modvendor
@@ -65,5 +72,6 @@ MOCKERY                          := $(AKASH_DEVCACHE_BIN)/mockery
 NPM                              := npm
 GOLANGCI_LINT                    := $(AKASH_DEVCACHE_BIN)/golangci-lint
 STATIK                           := $(AKASH_DEVCACHE_BIN)/statik
+COSMOVISOR                       := $(AKASH_DEVCACHE_BIN)/cosmovisor
 
 include $(AKASH_ROOT)/make/setup-cache.mk
