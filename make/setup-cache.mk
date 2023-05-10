@@ -53,5 +53,14 @@ $(STATIK_VERSION_FILE): $(AKASH_DEVCACHE)
 	touch $@
 $(STATIK): $(STATIK_VERSION_FILE)
 
+$(COSMOVISOR_VERSION_FILE): $(AKASH_DEVCACHE)
+	@echo "installing cosmovisor $(COSMOVISOR_VERSION) ..."
+	rm -f $(COSMOVISOR)
+	GOBIN=$(AKASH_DEVCACHE_BIN) $(GO) install cosmossdk.io/tools/cosmovisor/cmd/cosmovisor@$(COSMOVISOR_VERSION)
+	rm -rf "$(dir $@)"
+	mkdir -p "$(dir $@)"
+	touch $@
+$(COSMOVISOR): $(COSMOVISOR_VERSION_FILE)
+
 cache-clean:
 	rm -rf $(AKASH_DEVCACHE)
