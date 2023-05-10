@@ -26,6 +26,7 @@ require (
 	github.com/tendermint/tm-db v0.6.7
 	github.com/theckman/yacspin v0.13.12
 	go.step.sm/crypto v0.26.0
+	golang.org/x/mod v0.7.0
 	golang.org/x/sync v0.1.0
 	google.golang.org/grpc v1.53.0
 	gopkg.in/yaml.v3 v3.0.1
