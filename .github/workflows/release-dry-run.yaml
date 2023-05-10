@@ -5,11 +5,13 @@ defaults:
     shell: bash
 
 on:
+  pull_request:
   push:
     branches:
       - master
       - mainnet/main
-  pull_request:
+    tags:
+      - v*
 
 jobs:
   dry-run:

@@ -1032,8 +1032,7 @@ func (ga *GenesisState) AddNewAccount(cdc codec.Codec, addr sdk.AccAddress, pubk
 		return fmt.Errorf("account (%s) already exists", addr.String()) // nolint: goerr113
 	}
 
-	var genAccount authtypes.GenesisAccount
-	genAccount = authtypes.NewBaseAccount(addr, pubkey, ga.app.AuthState.nextAccountNumber(), 0)
+	genAccount := authtypes.NewBaseAccount(addr, pubkey, ga.app.AuthState.nextAccountNumber(), 0)
 
 	if err := genAccount.Validate(); err != nil {
 		return fmt.Errorf("failed to validate new genesis account: %s", err.Error()) // nolint: goerr113
