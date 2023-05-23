@@ -128,14 +128,17 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 				return errors.Errorf("failed to get accounts from any: %v", err)
 			}
 
-			if accs.Contains(addr) {
-				return errors.Errorf("cannot add account at existing address %s", addr)
+			lAccountNumber := uint64(0)
+			if len(accs) > 0 {
+				if accs.Contains(addr) {
+					return errors.Errorf("cannot add account at existing address %s", addr)
+				}
+				accs = authtypes.SanitizeGenesisAccounts(accs)
+				lAccountNumber = accs[len(accs)-1].GetAccountNumber() + 1
 			}
 
-			accs = authtypes.SanitizeGenesisAccounts(accs)
-			lAccountNumber := accs[len(accs)-1].GetAccountNumber()
 			// sdk always returns nil
-			_ = genAccount.SetAccountNumber(lAccountNumber + 1)
+			_ = genAccount.SetAccountNumber(lAccountNumber)
 
 			accs = append(accs, genAccount)
 
