@@ -6,7 +6,7 @@ import (
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 
 	utypes "github.com/akash-network/node/upgrades/types"
-	// nolint: revive
+
 	_ "github.com/akash-network/node/upgrades"
 )
 

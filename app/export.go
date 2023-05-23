@@ -59,7 +59,7 @@ func (app *AkashApp) ExportAppStateAndValidators(
 // prepForZeroHeightGenesis prepare for fresh start at zero height
 // NOTE zero height genesis is a temporary feature which will be deprecated
 //
-//	in favour of export at a block height
+//	in favor of export at a block height
 func (app *AkashApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllowedAddrs []string) {
 	applyAllowedAddrs := false
 
@@ -229,7 +229,7 @@ func Setup(isCheckTx bool) *AkashApp {
 }
 
 func OptsWithGenesisTime(seed int64) servertypes.AppOptions {
-	r := rand.New(rand.NewSource(seed)) // nolint: gosec
+	r := rand.New(rand.NewSource(seed))
 	genTime := simulation.RandTimestamp(r)
 
 	appOpts := viper.New()

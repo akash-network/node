@@ -18,7 +18,5 @@ type (
 	Keeper = keeper.Keeper
 )
 
-var (
-	// NewKeeper creates new keeper instance of market module
-	NewKeeper = keeper.NewKeeper
-)
+// NewKeeper creates new keeper instance of market module
+var NewKeeper = keeper.NewKeeper

@@ -23,8 +23,8 @@ import (
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
-	ibccoretypes "github.com/cosmos/ibc-go/v3/modules/core/types"
+	ibchost "github.com/cosmos/ibc-go/v4/modules/core/24-host"
+	ibccoretypes "github.com/cosmos/ibc-go/v4/modules/core/types"
 
 	atypes "github.com/akash-network/akash-api/go/node/audit/v1beta3"
 	ctypes "github.com/akash-network/akash-api/go/node/cert/v1beta3"
@@ -40,8 +40,10 @@ import (
 	"github.com/akash-network/node/x/provider"
 )
 
-type GenesisValidators []tmtypes.GenesisValidator
-type StakingValidators []stakingtypes.Validator
+type (
+	GenesisValidators []tmtypes.GenesisValidator
+	StakingValidators []stakingtypes.Validator
+)
 
 type iState interface {
 	pack(cdc codec.Codec) error
@@ -51,9 +53,11 @@ type iState interface {
 func (u GenesisValidators) Len() int {
 	return len(u)
 }
+
 func (u GenesisValidators) Swap(i, j int) {
 	u[i], u[j] = u[j], u[i]
 }
+
 func (u GenesisValidators) Less(i, j int) bool {
 	return u[i].Power < u[j].Power
 }
@@ -61,9 +65,11 @@ func (u GenesisValidators) Less(i, j int) bool {
 func (u StakingValidators) Len() int {
 	return len(u)
 }
+
 func (u StakingValidators) Swap(i, j int) {
 	u[i], u[j] = u[j], u[i]
 }
+
 func (u StakingValidators) Less(i, j int) bool {
 	return u[i].DelegatorShares.LT(u[j].DelegatorShares)
 }
@@ -148,19 +154,21 @@ type ProviderState struct {
 	once   sync.Once
 }
 
-var _ iState = (*AuthState)(nil)
-var _ iState = (*BankState)(nil)
-var _ iState = (*DistributionState)(nil)
-var _ iState = (*IBCState)(nil)
-var _ iState = (*GovState)(nil)
-var _ iState = (*StakingState)(nil)
-var _ iState = (*SlashingState)(nil)
-var _ iState = (*AuditState)(nil)
-var _ iState = (*CertState)(nil)
-var _ iState = (*DeploymentState)(nil)
-var _ iState = (*EscrowState)(nil)
-var _ iState = (*MarketState)(nil)
-var _ iState = (*ProviderState)(nil)
+var (
+	_ iState = (*AuthState)(nil)
+	_ iState = (*BankState)(nil)
+	_ iState = (*DistributionState)(nil)
+	_ iState = (*IBCState)(nil)
+	_ iState = (*GovState)(nil)
+	_ iState = (*StakingState)(nil)
+	_ iState = (*SlashingState)(nil)
+	_ iState = (*AuditState)(nil)
+	_ iState = (*CertState)(nil)
+	_ iState = (*DeploymentState)(nil)
+	_ iState = (*EscrowState)(nil)
+	_ iState = (*MarketState)(nil)
+	_ iState = (*ProviderState)(nil)
+)
 
 type GenesisState struct {
 	doc   *tmtypes.GenesisDoc
@@ -549,7 +557,6 @@ func (ga *DistributionState) pack(cdc codec.Codec) error {
 	return nil
 }
 
-// nolint: unused
 func (ga *AuditState) unpack(cdc codec.Codec) error {
 	ga.once.Do(func() {
 		ga.state = audit.GetGenesisStateFromAppState(cdc, ga.gstate)
@@ -573,7 +580,6 @@ func (ga *AuditState) pack(cdc codec.Codec) error {
 	return nil
 }
 
-// nolint: unused
 func (ga *CertState) unpack(cdc codec.Codec) error {
 	ga.once.Do(func() {
 		ga.state = cert.GetGenesisStateFromAppState(cdc, ga.gstate)
@@ -597,7 +603,6 @@ func (ga *CertState) pack(cdc codec.Codec) error {
 	return nil
 }
 
-// nolint: unused
 func (ga *DeploymentState) unpack(cdc codec.Codec) error {
 	ga.once.Do(func() {
 		ga.state = deployment.GetGenesisStateFromAppState(cdc, ga.gstate)
@@ -621,7 +626,6 @@ func (ga *DeploymentState) pack(cdc codec.Codec) error {
 	return nil
 }
 
-// nolint: unused
 func (ga *EscrowState) unpack(cdc codec.Codec) error {
 	ga.once.Do(func() {
 		ga.state = escrow.GetGenesisStateFromAppState(cdc, ga.gstate)
@@ -645,7 +649,6 @@ func (ga *EscrowState) pack(cdc codec.Codec) error {
 	return nil
 }
 
-// nolint: unused
 func (ga *MarketState) unpack(cdc codec.Codec) error {
 	ga.once.Do(func() {
 		ga.state = market.GetGenesisStateFromAppState(cdc, ga.gstate)
@@ -669,7 +672,6 @@ func (ga *MarketState) pack(cdc codec.Codec) error {
 	return nil
 }
 
-// nolint: unused
 func (ga *ProviderState) unpack(cdc codec.Codec) error {
 	ga.once.Do(func() {
 		ga.state = provider.GetGenesisStateFromAppState(cdc, ga.gstate)

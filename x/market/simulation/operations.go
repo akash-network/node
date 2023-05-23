@@ -30,7 +30,8 @@ const (
 // WeightedOperations returns all the operations from the module with their respective weights
 func WeightedOperations(
 	appParams simtypes.AppParams, cdc codec.JSONCodec, ak govtypes.AccountKeeper,
-	ks keepers.Keepers) simulation.WeightedOperations {
+	ks keepers.Keepers,
+) simulation.WeightedOperations {
 	var (
 		weightMsgCreateBid  int
 		weightMsgCloseBid   int
@@ -74,7 +75,8 @@ func WeightedOperations(
 // SimulateMsgCreateBid generates a MsgCreateBid with random values
 func SimulateMsgCreateBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simtypes.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account,
-		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
+		chainID string,
+	) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		orders := getOrdersWithState(ctx, ks, types.OrderOpen)
 		if len(orders) == 0 {
 			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeCreateBid, "no open orders found"), nil, nil
@@ -150,14 +152,14 @@ func SimulateMsgCreateBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simtype
 		default:
 			return simtypes.NoOpMsg(types.ModuleName, msg.Type(), "unable to deliver mock tx"), nil, err
 		}
-
 	}
 }
 
 // SimulateMsgCloseBid generates a MsgCloseBid with random values
 func SimulateMsgCloseBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simtypes.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account,
-		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
+		chainID string,
+	) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		var bids []types.Bid
 
 		ks.Market.WithBids(ctx, func(bid types.Bid) bool {
@@ -227,7 +229,8 @@ func SimulateMsgCloseBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simtypes
 // SimulateMsgCloseLease generates a MsgCloseLease with random values
 func SimulateMsgCloseLease(ak govtypes.AccountKeeper, ks keepers.Keepers) simtypes.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account,
-		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
+		chainID string,
+	) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		// orders := getOrdersWithState(ctx, ks, types.OrderActive)
 		// if len(orders) == 0 {
 		// 	return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeCloseLease, "no orders with state matched found"), nil, nil

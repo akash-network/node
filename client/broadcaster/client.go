@@ -11,10 +11,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-var (
-	// ErrBroadcastTx is used when a broadcast fails due to tendermint errors
-	ErrBroadcastTx = errors.New("broadcast tx error")
-)
+// ErrBroadcastTx is used when a broadcast fails due to tendermint errors
+var ErrBroadcastTx = errors.New("broadcast tx error")
 
 //go:generate mockery --name Client --output ./mocks
 type Client interface {

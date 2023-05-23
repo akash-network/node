@@ -112,7 +112,7 @@ func (kpm *keyPairManager) KeyExists() (bool, error) {
 func (kpm *keyPairManager) Generate(notBefore, notAfter time.Time, domains []string) error {
 	var err error
 	var pemOut *os.File
-	if pemOut, err = os.OpenFile(kpm.getKeyPath(), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600); err != nil {
+	if pemOut, err = os.OpenFile(kpm.getKeyPath(), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600); err != nil {
 		return err
 	}
 
@@ -266,7 +266,7 @@ func (kpm *keyPairManager) readImpl(fin io.Reader) ([]byte, []byte, []byte, erro
 	var privKeyPlaintext []byte
 
 	// PKCS#8 header defined in RFC7468 section 11
-	// nolint: gocritic
+
 	if block.Type == "ENCRYPTED PRIVATE KEY" {
 		privKeyPlaintext, err = pemutil.DecryptPKCS8PrivateKey(block.Bytes, kpm.passwordBytes)
 	} else if block.Headers["Proc-Type"] == "4,ENCRYPTED" {

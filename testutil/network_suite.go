@@ -16,7 +16,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
-	cosmosauthtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/gogo/protobuf/jsonpb"
 	"github.com/spf13/pflag"
@@ -142,7 +141,6 @@ func (nts *NetworkTestSuite) SetupSuite() {
 		break
 	}
 	require.NoError(nts.T(), lctx.Err())
-
 }
 
 func (nts *NetworkTestSuite) Validator(idxT ...int) *sdknetworktest.Validator {
@@ -218,7 +216,7 @@ func (nts *NetworkTestSuite) ValidateTx(resultData []byte) string {
 	require.NoError(nts.T(), err, "failed trying to unmarshal JSON transaction result")
 
 	for {
-		res, err := cosmosauthtx.QueryTx(nts.ContextForTest(), resp.TxHash)
+		res, err := authtx.QueryTx(nts.ContextForTest(), resp.TxHash)
 		if err != nil {
 			ctxDone := nts.GoContextForTest().Err() != nil
 			if ctxDone {

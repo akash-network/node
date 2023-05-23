@@ -102,7 +102,6 @@ func TestGRPCQueryProvider(t *testing.T) {
 				require.Error(t, err)
 				require.Nil(t, res)
 			}
-
 		})
 	}
 }

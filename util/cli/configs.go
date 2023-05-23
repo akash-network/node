@@ -26,9 +26,7 @@ const (
 	FlagLogTimestamp = "log_timestamp"
 )
 
-var (
-	ErrEmptyEnvPrefix = errors.New("envPrefixes parameter must contain at least one prefix")
-)
+var ErrEmptyEnvPrefix = errors.New("envPrefixes parameter must contain at least one prefix")
 
 // InterceptConfigsPreRunHandler performs a pre-run function for the root daemon
 // application command. It will create a Viper literal and a default server

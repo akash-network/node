@@ -10,9 +10,7 @@ import (
 	"github.com/akash-network/akash-api/go/node/types/unit"
 )
 
-var (
-	errNegativeValue = fmt.Errorf("invalid: negative value not allowed")
-)
+var errNegativeValue = fmt.Errorf("invalid: negative value not allowed")
 
 var unitSuffixes = []struct {
 	symbol string

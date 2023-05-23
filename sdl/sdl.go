@@ -54,7 +54,6 @@ func (s *sdl) UnmarshalYAML(node *yaml.Node) error {
 		return errSDLInvalidNoVersion
 	}
 
-	// nolint: gocritic
 	if result.Version.GE(semver.MustParse("2.0.0")) && result.Version.LT(semver.MustParse("3.0.0")) {
 		var decoded v2
 		if err := node.Decode(&decoded); err != nil {

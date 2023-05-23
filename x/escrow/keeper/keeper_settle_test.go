@@ -268,7 +268,7 @@ func setupDistTest(cfg distTestConfig) (types.Account, []types.FractionalPayment
 	return account, payments, sdk.NewInt(cfg.blocks), sdk.NewInt64DecCoin(denom, blockRate)
 }
 
-func assertCoinsEqual(t testing.TB, c1 sdk.DecCoin, c2 sdk.DecCoin, msg string) {
+func assertCoinsEqual(t testing.TB, c1, c2 sdk.DecCoin, msg string) {
 	t.Helper()
 	if c1.IsZero() {
 		if !c2.IsZero() {

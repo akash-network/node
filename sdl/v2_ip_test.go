@@ -167,7 +167,6 @@ func TestV2Parse_MultipleGroupsIP(t *testing.T) {
 	require.Len(t, resources, 1)
 	resource = resources[0]
 	require.Equal(t, findFirstIPEndpoint(t, resource.Resources.Endpoints).SequenceNumber, ipEndpointSecondGroup.SequenceNumber)
-
 }
 
 func TestV2Parse_IPEndpointNaming(t *testing.T) {
@@ -255,5 +254,4 @@ endpoints:
 	require.Error(t, err)
 	require.ErrorIs(t, err, errSDLInvalid)
 	require.Contains(t, err.Error(), "not a valid name")
-
 }

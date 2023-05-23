@@ -34,8 +34,10 @@ var (
 	}
 )
 
-type UpgradeInitFn func(log.Logger, *apptypes.App) (IUpgrade, error)
-type NewMigrationFn func(Migrator) Migration
+type (
+	UpgradeInitFn  func(log.Logger, *apptypes.App) (IUpgrade, error)
+	NewMigrationFn func(Migrator) Migration
+)
 
 type moduleMigrations map[uint64]NewMigrationFn
 

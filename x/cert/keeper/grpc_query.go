@@ -65,7 +65,7 @@ func (q querier) Certificates(c context.Context, req *types.QueryCertificatesReq
 			}
 		} else {
 			ownerStore := prefix.NewStore(store, certificatePrefix(owner))
-			pageRes, err = sdkquery.FilteredPaginate(ownerStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
+			pageRes, err = sdkquery.FilteredPaginate(ownerStore, req.Pagination, func(key, value []byte, accumulate bool) (bool, error) {
 				// prefixed store returns key without prefix
 				key = append(certificatePrefix(owner), key...)
 				item, err := q.unmarshalIterator(key, value)
@@ -84,7 +84,7 @@ func (q querier) Certificates(c context.Context, req *types.QueryCertificatesReq
 			})
 		}
 	} else {
-		pageRes, err = sdkquery.FilteredPaginate(store, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
+		pageRes, err = sdkquery.FilteredPaginate(store, req.Pagination, func(key, value []byte, accumulate bool) (bool, error) {
 			item, err := q.unmarshalIterator(key, value)
 			if err != nil {
 				return true, err
@@ -111,6 +111,6 @@ func (q querier) Certificates(c context.Context, req *types.QueryCertificatesReq
 	}, nil
 }
 
-func filterCertByState(state types.Certificate_State, cert types.Certificate_State) bool {
+func filterCertByState(state, cert types.Certificate_State) bool {
 	return (state == types.CertificateStateInvalid) || (cert == state)
 }

@@ -83,7 +83,6 @@ func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, _ client.TxEncodingCo
 
 // RegisterRESTRoutes registers rest routes for this module
 func (AppModuleBasic) RegisterRESTRoutes(_ client.Context, _ *mux.Router) {
-
 }
 
 // RegisterGRPCGatewayRoutes registers the gRPC Gateway routes for the provider module.
@@ -220,7 +219,6 @@ func (AppModuleSimulation) RandomizedParams(_ *rand.Rand) []sim.ParamChange {
 
 // RegisterStoreDecoder registers a decoder for staking module's types
 func (AppModuleSimulation) RegisterStoreDecoder(_ sdk.StoreDecoderRegistry) {
-
 }
 
 // WeightedOperations returns the all the staking module operations with their respective weights.

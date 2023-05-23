@@ -19,7 +19,7 @@ func deploymentKey(id types.DeploymentID) []byte {
 	return buf.Bytes()
 }
 
-// groupKey provides prefixed key for a Group's marshalled data.
+// groupKey provides prefixed key for a Group's marshaled data.
 func groupKey(id types.GroupID) []byte {
 	buf := bytes.NewBuffer(types.GroupPrefix())
 	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))

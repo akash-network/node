@@ -31,7 +31,7 @@ func (q Querier) AllProvidersAttributes(
 
 	store := ctx.KVStore(q.skey)
 
-	pageRes, err := sdkquery.Paginate(store, req.Pagination, func(key []byte, value []byte) error {
+	pageRes, err := sdkquery.Paginate(store, req.Pagination, func(key, value []byte) error {
 		var provider types.Provider
 
 		err := q.cdc.Unmarshal(value, &provider)
@@ -125,7 +125,7 @@ func (q Querier) AuditorAttributes(
 
 	store := ctx.KVStore(q.skey)
 
-	pageRes, err := sdkquery.Paginate(store, req.Pagination, func(key []byte, value []byte) error {
+	pageRes, err := sdkquery.Paginate(store, req.Pagination, func(key, value []byte) error {
 		var provider types.Provider
 
 		err := q.cdc.Unmarshal(value, &provider)

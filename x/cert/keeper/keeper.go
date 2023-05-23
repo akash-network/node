@@ -48,7 +48,7 @@ func (k keeper) StoreKey() sdk.StoreKey {
 	return k.skey
 }
 
-func (k keeper) CreateCertificate(ctx sdk.Context, owner sdk.Address, crt []byte, pubkey []byte) error {
+func (k keeper) CreateCertificate(ctx sdk.Context, owner sdk.Address, crt, pubkey []byte) error {
 	store := ctx.KVStore(k.skey)
 
 	cert, err := types.ParseAndValidateCertificate(owner, crt, pubkey)

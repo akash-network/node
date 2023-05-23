@@ -8,7 +8,7 @@ import (
 )
 
 func TestV2ResourceCPU_Valid(t *testing.T) {
-	var stream = `
+	stream := `
 units: 0.1
 attributes:
   arch: amd64

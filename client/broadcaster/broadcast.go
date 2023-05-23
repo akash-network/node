@@ -92,7 +92,6 @@ func BroadcastTX(ctx context.Context, cctx sdkclient.Context, flags *pflag.FlagS
 	}
 
 	return cctx.PrintProto(res)
-
 }
 
 // PrepareFactory has been copied from cosmos-sdk to make it public.
@@ -190,7 +189,7 @@ func confirmTx(ctx sdkclient.Context, txb sdkclient.TxBuilder) (bool, error) {
 	ok, err := input.GetConfirmation("confirm transaction before signing and broadcasting", buf, os.Stderr)
 
 	if err != nil || !ok {
-		_, _ = fmt.Fprintf(os.Stderr, "%s\n", "cancelled transaction")
+		_, _ = fmt.Fprintf(os.Stderr, "%s\n", "canceled transaction")
 		return false, err
 	}
 

@@ -8,12 +8,12 @@ import (
 
 func Coin(t testing.TB) sdk.Coin {
 	t.Helper()
-	return sdk.NewCoin("testcoin", sdk.NewInt(int64(RandRangeInt(1, 1000)))) // nolint: gosec
+	return sdk.NewCoin("testcoin", sdk.NewInt(int64(RandRangeInt(1, 1000))))
 }
 
 func DecCoin(t testing.TB) sdk.DecCoin {
 	t.Helper()
-	return sdk.NewDecCoin("testcoin", sdk.NewInt(int64(RandRangeInt(1, 1000)))) // nolint: gosec
+	return sdk.NewDecCoin("testcoin", sdk.NewInt(int64(RandRangeInt(1, 1000))))
 }
 
 // AkashCoin provides simple interface to the Akash sdk.Coin type.

@@ -195,7 +195,6 @@ func (sdl *v2) computeEndpointSequenceNumbers() map[string]uint32 {
 	var endpointNames []string
 
 	for _, serviceName := range v2DeploymentSvcNames(sdl.Deployments) {
-
 		for _, expose := range sdl.Services[serviceName].Expose {
 			for _, to := range expose.To {
 				if to.Global && len(to.IP) == 0 {
@@ -292,8 +291,10 @@ func (sdl *v2) DeploymentGroups() ([]*dtypes.GroupSpec, error) {
 						seqNo := ipEndpointNames[v.IP]
 						v.EndpointSequenceNumber = seqNo
 						endpoints = append(endpoints,
-							types.Endpoint{Kind: types.Endpoint_LEASED_IP,
-								SequenceNumber: seqNo})
+							types.Endpoint{
+								Kind:           types.Endpoint_LEASED_IP,
+								SequenceNumber: seqNo,
+							})
 					}
 
 					kind := types.Endpoint_RANDOM_PORT
@@ -546,7 +547,6 @@ func (sdl *v2) validate() error {
 						}
 						portsUsed[portKey] = svcName
 					}
-
 				}
 			}
 

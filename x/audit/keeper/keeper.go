@@ -10,7 +10,6 @@ import (
 	types "github.com/akash-network/akash-api/go/node/audit/v1beta3"
 
 	akashtypes "github.com/akash-network/akash-api/go/node/types/v1beta3"
-	atypes "github.com/akash-network/akash-api/go/node/types/v1beta3"
 )
 
 // TODO: use interfaces for keepers, queriers
@@ -114,7 +113,7 @@ func (k Keeper) CreateOrUpdateProviderAttributes(ctx sdk.Context, id types.Provi
 		attr = akashtypes.Attributes{}
 
 		for ky, val := range kv {
-			attr = append(attr, atypes.Attribute{
+			attr = append(attr, akashtypes.Attribute{
 				Key:   ky,
 				Value: val,
 			})
@@ -176,7 +175,7 @@ func (k Keeper) DeleteProviderAttributes(ctx sdk.Context, id types.ProviderID, k
 		var attr akashtypes.Attributes
 
 		for ky, val := range kv {
-			attr = append(attr, atypes.Attribute{
+			attr = append(attr, akashtypes.Attribute{
 				Key:   ky,
 				Value: val,
 			})

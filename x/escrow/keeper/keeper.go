@@ -8,8 +8,10 @@ import (
 	types "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
 )
 
-type AccountHook func(sdk.Context, types.Account)
-type PaymentHook func(sdk.Context, types.FractionalPayment)
+type (
+	AccountHook func(sdk.Context, types.Account)
+	PaymentHook func(sdk.Context, types.FractionalPayment)
+)
 
 type Keeper interface {
 	Codec() codec.BinaryCodec
@@ -246,7 +248,6 @@ func (k *keeper) PaymentWithdraw(ctx sdk.Context, id types.AccountID, pid string
 }
 
 func (k *keeper) PaymentClose(ctx sdk.Context, id types.AccountID, pid string) error {
-
 	payment, err := k.GetPayment(ctx, id, pid)
 	if err != nil {
 		return err
@@ -257,7 +258,6 @@ func (k *keeper) PaymentClose(ctx sdk.Context, id types.AccountID, pid string) e
 	}
 
 	od, err := k.AccountSettle(ctx, id)
-
 	if err != nil {
 		return err
 	}
@@ -294,7 +294,6 @@ func (k *keeper) AddOnPaymentClosedHook(hook PaymentHook) Keeper {
 }
 
 func (k *keeper) GetAccount(ctx sdk.Context, id types.AccountID) (types.Account, error) {
-
 	store := ctx.KVStore(k.skey)
 	key := accountKey(id)
 
@@ -364,7 +363,6 @@ func (k *keeper) WithPayments(ctx sdk.Context, fn func(types.FractionalPayment) 
 
 func (k *keeper) doAccountSettle(ctx sdk.Context, id types.AccountID) (types.Account, []types.FractionalPayment, bool, error) {
 	account, err := k.GetAccount(ctx, id)
-
 	if err != nil {
 		return account, nil, false, err
 	}
@@ -613,7 +611,6 @@ func accountSettleDistributeWeighted(
 	[]types.FractionalPayment,
 	sdk.DecCoin,
 ) {
-
 	actualTransferred := sdk.ZeroDec()
 
 	// distribute remaining balance weighted by rate

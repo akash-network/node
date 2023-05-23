@@ -235,7 +235,6 @@ func TestUpdateDeploymentExisting(t *testing.T) {
 	res, err = suite.handler(suite.ctx, msgUpdate)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "Invalid: deployment version")
-
 }
 
 func TestCloseDeploymentNonExisting(t *testing.T) {

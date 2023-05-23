@@ -11,9 +11,7 @@ import (
 	types "github.com/akash-network/akash-api/go/node/types/v1beta3"
 )
 
-var (
-	ErrDuplicatedAttribute = errors.New("provider: duplicated attribute")
-)
+var ErrDuplicatedAttribute = errors.New("provider: duplicated attribute")
 
 // Config is the struct that stores provider config
 type Config struct {

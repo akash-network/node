@@ -145,7 +145,6 @@ func doPublishCmd(cmd *cobra.Command) error {
 				Pubkey: msg.Pubkey,
 			},
 		})
-
 	}
 
 	return broadcaster.BroadcastTX(cmd.Context(), cctx, cmd.Flags(), msg)

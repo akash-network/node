@@ -46,7 +46,7 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 
 	orderStore := prefix.NewStore(store, searchPrefix)
 
-	pageRes, err := sdkquery.FilteredPaginate(orderStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
+	pageRes, err := sdkquery.FilteredPaginate(orderStore, req.Pagination, func(key, value []byte, accumulate bool) (bool, error) {
 		var order types.Order
 
 		err := k.cdc.Unmarshal(value, &order)
@@ -118,7 +118,7 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 
 	bidStore := prefix.NewStore(store, searchPrefix)
 
-	pageRes, err := sdkquery.FilteredPaginate(bidStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
+	pageRes, err := sdkquery.FilteredPaginate(bidStore, req.Pagination, func(key, value []byte, accumulate bool) (bool, error) {
 		var bid types.Bid
 
 		err := k.cdc.Unmarshal(value, &bid)
@@ -209,7 +209,7 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 	}
 	searchedStore := prefix.NewStore(store, searchPrefix)
 
-	pageRes, err := sdkquery.FilteredPaginate(searchedStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
+	pageRes, err := sdkquery.FilteredPaginate(searchedStore, req.Pagination, func(key, value []byte, accumulate bool) (bool, error) {
 		var lease types.Lease
 
 		if isSecondaryPrefix {

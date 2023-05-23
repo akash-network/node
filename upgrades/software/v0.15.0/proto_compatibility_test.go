@@ -19,9 +19,7 @@ import (
 	"github.com/akash-network/node/app"
 )
 
-var (
-	cdc = app.MakeEncodingConfig().Marshaler.(codec.BinaryCodec)
-)
+var cdc = app.MakeEncodingConfig().Marshaler.(codec.BinaryCodec)
 
 func TestDeployment_DeploymentProto_IsCompatible(t *testing.T) {
 	oldProto := dv1beta1.Deployment{
@@ -130,7 +128,7 @@ func TestEscrow_AccountProto_IsNotCompatible(t *testing.T) {
 	var actualProto ev1beta2.Account
 	cdc.MustUnmarshal(cdc.MustMarshal(&oldProto), &actualProto)                      // although it unmarshalls
 	require.NotEqual(t, expectedProto, actualProto)                                  // but the result isn't equal
-	require.NotEqual(t, cdc.MustMarshal(&oldProto), cdc.MustMarshal(&expectedProto)) // neither is marshalled bytes
+	require.NotEqual(t, cdc.MustMarshal(&oldProto), cdc.MustMarshal(&expectedProto)) // neither is marshaled bytes
 }
 
 func TestEscrow_PaymentProto_IsNotCompatible(t *testing.T) {
@@ -163,7 +161,7 @@ func TestEscrow_PaymentProto_IsNotCompatible(t *testing.T) {
 	var actualProto ev1beta2.FractionalPayment
 	cdc.MustUnmarshal(cdc.MustMarshal(&oldProto), &actualProto)                      // although it unmarshalls
 	require.NotEqual(t, expectedProto, actualProto)                                  // but the result isn't equal
-	require.NotEqual(t, cdc.MustMarshal(&oldProto), cdc.MustMarshal(&expectedProto)) // neither is marshalled bytes
+	require.NotEqual(t, cdc.MustMarshal(&oldProto), cdc.MustMarshal(&expectedProto)) // neither is marshaled bytes
 }
 
 func TestMarket_BidProto_IsNotCompatible(t *testing.T) {
@@ -196,7 +194,7 @@ func TestMarket_BidProto_IsNotCompatible(t *testing.T) {
 	var actualProto mv1beta2.Bid
 	cdc.MustUnmarshal(cdc.MustMarshal(&oldProto), &actualProto)                      // although it unmarshalls
 	require.NotEqual(t, expectedProto, actualProto)                                  // but the result isn't equal
-	require.NotEqual(t, cdc.MustMarshal(&oldProto), cdc.MustMarshal(&expectedProto)) // neither is marshalled bytes
+	require.NotEqual(t, cdc.MustMarshal(&oldProto), cdc.MustMarshal(&expectedProto)) // neither is marshaled bytes
 }
 
 func TestMarket_LeaseProto_IsNotCompatible(t *testing.T) {
@@ -229,7 +227,7 @@ func TestMarket_LeaseProto_IsNotCompatible(t *testing.T) {
 	var actualProto mv1beta2.Lease
 	cdc.MustUnmarshal(cdc.MustMarshal(&oldProto), &actualProto)                      // although it unmarshalls
 	require.NotEqual(t, expectedProto, actualProto)                                  // but the result isn't equal
-	require.NotEqual(t, cdc.MustMarshal(&oldProto), cdc.MustMarshal(&expectedProto)) // neither is marshalled bytes
+	require.NotEqual(t, cdc.MustMarshal(&oldProto), cdc.MustMarshal(&expectedProto)) // neither is marshaled bytes
 }
 
 func TestMarket_OrderProto_IsNotCompatible(t *testing.T) {

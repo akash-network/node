@@ -12,7 +12,6 @@ import (
 
 // GetQueryCmd returns the query commands for the deployment module
 func GetQueryCmd() *cobra.Command {
-
 	cmd := &cobra.Command{
 		Use:                        types.ModuleName,
 		Short:                      "Deployment query commands",

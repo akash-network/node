@@ -42,7 +42,6 @@ func TestShouldBeIngress(t *testing.T) {
 }
 
 func TestComputeCommittedResources(t *testing.T) {
-
 	rv := atypes.NewResourceValue(100)
 	// Negative factor returns original value
 	require.Equal(t, uint64(100), util.ComputeCommittedResources(-1.0, rv).Val.Uint64())

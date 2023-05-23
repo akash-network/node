@@ -242,7 +242,6 @@ func (AppModuleSimulation) RandomizedParams(r *rand.Rand) []sim.ParamChange {
 
 // RegisterStoreDecoder registers a decoder for staking module's types
 func (AppModuleSimulation) RegisterStoreDecoder(sdr sdk.StoreDecoderRegistry) {
-
 }
 
 // WeightedOperations returns the all the staking module operations with their respective weights.

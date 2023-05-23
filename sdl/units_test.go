@@ -10,7 +10,6 @@ import (
 )
 
 func TestCPUQuantity(t *testing.T) {
-
 	type vtype struct {
 		Val cpuQuantity `yaml:"val"`
 	}
