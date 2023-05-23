@@ -22,9 +22,11 @@ import (
 )
 
 // Simulation operation weights constants
+//
+
 const (
-	OpWeightMsgCreate = "op_weight_msg_create" // nolint gosec
-	OpWeightMsgUpdate = "op_weight_msg_update" // nolint gosec
+	OpWeightMsgCreate = "op_weight_msg_create"
+	OpWeightMsgUpdate = "op_weight_msg_update"
 )
 
 // WeightedOperations returns all the operations from the module with their respective weights
@@ -62,7 +64,6 @@ func WeightedOperations(
 }
 
 // SimulateMsgCreate generates a MsgCreateProvider with random values
-// nolint:funlen
 func SimulateMsgCreate(ak govtypes.AccountKeeper, bk bankkeeper.Keeper, k keeper.IKeeper) simtypes.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account,
 		chainID string,
@@ -115,7 +116,6 @@ func SimulateMsgCreate(ak govtypes.AccountKeeper, bk bankkeeper.Keeper, k keeper
 }
 
 // SimulateMsgUpdate generates a MsgUpdateProvider with random values
-// nolint:funlen
 func SimulateMsgUpdate(ak govtypes.AccountKeeper, bk bankkeeper.Keeper, k keeper.IKeeper) simtypes.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account,
 		chainID string,

@@ -77,28 +77,28 @@ type v2HTTPOptions struct {
 
 func (ho v2HTTPOptions) asManifest() (manifest.ServiceExposeHTTPOptions, error) {
 	maxBodySize := ho.MaxBodySize
-	if 0 == maxBodySize {
+	if maxBodySize == 0 {
 		maxBodySize = defaultMaxBodySize
 	} else if maxBodySize > upperLimitBodySize {
 		return manifest.ServiceExposeHTTPOptions{}, fmt.Errorf("%w: body size cannot be greater than %d bytes", errHTTPOptionNotAllowed, upperLimitBodySize)
 	}
 
 	readTimeout := ho.ReadTimeout
-	if 0 == readTimeout {
+	if readTimeout == 0 {
 		readTimeout = defaultReadTimeout
 	} else if readTimeout > upperLimitReadTimeout {
 		return manifest.ServiceExposeHTTPOptions{}, fmt.Errorf("%w: read timeout cannot be greater than %d ms", errHTTPOptionNotAllowed, upperLimitReadTimeout)
 	}
 
 	sendTimeout := ho.SendTimeout
-	if 0 == sendTimeout {
+	if sendTimeout == 0 {
 		sendTimeout = defaultSendTimeout
 	} else if sendTimeout > upperLimitSendTimeout {
 		return manifest.ServiceExposeHTTPOptions{}, fmt.Errorf("%w: send timeout cannot be greater than %d ms", errHTTPOptionNotAllowed, upperLimitSendTimeout)
 	}
 
 	nextTries := ho.NextTries
-	if 0 == nextTries {
+	if nextTries == 0 {
 		nextTries = defaultNextTries
 	}
 

@@ -1,6 +1,4 @@
-// Package v0_15_0
-// nolint revive
-package v0_15_0
+package v0_15_0 //nolint:revive // this package is named this way becauase it is part of an upgrade
 
 import (
 	dv1beta1 "github.com/akash-network/akash-api/go/node/deployment/v1beta1"

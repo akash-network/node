@@ -270,11 +270,9 @@ func (kpm *keyPairManager) readImpl(fin io.Reader) ([]byte, []byte, []byte, erro
 	if block.Type == "ENCRYPTED PRIVATE KEY" {
 		privKeyPlaintext, err = pemutil.DecryptPKCS8PrivateKey(block.Bytes, kpm.passwordBytes)
 	} else if block.Headers["Proc-Type"] == "4,ENCRYPTED" {
-		// nolint: staticcheck
-		privKeyPlaintext, err = x509.DecryptPEMBlock(block, kpm.passwordBytes)
+		privKeyPlaintext, err = x509.DecryptPEMBlock(block, kpm.passwordBytes) //nolint:staticcheck // we need to use this for kube compatibility
 		if errors.Is(err, x509.IncorrectPasswordError) {
-			// nolint: staticcheck
-			privKeyPlaintext, err = x509.DecryptPEMBlock(block, kpm.passwordLegacy)
+			privKeyPlaintext, err = x509.DecryptPEMBlock(block, kpm.passwordLegacy) //nolint:staticcheck // we need to use this for kube compatibility
 		}
 	} else {
 		return nil, nil, nil, errUnsupportedEncryptedPEM

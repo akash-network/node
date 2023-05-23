@@ -10,7 +10,7 @@ import (
 )
 
 func ShouldBeIngress(expose manifest.ServiceExpose) bool {
-	return expose.Proto == manifest.TCP && expose.Global && 80 == ExposeExternalPort(expose)
+	return expose.Proto == manifest.TCP && expose.Global && ExposeExternalPort(expose) == 80
 }
 
 func ExposeExternalPort(expose manifest.ServiceExpose) int32 {

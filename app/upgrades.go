@@ -7,7 +7,7 @@ import (
 
 	utypes "github.com/akash-network/node/upgrades/types"
 
-	_ "github.com/akash-network/node/upgrades"
+	_ "github.com/akash-network/node/upgrades" // import all upgrades
 )
 
 func (app *AkashApp) registerUpgradeHandlers() error {

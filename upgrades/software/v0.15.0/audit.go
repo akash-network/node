@@ -1,6 +1,5 @@
 // Package v0_15_0
-// nolint revive
-package v0_15_0
+package v0_15_0 //nolint:revive // this package is named this way becauase it is part of an upgrade
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"

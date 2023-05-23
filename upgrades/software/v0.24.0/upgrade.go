@@ -1,6 +1,4 @@
-// Package v0_24_0
-// nolint revive
-package v0_24_0
+package v0_24_0 //nolint:revive // this package is named this way becauase it is part of an upgrade
 
 import (
 	"fmt"

@@ -11,11 +11,10 @@ import (
 var (
 	orderPrefix = []byte{0x01, 0x00}
 	bidPrefix   = []byte{0x02, 0x00}
-	leasePrefix = []byte{0x03, 0x00} // nolint: unused
+	leasePrefix = []byte{0x03, 0x00} //nolint:unused // this will be used in the future
 )
 
-// nolint: unused
-func orderKey(id types.OrderID) []byte {
+func orderKey(id types.OrderID) []byte { //nolint:unused // this will be used in the future
 	buf := bytes.NewBuffer(orderPrefix)
 	buf.Write([]byte(id.Owner))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
@@ -30,8 +29,7 @@ func orderKey(id types.OrderID) []byte {
 	return buf.Bytes()
 }
 
-// nolint: unused
-func bidKey(id types.BidID) []byte {
+func bidKey(id types.BidID) []byte { //nolint:unused // this will be used in the future
 	buf := bytes.NewBuffer(bidPrefix)
 	buf.Write([]byte(id.Owner))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
@@ -47,8 +45,7 @@ func bidKey(id types.BidID) []byte {
 	return buf.Bytes()
 }
 
-// nolint: unused
-func leaseKey(id types.LeaseID) []byte {
+func leaseKey(id types.LeaseID) []byte { //nolint:unused // this will be used in the future
 	buf := bytes.NewBuffer(leasePrefix)
 	buf.Write([]byte(id.Owner))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {

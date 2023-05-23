@@ -1,6 +1,4 @@
-// Package v0_24_0
-// nolint revive
-package v0_24_0
+package v0_24_0 //nolint:revive // this package is named this way becauase it is part of an upgrade
 
 import (
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -30,7 +28,6 @@ func (m deploymentMigrations) handler(ctx sdk.Context) error {
 	store := ctx.KVStore(m.StoreKey())
 
 	err := utypes.MigrateValue(store, m.Codec(), dv1beta2.GroupPrefix(), migrateDeploymentGroup)
-
 	if err != nil {
 		return err
 	}

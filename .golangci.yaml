@@ -3,12 +3,9 @@ run:
   timeout: 10m
   sort-results: true
   allow-parallel-runners: true
-  exclude-dir: testutil/testdata
   skip-dirs:
     - pkg/client
     - ".*/mocks"
-  skip-files:
-    - server/grpc/gogoreflection/fix_registration.go
   skip-dirs-use-default: true
 
 linters:
@@ -117,9 +114,3 @@ linters-settings:
     require-specific: false
   gosimple:
     checks: ["all"]
-
-  gocritic:
-    disabled-checks:
-      - regexpMust
-      - appendAssign
-      - ifElseChain

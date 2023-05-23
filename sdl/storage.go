@@ -75,7 +75,7 @@ func validateAttributeStorageClass(_ string, val *string) error {
 
 // UnmarshalYAML unmarshal storage config
 // data can be present either as single entry mapping or an array of them
-// nolint: gofmt
+// nolint: gofmt // this is yaml code
 // e.g
 // single entity
 // ```yaml

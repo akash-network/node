@@ -302,7 +302,7 @@ func (k Keeper) updateDeployment(ctx sdk.Context, obj types.Deployment) {
 	store.Set(key, k.cdc.MustMarshal(&obj))
 }
 
-// nolint: unused
+//nolint:unused // this will be used in the future
 func (k Keeper) updateGroup(ctx sdk.Context, group types.Group) {
 	store := ctx.KVStore(k.skey)
 	key := groupKey(group.ID())

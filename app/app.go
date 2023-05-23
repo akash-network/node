@@ -475,7 +475,7 @@ func NewApp(
 	return app
 }
 
-func getGenesisTime(appOpts servertypes.AppOptions, homePath string) time.Time { // nolint: unused,deadcode // we'd like to preserve this unused code
+func getGenesisTime(appOpts servertypes.AppOptions, homePath string) time.Time { //nolint:unused,deadcode // we'd like to preserve this unused code
 	if v := appOpts.Get("GenesisTime"); v != nil {
 		// in tests, GenesisTime is supplied using appOpts
 		genTime, ok := v.(time.Time)
