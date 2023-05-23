@@ -44,7 +44,7 @@ func Cmd() *cobra.Command {
 			}
 
 			if sID < 0 || sID > 90 {
-				return fmt.Errorf("invalid value %d for --spinner. expecting 0..90", sID) // nolint: goerr113
+				return fmt.Errorf("invalid value %d for --spinner. expecting 0..90", sID)
 			}
 
 			return nil

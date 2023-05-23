@@ -224,17 +224,17 @@ func NewGenesisState(sp *yacspin.Spinner, state map[string]json.RawMessage, doc 
 	var err error
 	st.moduleAddresses.bondedPool, err = st.findModuleAccount(cdc, "bonded_tokens_pool")
 	if err != nil {
-		return nil, fmt.Errorf("couldn't find bonded_tokens_pool account") // nolint: goerr113
+		return nil, fmt.Errorf("couldn't find bonded_tokens_pool account")
 	}
 
 	st.moduleAddresses.notBondedPool, err = st.findModuleAccount(cdc, "not_bonded_tokens_pool")
 	if err != nil {
-		return nil, fmt.Errorf("couldn't find not_bonded_tokens_pool account") // nolint: goerr113
+		return nil, fmt.Errorf("couldn't find not_bonded_tokens_pool account")
 	}
 
 	st.moduleAddresses.distribution, err = st.findModuleAccount(cdc, "distribution")
 	if err != nil {
-		return nil, fmt.Errorf("couldn't find distribution account") // nolint: goerr113
+		return nil, fmt.Errorf("couldn't find distribution account")
 	}
 
 	_ = sp.Stop()
@@ -317,7 +317,7 @@ func (ga *AuthState) unpack(cdc codec.Codec) error {
 		ga.accs, err = authtypes.UnpackAccounts(ga.state.Accounts)
 
 		if err != nil {
-			err = fmt.Errorf("failed to get accounts from any: %s", err.Error()) // nolint: goerr113
+			err = fmt.Errorf("failed to get accounts from any: %s", err.Error())
 		}
 
 		ga.accs = authtypes.SanitizeGenesisAccounts(ga.accs)
@@ -365,12 +365,12 @@ func (ga *AuthState) pack(cdc codec.Codec) error {
 		var err error
 		ga.state.Accounts, err = authtypes.PackAccounts(ga.accs)
 		if err != nil {
-			return fmt.Errorf("failed to convert accounts into any's: %s", err.Error()) // nolint: goerr113
+			return fmt.Errorf("failed to convert accounts into any's: %s", err.Error())
 		}
 
 		stateBz, err := cdc.MarshalJSON(&ga.state)
 		if err != nil {
-			return fmt.Errorf("failed to marshal auth genesis state: %s", err.Error()) // nolint: goerr113
+			return fmt.Errorf("failed to marshal auth genesis state: %s", err.Error())
 		}
 
 		ga.gstate[authtypes.ModuleName] = stateBz
@@ -401,7 +401,7 @@ func (ga *BankState) pack(cdc codec.Codec) error {
 
 		stateBz, err := cdc.MarshalJSON(ga.state)
 		if err != nil {
-			return fmt.Errorf("failed to marshal bank genesis state: %s", err.Error()) // nolint: goerr113
+			return fmt.Errorf("failed to marshal bank genesis state: %s", err.Error())
 		}
 
 		ga.gstate[banktypes.ModuleName] = stateBz
@@ -430,7 +430,7 @@ func (ga *GovState) pack(cdc codec.Codec) error {
 	if ga.state != nil {
 		stateBz, err := cdc.MarshalJSON(ga.state)
 		if err != nil {
-			return fmt.Errorf("failed to marshal gov genesis state: %s", err.Error()) // nolint: goerr113
+			return fmt.Errorf("failed to marshal gov genesis state: %s", err.Error())
 		}
 
 		ga.gstate[govtypes.ModuleName] = stateBz
@@ -459,7 +459,7 @@ func (ga *IBCState) pack(cdc codec.Codec) error {
 	if ga.state != nil {
 		stateBz, err := cdc.MarshalJSON(ga.state)
 		if err != nil {
-			return fmt.Errorf("failed to marshal ibc genesis state: %s", err.Error()) // nolint: goerr113
+			return fmt.Errorf("failed to marshal ibc genesis state: %s", err.Error())
 		}
 
 		ga.gstate[ibchost.ModuleName] = stateBz
@@ -488,7 +488,7 @@ func (ga *StakingState) pack(cdc codec.Codec) error {
 	if ga.state != nil {
 		stateBz, err := cdc.MarshalJSON(ga.state)
 		if err != nil {
-			return fmt.Errorf("failed to marshal staking genesis state: %s", err.Error()) // nolint: goerr113
+			return fmt.Errorf("failed to marshal staking genesis state: %s", err.Error())
 		}
 
 		ga.gstate[stakingtypes.ModuleName] = stateBz
@@ -517,7 +517,7 @@ func (ga *SlashingState) pack(cdc codec.Codec) error {
 	if ga.state != nil {
 		stateBz, err := cdc.MarshalJSON(ga.state)
 		if err != nil {
-			return fmt.Errorf("failed to marshal staking genesis state: %s", err.Error()) // nolint: goerr113
+			return fmt.Errorf("failed to marshal staking genesis state: %s", err.Error())
 		}
 
 		ga.gstate[slashingtypes.ModuleName] = stateBz
@@ -546,7 +546,7 @@ func (ga *DistributionState) pack(cdc codec.Codec) error {
 	if ga.state != nil {
 		stateBz, err := cdc.MarshalJSON(ga.state)
 		if err != nil {
-			return fmt.Errorf("failed to marshal distribution genesis state: %s", err.Error()) // nolint: goerr113
+			return fmt.Errorf("failed to marshal distribution genesis state: %s", err.Error())
 		}
 
 		ga.gstate[distributiontypes.ModuleName] = stateBz
@@ -569,7 +569,7 @@ func (ga *AuditState) pack(cdc codec.Codec) error {
 	if ga.state != nil {
 		stateBz, err := cdc.MarshalJSON(ga.state)
 		if err != nil {
-			return fmt.Errorf("failed to marshal audit genesis state: %s", err.Error()) // nolint: goerr113
+			return fmt.Errorf("failed to marshal audit genesis state: %s", err.Error())
 		}
 
 		ga.gstate[atypes.ModuleName] = stateBz
@@ -592,7 +592,7 @@ func (ga *CertState) pack(cdc codec.Codec) error {
 	if ga.state != nil {
 		stateBz, err := cdc.MarshalJSON(ga.state)
 		if err != nil {
-			return fmt.Errorf("failed to marshal cert genesis state: %s", err.Error()) // nolint: goerr113
+			return fmt.Errorf("failed to marshal cert genesis state: %s", err.Error())
 		}
 
 		ga.gstate[ctypes.ModuleName] = stateBz
@@ -615,7 +615,7 @@ func (ga *DeploymentState) pack(cdc codec.Codec) error {
 	if ga.state != nil {
 		stateBz, err := cdc.MarshalJSON(ga.state)
 		if err != nil {
-			return fmt.Errorf("failed to marshal deployment genesis state: %s", err.Error()) // nolint: goerr113
+			return fmt.Errorf("failed to marshal deployment genesis state: %s", err.Error())
 		}
 
 		ga.gstate[dtypes.ModuleName] = stateBz
@@ -638,7 +638,7 @@ func (ga *EscrowState) pack(cdc codec.Codec) error {
 	if ga.state != nil {
 		stateBz, err := cdc.MarshalJSON(ga.state)
 		if err != nil {
-			return fmt.Errorf("failed to marshal escrow genesis state: %s", err.Error()) // nolint: goerr113
+			return fmt.Errorf("failed to marshal escrow genesis state: %s", err.Error())
 		}
 
 		ga.gstate[etypes.ModuleName] = stateBz
@@ -661,7 +661,7 @@ func (ga *MarketState) pack(cdc codec.Codec) error {
 	if ga.state != nil {
 		stateBz, err := cdc.MarshalJSON(ga.state)
 		if err != nil {
-			return fmt.Errorf("failed to marshal market genesis state: %s", err.Error()) // nolint: goerr113
+			return fmt.Errorf("failed to marshal market genesis state: %s", err.Error())
 		}
 
 		ga.gstate[mtypes.ModuleName] = stateBz
@@ -684,7 +684,7 @@ func (ga *ProviderState) pack(cdc codec.Codec) error {
 	if ga.state != nil {
 		stateBz, err := cdc.MarshalJSON(ga.state)
 		if err != nil {
-			return fmt.Errorf("failed to marshal provider genesis state: %s", err.Error()) // nolint: goerr113
+			return fmt.Errorf("failed to marshal provider genesis state: %s", err.Error())
 		}
 
 		ga.gstate[ptypes.ModuleName] = stateBz
@@ -750,7 +750,7 @@ func (ga *GenesisState) decreaseSupply(cdc codec.Codec, coins ...sdk.Coin) error
 		}
 
 		if !found {
-			return fmt.Errorf("cannot decrease supply for not existing token") // nolint: goerr113
+			return fmt.Errorf("cannot decrease supply for not existing token")
 		}
 	}
 
@@ -773,7 +773,7 @@ func (ga *GenesisState) IncreaseBalances(cdc codec.Codec, addr sdk.AccAddress, c
 	}
 
 	if balance == nil {
-		return fmt.Errorf("no balances found for account (%s)", addr.String()) // nolint: goerr113
+		return fmt.Errorf("no balances found for account (%s)", addr.String())
 	}
 
 	for _, coin := range coins {
@@ -814,7 +814,7 @@ func (ga *GenesisState) DecreaseBalances(cdc codec.Codec, addr sdk.AccAddress, c
 	}
 
 	if balance == nil {
-		return fmt.Errorf("no balances found for account (%s)", addr.String()) // nolint: goerr113
+		return fmt.Errorf("no balances found for account (%s)", addr.String())
 	}
 
 	for _, coin := range coins {
@@ -858,7 +858,7 @@ func (ga *GenesisState) IncreaseDelegatorStake(
 	}
 
 	if sVal == nil {
-		return fmt.Errorf("staking validator (%s) does not exists", val.String()) // nolint: goerr113
+		return fmt.Errorf("staking validator (%s) does not exists", val.String())
 	}
 
 	for idx, d := range ga.app.StakingState.state.Delegations {
@@ -1031,13 +1031,13 @@ func (ga *GenesisState) AddNewAccount(cdc codec.Codec, addr sdk.AccAddress, pubk
 	}
 
 	if ga.app.AuthState.accs.Contains(addr) {
-		return fmt.Errorf("account (%s) already exists", addr.String()) // nolint: goerr113
+		return fmt.Errorf("account (%s) already exists", addr.String())
 	}
 
 	genAccount := authtypes.NewBaseAccount(addr, pubkey, ga.app.AuthState.nextAccountNumber(), 0)
 
 	if err := genAccount.Validate(); err != nil {
-		return fmt.Errorf("failed to validate new genesis account: %s", err.Error()) // nolint: goerr113
+		return fmt.Errorf("failed to validate new genesis account: %s", err.Error())
 	}
 
 	ga.app.AuthState.accs = append(ga.app.AuthState.accs, genAccount)

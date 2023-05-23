@@ -185,7 +185,7 @@ func interceptConfigs(rootViper *viper.Viper, customAppTemplate string, customCo
 		tmcfg.EnsureRoot(rootDir)
 
 		if err = conf.ValidateBasic(); err != nil {
-			return nil, fmt.Errorf("error in config file: %v", err) // nolint: goerr113
+			return nil, fmt.Errorf("error in config file: %v", err)
 		}
 
 		conf.RPC.PprofListenAddress = "localhost:6060"
@@ -203,7 +203,7 @@ func interceptConfigs(rootViper *viper.Viper, customAppTemplate string, customCo
 		rootViper.AddConfigPath(configPath)
 
 		if err := rootViper.ReadInConfig(); err != nil {
-			return nil, fmt.Errorf("failed to read in %s: %w", tmCfgFile, err) // nolint: goerr113
+			return nil, fmt.Errorf("failed to read in %s: %w", tmCfgFile, err)
 		}
 	}
 
@@ -222,14 +222,14 @@ func interceptConfigs(rootViper *viper.Viper, customAppTemplate string, customCo
 			config.SetConfigTemplate(customAppTemplate)
 
 			if err = rootViper.Unmarshal(&customConfig); err != nil {
-				return nil, fmt.Errorf("failed to parse %s: %w", appCfgFilePath, err) // nolint: goerr113
+				return nil, fmt.Errorf("failed to parse %s: %w", appCfgFilePath, err)
 			}
 
 			config.WriteConfigFile(appCfgFilePath, customConfig)
 		} else {
 			appConf, err := config.ParseConfig(rootViper)
 			if err != nil {
-				return nil, fmt.Errorf("failed to parse %s: %w", appCfgFilePath, err) // nolint: goerr113
+				return nil, fmt.Errorf("failed to parse %s: %w", appCfgFilePath, err)
 			}
 
 			config.WriteConfigFile(appCfgFilePath, appConf)
@@ -241,7 +241,7 @@ func interceptConfigs(rootViper *viper.Viper, customAppTemplate string, customCo
 	rootViper.AddConfigPath(configPath)
 
 	if err := rootViper.MergeInConfig(); err != nil {
-		return nil, fmt.Errorf("failed to merge configuration: %w", err) // nolint: goerr113
+		return nil, fmt.Errorf("failed to merge configuration: %w", err)
 	}
 
 	return conf, nil

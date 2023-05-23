@@ -94,14 +94,14 @@ func FindStructField[C any](obj interface{}, fieldName string) (C, error) {
 
 	field := rValue.Elem().FieldByName(fieldName)
 	if !field.IsValid() {
-		return *new(C), fmt.Errorf("interface `%s` does not have the field `%s`", // nolint: goerr113
+		return *new(C), fmt.Errorf("interface `%s` does not have the field `%s`",
 			rValue.Type(),
 			fieldName)
 	}
 
 	res, valid := field.Interface().(C)
 	if !valid {
-		return *new(C), fmt.Errorf( // nolint: goerr113
+		return *new(C), fmt.Errorf(
 			"object's `%s` expected type `%s` does not match actual `%s`",
 			fieldName,
 			reflect.TypeOf(*new(C)), field.Type().String())

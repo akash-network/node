@@ -92,7 +92,7 @@ func (t *VotingPeriod) UnmarshalJSON(data []byte) error {
 	val := TrimQuotes(string(data))
 
 	if !strings.HasSuffix(val, "s") {
-		return fmt.Errorf("invalid format of voting period. must contain time unit. Valid time units are ns|us(µs)|ms|s|m|h") // nolint: goerr113
+		return fmt.Errorf("invalid format of voting period. must contain time unit. Valid time units are ns|us(µs)|ms|s|m|h")
 	}
 
 	var err error

@@ -35,7 +35,7 @@ func initUpgrade(_ log.Logger, app *apptypes.App) (utypes.IUpgrade, error) {
 	}
 
 	if _, exists := up.MM.Modules[icatypes.ModuleName]; !exists {
-		return nil, fmt.Errorf("module %s has not been initialized", icatypes.ModuleName) // nolint: goerr113
+		return nil, fmt.Errorf("module %s has not been initialized", icatypes.ModuleName)
 	}
 
 	return up, nil

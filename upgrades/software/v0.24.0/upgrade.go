@@ -40,11 +40,11 @@ func initUpgrade(log log.Logger, app *apptypes.App) (utypes.IUpgrade, error) {
 	}
 
 	if _, exists := up.MM.Modules[agov.ModuleName]; !exists {
-		return nil, fmt.Errorf("module %s has not been initialized", agov.ModuleName) // nolint: goerr113
+		return nil, fmt.Errorf("module %s has not been initialized", agov.ModuleName)
 	}
 
 	if _, exists := up.MM.Modules[astaking.ModuleName]; !exists {
-		return nil, fmt.Errorf("module %s has not been initialized", astaking.ModuleName) // nolint: goerr113
+		return nil, fmt.Errorf("module %s has not been initialized", astaking.ModuleName)
 	}
 
 	return up, nil
