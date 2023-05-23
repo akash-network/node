@@ -267,14 +267,15 @@ func (kpm *keyPairManager) readImpl(fin io.Reader) ([]byte, []byte, []byte, erro
 
 	// PKCS#8 header defined in RFC7468 section 11
 
-	if block.Type == "ENCRYPTED PRIVATE KEY" {
+	switch {
+	case block.Type == "ENCRYPTED PRIVATE KEY":
 		privKeyPlaintext, err = pemutil.DecryptPKCS8PrivateKey(block.Bytes, kpm.passwordBytes)
-	} else if block.Headers["Proc-Type"] == "4,ENCRYPTED" {
+	case block.Headers["Proc-Type"] == "4,ENCRYPTED":
 		privKeyPlaintext, err = x509.DecryptPEMBlock(block, kpm.passwordBytes) //nolint:staticcheck // we need to use this for kube compatibility
 		if errors.Is(err, x509.IncorrectPasswordError) {
 			privKeyPlaintext, err = x509.DecryptPEMBlock(block, kpm.passwordLegacy) //nolint:staticcheck // we need to use this for kube compatibility
 		}
-	} else {
+	default:
 		return nil, nil, nil, errUnsupportedEncryptedPEM
 	}
 
