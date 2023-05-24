@@ -37,54 +37,52 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-	"github.com/cosmos/ibc-go/v3/modules/apps/transfer"
-	ibctransfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
-	ibc "github.com/cosmos/ibc-go/v3/modules/core"
-	ibcclient "github.com/cosmos/ibc-go/v3/modules/core/02-client/client"
-	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
+	"github.com/cosmos/ibc-go/v4/modules/apps/transfer"
+	ibctransfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
+	ibc "github.com/cosmos/ibc-go/v4/modules/core"
+	ibcclient "github.com/cosmos/ibc-go/v4/modules/core/02-client/client"
+	ibchost "github.com/cosmos/ibc-go/v4/modules/core/24-host"
 
 	appparams "github.com/akash-network/node/app/params"
 )
 
-var (
-	mbasics = module.NewBasicManager(
-		append([]module.AppModuleBasic{
-			// accounts, fees.
-			auth.AppModuleBasic{},
-			// authorizations
-			authzmodule.AppModuleBasic{},
-			// genesis utilities
-			genutil.AppModuleBasic{},
-			// tokens, token balance.
-			bank.AppModuleBasic{},
-			capability.AppModuleBasic{},
-			// validator staking
-			staking.AppModuleBasic{},
-			// inflation
-			mint.AppModuleBasic{},
-			// distribution of fess and inflation
-			distr.AppModuleBasic{},
-			// governance functionality (voting)
-			gov.NewAppModuleBasic(
-				paramsclient.ProposalHandler, distrclient.ProposalHandler,
-				upgradeclient.ProposalHandler, upgradeclient.CancelProposalHandler,
-				ibcclient.UpdateClientProposalHandler, ibcclient.UpgradeProposalHandler,
-			),
-			// chain parameters
-			params.AppModuleBasic{},
-			crisis.AppModuleBasic{},
-			slashing.AppModuleBasic{},
-			ibc.AppModuleBasic{},
-			upgrade.AppModuleBasic{},
-			evidence.AppModuleBasic{},
-			transfer.AppModuleBasic{},
-			vesting.AppModuleBasic{},
-			feegrantmodule.AppModuleBasic{},
-		},
-			// akash
-			akashModuleBasics()...,
-		)...,
-	)
+var mbasics = module.NewBasicManager(
+	append([]module.AppModuleBasic{
+		// accounts, fees.
+		auth.AppModuleBasic{},
+		// authorizations
+		authzmodule.AppModuleBasic{},
+		// genesis utilities
+		genutil.AppModuleBasic{},
+		// tokens, token balance.
+		bank.AppModuleBasic{},
+		capability.AppModuleBasic{},
+		// validator staking
+		staking.AppModuleBasic{},
+		// inflation
+		mint.AppModuleBasic{},
+		// distribution of fess and inflation
+		distr.AppModuleBasic{},
+		// governance functionality (voting)
+		gov.NewAppModuleBasic(
+			paramsclient.ProposalHandler, distrclient.ProposalHandler,
+			upgradeclient.ProposalHandler, upgradeclient.CancelProposalHandler,
+			ibcclient.UpdateClientProposalHandler, ibcclient.UpgradeProposalHandler,
+		),
+		// chain parameters
+		params.AppModuleBasic{},
+		crisis.AppModuleBasic{},
+		slashing.AppModuleBasic{},
+		ibc.AppModuleBasic{},
+		upgrade.AppModuleBasic{},
+		evidence.AppModuleBasic{},
+		transfer.AppModuleBasic{},
+		vesting.AppModuleBasic{},
+		feegrantmodule.AppModuleBasic{},
+	},
+		// akash
+		akashModuleBasics()...,
+	)...,
 )
 
 // ModuleBasics returns all app modules basics
@@ -134,5 +132,4 @@ func transientStoreKeys() map[string]*sdk.TransientStoreKey {
 
 func memStoreKeys() map[string]*sdk.MemoryStoreKey {
 	return sdk.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
-
 }

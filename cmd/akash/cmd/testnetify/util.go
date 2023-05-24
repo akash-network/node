@@ -7,8 +7,8 @@ import (
 	distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
-	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
-	ibccoretypes "github.com/cosmos/ibc-go/v3/modules/core/types"
+	ibchost "github.com/cosmos/ibc-go/v4/modules/core/24-host"
+	ibccoretypes "github.com/cosmos/ibc-go/v4/modules/core/types"
 )
 
 func GetIBCGenesisStateFromAppState(cdc codec.JSONCodec, appState map[string]json.RawMessage) *ibccoretypes.GenesisState {
