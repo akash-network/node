@@ -20,8 +20,8 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 
-	transfertypes ""github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
-	ibchost ""github.com/cosmos/ibc-go/v7/modules/core/24-host"
+	transfertypes "github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
+	ibchost "github.com/cosmos/ibc-go/v7/modules/core/24-host"
 
 	audittypes "github.com/akash-network/akash-api/go/node/audit/v1beta3"
 	certtypes "github.com/akash-network/akash-api/go/node/cert/v1beta3"
