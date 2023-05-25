@@ -16,8 +16,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
-	ibccltypes "github.com/cosmos/ibc-go/v3/modules/core/02-client/types"
-	ibcchtypes "github.com/cosmos/ibc-go/v3/modules/core/04-channel/types"
+	ibccltypes "github.com/cosmos/ibc-go/v4/modules/core/02-client/types"
+	ibcchtypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
 )
 
 const (
@@ -26,10 +26,8 @@ const (
 	denomDecimalPlaces = 1e6
 )
 
-var (
-	// yeah, I know
-	cdc codec.Codec
-)
+// yeah, I know
+var cdc codec.Codec
 
 func Cmd() *cobra.Command {
 	cmd := &cobra.Command{

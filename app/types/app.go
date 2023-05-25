@@ -20,8 +20,8 @@ import (
 	slashingkeeper "github.com/cosmos/cosmos-sdk/x/slashing/keeper"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	upgradekeeper "github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
-	ibctransferkeeper "github.com/cosmos/ibc-go/v3/modules/apps/transfer/keeper"
-	ibckeeper "github.com/cosmos/ibc-go/v3/modules/core/keeper"
+	ibctransferkeeper "github.com/cosmos/ibc-go/v4/modules/apps/transfer/keeper"
+	ibckeeper "github.com/cosmos/ibc-go/v4/modules/core/keeper"
 
 	akeeper "github.com/akash-network/node/x/audit/keeper"
 	ckeeper "github.com/akash-network/node/x/cert/keeper"
@@ -34,9 +34,7 @@ import (
 	astakingkeeper "github.com/akash-network/node/x/staking/keeper"
 )
 
-var (
-	ErrEmptyFieldName = errors.New("empty field name")
-)
+var ErrEmptyFieldName = errors.New("empty field name")
 
 type AppKeepers struct {
 	Cosmos struct {
