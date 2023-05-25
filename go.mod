@@ -3,7 +3,7 @@ module github.com/akash-network/node
 go 1.20
 
 require (
-	// cosmossdk.io/simapp v0.0.0-20230523092547-b500b0104fc8
+	cosmossdk.io/simapp v0.0.0-20230224204036-a6adb0821462
 	github.com/akash-network/akash-api v0.0.16
 	github.com/blang/semver/v4 v4.0.0
 	github.com/boz/go-lifecycle v0.1.0
@@ -32,7 +32,11 @@ require (
 	golang.org/x/mod v0.8.0
 	golang.org/x/oauth2 v0.7.0
 	golang.org/x/sync v0.1.0
-	google.golang.org/grpc v1.53.0
+	google.golang.org/api v0.110.0 // indirect
+	google.golang.org/appengine v1.6.7 // indirect
+	google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4 // indirect
+	google.golang.org/grpc v1.54.0
+	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1
 )
 

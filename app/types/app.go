@@ -20,8 +20,8 @@ import (
 	slashingkeeper "github.com/cosmos/cosmos-sdk/x/slashing/keeper"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	upgradekeeper "github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
-	ibctransferkeeper "github.com/cosmos/ibc-go/v3/modules/apps/transfer/keeper"
-	ibckeeper "github.com/cosmos/ibc-go/v3/modules/core/keeper"
+	ibctransferkeeper ""github.com/cosmos/ibc-go/v7/modules/apps/transfer/keeper"
+	ibckeeper ""github.com/cosmos/ibc-go/v7/modules/core/keeper"
 
 	akeeper "github.com/akash-network/node/x/audit/keeper"
 	ckeeper "github.com/akash-network/node/x/cert/keeper"

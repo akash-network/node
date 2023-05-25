@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/types/rest"
+	rest "github.com/cosmos/cosmos-sdk/server/api"
 	"github.com/gorilla/mux"
 
 	"github.com/akash-network/node/x/deployment/query"

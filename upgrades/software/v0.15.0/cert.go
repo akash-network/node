@@ -5,7 +5,7 @@ package v0_15_0
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkmodule "github.com/cosmos/cosmos-sdk/types/module"
-	v043 "github.com/cosmos/cosmos-sdk/x/distribution/legacy/v043"
+	v2 "github.com/cosmos/cosmos-sdk/x/distribution/migrations/v2"
 
 	cv1beta2 "github.com/akash-network/akash-api/go/node/cert/v1beta2"
 
@@ -28,7 +28,7 @@ func (m certMigrations) GetHandler() sdkmodule.MigrationHandler {
 func (m certMigrations) handler(ctx sdk.Context) error {
 	store := ctx.KVStore(m.StoreKey())
 
-	v043.MigratePrefixAddressAddress(store, cv1beta2.PrefixCertificateID())
+	v2.MigratePrefixAddressAddress(store, cv1beta2.PrefixCertificateID())
 
 	return nil
 }

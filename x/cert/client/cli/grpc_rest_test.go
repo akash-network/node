@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	sdkrest "github.com/cosmos/cosmos-sdk/types/rest"
+	sdkrest "github.com/cosmos/cosmos-sdk/testutil"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/cosmos/cosmos-sdk/client/flags"

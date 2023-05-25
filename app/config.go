@@ -36,11 +36,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-	"github.com/cosmos/ibc-go/v3/modules/apps/transfer"
-	ibctransfertypes "github.com/cosmos/ibc-go/v3/modules/apps/transfer/types"
-	ibc "github.com/cosmos/ibc-go/v3/modules/core"
-	ibcclient "github.com/cosmos/ibc-go/v3/modules/core/02-client/client"
-	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
+	""github.com/cosmos/ibc-go/v7/modules/apps/transfer"
+	ibctransfertypes ""github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
+	ibc ""github.com/cosmos/ibc-go/v7/modules/core"
+	ibchost ""github.com/cosmos/ibc-go/v7/modules/core/24-host"
 
 	appparams "github.com/akash-network/node/app/params"
 )

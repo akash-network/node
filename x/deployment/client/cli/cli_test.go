@@ -8,7 +8,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	banktestutil "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
+	banktestutil "github.com/cosmos/cosmos-sdk/testutil/cli"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	clitestutil "github.com/akash-network/node/testutil/cli"

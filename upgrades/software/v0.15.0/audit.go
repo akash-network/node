@@ -5,7 +5,7 @@ package v0_15_0
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkmodule "github.com/cosmos/cosmos-sdk/types/module"
-	v043 "github.com/cosmos/cosmos-sdk/x/distribution/legacy/v043"
+	v2 "github.com/cosmos/cosmos-sdk/x/distribution/migrations/v2"
 
 	av1beta2 "github.com/akash-network/akash-api/go/node/audit/v1beta2"
 
@@ -28,7 +28,7 @@ func (m auditMigrations) GetHandler() sdkmodule.MigrationHandler {
 func (m auditMigrations) handler(ctx sdk.Context) error {
 	store := ctx.KVStore(m.StoreKey())
 
-	v043.MigratePrefixAddressAddress(store, av1beta2.PrefixProviderID())
+	v2.MigratePrefixAddressAddress(store, av1beta2.PrefixProviderID())
 
 	return nil
 }

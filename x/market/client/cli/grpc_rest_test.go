@@ -13,8 +13,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	"github.com/cosmos/cosmos-sdk/testutil/network"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkrest "github.com/cosmos/cosmos-sdk/types/rest"
-	bankcli "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
+	sdkrest sdkrest "github.com/cosmos/cosmos-sdk/testutil"
+	bankcli "github.com/cosmos/cosmos-sdk/testutil/cli"
 
 	types "github.com/akash-network/akash-api/go/node/market/v1beta3"
 

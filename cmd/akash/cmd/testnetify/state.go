@@ -23,8 +23,8 @@ import (
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	ibchost "github.com/cosmos/ibc-go/v3/modules/core/24-host"
-	ibccoretypes "github.com/cosmos/ibc-go/v3/modules/core/types"
+	ibchost ""github.com/cosmos/ibc-go/v7/modules/core/24-host"
+	ibccoretypes ""github.com/cosmos/ibc-go/v7/modules/core/types"
 
 	atypes "github.com/akash-network/akash-api/go/node/audit/v1beta3"
 	ctypes "github.com/akash-network/akash-api/go/node/cert/v1beta3"
