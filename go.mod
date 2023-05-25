@@ -3,11 +3,12 @@ module github.com/akash-network/node
 go 1.20
 
 require (
+	// cosmossdk.io/simapp v0.0.0-20230523092547-b500b0104fc8
 	github.com/akash-network/akash-api v0.0.16
 	github.com/blang/semver/v4 v4.0.0
 	github.com/boz/go-lifecycle v0.1.0
-	github.com/cosmos/cosmos-sdk v0.45.15
-	github.com/cosmos/ibc-go/v3 v3.4.0
+	github.com/cosmos/cosmos-sdk v0.47.2
+	github.com/cosmos/ibc-go/v7 v7.0.0
 	github.com/gogo/protobuf v1.3.3
 	github.com/google/go-github/v52 v52.0.0
 	github.com/gorilla/mux v1.8.0
@@ -58,6 +59,9 @@ replace (
 	// latest grpc doesn't work with with cosmos-sdk modified proto compiler, so we need to enforce
 	// the following version across all dependencies.
 	google.golang.org/grpc => google.golang.org/grpc v1.33.2
+
+	github.com/akash-network/akash-api => github.com/notional-labs/akash-api v0.47.2-notional
+
 )
 
 require (

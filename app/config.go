@@ -1,7 +1,7 @@
 package app
 
 import (
-	simparams "github.com/cosmos/cosmos-sdk/simapp/params"
+	simparams "cosmossdk.io/simapp/params"
 	"github.com/cosmos/cosmos-sdk/std"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
@@ -16,7 +16,6 @@ import (
 	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	distr "github.com/cosmos/cosmos-sdk/x/distribution"
-	distrclient "github.com/cosmos/cosmos-sdk/x/distribution/client"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	"github.com/cosmos/cosmos-sdk/x/evidence"
 	evidencetypes "github.com/cosmos/cosmos-sdk/x/evidence/types"
@@ -65,11 +64,7 @@ var (
 			// distribution of fess and inflation
 			distr.AppModuleBasic{},
 			// governance functionality (voting)
-			gov.NewAppModuleBasic(
-				paramsclient.ProposalHandler, distrclient.ProposalHandler,
-				upgradeclient.ProposalHandler, upgradeclient.CancelProposalHandler,
-				ibcclient.UpdateClientProposalHandler, ibcclient.UpgradeProposalHandler,
-			),
+			gov.NewAppModuleBasic(getGovProposalHandlers()),
 			// chain parameters
 			params.AppModuleBasic{},
 			crisis.AppModuleBasic{},
