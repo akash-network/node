@@ -4,6 +4,7 @@ import (
 	"sort"
 
 	"github.com/cosmos/cosmos-sdk/codec"
+	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
@@ -25,12 +26,12 @@ type IKeeper interface {
 
 // Keeper of the provider store
 type Keeper struct {
-	skey sdk.StoreKey
+	skey storetypes.StoreKey
 	cdc  codec.BinaryCodec
 }
 
 // NewKeeper creates and returns an instance for Market keeper
-func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey) Keeper {
+func NewKeeper(cdc codec.BinaryCodec, skey storetypes.StoreKey) Keeper {
 	return Keeper{cdc: cdc, skey: skey}
 }
 
@@ -40,7 +41,7 @@ func (k Keeper) Codec() codec.BinaryCodec {
 }
 
 // StoreKey returns store key
-func (k Keeper) StoreKey() sdk.StoreKey {
+func (k Keeper) StoreKey() storetypes.StoreKey {
 	return k.skey
 }
 

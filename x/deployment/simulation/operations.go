@@ -8,6 +8,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/simapp/helpers"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
@@ -122,7 +123,7 @@ func SimulateMsgCreateDeployment(ak govtypes.AccountKeeper, bk bankkeeper.Keeper
 		if spendable.AmountOf(depositAmount.Denom).LT(depositAmount.Amount.MulRaw(2)) {
 			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeCreateDeployment, "out of money"), nil, nil
 		}
-		spendable = spendable.Sub(sdk.NewCoins(depositAmount))
+		spendable = spendable.Sub(sdk.NewCoin(depositAmount.Denom, depositAmount.Amount))
 
 		fees, err := simtypes.RandomFees(r, ctx, spendable)
 		if err != nil {

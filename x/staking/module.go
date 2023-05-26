@@ -190,7 +190,7 @@ func (AppModuleSimulation) ProposalContents(_ module.SimulationState) []sim.Weig
 }
 
 // RandomizedParams creates randomized staking param changes for the simulator.
-func (AppModuleSimulation) RandomizedParams(_ *rand.Rand) []sim.ParamChange {
+func (AppModuleSimulation) RandomizedParams(_ *rand.Rand) []sim.LegacyParamChange {
 	return nil
 }
 

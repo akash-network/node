@@ -6,6 +6,7 @@ import (
 	dbm "github.com/cometbft/cometbft-db"
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	"github.com/cosmos/cosmos-sdk/store"
+	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdktestdata "github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -36,7 +37,7 @@ func setupTestSuite(t *testing.T) *testSuite {
 
 	db := dbm.NewMemDB()
 	suite.ms = store.NewCommitMultiStore(db)
-	suite.ms.MountStoreWithDB(aKey, sdk.StoreTypeIAVL, db)
+	suite.ms.MountStoreWithDB(aKey, storetypes.StoreTypeIAVL, db)
 
 	err := suite.ms.LoadLatestVersion()
 	require.NoError(t, err)

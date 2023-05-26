@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"github.com/cosmos/cosmos-sdk/codec"
+	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/pkg/errors"
 
@@ -13,7 +14,7 @@ type PaymentHook func(sdk.Context, types.FractionalPayment)
 
 type Keeper interface {
 	Codec() codec.BinaryCodec
-	StoreKey() sdk.StoreKey
+	StoreKey() storetypes.StoreKey
 	AccountCreate(ctx sdk.Context, id types.AccountID, owner, depositor sdk.AccAddress, deposit sdk.Coin) error
 	AccountDeposit(ctx sdk.Context, id types.AccountID, depositor sdk.AccAddress, amount sdk.Coin) error
 	AccountSettle(ctx sdk.Context, id types.AccountID) (bool, error)
@@ -33,7 +34,7 @@ type Keeper interface {
 	SavePayment(sdk.Context, types.FractionalPayment)
 }
 
-func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey, bkeeper BankKeeper) Keeper {
+func NewKeeper(cdc codec.BinaryCodec, skey storetypes.StoreKey, bkeeper BankKeeper) Keeper {
 	return &keeper{
 		cdc:     cdc,
 		skey:    skey,
@@ -43,7 +44,7 @@ func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey, bkeeper BankKeeper) Kee
 
 type keeper struct {
 	cdc     codec.BinaryCodec
-	skey    sdk.StoreKey
+	skey    storetypes.StoreKey
 	bkeeper BankKeeper
 
 	hooks struct {
@@ -57,7 +58,7 @@ func (k *keeper) Codec() codec.BinaryCodec {
 }
 
 // StoreKey returns store key
-func (k *keeper) StoreKey() sdk.StoreKey {
+func (k *keeper) StoreKey() storetypes.StoreKey {
 	return k.skey
 }
 

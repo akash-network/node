@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"github.com/cosmos/cosmos-sdk/codec"
+	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 
@@ -10,20 +11,20 @@ import (
 
 type IKeeper interface {
 	Codec() codec.BinaryCodec
-	StoreKey() sdk.StoreKey
+	StoreKey() storetypes.StoreKey
 	SetDepositParams(ctx sdk.Context, params types.DepositParams) error
 	GetDepositParams(ctx sdk.Context) (params types.DepositParams)
 }
 
 // Keeper of the provider store
 type Keeper struct {
-	skey   sdk.StoreKey
+	skey   storetypes.StoreKey
 	cdc    codec.BinaryCodec
 	pspace paramtypes.Subspace
 }
 
 // NewKeeper creates and returns an instance for Provider keeper
-func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey, pspace paramtypes.Subspace) IKeeper {
+func NewKeeper(cdc codec.BinaryCodec, skey storetypes.StoreKey, pspace paramtypes.Subspace) IKeeper {
 	if !pspace.HasKeyTable() {
 		pspace = pspace.WithKeyTable(types.ParamKeyTable())
 	}
@@ -40,7 +41,7 @@ func (k Keeper) Codec() codec.BinaryCodec {
 	return k.cdc
 }
 
-func (k Keeper) StoreKey() sdk.StoreKey {
+func (k Keeper) StoreKey() storetypes.StoreKey {
 	return k.skey
 }
 

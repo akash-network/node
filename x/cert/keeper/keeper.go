@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"github.com/cosmos/cosmos-sdk/codec"
+	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
@@ -11,7 +12,7 @@ import (
 type Keeper interface {
 	Querier() types.QueryServer
 	Codec() codec.BinaryCodec
-	StoreKey() sdk.StoreKey
+	StoreKey() storetypes.StoreKey
 	CreateCertificate(sdk.Context, sdk.Address, []byte, []byte) error
 	RevokeCertificate(sdk.Context, types.CertID) error
 	GetCertificateByID(ctx sdk.Context, id types.CertID) (types.CertificateResponse, bool)
@@ -22,14 +23,14 @@ type Keeper interface {
 }
 
 type keeper struct {
-	skey sdk.StoreKey
+	skey storetypes.StoreKey
 	cdc  codec.BinaryCodec
 }
 
 var _ Keeper = (*keeper)(nil)
 
 // NewKeeper creates and returns an instance for Market keeper
-func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey) Keeper {
+func NewKeeper(cdc codec.BinaryCodec, skey storetypes.StoreKey) Keeper {
 	return &keeper{cdc: cdc, skey: skey}
 }
 
@@ -44,7 +45,7 @@ func (k keeper) Codec() codec.BinaryCodec {
 }
 
 // StoreKey returns store key
-func (k keeper) StoreKey() sdk.StoreKey {
+func (k keeper) StoreKey() storetypes.StoreKey {
 	return k.skey
 }
 

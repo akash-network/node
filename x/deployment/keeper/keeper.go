@@ -4,6 +4,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 
@@ -11,7 +12,7 @@ import (
 )
 
 type IKeeper interface {
-	StoreKey() sdk.StoreKey
+	StoreKey() storetypes.StoreKey
 	Codec() codec.BinaryCodec
 	GetDeployment(ctx sdk.Context, id types.DeploymentID) (types.Deployment, bool)
 	GetGroup(ctx sdk.Context, id types.GroupID) (types.Group, bool)
@@ -34,14 +35,14 @@ type IKeeper interface {
 
 // Keeper of the deployment store
 type Keeper struct {
-	skey    sdk.StoreKey
+	skey    storetypes.StoreKey
 	cdc     codec.BinaryCodec
 	pspace  paramtypes.Subspace
 	ekeeper EscrowKeeper
 }
 
 // NewKeeper creates and returns an instance for deployment keeper
-func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey, pspace paramtypes.Subspace, ekeeper EscrowKeeper) IKeeper {
+func NewKeeper(cdc codec.BinaryCodec, skey storetypes.StoreKey, pspace paramtypes.Subspace, ekeeper EscrowKeeper) IKeeper {
 
 	if !pspace.HasKeyTable() {
 		pspace = pspace.WithKeyTable(types.ParamKeyTable())
@@ -64,7 +65,7 @@ func (k Keeper) Codec() codec.BinaryCodec {
 	return k.cdc
 }
 
-func (k Keeper) StoreKey() sdk.StoreKey {
+func (k Keeper) StoreKey() storetypes.StoreKey {
 	return k.skey
 }
 
