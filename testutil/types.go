@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"cosmossdk.io/simapp"
+	dbm "github.com/cometbft/cometbft-db"
 	tmrand "github.com/cometbft/cometbft/libs/rand"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
@@ -19,7 +20,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/testutil/network"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	dbm github.com/cometbft/cometbft-db
 
 	types "github.com/akash-network/akash-api/go/node/types/v1beta3"
 

@@ -4,6 +4,7 @@ import (
 	"sort"
 	"testing"
 
+	dbm "github.com/cometbft/cometbft-db"
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	"github.com/cosmos/cosmos-sdk/store"
 	sdktestdata "github.com/cosmos/cosmos-sdk/testutil/testdata"
@@ -11,7 +12,6 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
-	dbm github.com/cometbft/cometbft-db
 
 	types "github.com/akash-network/akash-api/go/node/audit/v1beta3"
 

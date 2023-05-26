@@ -16,13 +16,13 @@ import (
 	"github.com/rakyll/statik/fs"
 	"github.com/spf13/cast"
 
+	dbm "github.com/cometbft/cometbft-db"
 	abci "github.com/cometbft/cometbft/abci/types"
 	tmjson "github.com/cometbft/cometbft/libs/json"
 	"github.com/cometbft/cometbft/libs/log"
 	tmos "github.com/cometbft/cometbft/libs/os"
 	tmtypes "github.com/cometbft/cometbft/types"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
-	dbm github.com/cometbft/cometbft-db
 
 	"cosmossdk.io/simapp"
 	bam "github.com/cosmos/cosmos-sdk/baseapp"
@@ -52,6 +52,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/capability"
 	capabilitykeeper "github.com/cosmos/cosmos-sdk/x/capability/keeper"
 	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
+	consensusparamkeeper "github.com/cosmos/cosmos-sdk/x/consensus/keeper"
+	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	crisiskeeper "github.com/cosmos/cosmos-sdk/x/crisis/keeper"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
@@ -107,7 +109,7 @@ import (
 )
 
 const (
-	AppName = "akash"
+	appName = "akash"
 )
 
 var (
@@ -133,6 +135,8 @@ type AkashApp struct {
 	tkeys   map[string]*storetypes.TransientStoreKey
 	memkeys map[string]*storetypes.MemoryStoreKey
 
+	ConsensusParamsKeeper consensusparamkeeper.Keeper
+
 	// simulation manager
 	sm *module.SimulationManager
 }
@@ -156,11 +160,11 @@ func NewApp(
 
 	// TODO: Remove cdc in favor of appCodec once all modules are migrated.
 	encodingConfig := MakeEncodingConfig()
-	appCodec := encodingConfig.Marshaler
+	appCodec := encodingConfig.Codec
 	cdc := encodingConfig.Amino
 	interfaceRegistry := encodingConfig.InterfaceRegistry
 
-	bapp := bam.NewBaseApp(AppName, logger, db, encodingConfig.TxConfig.TxDecoder(), options...)
+	bapp := bam.NewBaseApp(appName, logger, db, encodingConfig.TxConfig.TxDecoder(), options...)
 	bapp.SetCommitMultiStoreTracer(tio)
 	bapp.SetVersion(version.Version)
 	bapp.SetInterfaceRegistry(interfaceRegistry)
@@ -184,7 +188,8 @@ func NewApp(
 	app.Keepers.Cosmos.Params = initParamsKeeper(appCodec, cdc, app.keys[paramstypes.StoreKey], tkeys[paramstypes.TStoreKey])
 
 	// set the BaseApp's parameter store
-	bapp.SetParamStore(app.Keepers.Cosmos.Params.Subspace(bam.Paramspace).WithKeyTable(paramskeeper.ConsensusParamsKeyTable()))
+	app.ConsensusParamsKeeper = consensusparamkeeper.NewKeeper(appCodec, keys[consensusparamtypes.StoreKey], authtypes.NewModuleAddress(govtypes.ModuleName).String())
+	bapp.SetParamStore(&app.ConsensusParamsKeeper)
 
 	// add capability keeper and ScopeToModule for ibc module
 	app.Keepers.Cosmos.Cap = capabilitykeeper.NewKeeper(
