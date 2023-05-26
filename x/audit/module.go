@@ -19,7 +19,6 @@ import (
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/gogo/protobuf/grpc"
-	"github.com/pkg/errors"
 
 	v1beta1types "github.com/akash-network/akash-api/go/node/audit/v1beta1"
 	v1beta2types "github.com/akash-network/akash-api/go/node/audit/v1beta2"
@@ -79,7 +78,7 @@ func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, _ client.TxEncodingCo
 
 	err := cdc.UnmarshalJSON(bz, &data)
 	if err != nil {
-		return errors.Errorf("failed to unmarshal %s genesis state: %v", types.ModuleName, err)
+		return fmt.Errorf("failed to unmarshal %s genesis state: %v", types.ModuleName, err)
 	}
 
 	return ValidateGenesis(&data)

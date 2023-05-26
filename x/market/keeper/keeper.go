@@ -1,7 +1,7 @@
 package keeper
 
 import (
-	"github.com/pkg/errors"
+	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -95,7 +95,7 @@ func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.Gro
 	})
 
 	if err != nil {
-		return types.Order{}, errors.Wrap(err, "create order: active order exists")
+		return types.Order{}, fmt.Errorf("%w: create order: active order exists", err)
 	}
 
 	order := types.Order{

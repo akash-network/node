@@ -1,9 +1,9 @@
 package sdl
 
 import (
+	"fmt"
 	"sort"
 
-	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
 	types "github.com/akash-network/akash-api/go/node/types/v1beta3"
@@ -27,7 +27,7 @@ func (sdl *v2CPUAttributes) UnmarshalYAML(node *yaml.Node) error {
 				return err
 			}
 		default:
-			return errors.Errorf("unsupported cpu attribute \"%s\"", node.Content[i].Value)
+			return fmt.Errorf("unsupported cpu attribute \"%s\"", node.Content[i].Value)
 		}
 
 		attr = append(attr, types.Attribute{

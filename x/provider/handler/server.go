@@ -2,10 +2,10 @@ package handler
 
 import (
 	"context"
+	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/pkg/errors"
 
 	mtypes "github.com/akash-network/akash-api/go/node/market/v1beta3"
 
@@ -43,7 +43,7 @@ func (ms msgServer) CreateProvider(goCtx context.Context, msg *types.MsgCreatePr
 	owner, _ := sdk.AccAddressFromBech32(msg.Owner)
 
 	if _, ok := ms.provider.Get(ctx, owner); ok {
-		return nil, errors.Wrapf(types.ErrProviderExists, "id: %s", msg.Owner)
+		return nil, fmt.Errorf("%w: id: %s", types.ErrProviderExists, msg.Owner)
 	}
 
 	if err := ms.provider.Create(ctx, types.Provider(*msg)); err != nil {
@@ -64,7 +64,7 @@ func (ms msgServer) UpdateProvider(goCtx context.Context, msg *types.MsgUpdatePr
 	owner, _ := sdk.AccAddressFromBech32(msg.Owner)
 	prov, found := ms.provider.Get(ctx, owner)
 	if !found {
-		return nil, errors.Wrapf(types.ErrProviderNotFound, "id: %s", msg.Owner)
+		return nil, fmt.Errorf("%w: id: %s", types.ErrProviderNotFound, msg.Owner)
 	}
 
 	// all filtering code below is madness!. should make an index to not melt the cpu
@@ -74,8 +74,8 @@ func (ms msgServer) UpdateProvider(goCtx context.Context, msg *types.MsgUpdatePr
 			var order mtypes.Order
 			order, found = ms.market.GetOrder(ctx, lease.ID().OrderID())
 			if !found {
-				err = errors.Wrapf(ErrInternal,
-					"order \"%s\" for lease \"%s\" has not been found",
+				err = fmt.Errorf("%w: order \"%s\" for lease \"%s\" has not been found",
+					ErrInternal,
 					order.ID(),
 					lease.ID())
 				return true

@@ -2,10 +2,10 @@ package escrow
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/pkg/errors"
 	abci "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/akash-network/node/x/escrow/keeper"
@@ -20,41 +20,41 @@ func ValidateGenesis(data *types.GenesisState) error {
 
 	for idx, account := range data.Accounts {
 		if err := account.ValidateBasic(); err != nil {
-			return errors.Wrapf(err, "error with account %s (idx %v)", account.ID, idx)
+			return fmt.Errorf("%w: error with account %s (idx %v)", err, account.ID, idx)
 		}
 		if _, found := amap[account.ID]; found {
-			return errors.Wrapf(types.ErrAccountExists, "duplicate account %s (idx %v)", account.ID, idx)
+			return fmt.Errorf("%w: duplicate account %s (idx %v)", types.ErrAccountExists, account.ID, idx)
 		}
 		amap[account.ID] = account
 	}
 
 	for idx, payment := range data.Payments {
 		if err := payment.ValidateBasic(); err != nil {
-			return errors.Wrapf(err, "error with payment %s %s (idx %v)", payment.AccountID, payment.PaymentID, idx)
+			return fmt.Errorf("%w: error with payment %s %s (idx %v)", err, payment.AccountID, payment.PaymentID, idx)
 		}
 
 		// make sure there's an account
 		account, found := amap[payment.AccountID]
 		if !found {
-			return errors.Wrapf(
-				types.ErrAccountNotFound, "no account for payment %s %s (idx %v)", payment.AccountID, payment.PaymentID, idx)
+			return fmt.Errorf(
+				"%w: no account for payment %s %s (idx %v)", types.ErrAccountNotFound, payment.AccountID, payment.PaymentID, idx)
 		}
 
 		// ensure state is in sync with payment
 		switch {
 		case payment.State == types.PaymentOpen && account.State != types.AccountOpen:
-			return errors.Wrapf(types.ErrInvalidPayment, "invalid payment statefor payment %s %s (idx %v)",
-				payment.AccountID, payment.PaymentID, idx)
+			return fmt.Errorf("%w: invalid payment statefor payment %s %s (idx %v)",
+				types.ErrInvalidPayment, payment.AccountID, payment.PaymentID, idx)
 		case payment.State == types.PaymentOverdrawn && account.State != types.AccountOverdrawn:
-			return errors.Wrapf(types.ErrInvalidPayment, "invalid payment statefor payment %s %s (idx %v)",
-				payment.AccountID, payment.PaymentID, idx)
+			return fmt.Errorf("%w: invalid payment statefor payment %s %s (idx %v)",
+				types.ErrInvalidPayment, payment.AccountID, payment.PaymentID, idx)
 		}
 
 		// check for duplicates
 		for _, p2 := range pmap[payment.AccountID] {
 			if p2.PaymentID == payment.PaymentID {
-				return errors.Wrapf(
-					types.ErrPaymentExists, "dupliate payment for %s %s (idx %v)", payment.AccountID, payment.PaymentID, idx)
+				return fmt.Errorf(
+					"%w, dupliate payment for %s %s (idx %v)", types.ErrPaymentExists, payment.AccountID, payment.PaymentID, idx)
 			}
 		}
 

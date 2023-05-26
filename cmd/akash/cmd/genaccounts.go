@@ -3,8 +3,9 @@ package cmd
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
+	"fmt"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -63,7 +64,7 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 
 				info, err := kb.Key(args[0])
 				if err != nil {
-					return errors.Errorf("failed to get address from Keybase: %v", err)
+					return fmt.Errorf("failed to get address from Keybase: %v", err)
 				}
 
 				addr = info.GetAddress()
@@ -71,7 +72,7 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 
 			coins, err := sdk.ParseCoinsNormalized(args[1])
 			if err != nil {
-				return errors.Errorf("failed to parse coins: %v", err)
+				return fmt.Errorf("failed to parse coins: %v", err)
 			}
 
 			vestingStart, _ := cmd.Flags().GetInt64(flagVestingStart)
@@ -80,7 +81,7 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 
 			vestingAmt, err := sdk.ParseCoinsNormalized(vestingAmtStr)
 			if err != nil {
-				return errors.Errorf("failed to parse vesting amount: %v", err)
+				return fmt.Errorf("failed to parse vesting amount: %v", err)
 			}
 
 			// create concrete account type based on input parameters
@@ -105,33 +106,33 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 					genAccount = authvesting.NewDelayedVestingAccountRaw(baseVestingAccount)
 
 				default:
-					return errors.Wrap(ErrInvalidVestingParameters, "must supply start and end time or end time")
+					return fmt.Errorf("%w: must supply start and end time or end time", ErrInvalidVestingParameters)
 				}
 			} else {
 				genAccount = baseAccount
 			}
 
 			if err := genAccount.Validate(); err != nil {
-				return errors.Errorf("failed to validate new genesis account: %v", err)
+				return fmt.Errorf("%w: failed to validate new genesis account", err)
 			}
 
 			genFile := config.GenesisFile()
 			appState, genDoc, err := genutiltypes.GenesisStateFromGenFile(genFile)
 			if err != nil {
-				return errors.Errorf("failed to unmarshal genesis state: %v", err)
+				return fmt.Errorf("%w: failed to unmarshal genesis state", err)
 			}
 
 			authGenState := authtypes.GetGenesisStateFromAppState(cdc, appState)
 
 			accs, err := authtypes.UnpackAccounts(authGenState.Accounts)
 			if err != nil {
-				return errors.Errorf("failed to get accounts from any: %v", err)
+				return fmt.Errorf("%w: failed to get accounts from any", err)
 			}
 
 			lAccountNumber := uint64(0)
 			if len(accs) > 0 {
 				if accs.Contains(addr) {
-					return errors.Errorf("cannot add account at existing address %s", addr)
+					return fmt.Errorf("cannot add account at existing address %s", addr)
 				}
 				accs = authtypes.SanitizeGenesisAccounts(accs)
 				lAccountNumber = accs[len(accs)-1].GetAccountNumber() + 1
@@ -144,13 +145,13 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 
 			genAccs, err := authtypes.PackAccounts(accs)
 			if err != nil {
-				return errors.Errorf("failed to convert accounts into any's: %v", err)
+				return fmt.Errorf("%w: failed to convert accounts into any's", err)
 			}
 			authGenState.Accounts = genAccs
 
 			authGenStateBz, err := cdc.MarshalJSON(&authGenState)
 			if err != nil {
-				return errors.Errorf("failed to marshal auth genesis state: %v", err)
+				return fmt.Errorf("%w: failed to marshal auth genesis state", err)
 			}
 
 			appState[authtypes.ModuleName] = authGenStateBz
@@ -162,14 +163,14 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 
 			bankGenStateBz, err := cdc.MarshalJSON(bankGenState)
 			if err != nil {
-				return errors.Errorf("failed to marshal bank genesis state: %v", err)
+				return fmt.Errorf("%w: failed to marshal bank genesis state", err)
 			}
 
 			appState[banktypes.ModuleName] = bankGenStateBz
 
 			appStateJSON, err := json.Marshal(appState)
 			if err != nil {
-				return errors.Errorf("failed to marshal application genesis state: %v", err)
+				return fmt.Errorf("%w: failed to marshal application genesis state", err)
 			}
 
 			genDoc.AppState = appStateJSON

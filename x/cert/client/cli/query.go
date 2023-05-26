@@ -1,12 +1,12 @@
 package cli
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
@@ -65,7 +65,7 @@ func cmdGetCertificates() *cobra.Command {
 
 			if value := cmd.Flag("serial").Value.String(); value != "" {
 				if params.Filter.Owner == "" {
-					return errors.Errorf("--serial flag requires --owner to be set")
+					return fmt.Errorf("--serial flag requires --owner to be set")
 				}
 				val, valid := new(big.Int).SetString(value, 10)
 				if !valid {
@@ -77,7 +77,7 @@ func cmdGetCertificates() *cobra.Command {
 
 			if value := cmd.Flag("state").Value.String(); value != "" {
 				if value != stateValid && value != stateRevoked {
-					return errors.Errorf("invalid value of --state flag. expected valid|revoked")
+					return fmt.Errorf("invalid value of --state flag. expected valid|revoked")
 				}
 
 				params.Filter.State = value

@@ -1,13 +1,12 @@
 package sdl
 
 import (
+	"errors"
 	"fmt"
 	"path"
 	"regexp"
 	"sort"
 	"strconv"
-
-	"github.com/pkg/errors"
 
 	manifest "github.com/akash-network/akash-api/go/manifest/v2beta2"
 	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"

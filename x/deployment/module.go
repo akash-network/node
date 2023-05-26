@@ -8,7 +8,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -74,7 +73,7 @@ func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, config client.TxEncod
 	var data types.GenesisState
 	err := cdc.UnmarshalJSON(bz, &data)
 	if err != nil {
-		return errors.Errorf("failed to unmarshal %s genesis state: %v", types.ModuleName, err)
+		return fmt.Errorf("failed to unmarshal %s genesis state: %v", types.ModuleName, err)
 	}
 	return ValidateGenesis(&data)
 }

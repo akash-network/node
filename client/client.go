@@ -2,8 +2,7 @@ package client
 
 import (
 	"context"
-
-	"github.com/pkg/errors"
+	"errors"
 
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"

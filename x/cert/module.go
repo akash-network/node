@@ -15,14 +15,12 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	abci "github.com/tendermint/tendermint/abci/types"
 
-	"github.com/cosmos/cosmos-sdk/codec"
-	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
-	"github.com/cosmos/cosmos-sdk/types/module"
-	"github.com/pkg/errors"
-
 	"github.com/akash-network/akash-api/go/node/cert/v1beta1"
 	"github.com/akash-network/akash-api/go/node/cert/v1beta2"
 	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+	"github.com/cosmos/cosmos-sdk/codec"
+	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
+	"github.com/cosmos/cosmos-sdk/types/module"
 
 	utypes "github.com/akash-network/node/upgrades/types"
 	"github.com/akash-network/node/x/cert/client/cli"
@@ -75,7 +73,7 @@ func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, _ client.TxEncodingCo
 
 	err := cdc.UnmarshalJSON(bz, &data)
 	if err != nil {
-		return errors.Errorf("failed to unmarshal %s genesis state: %v", types.ModuleName, err)
+		return fmt.Errorf("failed to unmarshal %s genesis state: %v", types.ModuleName, err)
 	}
 
 	return ValidateGenesis(&data)

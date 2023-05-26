@@ -1,13 +1,13 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -62,7 +62,7 @@ func cmdCreate(key string) *cobra.Command {
 			// first lets validate certificate exists for given account
 			if _, err = cutils.LoadAndQueryCertificateForAccount(cmd.Context(), clientCtx, nil); err != nil {
 				if os.IsNotExist(err) {
-					err = errors.Errorf("no certificate file found for account %q.\n"+
+					err = fmt.Errorf("no certificate file found for account %q.\n"+
 						"consider creating it as certificate required to submit manifest", clientCtx.FromAddress.String())
 				}
 
@@ -442,7 +442,7 @@ Examples:
 				return err
 			}
 			if spendLimit.IsZero() || spendLimit.IsNegative() {
-				return errors.Errorf("spend-limit should be greater than zero, got: %s", spendLimit)
+				return fmt.Errorf("spend-limit should be greater than zero, got: %s", spendLimit)
 			}
 
 			exp, err := cmd.Flags().GetInt64(FlagExpiration)

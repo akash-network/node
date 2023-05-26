@@ -1,11 +1,11 @@
 package query
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/pkg/errors"
 
 	types "github.com/akash-network/akash-api/go/node/market/v1beta3"
 
