@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/cometbft/cometbft/libs/rand"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/tendermint/tendermint/libs/rand"
 
 	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
 	types "github.com/akash-network/akash-api/go/node/types/v1beta3"

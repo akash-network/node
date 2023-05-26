@@ -3,7 +3,7 @@ package ctxlog
 import (
 	"context"
 
-	"github.com/tendermint/tendermint/libs/log"
+	"github.com/cometbft/cometbft/libs/log"
 )
 
 type ctxKey string

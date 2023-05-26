@@ -3,9 +3,9 @@ package state
 import (
 	"testing"
 
+	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/mock"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 
 	atypes "github.com/akash-network/akash-api/go/node/audit/v1beta3"
 

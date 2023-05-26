@@ -16,12 +16,13 @@ import (
 	"github.com/rakyll/statik/fs"
 	"github.com/spf13/cast"
 
-	abci "github.com/tendermint/tendermint/abci/types"
-	tmjson "github.com/tendermint/tendermint/libs/json"
-	"github.com/tendermint/tendermint/libs/log"
-	tmos "github.com/tendermint/tendermint/libs/os"
-	tmtypes "github.com/tendermint/tendermint/types"
-	dbm "github.com/tendermint/tm-db"
+	abci "github.com/cometbft/cometbft/abci/types"
+	tmjson "github.com/cometbft/cometbft/libs/json"
+	"github.com/cometbft/cometbft/libs/log"
+	tmos "github.com/cometbft/cometbft/libs/os"
+	tmtypes "github.com/cometbft/cometbft/types"
+	storetypes "github.com/cosmos/cosmos-sdk/store/types"
+	dbm github.com/cometbft/cometbft-db
 
 	"cosmossdk.io/simapp"
 	bam "github.com/cosmos/cosmos-sdk/baseapp"
@@ -128,9 +129,9 @@ type AkashApp struct {
 
 	invCheckPeriod uint
 
-	keys    map[string]*sdk.KVStoreKey
-	tkeys   map[string]*sdk.TransientStoreKey
-	memkeys map[string]*sdk.MemoryStoreKey
+	keys    map[string]*storetypes.KVStoreKey
+	tkeys   map[string]*storetypes.TransientStoreKey
+	memkeys map[string]*storetypes.MemoryStoreKey
 
 	// simulation manager
 	sm *module.SimulationManager

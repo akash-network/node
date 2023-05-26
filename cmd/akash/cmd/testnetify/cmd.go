@@ -10,8 +10,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/theckman/yacspin"
 
-	cmtjson "github.com/tendermint/tendermint/libs/json"
-	tmtypes "github.com/tendermint/tendermint/types"
+	cmtjson "github.com/cometbft/cometbft/libs/json"
+	tmtypes "github.com/cometbft/cometbft/types"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"

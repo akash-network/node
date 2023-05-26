@@ -7,6 +7,8 @@ require (
 	github.com/akash-network/akash-api v0.0.16
 	github.com/blang/semver/v4 v4.0.0
 	github.com/boz/go-lifecycle v0.1.0
+	github.com/cometbft/cometbft v0.37.1
+	github.com/cometbft/cometbft-db v0.8.0 // indirect
 	github.com/cosmos/cosmos-sdk v0.47.2
 	github.com/cosmos/ibc-go/v7 v7.0.0
 	github.com/gogo/protobuf v1.3.3
@@ -20,13 +22,11 @@ require (
 	github.com/rakyll/statik v0.1.7
 	github.com/regen-network/cosmos-proto v0.3.1
 	github.com/rs/zerolog v1.27.0
-	github.com/spf13/cast v1.5.0
+	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.15.0
 	github.com/stretchr/testify v1.8.2
-	github.com/tendermint/tendermint v0.34.27
-	github.com/tendermint/tm-db v0.6.7
 	github.com/theckman/yacspin v0.13.12
 	go.step.sm/crypto v0.26.0
 	golang.org/x/mod v0.8.0
@@ -60,11 +60,14 @@ replace (
 	// Use regen gogoproto fork
 	// To be replaced by cosmos/gogoproto in future versions
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
-	// use cometBFT system fork of tendermint with akash patches
-	github.com/tendermint/tendermint => github.com/akash-network/cometbft v0.34.27-akash
 	github.com/zondax/hid => github.com/troian/hid v0.13.2
 	github.com/zondax/ledger-go => github.com/akash-network/ledger-go v0.14.3
 
+)
+
+require (
+	github.com/tendermint/tendermint v0.35.9
+	github.com/tendermint/tm-db v0.6.7
 )
 
 require (
@@ -89,6 +92,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
 	github.com/bgentry/speakeasy v0.1.1-0.20220910012023-760eaf8b6816 // indirect
+	github.com/btcsuite/btcd v0.22.1 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2 // indirect
 	github.com/cenkalti/backoff/v4 v4.1.3 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
@@ -97,8 +101,6 @@ require (
 	github.com/cloudflare/circl v1.3.1 // indirect
 	github.com/cockroachdb/apd/v2 v2.0.2 // indirect
 	github.com/coinbase/rosetta-sdk-go v0.7.9 // indirect
-	github.com/cometbft/cometbft v0.37.1 // indirect
-	github.com/cometbft/cometbft-db v0.7.0 // indirect
 	github.com/confio/ics23/go v0.9.0 // indirect
 	github.com/cosmos/btcutil v1.0.5 // indirect
 	github.com/cosmos/cosmos-proto v1.0.0-beta.2 // indirect
@@ -165,6 +167,7 @@ require (
 	github.com/klauspost/compress v1.16.3 // indirect
 	github.com/lib/pq v1.10.7 // indirect
 	github.com/libp2p/go-buffer-pool v0.1.0 // indirect
+	github.com/linxGnu/grocksdb v1.7.16 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/manifoldco/promptui v0.9.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
@@ -179,6 +182,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/mtibben/percent v0.2.1 // indirect
+	github.com/oasisprotocol/curve25519-voi v0.0.0-20210609091139-0a56a4bca00b // indirect
 	github.com/pelletier/go-toml/v2 v2.0.6 // indirect
 	github.com/petermattis/goid v0.0.0-20221215004737-a150e88a970d // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
@@ -195,7 +199,6 @@ require (
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/subosito/gotenv v1.4.2 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d // indirect
-	github.com/tecbot/gorocksdb v0.0.0-20191217155057-f0fad39f321c // indirect
 	github.com/tendermint/go-amino v0.16.0 // indirect
 	github.com/tidwall/btree v1.6.0 // indirect
 	github.com/ulikunitz/xz v0.5.11 // indirect

@@ -4,6 +4,7 @@ package v0_15_0
 
 import (
 	inflationtypes "github.com/akash-network/akash-api/go/node/inflation/v1beta3"
+	"github.com/cometbft/cometbft/libs/log"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
@@ -11,7 +12,6 @@ import (
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	ibcconnectiontypes "github.com/cosmos/ibc-go/v7/modules/core/03-connection/types"
 	ibckeeper "github.com/cosmos/ibc-go/v7/modules/core/keeper"
-	"github.com/tendermint/tendermint/libs/log"
 
 	apptypes "github.com/akash-network/node/app/types"
 	utypes "github.com/akash-network/node/upgrades/types"

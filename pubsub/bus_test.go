@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	"github.com/akash-network/node/pubsub"
+	"github.com/cometbft/cometbft/crypto/ed25519"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tendermint/crypto/ed25519"
 )
 
 func TestBus(t *testing.T) {

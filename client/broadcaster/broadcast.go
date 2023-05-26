@@ -18,7 +18,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 
-	ttypes "github.com/tendermint/tendermint/types"
+	ttypes "github.com/cometbft/cometbft/types"
 )
 
 const (
@@ -28,11 +28,11 @@ const (
 	// sadface.
 
 	// Only way to detect the timeout error.
-	// https://github.com/tendermint/tendermint/blob/46e06c97320bc61c4d98d3018f59d47ec69863c9/rpc/core/mempool.go#L124
+	// https://github.com/cometbft/cometbft/blob/46e06c97320bc61c4d98d3018f59d47ec69863c9/rpc/core/mempool.go#L124
 	timeoutErrorMessage = "timed out waiting for tx to be included in a block"
 
 	// Only way to check for tx not found error.
-	// https://github.com/tendermint/tendermint/blob/46e06c97320bc61c4d98d3018f59d47ec69863c9/rpc/core/tx.go#L31-L33
+	// https://github.com/cometbft/cometbft/blob/46e06c97320bc61c4d98d3018f59d47ec69863c9/rpc/core/tx.go#L31-L33
 	notFoundErrorMessageSuffix = ") not found"
 )
 

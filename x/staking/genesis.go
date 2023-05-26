@@ -1,8 +1,8 @@
 package provider
 
 import (
+	abci "github.com/cometbft/cometbft/abci/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	abci "github.com/tendermint/tendermint/abci/types"
 
 	types "github.com/akash-network/akash-api/go/node/staking/v1beta3"
 

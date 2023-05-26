@@ -3,9 +3,9 @@ package types
 import (
 	"fmt"
 
+	"github.com/cometbft/cometbft/libs/log"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdkmodule "github.com/cosmos/cosmos-sdk/types/module"
-	"github.com/tendermint/tendermint/libs/log"
 
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"

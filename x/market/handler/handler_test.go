@@ -8,10 +8,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/cometbft/cometbft/libs/rand"
 	sdktestdata "github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/tendermint/tendermint/libs/rand"
 
 	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
 	types "github.com/akash-network/akash-api/go/node/market/v1beta3"

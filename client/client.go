@@ -5,13 +5,13 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/cometbft/cometbft/libs/log"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/tendermint/tendermint/libs/log"
 	"google.golang.org/grpc"
 
-	tmrpc "github.com/tendermint/tendermint/rpc/core/types"
+	tmrpc "github.com/cometbft/cometbft/rpc/core/types"
 
 	atypes "github.com/akash-network/akash-api/go/node/audit/v1beta3"
 

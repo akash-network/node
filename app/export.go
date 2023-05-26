@@ -7,10 +7,10 @@ import (
 
 	"github.com/spf13/viper"
 
-	abci "github.com/tendermint/tendermint/abci/types"
-	logger "github.com/tendermint/tendermint/libs/log"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
-	dbm "github.com/tendermint/tm-db"
+	abci "github.com/cometbft/cometbft/abci/types"
+	logger "github.com/cometbft/cometbft/libs/log"
+	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
+	dbm github.com/cometbft/cometbft-db
 
 	"cosmossdk.io/simapp"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"

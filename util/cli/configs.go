@@ -14,7 +14,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
-	tmcfg "github.com/tendermint/tendermint/config"
+	tmcfg "github.com/cometbft/cometbft/config"
 
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/server"

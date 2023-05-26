@@ -5,11 +5,11 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
+	abci "github.com/cometbft/cometbft/abci/types"
+	tmclient "github.com/cometbft/cometbft/rpc/client"
+	ctypes "github.com/cometbft/cometbft/rpc/core/types"
+	tmtmtypes "github.com/cometbft/cometbft/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	abci "github.com/tendermint/tendermint/abci/types"
-	tmclient "github.com/tendermint/tendermint/rpc/client"
-	ctypes "github.com/tendermint/tendermint/rpc/core/types"
-	tmtmtypes "github.com/tendermint/tendermint/types"
 
 	atypes "github.com/akash-network/akash-api/go/node/audit/v1beta3"
 	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
