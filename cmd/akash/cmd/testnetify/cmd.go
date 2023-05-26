@@ -16,8 +16,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
-	ibccltypes ""github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
-	ibcchtypes ""github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
+	ibccltypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
+	ibcchtypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
 )
 
 const (
