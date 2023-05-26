@@ -7,7 +7,7 @@ require (
 	github.com/blang/semver/v4 v4.0.0
 	github.com/boz/go-lifecycle v0.1.0
 	github.com/cosmos/cosmos-sdk v0.45.15
-	github.com/cosmos/ibc-go/v4 v4.4.0
+	github.com/cosmos/ibc-go/v4 v4.4.1
 	github.com/gogo/protobuf v1.3.3
 	github.com/google/go-github/v52 v52.0.0
 	github.com/gorilla/mux v1.8.0
