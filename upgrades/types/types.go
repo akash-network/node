@@ -57,7 +57,7 @@ type IHeightPatch interface {
 }
 
 type Migrator interface {
-	StoreKey() sdk.StoreKey
+	StoreKey() storetypes.StoreKey
 	Codec() codec.BinaryCodec
 }
 
