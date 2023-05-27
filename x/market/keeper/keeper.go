@@ -4,6 +4,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/cosmos/cosmos-sdk/codec"
+	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 
@@ -17,7 +18,7 @@ import (
 type IKeeper interface {
 	NewQuerier() Querier
 	Codec() codec.BinaryCodec
-	StoreKey() sdk.StoreKey
+	StoreKey() storetypes.StoreKey
 	CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.GroupSpec) (types.Order, error)
 	CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAddress, price sdk.DecCoin) (types.Bid, error)
 	CreateLease(ctx sdk.Context, bid types.Bid)
@@ -45,13 +46,13 @@ type IKeeper interface {
 // Keeper of the market store
 type Keeper struct {
 	cdc     codec.BinaryCodec
-	skey    sdk.StoreKey
+	skey    storetypes.StoreKey
 	pspace  paramtypes.Subspace
 	ekeeper EscrowKeeper
 }
 
 // NewKeeper creates and returns an instance for Market keeper
-func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey, pspace paramtypes.Subspace, ekeeper EscrowKeeper) IKeeper {
+func NewKeeper(cdc codec.BinaryCodec, skey storetypes.StoreKey, pspace paramtypes.Subspace, ekeeper EscrowKeeper) IKeeper {
 
 	if !pspace.HasKeyTable() {
 		pspace = pspace.WithKeyTable(types.ParamKeyTable())
@@ -75,7 +76,7 @@ func (k Keeper) Codec() codec.BinaryCodec {
 }
 
 // StoreKey returns store key
-func (k Keeper) StoreKey() sdk.StoreKey {
+func (k Keeper) StoreKey() storetypes.StoreKey {
 	return k.skey
 }
 

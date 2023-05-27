@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"github.com/cosmos/cosmos-sdk/codec"
+	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	types "github.com/akash-network/akash-api/go/node/provider/v1beta3"
@@ -9,7 +10,7 @@ import (
 
 type IKeeper interface {
 	Codec() codec.BinaryCodec
-	StoreKey() sdk.StoreKey
+	StoreKey() storetypes.StoreKey
 	Get(ctx sdk.Context, id sdk.Address) (types.Provider, bool)
 	Create(ctx sdk.Context, provider types.Provider) error
 	WithProviders(ctx sdk.Context, fn func(types.Provider) bool)
@@ -20,12 +21,12 @@ type IKeeper interface {
 
 // Keeper of the provider store
 type Keeper struct {
-	skey sdk.StoreKey
+	skey storetypes.StoreKey
 	cdc  codec.BinaryCodec
 }
 
 // NewKeeper creates and returns an instance for Provider keeper
-func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey) IKeeper {
+func NewKeeper(cdc codec.BinaryCodec, skey storetypes.StoreKey) IKeeper {
 	return Keeper{
 		skey: skey,
 		cdc:  cdc,
@@ -42,7 +43,7 @@ func (k Keeper) Codec() codec.BinaryCodec {
 }
 
 // StoreKey returns store key
-func (k Keeper) StoreKey() sdk.StoreKey {
+func (k Keeper) StoreKey() storetypes.StoreKey {
 	return k.skey
 }
 

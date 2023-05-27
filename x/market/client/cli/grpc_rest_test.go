@@ -11,10 +11,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	sdkrest "github.com/cosmos/cosmos-sdk/testutil"
+	bankcli "github.com/cosmos/cosmos-sdk/testutil/cli"
 	"github.com/cosmos/cosmos-sdk/testutil/network"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkrest sdkrest "github.com/cosmos/cosmos-sdk/testutil"
-	bankcli "github.com/cosmos/cosmos-sdk/testutil/cli"
 
 	types "github.com/akash-network/akash-api/go/node/market/v1beta3"
 
