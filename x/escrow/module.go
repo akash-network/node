@@ -29,7 +29,6 @@ import (
 	"github.com/akash-network/node/x/escrow/client/cli"
 	"github.com/akash-network/node/x/escrow/client/rest"
 	"github.com/akash-network/node/x/escrow/keeper"
-	"github.com/akash-network/node/x/escrow/query"
 )
 
 var (
@@ -140,21 +139,6 @@ func (AppModule) Name() string {
 // RegisterInvariants registers module invariants
 func (am AppModule) RegisterInvariants(ir sdk.InvariantRegistry) {}
 
-// Route returns the message routing key for the audit module.
-func (am AppModule) Route() sdk.Route {
-	return sdk.NewRoute(types.RouterKey, nil)
-}
-
-// QuerierRoute returns the audit module's querier route name.
-func (am AppModule) QuerierRoute() string {
-	return types.ModuleName
-}
-
-// LegacyQuerierHandler returns the sdk.Querier for audit module
-func (am AppModule) LegacyQuerierHandler(legacyQuerierCdc *codec.LegacyAmino) sdk.Querier {
-	return query.NewQuerier(am.keeper, legacyQuerierCdc)
-}
-
 // RegisterServices registers the module's servicess
 func (am AppModule) RegisterServices(cfg module.Configurator) {
 	querier := keeper.NewQuerier(am.keeper)
@@ -182,6 +166,9 @@ func (am AppModule) BeginBlock(_ sdk.Context, _ abci.RequestBeginBlock) {}
 func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
 	return []abci.ValidatorUpdate{}
 }
+
+// QuerierRoute returns the bank module's querier route name.
+func (AppModule) QuerierRoute() string { return types.RouterKey }
 
 // InitGenesis performs genesis initialization for the audit module. It returns
 // no validator updates.

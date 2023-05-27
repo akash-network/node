@@ -1,11 +1,13 @@
 package simulation
 
 import (
-	simappparams "cosmossdk.io/simapp/params"
 	"math/rand"
+
+	simappparams "cosmossdk.io/simapp/params"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
+	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
@@ -116,7 +118,7 @@ func SimulateMsgCreateBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simtype
 		if spendable.AmountOf(depositAmount.Denom).LT(depositAmount.Amount.MulRaw(2)) {
 			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeCreateBid, "out of money"), nil, nil
 		}
-		spendable = spendable.Sub(sdk.NewCoins(depositAmount))
+		spendable = spendable.Sub(sdk.NewCoin(depositAmount.Denom, depositAmount.Amount))
 
 		fees, err := simtypes.RandomFees(r, ctx, spendable)
 		if err != nil {
@@ -126,11 +128,12 @@ func SimulateMsgCreateBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simtype
 		msg := types.NewMsgCreateBid(order.OrderID, simAccount.Address, order.Price(), depositAmount)
 
 		txGen := simappparams.MakeTestEncodingConfig().TxConfig
-		tx, err := helpers.GenTx(
+		tx, err := simtestutil.GenSignedMockTx(
+			r,
 			txGen,
 			[]sdk.Msg{msg},
 			fees,
-			helpers.DefaultGenTxGas,
+			simtestutil.DefaultGenTxGas,
 			chainID,
 			[]uint64{account.GetAccountNumber()},
 			[]uint64{account.GetSequence()},
@@ -200,11 +203,12 @@ func SimulateMsgCloseBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simtypes
 		msg := types.NewMsgCloseBid(bid.BidID)
 
 		txGen := simappparams.MakeTestEncodingConfig().TxConfig
-		tx, err := helpers.GenTx(
+		tx, err := simtestutil.GenSignedMockTx(
+			r,
 			txGen,
 			[]sdk.Msg{msg},
 			fees,
-			helpers.DefaultGenTxGas,
+			simtestutil.DefaultGenTxGas,
 			chainID,
 			[]uint64{account.GetAccountNumber()},
 			[]uint64{account.GetSequence()},

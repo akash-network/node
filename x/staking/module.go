@@ -128,6 +128,9 @@ func (am AppModule) EndBlock(_ sdk.Context, _ abci.RequestEndBlock) []abci.Valid
 	return []abci.ValidatorUpdate{}
 }
 
+// QuerierRoute returns the bank module's querier route name.
+func (AppModule) QuerierRoute() string { return types.RouterKey }
+
 // InitGenesis performs genesis initialization for the provider module. It returns
 // no validator updates.
 func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, data json.RawMessage) []abci.ValidatorUpdate {
