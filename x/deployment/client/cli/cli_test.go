@@ -30,7 +30,7 @@ type IntegrationTestSuite struct {
 	suite.Suite
 	cfg       network.Config
 	network   *network.Network
-	keyFunder keyring.Info
+	keyFunder *keyring.Record
 }
 
 func (s *IntegrationTestSuite) SetupSuite() {
@@ -58,13 +58,15 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	s.keyFunder, err = val.ClientCtx.Keyring.Key("keyFoo")
 	s.Require().NoError(err)
 
+	keyFunderAddr, err := s.keyFunder.GetAddress()
+	s.Require().NoError(err)
+
 	res, err := banktestutil.MsgSendExec(
 		val.ClientCtx,
 		val.Address,
-		s.keyFunder.GetAddress(),
+		keyFunderAddr,
 		sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, types.DefaultDeploymentMinDeposit.Amount.MulRaw(4))),
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 	)
@@ -86,7 +88,6 @@ func (s *IntegrationTestSuite) SetupSuite() {
 		val.ClientCtx,
 		val.Address,
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 	)
@@ -114,7 +115,6 @@ func (s *IntegrationTestSuite) TestDeployment() {
 		val.Address,
 		deploymentPath,
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 		fmt.Sprintf("--deposit=%s", cli.DefaultDeposit),
@@ -164,7 +164,6 @@ func (s *IntegrationTestSuite) TestDeployment() {
 		deploymentPath2,
 		fmt.Sprintf("--dseq=%v", createdDep.Deployment.DeploymentID.DSeq),
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 	)
@@ -200,7 +199,6 @@ func (s *IntegrationTestSuite) TestDeployment() {
 		val.Address,
 		fmt.Sprintf("--dseq=%v", createdDep.Deployment.DeploymentID.DSeq),
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 	)
@@ -233,7 +231,6 @@ func (s *IntegrationTestSuite) TestGroup() {
 		val.Address,
 		deploymentPath,
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 		fmt.Sprintf("--deposit=%s", cli.DefaultDeposit),
@@ -265,7 +262,6 @@ func (s *IntegrationTestSuite) TestGroup() {
 		createdDep.Groups[0].GroupID,
 		val.Address,
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 	)
@@ -293,7 +289,10 @@ func (s *IntegrationTestSuite) TestFundedDeployment() {
 		DSeq:  uint64(105),
 	}
 
-	prevFunderBal := s.getAccountBalance(s.keyFunder.GetAddress())
+	keyFunderAddr, err := s.keyFunder.GetAddress()
+	s.Require().NoError(err)
+
+	prevFunderBal := s.getAccountBalance(keyFunderAddr)
 
 	// Creating deployment paid by funder's account without any authorization from funder should
 	// fail
@@ -302,32 +301,30 @@ func (s *IntegrationTestSuite) TestFundedDeployment() {
 		val.Address,
 		deploymentPath,
 		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
 		fmt.Sprintf("--dseq=%v", deploymentID.DSeq),
-		fmt.Sprintf("--depositor-account=%s", s.keyFunder.GetAddress().String()),
+		fmt.Sprintf("--depositor-account=%s", keyFunderAddr.String()),
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
 	clitestutil.ValidateTxUnSuccessful(s.T(), val.ClientCtx, res.Bytes())
 
 	// funder's balance shouldn't be deducted
-	s.Require().Equal(prevFunderBal, s.getAccountBalance(s.keyFunder.GetAddress()))
+	s.Require().Equal(prevFunderBal, s.getAccountBalance(keyFunderAddr))
 
 	// Grant the tenant authorization to use funds from the funder's account
 	res, err = cli.TxGrantAuthorizationExec(
 		val.ClientCtx,
-		s.keyFunder.GetAddress(),
+		keyFunderAddr,
 		val.Address,
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
 	clitestutil.ValidateTxSuccessful(s.T(), val.ClientCtx, res.Bytes())
-	prevFunderBal = s.getAccountBalance(s.keyFunder.GetAddress())
+	prevFunderBal = s.getAccountBalance(keyFunderAddr)
 
 	ownerBal := s.getAccountBalance(val.Address)
 
@@ -337,18 +334,17 @@ func (s *IntegrationTestSuite) TestFundedDeployment() {
 		val.Address,
 		deploymentPath,
 		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 		fmt.Sprintf("--dseq=%v", deploymentID.DSeq),
-		fmt.Sprintf("--depositor-account=%s", s.keyFunder.GetAddress().String()),
+		fmt.Sprintf("--depositor-account=%s", keyFunderAddr.String()),
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
 	clitestutil.ValidateTxSuccessful(s.T(), val.ClientCtx, res.Bytes())
 
 	// funder's balance should be deducted correctly
-	curFunderBal := s.getAccountBalance(s.keyFunder.GetAddress())
+	curFunderBal := s.getAccountBalance(keyFunderAddr)
 	s.Require().Equal(prevFunderBal.Sub(types.DefaultDeploymentMinDeposit.Amount), curFunderBal)
 	prevFunderBal = curFunderBal
 
@@ -363,7 +359,6 @@ func (s *IntegrationTestSuite) TestFundedDeployment() {
 		types.DefaultDeploymentMinDeposit,
 		val.Address,
 		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 		fmt.Sprintf("--dseq=%v", deploymentID.DSeq),
@@ -384,35 +379,33 @@ func (s *IntegrationTestSuite) TestFundedDeployment() {
 		types.DefaultDeploymentMinDeposit,
 		val.Address,
 		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 		fmt.Sprintf("--dseq=%v", deploymentID.DSeq),
-		fmt.Sprintf("--depositor-account=%s", s.keyFunder.GetAddress().String()),
+		fmt.Sprintf("--depositor-account=%s", keyFunderAddr.String()),
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
 	clitestutil.ValidateTxSuccessful(s.T(), val.ClientCtx, res.Bytes())
 
 	// funder's balance should be deducted correctly
-	curFunderBal = s.getAccountBalance(s.keyFunder.GetAddress())
+	curFunderBal = s.getAccountBalance(keyFunderAddr)
 	s.Require().Equal(prevFunderBal.Sub(types.DefaultDeploymentMinDeposit.Amount), curFunderBal)
 	prevFunderBal = curFunderBal
 
 	// revoke the authorization given to the deployment owner by the funder
 	res, err = cli.TxRevokeAuthorizationExec(
 		val.ClientCtx,
-		s.keyFunder.GetAddress(),
+		keyFunderAddr,
 		val.Address,
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
 	clitestutil.ValidateTxSuccessful(s.T(), val.ClientCtx, res.Bytes())
-	prevFunderBal = s.getAccountBalance(s.keyFunder.GetAddress())
+	prevFunderBal = s.getAccountBalance(keyFunderAddr)
 
 	// depositing additional funds from the funder's account should fail now
 	res, err = cli.TxDepositDeploymentExec(
@@ -420,18 +413,17 @@ func (s *IntegrationTestSuite) TestFundedDeployment() {
 		types.DefaultDeploymentMinDeposit,
 		val.Address,
 		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 		fmt.Sprintf("--dseq=%v", deploymentID.DSeq),
-		fmt.Sprintf("--depositor-account=%s", s.keyFunder.GetAddress().String()),
+		fmt.Sprintf("--depositor-account=%s", keyFunderAddr.String()),
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
 	clitestutil.ValidateTxUnSuccessful(s.T(), val.ClientCtx, res.Bytes())
 
 	// funder's balance shouldn't be deducted
-	s.Require().Equal(prevFunderBal, s.getAccountBalance(s.keyFunder.GetAddress()))
+	s.Require().Equal(prevFunderBal, s.getAccountBalance(keyFunderAddr))
 	ownerBal = s.getAccountBalance(val.Address)
 
 	// closing the deployment should return the funds and balance in escrow to the funder and
@@ -440,7 +432,6 @@ func (s *IntegrationTestSuite) TestFundedDeployment() {
 		val.ClientCtx,
 		val.Address,
 		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 		fmt.Sprintf("--dseq=%v", deploymentID.DSeq),
@@ -448,7 +439,7 @@ func (s *IntegrationTestSuite) TestFundedDeployment() {
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
 	clitestutil.ValidateTxSuccessful(s.T(), val.ClientCtx, res.Bytes())
-	s.Require().Equal(prevFunderBal.Add(types.DefaultDeploymentMinDeposit.Amount.MulRaw(2)), s.getAccountBalance(s.keyFunder.GetAddress()))
+	s.Require().Equal(prevFunderBal.Add(types.DefaultDeploymentMinDeposit.Amount.MulRaw(2)), s.getAccountBalance(keyFunderAddr))
 	s.Require().Equal(ownerBal.Add(types.DefaultDeploymentMinDeposit.Amount).SubRaw(20), s.getAccountBalance(val.Address))
 }
 
