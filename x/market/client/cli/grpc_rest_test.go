@@ -43,7 +43,9 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 	cfg.NumValidators = 1
 
 	s.cfg = cfg
-	s.network = network.New(s.T(), cfg)
+	network, err := network.New(s.T(), s.T().TempDir(), s.cfg)
+	s.Require().NoError(err)
+	s.network = network
 
 	kb := s.network.Validators[0].ClientCtx.Keyring
 	keyBar, _, err := kb.NewMnemonic("keyBar", keyring.English, sdk.FullFundraiserPath, "",
@@ -109,12 +111,15 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 	// test query order
 	s.order = orders[0]
 
+	keyBarAddr, err := keyBar.GetAddress()
+	s.Require().NoError(err)
+
 	// Send coins from validator to keyBar
 	sendTokens := cli.DefaultDeposit.Add(cli.DefaultDeposit)
 	_, err = bankcli.MsgSendExec(
 		val.ClientCtx,
 		val.Address,
-		keyBar.GetAddress(),
+		keyBarAddr,
 		sdk.NewCoins(sendTokens),
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
@@ -127,7 +132,7 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 	// create provider
 	_, err = pcli.TxCreateProviderExec(
 		val.ClientCtx,
-		keyBar.GetAddress(),
+		keyBarAddr,
 		providerPath,
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
@@ -141,7 +146,7 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 		val.ClientCtx,
 		s.order.OrderID,
 		sdk.NewDecCoinFromDec(testutil.CoinDenom, sdk.MustNewDecFromStr("1.1")),
-		keyBar.GetAddress(),
+		keyBarAddr,
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
@@ -160,7 +165,7 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 	s.Require().Len(bidRes.Bids, 1)
 	bids := bidRes.Bids
-	s.Require().Equal(keyBar.GetAddress().String(), bids[0].Bid.BidID.Provider)
+	s.Require().Equal(keyBarAddr.String(), bids[0].Bid.BidID.Provider)
 
 	s.bid = bids[0].Bid
 
@@ -186,7 +191,7 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 	s.Require().Len(leaseRes.Leases, 1)
 	leases := leaseRes.Leases
-	s.Require().Equal(keyBar.GetAddress().String(), leases[0].Lease.LeaseID.Provider)
+	s.Require().Equal(keyBarAddr.String(), leases[0].Lease.LeaseID.Provider)
 
 	s.order.State = types.OrderActive
 	s.bid.State = types.BidActive

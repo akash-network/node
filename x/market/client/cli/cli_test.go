@@ -43,10 +43,12 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	// cfg.EnableLogging = true
 
 	s.cfg = cfg
-	s.network = network.New(s.T(), cfg)
+	network, err := network.New(s.T(), s.T().TempDir(), s.cfg)
+	s.Require().NoError(err)
+	s.network = network
 
 	kb := s.network.Validators[0].ClientCtx.Keyring
-	_, _, err := kb.NewMnemonic("keyBar", keyring.English, sdk.FullFundraiserPath, "", hd.Secp256k1)
+	_, _, err = kb.NewMnemonic("keyBar", keyring.English, sdk.FullFundraiserPath, "", hd.Secp256k1)
 	s.Require().NoError(err)
 
 	_, err = s.network.WaitForHeight(1)
@@ -173,10 +175,14 @@ func (s *IntegrationTestSuite) Test2CreateBid() {
 
 	// Send coins from validator to keyBar
 	sendTokens := sdk.NewCoin(s.cfg.BondDenom, cli.DefaultDeposit.Amount.MulRaw(2))
+
+	keyBarAddr, err := keyBar.GetAddress()
+	s.Require().NoError(err)
+
 	_, err = bankcli.MsgSendExec(
 		val.ClientCtx,
 		val.Address,
-		keyBar.GetAddress(),
+		keyBarAddr,
 		sdk.NewCoins(sendTokens),
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
@@ -186,7 +192,7 @@ func (s *IntegrationTestSuite) Test2CreateBid() {
 
 	s.Require().NoError(s.network.WaitForNextBlock())
 
-	resp, err := bankcli.QueryBalancesExec(val.ClientCtx.WithOutputFormat("json"), keyBar.GetAddress())
+	resp, err := bankcli.QueryBalancesExec(val.ClientCtx.WithOutputFormat("json"), keyBarAddr)
 	s.Require().NoError(err)
 
 	var balRes banktypes.QueryAllBalancesResponse
@@ -197,7 +203,7 @@ func (s *IntegrationTestSuite) Test2CreateBid() {
 	// create provider
 	_, err = pcli.TxCreateProviderExec(
 		val.ClientCtx,
-		keyBar.GetAddress(),
+		keyBarAddr,
 		providerPath,
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
@@ -215,7 +221,7 @@ func (s *IntegrationTestSuite) Test2CreateBid() {
 	err = val.ClientCtx.Codec.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Providers, 1, "Provider Creation Failed in TestCreateBid")
-	s.Require().Equal(keyBar.GetAddress().String(), out.Providers[0].Owner)
+	s.Require().Equal(keyBarAddr.String(), out.Providers[0].Owner)
 
 	// fetch orders
 	resp, err = cli.QueryOrdersExec(val.ClientCtx.WithOutputFormat("json"))
@@ -233,7 +239,7 @@ func (s *IntegrationTestSuite) Test2CreateBid() {
 		val.ClientCtx,
 		createdOrder.OrderID,
 		sdk.NewDecCoinFromDec(testutil.CoinDenom, sdk.MustNewDecFromStr("1.1")),
-		keyBar.GetAddress(),
+		keyBarAddr,
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
@@ -252,7 +258,7 @@ func (s *IntegrationTestSuite) Test2CreateBid() {
 	s.Require().NoError(err)
 	s.Require().Len(bidRes.Bids, 1)
 	bids := bidRes.Bids
-	s.Require().Equal(keyBar.GetAddress().String(), bids[0].Bid.BidID.Provider)
+	s.Require().Equal(keyBarAddr.String(), bids[0].Bid.BidID.Provider)
 
 	// test query bid
 	createdBid := bids[0].Bid
@@ -268,7 +274,7 @@ func (s *IntegrationTestSuite) Test2CreateBid() {
 	// test query bids with filters
 	resp, err = cli.QueryBidsExec(
 		val.ClientCtx.WithOutputFormat("json"),
-		fmt.Sprintf("--provider=%s", keyBar.GetAddress().String()),
+		fmt.Sprintf("--provider=%s", keyBarAddr.String()),
 		fmt.Sprintf("--state=%s", bid.Bid.State.String()),
 	)
 	s.Require().NoError(err)
@@ -323,7 +329,10 @@ func (s *IntegrationTestSuite) Test3QueryLeasesAndCloseBid() {
 	s.Require().NoError(err)
 	s.Require().Len(leaseRes.Leases, 1)
 	leases := leaseRes.Leases
-	s.Require().Equal(keyBar.GetAddress().String(), leases[0].Lease.LeaseID.Provider)
+
+	keyBarAddr, err := keyBar.GetAddress()
+	s.Require().NoError(err)
+	s.Require().Equal(keyBarAddr.String(), leases[0].Lease.LeaseID.Provider)
 
 	// test query lease
 	createdLease := leases[0].Lease
@@ -339,7 +348,7 @@ func (s *IntegrationTestSuite) Test3QueryLeasesAndCloseBid() {
 	_, err = cli.TxCloseBidExec(
 		val.ClientCtx,
 		lease.Lease.LeaseID.OrderID(),
-		keyBar.GetAddress(),
+		keyBarAddr,
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
@@ -355,7 +364,7 @@ func (s *IntegrationTestSuite) Test3QueryLeasesAndCloseBid() {
 	err = val.ClientCtx.Codec.UnmarshalJSON(resp.Bytes(), bidRes)
 	s.Require().NoError(err)
 	s.Require().Len(bidRes.Bids, 1)
-	s.Require().Equal(keyBar.GetAddress().String(), bidRes.Bids[0].Bid.BidID.Provider)
+	s.Require().Equal(keyBarAddr.String(), bidRes.Bids[0].Bid.BidID.Provider)
 
 	// test query leases with state value filter
 	resp, err = cli.QueryLeasesExec(val.ClientCtx.WithOutputFormat("json"), "--state=closed")
