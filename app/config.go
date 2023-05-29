@@ -3,6 +3,7 @@ package app
 import (
 	simparams "cosmossdk.io/simapp/params"
 	"github.com/cosmos/cosmos-sdk/std"
+	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -37,7 +38,7 @@ import (
 	"github.com/cosmos/ibc-go/v7/modules/apps/transfer"
 	ibctransfertypes "github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
 	ibc "github.com/cosmos/ibc-go/v7/modules/core"
-	ibchost "github.com/cosmos/ibc-go/v7/modules/core/24-host"
+	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/exported"
 
 	appparams "github.com/akash-network/node/app/params"
 )
@@ -45,32 +46,26 @@ import (
 var (
 	mbasics = module.NewBasicManager(
 		append([]module.AppModuleBasic{
-			// accounts, fees.
 			auth.AppModuleBasic{},
-			// authorizations
-			authzmodule.AppModuleBasic{},
-			// genesis utilities
 			genutil.AppModuleBasic{},
-			// tokens, token balance.
-			bank.AppModuleBasic{},
+			bank.AppModule{},
 			capability.AppModuleBasic{},
-			// validator staking
 			staking.AppModuleBasic{},
-			// inflation
 			mint.AppModuleBasic{},
-			// distribution of fess and inflation
 			distr.AppModuleBasic{},
-			// governance functionality (voting)
 			gov.NewAppModuleBasic(getGovProposalHandlers()),
-			// chain parameters
+
 			params.AppModuleBasic{},
 			crisis.AppModuleBasic{},
 			slashing.AppModuleBasic{},
+			feegrantmodule.AppModuleBasic{},
+			authzmodule.AppModuleBasic{},
 			ibc.AppModuleBasic{},
 			upgrade.AppModuleBasic{},
 			evidence.AppModuleBasic{},
 			transfer.AppModuleBasic{},
 			vesting.AppModuleBasic{},
+			// chain parameters
 			feegrantmodule.AppModuleBasic{},
 		},
 			// akash
@@ -96,7 +91,7 @@ func MakeEncodingConfig() simparams.EncodingConfig {
 	return encodingConfig
 }
 
-func kvStoreKeys() map[string]*sdk.KVStoreKey {
+func kvStoreKeys() map[string]*storetypes.KVStoreKey {
 	return sdk.NewKVStoreKeys(
 		append([]string{
 			authtypes.StoreKey,
@@ -109,7 +104,7 @@ func kvStoreKeys() map[string]*sdk.KVStoreKey {
 			slashingtypes.StoreKey,
 			govtypes.StoreKey,
 			paramstypes.StoreKey,
-			ibchost.StoreKey,
+			ibcexported.StoreKey,
 			upgradetypes.StoreKey,
 			evidencetypes.StoreKey,
 			ibctransfertypes.StoreKey,
@@ -120,11 +115,11 @@ func kvStoreKeys() map[string]*sdk.KVStoreKey {
 	)
 }
 
-func transientStoreKeys() map[string]*sdk.TransientStoreKey {
+func transientStoreKeys() map[string]*storetypes.TransientStoreKey {
 	return sdk.NewTransientStoreKeys(paramstypes.TStoreKey)
 }
 
-func memStoreKeys() map[string]*sdk.MemoryStoreKey {
+func memStoreKeys() map[string]*storetypes.MemoryStoreKey {
 	return sdk.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
 
 }
