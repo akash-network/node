@@ -6,7 +6,7 @@ import (
 
 	"github.com/akash-network/node/x/provider/query"
 	"github.com/cosmos/cosmos-sdk/client"
-	rest "github.com/cosmos/cosmos-sdk/server/api"
+	rest "github.com/akash-network/node/util/api"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/gorilla/mux"
 )

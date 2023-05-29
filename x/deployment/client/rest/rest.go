@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
+	rest "github.com/akash-network/node/util/api"
 	"github.com/cosmos/cosmos-sdk/client"
-	rest "github.com/cosmos/cosmos-sdk/server/api"
 	"github.com/gorilla/mux"
 
 	"github.com/akash-network/node/x/deployment/query"

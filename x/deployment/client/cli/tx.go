@@ -453,7 +453,8 @@ Examples:
 			granter := clientCtx.GetFromAddress()
 			authorization := types.NewDepositDeploymentAuthorization(spendLimit)
 
-			msg, err := authz.NewMsgGrant(granter, grantee, authorization, time.Unix(exp, 0))
+			zeroTimeUnix := time.Unix(exp, 0)
+			msg, err := authz.NewMsgGrant(granter, grantee, authorization, &zeroTimeUnix)
 			if err != nil {
 				return err
 			}

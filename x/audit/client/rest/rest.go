@@ -5,9 +5,9 @@ import (
 	"net/http"
 
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/server/api"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	apiUtil "github.com/akash-network/node/util/api"
 	"github.com/gorilla/mux"
 
 	types "github.com/akash-network/akash-api/go/node/audit/v1beta3"
@@ -29,10 +29,10 @@ func listAllSignedHandler(ctx client.Context, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		res, err := query.NewRawClient(ctx, ns).AllProviders()
 		if err != nil {
-			api.WriteErrorResponse(w, http.StatusNotFound, "Not Found")
+			apiUtil.WriteErrorResponse(w, http.StatusNotFound, "Not Found")
 			return
 		}
-		api.PostProcessResponse(w, ctx, res)
+		apiUtil.PostProcessResponse(w, ctx, res)
 	}
 }
 
@@ -40,16 +40,16 @@ func listProviderAttributes(ctx client.Context, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, err := sdk.AccAddressFromBech32(mux.Vars(r)["providerOwner"])
 		if err != nil {
-			api.WriteErrorResponse(w, http.StatusBadRequest, "Invalid address")
+			apiUtil.WriteErrorResponse(w, http.StatusBadRequest, "Invalid address")
 			return
 		}
 
 		res, err := query.NewRawClient(ctx, ns).Provider(id)
 		if err != nil {
-			api.WriteErrorResponse(w, http.StatusNotFound, "Not Found")
+			apiUtil.WriteErrorResponse(w, http.StatusNotFound, "Not Found")
 			return
 		}
-		api.PostProcessResponse(w, ctx, res)
+		apiUtil.PostProcessResponse(w, ctx, res)
 	}
 }
 
@@ -57,7 +57,7 @@ func listAuditorProviderAttributes(ctx client.Context, ns string) http.HandlerFu
 	return func(w http.ResponseWriter, r *http.Request) {
 		auditor, err := sdk.AccAddressFromBech32(mux.Vars(r)["auditor"])
 		if err != nil {
-			api.WriteErrorResponse(w, http.StatusBadRequest, "Invalid address")
+			apiUtil.WriteErrorResponse(w, http.StatusBadRequest, "Invalid address")
 			return
 		}
 
@@ -68,7 +68,7 @@ func listAuditorProviderAttributes(ctx client.Context, ns string) http.HandlerFu
 		} else {
 			var owner sdk.AccAddress
 			if owner, err = sdk.AccAddressFromBech32(addr); err != nil {
-				api.WriteErrorResponse(w, http.StatusBadRequest, "Invalid address")
+				apiUtil.WriteErrorResponse(w, http.StatusBadRequest, "Invalid address")
 				return
 			}
 
@@ -79,10 +79,10 @@ func listAuditorProviderAttributes(ctx client.Context, ns string) http.HandlerFu
 		}
 
 		if err != nil {
-			api.WriteErrorResponse(w, http.StatusNotFound, "Not Found")
+			apiUtil.WriteErrorResponse(w, http.StatusNotFound, "Not Found")
 			return
 		}
 
-		api.PostProcessResponse(w, ctx, res)
+		apiUtil.PostProcessResponse(w, ctx, res)
 	}
 }
