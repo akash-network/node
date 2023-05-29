@@ -1,6 +1,7 @@
 package app
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -91,14 +92,17 @@ import (
 	ibc "github.com/cosmos/ibc-go/v7/modules/core"
 	ibcclientclient "github.com/cosmos/ibc-go/v7/modules/core/02-client/client"
 	porttypes "github.com/cosmos/ibc-go/v7/modules/core/05-port/types"
+	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/exported"
 
+	govv1beta1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	icacontrollertypes "github.com/cosmos/ibc-go/v7/modules/apps/27-interchain-accounts/controller/types"
 	icahosttypes "github.com/cosmos/ibc-go/v7/modules/apps/27-interchain-accounts/host/types"
+	ibcfeekeeper "github.com/cosmos/ibc-go/v7/modules/apps/29-fee/keeper"
+	ibcfeetypes "github.com/cosmos/ibc-go/v7/modules/apps/29-fee/types"
 	ibctransferkeeper "github.com/cosmos/ibc-go/v7/modules/apps/transfer/keeper"
 	ibctransfertypes "github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
 	ibcclient "github.com/cosmos/ibc-go/v7/modules/core/02-client"
 	ibcclienttypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
-	ibchost "github.com/cosmos/ibc-go/v7/modules/core/24-host"
 	ibckeeper "github.com/cosmos/ibc-go/v7/modules/core/keeper"
 
 	apptypes "github.com/akash-network/node/app/types"
@@ -124,7 +128,7 @@ var (
 type AkashApp struct {
 	*bam.BaseApp
 	apptypes.App
-	cdc               *codec.LegacyAmino
+	legacyAmino       *codec.LegacyAmino
 	appCodec          codec.Codec
 	interfaceRegistry codectypes.InterfaceRegistry
 	basicManager      module.BasicManager
@@ -161,7 +165,7 @@ func NewApp(
 	// TODO: Remove cdc in favor of appCodec once all modules are migrated.
 	encodingConfig := MakeEncodingConfig()
 	appCodec := encodingConfig.Codec
-	cdc := encodingConfig.Amino
+	legacyAmino := encodingConfig.Amino
 	interfaceRegistry := encodingConfig.InterfaceRegistry
 
 	bapp := bam.NewBaseApp(appName, logger, db, encodingConfig.TxConfig.TxDecoder(), options...)
@@ -175,7 +179,7 @@ func NewApp(
 
 	app := &AkashApp{
 		BaseApp:           bapp,
-		cdc:               cdc,
+		legacyAmino:       legacyAmino,
 		appCodec:          appCodec,
 		interfaceRegistry: interfaceRegistry,
 		invCheckPeriod:    invCheckPeriod,
@@ -185,7 +189,7 @@ func NewApp(
 	}
 	app.Configurator = module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter())
 
-	app.Keepers.Cosmos.Params = initParamsKeeper(appCodec, cdc, app.keys[paramstypes.StoreKey], tkeys[paramstypes.TStoreKey])
+	app.Keepers.Cosmos.Params = initParamsKeeper(appCodec, legacyAmino, app.keys[paramstypes.StoreKey], tkeys[paramstypes.TStoreKey])
 
 	// set the BaseApp's parameter store
 	app.ConsensusParamsKeeper = consensusparamkeeper.NewKeeper(appCodec, keys[consensusparamtypes.StoreKey], authtypes.NewModuleAddress(govtypes.ModuleName).String())
@@ -198,7 +202,7 @@ func NewApp(
 		app.memkeys[capabilitytypes.MemStoreKey],
 	)
 
-	scopedIBCKeeper := app.Keepers.Cosmos.Cap.ScopeToModule(ibchost.ModuleName)
+	scopedIBCKeeper := app.Keepers.Cosmos.Cap.ScopeToModule(ibcexported.ModuleName)
 	scopedTransferKeeper := app.Keepers.Cosmos.Cap.ScopeToModule(ibctransfertypes.ModuleName)
 
 	// seal the capability keeper so all persistent capabilities are loaded in-memory and prevent
@@ -208,13 +212,19 @@ func NewApp(
 	app.Keepers.Cosmos.Acct = authkeeper.NewAccountKeeper(
 		appCodec,
 		app.keys[authtypes.StoreKey],
-		app.GetSubspace(authtypes.ModuleName),
 		authtypes.ProtoBaseAccount,
 		MacPerms(),
+		sdk.GetConfig().GetBech32AccountAddrPrefix(),
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 
 	// add authz keeper
-	app.Keepers.Cosmos.Authz = authzkeeper.NewKeeper(app.keys[authzkeeper.StoreKey], appCodec, app.MsgServiceRouter())
+	app.Keepers.Cosmos.Authz = authzkeeper.NewKeeper(
+		app.keys[authzkeeper.StoreKey],
+		appCodec,
+		app.MsgServiceRouter(),
+		app.Keepers.Cosmos.Acct,
+	)
 
 	app.Keepers.Cosmos.FeeGrant = feegrantkeeper.NewKeeper(
 		appCodec,
@@ -226,102 +236,122 @@ func NewApp(
 		appCodec,
 		app.keys[banktypes.StoreKey],
 		app.Keepers.Cosmos.Acct,
-		app.GetSubspace(banktypes.ModuleName),
 		app.BlockedAddrs(),
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 
-	skeeper := stakingkeeper.NewKeeper(
+	app.Keepers.Cosmos.Staking = stakingkeeper.NewKeeper(
 		appCodec,
 		app.keys[stakingtypes.StoreKey],
 		app.Keepers.Cosmos.Acct,
 		app.Keepers.Cosmos.Bank,
-		app.GetSubspace(stakingtypes.ModuleName),
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 
 	app.Keepers.Cosmos.Mint = mintkeeper.NewKeeper(
 		appCodec,
 		app.keys[minttypes.StoreKey],
-		app.GetSubspace(minttypes.ModuleName),
-		&skeeper,
+		app.Keepers.Cosmos.Staking,
 		app.Keepers.Cosmos.Acct,
 		app.Keepers.Cosmos.Bank,
 		authtypes.FeeCollectorName,
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 
 	app.Keepers.Cosmos.Distr = distrkeeper.NewKeeper(
 		appCodec,
 		app.keys[distrtypes.StoreKey],
-		app.GetSubspace(distrtypes.ModuleName),
 		app.Keepers.Cosmos.Acct,
 		app.Keepers.Cosmos.Bank,
-		&skeeper,
+		app.Keepers.Cosmos.Staking,
 		authtypes.FeeCollectorName,
-		app.ModuleAccountAddrs(),
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 
 	app.Keepers.Cosmos.Slashing = slashingkeeper.NewKeeper(
 		appCodec,
+		legacyAmino,
 		app.keys[slashingtypes.StoreKey],
-		&skeeper,
-		app.GetSubspace(slashingtypes.ModuleName),
+		app.Keepers.Cosmos.Staking,
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 
-	app.Keepers.Cosmos.Crisis = crisiskeeper.NewKeeper(
-		app.GetSubspace(crisistypes.ModuleName),
+	app.Keepers.Cosmos.Crisis = *crisiskeeper.NewKeeper(
+		appCodec,
+		keys[crisistypes.StoreKey],
 		invCheckPeriod,
 		app.Keepers.Cosmos.Bank,
 		authtypes.FeeCollectorName,
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 
-	app.Keepers.Cosmos.Upgrade = upgradekeeper.NewKeeper(skipUpgradeHeights, app.keys[upgradetypes.StoreKey], appCodec, homePath, app.BaseApp)
+	app.Keepers.Cosmos.Upgrade = *upgradekeeper.NewKeeper(
+		skipUpgradeHeights,
+		app.keys[upgradetypes.StoreKey],
+		appCodec,
+		homePath,
+		app.BaseApp,
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+	)
 
 	// register the staking hooks
 	// NOTE: stakingKeeper above is passed by reference, so that it will contain these hooks
-	app.Keepers.Cosmos.Staking = *skeeper.SetHooks(
+	app.Keepers.Cosmos.Staking.SetHooks(
 		stakingtypes.NewMultiStakingHooks(
 			app.Keepers.Cosmos.Distr.Hooks(),
-			app.Keepers.Cosmos.Slashing.Hooks(),
-		),
+			app.Keepers.Cosmos.Slashing.Hooks()),
 	)
 
 	// register IBC Keeper
 	app.Keepers.Cosmos.IBC = ibckeeper.NewKeeper(
 		appCodec,
-		app.keys[ibchost.StoreKey],
-		app.GetSubspace(ibchost.ModuleName),
+		app.keys[ibcexported.StoreKey],
+		app.GetSubspace(ibcexported.ModuleName),
 		app.Keepers.Cosmos.Staking,
 		app.Keepers.Cosmos.Upgrade,
 		scopedIBCKeeper,
 	)
 
 	// register the proposal types
-	govRouter := govtypes.NewRouter()
-	govRouter.AddRoute(govtypes.RouterKey, govtypes.ProposalHandler).
+	govRouter := govv1beta1.NewRouter()
+	govRouter.AddRoute(govtypes.RouterKey, govv1beta1.ProposalHandler).
 		AddRoute(
 			paramproposal.RouterKey,
 			params.NewParamChangeProposalHandler(app.Keepers.Cosmos.Params),
 		).
 		AddRoute(
-			distrtypes.RouterKey,
-			distr.NewCommunityPoolSpendProposalHandler(app.Keepers.Cosmos.Distr),
-		).
-		AddRoute(
 			upgradetypes.RouterKey,
-			upgrade.NewSoftwareUpgradeProposalHandler(app.Keepers.Cosmos.Upgrade),
+			upgrade.NewSoftwareUpgradeProposalHandler(&app.Keepers.Cosmos.Upgrade),
 		).
 		AddRoute(
 			ibcclienttypes.RouterKey,
 			ibcclient.NewClientProposalHandler(app.Keepers.Cosmos.IBC.ClientKeeper),
 		)
 
-	app.Keepers.Cosmos.Gov = govkeeper.NewKeeper(
+	govConfig := govtypes.DefaultConfig()
+	govKeeper := govkeeper.NewKeeper(
 		appCodec,
-		app.keys[govtypes.StoreKey],
-		app.GetSubspace(govtypes.ModuleName),
+		keys[govtypes.StoreKey],
 		app.Keepers.Cosmos.Acct,
 		app.Keepers.Cosmos.Bank,
-		&skeeper,
-		govRouter,
+		app.Keepers.Cosmos.Staking,
+		app.MsgServiceRouter(),
+		govConfig,
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+	)
+	govKeeper.SetLegacyRouter(govRouter)
+
+	app.Keepers.Cosmos.Gov = *govKeeper.SetHooks(
+		govtypes.NewMultiGovHooks(
+		// register the governance hooks
+		),
+	)
+	// IBC Fee Module keeper
+	app.Keepers.Cosmos.IBCFeeKeeper = ibcfeekeeper.NewKeeper(
+		appCodec, keys[ibcfeetypes.StoreKey],
+		app.Keepers.Cosmos.IBC.ChannelKeeper, // may be replaced with IBC middleware
+		app.Keepers.Cosmos.IBC.ChannelKeeper,
+		&app.Keepers.Cosmos.IBC.PortKeeper, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank,
 	)
 
 	// register Transfer Keepers
@@ -329,7 +359,7 @@ func NewApp(
 		appCodec,
 		app.keys[ibctransfertypes.StoreKey],
 		app.GetSubspace(ibctransfertypes.ModuleName),
-		app.Keepers.Cosmos.IBC.ChannelKeeper,
+		app.Keepers.Cosmos.IBCFeeKeeper,
 		app.Keepers.Cosmos.IBC.ChannelKeeper,
 		&app.Keepers.Cosmos.IBC.PortKeeper,
 		app.Keepers.Cosmos.Acct,
@@ -350,7 +380,7 @@ func NewApp(
 	evidenceKeeper := evidencekeeper.NewKeeper(
 		appCodec,
 		app.keys[evidencetypes.StoreKey],
-		&app.Keepers.Cosmos.Staking,
+		app.Keepers.Cosmos.Staking,
 		app.Keepers.Cosmos.Slashing,
 	)
 
@@ -366,21 +396,22 @@ func NewApp(
 	app.MM = module.NewManager(
 		append([]module.AppModule{
 			genutil.NewAppModule(app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Staking, app.BaseApp.DeliverTx, encodingConfig.TxConfig),
-			auth.NewAppModule(appCodec, app.Keepers.Cosmos.Acct, nil),
+			auth.NewAppModule(appCodec, app.Keepers.Cosmos.Acct, authsims.RandomGenesisAccounts, app.GetSubspace(authtypes.ModuleName)),
 			authzmodule.NewAppModule(appCodec, app.Keepers.Cosmos.Authz, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank, app.interfaceRegistry),
 			feegrantmodule.NewAppModule(appCodec, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank, app.Keepers.Cosmos.FeeGrant, app.interfaceRegistry),
 			vesting.NewAppModule(app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank),
-			bank.NewAppModule(appCodec, app.Keepers.Cosmos.Bank, app.Keepers.Cosmos.Acct),
-			capability.NewAppModule(appCodec, *app.Keepers.Cosmos.Cap),
-			crisis.NewAppModule(&app.Keepers.Cosmos.Crisis, skipGenesisInvariants),
-			gov.NewAppModule(appCodec, app.Keepers.Cosmos.Gov, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank),
-			mint.NewAppModule(appCodec, app.Keepers.Cosmos.Mint, app.Keepers.Cosmos.Acct),
+			// bank.NewAppModule(appCodec, app.BankKeeper, app.AccountKeeper, app.GetSubspace(banktypes.ModuleName)),
+			bank.NewAppModule(appCodec, app.Keepers.Cosmos.Bank, app.Keepers.Cosmos.Acct, app.GetSubspace(banktypes.ModuleName)),
+			capability.NewAppModule(appCodec, *app.Keepers.Cosmos.Cap, false),
+			crisis.NewAppModule(&app.Keepers.Cosmos.Crisis, skipGenesisInvariants, app.GetSubspace(crisistypes.ModuleName)),
+			gov.NewAppModule(appCodec, &app.Keepers.Cosmos.Gov, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank, app.GetSubspace(govtypes.ModuleName)),
+			mint.NewAppModule(appCodec, app.Keepers.Cosmos.Mint, app.Keepers.Cosmos.Acct, nil, app.GetSubspace(minttypes.ModuleName)),
 			// todo akash-network/support#4
 			// mint.NewAppModule(appCodec, app.Keepers.Cosmos.Mint, app.Keepers.Cosmos.Acct, nil),
-			slashing.NewAppModule(appCodec, app.Keepers.Cosmos.Slashing, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank, app.Keepers.Cosmos.Staking),
-			distr.NewAppModule(appCodec, app.Keepers.Cosmos.Distr, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank, app.Keepers.Cosmos.Staking),
-			staking.NewAppModule(appCodec, app.Keepers.Cosmos.Staking, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank),
-			upgrade.NewAppModule(app.Keepers.Cosmos.Upgrade),
+			slashing.NewAppModule(appCodec, app.Keepers.Cosmos.Slashing, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank, app.Keepers.Cosmos.Staking, app.GetSubspace(slashingtypes.ModuleName)),
+			distr.NewAppModule(appCodec, app.Keepers.Cosmos.Distr, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank, app.Keepers.Cosmos.Staking, app.GetSubspace(distrtypes.ModuleName)),
+			staking.NewAppModule(appCodec, app.Keepers.Cosmos.Staking, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank, app.GetSubspace(stakingtypes.ModuleName)),
+			upgrade.NewAppModule(&app.Keepers.Cosmos.Upgrade),
 			evidence.NewAppModule(app.Keepers.Cosmos.Evidence),
 			ibc.NewAppModule(app.Keepers.Cosmos.IBC),
 			params.NewAppModule(app.Keepers.Cosmos.Params),
@@ -408,34 +439,44 @@ func NewApp(
 	)
 
 	app.MM.RegisterInvariants(&app.Keepers.Cosmos.Crisis)
-	app.MM.RegisterRoutes(app.Router(), app.QueryRouter(), encodingConfig.Amino)
+	app.Configurator = module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter())
 	app.MM.RegisterServices(app.Configurator)
 
 	// add test gRPC service for testing gRPC queries in isolation
 	testdata.RegisterQueryServer(app.GRPCQueryRouter(), testdata.QueryImpl{})
 
-	app.sm = module.NewSimulationManager(
-		append([]module.AppModuleSimulation{
-			auth.NewAppModule(appCodec, app.Keepers.Cosmos.Acct, authsims.RandomGenesisAccounts),
-			authzmodule.NewAppModule(appCodec, app.Keepers.Cosmos.Authz, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank, app.interfaceRegistry),
-			bank.NewAppModule(appCodec, app.Keepers.Cosmos.Bank, app.Keepers.Cosmos.Acct),
-			feegrantmodule.NewAppModule(appCodec, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank, app.Keepers.Cosmos.FeeGrant, app.interfaceRegistry),
-			capability.NewAppModule(appCodec, *app.Keepers.Cosmos.Cap),
-			gov.NewAppModule(appCodec, app.Keepers.Cosmos.Gov, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank),
-			mint.NewAppModule(appCodec, app.Keepers.Cosmos.Mint, app.Keepers.Cosmos.Acct),
-			// todo akash-network/support#4
-			// mint.NewAppModule(appCodec, app.Keepers.Cosmos.Mint, app.Keepers.Cosmos.Acct, nil),
-			staking.NewAppModule(appCodec, app.Keepers.Cosmos.Staking, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank),
-			distr.NewAppModule(appCodec, app.Keepers.Cosmos.Distr, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank, app.Keepers.Cosmos.Staking),
-			slashing.NewAppModule(appCodec, app.Keepers.Cosmos.Slashing, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank, app.Keepers.Cosmos.Staking),
-			params.NewAppModule(app.Keepers.Cosmos.Params),
-			evidence.NewAppModule(app.Keepers.Cosmos.Evidence),
-			ibc.NewAppModule(app.Keepers.Cosmos.IBC),
-			transferModule,
-		},
-			app.akashSimModules()...,
-		)...,
-	)
+	// create the simulation manager and define the order of the modules for deterministic simulations
+	//
+	// NOTE: this is not required apps that don't use the simulator for fuzz testing
+	// transactions
+	overrideModules := map[string]module.AppModuleSimulation{
+		authtypes.ModuleName: auth.NewAppModule(app.appCodec, app.Keepers.Cosmos.Acct, authsims.RandomGenesisAccounts, app.GetSubspace(authtypes.ModuleName)),
+	}
+
+	app.sm = module.NewSimulationManagerFromAppModules(app.MM.Modules, overrideModules)
+
+	// app.sm = module.NewSimulationManager(
+	// 	append([]module.AppModuleSimulation{
+	// 		auth.NewAppModule(appCodec, app.Keepers.Cosmos.Acct, authsims.RandomGenesisAccounts),
+	// 		authzmodule.NewAppModule(appCodec, app.Keepers.Cosmos.Authz, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank, app.interfaceRegistry),
+	// 		bank.NewAppModule(appCodec, app.Keepers.Cosmos.Bank, app.Keepers.Cosmos.Acct),
+	// 		feegrantmodule.NewAppModule(appCodec, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank, app.Keepers.Cosmos.FeeGrant, app.interfaceRegistry),
+	// 		capability.NewAppModule(appCodec, *app.Keepers.Cosmos.Cap),
+	// 		gov.NewAppModule(appCodec, app.Keepers.Cosmos.Gov, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank),
+	// 		mint.NewAppModule(appCodec, app.Keepers.Cosmos.Mint, app.Keepers.Cosmos.Acct),
+	// 		// todo akash-network/support#4
+	// 		// mint.NewAppModule(appCodec, app.Keepers.Cosmos.Mint, app.Keepers.Cosmos.Acct, nil),
+	// 		staking.NewAppModule(appCodec, app.Keepers.Cosmos.Staking, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank),
+	// 		distr.NewAppModule(appCodec, app.Keepers.Cosmos.Distr, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank, app.Keepers.Cosmos.Staking),
+	// 		slashing.NewAppModule(appCodec, app.Keepers.Cosmos.Slashing, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank, app.Keepers.Cosmos.Staking),
+	// 		params.NewAppModule(app.Keepers.Cosmos.Params),
+	// 		evidence.NewAppModule(app.Keepers.Cosmos.Evidence),
+	// 		ibc.NewAppModule(app.Keepers.Cosmos.IBC),
+	// 		transferModule,
+	// 	},
+	// 		app.akashSimModules()...,
+	// 	)...,
+	// )
 
 	app.sm.RegisterStoreDecoders()
 
@@ -509,7 +550,7 @@ func getGenesisTime(appOpts servertypes.AppOptions, homePath string) time.Time {
 // full simapp
 func MakeCodecs() (codec.Codec, *codec.LegacyAmino) {
 	config := MakeEncodingConfig()
-	return config.Marshaler, config.Amino
+	return config.Codec, config.Amino
 }
 
 // Name returns the name of the App
@@ -544,7 +585,7 @@ func (app *AkashApp) EndBlocker(
 
 // LegacyAmino returns AkashApp's amino codec.
 func (app *AkashApp) LegacyAmino() *codec.LegacyAmino {
-	return app.cdc
+	return app.legacyAmino
 }
 
 // AppCodec returns AkashApp's app codec.
@@ -575,12 +616,12 @@ func (app *AkashApp) InterfaceRegistry() codectypes.InterfaceRegistry {
 }
 
 // GetKey returns the KVStoreKey for the provided store key.
-func (app *AkashApp) GetKey(storeKey string) *sdk.KVStoreKey {
+func (app *AkashApp) GetKey(storeKey string) *storetypes.KVStoreKey {
 	return app.keys[storeKey]
 }
 
 // GetTKey returns the TransientStoreKey for the provided store key.
-func (app *AkashApp) GetTKey(storeKey string) *sdk.TransientStoreKey {
+func (app *AkashApp) GetTKey(storeKey string) *storetypes.TransientStoreKey {
 	return app.tkeys[storeKey]
 }
 
@@ -638,7 +679,17 @@ func (app *AkashApp) RegisterTxService(clientCtx client.Context) {
 
 // RegisterTendermintService implements the Application.RegisterTendermintService method.
 func (app *AkashApp) RegisterTendermintService(clientCtx client.Context) {
-	tmservice.RegisterTendermintService(app.BaseApp.GRPCQueryRouter(), clientCtx, app.interfaceRegistry)
+	tmservice.RegisterTendermintService(
+		clientCtx,
+		app.BaseApp.GRPCQueryRouter(),
+		app.interfaceRegistry,
+		app.Query,
+	)
+}
+
+// DefaultGenesis returns a default genesis from the registered AppModuleBasic's.
+func (app *AkashApp) DefaultGenesis() map[string]json.RawMessage {
+	return ModuleBasics().DefaultGenesis(app.appCodec)
 }
 
 // RegisterSwaggerAPI registers swagger route with API Server
@@ -659,7 +710,7 @@ func (app *AkashApp) LoadHeight(height int64) error {
 
 // initParamsKeeper init params keeper and its subspaces
 func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino, key,
-	tkey sdk.StoreKey) paramskeeper.Keeper {
+	tkey storetypes.StoreKey) paramskeeper.Keeper {
 	paramsKeeper := paramskeeper.NewKeeper(appCodec, legacyAmino, key, tkey)
 
 	paramsKeeper.Subspace(authtypes.ModuleName)
@@ -668,10 +719,9 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(minttypes.ModuleName)
 	paramsKeeper.Subspace(distrtypes.ModuleName)
 	paramsKeeper.Subspace(slashingtypes.ModuleName)
-	paramsKeeper.Subspace(govtypes.ModuleName).WithKeyTable(govtypes.ParamKeyTable())
+	paramsKeeper.Subspace(govtypes.ModuleName)
 	paramsKeeper.Subspace(crisistypes.ModuleName)
 	paramsKeeper.Subspace(ibctransfertypes.ModuleName)
-	paramsKeeper.Subspace(ibchost.ModuleName)
 	paramsKeeper.Subspace(icacontrollertypes.SubModuleName)
 	paramsKeeper.Subspace(icahosttypes.SubModuleName)
 

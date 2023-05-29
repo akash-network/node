@@ -32,6 +32,7 @@ import (
 	mkeeper "github.com/akash-network/node/x/market/keeper"
 	pkeeper "github.com/akash-network/node/x/provider/keeper"
 	astakingkeeper "github.com/akash-network/node/x/staking/keeper"
+	ibcfeekeeper "github.com/cosmos/ibc-go/v7/modules/apps/29-fee/keeper"
 )
 
 var (
@@ -45,7 +46,7 @@ type AppKeepers struct {
 		FeeGrant             feegrantkeeper.Keeper
 		Bank                 bankkeeper.Keeper
 		Cap                  *capabilitykeeper.Keeper
-		Staking              stakingkeeper.Keeper
+		Staking              *stakingkeeper.Keeper
 		Slashing             slashingkeeper.Keeper
 		Mint                 mintkeeper.Keeper
 		Distr                distrkeeper.Keeper
@@ -54,6 +55,7 @@ type AppKeepers struct {
 		Upgrade              upgradekeeper.Keeper
 		Params               paramskeeper.Keeper
 		IBC                  *ibckeeper.Keeper
+		IBCFeeKeeper         ibcfeekeeper.Keeper
 		Evidence             evidencekeeper.Keeper
 		Transfer             ibctransferkeeper.Keeper
 		ScopedIBCKeeper      capabilitykeeper.ScopedKeeper
