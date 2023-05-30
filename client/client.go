@@ -61,7 +61,7 @@ func NewClient(
 	log log.Logger,
 	cctx sdkclient.Context,
 	txf tx.Factory,
-	info keyring.Info,
+	info keyring.LegacyInfo,
 	qclient QueryClient,
 ) Client {
 	return NewClientWithBroadcaster(
@@ -78,7 +78,7 @@ func NewClientWithBroadcaster(
 	log log.Logger,
 	cctx sdkclient.Context,
 	txf tx.Factory,
-	info keyring.Info,
+	info keyring.LegacyInfo,
 	qclient QueryClient,
 	bclient broadcaster.Client,
 ) Client {
@@ -95,7 +95,7 @@ func NewClientWithBroadcaster(
 type client struct {
 	cctx    sdkclient.Context
 	txf     tx.Factory
-	info    keyring.Info
+	info    keyring.LegacyInfo
 	qclient QueryClient
 	bclient broadcaster.Client
 	log     log.Logger
