@@ -6,7 +6,7 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/authz"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 
 	agovkeeper "github.com/akash-network/node/x/gov/keeper"
 )
@@ -44,10 +44,9 @@ func (gpsd GovPreventSpamDecorator) checkSpamSubmitProposalMsg(ctx sdk.Context, 
 	validMsg := func(m sdk.Msg) error {
 		if msg, ok := m.(*govtypes.MsgSubmitProposal); ok {
 			// prevent spam gov msg
-			depositParams := gpsd.govKeeper.GetDepositParams(ctx)
+			minDeposit := gpsd.govKeeper.GetParams(ctx).MinDeposit
 			aDepositParams := gpsd.aGovKeeper.GetDepositParams(ctx)
-
-			minimumInitialDeposit := gpsd.calcMinimumInitialDeposit(aDepositParams.MinInitialDepositRate, depositParams.MinDeposit)
+			minimumInitialDeposit := gpsd.calcMinimumInitialDeposit(aDepositParams.MinInitialDepositRate, minDeposit)
 			if msg.InitialDeposit.IsAllLT(minimumInitialDeposit) {
 				return sdkerrors.Wrapf(sdkerrors.ErrUnauthorized, "not enough initial deposit. required: %v", minimumInitialDeposit)
 			}

@@ -16,7 +16,7 @@ func MakeEncodingConfig() simparams.EncodingConfig {
 
 	return simparams.EncodingConfig{
 		InterfaceRegistry: interfaceRegistry,
-		Marshaler:         marshaler,
+		Codec:             marshaler,
 		TxConfig:          txCfg,
 		Amino:             amino,
 	}

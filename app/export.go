@@ -12,10 +12,10 @@ import (
 	logger "github.com/cometbft/cometbft/libs/log"
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 
-	"cosmossdk.io/simapp"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/simulation"
+	simulation_cli "github.com/cosmos/cosmos-sdk/x/simulation/client/cli"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	"github.com/cosmos/cosmos-sdk/x/staking"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
@@ -234,7 +234,7 @@ func OptsWithGenesisTime(seed int64) servertypes.AppOptions {
 
 	appOpts := viper.New()
 	appOpts.Set("GenesisTime", genTime)
-	simapp.FlagGenesisTimeValue = genTime.Unix()
+	simulation_cli.FlagGenesisTimeValue = genTime.Unix()
 
 	return appOpts
 }
