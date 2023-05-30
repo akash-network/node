@@ -3,18 +3,19 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
 	tmcfg "github.com/cometbft/cometbft/config"
+	tmcli "github.com/cometbft/cometbft/libs/cli"
+	tmflags "github.com/cometbft/cometbft/libs/cli/flags"
+	tmlog "github.com/cometbft/cometbft/libs/log"
 
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/server"
@@ -74,42 +75,26 @@ func InterceptConfigsPreRunHandler(
 	}
 	serverCtx.Config = cfg
 
-	logTimeFmt, err := parseTimestampFormat(serverCtx.Viper.GetString(FlagLogTimestamp))
+	serverCtx.Viper.GetString(flags.FlagLogLevel)
+
+	var logger tmlog.Logger
+	if serverCtx.Viper.GetString(flags.FlagLogFormat) == tmcfg.LogFormatJSON {
+		logger = tmlog.NewTMJSONLogger(tmlog.NewSyncWriter(os.Stdout))
+	} else {
+		logger = tmlog.NewTMLogger(tmlog.NewSyncWriter(os.Stdout))
+	}
+	logger, err = tmflags.ParseLogLevel(cfg.LogLevel, logger, tmcfg.DefaultLogLevel)
 	if err != nil {
 		return err
 	}
 
-	logLvlStr := serverCtx.Viper.GetString(flags.FlagLogLevel)
-	serverCtx.Viper.GetString(flags.FlagLogLevel)
-	logLvl, err := zerolog.ParseLevel(logLvlStr)
-	if err != nil {
-		return fmt.Errorf("failed to parse log level (%s): %w", logLvlStr, err)
+	// Check if the tendermint flag for trace logging is set if it is then setup
+	// a tracing logger in this app as well.
+	if serverCtx.Viper.GetBool(tmcli.TraceFlag) {
+		logger = tmlog.NewTracingLogger(logger)
 	}
 
-	logWriter := io.Writer(os.Stdout)
-
-	if strings.ToLower(serverCtx.Viper.GetString(flags.FlagLogFormat)) == tmcfg.LogFormatPlain {
-		cl := zerolog.ConsoleWriter{
-			Out:        os.Stdout,
-			NoColor:    !serverCtx.Viper.GetBool(FlagLogColor),
-			TimeFormat: logTimeFmt,
-		}
-
-		if logTimeFmt == "" {
-			cl.PartsExclude = []string{
-				zerolog.TimestampFieldName,
-			}
-		}
-		logWriter = cl
-	}
-
-	logger := zerolog.New(logWriter).Level(logLvl)
-
-	if logTimeFmt != "" {
-		logger = logger.With().Timestamp().Logger()
-	}
-
-	serverCtx.Logger = server.ZeroLogWrapper{Logger: logger}
+	serverCtx.Logger = logger.With("module", "server")
 
 	if err = bindFlags(cmd, serverCtx.Viper, envPrefixes); err != nil {
 		return err
