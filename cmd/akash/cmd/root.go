@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -9,8 +10,10 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"cosmossdk.io/simapp/params"
+	rosettaCmd "cosmossdk.io/tools/rosetta/cmd"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/debug"
@@ -22,7 +25,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/snapshots"
 	snapshottypes "github.com/cosmos/cosmos-sdk/snapshots/types"
 	"github.com/cosmos/cosmos-sdk/store"
-	rosettaCmd "cosmossdk.io/tools/rosetta/cmd"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
@@ -78,7 +80,6 @@ func GetPersistentPreRunE(encodingConfig params.EncodingConfig, envPrefixes []st
 			WithLegacyAmino(encodingConfig.Amino).
 			WithInput(os.Stdin).
 			WithAccountRetriever(authtypes.AccountRetriever{}).
-			WithBroadcastMode(flags.BroadcastBlock).
 			WithHomeDir(app.DefaultHome)
 
 		return client.SetCmdClientContextHandler(initClientCtx, cmd)
@@ -193,21 +194,44 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts serverty
 }
 
 func createAppAndExport(
-	logger log.Logger, db dbm.DB, tio io.Writer, height int64, forZeroHeight bool, jailAllowedAddrs []string, appOpts servertypes.AppOptions) (servertypes.ExportedApp, error) {
-
+	logger log.Logger,
+	db dbm.DB,
+	traceStore io.Writer,
+	height int64,
+	forZeroHeight bool,
+	jailAllowedAddrs []string,
+	appOpts servertypes.AppOptions,
+	modulesToExport []string,
+) (servertypes.ExportedApp, error) {
 	var akashApp *app.AkashApp
 
+	// this check is necessary as we use the flag in x/upgrade.
+	// we can exit more gracefully by checking the flag here.
+	homePath, ok := appOpts.Get(flags.FlagHome).(string)
+	if !ok || homePath == "" {
+		return servertypes.ExportedApp{}, errors.New("application home not set")
+	}
+
+	viperAppOpts, ok := appOpts.(*viper.Viper)
+	if !ok {
+		return servertypes.ExportedApp{}, errors.New("appOpts is not viper.Viper")
+	}
+
+	// overwrite the FlagInvCheckPeriod
+	viperAppOpts.Set(server.FlagInvCheckPeriod, 1)
+	appOpts = viperAppOpts
+
 	if height != -1 {
-		akashApp = app.NewApp(logger, db, tio, false, uint(1), map[int64]bool{}, "", appOpts)
+		akashApp = app.NewApp(logger, db, traceStore, false, uint(1), map[int64]bool{}, "", appOpts)
 
 		if err := akashApp.LoadHeight(height); err != nil {
 			return servertypes.ExportedApp{}, err
 		}
 	} else {
-		akashApp = app.NewApp(logger, db, tio, true, uint(1), map[int64]bool{}, "", appOpts)
+		akashApp = app.NewApp(logger, db, traceStore, true, uint(1), map[int64]bool{}, "", appOpts)
 	}
 
-	return akashApp.ExportAppStateAndValidators(forZeroHeight, jailAllowedAddrs)
+	return akashApp.ExportAppStateAndValidators(forZeroHeight, jailAllowedAddrs, modulesToExport)
 }
 
 func QueryCmd() *cobra.Command {
