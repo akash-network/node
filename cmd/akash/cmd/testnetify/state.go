@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"cosmossdk.io/math"
 	ptypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
 	"github.com/theckman/yacspin"
 
@@ -21,6 +22,7 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	ibchost "github.com/cosmos/ibc-go/v7/modules/core/24-host"
@@ -84,7 +86,7 @@ type BankState struct {
 
 type GovState struct {
 	gstate map[string]json.RawMessage
-	state  *govtypes.GenesisState
+	state  *govv1.GenesisState
 	once   sync.Once
 }
 
@@ -454,7 +456,7 @@ func (ga *IBCState) pack(cdc codec.Codec) error {
 			return fmt.Errorf("failed to marshal ibc genesis state: %s", err.Error()) // nolint: goerr113
 		}
 
-		ga.gstate[ibchost.ModuleName] = stateBz
+		ga.gstate[ibchost.SubModuleName] = stateBz
 
 		ga.once = sync.Once{}
 	}
@@ -899,7 +901,7 @@ func (ga *GenesisState) IncreaseDelegatorStake(
 	stake := sdk.NewDec(0)
 
 	for _, coin := range coins {
-		stake = stake.Add(coin.Amount.ToDec())
+		stake = stake.Add(math.LegacyDec(coin.Amount))
 		*sVal, _ = sVal.AddTokensFromDel(coin.Amount)
 	}
 

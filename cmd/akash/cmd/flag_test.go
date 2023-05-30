@@ -38,7 +38,7 @@ func TestContextFlags(t *testing.T) {
 		flags.FlagBroadcastMode:    "async",                 // default = "sync"
 		flags.FlagSkipConfirmation: true,                    // default = false
 		flags.FlagSignMode:         "direct",
-		flags.FlagFeeAccount:       testutil.AccAddress(t).String(),
+		flags.FlagFeePayer:         testutil.AccAddress(t).String(),
 		flags.FlagFrom:             testutil.AccAddress(t).String(),
 	}
 
@@ -134,7 +134,7 @@ func TestContextFlags(t *testing.T) {
 			isTxOnly: true,
 		},
 		{
-			flag: flags.FlagFeeAccount,
+			flag: flags.FlagFeePayer,
 			ctxFieldGetter: func(ctx client.Context) interface{} {
 				return ctx.FeeGranter.String()
 			},

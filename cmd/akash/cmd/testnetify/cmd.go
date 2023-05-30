@@ -298,7 +298,7 @@ func (ga *GenesisState) modifyGov(cdc codec.Codec, cfg *GovConfig) error {
 
 	if params := cfg.VotingParams; params != nil {
 		if params.VotingPeriod.Duration > 0 {
-			ga.app.GovState.state.VotingParams.VotingPeriod = params.VotingPeriod.Duration
+			ga.app.GovState.state.VotingParams.VotingPeriod = &params.VotingPeriod.Duration
 		}
 	}
 
