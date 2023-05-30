@@ -1,6 +1,8 @@
 package decorators
 
 import (
+	errorsmod "cosmossdk.io/errors"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -48,7 +50,7 @@ func (gpsd GovPreventSpamDecorator) checkSpamSubmitProposalMsg(ctx sdk.Context, 
 			aDepositParams := gpsd.aGovKeeper.GetDepositParams(ctx)
 			minimumInitialDeposit := gpsd.calcMinimumInitialDeposit(aDepositParams.MinInitialDepositRate, minDeposit)
 			if msg.InitialDeposit.IsAllLT(minimumInitialDeposit) {
-				return sdkerrors.Wrapf(sdkerrors.ErrUnauthorized, "not enough initial deposit. required: %v", minimumInitialDeposit)
+				return errorsmod.Wrapf(sdkerrors.ErrUnauthorized, "not enough initial deposit. required: %v", minimumInitialDeposit)
 			}
 		}
 		return nil
@@ -62,7 +64,7 @@ func (gpsd GovPreventSpamDecorator) checkSpamSubmitProposalMsg(ctx sdk.Context, 
 			for _, v := range msg.Msgs {
 				err := gpsd.cdc.UnpackAny(v, &innerMsg)
 				if err != nil {
-					return sdkerrors.Wrapf(sdkerrors.ErrUnauthorized, "cannot unmarshal authz exec msgs")
+					return errorsmod.Wrapf(sdkerrors.ErrUnauthorized, "cannot unmarshal authz exec msgs")
 				}
 
 				err = validMsg(innerMsg)

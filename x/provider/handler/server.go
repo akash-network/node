@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	errorsmod "cosmossdk.io/errors"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -47,7 +48,7 @@ func (ms msgServer) CreateProvider(goCtx context.Context, msg *types.MsgCreatePr
 	}
 
 	if err := ms.provider.Create(ctx, types.Provider(*msg)); err != nil {
-		return nil, sdkerrors.Wrapf(ErrInternal, "err: %v", err)
+		return nil, errorsmod.Wrapf(ErrInternal, "err: %v", err)
 	}
 
 	return &types.MsgCreateProviderResponse{}, nil
@@ -93,7 +94,7 @@ func (ms msgServer) UpdateProvider(goCtx context.Context, msg *types.MsgUpdatePr
 	}
 
 	if err := ms.provider.Update(ctx, types.Provider(*msg)); err != nil {
-		return nil, sdkerrors.Wrapf(ErrInternal, "err: %v", err)
+		return nil, errorsmod.Wrapf(ErrInternal, "err: %v", err)
 	}
 
 	return &types.MsgUpdateProviderResponse{}, nil
@@ -112,5 +113,5 @@ func (ms msgServer) DeleteProvider(goCtx context.Context, msg *types.MsgDeletePr
 	}
 
 	// TODO: cancel leases
-	return nil, sdkerrors.Wrapf(ErrInternal, "NOTIMPLEMENTED")
+	return nil, errorsmod.Wrapf(ErrInternal, "NOTIMPLEMENTED")
 }

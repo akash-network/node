@@ -3,6 +3,7 @@ package handler
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	errorsmod "cosmossdk.io/errors"
 
 	types "github.com/akash-network/akash-api/go/node/audit/v1beta3"
 
@@ -23,6 +24,6 @@ func NewHandler(keeper keeper.Keeper) sdk.Handler {
 			return sdk.WrapServiceResult(ctx, res, err)
 		}
 
-		return nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "unrecognized message type: %T", msg)
+		return nil, errorsmod.Wrapf(sdkerrors.ErrUnknownRequest, "unrecognized message type: %T", msg)
 	}
 }

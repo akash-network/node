@@ -1,6 +1,7 @@
 package decorators
 
 import (
+	errorsmod "cosmossdk.io/errors"
 	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -70,7 +71,7 @@ func (min *MinCommissionDecorator) isValidAuthz(ctx sdk.Context, execMsg *authz.
 		var innerMsg sdk.Msg
 		err := min.cdc.UnpackAny(v, &innerMsg)
 		if err != nil {
-			return sdkerrors.Wrapf(sdkerrors.ErrUnauthorized, "cannot unmarshal authz exec msgs")
+			return errorsmod.Wrapf(sdkerrors.ErrUnauthorized, "cannot unmarshal authz exec msgs")
 		}
 
 		err = min.isValidMsg(ctx, innerMsg)

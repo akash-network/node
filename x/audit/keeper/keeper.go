@@ -1,12 +1,12 @@
 package keeper
 
 import (
+	errorsmod "cosmossdk.io/errors"
 	"sort"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	types "github.com/akash-network/akash-api/go/node/audit/v1beta3"
 
@@ -165,7 +165,7 @@ func (k Keeper) DeleteProviderAttributes(ctx sdk.Context, id types.ProviderID, k
 
 		for _, entry := range keys {
 			if _, exists := kv[entry]; !exists {
-				return sdkerrors.Wrapf(types.ErrAttributeNotFound, "trying to delete non-existing attribute \"%s\" for auditor/provider \"%s/%s\"",
+				return errorsmod.Wrapf(types.ErrAttributeNotFound, "trying to delete non-existing attribute \"%s\" for auditor/provider \"%s/%s\"",
 					entry,
 					prov.Auditor,
 					prov.Owner)
