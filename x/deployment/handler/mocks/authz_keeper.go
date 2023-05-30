@@ -28,7 +28,7 @@ func (_m *AuthzKeeper) EXPECT() *AuthzKeeper_Expecter {
 // DeleteGrant provides a mock function with given fields: ctx, grantee, granter, msgType
 func (_m *AuthzKeeper) DeleteGrant(ctx types.Context, grantee types.AccAddress, granter types.AccAddress, msgType string) error {
 	ret := _m.Called(ctx, grantee, granter, msgType)
-
+	
 	var r0 error
 	if rf, ok := ret.Get(0).(func(types.Context, types.AccAddress, types.AccAddress, string) error); ok {
 		r0 = rf(ctx, grantee, granter, msgType)
@@ -128,11 +128,11 @@ func (_c *AuthzKeeper_GetCleanAuthorization_Call) RunAndReturn(run func(types.Co
 }
 
 // SaveGrant provides a mock function with given fields: ctx, grantee, granter, authorization, expiration
-func (_m *AuthzKeeper) SaveGrant(ctx types.Context, grantee types.AccAddress, granter types.AccAddress, authorization authz.Authorization, expiration time.Time) error {
+func (_m *AuthzKeeper) SaveGrant(ctx types.Context, grantee types.AccAddress, granter types.AccAddress, authorization authz.Authorization, expiration *time.Time) error {
 	ret := _m.Called(ctx, grantee, granter, authorization, expiration)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(types.Context, types.AccAddress, types.AccAddress, authz.Authorization, time.Time) error); ok {
+	if rf, ok := ret.Get(0).(func(types.Context, types.AccAddress, types.AccAddress, authz.Authorization, *time.Time) error); ok {
 		r0 = rf(ctx, grantee, granter, authorization, expiration)
 	} else {
 		r0 = ret.Error(0)

@@ -27,6 +27,5 @@ type EscrowKeeper interface {
 //go:generate mockery --name AuthzKeeper --output ./mocks
 type AuthzKeeper interface {
 	DeleteGrant(ctx sdk.Context, grantee, granter sdk.AccAddress, msgType string) error
-	GetCleanAuthorization(ctx sdk.Context, grantee, granter sdk.AccAddress, msgType string) (cap authz.Authorization, expiration time.Time)
-	SaveGrant(ctx sdk.Context, grantee, granter sdk.AccAddress, authorization authz.Authorization, expiration time.Time) error
+	SaveGrant(ctx sdk.Context, grantee, granter sdk.AccAddress, authorization authz.Authorization, expiration *time.Time) error
 }

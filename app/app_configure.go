@@ -21,7 +21,7 @@ import (
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 
 	transfertypes "github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
-	ibchost "github.com/cosmos/ibc-go/v7/modules/core/24-host"
+	ibcexported "github.com/cosmos/ibc-go/v7/modules/core/exported"
 
 	audittypes "github.com/akash-network/akash-api/go/node/audit/v1beta3"
 	certtypes "github.com/akash-network/akash-api/go/node/cert/v1beta3"
@@ -238,7 +238,7 @@ func (app *AkashApp) akashBeginBlockModules() []string {
 		stakingtypes.ModuleName,
 		astaking.ModuleName,
 		transfertypes.ModuleName,
-		ibchost.ModuleName,
+		ibcexported.ModuleName,
 		feegrant.ModuleName,
 	}
 }
@@ -271,7 +271,7 @@ func (app *AkashApp) akashEndBlockModules() []string {
 		slashingtypes.ModuleName,
 		evidencetypes.ModuleName,
 		transfertypes.ModuleName,
-		ibchost.ModuleName,
+		ibcexported.ModuleName,
 		feegrant.ModuleName,
 	}
 }
@@ -292,7 +292,7 @@ func (app *AkashApp) akashInitGenesisOrder() []string {
 		upgradetypes.ModuleName,
 		minttypes.ModuleName,
 		crisistypes.ModuleName,
-		ibchost.ModuleName,
+		ibcexported.ModuleName,
 		evidencetypes.ModuleName,
 		transfertypes.ModuleName,
 		feegrant.ModuleName,
