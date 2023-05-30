@@ -9,15 +9,15 @@ import (
 	"testing"
 	"time"
 
-	"cosmossdk.io/simapp"
 	dbm "github.com/cometbft/cometbft-db"
 	tmrand "github.com/cometbft/cometbft/libs/rand"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
-	storetypes "github.com/cosmos/cosmos-sdk/store/types"
+	pruningtypes "github.com/cosmos/cosmos-sdk/store/pruning/types"
 	"github.com/cosmos/cosmos-sdk/testutil/network"
+	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
@@ -63,12 +63,12 @@ func ResourceUnits(_ testing.TB) types.ResourceUnits {
 	}
 }
 
-func NewApp(val network.Validator) servertypes.Application {
+func NewApp(val network.ValidatorI) servertypes.Application {
 	return app.NewApp(
-		val.Ctx.Logger, dbm.NewMemDB(), nil, true, 0, make(map[int64]bool), val.Ctx.Config.RootDir,
-		simapp.EmptyAppOptions{},
-		baseapp.SetPruning(storetypes.NewPruningOptionsFromString(val.AppConfig.Pruning)),
-		baseapp.SetMinGasPrices(val.AppConfig.MinGasPrices),
+		val.GetCtx().Logger, dbm.NewMemDB(), nil, true, 0, make(map[int64]bool), val.GetCtx().Config.RootDir,
+		simtestutil.EmptyAppOptions{},
+		baseapp.SetPruning(pruningtypes.NewPruningOptionsFromString(val.GetAppConfig().Pruning)),
+		baseapp.SetMinGasPrices(val.GetAppConfig().MinGasPrices),
 	)
 }
 
@@ -76,7 +76,7 @@ func NewApp(val network.Validator) servertypes.Application {
 // testing requirements.
 func DefaultConfig() network.Config {
 	encCfg := app.MakeEncodingConfig()
-	origGenesisState := app.ModuleBasics().DefaultGenesis(encCfg.Marshaler)
+	origGenesisState := app.ModuleBasics().DefaultGenesis(encCfg.Codec)
 
 	genesisState := make(map[string]json.RawMessage)
 	for k, v := range origGenesisState {
@@ -109,7 +109,7 @@ func DefaultConfig() network.Config {
 	}
 
 	return network.Config{
-		Codec:             encCfg.Marshaler,
+		Codec:             encCfg.Codec,
 		TxConfig:          encCfg.TxConfig,
 		LegacyAmino:       encCfg.Amino,
 		InterfaceRegistry: encCfg.InterfaceRegistry,
@@ -124,7 +124,7 @@ func DefaultConfig() network.Config {
 		AccountTokens:     sdk.TokensFromConsensusPower(1000000000000, sdk.DefaultPowerReduction),
 		StakingTokens:     sdk.TokensFromConsensusPower(100000, sdk.DefaultPowerReduction),
 		BondedTokens:      sdk.TokensFromConsensusPower(100, sdk.DefaultPowerReduction),
-		PruningStrategy:   storetypes.PruningOptionNothing,
+		PruningStrategy:   pruningtypes.PruningOptionNothing,
 		CleanupDir:        true,
 		SigningAlgo:       string(hd.Secp256k1Type),
 		KeyringOptions:    []keyring.Option{},

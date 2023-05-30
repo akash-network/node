@@ -56,7 +56,7 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 				keyringBackend, _ := cmd.Flags().GetString(flags.FlagKeyringBackend)
 
 				// attempt to lookup address from Keybase if no address was provided
-				kb, err := keyring.New(sdk.KeyringServiceName(), keyringBackend, clientCtx.HomeDir, inBuf)
+				kb, err := keyring.New(sdk.KeyringServiceName(), keyringBackend, clientCtx.HomeDir, inBuf, cdc)
 				if err != nil {
 					return err
 				}
@@ -66,7 +66,10 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 					return errors.Errorf("failed to get address from Keybase: %v", err)
 				}
 
-				addr = info.GetAddress()
+				addr, err = info.GetAddress()
+				if err != nil {
+					return errors.Errorf("failed to get address from Record: %v", err)
+				}
 			}
 
 			coins, err := sdk.ParseCoinsNormalized(args[1])
