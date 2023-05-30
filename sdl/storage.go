@@ -1,9 +1,10 @@
 package sdl
 
 import (
+	"errors"
+	"fmt"
 	"sort"
 
-	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
 	types "github.com/akash-network/akash-api/go/node/types/v1beta3"
@@ -62,7 +63,7 @@ func validateAttributeBool(key string, val *string) error {
 		return nil
 	}
 
-	return errors.Errorf("sdl: invalid value for attribute \"%s\". expected bool", key)
+	return fmt.Errorf("sdl: invalid value for attribute \"%s\". expected bool", key)
 }
 
 func validateAttributeStorageClass(_ string, val *string) error {
@@ -70,7 +71,7 @@ func validateAttributeStorageClass(_ string, val *string) error {
 		return nil
 	}
 
-	return errors.Errorf("sdl: invalid value for attribute class")
+	return fmt.Errorf("sdl: invalid value for attribute class")
 }
 
 // UnmarshalYAML unmarshal storage config
@@ -171,7 +172,7 @@ func (sdl *v2StorageAttributes) UnmarshalYAML(node *yaml.Node) error {
 	for k, v := range res {
 		validateFn, supportedAttr := validateStorageAttributes[k]
 		if !supportedAttr {
-			return errors.Wrap(errUnsupportedStorageAttribute, k)
+			return fmt.Errorf("%w: %s", errUnsupportedStorageAttribute, k)
 		}
 
 		val := v

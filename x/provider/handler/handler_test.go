@@ -1,12 +1,12 @@
 package handler_test
 
 import (
+	"errors"
 	"testing"
 
 	sdktestdata "github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
 	types "github.com/akash-network/akash-api/go/node/provider/v1beta3"

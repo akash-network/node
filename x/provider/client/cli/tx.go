@@ -5,7 +5,6 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	types "github.com/akash-network/akash-api/go/node/provider/v1beta3"
@@ -43,7 +42,7 @@ func cmdCreate(key string) *cobra.Command {
 			// TODO: enable reading files with non-local URIs
 			cfg, err := config.ReadConfigPath(args[0])
 			if err != nil {
-				err = errors.Wrapf(err, "ReadConfigPath err: %q", args[0])
+				err = fmt.Errorf("%w: ReadConfigPath err: %q", err, args[0])
 				return err
 			}
 

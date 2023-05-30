@@ -1,9 +1,10 @@
 package keeper
 
 import (
+	"fmt"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/pkg/errors"
 
 	types "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
 )
@@ -419,7 +420,7 @@ func (k *keeper) doAccountSettle(ctx sdk.Context, id types.AccountID) (types.Acc
 		account, payments, blockRate, amountRemaining)
 
 	if amountRemaining.Amount.GT(sdk.NewDec(1)) {
-		return account, payments, false, errors.Wrapf(types.ErrInvalidSettlement, "Invalid settlement: %v remains", amountRemaining)
+		return account, payments, false, fmt.Errorf("%w: Invalid settlement: %v remains", types.ErrInvalidSettlement, amountRemaining)
 	}
 
 	// save objects

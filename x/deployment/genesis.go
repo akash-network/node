@@ -2,10 +2,10 @@ package deployment
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/pkg/errors"
 
 	abci "github.com/tendermint/tendermint/abci/types"
 
@@ -18,7 +18,7 @@ import (
 func ValidateGenesis(data *types.GenesisState) error {
 	for _, record := range data.Deployments {
 		if err := record.Deployment.ID().Validate(); err != nil {
-			return errors.Wrap(err, types.ErrInvalidDeployment.Error())
+			return fmt.Errorf("%w: %s", err, types.ErrInvalidDeployment.Error())
 		}
 	}
 	return data.Params.Validate()

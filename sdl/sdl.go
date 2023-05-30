@@ -3,11 +3,11 @@ package sdl
 import (
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/blang/semver/v4"
-	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"

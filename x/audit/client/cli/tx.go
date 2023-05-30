@@ -1,12 +1,12 @@
 package cli
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	types "github.com/akash-network/akash-api/go/node/audit/v1beta3"
@@ -54,7 +54,7 @@ func cmdCreateProviderAttributes() *cobra.Command {
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if ((len(args) - 1) % 2) != 0 {
-				return errors.Errorf("attributes must be provided as pairs")
+				return fmt.Errorf("attributes must be provided as pairs")
 			}
 
 			providerAddress, err := sdk.AccAddressFromBech32(args[0])
@@ -73,7 +73,7 @@ func cmdCreateProviderAttributes() *cobra.Command {
 			}
 
 			if len(attr) == 0 {
-				return errors.Errorf("no attributes provided|found")
+				return fmt.Errorf("no attributes provided|found")
 			}
 
 			msg := &types.MsgSignProviderAttributes{
@@ -171,7 +171,7 @@ func readAttributes(cmd *cobra.Command, cctx client.Context, provider string, ar
 	})
 
 	if checkAttributeDuplicates(attr) {
-		return nil, errors.Errorf("supplied attributes with duplicate keys")
+		return nil, fmt.Errorf("supplied attributes with duplicate keys")
 	}
 
 	return attr, nil
@@ -183,7 +183,7 @@ func readKeys(args []string) ([]string, error) {
 	})
 
 	if checkKeysDuplicates(args) {
-		return nil, errors.Errorf("supplied attributes with duplicate keys")
+		return nil, fmt.Errorf("supplied attributes with duplicate keys")
 	}
 
 	return args, nil

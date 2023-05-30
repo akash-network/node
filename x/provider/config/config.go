@@ -1,9 +1,10 @@
 package config
 
 import (
+	"errors"
+	"fmt"
 	"os"
 
-	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
 	ptypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
@@ -41,7 +42,7 @@ func ReadConfigPath(path string) (Config, error) {
 	dups := make(map[string]string)
 	for _, attr := range val.Attributes {
 		if _, exists := dups[attr.Key]; exists {
-			return Config{}, errors.Wrapf(ErrDuplicatedAttribute, attr.Key)
+			return Config{}, fmt.Errorf("%w: %s", ErrDuplicatedAttribute, attr.Key)
 		}
 
 		dups[attr.Key] = attr.Value

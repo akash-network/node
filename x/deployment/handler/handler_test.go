@@ -2,6 +2,7 @@ package handler_test
 
 import (
 	"crypto/sha256"
+	"errors"
 	"testing"
 	"time"
 
@@ -12,12 +13,12 @@ import (
 	sdktestdata "github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+
 	"github.com/akash-network/node/testutil"
 	"github.com/akash-network/node/testutil/state"
 	"github.com/akash-network/node/x/deployment/handler/mocks"

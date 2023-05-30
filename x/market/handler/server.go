@@ -2,10 +2,9 @@ package handler
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/telemetry"
-	"github.com/pkg/errors"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	atypes "github.com/akash-network/akash-api/go/node/audit/v1beta3"
@@ -35,14 +34,14 @@ func (ms msgServer) CreateBid(goCtx context.Context, msg *types.MsgCreateBid) (*
 
 	minDeposit := params.BidMinDeposit
 	if msg.Deposit.Denom != minDeposit.Denom {
-		return nil, errors.Wrapf(types.ErrInvalidDeposit, "mininum:%v received:%v", minDeposit, msg.Deposit)
+		return nil, fmt.Errorf("%w: mininum:%v received:%v", types.ErrInvalidDeposit, minDeposit, msg.Deposit)
 	}
 	if minDeposit.Amount.GT(msg.Deposit.Amount) {
-		return nil, errors.Wrapf(types.ErrInvalidDeposit, "mininum:%v received:%v", minDeposit, msg.Deposit)
+		return nil, fmt.Errorf("%w: mininum:%v received:%v", types.ErrInvalidDeposit, minDeposit, msg.Deposit)
 	}
 
 	if ms.keepers.Market.BidCountForOrder(ctx, msg.Order) > params.OrderMaxBids {
-		return nil, errors.Wrapf(types.ErrInvalidBid, "too many existing bids (%v)", params.OrderMaxBids)
+		return nil, fmt.Errorf("%w: too many existing bids (%v)", types.ErrInvalidBid, params.OrderMaxBids)
 	}
 
 	order, found := ms.keepers.Market.GetOrder(ctx, msg.Order)

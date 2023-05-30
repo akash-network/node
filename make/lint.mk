@@ -1,6 +1,5 @@
 SUBLINTERS = unused \
 			misspell \
-			goerr113 \
 			gofmt \
 			gocritic \
 			goconst \

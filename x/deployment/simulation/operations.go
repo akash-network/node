@@ -1,9 +1,8 @@
 package simulation
 
 import (
+	"fmt"
 	"math/rand"
-
-	"github.com/pkg/errors"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -16,6 +15,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/simulation"
 
 	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+
 	appparams "github.com/akash-network/node/app/params"
 	sdlv1 "github.com/akash-network/node/sdl"
 	"github.com/akash-network/node/x/deployment/keeper"
@@ -192,7 +192,7 @@ func SimulateMsgUpdateDeployment(ak govtypes.AccountKeeper, bk bankkeeper.Keeper
 		simAccount, found := simtypes.FindAccount(accounts, owner)
 		if !found {
 			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeUpdateDeployment, "unable to find deployment with given id"),
-				nil, errors.Errorf("deployment with %s not found", deployment.ID().Owner)
+				nil, fmt.Errorf("deployment with %s not found", deployment.ID().Owner)
 		}
 
 		sdl, readError := sdlv1.ReadFile("../x/deployment/testdata/deployment-v2.yaml")
@@ -270,7 +270,7 @@ func SimulateMsgCloseDeployment(ak govtypes.AccountKeeper, bk bankkeeper.Keeper,
 		simAccount, found := simtypes.FindAccount(accounts, owner)
 		if !found {
 			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeCloseDeployment, "unable to find deployment"), nil,
-				errors.Errorf("deployment with %s not found", deployment.ID().Owner)
+				fmt.Errorf("deployment with %s not found", deployment.ID().Owner)
 		}
 
 		account := ak.GetAccount(ctx, simAccount.Address)
@@ -336,7 +336,7 @@ func SimulateMsgCloseGroup(ak govtypes.AccountKeeper, bk bankkeeper.Keeper, k ke
 
 		simAccount, found := simtypes.FindAccount(accounts, owner)
 		if !found {
-			err := errors.Errorf("deployment with %s not found", deployment.ID().Owner)
+			err := fmt.Errorf("deployment with %s not found", deployment.ID().Owner)
 			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeCloseGroup, err.Error()), nil, err
 		}
 
@@ -352,7 +352,7 @@ func SimulateMsgCloseGroup(ak govtypes.AccountKeeper, bk bankkeeper.Keeper, k ke
 		groups := k.GetGroups(ctx, deployment.ID())
 		if len(groups) < 1 {
 			// No groups to close
-			err := errors.Errorf("no groups for deployment ID: %v", deployment.ID())
+			err := fmt.Errorf("no groups for deployment ID: %v", deployment.ID())
 			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeCloseGroup, err.Error()), nil, err
 		}
 		i = r.Intn(len(groups))
@@ -385,7 +385,7 @@ func SimulateMsgCloseGroup(ak govtypes.AccountKeeper, bk bankkeeper.Keeper, k ke
 
 		_, _, err = app.Deliver(txGen.TxEncoder(), tx)
 		if err != nil {
-			err = errors.Wrapf(err, "%s: msg delivery error closing group: %v", types.ModuleName, group.ID())
+			err = fmt.Errorf("%w: %s: msg delivery error closing group: %v", err, types.ModuleName, group.ID())
 			return simtypes.NoOpMsg(types.ModuleName, msg.Type(), err.Error()), nil, err
 		}
 		return simtypes.NewOperationMsg(msg, true, "submitting MsgCloseGroup", nil), nil, nil
