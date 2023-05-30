@@ -9,6 +9,7 @@ import (
 	"github.com/cometbft/cometbft/crypto/ed25519"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/codec"
 
 	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
 	mtypes "github.com/akash-network/akash-api/go/node/market/v1beta3"
@@ -16,7 +17,8 @@ import (
 
 func Keyring(t testing.TB) keyring.Keyring {
 	t.Helper()
-	obj := keyring.NewInMemory()
+	var cdc codec.Codec
+	obj := keyring.NewInMemory(cdc)
 	return obj
 }
 

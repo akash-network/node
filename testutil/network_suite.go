@@ -74,9 +74,10 @@ func (nts *NetworkTestSuite) TearDownSuite() {
 
 func (nts *NetworkTestSuite) SetupSuite() {
 	nts.kr = Keyring(nts.T())
-	nts.network = sdknetworktest.New(nts.T(), nts.cfg)
+	var err error
+	nts.network, err = sdknetworktest.New(nts.T(), nts.T().TempDir(), nts.cfg)
 
-	_, err := nts.network.WaitForHeightWithTimeout(1, time.Second*30)
+	_, err = nts.network.WaitForHeightWithTimeout(1, time.Second*30)
 	require.NoError(nts.T(), err)
 
 	walletCount := nts.countTests()
@@ -89,14 +90,15 @@ func (nts *NetworkTestSuite) SetupSuite() {
 		require.NoError(nts.T(), err)
 		require.NotEmpty(nts.T(), str)
 
-		toAddr := kinfo.GetAddress()
+		toAddr, err := kinfo.GetAddress()
+		require.NoError(nts.T(), err)
 
 		coins := sdk.NewCoins(sdk.NewCoin(nts.Config().BondDenom, sdk.NewInt(1000000)))
 		msg := banktypes.NewMsgSend(nts.Validator().Address, toAddr, coins)
 		msgs = append(msgs, msg)
 	}
 
-	txf := tx.NewFactoryCLI(nts.Context(), &pflag.FlagSet{})
+	txf, err := tx.NewFactoryCLI(nts.Context(), &pflag.FlagSet{})
 	txf = txf.WithSignMode(signing.SignMode_SIGN_MODE_DIRECT)
 	txf = txf.WithSimulateAndExecute(false)
 
@@ -112,7 +114,7 @@ func (nts *NetworkTestSuite) SetupSuite() {
 	txf = txf.WithGas(uint64(150000 * nts.countTests()))                 // Just made this up
 	txf = txf.WithFees(fmt.Sprintf("%d%s", 100, nts.Config().BondDenom)) // Just made this up
 
-	txb, err := tx.BuildUnsignedTx(txf, msgs...)
+	txb, err := txf.BuildUnsignedTx(msgs...)
 	require.NoError(nts.T(), err)
 
 	txb.SetFeeGranter(nts.Context().GetFeeGranterAddress())
@@ -167,14 +169,18 @@ func (nts *NetworkTestSuite) WalletNameForTest() string {
 func (nts *NetworkTestSuite) WalletForTest() sdk.AccAddress {
 	k, err := nts.kr.Key(nts.WalletNameForTest())
 	require.NoError(nts.T(), err)
-	return k.GetAddress()
+	addr, err := k.GetAddress()
+	require.NoError(nts.T(), err)
+	return addr
 }
 
 func (nts *NetworkTestSuite) ContextForTest() sdkclient.Context {
 	result := nts.Context()
 	k, err := nts.kr.Key(nts.WalletNameForTest())
 	require.NoError(nts.T(), err)
-	return result.WithKeyring(nts.kr).WithFromAddress(k.GetAddress()).WithFromName(nts.WalletNameForTest())
+	addr, err := k.GetAddress()
+	require.NoError(nts.T(), err)
+	return result.WithKeyring(nts.kr).WithFromAddress(addr).WithFromName(nts.WalletNameForTest())
 }
 
 func (nts *NetworkTestSuite) GoContextForTest() context.Context {
