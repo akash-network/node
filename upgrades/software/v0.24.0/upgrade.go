@@ -108,7 +108,7 @@ func (up *upgrade) enforceMinValidatorCommission(ctx sdk.Context) error {
 
 			validator.Commission.MaxChangeRate = maxRateCh
 
-			up.Keepers.Cosmos.Staking.BeforeValidatorModified(ctx, validator.GetOperator())
+			up.Keepers.Cosmos.Staking.Hooks().BeforeValidatorModified(ctx, validator.GetOperator())
 			up.Keepers.Cosmos.Staking.SetValidator(ctx, validator)
 		}
 	}
