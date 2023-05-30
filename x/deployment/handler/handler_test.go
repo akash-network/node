@@ -42,17 +42,17 @@ func setupTestSuite(t *testing.T) *testSuite {
 	depositor := testutil.AccAddress(t)
 	authzKeeper := &mocks.AuthzKeeper{}
 	authzKeeper.
-		On("GetCleanAuthorization", mock.Anything, mock.Anything, depositor, sdk.MsgTypeURL(&types.MsgDepositDeployment{})).
+		On("GetAuthorization", mock.Anything, mock.Anything, depositor, sdk.MsgTypeURL(&types.MsgDepositDeployment{})).
 		Return(&types.DepositDeploymentAuthorization{
 			SpendLimit: types.DefaultDeploymentMinDeposit.Add(types.DefaultDeploymentMinDeposit),
 		}, time.Time{}).
 		Once().
-		On("GetCleanAuthorization", mock.Anything, mock.Anything, depositor, sdk.MsgTypeURL(&types.MsgDepositDeployment{})).
+		On("GetAuthorization", mock.Anything, mock.Anything, depositor, sdk.MsgTypeURL(&types.MsgDepositDeployment{})).
 		Return(&types.DepositDeploymentAuthorization{
 			SpendLimit: types.DefaultDeploymentMinDeposit,
 		}, time.Time{}).
 		Once().
-		On("GetCleanAuthorization", mock.Anything, mock.Anything,
+		On("GetAuthorization", mock.Anything, mock.Anything,
 			mock.MatchedBy(func(addr sdk.AccAddress) bool {
 				return !depositor.Equals(addr)
 			}), sdk.MsgTypeURL(&types.MsgDepositDeployment{})).

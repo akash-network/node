@@ -70,13 +70,13 @@ func (_c *AuthzKeeper_DeleteGrant_Call) RunAndReturn(run func(types.Context, typ
 	return _c
 }
 
-// GetCleanAuthorization provides a mock function with given fields: ctx, grantee, granter, msgType
-func (_m *AuthzKeeper) GetCleanAuthorization(ctx types.Context, grantee types.AccAddress, granter types.AccAddress, msgType string) (authz.Authorization, time.Time) {
+// GetAuthorization provides a mock function with given fields: ctx, grantee, granter, msgType
+func (_m *AuthzKeeper) GetAuthorization(ctx types.Context, grantee types.AccAddress, granter types.AccAddress, msgType string) (authz.Authorization, *time.Time) {
 	ret := _m.Called(ctx, grantee, granter, msgType)
 
 	var r0 authz.Authorization
 	var r1 time.Time
-	if rf, ok := ret.Get(0).(func(types.Context, types.AccAddress, types.AccAddress, string) (authz.Authorization, time.Time)); ok {
+	if rf, ok := ret.Get(0).(func(types.Context, types.AccAddress, types.AccAddress, string) (authz.Authorization, *time.Time)); ok {
 		return rf(ctx, grantee, granter, msgType)
 	}
 	if rf, ok := ret.Get(0).(func(types.Context, types.AccAddress, types.AccAddress, string) authz.Authorization); ok {
@@ -93,36 +93,36 @@ func (_m *AuthzKeeper) GetCleanAuthorization(ctx types.Context, grantee types.Ac
 		r1 = ret.Get(1).(time.Time)
 	}
 
-	return r0, r1
+	return r0, &r1
 }
 
-// AuthzKeeper_GetCleanAuthorization_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetCleanAuthorization'
-type AuthzKeeper_GetCleanAuthorization_Call struct {
+// AuthzKeeper_GetAuthorization_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAuthorization'
+type AuthzKeeper_GetAuthorization_Call struct {
 	*mock.Call
 }
 
-// GetCleanAuthorization is a helper method to define mock.On call
+// GetAuthorization is a helper method to define mock.On call
 //   - ctx types.Context
 //   - grantee types.AccAddress
 //   - granter types.AccAddress
 //   - msgType string
-func (_e *AuthzKeeper_Expecter) GetCleanAuthorization(ctx interface{}, grantee interface{}, granter interface{}, msgType interface{}) *AuthzKeeper_GetCleanAuthorization_Call {
-	return &AuthzKeeper_GetCleanAuthorization_Call{Call: _e.mock.On("GetCleanAuthorization", ctx, grantee, granter, msgType)}
+func (_e *AuthzKeeper_Expecter) GetAuthorization(ctx interface{}, grantee interface{}, granter interface{}, msgType interface{}) *AuthzKeeper_GetAuthorization_Call {
+	return &AuthzKeeper_GetAuthorization_Call{Call: _e.mock.On("GetAuthorization", ctx, grantee, granter, msgType)}
 }
 
-func (_c *AuthzKeeper_GetCleanAuthorization_Call) Run(run func(ctx types.Context, grantee types.AccAddress, granter types.AccAddress, msgType string)) *AuthzKeeper_GetCleanAuthorization_Call {
+func (_c *AuthzKeeper_GetAuthorization_Call) Run(run func(ctx types.Context, grantee types.AccAddress, granter types.AccAddress, msgType string)) *AuthzKeeper_GetAuthorization_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(types.Context), args[1].(types.AccAddress), args[2].(types.AccAddress), args[3].(string))
 	})
 	return _c
 }
 
-func (_c *AuthzKeeper_GetCleanAuthorization_Call) Return(cap authz.Authorization, expiration time.Time) *AuthzKeeper_GetCleanAuthorization_Call {
+func (_c *AuthzKeeper_GetAuthorization_Call) Return(cap authz.Authorization, expiration time.Time) *AuthzKeeper_GetAuthorization_Call {
 	_c.Call.Return(cap, expiration)
 	return _c
 }
 
-func (_c *AuthzKeeper_GetCleanAuthorization_Call) RunAndReturn(run func(types.Context, types.AccAddress, types.AccAddress, string) (authz.Authorization, time.Time)) *AuthzKeeper_GetCleanAuthorization_Call {
+func (_c *AuthzKeeper_GetAuthorization_Call) RunAndReturn(run func(types.Context, types.AccAddress, types.AccAddress, string) (authz.Authorization, time.Time)) *AuthzKeeper_GetAuthorization_Call {
 	_c.Call.Return(run)
 	return _c
 }
