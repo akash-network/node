@@ -40,9 +40,12 @@ func BroadcastTX(ctx context.Context, cctx sdkclient.Context, flags *pflag.FlagS
 	// rewrite of https://github.com/cosmos/cosmos-sdk/blob/ca98fda6eae597b1e7d468f96d030b6d905748d7/client/tx/tx.go#L29
 	// to add continuing retries if broadcast-mode=block fails with a timeout.
 
-	txf := tx.NewFactoryCLI(cctx, flags)
+	txf, err := tx.NewFactoryCLI(cctx, flags)
+	if err != nil {
+		return err
+	}
 
-	txf, err := PrepareFactory(cctx, txf)
+	txf, err = PrepareFactory(cctx, txf)
 	if err != nil {
 		return err
 	}
@@ -55,7 +58,7 @@ func BroadcastTX(ctx context.Context, cctx sdkclient.Context, flags *pflag.FlagS
 		return nil
 	}
 
-	txb, err := tx.BuildUnsignedTx(txf, msgs...)
+	txb, err := txf.BuildUnsignedTx(msgs...)
 	if err != nil {
 		return err
 	}
@@ -135,7 +138,7 @@ func doBroadcast(ctx context.Context, cctx sdkclient.Context, timeout time.Durat
 
 	// broadcast-mode=block
 	// submit with mode commit/block
-	cres, err := cctx.BroadcastTxCommit(txb)
+	cres, err := cctx.BroadcastTx(txb)
 	if err == nil {
 		// good job
 		return cres, nil

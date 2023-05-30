@@ -24,10 +24,10 @@ type Client interface {
 type simpleClient struct {
 	cctx sdkclient.Context
 	txf  tx.Factory
-	info keyring.Info
+	info keyring.LegacyInfo
 }
 
-func NewClient(cctx sdkclient.Context, txf tx.Factory, info keyring.Info) Client {
+func NewClient(cctx sdkclient.Context, txf tx.Factory, info keyring.LegacyInfo) Client {
 	return &simpleClient{
 		cctx: cctx,
 		txf:  txf,
@@ -53,7 +53,7 @@ func (c *simpleClient) Broadcast(_ context.Context, msgs ...sdk.Msg) error {
 }
 
 func (c *simpleClient) doBroadcast(cctx sdkclient.Context, txf tx.Factory, keyName string, msgs ...sdk.Msg) (*sdk.TxResponse, error) {
-	txn, err := tx.BuildUnsignedTx(txf, msgs...)
+	txn, err := txf.BuildUnsignedTx(msgs...)
 	if err != nil {
 		return nil, err
 	}
