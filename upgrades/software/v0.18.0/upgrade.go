@@ -54,7 +54,9 @@ func (up *upgrade) StoreLoader() *storetypes.StoreUpgrades {
 
 func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 	return func(ctx sdk.Context, plan upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
-		fromVM[icatypes.ModuleName] = up.MM.Modules[icatypes.ModuleName].ConsensusVersion()
+		if module, ok := up.MM.Modules[icatypes.ModuleName].(module.HasConsensusVersion); ok {
+			fromVM[icatypes.ModuleName] = module.ConsensusVersion()
+		}
 
 		// create ICS27 Controller submodule params
 		// enable the controller chain
