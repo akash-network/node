@@ -1,9 +1,9 @@
 package query
 
 import (
+	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	abci "github.com/tendermint/tendermint/abci/types"
 
 	"github.com/akash-network/node/x/escrow/keeper"
 )
