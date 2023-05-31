@@ -14,6 +14,7 @@ import (
 	cmdcommon "github.com/akash-network/node/cmd/common"
 	"github.com/akash-network/node/events"
 	"github.com/akash-network/node/pubsub"
+	tmclient "github.com/cometbft/cometbft/rpc/client"
 )
 
 // EventCmd prints out events in real time
@@ -39,42 +40,47 @@ func EventCmd() *cobra.Command {
 func getEvents(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	cctx := client.GetClientContextFromCmd(cmd)
 
-	if err := cctx.Client.Start(); err != nil {
-		return err
-	}
+	if client, ok := cctx.Client.(tmclient.Client); ok == false {
+		return errors.New("client is not a rpc client")
+	} else {
+		if err := client.Start(); err != nil {
+			return err
+		}
 
-	bus := pubsub.NewBus()
-	defer bus.Close()
+		bus := pubsub.NewBus()
+		defer bus.Close()
 
-	group, ctx := errgroup.WithContext(ctx)
+		group, ctx := errgroup.WithContext(ctx)
 
-	subscriber, err := bus.Subscribe()
+		subscriber, err := bus.Subscribe()
 
-	if err != nil {
-		return err
-	}
+		if err != nil {
+			return err
+		}
 
-	group.Go(func() error {
-		return events.Publish(ctx, cctx.Client, "akash-cli", bus)
-	})
+		group.Go(func() error {
+			return events.Publish(ctx, client, "akash-cli", bus)
+		})
 
-	group.Go(func() error {
-		for {
-			select {
-			case <-subscriber.Done():
-				return nil
-			case ev := <-subscriber.Events():
-				if err := cmdcommon.PrintJSON(cctx, ev); err != nil {
-					return err
+		group.Go(func() error {
+			for {
+				select {
+				case <-subscriber.Done():
+					return nil
+				case ev := <-subscriber.Events():
+					if err := cmdcommon.PrintJSON(cctx, ev); err != nil {
+						return err
+					}
 				}
 			}
-		}
-	})
+		})
 
-	err = group.Wait()
-	if err != nil && !errors.Is(err, context.Canceled) {
-		return err
+		err = group.Wait()
+		if err != nil && !errors.Is(err, context.Canceled) {
+			return err
+		}
+
+		return nil
 	}
 
-	return nil
 }
