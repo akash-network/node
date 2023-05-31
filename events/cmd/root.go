@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/cosmos/cosmos-sdk/client"
+
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -38,10 +39,6 @@ func EventCmd() *cobra.Command {
 
 func getEvents(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	cctx := client.GetClientContextFromCmd(cmd)
-
-	if err := cctx.Client.Start(); err != nil {
-		return err
-	}
 
 	bus := pubsub.NewBus()
 	defer bus.Close()
