@@ -33,6 +33,10 @@ profiles:
             arch: amd64
         gpu:
           units: 1
+          attributes:
+            vendor:
+              nvidia:
+                - model: a100
         memory:
           size: 16Mi
         storage:
