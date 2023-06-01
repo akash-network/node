@@ -150,6 +150,9 @@ replace (
 
 	// dragonberry path
 	github.com/confio/ics23/go => github.com/cosmos/cosmos-sdk/ics23/go v0.8.0
+
+	// huckleberry path
+	github.com/cosmos/ibc-go/v3 => github.com/akash-network/ibc-go/v3 v3.1.2
 	github.com/cosmos/ledger-cosmos-go => github.com/ovrclk/ledger-go/cosmos v0.14.0
 
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
