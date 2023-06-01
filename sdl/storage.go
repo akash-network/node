@@ -1,6 +1,7 @@
 package sdl
 
 import (
+	errorsmod "cosmossdk.io/errors"
 	"sort"
 
 	"github.com/pkg/errors"
@@ -171,7 +172,7 @@ func (sdl *v2StorageAttributes) UnmarshalYAML(node *yaml.Node) error {
 	for k, v := range res {
 		validateFn, supportedAttr := validateStorageAttributes[k]
 		if !supportedAttr {
-			return errors.Wrap(errUnsupportedStorageAttribute, k)
+			return errorsmod.Wrap(errUnsupportedStorageAttribute, k)
 		}
 
 		val := v

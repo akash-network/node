@@ -60,7 +60,7 @@ func (min *MinCommissionDecorator) isValidMsg(ctx sdk.Context, m sdk.Msg) error 
 	// prevent new validators joining the set with
 	// commission set below 5%
 	if rate.LT(minRate) {
-		return sdkerrors.Wrap(sdkerrors.ErrUnauthorized, fmt.Sprintf("commission can't be lower than %s%%", minRate))
+		return errorsmod.Wrap(sdkerrors.ErrUnauthorized, fmt.Sprintf("commission can't be lower than %s%%", minRate))
 	}
 
 	return nil

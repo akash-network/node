@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	errorsmod "cosmossdk.io/errors"
 	"encoding/json"
 
 	"github.com/pkg/errors"
@@ -108,7 +109,7 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 					genAccount = authvesting.NewDelayedVestingAccountRaw(baseVestingAccount)
 
 				default:
-					return errors.Wrap(ErrInvalidVestingParameters, "must supply start and end time or end time")
+					return errorsmod.Wrap(ErrInvalidVestingParameters, "must supply start and end time or end time")
 				}
 			} else {
 				genAccount = baseAccount

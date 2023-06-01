@@ -1,11 +1,11 @@
 package deployment
 
 import (
+	errorsmod "cosmossdk.io/errors"
 	"encoding/json"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/pkg/errors"
 
 	abci "github.com/cometbft/cometbft/abci/types"
 
@@ -18,7 +18,7 @@ import (
 func ValidateGenesis(data *types.GenesisState) error {
 	for _, record := range data.Deployments {
 		if err := record.Deployment.ID().Validate(); err != nil {
-			return errors.Wrap(err, types.ErrInvalidDeployment.Error())
+			return errorsmod.Wrap(err, types.ErrInvalidDeployment.Error())
 		}
 	}
 	return data.Params.Validate()
