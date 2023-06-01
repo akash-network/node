@@ -1,7 +1,6 @@
 package app
 
 import (
-	simparams "cosmossdk.io/simapp/params"
 	"github.com/cosmos/cosmos-sdk/std"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -80,7 +79,7 @@ func ModuleBasics() module.BasicManager {
 }
 
 // MakeEncodingConfig creates an EncodingConfig for testing
-func MakeEncodingConfig() simparams.EncodingConfig {
+func MakeEncodingConfig() appparams.EncodingConfig {
 	encodingConfig := appparams.MakeEncodingConfig()
 
 	std.RegisterLegacyAminoCodec(encodingConfig.Amino)

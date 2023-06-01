@@ -164,7 +164,7 @@ func NewApp(
 
 	// TODO: Remove cdc in favor of appCodec once all modules are migrated.
 	encodingConfig := MakeEncodingConfig()
-	appCodec := encodingConfig.Codec
+	appCodec := encodingConfig.Marshaler
 	legacyAmino := encodingConfig.Amino
 	interfaceRegistry := encodingConfig.InterfaceRegistry
 
@@ -550,7 +550,7 @@ func getGenesisTime(appOpts servertypes.AppOptions, homePath string) time.Time {
 // full simapp
 func MakeCodecs() (codec.Codec, *codec.LegacyAmino) {
 	config := MakeEncodingConfig()
-	return config.Codec, config.Amino
+	return config.Marshaler, config.Amino
 }
 
 // Name returns the name of the App

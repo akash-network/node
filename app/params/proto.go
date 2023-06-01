@@ -1,22 +1,29 @@
 package params
 
 import (
-	simparams "cosmossdk.io/simapp/params"
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
 )
 
+type EncodingConfig struct {
+	InterfaceRegistry types.InterfaceRegistry
+	Marshaler         codec.Codec
+	TxConfig          client.TxConfig
+	Amino             *codec.LegacyAmino
+}
+
 // MakeEncodingConfig creates an EncodingConfig for a proto based test configuration.
-func MakeEncodingConfig() simparams.EncodingConfig {
+func MakeEncodingConfig() EncodingConfig {
 	amino := codec.NewLegacyAmino()
 	interfaceRegistry := types.NewInterfaceRegistry()
 	marshaler := codec.NewProtoCodec(interfaceRegistry)
 	txCfg := tx.NewTxConfig(marshaler, tx.DefaultSignModes)
 
-	return simparams.EncodingConfig{
+	return EncodingConfig{
 		InterfaceRegistry: interfaceRegistry,
-		Codec:             marshaler,
+		Marshaler:         marshaler,
 		TxConfig:          txCfg,
 		Amino:             amino,
 	}

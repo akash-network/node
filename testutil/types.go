@@ -76,7 +76,7 @@ func NewApp(val network.ValidatorI) servertypes.Application {
 // testing requirements.
 func DefaultConfig() network.Config {
 	encCfg := app.MakeEncodingConfig()
-	origGenesisState := app.ModuleBasics().DefaultGenesis(encCfg.Codec)
+	origGenesisState := app.ModuleBasics().DefaultGenesis(encCfg.Marshaler)
 
 	genesisState := make(map[string]json.RawMessage)
 	for k, v := range origGenesisState {
@@ -109,7 +109,7 @@ func DefaultConfig() network.Config {
 	}
 
 	return network.Config{
-		Codec:             encCfg.Codec,
+		Codec:             encCfg.Marshaler,
 		TxConfig:          encCfg.TxConfig,
 		LegacyAmino:       encCfg.Amino,
 		InterfaceRegistry: encCfg.InterfaceRegistry,

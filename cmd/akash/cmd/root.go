@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"cosmossdk.io/simapp/params"
 	rosettaCmd "cosmossdk.io/tools/rosetta/cmd"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -43,6 +42,7 @@ import (
 	"github.com/cometbft/cometbft/libs/log"
 
 	"github.com/akash-network/node/app"
+	appparams "github.com/akash-network/node/app/params"
 	"github.com/akash-network/node/cmd/akash/cmd/testnetify"
 	ecmd "github.com/akash-network/node/events/cmd"
 	utilcli "github.com/akash-network/node/util/cli"
@@ -50,7 +50,7 @@ import (
 
 // NewRootCmd creates a new root command for akash. It is called once in the
 // main function.
-func NewRootCmd() (*cobra.Command, params.EncodingConfig) {
+func NewRootCmd() (*cobra.Command, appparams.EncodingConfig) {
 	encodingConfig := app.MakeEncodingConfig()
 
 	rootCmd := &cobra.Command{
@@ -67,14 +67,14 @@ func NewRootCmd() (*cobra.Command, params.EncodingConfig) {
 }
 
 // GetPersistentPreRunE persistent prerun hook for root command
-func GetPersistentPreRunE(encodingConfig params.EncodingConfig, envPrefixes []string) func(*cobra.Command, []string) error {
+func GetPersistentPreRunE(encodingConfig appparams.EncodingConfig, envPrefixes []string) func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, _ []string) error {
 		if err := utilcli.InterceptConfigsPreRunHandler(cmd, envPrefixes, false, "", nil); err != nil {
 			return err
 		}
 
 		initClientCtx := client.Context{}.
-			WithCodec(encodingConfig.Codec).
+			WithCodec(encodingConfig.Marshaler).
 			WithInterfaceRegistry(encodingConfig.InterfaceRegistry).
 			WithTxConfig(encodingConfig.TxConfig).
 			WithLegacyAmino(encodingConfig.Amino).
@@ -108,7 +108,7 @@ func Execute(rootCmd *cobra.Command, envPrefix string) error {
 	return executor.ExecuteContext(ctx)
 }
 
-func initRootCmd(rootCmd *cobra.Command, moduleBasics module.BasicManager, encodingConfig params.EncodingConfig) {
+func initRootCmd(rootCmd *cobra.Command, moduleBasics module.BasicManager, encodingConfig appparams.EncodingConfig) {
 	debugCmd := debug.Cmd()
 	debugCmd.AddCommand(ConvertBech32Cmd())
 	debugCmd.AddCommand(testnetify.Cmd())
@@ -137,7 +137,7 @@ func initRootCmd(rootCmd *cobra.Command, moduleBasics module.BasicManager, encod
 	server.AddCommands(rootCmd, app.DefaultHome, newApp, createAppAndExport, addModuleInitFlags)
 
 	rootCmd.AddCommand(
-		rosettaCmd.RosettaCommand(encodingConfig.InterfaceRegistry, encodingConfig.Codec))
+		rosettaCmd.RosettaCommand(encodingConfig.InterfaceRegistry, encodingConfig.Marshaler))
 
 }
 

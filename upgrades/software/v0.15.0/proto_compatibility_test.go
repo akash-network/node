@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	cdc = app.MakeEncodingConfig().Codec.(codec.BinaryCodec)
+	cdc = app.MakeEncodingConfig().Marshaler.(codec.BinaryCodec)
 )
 
 func TestDeployment_DeploymentProto_IsCompatible(t *testing.T) {
