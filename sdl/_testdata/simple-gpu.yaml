@@ -21,14 +21,19 @@ profiles:
           units: "100m"
         gpu:
           units: 1
+          attributes:
+            vendor:
+              nvidia:
+              - model: a100
         memory:
           size: "128Mi"
         storage:
-          size: "1Gi"
+        - size: "1Gi"
   placement:
     westcoast:
       attributes:
         region: us-west
+        blalbla: foo
       signedBy:
         anyOf:
           - 1

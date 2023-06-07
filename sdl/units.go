@@ -14,27 +14,28 @@ var (
 	errNegativeValue = fmt.Errorf("invalid: negative value not allowed")
 )
 
-var unitSuffixes = []struct {
-	symbol string
-	unit   uint64
-}{
-	{"k", unit.K},
-	{"Ki", unit.Ki},
+var unitSuffixes = map[string]uint64{
+	"k":  unit.K,
+	"Ki": unit.Ki,
+	"M":  unit.M,
+	"Mi": unit.Mi,
+	"G":  unit.G,
+	"Gi": unit.Gi,
+	"T":  unit.T,
+	"Ti": unit.Ti,
+	"P":  unit.P,
+	"Pi": unit.Pi,
+	"E":  unit.E,
+	"Ei": unit.Ei,
+}
 
-	{"M", unit.M},
-	{"Mi", unit.Mi},
-
-	{"G", unit.G},
-	{"Gi", unit.Gi},
-
-	{"T", unit.T},
-	{"Ti", unit.Ti},
-
-	{"P", unit.P},
-	{"Pi", unit.Pi},
-
-	{"E", unit.E},
-	{"Ei", unit.Ei},
+var memorySuffixes = map[string]uint64{
+	"Ki": unit.Ki,
+	"Mi": unit.Mi,
+	"Gi": unit.Gi,
+	"Ti": unit.Ti,
+	"Pi": unit.Pi,
+	"Ei": unit.Ei,
 }
 
 // CPU shares.  One CPUQuantity = 1/1000 of a CPU
@@ -85,9 +86,10 @@ func (u *gpuQuantity) UnmarshalYAML(node *yaml.Node) error {
 
 // Memory,Storage size in bytes.
 type byteQuantity uint64
+type memoryQuantity uint64
 
 func (u *byteQuantity) UnmarshalYAML(node *yaml.Node) error {
-	val, err := parseWithSuffix(node.Value)
+	val, err := parseWithSuffix(node.Value, unitSuffixes)
 	if err != nil {
 		return err
 	}
@@ -95,20 +97,42 @@ func (u *byteQuantity) UnmarshalYAML(node *yaml.Node) error {
 	return nil
 }
 
-func parseWithSuffix(sval string) (uint64, error) {
-	for _, suffix := range unitSuffixes {
-		if !strings.HasSuffix(sval, suffix.symbol) {
+func (u *memoryQuantity) UnmarshalYAML(node *yaml.Node) error {
+	val, err := parseWithSuffix(node.Value, memorySuffixes)
+	if err != nil {
+		return err
+	}
+	*u = memoryQuantity(val)
+	return nil
+}
+
+func (u *memoryQuantity) StringWithSuffix(suffix string) string {
+	unit, exists := memorySuffixes[suffix]
+
+	val := uint64(*u) / unit
+
+	res := fmt.Sprintf("%d", val)
+	if exists {
+		res += suffix
+	}
+
+	return res
+}
+
+func parseWithSuffix(sval string, units map[string]uint64) (uint64, error) {
+	for suffix, unit := range units {
+		if !strings.HasSuffix(sval, suffix) {
 			continue
 		}
 
-		sval := strings.TrimSuffix(sval, suffix.symbol)
+		sval := strings.TrimSuffix(sval, suffix)
 
 		val, err := strconv.ParseFloat(sval, 64)
 		if err != nil {
 			return 0, err
 		}
 
-		val *= float64(suffix.unit)
+		val *= float64(unit)
 
 		if val < 0 {
 			return 0, errNegativeValue

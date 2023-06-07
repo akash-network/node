@@ -36,7 +36,7 @@ const (
 	randStorage uint64 = 1 * unit.Gi
 )
 
-func Test_v1_Parse_simple_gpu(t *testing.T) {
+func TestV2ParseSimpleGPU(t *testing.T) {
 	sdl, err := ReadFile("./_testdata/simple-gpu.yaml")
 	require.NoError(t, err)
 
@@ -46,11 +46,12 @@ func Test_v1_Parse_simple_gpu(t *testing.T) {
 
 	group := groups[0]
 	assert.Len(t, group.GetResources(), 1)
+	assert.Len(t, group.Requirements.Attributes, 2)
 
 	assert.Equal(t, atypes.Attribute{
 		Key:   "region",
 		Value: "us-west",
-	}, group.Requirements.Attributes[0])
+	}, group.Requirements.Attributes[1])
 
 	assert.Len(t, group.GetResources(), 1)
 
@@ -62,6 +63,12 @@ func Test_v1_Parse_simple_gpu(t *testing.T) {
 			},
 			GPU: &atypes.GPU{
 				Units: atypes.NewResourceValue(randGPU),
+				Attributes: atypes.Attributes{
+					{
+						Key:   "vendor/nvidia/model/a100",
+						Value: "true",
+					},
+				},
 			},
 			Memory: &atypes.Memory{
 				Quantity: atypes.NewResourceValue(randMemory),
