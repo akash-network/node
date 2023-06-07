@@ -99,7 +99,7 @@ genesis: $(GENESIS_DEST)
 
 .PHONY: test
 test: init upgrade-binary
-	$(GO) test ./... -tags e2e.upgrade -timeout 60m -v -args \
+	$(GO_TEST) ./... -tags e2e.upgrade -timeout 60m -v -args \
 		-home=$(AP_RUN_DIR) \
 		-cosmovisor=$(COSMOVISOR) \
 		-genesis-binary=$(GENESIS_BINARY) \

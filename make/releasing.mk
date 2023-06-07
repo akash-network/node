@@ -45,17 +45,17 @@ bins: $(BINS)
 
 .PHONY: build
 build:
-	$(GO) build -a  ./...
+	$(GO_BUILD) -a  ./...
 
 $(AKASH): modvendor
-	$(GO) build -o $@ $(BUILD_FLAGS) ./cmd/akash
+	$(GO_BUILD) -o $@ $(BUILD_FLAGS) ./cmd/akash
 
 .PHONY: akash
 akash: $(AKASH)
 
 .PHONY: akash_docgen
 akash_docgen: $(AKASH_DEVCACHE)
-	$(GO) build -o $(AKASH_DEVCACHE_BIN)/akash_docgen $(BUILD_FLAGS) ./docgen
+	$(GO_BUILD) -o $(AKASH_DEVCACHE_BIN)/akash_docgen $(BUILD_FLAGS) ./docgen
 
 .PHONY: install
 install:
