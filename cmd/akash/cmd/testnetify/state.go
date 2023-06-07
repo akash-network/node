@@ -222,12 +222,12 @@ func NewGenesisState(sp *yacspin.Spinner, state map[string]json.RawMessage, doc 
 	_ = sp.Start()
 
 	var err error
-	st.moduleAddresses.bondedPool, err = st.findModuleAccount(cdc, "bonded_tokens_pool")
+	st.moduleAddresses.bondedPool, err = st.findModuleAccount(cdc, stakingtypes.BondedPoolName)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't find bonded_tokens_pool account") // nolint: goerr113
 	}
 
-	st.moduleAddresses.notBondedPool, err = st.findModuleAccount(cdc, "not_bonded_tokens_pool")
+	st.moduleAddresses.notBondedPool, err = st.findModuleAccount(cdc, stakingtypes.NotBondedPoolName)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't find not_bonded_tokens_pool account") // nolint: goerr113
 	}
@@ -237,12 +237,81 @@ func NewGenesisState(sp *yacspin.Spinner, state map[string]json.RawMessage, doc 
 		return nil, fmt.Errorf("couldn't find distribution account") // nolint: goerr113
 	}
 
+	if err = st.app.BankState.unpack(cdc); err != nil {
+		return nil, err
+	}
+
+	if err = st.app.StakingState.unpack(cdc); err != nil {
+		return nil, err
+	}
+
+	if err = st.validateBalances(); err != nil {
+		return nil, err
+	}
+
 	_ = sp.Stop()
 
 	return st, nil
 }
 
+func (ga *GenesisState) validateBalances() error {
+	bondedTokens := sdk.ZeroInt()
+	notBondedTokens := sdk.ZeroInt()
+
+	for _, val := range ga.app.StakingState.state.Validators {
+		switch val.GetStatus() {
+		case stakingtypes.Bonded:
+			bondedTokens = bondedTokens.Add(val.GetTokens())
+		case stakingtypes.Unbonding, stakingtypes.Unbonded:
+			notBondedTokens = notBondedTokens.Add(val.GetTokens())
+		default:
+			return fmt.Errorf("invalid validator status") // nolint: goerr113
+		}
+	}
+
+	for _, ubd := range ga.app.StakingState.state.UnbondingDelegations {
+		for _, entry := range ubd.Entries {
+			notBondedTokens = notBondedTokens.Add(entry.Balance)
+		}
+	}
+
+	bondedCoins := sdk.NewCoins(sdk.NewCoin(ga.app.StakingState.state.Params.BondDenom, bondedTokens))
+	notBondedCoins := sdk.NewCoins(sdk.NewCoin(ga.app.StakingState.state.Params.BondDenom, notBondedTokens))
+
+	var bondedBalance sdk.Coins
+	var notBondedBalance sdk.Coins
+
+	for _, balance := range ga.app.BankState.state.Balances {
+		if balance.Address == ga.moduleAddresses.bondedPool.String() {
+			bondedBalance = bondedBalance.Add(balance.Coins...)
+		}
+	}
+
+	for _, balance := range ga.app.BankState.state.Balances {
+		if balance.Address == ga.moduleAddresses.notBondedPool.String() {
+			notBondedBalance = notBondedBalance.Add(balance.Coins...)
+		}
+	}
+
+	bondedBalance.Sort()
+	notBondedBalance.Sort()
+
+	if !bondedBalance.IsEqual(bondedCoins) {
+		return fmt.Errorf("bonded pool balance is different from bonded coins: %s <-> %s", notBondedBalance, notBondedCoins) // nolint: goerr113
+	}
+
+	// if !notBondedBalance.IsEqual(notBondedCoins) {
+	// 	return fmt.Errorf("not bonded pool balance is different from not bonded coins: %s <-> %s", notBondedBalance, notBondedCoins) // nolint: goerr113
+	// }
+
+	return nil
+}
+
 func (ga *GenesisState) pack(cdc codec.Codec) error {
+	if err := ga.validateBalances(); err != nil {
+		return err
+	}
+
 	if err := ga.ensureActiveSet(cdc); err != nil {
 		return err
 	}
@@ -715,7 +784,7 @@ func (ga *GenesisState) createCoin(cdc codec.Codec, coin sdk.Coin) error {
 	return nil
 }
 
-func (ga *GenesisState) increaseSupply(cdc codec.Codec, coins ...sdk.Coin) error {
+func (ga *GenesisState) IncreaseSupply(cdc codec.Codec, coins ...sdk.Coin) error {
 	if err := ga.app.BankState.unpack(cdc); err != nil {
 		return nil
 	}
@@ -740,7 +809,7 @@ func (ga *GenesisState) increaseSupply(cdc codec.Codec, coins ...sdk.Coin) error
 	return nil
 }
 
-func (ga *GenesisState) decreaseSupply(cdc codec.Codec, coins ...sdk.Coin) error {
+func (ga *GenesisState) DecreaseSupply(cdc codec.Codec, coins ...sdk.Coin) error {
 	if err := ga.app.BankState.unpack(cdc); err != nil {
 		return nil
 	}
@@ -763,6 +832,30 @@ func (ga *GenesisState) decreaseSupply(cdc codec.Codec, coins ...sdk.Coin) error
 	return nil
 }
 
+func (ga *GenesisState) SendFromModuleToModule(cdc codec.Codec, from, to sdk.AccAddress, amt sdk.Coins) error {
+	if err := ga.DecreaseBalances(cdc, from, amt); err != nil {
+		return err
+	}
+
+	if err := ga.IncreaseBalances(cdc, to, amt); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ga *GenesisState) DelegateToPool(cdc codec.Codec, from, to sdk.AccAddress, amt sdk.Coins) error {
+	if err := ga.DecreaseBalances(cdc, from, amt); err != nil {
+		return err
+	}
+
+	if err := ga.IncreaseBalances(cdc, to, amt); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // IncreaseBalances increases the balance of an account
 // and the overall supply of corresponding token by the same amount
 func (ga *GenesisState) IncreaseBalances(cdc codec.Codec, addr sdk.AccAddress, coins sdk.Coins) error {
@@ -775,6 +868,7 @@ func (ga *GenesisState) IncreaseBalances(cdc codec.Codec, addr sdk.AccAddress, c
 	for idx := range ga.app.BankState.state.Balances {
 		if ga.app.BankState.state.Balances[idx].GetAddress().Equals(addr) {
 			balance = &ga.app.BankState.state.Balances[idx]
+			break
 		}
 	}
 
@@ -799,10 +893,6 @@ func (ga *GenesisState) IncreaseBalances(cdc codec.Codec, addr sdk.AccAddress, c
 
 	balance.Coins = balance.Coins.Sort()
 
-	if err := ga.increaseSupply(cdc, coins...); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -816,6 +906,7 @@ func (ga *GenesisState) DecreaseBalances(cdc codec.Codec, addr sdk.AccAddress, c
 	for idx := range ga.app.BankState.state.Balances {
 		if ga.app.BankState.state.Balances[idx].GetAddress().Equals(addr) {
 			balance = &ga.app.BankState.state.Balances[idx]
+			break
 		}
 	}
 
@@ -830,10 +921,6 @@ func (ga *GenesisState) DecreaseBalances(cdc codec.Codec, addr sdk.AccAddress, c
 				break
 			}
 		}
-	}
-
-	if err := ga.decreaseSupply(cdc, coins...); err != nil {
-		return err
 	}
 
 	return nil
@@ -914,7 +1001,18 @@ func (ga *GenesisState) IncreaseDelegatorStake(
 	info.StartingInfo.Stake = stake
 	delegation.Shares = stake
 
-	if err := ga.sortValidatorsByShares(); err != nil {
+	var err error
+	if sVal.IsBonded() {
+		err = ga.DelegateToPool(cdc, addr, ga.moduleAddresses.bondedPool, coins)
+	} else {
+		err = ga.DelegateToPool(cdc, addr, ga.moduleAddresses.notBondedPool, coins)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	if err = ga.sortValidatorsByShares(); err != nil {
 		return err
 	}
 
@@ -949,7 +1047,7 @@ func (ga *GenesisState) ensureActiveSet(cdc codec.Codec) error {
 	totalPower := int64(0)
 
 	for i, val := range sVals {
-		power := val.GetDelegatorShares().QuoInt64(denomDecimalPlaces).RoundInt64()
+		coins := sdk.NewCoins(sdk.NewCoin(ga.app.StakingState.state.Params.BondDenom, val.Tokens))
 
 		if uint32(len(vals)) < vCount {
 			if val.IsJailed() {
@@ -958,10 +1056,12 @@ func (ga *GenesisState) ensureActiveSet(cdc codec.Codec) error {
 
 			if !val.IsBonded() {
 				sVals[i].Status = stakingtypes.Bonded
-			}
 
-			// bonded.Add(val.Tokens)
-			totalPower += power
+				err := ga.SendFromModuleToModule(cdc, ga.moduleAddresses.notBondedPool, ga.moduleAddresses.bondedPool, coins)
+				if err != nil {
+					return err
+				}
+			}
 
 			pubkey, _ := val.ConsPubKey()
 
@@ -969,6 +1069,9 @@ func (ga *GenesisState) ensureActiveSet(cdc codec.Codec) error {
 			if err != nil {
 				return err
 			}
+
+			power := val.GetDelegatorShares().QuoInt64(denomDecimalPlaces).RoundInt64()
+			totalPower += power
 
 			vals = append(vals, tmtypes.GenesisValidator{
 				Address: tmPk.Address(),
@@ -983,13 +1086,8 @@ func (ga *GenesisState) ensureActiveSet(cdc codec.Codec) error {
 			})
 		} else if val.IsBonded() {
 			sVals[i].Status = stakingtypes.Unbonding
-			coins := sdk.NewCoins(sdk.NewCoin("uakt", val.DelegatorShares.RoundInt()))
-			err := ga.DecreaseBalances(cdc, ga.moduleAddresses.bondedPool, coins)
-			if err != nil {
-				return err
-			}
-
-			err = ga.IncreaseBalances(cdc, ga.moduleAddresses.notBondedPool, coins)
+			sVals[i].UnbondingHeight = ga.doc.InitialHeight
+			err := ga.SendFromModuleToModule(cdc, ga.moduleAddresses.bondedPool, ga.moduleAddresses.notBondedPool, coins)
 			if err != nil {
 				return err
 			}

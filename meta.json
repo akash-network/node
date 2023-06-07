@@ -7,7 +7,7 @@
     "upgrades": {
         "v0.24.0": {
             "skipped": false,
-            "from_binary": "v0.22.6",
+            "from_binary": "v0.22.8",
             "from_version": "v0.22.0"
         }
     }
