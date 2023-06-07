@@ -5,49 +5,11 @@ defaults:
     shell: bash
 
 on:
-  push:
-    tags:
-      - v*
+  workflow_dispatch:
 
 jobs:
-  ensure-dry-run:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Ensure release/dry-run PASS
-        uses: lewagon/wait-on-check-action@v1.3.1
-        with:
-          ref: ${{ github.ref }}
-          check-name: 'dry-run'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 10
-          allowed-conclusions: success
-  ensure-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Ensure tests PASS
-        uses: lewagon/wait-on-check-action@v1.3.1
-        with:
-          ref: ${{ github.ref }}
-          check-name: 'tests'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 10
-          allowed-conclusions: success
-  ensure-tools:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Ensure tools PASS
-        uses: lewagon/wait-on-check-action@v1.3.1
-        with:
-          ref: ${{ github.ref }}
-          check-name: 'tools'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 10
-          allowed-conclusions: success
   publish:
     runs-on: ubuntu-latest
-    needs:
-      - ensure-dry-run
-      - ensure-tests
     steps:
       - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
@@ -80,9 +42,47 @@ jobs:
           GORELEASER_MOUNT_CONFIG: true
           # using PAT as homebrew is located in different repo
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  homebrew:
+  test-upgrade:
+    runs-on: upgrade-tester
+    needs:
+      - publish
+    steps:
+      - uses: actions/checkout@v3
+      - run: git fetch --prune --unshallow
+      - name: set environment
+        uses: HatsuneMiku3939/direnv-action@v1
+      - uses: actions/setup-go@v3
+        with:
+          go-version: "${{ env.GOLANG_VERSION }}"
+      - name: configure variables
+        run: |
+          echo "RELEASE_TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
+          test_required=$(./script/upgrades.sh test-required ${{ github.event.inputs.tag }})
+          echo "TEST_REQUIRED=$test_required" >> $GITHUB_ENV
+      - name: run test
+        if: env.TEST_REQUIRED == 'true'
+        run: |
+          cd tests/upgrade
+          UPGRADE_BINARY_VERSION=${{ env.RELEASE_TAG }} make test
+      - name: dump stderr
+        if: always() && steps.test.outcome != 'skipped'
+        run: cat .cache/run/upgrade/stderr.log
+      - name: upload stderr
+        if: always() && steps.test.outcome != 'skipped'
+        uses: actions/upload-artifact@v3
+        with:
+          name: stderr.log
+          path: .cache/run/upgrade/stderr.log
+      - name: upload stdout
+        if: always() && steps.test.outcome != 'skipped'
+        uses: actions/upload-artifact@v3
+        with:
+          name: stdout.log
+          path: .cache/run/upgrade/stdout.log
+  notify-homebrew:
     runs-on: ubuntu-latest
-    needs: [ publish ]
+    needs:
+      - publish
     steps:
       - uses: actions/checkout@v3
         with:
