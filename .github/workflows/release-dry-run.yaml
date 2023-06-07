@@ -16,6 +16,7 @@ on:
 jobs:
   dry-run:
     runs-on: ubuntu-latest
+    name: dry-run
     steps:
       - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
