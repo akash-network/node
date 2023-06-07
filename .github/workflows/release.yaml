@@ -17,9 +17,9 @@ jobs:
         uses: lewagon/wait-on-check-action@v1.3.1
         with:
           ref: ${{ github.ref }}
-          check-name: 'dry-run'
+          running-workflow-name: 'release/dry-run'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 10
+          wait-interval: 60
           allowed-conclusions: success
   ensure-tests:
     runs-on: ubuntu-latest
@@ -30,7 +30,7 @@ jobs:
           ref: ${{ github.ref }}
           check-name: 'tests'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 10
+          wait-interval: 60
           allowed-conclusions: success
   ensure-tools:
     runs-on: ubuntu-latest
@@ -39,15 +39,16 @@ jobs:
         uses: lewagon/wait-on-check-action@v1.3.1
         with:
           ref: ${{ github.ref }}
-          check-name: 'tools'
+          running-workflow-name: 'tools'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 10
+          wait-interval: 60
           allowed-conclusions: success
   publish:
     runs-on: ubuntu-latest
     needs:
       - ensure-dry-run
       - ensure-tests
+      - ensure-tools
     steps:
       - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow

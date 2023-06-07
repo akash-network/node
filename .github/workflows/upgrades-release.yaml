@@ -15,9 +15,9 @@ jobs:
         uses: lewagon/wait-on-check-action@v1.3.1
         with:
           ref: ${{ github.ref }}
-          check-name: 'release'
+          running-workflow-name: 'release'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 10
+          wait-interval: 60
           allowed-conclusions: success
   test:
     runs-on: upgrade-tester
@@ -41,3 +41,18 @@ jobs:
         run: |
           cd tests/upgrade
           UPGRADE_BINARY_VERSION=${{ env.RELEASE_TAG }} make test
+      - name: dump stderr
+        if: always() && steps.test.outcome != 'skipped'
+        run: cat .cache/run/upgrade/stderr.log
+      - name: upload stderr
+        if: always() && steps.test.outcome != 'skipped'
+        uses: actions/upload-artifact@v3
+        with:
+          name: stderr.log
+          path: .cache/run/upgrade/stderr.log
+      - name: upload stdout
+        if: always() && steps.test.outcome != 'skipped'
+        uses: actions/upload-artifact@v3
+        with:
+          name: stdout.log
+          path: .cache/run/upgrade/stdout.log
