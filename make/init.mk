@@ -41,7 +41,18 @@ endif
 
 BINS                         := $(AKASH)
 
+GOWORK                       ?= on
+
+GO_MOD                       ?= vendor
+ifeq ($(GOWORK), on)
+GO_MOD                       := readonly
+endif
+
 GO                           := GO111MODULE=$(GO111MODULE) go
+GO_BUILD                     := $(GO) build -mod=$(GO_MOD)
+GO_TEST                      := $(GO) test -mod=$(GO_MOD)
+GO_VET                       := $(GO) vet -mod=$(GO_MOD)
+
 GO_MOD_NAME                  := $(shell go list -m 2>/dev/null)
 
 # ==== Build tools versions ====

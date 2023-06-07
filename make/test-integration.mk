@@ -16,23 +16,23 @@ shellcheck:
 
 .PHONY: test
 test:
-	$(GO) test -timeout 300s ./...
+	$(GO_TEST) -v -timeout 300s $(TEST_MODULE)
 
 .PHONY: test-nocache
 test-nocache:
-	$(GO) test -count=1 ./...
+	$(GO_TEST) -count=1 $(TEST_MODULE)
 
 .PHONY: test-full
 test-full:
-	$(GO) test -v -tags=$(BUILD_TAGS) $(TEST_MODULE)
+	$(GO_TEST) -v -tags=$(BUILD_TAGS) $(TEST_MODULE)
 
 .PHONY: test-coverage
 test-coverage:
-	$(GO) test -tags=$(BUILD_MAINNET) -coverprofile=coverage.txt \
+	$(GO_TEST) -tags=$(BUILD_MAINNET) -coverprofile=coverage.txt \
 		-covermode=count \
 		-coverpkg="$(COVER_PACKAGES)" \
 		./...
 
 .PHONY: test-vet
 test-vet:
-	$(GO) vet ./...
+	$(GO_VET) ./...
