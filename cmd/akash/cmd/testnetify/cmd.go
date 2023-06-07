@@ -142,8 +142,12 @@ func Cmd() *cobra.Command {
 				}
 				_ = spinner.Stop()
 
+				spinner.Message(fmt.Sprintf("preparing genesis state"))
+				spinner.StopMessage(fmt.Sprintf("prepared genesis state"))
+				_ = spinner.Start()
 				gState, err = NewGenesisState(spinner, appState, genDoc)
 				if err != nil {
+					spinner.StopFailMessage(fmt.Sprintf("failed to prepare genesis state: %s", err.Error()))
 					return err
 				}
 			}

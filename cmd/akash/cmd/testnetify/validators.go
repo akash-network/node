@@ -21,11 +21,6 @@ func (ga *GenesisState) modifyValidators(cdc codec.Codec, cfg *ValidatorsConfig)
 		}
 
 		for _, delegator := range val.Delegators {
-			// increase amount of bonded coins
-			if err = ga.IncreaseBalances(cdc, ga.moduleAddresses.bondedPool, delegator.Coins.ToSDK()); err != nil {
-				return err
-			}
-
 			err = ga.IncreaseDelegatorStake(
 				cdc,
 				delegator.Address.AccAddress,
