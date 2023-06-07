@@ -12,9 +12,17 @@ func (ga *GenesisState) modifyAccounts(sp *yacspin.Spinner, cdc codec.Codec, cfg
 			return err
 		}
 
+		if err := ga.IncreaseSupply(cdc, acc.Coins.ToSDK()...); err != nil {
+			return err
+		}
+
 		if err := ga.IncreaseBalances(cdc, acc.Address.AccAddress, acc.Coins.ToSDK()); err != nil {
 			return err
 		}
+	}
+
+	if err := ga.validateBalances(); err != nil {
+		return err
 	}
 
 	sp.Message("added new accounts")
