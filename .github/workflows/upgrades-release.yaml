@@ -4,21 +4,11 @@ defaults:
     shell: bash
 
 on:
-  push:
-    tags:
-      - v*
+  workflow_dispatch:
+    inputs:
+      tag:
+
 jobs:
-  ensure-release:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Ensure release PASS
-        uses: lewagon/wait-on-check-action@v1.3.1
-        with:
-          ref: ${{ github.ref }}
-          check-name: 'release'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 10
-          allowed-conclusions: success
   test:
     runs-on: upgrade-tester
     needs:
@@ -33,11 +23,26 @@ jobs:
           go-version: "${{ env.GOLANG_VERSION }}"
       - name: configure variables
         run: |
-          test_required=$(./script/upgrades.sh test-required ${{ github.ref }})
+          echo "RELEASE_TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
+          test_required=$(./script/upgrades.sh test-required ${{ github.event.inputs.tag }})
           echo "TEST_REQUIRED=$test_required" >> $GITHUB_ENV
-          echo "RELEASE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
       - name: run test
         if: env.TEST_REQUIRED == 'true'
         run: |
           cd tests/upgrade
           UPGRADE_BINARY_VERSION=${{ env.RELEASE_TAG }} make test
+      - name: dump stderr
+        if: always() && steps.test.outcome != 'skipped'
+        run: cat .cache/run/upgrade/stderr.log
+      - name: upload stderr
+        if: always() && steps.test.outcome != 'skipped'
+        uses: actions/upload-artifact@v3
+        with:
+          name: stderr.log
+          path: .cache/run/upgrade/stderr.log
+      - name: upload stdout
+        if: always() && steps.test.outcome != 'skipped'
+        uses: actions/upload-artifact@v3
+        with:
+          name: stdout.log
+          path: .cache/run/upgrade/stdout.log

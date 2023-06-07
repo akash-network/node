@@ -31,6 +31,9 @@ jobs:
         run: |
           cd tests/upgrade
           make test
+      - name: dump stderr
+        if: always() && steps.test.outcome != 'skipped'
+        run: cat .cache/run/upgrade/stderr.log
       - name: upload stderr
         if: always() && steps.test.outcome != 'skipped'
         uses: actions/upload-artifact@v3
