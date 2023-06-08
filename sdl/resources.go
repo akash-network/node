@@ -28,7 +28,7 @@ func (sdl *v2ComputeResources) toDGroupResourceUnits() types.ResourceUnits {
 	if sdl.GPU != nil {
 		units.GPU = &types.GPU{
 			Units:      types.NewResourceValue(uint64(sdl.GPU.Units)),
-			Attributes: sdl.GPU.Attributes.attr,
+			Attributes: types.Attributes(sdl.GPU.Attributes),
 		}
 	} else {
 		units.GPU = &types.GPU{

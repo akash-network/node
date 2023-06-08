@@ -31,9 +31,9 @@ attributes:
 	err := yaml.Unmarshal([]byte(stream), &p)
 	require.NoError(t, err)
 	require.Equal(t, gpuQuantity(1), p.Units)
-	require.Equal(t, 1, len(p.Attributes.attr))
-	require.Equal(t, "vendor/nvidia/model/*", p.Attributes.attr[0].Key)
-	require.Equal(t, "true", p.Attributes.attr[0].Value)
+	require.Equal(t, 1, len(p.Attributes))
+	require.Equal(t, "vendor/nvidia/model/*", p.Attributes[0].Key)
+	require.Equal(t, "true", p.Attributes[0].Value)
 }
 
 func TestV2ResourceGPU_SingleModel(t *testing.T) {
@@ -49,9 +49,9 @@ attributes:
 	err := yaml.Unmarshal([]byte(stream), &p)
 	require.NoError(t, err)
 	require.Equal(t, gpuQuantity(1), p.Units)
-	require.Equal(t, 1, len(p.Attributes.attr))
-	require.Equal(t, "vendor/nvidia/model/a100", p.Attributes.attr[0].Key)
-	require.Equal(t, "true", p.Attributes.attr[0].Value)
+	require.Equal(t, 1, len(p.Attributes))
+	require.Equal(t, "vendor/nvidia/model/a100", p.Attributes[0].Key)
+	require.Equal(t, "true", p.Attributes[0].Value)
 }
 
 func TestV2ResourceGPU_SingleModelWithRAM(t *testing.T) {
@@ -68,9 +68,9 @@ attributes:
 	err := yaml.Unmarshal([]byte(stream), &p)
 	require.NoError(t, err)
 	require.Equal(t, gpuQuantity(1), p.Units)
-	require.Equal(t, 1, len(p.Attributes.attr))
-	require.Equal(t, "vendor/nvidia/model/a100/80Gi", p.Attributes.attr[0].Key)
-	require.Equal(t, "true", p.Attributes.attr[0].Value)
+	require.Equal(t, 1, len(p.Attributes))
+	require.Equal(t, "vendor/nvidia/model/a100/80Gi", p.Attributes[0].Key)
+	require.Equal(t, "true", p.Attributes[0].Value)
 }
 
 func TestV2ResourceGPU_InvalidRAMUnit(t *testing.T) {
@@ -104,11 +104,11 @@ attributes:
 	err := yaml.Unmarshal([]byte(stream), &p)
 	require.NoError(t, err)
 	require.Equal(t, gpuQuantity(1), p.Units)
-	require.Equal(t, 2, len(p.Attributes.attr))
-	require.Equal(t, "vendor/nvidia/model/a100/40Gi", p.Attributes.attr[0].Key)
-	require.Equal(t, "true", p.Attributes.attr[0].Value)
-	require.Equal(t, "vendor/nvidia/model/a100/80Gi", p.Attributes.attr[1].Key)
-	require.Equal(t, "true", p.Attributes.attr[1].Value)
+	require.Equal(t, 2, len(p.Attributes))
+	require.Equal(t, "vendor/nvidia/model/a100/40Gi", p.Attributes[0].Key)
+	require.Equal(t, "true", p.Attributes[0].Value)
+	require.Equal(t, "vendor/nvidia/model/a100/80Gi", p.Attributes[1].Key)
+	require.Equal(t, "true", p.Attributes[1].Value)
 }
 
 func TestV2ResourceGPU_MultipleModels2(t *testing.T) {
@@ -126,11 +126,11 @@ attributes:
 	err := yaml.Unmarshal([]byte(stream), &p)
 	require.NoError(t, err)
 	require.Equal(t, gpuQuantity(1), p.Units)
-	require.Equal(t, 2, len(p.Attributes.attr))
-	require.Equal(t, "vendor/nvidia/model/a100", p.Attributes.attr[0].Key)
-	require.Equal(t, "true", p.Attributes.attr[0].Value)
-	require.Equal(t, "vendor/nvidia/model/a100/80Gi", p.Attributes.attr[1].Key)
-	require.Equal(t, "true", p.Attributes.attr[1].Value)
+	require.Equal(t, 2, len(p.Attributes))
+	require.Equal(t, "vendor/nvidia/model/a100", p.Attributes[0].Key)
+	require.Equal(t, "true", p.Attributes[0].Value)
+	require.Equal(t, "vendor/nvidia/model/a100/80Gi", p.Attributes[1].Key)
+	require.Equal(t, "true", p.Attributes[1].Value)
 }
 
 func TestV2ResourceGPU_MultipleModels3(t *testing.T) {
@@ -147,9 +147,9 @@ attributes:
 	err := yaml.Unmarshal([]byte(stream), &p)
 	require.NoError(t, err)
 	require.Equal(t, gpuQuantity(1), p.Units)
-	require.Equal(t, 2, len(p.Attributes.attr))
-	require.Equal(t, "vendor/nvidia/model/a40", p.Attributes.attr[0].Key)
-	require.Equal(t, "true", p.Attributes.attr[0].Value)
-	require.Equal(t, "vendor/nvidia/model/a6000", p.Attributes.attr[1].Key)
-	require.Equal(t, "true", p.Attributes.attr[1].Value)
+	require.Equal(t, 2, len(p.Attributes))
+	require.Equal(t, "vendor/nvidia/model/a40", p.Attributes[0].Key)
+	require.Equal(t, "true", p.Attributes[0].Value)
+	require.Equal(t, "vendor/nvidia/model/a6000", p.Attributes[1].Key)
+	require.Equal(t, "true", p.Attributes[1].Value)
 }
