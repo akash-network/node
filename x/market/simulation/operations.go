@@ -18,6 +18,7 @@ import (
 	types "github.com/akash-network/akash-api/go/node/market/v1beta3"
 
 	appparams "github.com/akash-network/node/app/params"
+	testsim "github.com/akash-network/node/testutil/sim"
 	keepers "github.com/akash-network/node/x/market/handler"
 )
 
@@ -82,8 +83,7 @@ func SimulateMsgCreateBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simtype
 		}
 
 		// Get random order
-		i := r.Intn(len(orders))
-		order := orders[i]
+		order := orders[testsim.RandIdx(r, len(orders)-1)]
 
 		providers := getProviders(ctx, ks)
 
@@ -92,8 +92,7 @@ func SimulateMsgCreateBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simtype
 		}
 
 		// Get random deployment
-		i = r.Intn(len(providers))
-		provider := providers[i]
+		provider := providers[testsim.RandIdx(r, len(providers)-1)]
 
 		ownerAddr, convertErr := sdk.AccAddressFromBech32(provider.Owner)
 		if convertErr != nil {
@@ -177,8 +176,7 @@ func SimulateMsgCloseBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simtypes
 		}
 
 		// Get random bid
-		i := r.Intn(len(bids))
-		bid := bids[i]
+		bid := bids[testsim.RandIdx(r, len(bids)-1)]
 
 		providerAddr, convertErr := sdk.AccAddressFromBech32(bid.ID().Provider)
 		if convertErr != nil {
@@ -235,8 +233,7 @@ func SimulateMsgCloseLease(ak govtypes.AccountKeeper, ks keepers.Keepers) simtyp
 		// }
 
 		// // Get random order
-		// i := r.Intn(len(orders))
-		// order := orders[i]
+		// order := orders[testsim.RandIdx(r, len(orders) - 1)]
 
 		// ownerAddr, convertErr := sdk.AccAddressFromBech32(order.ID().Owner)
 		// if convertErr != nil {
