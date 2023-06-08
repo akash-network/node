@@ -140,8 +140,8 @@ func Cmd() *cobra.Command {
 				}
 				_ = spinner.Stop()
 
-				spinner.Message(fmt.Sprintf("preparing genesis state"))
-				spinner.StopMessage(fmt.Sprintf("prepared genesis state"))
+				spinner.Message("preparing genesis state")
+				spinner.StopMessage("prepared genesis state")
 				_ = spinner.Start()
 				gState, err = NewGenesisState(spinner, appState, genDoc)
 				if err != nil {
