@@ -111,7 +111,10 @@ func QueryGroupExec(clientCtx client.Context, id types.GroupID, extraArgs ...str
 }
 
 func TxGrantAuthorizationExec(clientCtx client.Context, granter, grantee sdk.AccAddress, extraArgs ...string) (sdktest.BufferWriter, error) {
-	spendLimit := sdk.NewCoin(types.DefaultDeploymentMinDeposit.Denom, types.DefaultDeploymentMinDeposit.Amount.MulRaw(3))
+
+	dmin, _ := types.DefaultParams().MinDepositFor("uakt")
+
+	spendLimit := sdk.NewCoin(dmin.Denom, dmin.Amount.MulRaw(3))
 	args := []string{
 		grantee.String(),
 		spendLimit.String(),

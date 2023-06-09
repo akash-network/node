@@ -28,9 +28,10 @@ import (
 
 type IntegrationTestSuite struct {
 	suite.Suite
-	cfg       network.Config
-	network   *network.Network
-	keyFunder keyring.Info
+	cfg            network.Config
+	network        *network.Network
+	keyFunder      keyring.Info
+	defaultDeposit sdk.Coin
 }
 
 func (s *IntegrationTestSuite) SetupSuite() {
@@ -56,11 +57,14 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	s.keyFunder, err = val.ClientCtx.Keyring.Key("keyFoo")
 	s.Require().NoError(err)
 
+	s.defaultDeposit, err = types.DefaultParams().MinDepositFor("uakt")
+	s.Require().NoError(err)
+
 	res, err := banktestutil.MsgSendExec(
 		val.ClientCtx,
 		val.Address,
 		s.keyFunder.GetAddress(),
-		sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, types.DefaultDeploymentMinDeposit.Amount.MulRaw(4))),
+		sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, s.defaultDeposit.Amount.MulRaw(4))),
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
@@ -347,7 +351,7 @@ func (s *IntegrationTestSuite) TestFundedDeployment() {
 
 	// funder's balance should be deducted correctly
 	curFunderBal := s.getAccountBalance(s.keyFunder.GetAddress())
-	s.Require().Equal(prevFunderBal.Sub(types.DefaultDeploymentMinDeposit.Amount), curFunderBal)
+	s.Require().Equal(prevFunderBal.Sub(s.defaultDeposit.Amount), curFunderBal)
 	prevFunderBal = curFunderBal
 
 	// owner's balance should be deducted correctly
@@ -358,7 +362,7 @@ func (s *IntegrationTestSuite) TestFundedDeployment() {
 	// depositing additional funds from the owner's account should work
 	res, err = cli.TxDepositDeploymentExec(
 		val.ClientCtx,
-		types.DefaultDeploymentMinDeposit,
+		s.defaultDeposit,
 		val.Address,
 		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
@@ -372,14 +376,14 @@ func (s *IntegrationTestSuite) TestFundedDeployment() {
 
 	// owner's balance should be deducted correctly
 	curOwnerBal = s.getAccountBalance(val.Address)
-	s.Require().Equal(ownerBal.Sub(types.DefaultDeploymentMinDeposit.Amount).SubRaw(20), curOwnerBal)
+	s.Require().Equal(ownerBal.Sub(s.defaultDeposit.Amount).SubRaw(20), curOwnerBal)
 	// s.Require().Equal(prevOwnerBal.Sub(types.DefaultDeploymentMinDeposit.Amount), curOwnerBal)
 	ownerBal = curOwnerBal
 
 	// depositing additional funds from the funder's account should work
 	res, err = cli.TxDepositDeploymentExec(
 		val.ClientCtx,
-		types.DefaultDeploymentMinDeposit,
+		s.defaultDeposit,
 		val.Address,
 		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
@@ -394,7 +398,7 @@ func (s *IntegrationTestSuite) TestFundedDeployment() {
 
 	// funder's balance should be deducted correctly
 	curFunderBal = s.getAccountBalance(s.keyFunder.GetAddress())
-	s.Require().Equal(prevFunderBal.Sub(types.DefaultDeploymentMinDeposit.Amount), curFunderBal)
+	s.Require().Equal(prevFunderBal.Sub(s.defaultDeposit.Amount), curFunderBal)
 	prevFunderBal = curFunderBal
 
 	// revoke the authorization given to the deployment owner by the funder
@@ -415,7 +419,7 @@ func (s *IntegrationTestSuite) TestFundedDeployment() {
 	// depositing additional funds from the funder's account should fail now
 	res, err = cli.TxDepositDeploymentExec(
 		val.ClientCtx,
-		types.DefaultDeploymentMinDeposit,
+		s.defaultDeposit,
 		val.Address,
 		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
 		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
@@ -446,8 +450,8 @@ func (s *IntegrationTestSuite) TestFundedDeployment() {
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
 	clitestutil.ValidateTxSuccessful(s.T(), val.ClientCtx, res.Bytes())
-	s.Require().Equal(prevFunderBal.Add(types.DefaultDeploymentMinDeposit.Amount.MulRaw(2)), s.getAccountBalance(s.keyFunder.GetAddress()))
-	s.Require().Equal(ownerBal.Add(types.DefaultDeploymentMinDeposit.Amount).SubRaw(20), s.getAccountBalance(val.Address))
+	s.Require().Equal(prevFunderBal.Add(s.defaultDeposit.Amount.MulRaw(2)), s.getAccountBalance(s.keyFunder.GetAddress()))
+	s.Require().Equal(ownerBal.Add(s.defaultDeposit.Amount).SubRaw(20), s.getAccountBalance(val.Address))
 }
 
 func TestIntegrationTestSuite(t *testing.T) {

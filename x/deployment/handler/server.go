@@ -35,13 +35,9 @@ func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreate
 		return nil, types.ErrDeploymentExists
 	}
 
-	minDeposit := ms.deployment.GetParams(ctx).DeploymentMinDeposit
-
-	if minDeposit.Denom != msg.Deposit.Denom {
-		return nil, fmt.Errorf("%w: mininum:%v received:%v", types.ErrInvalidDeposit, minDeposit, msg.Deposit)
-	}
-	if minDeposit.Amount.GT(msg.Deposit.Amount) {
-		return nil, fmt.Errorf("%w: mininum:%v received:%v", types.ErrInvalidDeposit, minDeposit, msg.Deposit)
+	params := ms.deployment.GetParams(ctx)
+	if err := params.ValidateDeposit(msg.Deposit); err != nil {
+		return nil, err
 	}
 
 	deployment := types.Deployment{

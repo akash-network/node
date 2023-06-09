@@ -17,8 +17,8 @@ const (
 )
 
 var (
-	ErrStateValue  = errors.New("query: invalid state value")
-	DefaultDeposit = types.DefaultDeploymentMinDeposit
+	ErrStateValue     = errors.New("query: invalid state value")
+	DefaultDeposit, _ = types.DefaultParams().MinDepositFor("uakt")
 )
 
 type DeploymentIDOptions struct {

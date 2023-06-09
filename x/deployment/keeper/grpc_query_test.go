@@ -505,12 +505,14 @@ func (suite *grpcTestSuite) createEscrowAccount(id types.DeploymentID) etypes.Ac
 	require.NoError(suite.t, err)
 
 	eid := types.EscrowAccountForDeployment(id)
+	defaultDeposit, err := types.DefaultParams().MinDepositFor("uakt")
+	require.NoError(suite.t, err)
 
 	err = suite.ekeeper.AccountCreate(suite.ctx,
 		eid,
 		owner,
 		owner,
-		types.DefaultDeploymentMinDeposit,
+		defaultDeposit,
 	)
 	require.NoError(suite.t, err)
 	return eid
