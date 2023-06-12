@@ -67,8 +67,10 @@ func toManifestResources(res *v2ComputeResources) types.ResourceUnits {
 
 	if res.GPU != nil {
 		units.GPU = &types.GPU{
-			Units: types.NewResourceValue(uint64(res.GPU.Units)),
+			Units:      types.NewResourceValue(uint64(res.GPU.Units)),
+			Attributes: make(types.Attributes, len(res.GPU.Attributes)),
 		}
+		copy(units.GPU.Attributes, res.GPU.Attributes)
 	} else {
 		units.GPU = &types.GPU{
 			Units: types.NewResourceValue(0),
