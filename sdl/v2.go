@@ -344,7 +344,7 @@ func (sdl *v2) Manifest() (manifest.Manifest, error) {
 				groups[group.Name] = group
 			}
 
-			// at this moment compute and svc have been check for existence
+			// at this moment compute and svc have been checked for existence
 			compute := sdl.Profiles.Compute[svcdepl.Profile]
 			svc := sdl.Services[svcName]
 
