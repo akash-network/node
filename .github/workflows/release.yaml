@@ -60,7 +60,8 @@ jobs:
           echo "TEST_REQUIRED=$test_required" >> $GITHUB_ENV
       - name: run test
         if: env.TEST_REQUIRED == 'true'
-        env: UPGRADE_BINARY_VERSION=${{ env.RELEASE_TAG }}
+        env:
+          UPGRADE_BINARY_VERSION: ${{ env.RELEASE_TAG }}
         run: |
           cd tests/upgrade
           make test
