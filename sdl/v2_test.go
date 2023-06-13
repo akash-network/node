@@ -109,6 +109,12 @@ func TestV2ParseSimpleGPU(t *testing.T) {
 					},
 					GPU: &atypes.GPU{
 						Units: atypes.NewResourceValue(1),
+						Attributes: atypes.Attributes{
+							{
+								Key:   "vendor/nvidia/model/a100",
+								Value: "true",
+							},
+						},
 					},
 					Memory: &atypes.Memory{
 						Quantity: atypes.NewResourceValue(128 * unit.Mi),
