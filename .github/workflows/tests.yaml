@@ -83,7 +83,6 @@ jobs:
         with:
           go-version: "${{ env.GOLANG_VERSION }}"
       - run: make deps-tidy
-      - run: make deps-vendor
       - run: make build
       - run: make test-vet
       - name: lint all
