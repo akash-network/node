@@ -11,8 +11,6 @@ include make/init.mk
 .DEFAULT_GOAL         := bins
 
 DOCKER_RUN            := docker run --rm -v $(shell pwd):/workspace -w /workspace
-DOCKER_BUF            := $(DOCKER_RUN) bufbuild/buf:$(BUF_VERSION)
-DOCKER_CLANG          := $(DOCKER_RUN) tendermintdev/docker-build-proto
 GOLANGCI_LINT_RUN     := $(GOLANGCI_LINT) run
 LINT                   = $(GOLANGCI_LINT_RUN) ./... --disable-all --deadline=5m --enable
 
@@ -69,12 +67,10 @@ all: build bins
 clean: cache-clean
 	rm -f $(BINS)
 
-include make/proto.mk
 include make/releasing.mk
 include make/mod.mk
 include make/lint.mk
 include make/test-integration.mk
 include make/test-simulation.mk
 include make/tools.mk
-include make/environment.mk
 include make/codegen.mk

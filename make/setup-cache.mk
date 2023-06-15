@@ -8,15 +8,6 @@ $(AKASH_DEVCACHE):
 	mkdir -p $(AKASH_DEVCACHE)/run
 cache: $(AKASH_DEVCACHE)
 
-$(MODVENDOR_VERSION_FILE): $(AKASH_DEVCACHE)
-	@echo "installing modvendor $(MODVENDOR_VERSION) ..."
-	rm -f $(MODVENDOR)
-	GOBIN=$(AKASH_DEVCACHE_BIN) $(GO) install github.com/goware/modvendor@$(MODVENDOR_VERSION)
-	rm -rf "$(dir $@)"
-	mkdir -p "$(dir $@)"
-	touch $@
-$(MODVENDOR): $(MODVENDOR_VERSION_FILE)
-
 $(GIT_CHGLOG_VERSION_FILE): $(AKASH_DEVCACHE)
 	@echo "installing git-chglog $(GIT_CHGLOG_VERSION) ..."
 	rm -f $(GIT_CHGLOG)

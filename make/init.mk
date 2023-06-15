@@ -57,19 +57,16 @@ GO_MOD_NAME                  := $(shell go list -m 2>/dev/null)
 
 # ==== Build tools versions ====
 # Format <TOOL>_VERSION
-BUF_VERSION                  ?= 0.35.1
 GOLANGCI_LINT_VERSION        ?= v1.51.2
 GOLANG_VERSION               ?= 1.16.1
 STATIK_VERSION               ?= v0.1.7
 GIT_CHGLOG_VERSION           ?= v0.15.1
-MODVENDOR_VERSION            ?= v0.3.0
 MOCKERY_VERSION              ?= 2.24.0
 COSMOVISOR_VERSION           ?= v1.4.0
 
 # ==== Build tools version tracking ====
 # <TOOL>_VERSION_FILE points to the marker file for the installed version.
 # If <TOOL>_VERSION_FILE is changed, the binary will be re-downloaded.
-MODVENDOR_VERSION_FILE           := $(AKASH_DEVCACHE_VERSIONS)/modvendor/$(MODVENDOR_VERSION)
 GIT_CHGLOG_VERSION_FILE          := $(AKASH_DEVCACHE_VERSIONS)/git-chglog/$(GIT_CHGLOG_VERSION)
 MOCKERY_VERSION_FILE             := $(AKASH_DEVCACHE_VERSIONS)/mockery/v$(MOCKERY_VERSION)
 GOLANGCI_LINT_VERSION_FILE       := $(AKASH_DEVCACHE_VERSIONS)/golangci-lint/$(GOLANGCI_LINT_VERSION)
@@ -77,7 +74,6 @@ STATIK_VERSION_FILE              := $(AKASH_DEVCACHE_VERSIONS)/statik/$(STATIK_V
 COSMOVISOR_VERSION_FILE          := $(AKASH_DEVCACHE_VERSIONS)/cosmovisor/$(COSMOVISOR_VERSION)
 
 # ==== Build tools executables ====
-MODVENDOR                        := $(AKASH_DEVCACHE_BIN)/modvendor
 GIT_CHGLOG                       := $(AKASH_DEVCACHE_BIN)/git-chglog
 MOCKERY                          := $(AKASH_DEVCACHE_BIN)/mockery
 NPM                              := npm
