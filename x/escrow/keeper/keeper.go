@@ -534,7 +534,7 @@ func (k *keeper) paymentWithdraw(ctx sdk.Context, obj *types.FractionalPayment) 
 		return err
 	}
 
-	rawEarnings := sdk.NewCoin(obj.Balance.Denom, obj.Balance.Amount.RoundInt())
+	rawEarnings := sdk.NewCoin(obj.Balance.Denom, obj.Balance.Amount.TruncateInt())
 
 	if rawEarnings.Amount.IsZero() {
 		return nil
