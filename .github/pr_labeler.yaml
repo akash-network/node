@@ -16,9 +16,13 @@
   - x/provider/**/*
 "C:x/staking":
   - x/staking/**/*
+"C:x/take":
+  - x/take/**/*
 "C:CLI":
   - cmd/**/*
   - x/*/client/cli/*
+"C:upgrades":
+  - upgrades/**/*
 "Type: Build":
   - Makefile
   - Dockerfile
