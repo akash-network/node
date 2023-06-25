@@ -7,6 +7,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	types "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
+	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 )
 
 type AccountHook func(sdk.Context, types.Account)
@@ -34,12 +35,13 @@ type Keeper interface {
 	SavePayment(sdk.Context, types.FractionalPayment)
 }
 
-func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey, bkeeper BankKeeper, tkeeper TakeKeeper) Keeper {
+func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey, bkeeper BankKeeper, tkeeper TakeKeeper, dkeeper DistrKeeper) Keeper {
 	return &keeper{
 		cdc:     cdc,
 		skey:    skey,
 		bkeeper: bkeeper,
 		tkeeper: tkeeper,
+		dkeeper: dkeeper,
 	}
 }
 
@@ -48,6 +50,7 @@ type keeper struct {
 	skey    sdk.StoreKey
 	bkeeper BankKeeper
 	tkeeper TakeKeeper
+	dkeeper DistrKeeper
 
 	hooks struct {
 		onAccountClosed []AccountHook
@@ -545,11 +548,9 @@ func (k *keeper) paymentWithdraw(ctx sdk.Context, obj *types.FractionalPayment) 
 		return err
 	}
 
-	if !fee.IsZero() {
-		if err := k.bkeeper.SendCoinsFromModuleToModule(ctx, types.ModuleName, "community", sdk.NewCoins(fee)); err != nil {
-			ctx.Logger().Error("payment withdraw - fees", "err", err, "account", obj.AccountID, "payment", obj.PaymentID)
-			return err
-		}
+	if err := k.sendFeeToCommunityPool(ctx, fee); err != nil {
+		ctx.Logger().Error("payment withdraw - fees", "err", err, "account", obj.AccountID, "payment", obj.PaymentID)
+		return err
 	}
 
 	if !earnings.IsZero() {
@@ -565,6 +566,26 @@ func (k *keeper) paymentWithdraw(ctx sdk.Context, obj *types.FractionalPayment) 
 	obj.Balance = obj.Balance.Sub(sdk.NewDecCoinFromCoin(total))
 
 	k.savePayment(ctx, obj)
+	return nil
+}
+
+func (k keeper) sendFeeToCommunityPool(ctx sdk.Context, fee sdk.Coin) error {
+
+	if fee.IsZero() {
+		return nil
+	}
+
+	// see https://github.com/cosmos/cosmos-sdk/blob/c2a07cea272a7878b5bc2ec160eb58ca83794214/x/distribution/keeper/keeper.go#L251-L263
+
+	if err := k.bkeeper.SendCoinsFromModuleToModule(ctx, types.ModuleName, distrtypes.ModuleName, sdk.NewCoins(fee)); err != nil {
+		return err
+	}
+
+	pool := k.dkeeper.GetFeePool(ctx)
+
+	pool.CommunityPool = pool.CommunityPool.Add(sdk.NewDecCoinFromCoin(fee))
+	k.dkeeper.SetFeePool(ctx, pool)
+
 	return nil
 }
 

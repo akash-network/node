@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	"github.com/stretchr/testify/mock"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 
@@ -46,6 +47,7 @@ type Keepers struct {
 	Deployment dkeeper.IKeeper
 	Provider   pkeeper.IKeeper
 	Bank       *emocks.BankKeeper
+	Distr      *emocks.DistrKeeper
 }
 
 // SetupTestSuite provides toolkit for accessing stores and keepers
@@ -66,6 +68,15 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 		keepers.Bank = bkeeper
 	}
 
+	if keepers.Distr == nil {
+		dkeeper := &emocks.DistrKeeper{}
+		dkeeper.
+			On("GetFeePool", mock.Anything).
+			Return(distrtypes.FeePool{})
+		dkeeper.On("SetFeePool", mock.Anything, mock.Anything).
+			Return()
+	}
+
 	app := app.Setup(false)
 
 	if keepers.Audit == nil {
@@ -77,7 +88,7 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 	}
 
 	if keepers.Escrow == nil {
-		keepers.Escrow = ekeeper.NewKeeper(etypes.ModuleCdc, app.GetKey(etypes.StoreKey), keepers.Bank, keepers.Take)
+		keepers.Escrow = ekeeper.NewKeeper(etypes.ModuleCdc, app.GetKey(etypes.StoreKey), keepers.Bank, keepers.Take, keepers.Distr)
 	}
 	if keepers.Market == nil {
 		keepers.Market = mkeeper.NewKeeper(mtypes.ModuleCdc, app.GetKey(mtypes.StoreKey), app.GetSubspace(mtypes.ModuleName), keepers.Escrow)
