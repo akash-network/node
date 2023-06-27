@@ -2,7 +2,7 @@
 
 ![tests](https://github.com/akash-network/node/workflows/tests/badge.svg)
 ![simulations](https://github.com/akash-network/node/workflows/simulation-tests/badge.svg)
-[![codecov](https://codecov.io/github/akash-network/node/coverage.svg?branch=master)](https://codecov.io/github/akash-network/node?branch=master)
+[![codecov](https://codecov.io/github/akash-network/node/coverage.svg?branch=main)](https://codecov.io/github/akash-network/node?branch=main)
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/akash-network/node)](https://goreportcard.com/report/github.com/akash-network/node)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
@@ -16,10 +16,10 @@ found in the [design documentation](https://docs.akash.network); and the target 
 
 # Branching and Versioning
 
-The `master` branch contains new features and is under active development; the `mainnet/main` branch contains the current, stable release.
+The `main` branch contains new features and is under active development; the `mainnet/main` branch contains the current, stable release.
 
 * **stable** releases will have even minor numbers ( `v0.8.0` ) and be cut from the `mainnet/main` branch.
-* **unstable** releases will have odd minor numbers ( `v0.9.0` ) and be cut from the `master` branch.
+* **unstable** releases will have odd minor numbers ( `v0.9.0` ) and be cut from the `main` branch.
 
 ## Akash Suite
 
@@ -66,13 +66,13 @@ $ brew install akash
 Or [GoDownloader](https://github.com/goreleaser/godownloader):
 
 ```sh
-$ curl -sSfL https://raw.githubusercontent.com/akash-network/node/master/install.sh | sh
+$ curl -sSfL https://raw.githubusercontent.com/akash-network/node/main/install.sh | sh
 ```
 
 Or install a specific version with [GoDownloader](https://github.com/goreleaser/godownloader)
 
 ```sh
-$ curl -sSfL https://raw.githubusercontent.com/akash-network/node/master/install | sh -s -- v0.22.0
+$ curl -sSfL https://raw.githubusercontent.com/akash-network/node/main/install | sh -s -- v0.22.0
 ```
 
 # Roadmap and contributing
@@ -82,7 +82,7 @@ Akash is written in Golang and is Apache 2.0 licensed - contributions are welcom
 To become a contributor, please see the guide on [contributing](CONTRIBUTING.md)
 
 ## Development environment
-[This doc](https://github.com/akash-network/node/blob/master/_docs/development-environment.md) guides through setting up local development environment
+[This doc](https://github.com/akash-network/node/blob/main/_docs/development-environment.md) guides through setting up local development environment
 
 Akash is developed and tested with [golang 1.16.0+](https://golang.org/). 
 Building requires a working [golang](https://golang.org/) installation, a properly set `GOPATH`, and `$GOPATH/bin` present in `$PATH`.
