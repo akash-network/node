@@ -148,6 +148,26 @@ jobs:
       - name: release dry-run
         run: make release
 
+  network-upgrade-names:
+    runs-on: upgrade-tester
+    steps:
+      - uses: actions/checkout@v3
+      - run: git fetch --prune --unshallow
+      - name: set environment
+        uses: HatsuneMiku3939/direnv-action@v1
+      - name: Ensure only directories exists in upgrades dir
+        run: |
+          dir=./upgrades/software
+          if [[ $(find "$dir" ! -path "$dir"  -maxdepth 1 -type f | wc -c) -ne 0 ]]; then
+              echo "$dir must contain only directories"
+              exit 1
+          fi
+      - name: Ensure names of upgrade dirs are semver compliant
+        run: |
+          dir=./upgrades/software
+          while read upgrade; do
+              ./script/semver.sh validate "$upgrade"
+          done <<< $(find "$dir" ! -path "$dir"  -maxdepth 1 -type d -exec basename {} \;)
   network-upgrade:
     runs-on: upgrade-tester
     steps:
