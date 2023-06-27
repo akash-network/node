@@ -31,6 +31,7 @@ var (
 		"inflation":  1,
 		"agov":       1,
 		"astaking":   1,
+		"take":       1,
 	}
 )
 
