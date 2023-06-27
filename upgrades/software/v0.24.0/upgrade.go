@@ -53,6 +53,10 @@ func initUpgrade(log log.Logger, app *apptypes.App) (utypes.IUpgrade, error) {
 		return nil, fmt.Errorf("module %s has not been initialized", atake.ModuleName) // nolint: goerr113
 	}
 
+	if _, exists := up.MM.Modules[feegrant.ModuleName]; !exists {
+		return nil, fmt.Errorf("module %s has not been initialized", feegrant.ModuleName) // nolint: goerr113
+	}
+
 	return up, nil
 }
 
