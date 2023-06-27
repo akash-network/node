@@ -106,7 +106,7 @@ test: init upgrade-binary
 		-chain-id="localakash" \
 		-upgrade-name=$(UPGRADE_TO) \
 		-upgrade-version="$(UPGRADE_BINARY_VERSION)" \
-		-test-cases=upgrades-$(UPGRADE_TO).json
+		-test-cases=upgrade-$(UPGRADE_TO).json
 
 .PHONY: test-reset
 test-reset:
