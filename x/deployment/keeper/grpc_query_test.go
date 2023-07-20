@@ -482,7 +482,7 @@ func (suite *grpcTestSuite) createDeployment() (types.Deployment, []types.Group)
 
 	deployment := testutil.Deployment(suite.t)
 	group := testutil.DeploymentGroup(suite.t, deployment.ID(), 0)
-	group.GroupSpec.Resources = []types.Resource{
+	group.GroupSpec.Resources = types.ResourceUnits{
 		{
 			Resources: testutil.ResourceUnits(suite.t),
 			Count:     1,

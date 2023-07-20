@@ -5,20 +5,57 @@ import (
 	"fmt"
 	"testing"
 
+	manifest "github.com/akash-network/akash-api/go/manifest/v2beta2"
 	"github.com/stretchr/testify/require"
 
 	types "github.com/akash-network/akash-api/go/node/types/v1beta3"
 )
 
-func findFirstIPEndpoint(t *testing.T, endpoints []types.Endpoint) types.Endpoint {
+func findIPEndpoint(t *testing.T, endpoints []types.Endpoint, id int) types.Endpoint {
+	idx := 0
 	for _, endpoint := range endpoints {
 		if endpoint.Kind == types.Endpoint_LEASED_IP {
-			return endpoint
+			idx++
+			if id == idx {
+				return endpoint
+			}
 		}
 	}
 
 	t.Fatal("did not find any IP endpoints")
 	return types.Endpoint{}
+}
+
+func TestV2ParseSimpleWithIP(t *testing.T) {
+	sdl, err := ReadFile("./_testdata/simple-with-ip.yaml")
+	require.NoError(t, err)
+	require.NotNil(t, sdl)
+
+	groups, err := sdl.DeploymentGroups()
+	require.NoError(t, err)
+	require.Len(t, groups, 1)
+	group := groups[0]
+	resources := group.GetResourceUnits()
+	require.Len(t, resources, 1)
+	resource := resources[0]
+
+	ipEndpoint := findIPEndpoint(t, resource.Resources.Endpoints, 1)
+
+	require.Equal(t, ipEndpoint.Kind, types.Endpoint_LEASED_IP)
+
+	mani, err := sdl.Manifest()
+	require.NoError(t, err)
+	var exposeIP manifest.ServiceExpose
+	for _, expose := range mani[0].Services[0].Expose {
+		if len(expose.IP) != 0 {
+			exposeIP = expose
+			break
+		}
+	}
+	require.NotEmpty(t, exposeIP.IP)
+	require.Equal(t, exposeIP.Proto, manifest.UDP)
+	require.Equal(t, exposeIP.Port, uint32(12345))
+	require.True(t, exposeIP.Global)
 }
 
 func TestV2Parse_IP(t *testing.T) {
@@ -30,7 +67,7 @@ func TestV2Parse_IP(t *testing.T) {
 	require.Len(t, groups, 1)
 	group := groups[0]
 
-	resources := group.GetResources()
+	resources := group.GetResourceUnits()
 	require.Len(t, resources, 1)
 	resource := resources[0]
 	endpoints := resource.Resources.Endpoints
@@ -76,15 +113,14 @@ func TestV2Parse_SharedIP(t *testing.T) {
 
 	group := groups[0]
 
-	resources := group.GetResources()
-	require.Len(t, resources, 2)
+	resources := group.GetResourceUnits()
+	require.Len(t, resources, 1)
 
 	resource := resources[0]
-	ipEndpoint := findFirstIPEndpoint(t, resource.Resources.Endpoints)
+	ipEndpoint := findIPEndpoint(t, resource.Resources.Endpoints, 1)
 	require.Greater(t, ipEndpoint.SequenceNumber, uint32(0))
 
-	resource = resources[1]
-	ipEndpoint = findFirstIPEndpoint(t, resource.Resources.Endpoints)
+	ipEndpoint = findIPEndpoint(t, resource.Resources.Endpoints, 2)
 	require.Greater(t, ipEndpoint.SequenceNumber, uint32(0))
 
 	mani, err := sdl1.Manifest()
@@ -98,11 +134,11 @@ func TestV2Parse_SharedIP(t *testing.T) {
 	require.Len(t, services, 2)
 	serviceA := services[0]
 
-	serviceIPEndpoint := findFirstIPEndpoint(t, serviceA.Resources.Endpoints)
+	serviceIPEndpoint := findIPEndpoint(t, serviceA.Resources.Endpoints, 1)
 	require.Equal(t, serviceIPEndpoint.SequenceNumber, ipEndpoint.SequenceNumber)
 
 	serviceB := services[1]
-	serviceIPEndpoint = findFirstIPEndpoint(t, serviceB.Resources.Endpoints)
+	serviceIPEndpoint = findIPEndpoint(t, serviceB.Resources.Endpoints, 1)
 	require.Equal(t, serviceIPEndpoint.SequenceNumber, ipEndpoint.SequenceNumber)
 }
 
@@ -117,8 +153,8 @@ func TestV2Parse_MultipleIP(t *testing.T) {
 
 	group := groups[0]
 
-	resources := group.GetResources()
-	require.Len(t, resources, 2)
+	resources := group.GetResourceUnits()
+	require.Len(t, resources, 1)
 
 	mani, err := sdl1.Manifest()
 	require.NoError(t, err)
@@ -134,20 +170,20 @@ func TestV2Parse_MultipleGroupsIP(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, groups, 2)
 
-	resources := groups[0].GetResources()
+	resources := groups[0].GetResourceUnits()
 	require.Len(t, resources, 1)
 
 	resource := resources[0]
 	require.Len(t, resource.Resources.Endpoints, 2)
-	ipEndpointFirstGroup := findFirstIPEndpoint(t, resource.Resources.Endpoints)
+	ipEndpointFirstGroup := findIPEndpoint(t, resource.Resources.Endpoints, 1)
 	require.Greater(t, ipEndpointFirstGroup.SequenceNumber, uint32(0))
 
-	resources = groups[1].GetResources()
+	resources = groups[1].GetResourceUnits()
 	require.Len(t, resources, 1)
 
 	resource = resources[0]
 	require.Len(t, resource.Resources.Endpoints, 2)
-	ipEndpointSecondGroup := findFirstIPEndpoint(t, resource.Resources.Endpoints)
+	ipEndpointSecondGroup := findIPEndpoint(t, resource.Resources.Endpoints, 1)
 	require.Greater(t, ipEndpointSecondGroup.SequenceNumber, uint32(0))
 	require.NotEqual(t, ipEndpointFirstGroup.SequenceNumber, ipEndpointSecondGroup.SequenceNumber)
 
@@ -157,16 +193,16 @@ func TestV2Parse_MultipleGroupsIP(t *testing.T) {
 	require.Len(t, maniGroups, 2)
 
 	maniGroup := maniGroups[0]
-	resources = maniGroup.GetResources()
-	require.Len(t, resources, 1)
-	resource = resources[0]
-	require.Equal(t, findFirstIPEndpoint(t, resource.Resources.Endpoints).SequenceNumber, ipEndpointFirstGroup.SequenceNumber)
+	mresources := maniGroup.GetResourceUnits()
+	require.Len(t, mresources, 1)
+	mresource := mresources[0]
+	require.Equal(t, findIPEndpoint(t, mresource.Endpoints, 1).SequenceNumber, ipEndpointFirstGroup.SequenceNumber)
 
 	maniGroup = maniGroups[1]
-	resources = maniGroup.GetResources()
-	require.Len(t, resources, 1)
-	resource = resources[0]
-	require.Equal(t, findFirstIPEndpoint(t, resource.Resources.Endpoints).SequenceNumber, ipEndpointSecondGroup.SequenceNumber)
+	mresources = maniGroup.GetResourceUnits()
+	require.Len(t, mresources, 1)
+	mresource = mresources[0]
+	require.Equal(t, findIPEndpoint(t, mresource.Endpoints, 1).SequenceNumber, ipEndpointSecondGroup.SequenceNumber)
 
 }
 
@@ -184,7 +220,7 @@ services:
           - global: true
             ip: %q
         accept:
-          - test.localhost         
+          - test.localhost
 
 profiles:
   compute:

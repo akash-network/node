@@ -5,41 +5,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	manifest "github.com/akash-network/akash-api/go/manifest/v2beta2"
 	atypes "github.com/akash-network/akash-api/go/node/types/v1beta3"
 
 	"github.com/akash-network/node/sdl/util"
 )
-
-func TestShouldBeIngress(t *testing.T) {
-	// Should not create ingress for something on port 81
-	require.False(t, util.ShouldBeIngress(manifest.ServiceExpose{
-		Global: true,
-		Proto:  manifest.TCP,
-		Port:   81,
-	}))
-
-	// Should create ingress for something on port 80
-	require.True(t, util.ShouldBeIngress(manifest.ServiceExpose{
-		Global: true,
-		Proto:  manifest.TCP,
-		Port:   80,
-	}))
-
-	// Should not create ingress for something on port 80 that is not Global
-	require.False(t, util.ShouldBeIngress(manifest.ServiceExpose{
-		Global: false,
-		Proto:  manifest.TCP,
-		Port:   80,
-	}))
-
-	// Should not create ingress for something on port 80 that is UDP
-	require.False(t, util.ShouldBeIngress(manifest.ServiceExpose{
-		Global: true,
-		Proto:  manifest.UDP,
-		Port:   80,
-	}))
-}
 
 func TestComputeCommittedResources(t *testing.T) {
 

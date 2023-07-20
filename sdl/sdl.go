@@ -1,16 +1,12 @@
 package sdl
 
 import (
-	"crypto/sha256"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 
 	"github.com/blang/semver/v4"
 	"gopkg.in/yaml.v3"
-
-	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	manifest "github.com/akash-network/akash-api/go/manifest/v2beta2"
 	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
@@ -23,16 +19,17 @@ var (
 
 // SDL is the interface which wraps Validate, Deployment and Manifest methods
 type SDL interface {
-	DeploymentGroups() ([]*dtypes.GroupSpec, error)
+	DeploymentGroups() (dtypes.GroupSpecs, error)
 	Manifest() (manifest.Manifest, error)
+	Version() ([]byte, error)
 	validate() error
 }
 
 var _ SDL = (*sdl)(nil)
 
 type sdl struct {
-	Version semver.Version `yaml:"-"`
-	data    SDL            `yaml:"-"`
+	Ver  semver.Version `yaml:"version,-"`
+	data SDL            `yaml:"-"`
 }
 
 func (s *sdl) UnmarshalYAML(node *yaml.Node) error {
@@ -42,7 +39,7 @@ func (s *sdl) UnmarshalYAML(node *yaml.Node) error {
 	for idx := range node.Content {
 		if node.Content[idx].Value == "version" {
 			var err error
-			if result.Version, err = semver.ParseTolerant(node.Content[idx+1].Value); err != nil {
+			if result.Ver, err = semver.ParseTolerant(node.Content[idx+1].Value); err != nil {
 				return err
 			}
 			foundVersion = true
@@ -55,7 +52,7 @@ func (s *sdl) UnmarshalYAML(node *yaml.Node) error {
 	}
 
 	// nolint: gocritic
-	if result.Version.GE(semver.MustParse("2.0.0")) && result.Version.LT(semver.MustParse("3.0.0")) {
+	if result.Ver.GE(semver.MustParse("2.0.0")) && result.Ver.LT(semver.MustParse("3.0.0")) {
 		var decoded v2
 		if err := node.Decode(&decoded); err != nil {
 			return err
@@ -63,7 +60,7 @@ func (s *sdl) UnmarshalYAML(node *yaml.Node) error {
 
 		result.data = &decoded
 	} else {
-		return fmt.Errorf("%w: config: unsupported version %q", errSDLInvalid, result.Version)
+		return fmt.Errorf("%w: config: unsupported version %q", errSDLInvalid, result.Ver)
 	}
 
 	*s = result
@@ -110,7 +107,7 @@ func Read(buf []byte) (SDL, error) {
 		return nil, err
 	}
 
-	if err := manifest.ValidateManifest(m); err != nil {
+	if err := m.Validate(); err != nil {
 		return nil, err
 	}
 
@@ -118,35 +115,17 @@ func Read(buf []byte) (SDL, error) {
 }
 
 // Version creates the deterministic Deployment Version hash from the SDL.
-func Version(s SDL) ([]byte, error) {
-	manifest, err := s.Manifest()
-	if err != nil {
-		return nil, err
-	}
-	return ManifestVersion(manifest)
-}
-
-// ManifestVersion calculates the identifying deterministic hash for an SDL.
-// Sha256 returns 32 byte sum of the SDL.
-func ManifestVersion(manifest manifest.Manifest) ([]byte, error) {
-	m, err := json.Marshal(manifest)
-	if err != nil {
-		return nil, err
-	}
-
-	sortedBytes, err := sdk.SortJSON(m)
-	if err != nil {
-		return nil, err
-	}
-
-	sum := sha256.Sum256(sortedBytes)
-
-	return sum[:], nil
-}
-
-func (s *sdl) DeploymentGroups() ([]*dtypes.GroupSpec, error) {
+func (s *sdl) Version() ([]byte, error) {
 	if s.data == nil {
-		return []*dtypes.GroupSpec{}, errUninitializedConfig
+		return nil, errUninitializedConfig
+	}
+
+	return s.data.Version()
+}
+
+func (s *sdl) DeploymentGroups() (dtypes.GroupSpecs, error) {
+	if s.data == nil {
+		return dtypes.GroupSpecs{}, errUninitializedConfig
 	}
 
 	return s.data.DeploymentGroups()

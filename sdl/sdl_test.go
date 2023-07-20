@@ -13,7 +13,7 @@ func TestSDLManifestVersion(t *testing.T) {
 	m, err := obj.Manifest()
 	require.NoError(t, err)
 
-	version, err := ManifestVersion(m)
+	version, err := m.Version()
 	require.NoError(t, err)
 	// Should return a value
 	require.NotEmpty(t, version)
@@ -24,11 +24,11 @@ func TestSDLManifestVersion(t *testing.T) {
 	m, err = obj.Manifest()
 	require.NoError(t, err)
 
-	secondVersion, err := ManifestVersion(m)
+	secondVersion, err := m.Version()
 	require.NoError(t, err)
 	// Should return a value
 	require.NotEmpty(t, secondVersion)
-	// Should be different than the first
+	// Should be different from the first
 	require.NotEqual(t, secondVersion, version)
 }
 
@@ -39,7 +39,7 @@ func TestSDLManifestVersionChangesWithVersion(t *testing.T) {
 	m, err := obj.Manifest()
 	require.NoError(t, err)
 
-	version, err := ManifestVersion(m)
+	version, err := m.Version()
 	require.NoError(t, err)
 	// Should return a value
 	require.NotEmpty(t, version)
@@ -50,10 +50,10 @@ func TestSDLManifestVersionChangesWithVersion(t *testing.T) {
 	m, err = obj.Manifest()
 	require.NoError(t, err)
 
-	secondVersion, err := ManifestVersion(m)
+	secondVersion, err := m.Version()
 	require.NoError(t, err)
 	// Should return a value
 	require.NotEmpty(t, secondVersion)
-	// Should be different than the first
+	// Should be different from the first
 	require.NotEqual(t, secondVersion, version)
 }

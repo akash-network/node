@@ -44,8 +44,9 @@ func RandRangeUint64(min, max uint64) uint64 {
 	return val
 }
 
-func ResourceUnits(_ testing.TB) types.ResourceUnits {
-	return types.ResourceUnits{
+func ResourceUnits(_ testing.TB) types.Resources {
+	return types.Resources{
+		ID: 1,
 		CPU: &types.CPU{
 			Units: types.NewResourceValue(uint64(RandCPUUnits())),
 		},

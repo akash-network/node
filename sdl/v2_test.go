@@ -3,14 +3,16 @@ package sdl
 import (
 	"testing"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 
 	manifest "github.com/akash-network/akash-api/go/manifest/v2beta2"
-
+	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
 	"github.com/akash-network/akash-api/go/node/types/unit"
 	atypes "github.com/akash-network/akash-api/go/node/types/v1beta3"
+	// "github.com/akash-network/node/testutil"
 )
 
 func TestV2Expose(t *testing.T) {
@@ -29,11 +31,27 @@ func TestV2Expose(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func AkashDecCoin(t testing.TB, amount int64) sdk.DecCoin {
+	t.Helper()
+	amt := sdk.NewInt(amount)
+	return sdk.NewDecCoin("uakt", amt)
+}
+
 const (
 	randCPU     uint64 = 100
 	randGPU     uint64 = 1
 	randMemory  uint64 = 128 * unit.Mi
 	randStorage uint64 = 1 * unit.Gi
+)
+
+var (
+	defaultHTTPOptions = manifest.ServiceExposeHTTPOptions{
+		MaxBodySize: defaultMaxBodySize,
+		ReadTimeout: defaultReadTimeout,
+		SendTimeout: defaultSendTimeout,
+		NextTries:   defaultNextTries,
+		NextCases:   []string{"error", "timeout"},
+	}
 )
 
 func TestV2ParseSimpleGPU(t *testing.T) {
@@ -45,7 +63,7 @@ func TestV2ParseSimpleGPU(t *testing.T) {
 	assert.Len(t, groups, 1)
 
 	group := groups[0]
-	assert.Len(t, group.GetResources(), 1)
+	assert.Len(t, group.GetResourceUnits(), 1)
 	assert.Len(t, group.Requirements.Attributes, 2)
 
 	assert.Equal(t, atypes.Attribute{
@@ -53,11 +71,12 @@ func TestV2ParseSimpleGPU(t *testing.T) {
 		Value: "us-west",
 	}, group.Requirements.Attributes[1])
 
-	assert.Len(t, group.GetResources(), 1)
+	assert.Len(t, group.GetResourceUnits(), 1)
 
-	assert.Equal(t, atypes.Resources{
+	assert.Equal(t, dtypes.ResourceUnit{
 		Count: 2,
-		Resources: atypes.ResourceUnits{
+		Resources: atypes.Resources{
+			ID: 1,
 			CPU: &atypes.CPU{
 				Units: atypes.NewResourceValue(randCPU),
 			},
@@ -88,7 +107,8 @@ func TestV2ParseSimpleGPU(t *testing.T) {
 				},
 			},
 		},
-	}, group.GetResources()[0])
+		Price: AkashDecCoin(t, 50),
+	}, group.GetResourceUnits()[0])
 
 	mani, err := sdl.Manifest()
 	require.NoError(t, err)
@@ -103,7 +123,8 @@ func TestV2ParseSimpleGPU(t *testing.T) {
 			{
 				Name:  "web",
 				Image: "nginx",
-				Resources: atypes.ResourceUnits{
+				Resources: atypes.Resources{
+					ID: 1,
 					CPU: &atypes.CPU{
 						Units: atypes.NewResourceValue(100),
 					},
@@ -123,6 +144,14 @@ func TestV2ParseSimpleGPU(t *testing.T) {
 						{
 							Name:     "default",
 							Quantity: atypes.NewResourceValue(1 * unit.Gi),
+						},
+					},
+					Endpoints: []atypes.Endpoint{
+						{
+							Kind: atypes.Endpoint_SHARED_HTTP,
+						},
+						{
+							Kind: atypes.Endpoint_RANDOM_PORT,
 						},
 					},
 				},
@@ -161,21 +190,17 @@ func TestV2Parse_Deployments(t *testing.T) {
 	_, err = sdl1.Manifest()
 	require.NoError(t, err)
 
-	sha1, err := Version(sdl1)
+	sha1, err := sdl1.Version()
 	require.NoError(t, err)
 	assert.Len(t, sha1, 32)
 
-	sha2, err := Version(sdl1)
-	require.NoError(t, err)
-	assert.Len(t, sha2, 32)
-
-	require.Equal(t, sha1, sha2)
-
 	sdl2, err := ReadFile("../x/deployment/testdata/deployment-v2.yaml")
 	require.NoError(t, err)
-	sha3, err := Version(sdl2)
+	sha2, err := sdl2.Version()
+
 	require.NoError(t, err)
-	require.NotEqual(t, sha1, sha3)
+	assert.Len(t, sha2, 32)
+	require.NotEqual(t, sha1, sha2)
 }
 
 func Test_V2_Cross_Validates(t *testing.T) {
@@ -191,7 +216,7 @@ func Test_V2_Cross_Validates(t *testing.T) {
 	// following is ture
 	// 1. Cross validation logic is wrong
 	// 2. The DeploymentGroups() & Manifest() code do not agree with one another
-	err = manifest.ValidateManifestWithGroupSpecs(&m, dgroups)
+	err = m.CheckAgainstGSpecs(dgroups)
 	require.NoError(t, err)
 
 	// Repeat the same test with another file
@@ -204,7 +229,7 @@ func Test_V2_Cross_Validates(t *testing.T) {
 
 	// This is a single document producing both the manifest & deployment groups
 	// These should always agree with each other
-	err = manifest.ValidateManifestWithGroupSpecs(&m, dgroups)
+	err = m.CheckAgainstGSpecs(dgroups)
 	require.NoError(t, err)
 
 	// Repeat the same test with another file
@@ -217,12 +242,12 @@ func Test_V2_Cross_Validates(t *testing.T) {
 
 	// This is a single document producing both the manifest & deployment groups
 	// These should always agree with each other
-	err = manifest.ValidateManifestWithGroupSpecs(&m, dgroups)
+	err = m.CheckAgainstGSpecs(dgroups)
 	require.NoError(t, err)
 
 }
 
-func Test_v1_Parse_simple(t *testing.T) {
+func Test_V2_Parse_simple(t *testing.T) {
 	sdl, err := ReadFile("./_testdata/simple.yaml")
 	require.NoError(t, err)
 
@@ -231,18 +256,19 @@ func Test_v1_Parse_simple(t *testing.T) {
 	assert.Len(t, groups, 1)
 
 	group := groups[0]
-	assert.Len(t, group.GetResources(), 1)
+	assert.Len(t, group.GetResourceUnits(), 1)
 
 	assert.Equal(t, atypes.Attribute{
 		Key:   "region",
 		Value: "us-west",
 	}, group.Requirements.Attributes[0])
 
-	assert.Len(t, group.GetResources(), 1)
+	assert.Len(t, group.GetResourceUnits(), 1)
 
-	assert.Equal(t, atypes.Resources{
+	assert.Equal(t, dtypes.ResourceUnit{
 		Count: 2,
-		Resources: atypes.ResourceUnits{
+		Resources: atypes.Resources{
+			ID: 1,
 			CPU: &atypes.CPU{
 				Units: atypes.NewResourceValue(randCPU),
 			},
@@ -267,7 +293,8 @@ func Test_v1_Parse_simple(t *testing.T) {
 				},
 			},
 		},
-	}, group.GetResources()[0])
+		Price: AkashDecCoin(t, 50),
+	}, group.GetResourceUnits()[0])
 
 	mani, err := sdl.Manifest()
 	require.NoError(t, err)
@@ -282,7 +309,8 @@ func Test_v1_Parse_simple(t *testing.T) {
 			{
 				Name:  "web",
 				Image: "nginx",
-				Resources: atypes.ResourceUnits{
+				Resources: atypes.Resources{
+					ID: 1,
 					CPU: &atypes.CPU{
 						Units: atypes.NewResourceValue(100),
 					},
@@ -296,6 +324,14 @@ func Test_v1_Parse_simple(t *testing.T) {
 						{
 							Name:     "default",
 							Quantity: atypes.NewResourceValue(1 * unit.Gi),
+						},
+					},
+					Endpoints: []atypes.Endpoint{
+						{
+							Kind: atypes.Endpoint_SHARED_HTTP,
+						},
+						{
+							Kind: atypes.Endpoint_RANDOM_PORT,
 						},
 					},
 				},
@@ -324,43 +360,6 @@ func Test_v1_Parse_simple(t *testing.T) {
 		},
 	}, mani.GetGroups()[0])
 }
-
-/**
-func Test_v1_Parse_simpleWithIP(t *testing.T) {
-	sdl, err := ReadFile("./_testdata/simple_with_ip.yaml")
-	require.NoError(t, err)
-	require.NotNil(t, sdl)
-
-	groups, err := sdl.DeploymentGroups()
-	require.NoError(t, err)
-	require.Len(t, groups, 1)
-	group := groups[0]
-	resources := group.GetResources()
-	require.Len(t, resources, 1)
-	resource := resources[0]
-	var ipEndpoint types.Endpoint
-	for _, endpoint := range resource.Resources.Endpoints {
-		if endpoint.Kind == types.Endpoint_LEASED_IP {
-			ipEndpoint = endpoint
-			break
-		}
-	}
-	require.Equal(t, ipEndpoint.Kind, types.Endpoint_LEASED_IP)
-
-	mani, err := sdl.Manifest()
-	require.NoError(t, err)
-	var exposeIP manifest.ServiceExpose
-	for _, expose := range mani[0].Services[0].Expose {
-		if len(expose.IP) != 0 {
-			exposeIP = expose
-			break
-		}
-	}
-	require.NotEmpty(t, exposeIP.IP)
-	require.Equal(t, exposeIP.Proto, manifest.UDP)
-	require.Equal(t, exposeIP.Port, uint16(12345))
-	require.True(t, exposeIP.Global)
-}**/
 
 func Test_v1_Parse_ProfileNameNotServiceName(t *testing.T) {
 	sdl, err := ReadFile("./_testdata/profile-svc-name-mismatch.yaml")
@@ -401,4 +400,358 @@ func Test_v2_Parse_DeploymentNameServiceNameMismatch(t *testing.T) {
 	require.Len(t, mani.GetGroups()[0].Services[0].Expose, 2)
 	require.Len(t, mani.GetGroups()[0].Services[0].Expose[0].Hosts, 1)
 	require.Equal(t, mani.GetGroups()[0].Services[0].Expose[0].Hosts[0], "ahostname.com")
+}
+
+func TestV2ParseServiceMix(t *testing.T) {
+	sdl, err := ReadFile("./_testdata/service-mix.yaml")
+	require.NoError(t, err)
+
+	groups, err := sdl.DeploymentGroups()
+	require.NoError(t, err)
+	assert.Len(t, groups, 1)
+
+	group := groups[0]
+	assert.Len(t, group.GetResourceUnits(), 2)
+	assert.Len(t, group.Requirements.Attributes, 2)
+
+	assert.Equal(t, atypes.Attribute{
+		Key:   "region",
+		Value: "us-west",
+	}, group.Requirements.Attributes[1])
+
+	assert.Equal(t, dtypes.ResourceUnits{
+		{
+			Count: 1,
+			Resources: atypes.Resources{
+				ID: 1,
+				CPU: &atypes.CPU{
+					Units: atypes.NewResourceValue(randCPU),
+				},
+				GPU: &atypes.GPU{
+					Units: atypes.NewResourceValue(randGPU),
+					Attributes: atypes.Attributes{
+						{
+							Key:   "vendor/nvidia/model/*",
+							Value: "true",
+						},
+					},
+				},
+				Memory: &atypes.Memory{
+					Quantity: atypes.NewResourceValue(randMemory),
+				},
+				Storage: atypes.Volumes{
+					{
+						Name:     "default",
+						Quantity: atypes.NewResourceValue(randStorage),
+					},
+				},
+				Endpoints: []atypes.Endpoint{
+					{
+						Kind: atypes.Endpoint_SHARED_HTTP,
+					},
+					{
+						Kind: atypes.Endpoint_RANDOM_PORT,
+					},
+				},
+			},
+			Price: AkashDecCoin(t, 50),
+		},
+		{
+			Count: 1,
+			Resources: atypes.Resources{
+				ID: 2,
+				CPU: &atypes.CPU{
+					Units: atypes.NewResourceValue(randCPU),
+				},
+				GPU: &atypes.GPU{
+					Units: atypes.NewResourceValue(0),
+				},
+				Memory: &atypes.Memory{
+					Quantity: atypes.NewResourceValue(randMemory),
+				},
+				Storage: atypes.Volumes{
+					{
+						Name:     "default",
+						Quantity: atypes.NewResourceValue(randStorage),
+					},
+				},
+				Endpoints: []atypes.Endpoint{
+					{
+						Kind: atypes.Endpoint_SHARED_HTTP,
+					},
+					{
+						Kind: atypes.Endpoint_RANDOM_PORT,
+					},
+				},
+			},
+			Price: AkashDecCoin(t, 50),
+		},
+	}, group.GetResourceUnits())
+
+	mani, err := sdl.Manifest()
+	require.NoError(t, err)
+
+	assert.Len(t, mani.GetGroups(), 1)
+
+	assert.Equal(t, manifest.Group{
+		Name: "westcoast",
+		Services: []manifest.Service{
+			{
+				Name:  "svca",
+				Image: "nginx",
+				Resources: atypes.Resources{
+					ID: 1,
+					CPU: &atypes.CPU{
+						Units: atypes.NewResourceValue(100),
+					},
+					GPU: &atypes.GPU{
+						Units: atypes.NewResourceValue(1),
+						Attributes: atypes.Attributes{
+							{
+								Key:   "vendor/nvidia/model/*",
+								Value: "true",
+							},
+						},
+					},
+					Memory: &atypes.Memory{
+						Quantity: atypes.NewResourceValue(128 * unit.Mi),
+					},
+					Storage: atypes.Volumes{
+						{
+							Name:     "default",
+							Quantity: atypes.NewResourceValue(1 * unit.Gi),
+						},
+					},
+					Endpoints: []atypes.Endpoint{
+						{
+							Kind: atypes.Endpoint_SHARED_HTTP,
+						},
+						{
+							Kind: atypes.Endpoint_RANDOM_PORT,
+						},
+					},
+				},
+				Count: 1,
+				Expose: []manifest.ServiceExpose{
+					{
+						Port: 80, Global: true, Proto: manifest.TCP, Hosts: []string{"ahostname.com"},
+						HTTPOptions: defaultHTTPOptions,
+					},
+					{
+						Port: 12345, Global: true, Proto: manifest.UDP,
+						HTTPOptions: defaultHTTPOptions,
+					},
+				},
+			},
+			{
+				Name:  "svcb",
+				Image: "nginx",
+				Resources: atypes.Resources{
+					ID: 2,
+					CPU: &atypes.CPU{
+						Units: atypes.NewResourceValue(100),
+					},
+					GPU: &atypes.GPU{
+						Units: atypes.NewResourceValue(0),
+					},
+					Memory: &atypes.Memory{
+						Quantity: atypes.NewResourceValue(128 * unit.Mi),
+					},
+					Storage: atypes.Volumes{
+						{
+							Name:     "default",
+							Quantity: atypes.NewResourceValue(1 * unit.Gi),
+						},
+					},
+					Endpoints: []atypes.Endpoint{
+						{
+							Kind: atypes.Endpoint_SHARED_HTTP,
+						},
+						{
+							Kind: atypes.Endpoint_RANDOM_PORT,
+						},
+					},
+				},
+				Count: 1,
+				Expose: []manifest.ServiceExpose{
+					{
+						Port: 80, Global: true, Proto: manifest.TCP, Hosts: []string{"bhostname.com"},
+						HTTPOptions: defaultHTTPOptions,
+					},
+					{
+						Port: 12346, Global: true, Proto: manifest.UDP,
+						HTTPOptions: defaultHTTPOptions,
+					},
+				},
+			},
+		},
+	}, mani.GetGroups()[0])
+}
+
+func TestV2ParseServiceMix2(t *testing.T) {
+	sdl, err := ReadFile("./_testdata/service-mix2.yaml")
+	require.NoError(t, err)
+
+	groups, err := sdl.DeploymentGroups()
+	require.NoError(t, err)
+	assert.Len(t, groups, 1)
+
+	group := groups[0]
+	assert.Len(t, group.GetResourceUnits(), 1)
+	assert.Len(t, group.Requirements.Attributes, 2)
+
+	assert.Equal(t, atypes.Attribute{
+		Key:   "region",
+		Value: "us-west",
+	}, group.Requirements.Attributes[1])
+
+	assert.Equal(t, dtypes.ResourceUnits{
+		{
+			Count: 2,
+			Resources: atypes.Resources{
+				ID: 1,
+				CPU: &atypes.CPU{
+					Units: atypes.NewResourceValue(randCPU),
+				},
+				GPU: &atypes.GPU{
+					Units: atypes.NewResourceValue(randGPU),
+					Attributes: atypes.Attributes{
+						{
+							Key:   "vendor/nvidia/model/*",
+							Value: "true",
+						},
+					},
+				},
+				Memory: &atypes.Memory{
+					Quantity: atypes.NewResourceValue(randMemory),
+				},
+				Storage: atypes.Volumes{
+					{
+						Name:     "default",
+						Quantity: atypes.NewResourceValue(randStorage),
+					},
+				},
+				Endpoints: []atypes.Endpoint{
+					{
+						Kind: atypes.Endpoint_SHARED_HTTP,
+					},
+					{
+						Kind: atypes.Endpoint_RANDOM_PORT,
+					},
+					{
+						Kind: atypes.Endpoint_SHARED_HTTP,
+					},
+					{
+						Kind: atypes.Endpoint_RANDOM_PORT,
+					},
+				},
+			},
+			Price: AkashDecCoin(t, 50),
+		},
+	}, group.GetResourceUnits())
+
+	mani, err := sdl.Manifest()
+	require.NoError(t, err)
+
+	assert.Len(t, mani.GetGroups(), 1)
+
+	assert.Equal(t, manifest.Group{
+		Name: "westcoast",
+		Services: []manifest.Service{
+			{
+				Name:  "svca",
+				Image: "nginx",
+				Resources: atypes.Resources{
+					ID: 1,
+					CPU: &atypes.CPU{
+						Units: atypes.NewResourceValue(100),
+					},
+					GPU: &atypes.GPU{
+						Units: atypes.NewResourceValue(1),
+						Attributes: atypes.Attributes{
+							{
+								Key:   "vendor/nvidia/model/*",
+								Value: "true",
+							},
+						},
+					},
+					Memory: &atypes.Memory{
+						Quantity: atypes.NewResourceValue(128 * unit.Mi),
+					},
+					Storage: atypes.Volumes{
+						{
+							Name:     "default",
+							Quantity: atypes.NewResourceValue(1 * unit.Gi),
+						},
+					},
+					Endpoints: []atypes.Endpoint{
+						{
+							Kind: atypes.Endpoint_SHARED_HTTP,
+						},
+						{
+							Kind: atypes.Endpoint_RANDOM_PORT,
+						},
+					},
+				},
+				Count: 1,
+				Expose: []manifest.ServiceExpose{
+					{
+						Port: 80, Global: true, Proto: manifest.TCP, Hosts: []string{"ahostname.com"},
+						HTTPOptions: defaultHTTPOptions,
+					},
+					{
+						Port: 12345, Global: true, Proto: manifest.UDP,
+						HTTPOptions: defaultHTTPOptions,
+					},
+				},
+			},
+			{
+				Name:  "svcb",
+				Image: "nginx",
+				Resources: atypes.Resources{
+					ID: 1,
+					CPU: &atypes.CPU{
+						Units: atypes.NewResourceValue(100),
+					},
+					GPU: &atypes.GPU{
+						Units: atypes.NewResourceValue(1),
+						Attributes: atypes.Attributes{
+							{
+								Key:   "vendor/nvidia/model/*",
+								Value: "true",
+							},
+						},
+					},
+					Memory: &atypes.Memory{
+						Quantity: atypes.NewResourceValue(128 * unit.Mi),
+					},
+					Storage: atypes.Volumes{
+						{
+							Name:     "default",
+							Quantity: atypes.NewResourceValue(1 * unit.Gi),
+						},
+					},
+					Endpoints: []atypes.Endpoint{
+						{
+							Kind: atypes.Endpoint_SHARED_HTTP,
+						},
+						{
+							Kind: atypes.Endpoint_RANDOM_PORT,
+						},
+					},
+				},
+				Count: 1,
+				Expose: []manifest.ServiceExpose{
+					{
+						Port: 80, Global: true, Proto: manifest.TCP, Hosts: []string{"bhostname.com"},
+						HTTPOptions: defaultHTTPOptions,
+					},
+					{
+						Port: 12346, Global: true, Proto: manifest.UDP,
+						HTTPOptions: defaultHTTPOptions,
+					},
+				},
+			},
+		},
+	}, mani.GetGroups()[0])
 }
