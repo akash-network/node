@@ -2,6 +2,7 @@ package sdl
 
 import (
 	"fmt"
+	"sort"
 
 	"gopkg.in/yaml.v3"
 
@@ -97,7 +98,8 @@ func (sdl *v2GPUAttributes) UnmarshalYAML(node *yaml.Node) error {
 			Value: "true",
 		})
 	}
-	res.Sort()
+
+	sort.Sort(res)
 
 	if err := res.Validate(); err != nil {
 		return fmt.Errorf("sdl: invalid GPU attributes: %w", err)

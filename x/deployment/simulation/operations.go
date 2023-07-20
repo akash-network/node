@@ -112,7 +112,7 @@ func SimulateMsgCreateDeployment(ak govtypes.AccountKeeper, bk bankkeeper.Keeper
 		if groupErr != nil {
 			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeCreateDeployment, "unable to read groups"), nil, groupErr
 		}
-		sdlSum, err := sdlv1.Version(sdl)
+		sdlSum, err := sdl.Version()
 		if err != nil {
 			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeCreateDeployment, "error parsing deployment version sum"),
 				nil, err
@@ -173,7 +173,7 @@ func SimulateMsgUpdateDeployment(ak govtypes.AccountKeeper, bk bankkeeper.Keeper
 			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeUpdateDeployment, "unable to read config file"), nil, readError
 		}
 
-		sdlSum, err := sdlv1.Version(sdl)
+		sdlSum, err := sdl.Version()
 		if err != nil {
 			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeUpdateDeployment, "error parsing deployment version sum"),
 				nil, err

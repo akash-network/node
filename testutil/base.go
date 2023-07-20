@@ -85,15 +85,16 @@ func RandStorageQuantity() uint64 {
 
 // Resources produces an attribute list for populating a Group's
 // 'Resources' fields.
-func Resources(t testing.TB) []dtypes.Resource {
+func Resources(t testing.TB) []dtypes.ResourceUnit {
 	t.Helper()
 	count := rand.Intn(10) + 1
 
-	vals := make([]dtypes.Resource, 0, count)
+	vals := make(dtypes.ResourceUnits, 0, count)
 	for i := 0; i < count; i++ {
 		coin := sdk.NewDecCoin(CoinDenom, sdk.NewInt(rand.Int63n(9999)+1))
-		res := dtypes.Resource{
-			Resources: types.ResourceUnits{
+		res := dtypes.ResourceUnit{
+			Resources: types.Resources{
+				ID: uint32(i) + 1,
 				CPU: &types.CPU{
 					Units: types.NewResourceValue(uint64(dtypes.GetValidationConfig().MinUnitCPU)),
 				},

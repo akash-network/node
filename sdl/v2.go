@@ -11,8 +11,7 @@ import (
 	manifest "github.com/akash-network/akash-api/go/manifest/v2beta2"
 	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
 	types "github.com/akash-network/akash-api/go/node/types/v1beta3"
-
-	sdlutil "github.com/akash-network/node/sdl/util"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -46,13 +45,22 @@ var (
 	endpointNameValidationRegex = regexp.MustCompile(`^[[:lower:]]+[[:lower:]-_\d]+$`)
 )
 
+var _ SDL = (*v2)(nil)
+
 type v2 struct {
-	Include     []string                `yaml:",omitempty"`
-	Services    map[string]v2Service    `yaml:"services,omitempty"`
-	Profiles    v2profiles              `yaml:"profiles,omitempty"`
-	Deployments map[string]v2Deployment `yaml:"deployment"`
-	Endpoints   map[string]v2Endpoint   `yaml:"endpoints"`
+	Include     []string              `yaml:",omitempty"`
+	Services    map[string]v2Service  `yaml:"services,omitempty"`
+	Profiles    v2profiles            `yaml:"profiles,omitempty"`
+	Deployments v2Deployments         `yaml:"deployment"`
+	Endpoints   map[string]v2Endpoint `yaml:"endpoints"`
+
+	result struct {
+		dgroups dtypes.GroupSpecs
+		mgroups manifest.Groups
+	}
 }
+
+type v2Deployments map[string]v2Deployment
 
 type v2Endpoint struct {
 	Kind string `yaml:"kind"`
@@ -145,6 +153,8 @@ type v2Expose struct {
 	HTTPOptions v2HTTPOptions `yaml:"http_options"`
 }
 
+type v2Exposes []v2Expose
+
 type v2Dependency struct {
 	Service string `yaml:"service"`
 }
@@ -158,7 +168,7 @@ type v2Service struct {
 	Command      []string         `yaml:",omitempty"`
 	Args         []string         `yaml:",omitempty"`
 	Env          []string         `yaml:",omitempty"`
-	Expose       []v2Expose       `yaml:",omitempty"`
+	Expose       v2Exposes        `yaml:",omitempty"`
 	Dependencies []v2Dependency   `yaml:",omitempty"`
 	Params       *v2ServiceParams `yaml:",omitempty"`
 }
@@ -175,7 +185,6 @@ type v2ServiceDeployment struct {
 type v2Deployment map[string]v2ServiceDeployment
 
 type v2ProfileCompute struct {
-	// todo are compute resources mandatory ?
 	Resources *v2ComputeResources `yaml:"resources,omitempty"`
 }
 
@@ -190,220 +199,142 @@ type v2profiles struct {
 	Placement map[string]v2ProfilePlacement `yaml:"placement"`
 }
 
-func (sdl *v2) computeEndpointSequenceNumbers() map[string]uint32 {
-	var endpointNames []string
+func (sdl *v2) DeploymentGroups() (dtypes.GroupSpecs, error) {
+	return sdl.result.dgroups, nil
+}
 
-	for _, serviceName := range v2DeploymentSvcNames(sdl.Deployments) {
+func (sdl *v2) Manifest() (manifest.Manifest, error) {
+	return manifest.Manifest(sdl.result.mgroups), nil
+}
 
-		for _, expose := range sdl.Services[serviceName].Expose {
-			for _, to := range expose.To {
-				if to.Global && len(to.IP) == 0 {
-					continue
-				}
+// Version creates the deterministic Deployment Version hash from the SDL.
+func (sdl *v2) Version() ([]byte, error) {
+	return manifest.Manifest(sdl.result.mgroups).Version()
+}
 
-				endpointNames = append(endpointNames, to.IP)
-			}
+func (sdl *v2) UnmarshalYAML(node *yaml.Node) error {
+	result := v2{}
+
+loop:
+	for i := 0; i < len(node.Content); i += 2 {
+		var val interface{}
+		switch node.Content[i].Value {
+		case "include":
+			val = &result.Include
+		case "services":
+			val = &result.Services
+		case "profiles":
+			val = &result.Profiles
+		case "deployment":
+			val = &result.Deployments
+		case "endpoints":
+			val = &result.Endpoints
+		case "version":
+			// version is already verified
+			continue loop
+		default:
+			return fmt.Errorf("sdl: unexpected field %s", node.Content[i].Value)
+		}
+
+		if err := node.Content[i+1].Decode(val); err != nil {
+			return err
 		}
 	}
 
-	ipEndpointNames := make(map[string]uint32)
-	if len(endpointNames) == 0 {
-		return ipEndpointNames
+	if err := result.buildGroups(); err != nil {
+		return err
 	}
 
-	// Make the assignment stable
-	sort.Strings(endpointNames)
+	*sdl = result
 
-	// Start at zero, so the first assigned one is 1
-	endpointSeqNumber := uint32(0)
-	for _, name := range endpointNames {
-		endpointSeqNumber++
-		seqNo := endpointSeqNumber
-		ipEndpointNames[name] = seqNo
-	}
-
-	return ipEndpointNames
+	return nil
 }
 
-func (sdl *v2) DeploymentGroups() ([]*dtypes.GroupSpec, error) {
-	groups := make(map[string]*dtypes.GroupSpec)
+type groupsBuilder struct {
+	dgroup        *dtypes.GroupSpec
+	mgroup        *manifest.Group
+	boundComputes map[string]map[string]int
+}
 
-	ipEndpointNames := sdl.computeEndpointSequenceNumbers()
-	for _, svcName := range v2DeploymentSvcNames(sdl.Deployments) {
+// buildGroups
+func (sdl *v2) buildGroups() error {
+	endpointsNames := sdl.computeEndpointSequenceNumbers()
+
+	groups := make(map[string]*groupsBuilder)
+
+	for _, svcName := range sdl.Deployments.svcNames() {
 		depl := sdl.Deployments[svcName]
 
-		for _, placementName := range v2DeploymentPlacementNames(depl) {
+		for _, placementName := range depl.placementNames() {
+			// objects below have been ensured to exist
 			svcdepl := depl[placementName]
-
-			// at this moment compute, infra and price have been checked for existence
 			compute := sdl.Profiles.Compute[svcdepl.Profile]
+			svc := sdl.Services[svcName]
 			infra := sdl.Profiles.Placement[placementName]
 			price := infra.Pricing[svcdepl.Profile]
 
 			group := groups[placementName]
 
 			if group == nil {
-				group = &dtypes.GroupSpec{
-					Name: placementName,
+				group = &groupsBuilder{
+					dgroup: &dtypes.GroupSpec{
+						Name: placementName,
+					},
+					mgroup: &manifest.Group{
+						Name: placementName,
+					},
+					boundComputes: make(map[string]map[string]int),
 				}
 
-				group.Requirements.Attributes = infra.Attributes
-				group.Requirements.SignedBy = infra.SignedBy
+				group.dgroup.Requirements.Attributes = types.Attributes(infra.Attributes)
+				group.dgroup.Requirements.SignedBy = infra.SignedBy
 
 				// keep ordering stable
-				sort.Slice(group.Requirements.Attributes, func(i, j int) bool {
-					return group.Requirements.Attributes[i].Key < group.Requirements.Attributes[j].Key
-				})
+				sort.Sort(group.dgroup.Requirements.Attributes)
 
 				groups[placementName] = group
 			}
 
-			resources := dtypes.Resource{
-				Resources: compute.Resources.toDGroupResourceUnits(),
-				Price:     price.Value,
-				Count:     svcdepl.Count,
+			if _, exists := group.boundComputes[placementName]; !exists {
+				group.boundComputes[placementName] = make(map[string]int)
 			}
 
-			endpoints := make([]types.Endpoint, 0)
-			for _, expose := range sdl.Services[svcName].Expose {
-				for _, to := range expose.To {
-					if !to.Global {
-						continue
-					}
-
-					proto, err := manifest.ParseServiceProtocol(expose.Proto)
-					if err != nil {
-						return nil, err
-					}
-					// This value is created just so it can be passed to the utility function
-					v := manifest.ServiceExpose{
-						Port:         expose.Port,
-						ExternalPort: expose.As,
-						Proto:        proto,
-						Service:      to.Service,
-						Global:       to.Global,
-						Hosts:        expose.Accept.Items,
-						IP:           to.IP,
-					}
-
-					// Check to see if an IP endpoint is also specified
-					if v.Global && len(v.IP) != 0 {
-						seqNo := ipEndpointNames[v.IP]
-						v.EndpointSequenceNumber = seqNo
-						endpoints = append(endpoints,
-							types.Endpoint{Kind: types.Endpoint_LEASED_IP,
-								SequenceNumber: seqNo})
-					}
-
-					kind := types.Endpoint_RANDOM_PORT
-					if sdlutil.ShouldBeIngress(v) {
-						kind = types.Endpoint_SHARED_HTTP
-					}
-
-					endpoints = append(endpoints, types.Endpoint{Kind: kind})
-				}
+			expose, err := sdl.Services[svcName].Expose.toManifestExpose(endpointsNames)
+			if err != nil {
+				return err
 			}
 
-			resources.Resources.Endpoints = endpoints
-			group.Resources = append(group.Resources, resources)
-		}
-	}
+			resources := compute.Resources.toResources()
+			resources.Endpoints = expose.GetEndpoints()
 
-	// keep ordering stable
-	names := make([]string, 0, len(groups))
-	for name := range groups {
-		names = append(names, name)
-	}
-	sort.Strings(names)
+			if location, bound := group.boundComputes[placementName][svcdepl.Profile]; !bound {
+				res := compute.Resources.toResources()
+				res.Endpoints = expose.GetEndpoints()
 
-	result := make([]*dtypes.GroupSpec, 0, len(names))
-	for _, name := range names {
-		result = append(result, groups[name])
-	}
-
-	return result, nil
-}
-
-func (sdl *v2) Manifest() (manifest.Manifest, error) {
-	groups := make(map[string]*manifest.Group)
-
-	ipEndpointNames := sdl.computeEndpointSequenceNumbers()
-
-	for _, svcName := range v2DeploymentSvcNames(sdl.Deployments) {
-		depl := sdl.Deployments[svcName]
-
-		for _, placementName := range v2DeploymentPlacementNames(depl) {
-			svcdepl := depl[placementName]
-
-			group := groups[placementName]
-
-			if group == nil {
-				group = &manifest.Group{
-					Name: placementName,
-				}
-				groups[group.Name] = group
-			}
-
-			// at this moment compute and svc have been checked for existence
-			compute := sdl.Profiles.Compute[svcdepl.Profile]
-			svc := sdl.Services[svcName]
-
-			manifestResources := toManifestResources(compute.Resources)
-
-			var manifestExpose []manifest.ServiceExpose
-
-			for _, expose := range svc.Expose {
-				proto, err := manifest.ParseServiceProtocol(expose.Proto)
-				if err != nil {
-					return manifest.Manifest{}, err
+				var resID int
+				if ln := len(group.dgroup.Resources); ln > 0 {
+					resID = ln + 1
+				} else {
+					resID = 1
 				}
 
-				httpOptions, err := expose.HTTPOptions.asManifest()
-				if err != nil {
-					return manifest.Manifest{}, err
-				}
+				res.ID = uint32(resID)
+				resources.ID = res.ID
 
-				if len(expose.To) != 0 {
-					for _, to := range expose.To {
+				group.dgroup.Resources = append(group.dgroup.Resources, dtypes.ResourceUnit{
+					Resources: res,
+					Price:     price.Value,
+					Count:     svcdepl.Count,
+				})
 
-						var seqNo uint32
-						if to.Global && len(to.IP) != 0 {
-							_, exists := sdl.Endpoints[to.IP]
-							if !exists {
-								return nil, fmt.Errorf("%w: unknown endpoint %q", errSDLInvalid, to.IP)
-							}
+				group.boundComputes[placementName][svcdepl.Profile] = len(group.dgroup.Resources) - 1
+			} else {
+				resources.ID = group.dgroup.Resources[location].ID
 
-							seqNo = ipEndpointNames[to.IP]
-							manifestResources.Endpoints = append(manifestResources.Endpoints, types.Endpoint{
-								Kind:           types.Endpoint_LEASED_IP,
-								SequenceNumber: seqNo,
-							})
-						}
+				group.dgroup.Resources[location].Count += svcdepl.Count
+				group.dgroup.Resources[location].Endpoints = append(group.dgroup.Resources[location].Endpoints, expose.GetEndpoints()...)
 
-						manifestExpose = append(manifestExpose, manifest.ServiceExpose{
-							Service:                to.Service,
-							Port:                   expose.Port,
-							ExternalPort:           expose.As,
-							Proto:                  proto,
-							Global:                 to.Global,
-							Hosts:                  expose.Accept.Items,
-							HTTPOptions:            httpOptions,
-							IP:                     to.IP,
-							EndpointSequenceNumber: seqNo,
-						})
-					}
-				} else { // Nothing explicitly set, fill in without any information from "expose.To"
-					manifestExpose = append(manifestExpose, manifest.ServiceExpose{
-						Service:      "",
-						Port:         expose.Port,
-						ExternalPort: expose.As,
-						Proto:        proto,
-						Global:       false,
-						Hosts:        expose.Accept.Items,
-						HTTPOptions:  httpOptions,
-						IP:           "",
-					})
-				}
+				sort.Sort(group.dgroup.Resources[location].Endpoints)
 			}
 
 			msvc := manifest.Service{
@@ -411,10 +342,10 @@ func (sdl *v2) Manifest() (manifest.Manifest, error) {
 				Image:     svc.Image,
 				Args:      svc.Args,
 				Env:       svc.Env,
-				Resources: manifestResources,
+				Resources: resources,
 				Count:     svcdepl.Count,
 				Command:   svc.Command,
-				Expose:    manifestExpose,
+				Expose:    expose,
 			}
 
 			if svc.Params != nil {
@@ -434,46 +365,30 @@ func (sdl *v2) Manifest() (manifest.Manifest, error) {
 				msvc.Params = params
 			}
 
-			// stable ordering for the Expose portion
-			sort.Slice(msvc.Expose, func(i, j int) bool {
-				a, b := msvc.Expose[i], msvc.Expose[j]
-
-				if a.Service != b.Service {
-					return a.Service < b.Service
-				}
-
-				if a.Port != b.Port {
-					return a.Port < b.Port
-				}
-
-				if a.Proto != b.Proto {
-					return a.Proto < b.Proto
-				}
-
-				if a.Global != b.Global {
-					return a.Global
-				}
-
-				return false
-			})
-
-			group.Services = append(group.Services, msvc)
+			group.mgroup.Services = append(group.mgroup.Services, msvc)
 		}
 	}
 
-	// stable ordering
+	// keep ordering stable
 	names := make([]string, 0, len(groups))
 	for name := range groups {
 		names = append(names, name)
 	}
 	sort.Strings(names)
 
-	result := make([]manifest.Group, 0, len(names))
+	sdl.result.dgroups = make(dtypes.GroupSpecs, 0, len(names))
+	sdl.result.mgroups = make(manifest.Groups, 0, len(names))
+
 	for _, name := range names {
-		result = append(result, *groups[name])
+		mgroup := *groups[name].mgroup
+		// stable ordering services by name
+		sort.Sort(mgroup.Services)
+
+		sdl.result.dgroups = append(sdl.result.dgroups, groups[name].dgroup)
+		sdl.result.mgroups = append(sdl.result.mgroups, mgroup)
 	}
 
-	return result, nil
+	return nil
 }
 
 func (sdl *v2) validate() error {
@@ -494,7 +409,7 @@ func (sdl *v2) validate() error {
 
 	endpointsUsed := make(map[string]struct{})
 	portsUsed := make(map[string]string)
-	for _, svcName := range v2DeploymentSvcNames(sdl.Deployments) {
+	for _, svcName := range sdl.Deployments.svcNames() {
 		depl := sdl.Deployments[svcName]
 
 		for _, placementName := range v2DeploymentPlacementNames(depl) {
@@ -617,22 +532,67 @@ func (sdl *v2) validate() error {
 	return nil
 }
 
-// stable ordering
-func v2DeploymentSvcNames(m map[string]v2Deployment) []string {
-	names := make([]string, 0, len(m))
-	for name := range m {
+func (sdl *v2) computeEndpointSequenceNumbers() map[string]uint32 {
+	var endpointNames []string
+	res := make(map[string]uint32)
+
+	for _, serviceName := range sdl.Deployments.svcNames() {
+		for _, expose := range sdl.Services[serviceName].Expose {
+			for _, to := range expose.To {
+				if to.Global && len(to.IP) == 0 {
+					continue
+				}
+
+				endpointNames = append(endpointNames, to.IP)
+			}
+		}
+	}
+
+	if len(endpointNames) == 0 {
+		return res
+	}
+
+	// Make the assignment stable
+	sort.Strings(endpointNames)
+
+	// Start at zero, so the first assigned one is 1
+	endpointSeqNumber := uint32(0)
+	for _, name := range endpointNames {
+		endpointSeqNumber++
+		seqNo := endpointSeqNumber
+		res[name] = seqNo
+	}
+
+	return res
+}
+
+func (sdl v2Deployments) svcNames() []string {
+	names := make([]string, 0, len(sdl))
+	for name := range sdl {
 		names = append(names, name)
 	}
 	sort.Strings(names)
+
 	return names
 }
 
-// stable ordering
+// placementNames stable ordered placement names
+func (sdl v2Deployment) placementNames() []string {
+	names := make([]string, 0, len(sdl))
+	for name := range sdl {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	return names
+}
+
 func v2DeploymentPlacementNames(m v2Deployment) []string {
 	names := make([]string, 0, len(m))
 	for name := range m {
 		names = append(names, name)
 	}
 	sort.Strings(names)
+
 	return names
 }

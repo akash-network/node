@@ -43,5 +43,6 @@ func migrateDeploymentGroup(fromBz []byte, cdc codec.BinaryCodec) codec.ProtoMar
 	cdc.MustUnmarshal(fromBz, &from)
 
 	to := dmigrate.GroupFromV1Beta2(from)
+
 	return &to
 }

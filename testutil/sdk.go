@@ -16,7 +16,7 @@ func DecCoin(t testing.TB) sdk.DecCoin {
 	return sdk.NewDecCoin("testcoin", sdk.NewInt(int64(RandRangeInt(1, 1000)))) // nolint: gosec
 }
 
-// AkashCoin provides simple interface to the Akash sdk.Coin type.
+// AkashCoinRandom provides simple interface to the Akash sdk.Coin type.
 func AkashCoinRandom(t testing.TB) sdk.Coin {
 	t.Helper()
 	amt := sdk.NewInt(int64(RandRangeInt(1, 1000)))

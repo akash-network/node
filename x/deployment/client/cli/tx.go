@@ -93,7 +93,7 @@ func cmdCreate(key string) *cobra.Command {
 				}
 			}
 
-			version, err := sdl.Version(sdlManifest)
+			version, err := sdlManifest.Version()
 			if err != nil {
 				return err
 			}
@@ -227,7 +227,7 @@ func cmdUpdate(key string) *cobra.Command {
 				return err
 			}
 
-			version, err := sdl.Version(sdlManifest)
+			version, err := sdlManifest.Version()
 			if err != nil {
 				return err
 			}
@@ -507,7 +507,7 @@ Example:
 
 func warnIfGroupVolumesExceeds(cctx client.Context, dgroups []*types.GroupSpec) {
 	for _, group := range dgroups {
-		for _, resources := range group.GetResources() {
+		for _, resources := range group.GetResourceUnits() {
 			if len(resources.Resources.Storage) > constants.DefaultMaxGroupVolumes {
 				_ = cctx.PrintString(fmt.Sprintf("amount of volumes for service exceeds recommended value (%v > %v)\n"+
 					"there may no providers on network to bid", len(resources.Resources.Storage), constants.DefaultMaxGroupVolumes))

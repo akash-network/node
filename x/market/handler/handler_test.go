@@ -159,7 +159,7 @@ func TestCreateBidClosedOrder(t *testing.T) {
 func TestCreateBidOverprice(t *testing.T) {
 	suite := setupTestSuite(t)
 
-	resources := []dtypes.Resource{
+	resources := dtypes.ResourceUnits{
 		{
 			Price: sdk.NewDecCoin(testutil.CoinDenom, sdk.NewInt(1)),
 		},
@@ -431,7 +431,7 @@ func (st *testSuite) createBid() (types.Bid, types.Order) {
 	return bid, order
 }
 
-func (st *testSuite) createOrder(resources []dtypes.Resource) (types.Order, dtypes.GroupSpec) {
+func (st *testSuite) createOrder(resources dtypes.ResourceUnits) (types.Order, dtypes.GroupSpec) {
 	st.t.Helper()
 
 	deployment := testutil.Deployment(st.t)
