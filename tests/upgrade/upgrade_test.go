@@ -9,7 +9,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -20,11 +19,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-github/v52/github"
-	"github.com/gregjones/httpcache"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/mod/semver"
-	"golang.org/x/oauth2"
 	"golang.org/x/sync/errgroup"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -33,6 +29,7 @@ import (
 	_ "github.com/akash-network/akash-api/go/sdkutil"
 
 	"github.com/akash-network/node/pubsub"
+	"github.com/akash-network/node/util/cli"
 )
 
 const (
@@ -178,10 +175,6 @@ type launcher struct {
 	testErrs          []string
 }
 
-type upgradeInfo struct {
-	Binaries map[string]string `json:"binaries"`
-}
-
 var (
 	homedir        = flag.String("home", "", "akash home")
 	cosmovisor     = flag.String("cosmovisor", "", "path to cosmovisor")
@@ -246,7 +239,7 @@ func TestUpgrade(t *testing.T) {
 
 	if *upgradeVersion != "local" {
 		t.Logf("generating upgradeinfo from release %s", *upgradeVersion)
-		l.upgradeInfo, err = generateUpgradeInfo(ctx, *upgradeVersion)
+		l.upgradeInfo, err = cli.UpgradeInfoFromTag(ctx, *upgradeVersion, false)
 		require.NoError(t, err)
 		require.NotEqual(t, "", l.upgradeInfo)
 	}
@@ -294,75 +287,6 @@ func newLauncher(ctx context.Context, t *testing.T) *launcher {
 
 func isOwnerExecutable(mode os.FileMode) bool {
 	return mode&0100 != 0
-}
-
-func generateUpgradeInfo(ctx context.Context, tag string) (string, error) {
-	tc := &http.Client{
-		Transport: &oauth2.Transport{
-			Base: httpcache.NewMemoryCacheTransport(),
-			Source: oauth2.StaticTokenSource(
-				&oauth2.Token{AccessToken: os.Getenv("GITHUB_TOKEN")},
-			),
-		},
-	}
-
-	gh := github.NewClient(tc)
-
-	rel, resp, err := gh.Repositories.GetReleaseByTag(ctx, "akash-network", "node", tag)
-	if err != nil {
-		return "", err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("no release for tag %s", tag)
-	}
-
-	sTag := strings.TrimPrefix(tag, "v")
-	checksumsAsset := fmt.Sprintf("akash_%s_checksums.txt", sTag)
-	var checksumsID int64
-	for _, asset := range rel.Assets {
-		if asset.GetName() == checksumsAsset {
-			checksumsID = asset.GetID()
-		}
-	}
-
-	body, _, err := gh.Repositories.DownloadReleaseAsset(ctx, "akash-network", "node", checksumsID, http.DefaultClient)
-	if err != nil {
-		return "", err
-	}
-	defer func() {
-		_ = body.Close()
-	}()
-
-	info := &upgradeInfo{
-		Binaries: make(map[string]string),
-	}
-
-	urlBase := fmt.Sprintf("https://github.com/akash-network/node/releases/download/%s", tag)
-	scanner := bufio.NewScanner(body)
-	for scanner.Scan() {
-		tuple := strings.Split(scanner.Text(), "  ")
-		if len(tuple) != 2 {
-			return "", fmt.Errorf("invalid checksum format")
-		}
-
-		switch tuple[1] {
-		case "akash_linux_amd64.zip":
-			info.Binaries["linux/amd64"] = fmt.Sprintf("%s/%s?checksum=sha256:%s", urlBase, tuple[1], tuple[0])
-		case "akash_linux_arm64.zip":
-			info.Binaries["linux/arm64"] = fmt.Sprintf("%s/%s?checksum=sha256:%s", urlBase, tuple[1], tuple[0])
-		case "akash_darwin_all.zip":
-			info.Binaries["darwin/amd64"] = fmt.Sprintf("%s/%s?checksum=sha256:%s", urlBase, tuple[1], tuple[0])
-			info.Binaries["darwin/arm64"] = fmt.Sprintf("%s/%s?checksum=sha256:%s", urlBase, tuple[1], tuple[0])
-		}
-	}
-
-	res, err := json.Marshal(info)
-	if err != nil {
-		return "", err
-	}
-
-	return string(res), nil
 }
 
 func executeCommand(ctx context.Context, env []string, cmd string, args ...string) ([]byte, error) {
