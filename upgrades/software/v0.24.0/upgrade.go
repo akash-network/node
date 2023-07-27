@@ -4,13 +4,16 @@ package v0_24_0
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/tendermint/tendermint/libs/log"
 
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/feegrant"
+	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 
 	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
@@ -117,7 +120,7 @@ func (up *upgrade) enforceMinValidatorCommission(ctx sdk.Context) error {
 			// set max change rate temporarily to 100%
 			maxRateCh := validator.Commission.MaxChangeRate
 			validator.Commission.MaxChangeRate = sdk.NewDecWithPrec(1, 0)
-			if _, err := up.Keepers.Cosmos.Staking.UpdateValidatorCommission(ctx, validator, minRate); err != nil {
+			if _, err := updateValidatorCommission(ctx, validator, minRate); err != nil {
 				return err
 			}
 
@@ -126,6 +129,47 @@ func (up *upgrade) enforceMinValidatorCommission(ctx sdk.Context) error {
 			up.Keepers.Cosmos.Staking.BeforeValidatorModified(ctx, validator.GetOperator())
 			up.Keepers.Cosmos.Staking.SetValidator(ctx, validator)
 		}
+	}
+
+	return nil
+}
+
+// updateValidatorCommission use custom implementation of update commission,
+// this prevents panic during upgrade if any of validators have changed their
+// commission within 24h of upgrade height
+func updateValidatorCommission(
+	ctx sdk.Context,
+	validator types.Validator,
+	newRate sdk.Dec,
+) (types.Commission, error) {
+	commission := validator.Commission
+	blockTime := ctx.BlockHeader().Time
+
+	if err := validateNewRate(commission, newRate, blockTime); err != nil {
+		return commission, err
+	}
+
+	commission.Rate = newRate
+	commission.UpdateTime = blockTime
+
+	return commission, nil
+}
+
+// validateNewRate performs basic sanity validation checks of a new commission
+// rate. If validation fails, an SDK error is returned.
+func validateNewRate(commission stakingtypes.Commission, newRate sdk.Dec, blockTime time.Time) error {
+	switch {
+	case newRate.IsNegative():
+		// new rate cannot be negative
+		return stakingtypes.ErrCommissionNegative
+
+	case newRate.GT(commission.MaxRate):
+		// new rate cannot be greater than the max rate
+		return stakingtypes.ErrCommissionGTMaxRate
+
+	case newRate.Sub(commission.Rate).GT(commission.MaxChangeRate):
+		// new rate % points change cannot be greater than the max change rate
+		return stakingtypes.ErrCommissionGTMaxChangeRate
 	}
 
 	return nil
