@@ -63,7 +63,7 @@ ifeq ($(UPGRADE_BINARY_VERSION), local)
 $(UPGRADE_BINARY): AKASH=$(UPGRADE_BINARY)
 $(UPGRADE_BINARY):
 	mkdir -p $(UPGRADE_BINARY_DIR)
-	make make -sC $(ROOT_DIR) akash
+	make -sC $(ROOT_DIR) akash
 
 .PHONY: clean-upgrade-binary
 clean-upgrade-binary:
