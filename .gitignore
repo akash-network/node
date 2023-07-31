@@ -28,5 +28,9 @@ coverage.txt
 /tmp-swagger-gen
 
 # go workspaces
-go.work
-go.work.sum
+/go.work
+/go.work.sum
+
+/.editorconfig
+
+dev.env
