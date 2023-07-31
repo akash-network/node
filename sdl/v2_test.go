@@ -233,6 +233,19 @@ func Test_V2_Cross_Validates(t *testing.T) {
 	require.NoError(t, err)
 
 	// Repeat the same test with another file
+	sdl2, err = ReadFile("./_testdata/simple3.yaml")
+	require.NoError(t, err)
+	dgroups, err = sdl2.DeploymentGroups()
+	require.NoError(t, err)
+	m, err = sdl2.Manifest()
+	require.NoError(t, err)
+
+	// This is a single document producing both the manifest & deployment groups
+	// These should always agree with each other
+	err = m.CheckAgainstGSpecs(dgroups)
+	require.NoError(t, err)
+
+	// Repeat the same test with another file
 	sdl2, err = ReadFile("./_testdata/private_service.yaml")
 	require.NoError(t, err)
 	dgroups, err = sdl2.DeploymentGroups()

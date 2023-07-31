@@ -2,6 +2,7 @@ package sdl
 
 import (
 	"net/url"
+	"sort"
 
 	manifest "github.com/akash-network/akash-api/go/manifest/v2beta2"
 	"gopkg.in/yaml.v3"
@@ -38,7 +39,7 @@ func (sdl v2Exposes) toManifestExpose(endpointNames map[string]uint32) (manifest
 		}
 	}
 
-	res := make([]manifest.ServiceExpose, 0, exposeCount)
+	res := make(manifest.ServiceExposes, 0, exposeCount)
 
 	for _, expose := range sdl {
 		exp, err := expose.toManifestExposes(endpointNames)
@@ -48,6 +49,8 @@ func (sdl v2Exposes) toManifestExpose(endpointNames map[string]uint32) (manifest
 
 		res = append(res, exp...)
 	}
+
+	sort.Sort(res)
 
 	return res, nil
 }
