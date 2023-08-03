@@ -74,9 +74,13 @@ func (k Keeper) SubtractFees(ctx sdk.Context, amt sdk.Coin) (sdk.Coin, sdk.Coin,
 func (k Keeper) findRate(ctx sdk.Context, denom string) sdk.Dec {
 	params := k.GetParams(ctx)
 
-	rate, ok := params.DenomTakeRates[denom]
-	if !ok {
-		rate = params.DefaultTakeRate
+	rate := params.DefaultTakeRate
+
+	for _, denomRate := range params.DenomTakeRates {
+		if denom == denomRate.Denom {
+			rate = denomRate.Rate
+			break
+		}
 	}
 
 	// return percentage.

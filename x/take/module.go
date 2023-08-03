@@ -190,6 +190,7 @@ func NewAppModuleSimulation(k keeper.IKeeper) AppModuleSimulation {
 }
 
 // AppModuleSimulation functions
+
 // GenerateGenesisState creates a randomized GenState of the staking module.
 func (AppModuleSimulation) GenerateGenesisState(simState *module.SimulationState) {
 	simulation.RandomizedGenState(simState)
