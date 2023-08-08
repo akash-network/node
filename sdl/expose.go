@@ -75,10 +75,6 @@ func (sdl v2Expose) toManifestExposes(endpointNames map[string]uint32) (manifest
 
 	if len(sdl.To) > 0 {
 		for _, to := range sdl.To {
-			if !to.Global {
-				continue
-			}
-
 			// This value is created just so it can be passed to the utility function
 			expose := manifest.ServiceExpose{
 				Service:      to.Service,
