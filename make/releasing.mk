@@ -21,17 +21,6 @@ ifeq ($(GORELEASER_MOUNT_CONFIG),true)
 	GORELEASER_IMAGE := -v $(HOME)/.docker/config.json:/root/.docker/config.json $(GORELEASER_IMAGE)
 endif
 
-ifeq ($(OS),Windows_NT)
-	DETECTED_OS := Windows
-else
-	DETECTED_OS := $(shell sh -c 'uname 2>/dev/null || echo Unknown')
-endif
-
-# on MacOS disable deprecation warnings security framework
-ifeq ($(DETECTED_OS), Darwin)
-	export CGO_CFLAGS=-Wno-deprecated-declarations
-endif
-
 # if go.mod contains replace for any modules on local filesystem
 # mount them into docker during goreleaser build to exactly same path
 #REPLACED_MODULES              := $(shell go list -mod=readonly -m -f '{{ .Replace }}' all 2>/dev/null | grep -v -x -F "<nil>" | grep "^/")

@@ -21,13 +21,15 @@ ifndef AKASH_ROOT
 	PATH                := $(AKASH_DEVCACHE_BIN):$(AKASH_DEVCACHE_NODE_BIN):$(PATH)
 endif
 
+SEMVER                       := $(ROOT_DIR)/script/semver.sh
+
 # require go<major>.<minor> to be equal
 GO_MIN_REQUIRED              := $(shell echo $(GOLANG_VERSION) | cut -f1-2 -d ".")
-DETECTED_GO_VERSION          := $(shell go version | cut -d ' ' -f 3 |  sed 's/go*//' | cut -f1-2 -d ".")
+DETECTED_GO_VERSION          := $(shell go version | cut -d ' ' -f 3 |  sed 's/go*//')
 STRIPPED_GO_VERSION          := $(shell echo $(DETECTED_GO_VERSION) | cut -f1-2 -d ".")
-__IS_GO_UPTODATE             := $(shell $(ROOT_DIR)/script/semver.sh compare $(STRIPPED_GO_VERSION) $(GO_MIN_REQUIRED) && echo $?)
+__IS_GO_UPTODATE             := $(shell $(ROOT_DIR)/script/semver.sh compare $(STRIPPED_GO_VERSION) $(GO_MIN_REQUIRED); echo $?)
 GO_MOD_VERSION               := $(shell go mod edit -json | jq -r .Go | cut -f1-2 -d ".")
-__IS_GO_MOD_MATCHING         := $(shell $(ROOT_DIR)/script/semver.sh compare $(GO_MOD_VERSION) $(GO_MIN_REQUIRED) && echo $?)
+__IS_GO_MOD_MATCHING         := $(shell $(SEMVER) compare $(GO_MOD_VERSION) $(GO_MIN_REQUIRED) && echo $?)
 
 ifneq (0, $(__IS_GO_MOD_MATCHING))
 $(error go version $(GO_MOD_VERSION) from go.mod does not match GO_MIN_REQUIRED=$(GO_MIN_REQUIRED))
@@ -54,6 +56,27 @@ GO_TEST                      := $(GO) test -mod=$(GO_MOD)
 GO_VET                       := $(GO) vet -mod=$(GO_MOD)
 
 GO_MOD_NAME                  := $(shell go list -m 2>/dev/null)
+
+ifeq ($(OS),Windows_NT)
+	DETECTED_OS := Windows
+else
+	DETECTED_OS := $(shell sh -c 'uname 2>/dev/null || echo Unknown')
+endif
+
+# on MacOS disable deprecation warnings security framework
+ifeq ($(DETECTED_OS), Darwin)
+	export CGO_CFLAGS=-Wno-deprecated-declarations
+
+	# on MacOS Sonoma Beta there is a bit of discrepancy between Go and new prime linker
+	clang_version := $(shell echo | clang -dM -E - | grep __clang_major__ | cut -d ' ' -f 3 | tr -d '\n')
+	go_has_ld_fix := $(shell $(SEMVER) compare "v$(DETECTED_GO_VERSION)" "v1.21.0" | tr -d '\n')
+
+	ifeq (15,$(clang_version))
+		ifeq (-1,$(go_has_ld_fix))
+			export CGO_LDFLAGS=-Wl,-ld_classic -Wno-deprecated-declarations
+		endif
+	endif
+endif
 
 # ==== Build tools versions ====
 # Format <TOOL>_VERSION
