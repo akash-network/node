@@ -11,17 +11,16 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	"github.com/cosmos/cosmos-sdk/testutil/network"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	bankcli "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
 	types "github.com/akash-network/akash-api/go/node/market/v1beta3"
-
 	ptypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
 
 	"github.com/akash-network/node/testutil"
+	"github.com/akash-network/node/testutil/network"
 	ccli "github.com/akash-network/node/x/cert/client/cli"
 	dcli "github.com/akash-network/node/x/deployment/client/cli"
 	"github.com/akash-network/node/x/market/client/cli"

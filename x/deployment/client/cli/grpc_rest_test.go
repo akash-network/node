@@ -9,12 +9,13 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/testutil/network"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkrest "github.com/cosmos/cosmos-sdk/types/rest"
 
 	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+
 	"github.com/akash-network/node/testutil"
+	"github.com/akash-network/node/testutil/network"
 	atypes "github.com/akash-network/node/types"
 	ccli "github.com/akash-network/node/x/cert/client/cli"
 	"github.com/akash-network/node/x/deployment/client/cli"

@@ -8,26 +8,28 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gogo/protobuf/jsonpb"
+	"github.com/spf13/pflag"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	sdknetworktest "github.com/cosmos/cosmos-sdk/testutil/network"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	cosmosauthtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	"github.com/gogo/protobuf/jsonpb"
-	"github.com/spf13/pflag"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
+
+	"github.com/akash-network/node/testutil/network"
 )
 
 type NetworkTestSuite struct {
 	*suite.Suite
-	cfg     sdknetworktest.Config
-	network *sdknetworktest.Network
+	cfg     network.Config
+	network *network.Network
 	testIdx int
 
 	kr        keyring.Keyring
@@ -37,7 +39,7 @@ type NetworkTestSuite struct {
 	cancelTestCtx context.CancelFunc
 }
 
-func NewNetworkTestSuite(cfg *sdknetworktest.Config, container interface{}) NetworkTestSuite {
+func NewNetworkTestSuite(cfg *network.Config, container interface{}) NetworkTestSuite {
 	nts := NetworkTestSuite{
 		Suite:     &suite.Suite{},
 		container: container,
@@ -74,7 +76,7 @@ func (nts *NetworkTestSuite) TearDownSuite() {
 
 func (nts *NetworkTestSuite) SetupSuite() {
 	nts.kr = Keyring(nts.T())
-	nts.network = sdknetworktest.New(nts.T(), nts.cfg)
+	nts.network = network.New(nts.T(), nts.cfg)
 
 	_, err := nts.network.WaitForHeightWithTimeout(1, time.Second*30)
 	require.NoError(nts.T(), err)
@@ -145,7 +147,7 @@ func (nts *NetworkTestSuite) SetupSuite() {
 
 }
 
-func (nts *NetworkTestSuite) Validator(idxT ...int) *sdknetworktest.Validator {
+func (nts *NetworkTestSuite) Validator(idxT ...int) *network.Validator {
 	idx := 0
 	if len(idxT) != 0 {
 		if len(idxT) > 1 {
@@ -181,7 +183,7 @@ func (nts *NetworkTestSuite) GoContextForTest() context.Context {
 	return nts.testCtx
 }
 
-func (nts *NetworkTestSuite) Network() *sdknetworktest.Network {
+func (nts *NetworkTestSuite) Network() *network.Network {
 	return nts.network
 }
 
@@ -196,7 +198,7 @@ func (nts *NetworkTestSuite) Context(idxT ...int) sdkclient.Context {
 	return result.WithFromAddress(validator.Address).WithFromName(fmt.Sprintf("node%d", idx))
 }
 
-func (nts *NetworkTestSuite) Config() sdknetworktest.Config {
+func (nts *NetworkTestSuite) Config() network.Config {
 	return nts.cfg
 }
 

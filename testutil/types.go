@@ -10,21 +10,38 @@ import (
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
+	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/simapp"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
-	"github.com/cosmos/cosmos-sdk/testutil/network"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+
 	tmrand "github.com/tendermint/tendermint/libs/rand"
 	dbm "github.com/tendermint/tm-db"
 
 	types "github.com/akash-network/akash-api/go/node/types/v1beta3"
 
 	"github.com/akash-network/node/app"
+	"github.com/akash-network/node/testutil/network"
 )
+
+type InterceptState func(codec.Codec, string, json.RawMessage) json.RawMessage
+
+type networkConfigOptions struct {
+	interceptState InterceptState
+}
+
+type ConfigOption func(*networkConfigOptions)
+
+// WithInterceptState set custom name of the log object
+func WithInterceptState(val InterceptState) ConfigOption {
+	return func(t *networkConfigOptions) {
+		t.interceptState = val
+	}
+}
 
 func RandRangeInt(min, max int) int {
 	return rand.Intn(max-min) + min // nolint: gosec
@@ -75,7 +92,12 @@ func NewApp(val network.Validator) servertypes.Application {
 
 // DefaultConfig returns a default configuration suitable for nearly all
 // testing requirements.
-func DefaultConfig() network.Config {
+func DefaultConfig(opts ...ConfigOption) network.Config {
+	cfg := &networkConfigOptions{}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
 	encCfg := app.MakeEncodingConfig()
 	origGenesisState := app.ModuleBasics().DefaultGenesis(encCfg.Marshaler)
 
@@ -109,6 +131,15 @@ func DefaultConfig() network.Config {
 		genesisState[k] = replacementV
 	}
 
+	if cfg.interceptState != nil {
+		for k, v := range genesisState {
+			res := cfg.interceptState(encCfg.Marshaler, k, v)
+			if res != nil {
+				genesisState[k] = res
+			}
+		}
+	}
+
 	return network.Config{
 		Codec:             encCfg.Marshaler,
 		TxConfig:          encCfg.TxConfig,
@@ -121,13 +152,16 @@ func DefaultConfig() network.Config {
 		ChainID:           "chain-" + tmrand.NewRand().Str(6),
 		NumValidators:     4,
 		BondDenom:         CoinDenom,
-		MinGasPrices:      fmt.Sprintf("0.000006%s", CoinDenom),
-		AccountTokens:     sdk.TokensFromConsensusPower(1000000000000, sdk.DefaultPowerReduction),
-		StakingTokens:     sdk.TokensFromConsensusPower(100000, sdk.DefaultPowerReduction),
-		BondedTokens:      sdk.TokensFromConsensusPower(100, sdk.DefaultPowerReduction),
-		PruningStrategy:   storetypes.PruningOptionNothing,
-		CleanupDir:        true,
-		SigningAlgo:       string(hd.Secp256k1Type),
-		KeyringOptions:    []keyring.Option{},
+		Denoms: []string{
+			"ibc/12C6A0C374171B595A0A9E18B83FA09D295FB1F2D8C6DAA3AC28683471752D84",
+		},
+		MinGasPrices:    fmt.Sprintf("0.000006%s", CoinDenom),
+		AccountTokens:   sdk.TokensFromConsensusPower(1000000000000, sdk.DefaultPowerReduction),
+		StakingTokens:   sdk.TokensFromConsensusPower(100000, sdk.DefaultPowerReduction),
+		BondedTokens:    sdk.TokensFromConsensusPower(100, sdk.DefaultPowerReduction),
+		PruningStrategy: storetypes.PruningOptionNothing,
+		CleanupDir:      true,
+		SigningAlgo:     string(hd.Secp256k1Type),
+		KeyringOptions:  []keyring.Option{},
 	}
 }
