@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"testing"
 
-	sdkrest "github.com/cosmos/cosmos-sdk/types/rest"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/testutil/network"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkrest "github.com/cosmos/cosmos-sdk/types/rest"
 
 	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
 
 	"github.com/akash-network/node/testutil"
+	"github.com/akash-network/node/testutil/network"
 	atypes "github.com/akash-network/node/types"
 	ccli "github.com/akash-network/node/x/cert/client/cli"
 )
@@ -34,7 +34,7 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 	cfg.NumValidators = 1
 
 	s.cfg = cfg
-	s.network = network.New(s.T(), cfg)
+	s.network = network.New(s.T(), s.cfg)
 
 	_, err := s.network.WaitForHeight(1)
 	s.Require().NoError(err)

@@ -6,22 +6,20 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/cosmos/cosmos-sdk/crypto/hd"
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	banktestutil "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-
-	clitestutil "github.com/akash-network/node/testutil/cli"
-
 	"github.com/stretchr/testify/suite"
 
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/testutil/network"
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	banktestutil "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
 
 	"github.com/akash-network/node/testutil"
+	clitestutil "github.com/akash-network/node/testutil/cli"
+	"github.com/akash-network/node/testutil/network"
 	ccli "github.com/akash-network/node/x/cert/client/cli"
 	"github.com/akash-network/node/x/deployment/client/cli"
 )

@@ -8,13 +8,13 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/cosmos/cosmos-sdk/testutil/network"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkrest "github.com/cosmos/cosmos-sdk/types/rest"
 
 	types "github.com/akash-network/akash-api/go/node/provider/v1beta3"
 
 	"github.com/akash-network/node/testutil"
+	"github.com/akash-network/node/testutil/network"
 	"github.com/akash-network/node/x/provider/client/cli"
 )
 
