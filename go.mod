@@ -2,6 +2,8 @@ module github.com/akash-network/node
 
 go 1.20
 
+toolchain go1.21.0
+
 require (
 	github.com/akash-network/akash-api v0.0.26
 	github.com/blang/semver/v4 v4.0.0

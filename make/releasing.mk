@@ -2,7 +2,7 @@ GON_CONFIGFILE           ?= gon.json
 
 GORELEASER_SKIP_VALIDATE ?= false
 GORELEASER_DEBUG         ?= false
-GORELEASER_IMAGE         := ghcr.io/goreleaser/goreleaser-cross:v$(GOLANG_VERSION)
+GORELEASER_IMAGE         := ghcr.io/goreleaser/goreleaser-cross:$(GOTOOLCHAIN_SEMVER)
 GORELEASER_RELEASE       ?= false
 GORELEASER_MOUNT_CONFIG  ?= false
 
@@ -67,6 +67,7 @@ docker-image:
 		-e LINKMODE="$(GO_LINKMODE)" \
 		-e DOCKER_IMAGE=$(RELEASE_DOCKER_IMAGE) \
 		-e GOPATH=/go \
+		-e GOTOOLCHAIN="$(GOTOOLCHAIN)" \
 		-v $(GOPATH):/go:ro \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v `pwd`:/go/src/$(GO_MOD_NAME) \
@@ -96,6 +97,7 @@ release: gen-changelog
 		-e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
 		-e GORELEASER_CURRENT_TAG="$(RELEASE_TAG)" \
 		-e DOCKER_IMAGE=$(RELEASE_DOCKER_IMAGE) \
+		-e GOTOOLCHAIN="$(GOTOOLCHAIN)" \
 		-e GOPATH=/go \
 		-v $(GOPATH):/go:ro \
 		-v /var/run/docker.sock:/var/run/docker.sock \
