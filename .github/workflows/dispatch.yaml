@@ -1,0 +1,32 @@
+name: dispatch
+
+defaults:
+  run:
+    shell: bash
+
+on:
+  push:
+
+jobs:
+  dispatch-akash:
+    runs-on: ubuntu-latest
+    steps:
+      - name: notify goreleaser-cross with new release
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          token: ${{ secrets.GORELEASER_ACCESS_TOKEN }}
+          repo: akash-network/homebrew-tap
+          workflow: akash
+          ref: refs/heads/main
+          inputs: '{ "tag" : "${{ env.RELEASE_TAG }}" }'
+  dispatch-provider:
+    runs-on: ubuntu-latest
+    steps:
+      - name: notify homebrew with new release
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          token: ${{ secrets.GORELEASER_ACCESS_TOKEN }}
+          repo: akash-network/homebrew-tap
+          workflow: provider-services
+          ref: refs/heads/main
+          inputs: '{"tag": "${{ env.RELEASE_TAG }}"}'

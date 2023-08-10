@@ -17,30 +17,39 @@ jobs:
   build-macos:
     runs-on: macos-latest
     steps:
+      - run: |
+          brew install bash direnv
+          sudo chsh -s /usr/local/bin/bash
       - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
+      - name: set environment
+        run: direnv allow
       - run: |
-          while IFS='' read -r LINE || [ -n "${LINE}" ]; do
-            echo "$LINE" >> $GITHUB_ENV;
-          done < .env
-      - run: |
-          brew install bash
-          sudo chsh -s /usr/local/bin/bash
-      - uses: actions/setup-go@v3
+          toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
+          echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
+          echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
+          echo "GOROOT=/Users/runner/hostedtoolcache/go/${toolchain}/x64" >> $GITHUB_ENV
+      - uses: actions/setup-go@v4
         with:
-          go-version: "${{ env.GOLANG_VERSION }}"
+          go-version: "${{ env.GOVERSION }}"
+          check-latest: true
       - run: make bins
   build-bins:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
-      - uses: c-py/action-dotenv-to-setenv@v3
+      - name: set environment
+        uses: HatsuneMiku3939/direnv-action@v1
+      - run: |
+          toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
+          echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
+          echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
+          echo "GOROOT=/opt/hostedtoolcache/go/${toolchain}/x64" >> $GITHUB_ENV
+      - uses: actions/setup-go@v4
         with:
-          env-file: .env
-      - uses: actions/setup-go@v3
-        with:
-          go-version: "${{ env.GOLANG_VERSION }}"
+          go-version: "${{ env.GOVERSION }}"
+          check-latest: true
       - run: make bins
       - run: make docker-image
 
@@ -49,12 +58,16 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
-      - uses: c-py/action-dotenv-to-setenv@v3
+      - name: set environment
+        uses: HatsuneMiku3939/direnv-action@v1
+      - run: |
+          toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
+          echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
+          echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
+          echo "GOROOT=/opt/hostedtoolcache/go/${toolchain}/x64" >> $GITHUB_ENV
+      - uses: actions/setup-go@v4
         with:
-          env-file: .env
-      - uses: actions/setup-go@v3
-        with:
-          go-version: "${{ env.GOLANG_VERSION }}"
+          go-version: "${{ env.GOVERSION }}"
       - run: make test-full
 
   coverage:
@@ -62,12 +75,16 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
-      - uses: c-py/action-dotenv-to-setenv@v3
+      - name: set environment
+        uses: HatsuneMiku3939/direnv-action@v1
+      - run: |
+          toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
+          echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
+          echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
+          echo "GOROOT=/opt/hostedtoolcache/go/${toolchain}/x64" >> $GITHUB_ENV
+      - uses: actions/setup-go@v4
         with:
-          env-file: .env
-      - uses: actions/setup-go@v3
-        with:
-          go-version: "${{ env.GOLANG_VERSION }}"
+          go-version: "${{ env.GOVERSION }}"
       - run: make test-coverage
       - uses: codecov/codecov-action@v3
 
@@ -76,12 +93,16 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
-      - uses: c-py/action-dotenv-to-setenv@v3
+      - name: set environment
+        uses: HatsuneMiku3939/direnv-action@v1
+      - run: |
+          toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
+          echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
+          echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
+          echo "GOROOT=/opt/hostedtoolcache/go/${toolchain}/x64" >> $GITHUB_ENV
+      - uses: actions/setup-go@v4
         with:
-          env-file: .env
-      - uses: actions/setup-go@v3
-        with:
-          go-version: "${{ env.GOLANG_VERSION }}"
+          go-version: "${{ env.GOVERSION }}"
       - run: make deps-tidy
       - run: make build
       - run: make test-vet
@@ -95,12 +116,16 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
-      - uses: c-py/action-dotenv-to-setenv@v3
+      - name: set environment
+        uses: HatsuneMiku3939/direnv-action@v1
+      - run: |
+          toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
+          echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
+          echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
+          echo "GOROOT=/opt/hostedtoolcache/go/${toolchain}/x64" >> $GITHUB_ENV
+      - uses: actions/setup-go@v4
         with:
-          env-file: .env
-      - uses: actions/setup-go@v3
-        with:
-          go-version: "${{ env.GOLANG_VERSION }}"
+          go-version: "${{ env.GOVERSION }}"
       - run: make shellcheck
 
   sims:
@@ -110,12 +135,16 @@ jobs:
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
       - uses: actions/checkout@v3
-      - uses: c-py/action-dotenv-to-setenv@v3
+      - name: set environment
+        uses: HatsuneMiku3939/direnv-action@v1
+      - run: |
+          toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
+          echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
+          echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
+          echo "GOROOT=/opt/hostedtoolcache/go/${toolchain}/x64" >> $GITHUB_ENV
+      - uses: actions/setup-go@v4
         with:
-          env-file: .env
-      - uses: actions/setup-go@v3
-        with:
-          go-version: "${{ env.GOLANG_VERSION }}"
+          go-version: "${{ env.GOVERSION }}"
       - name: test-sim-nondeterminism
         run: make test-sim-nondeterminism
       - name: test-sim-import-export
@@ -130,12 +159,16 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
-      - uses: c-py/action-dotenv-to-setenv@v3
+      - name: set environment
+        uses: HatsuneMiku3939/direnv-action@v1
+      - run: |
+          toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
+          echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
+          echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
+          echo "GOROOT=/opt/hostedtoolcache/go/${toolchain}/x64" >> $GITHUB_ENV
+      - uses: actions/setup-go@v4
         with:
-          env-file: .env
-      - uses: actions/setup-go@v3
-        with:
-          go-version: "${{ env.GOLANG_VERSION }}"
+          go-version: "${{ env.GOVERSION }}"
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
@@ -175,9 +208,14 @@ jobs:
       - run: git fetch --prune --unshallow
       - name: set environment
         uses: HatsuneMiku3939/direnv-action@v1
-      - uses: actions/setup-go@v3
+      - run: |
+          toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
+          echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
+          echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
+          echo "GOROOT=/opt/hostedtoolcache/go/${toolchain}/x64" >> $GITHUB_ENV
+      - uses: actions/setup-go@v4
         with:
-          go-version: "${{ env.GOLANG_VERSION }}"
+          go-version: "${{ env.GOVERSION }}"
       - name: configure variables
         run: |
           test_required=$(./script/upgrades.sh test-required ${{ github.ref }})

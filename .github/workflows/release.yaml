@@ -13,12 +13,16 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
-      - uses: c-py/action-dotenv-to-setenv@v3
+      - name: set environment
+        uses: HatsuneMiku3939/direnv-action@v1
+      - run: |
+          toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
+          echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
+          echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
+          echo "GOROOT=/opt/hostedtoolcache/go/${toolchain}/x64" >> $GITHUB_ENV
+      - uses: actions/setup-go@v4
         with:
-          env-file: .env
-      - uses: actions/setup-go@v3
-        with:
-          go-version: "${{ env.GOLANG_VERSION }}"
+          go-version: "${{ env.GOVERSION }}"
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
@@ -49,9 +53,14 @@ jobs:
       - run: git fetch --prune --unshallow
       - name: set environment
         uses: HatsuneMiku3939/direnv-action@v1
-      - uses: actions/setup-go@v3
+      - run: |
+          toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
+          echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
+          echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
+          echo "GOROOT=/opt/hostedtoolcache/go/${toolchain}/x64" >> $GITHUB_ENV
+      - uses: actions/setup-go@v4
         with:
-          go-version: "${{ env.GOLANG_VERSION }}"
+          go-version: "${{ env.GOVERSION }}"
       - name: detect release tag
         run: echo "RELEASE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
       - name: configure variables
