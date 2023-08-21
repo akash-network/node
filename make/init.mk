@@ -59,7 +59,7 @@ ifeq ($(DETECTED_OS), Darwin)
 
 	# on MacOS Sonoma Beta there is a bit of discrepancy between Go and new prime linker
 	clang_version := $(shell echo | clang -dM -E - | grep __clang_major__ | cut -d ' ' -f 3 | tr -d '\n')
-	go_has_ld_fix := $(shell $(SEMVER) compare "v$(GOTOOLCHAIN_SEMVER)" "v1.22.0" | tr -d '\n')
+	go_has_ld_fix := $(shell $(SEMVER) compare "$(GOTOOLCHAIN_SEMVER)" "v1.22.0" | tr -d '\n')
 
 	ifeq (15,$(clang_version))
 		ifeq (-1,$(go_has_ld_fix))
