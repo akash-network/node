@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/tendermint/tendermint/libs/log"
 
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
@@ -45,19 +44,31 @@ func initUpgrade(log log.Logger, app *apptypes.App) (utypes.IUpgrade, error) {
 	}
 
 	if _, exists := up.MM.Modules[agov.ModuleName]; !exists {
-		return nil, fmt.Errorf("module %s has not been initialized", agov.ModuleName) // nolint: goerr113
+		return nil, fmt.Errorf(
+			"module %s has not been initialized",
+			agov.ModuleName,
+		) // nolint: goerr113
 	}
 
 	if _, exists := up.MM.Modules[astaking.ModuleName]; !exists {
-		return nil, fmt.Errorf("module %s has not been initialized", astaking.ModuleName) // nolint: goerr113
+		return nil, fmt.Errorf(
+			"module %s has not been initialized",
+			astaking.ModuleName,
+		) // nolint: goerr113
 	}
 
 	if _, exists := up.MM.Modules[atake.ModuleName]; !exists {
-		return nil, fmt.Errorf("module %s has not been initialized", atake.ModuleName) // nolint: goerr113
+		return nil, fmt.Errorf(
+			"module %s has not been initialized",
+			atake.ModuleName,
+		) // nolint: goerr113
 	}
 
 	if _, exists := up.MM.Modules[feegrant.ModuleName]; !exists {
-		return nil, fmt.Errorf("module %s has not been initialized", feegrant.ModuleName) // nolint: goerr113
+		return nil, fmt.Errorf(
+			"module %s has not been initialized",
+			feegrant.ModuleName,
+		) // nolint: goerr113
 	}
 
 	return up, nil
@@ -77,7 +88,7 @@ func (up *upgrade) StoreLoader() *storetypes.StoreUpgrades {
 }
 
 func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
-	return func(ctx sdk.Context, plan upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
+	return func(ctx sdk.Context, _ upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
 		// initializing akash staking module here so enforceMinValidatorCommission below can use params
 		ctx.Logger().Info("initializing parameters in astaking module...")
 		if err := up.Keepers.Akash.Staking.SetParams(ctx, astakingtypes.DefaultParams()); err != nil {
@@ -93,7 +104,7 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 		ctx.Logger().Info("starting module migrations...")
 
 		// migrate to new deployment params schema
-		up.App.Keepers.Akash.Deployment.SetParams(ctx, dtypes.DefaultParams())
+		up.Keepers.Akash.Deployment.SetParams(ctx, dtypes.DefaultParams())
 
 		return up.MM.RunMigrations(ctx, up.Configurator, fromVM)
 	}
@@ -112,10 +123,12 @@ func (up *upgrade) enforceMinValidatorCommission(ctx sdk.Context) error {
 
 		if validator.GetCommission().LT(minRate) {
 			up.log.Info(
-				fmt.Sprintf("validator's `%s` current commission is %s%% < %[3]s%%(min required). Force updating to %[3]s%%",
+				fmt.Sprintf(
+					"validator's `%s` current commission is %s%% < %[3]s%%(min required). Force updating to %[3]s%%",
 					validator.OperatorAddress,
 					validator.Commission.Rate,
-					minRate),
+					minRate,
+				),
 			)
 			// set max change rate temporarily to 100%
 			maxRateCh := validator.Commission.MaxChangeRate
@@ -139,9 +152,9 @@ func (up *upgrade) enforceMinValidatorCommission(ctx sdk.Context) error {
 // commission within 24h of upgrade height
 func updateValidatorCommission(
 	ctx sdk.Context,
-	validator types.Validator,
+	validator stakingtypes.Validator,
 	newRate sdk.Dec,
-) (types.Commission, error) {
+) (stakingtypes.Commission, error) {
 	commission := validator.Commission
 	blockTime := ctx.BlockHeader().Time
 
@@ -157,7 +170,7 @@ func updateValidatorCommission(
 
 // validateNewRate performs basic sanity validation checks of a new commission
 // rate. If validation fails, an SDK error is returned.
-func validateNewRate(commission stakingtypes.Commission, newRate sdk.Dec, blockTime time.Time) error {
+func validateNewRate(commission stakingtypes.Commission, newRate sdk.Dec, _ time.Time) error {
 	switch {
 	case newRate.IsNegative():
 		// new rate cannot be negative
@@ -182,7 +195,8 @@ func (up *upgrade) patchDanglingEscrowPayments(ctx sdk.Context) {
 			(payment.State == v1beta3.PaymentOverdrawn && acc.State != v1beta3.AccountOverdrawn) {
 
 			up.log.Info(
-				fmt.Sprintf("payment id state `%s:%s` does not match account state `%s:%s`. forcing payment state to %[4]s",
+				fmt.Sprintf(
+					"payment id state `%s:%s` does not match account state `%s:%s`. forcing payment state to %[4]s",
 					payment.PaymentID,
 					payment.State,
 					acc.ID,
