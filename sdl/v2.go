@@ -8,10 +8,11 @@ import (
 	"sort"
 	"strconv"
 
+	"gopkg.in/yaml.v3"
+
 	manifest "github.com/akash-network/akash-api/go/manifest/v2beta2"
 	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
 	types "github.com/akash-network/akash-api/go/node/types/v1beta3"
-	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -41,9 +42,9 @@ var (
 	errUnknownNextCase               = errors.New("next case is unknown")
 	errHTTPOptionNotAllowed          = errors.New("http option not allowed")
 	errSDLInvalid                    = errors.New("SDL invalid")
-
-	endpointNameValidationRegex = regexp.MustCompile(`^[[:lower:]]+[[:lower:]-_\d]+$`)
 )
+
+var endpointNameValidationRegex = regexp.MustCompile(`^[[:lower:]]+[[:lower:]-_\d]+$`)
 
 var _ SDL = (*v2)(nil)
 
@@ -84,28 +85,29 @@ type v2HTTPOptions struct {
 
 func (ho v2HTTPOptions) asManifest() (manifest.ServiceExposeHTTPOptions, error) {
 	maxBodySize := ho.MaxBodySize
-	if 0 == maxBodySize {
+
+	if maxBodySize == 0 {
 		maxBodySize = defaultMaxBodySize
 	} else if maxBodySize > upperLimitBodySize {
 		return manifest.ServiceExposeHTTPOptions{}, fmt.Errorf("%w: body size cannot be greater than %d bytes", errHTTPOptionNotAllowed, upperLimitBodySize)
 	}
 
 	readTimeout := ho.ReadTimeout
-	if 0 == readTimeout {
+	if readTimeout == 0 {
 		readTimeout = defaultReadTimeout
 	} else if readTimeout > upperLimitReadTimeout {
 		return manifest.ServiceExposeHTTPOptions{}, fmt.Errorf("%w: read timeout cannot be greater than %d ms", errHTTPOptionNotAllowed, upperLimitReadTimeout)
 	}
 
 	sendTimeout := ho.SendTimeout
-	if 0 == sendTimeout {
+	if sendTimeout == 0 {
 		sendTimeout = defaultSendTimeout
 	} else if sendTimeout > upperLimitSendTimeout {
 		return manifest.ServiceExposeHTTPOptions{}, fmt.Errorf("%w: send timeout cannot be greater than %d ms", errHTTPOptionNotAllowed, upperLimitSendTimeout)
 	}
 
 	nextTries := ho.NextTries
-	if 0 == nextTries {
+	if nextTries == 0 {
 		nextTries = defaultNextTries
 	}
 
@@ -394,7 +396,11 @@ func (sdl *v2) buildGroups() error {
 func (sdl *v2) validate() error {
 	for endpointName, endpoint := range sdl.Endpoints {
 		if !endpointNameValidationRegex.MatchString(endpointName) {
-			return fmt.Errorf("%w: endpoint named %q is not a valid name", errSDLInvalid, endpointName)
+			return fmt.Errorf(
+				"%w: endpoint named %q is not a valid name",
+				errSDLInvalid,
+				endpointName,
+			)
 		}
 
 		if len(endpoint.Kind) == 0 {
@@ -403,7 +409,12 @@ func (sdl *v2) validate() error {
 
 		// Validate endpoint kind, there is only one allowed value for now
 		if endpoint.Kind != endpointKindIP {
-			return fmt.Errorf("%w: endpoint named %q, unknown kind %q", errSDLInvalid, endpointName, endpoint.Kind)
+			return fmt.Errorf(
+				"%w: endpoint named %q, unknown kind %q",
+				errSDLInvalid,
+				endpointName,
+				endpoint.Kind,
+			)
 		}
 	}
 
@@ -417,21 +428,45 @@ func (sdl *v2) validate() error {
 
 			compute, ok := sdl.Profiles.Compute[svcdepl.Profile]
 			if !ok {
-				return fmt.Errorf("%w: %v.%v: no compute profile named %v", errSDLInvalid, svcName, placementName, svcdepl.Profile)
+				return fmt.Errorf(
+					"%w: %v.%v: no compute profile named %v",
+					errSDLInvalid,
+					svcName,
+					placementName,
+					svcdepl.Profile,
+				)
 			}
 
 			infra, ok := sdl.Profiles.Placement[placementName]
 			if !ok {
-				return fmt.Errorf("%w: %v.%v: no placement profile named %v", errSDLInvalid, svcName, placementName, placementName)
+				return fmt.Errorf(
+					"%w: %v.%v: no placement profile named %v",
+					errSDLInvalid,
+					svcName,
+					placementName,
+					placementName,
+				)
 			}
 
 			if _, ok := infra.Pricing[svcdepl.Profile]; !ok {
-				return fmt.Errorf("%w: %v.%v: no pricing for profile %v", errSDLInvalid, svcName, placementName, svcdepl.Profile)
+				return fmt.Errorf(
+					"%w: %v.%v: no pricing for profile %v",
+					errSDLInvalid,
+					svcName,
+					placementName,
+					svcdepl.Profile,
+				)
 			}
 
 			svc, ok := sdl.Services[svcName]
 			if !ok {
-				return fmt.Errorf("%w: %v.%v: no service profile named %v", errSDLInvalid, svcName, placementName, svcName)
+				return fmt.Errorf(
+					"%w: %v.%v: no service profile named %v",
+					errSDLInvalid,
+					svcName,
+					placementName,
+					svcName,
+				)
 			}
 
 			for _, serviceExpose := range svc.Expose {
@@ -439,28 +474,56 @@ func (sdl *v2) validate() error {
 					// Check to see if an IP endpoint is also specified
 					if len(to.IP) != 0 {
 						if !to.Global {
-							return fmt.Errorf("%w: error on %q if an IP is declared the directive must be declared as global", errSDLInvalid, svcName)
+							return fmt.Errorf(
+								"%w: error on %q if an IP is declared the directive must be declared as global",
+								errSDLInvalid,
+								svcName,
+							)
 						}
 						endpoint, endpointExists := sdl.Endpoints[to.IP]
 						if !endpointExists {
-							return fmt.Errorf("%w: error on service %q no endpoint named %q exists", errSDLInvalid, svcName, to.IP)
+							return fmt.Errorf(
+								"%w: error on service %q no endpoint named %q exists",
+								errSDLInvalid,
+								svcName,
+								to.IP,
+							)
 						}
 
 						if endpoint.Kind != endpointKindIP {
-							return fmt.Errorf("%w: error on service %q endpoint %q has type %q, should be %q", errSDLInvalid, svcName, to.IP, endpoint.Kind, endpointKindIP)
+							return fmt.Errorf(
+								"%w: error on service %q endpoint %q has type %q, should be %q",
+								errSDLInvalid,
+								svcName,
+								to.IP,
+								endpoint.Kind,
+								endpointKindIP,
+							)
 						}
 
 						endpointsUsed[to.IP] = struct{}{}
 
 						// Endpoint exists. Now check for port collisions across a single endpoint, port, & protocol
-						portKey := fmt.Sprintf("%s-%d-%s", to.IP, serviceExpose.As, serviceExpose.Proto)
+						portKey := fmt.Sprintf(
+							"%s-%d-%s",
+							to.IP,
+							serviceExpose.As,
+							serviceExpose.Proto,
+						)
 						otherServiceName, inUse := portsUsed[portKey]
 						if inUse {
-							return fmt.Errorf("%w: IP endpoint %q port: %d protocol: %s specified by service %q already in use by %q", errSDLInvalid, to.IP, serviceExpose.Port, serviceExpose.Proto, svcName, otherServiceName)
+							return fmt.Errorf(
+								"%w: IP endpoint %q port: %d protocol: %s specified by service %q already in use by %q",
+								errSDLInvalid,
+								to.IP,
+								serviceExpose.Port,
+								serviceExpose.Proto,
+								svcName,
+								otherServiceName,
+							)
 						}
 						portsUsed[portKey] = svcName
 					}
-
 				}
 			}
 
@@ -485,11 +548,21 @@ func (sdl *v2) validate() error {
 			if svc.Params != nil {
 				for name, params := range svc.Params.Storage {
 					if _, exists := volumes[name]; !exists {
-						return fmt.Errorf("%w: service \"%s\" references to no-existing compute volume named \"%s\"", errSDLInvalid, svcName, name)
+						return fmt.Errorf(
+							"%w: service \"%s\" references to no-existing compute volume named \"%s\"",
+							errSDLInvalid,
+							svcName,
+							name,
+						)
 					}
 
 					if !path.IsAbs(params.Mount) {
-						return fmt.Errorf("%w: invalid value for \"service.%s.params.%s.mount\" parameter. expected absolute path", errSDLInvalid, svcName, name)
+						return fmt.Errorf(
+							"%w: invalid value for \"service.%s.params.%s.mount\" parameter. expected absolute path",
+							errSDLInvalid,
+							svcName,
+							name,
+						)
 					}
 
 					attr[StorageAttributeMount] = params.Mount
@@ -501,7 +574,12 @@ func (sdl *v2) validate() error {
 							return errStorageMultipleRootEphemeral
 						}
 
-						return fmt.Errorf("%w: mount %q already in use by volume %q", errStorageDupMountPoint, mount, vlname)
+						return fmt.Errorf(
+							"%w: mount %q already in use by volume %q",
+							errStorageDupMountPoint,
+							mount,
+							vlname,
+						)
 					}
 
 					mounts[mount] = name
@@ -516,7 +594,13 @@ func (sdl *v2) validate() error {
 				persistent, _ := strconv.ParseBool(attr[StorageAttributePersistent])
 
 				if persistent && attr[StorageAttributeMount] == "" {
-					return fmt.Errorf("%w: compute.storage.%s has persistent=true which requires service.%s.params.storage.%s to have mount", errSDLInvalid, name, svcName, name)
+					return fmt.Errorf(
+						"%w: compute.storage.%s has persistent=true which requires service.%s.params.storage.%s to have mount",
+						errSDLInvalid,
+						name,
+						svcName,
+						name,
+					)
 				}
 			}
 		}
@@ -525,7 +609,11 @@ func (sdl *v2) validate() error {
 	for endpointName := range sdl.Endpoints {
 		_, inUse := endpointsUsed[endpointName]
 		if !inUse {
-			return fmt.Errorf("%w: endpoint %q declared but never used", errSDLInvalid, endpointName)
+			return fmt.Errorf(
+				"%w: endpoint %q declared but never used",
+				errSDLInvalid,
+				endpointName,
+			)
 		}
 	}
 
