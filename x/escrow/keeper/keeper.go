@@ -569,14 +569,12 @@ func (k *keeper) paymentWithdraw(ctx sdk.Context, obj *types.FractionalPayment) 
 	return nil
 }
 
-func (k keeper) sendFeeToCommunityPool(ctx sdk.Context, fee sdk.Coin) error {
-
+func (k *keeper) sendFeeToCommunityPool(ctx sdk.Context, fee sdk.Coin) error {
 	if fee.IsZero() {
 		return nil
 	}
 
 	// see https://github.com/cosmos/cosmos-sdk/blob/c2a07cea272a7878b5bc2ec160eb58ca83794214/x/distribution/keeper/keeper.go#L251-L263
-
 	if err := k.bkeeper.SendCoinsFromModuleToModule(ctx, types.ModuleName, distrtypes.ModuleName, sdk.NewCoins(fee)); err != nil {
 		return err
 	}
