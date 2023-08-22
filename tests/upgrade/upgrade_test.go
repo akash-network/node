@@ -487,6 +487,7 @@ func (l *launcher) run() error {
 		fmt.Sprintf("DAEMON_RESTART_AFTER_UPGRADE=true"),
 		fmt.Sprintf("DAEMON_ALLOW_DOWNLOAD_BINARIES=true"),
 		fmt.Sprintf("DAEMON_RESTART_DELAY=3s"),
+		fmt.Sprintf("COSMOVISOR_COLOR_LOGS=false"),
 		fmt.Sprintf("UNSAFE_SKIP_BACKUP=true"),
 		fmt.Sprintf("AKASH_HOME=%s", l.params.homeDir),
 		fmt.Sprintf("AKASH_KEYRING_BACKEND=test"),

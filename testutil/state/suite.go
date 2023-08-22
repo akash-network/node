@@ -65,6 +65,9 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 		bkeeper.
 			On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
 		keepers.Bank = bkeeper
 	}
 
@@ -75,6 +78,8 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 			Return(distrtypes.FeePool{})
 		dkeeper.On("SetFeePool", mock.Anything, mock.Anything).
 			Return()
+
+		keepers.Distr = dkeeper
 	}
 
 	app := app.Setup(false)
