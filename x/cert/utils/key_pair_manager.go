@@ -264,6 +264,7 @@ func (kpm *keyPairManager) readImpl(fin io.Reader) ([]byte, []byte, []byte, erro
 	}
 
 	var privKeyPlaintext []byte
+	var privKeyI interface{}
 
 	// PKCS#8 header defined in RFC7468 section 11
 	// nolint: gocritic
@@ -271,22 +272,26 @@ func (kpm *keyPairManager) readImpl(fin io.Reader) ([]byte, []byte, []byte, erro
 		privKeyPlaintext, err = pemutil.DecryptPKCS8PrivateKey(block.Bytes, kpm.passwordBytes)
 	} else if block.Headers["Proc-Type"] == "4,ENCRYPTED" {
 		// nolint: staticcheck
-		privKeyPlaintext, err = x509.DecryptPEMBlock(block, kpm.passwordBytes)
-		if errors.Is(err, x509.IncorrectPasswordError) {
+		privKeyPlaintext, _ = x509.DecryptPEMBlock(block, kpm.passwordBytes)
+
+		// DecryptPEMBlock may not return IncorrectPasswordError.
+		// Try parse private key instead and if it fails give another try with legacy password
+		privKeyI, err = x509.ParsePKCS8PrivateKey(privKeyPlaintext)
+		if err != nil {
 			// nolint: staticcheck
 			privKeyPlaintext, err = x509.DecryptPEMBlock(block, kpm.passwordLegacy)
 		}
 	} else {
 		return nil, nil, nil, errUnsupportedEncryptedPEM
 	}
-
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("%w: failed decrypting x509 block with private key", err)
 	}
 
-	var privKeyI interface{}
-	if privKeyI, err = x509.ParsePKCS8PrivateKey(privKeyPlaintext); err != nil {
-		return nil, nil, nil, fmt.Errorf("%w: failed parsing private key data", err)
+	if privKeyI == nil {
+		if privKeyI, err = x509.ParsePKCS8PrivateKey(privKeyPlaintext); err != nil {
+			return nil, nil, nil, fmt.Errorf("%w: failed parsing private key data", err)
+		}
 	}
 
 	eckey, valid := privKeyI.(*ecdsa.PrivateKey)
