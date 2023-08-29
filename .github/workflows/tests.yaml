@@ -28,7 +28,6 @@ jobs:
           toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
           echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
           echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
-          echo "GOROOT=/Users/runner/hostedtoolcache/go/${toolchain}/x64" >> $GITHUB_ENV
       - uses: actions/setup-go@v4
         with:
           go-version: "${{ env.GOVERSION }}"
@@ -39,17 +38,16 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
-      - name: set environment
-        uses: HatsuneMiku3939/direnv-action@v1
       - run: |
           toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
           echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
           echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
-          echo "GOROOT=/opt/hostedtoolcache/go/${toolchain}/x64" >> $GITHUB_ENV
       - uses: actions/setup-go@v4
         with:
           go-version: "${{ env.GOVERSION }}"
           check-latest: true
+      - name: set environment
+        uses: HatsuneMiku3939/direnv-action@v1
       - run: make bins
       - run: make docker-image
 
@@ -58,16 +56,15 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
-      - name: set environment
-        uses: HatsuneMiku3939/direnv-action@v1
       - run: |
           toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
           echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
           echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
-          echo "GOROOT=/opt/hostedtoolcache/go/${toolchain}/x64" >> $GITHUB_ENV
       - uses: actions/setup-go@v4
         with:
           go-version: "${{ env.GOVERSION }}"
+      - name: set environment
+        uses: HatsuneMiku3939/direnv-action@v1
       - run: make test-full
 
   coverage:
@@ -75,16 +72,15 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
-      - name: set environment
-        uses: HatsuneMiku3939/direnv-action@v1
       - run: |
           toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
           echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
           echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
-          echo "GOROOT=/opt/hostedtoolcache/go/${toolchain}/x64" >> $GITHUB_ENV
       - uses: actions/setup-go@v4
         with:
           go-version: "${{ env.GOVERSION }}"
+      - name: set environment
+        uses: HatsuneMiku3939/direnv-action@v1
       - run: make test-coverage
       - uses: codecov/codecov-action@v3
 
@@ -93,16 +89,15 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
-      - name: set environment
-        uses: HatsuneMiku3939/direnv-action@v1
       - run: |
           toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
           echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
           echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
-          echo "GOROOT=/opt/hostedtoolcache/go/${toolchain}/x64" >> $GITHUB_ENV
       - uses: actions/setup-go@v4
         with:
           go-version: "${{ env.GOVERSION }}"
+      - name: set environment
+        uses: HatsuneMiku3939/direnv-action@v1
       - run: make deps-tidy
       - run: make build
       - run: make test-vet
@@ -116,16 +111,15 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
-      - name: set environment
-        uses: HatsuneMiku3939/direnv-action@v1
       - run: |
           toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
           echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
           echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
-          echo "GOROOT=/opt/hostedtoolcache/go/${toolchain}/x64" >> $GITHUB_ENV
       - uses: actions/setup-go@v4
         with:
           go-version: "${{ env.GOVERSION }}"
+      - name: set environment
+        uses: HatsuneMiku3939/direnv-action@v1
       - run: make shellcheck
 
   sims:
@@ -135,16 +129,15 @@ jobs:
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
       - uses: actions/checkout@v3
-      - name: set environment
-        uses: HatsuneMiku3939/direnv-action@v1
       - run: |
           toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
           echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
           echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
-          echo "GOROOT=/opt/hostedtoolcache/go/${toolchain}/x64" >> $GITHUB_ENV
       - uses: actions/setup-go@v4
         with:
           go-version: "${{ env.GOVERSION }}"
+      - name: set environment
+        uses: HatsuneMiku3939/direnv-action@v1
       - name: test-sim-nondeterminism
         run: make test-sim-nondeterminism
       - name: test-sim-import-export
@@ -159,16 +152,15 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
-      - name: set environment
-        uses: HatsuneMiku3939/direnv-action@v1
       - run: |
           toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
           echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
           echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
-          echo "GOROOT=/opt/hostedtoolcache/go/${toolchain}/x64" >> $GITHUB_ENV
       - uses: actions/setup-go@v4
         with:
           go-version: "${{ env.GOVERSION }}"
+      - name: set environment
+        uses: HatsuneMiku3939/direnv-action@v1
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
@@ -186,6 +178,13 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
+      - run: |
+          toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
+          echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
+          echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "${{ env.GOVERSION }}"
       - name: set environment
         uses: HatsuneMiku3939/direnv-action@v1
       - name: Ensure only directories exists in upgrades dir
@@ -206,16 +205,15 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
-      - name: set environment
-        uses: HatsuneMiku3939/direnv-action@v1
       - run: |
           toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
           echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
           echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
-          echo "GOROOT=/opt/hostedtoolcache/go/${toolchain}/x64" >> $GITHUB_ENV
       - uses: actions/setup-go@v4
         with:
           go-version: "${{ env.GOVERSION }}"
+      - name: set environment
+        uses: HatsuneMiku3939/direnv-action@v1
       - name: configure variables
         run: |
           test_required=$(./script/upgrades.sh test-required ${{ github.ref }})

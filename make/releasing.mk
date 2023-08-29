@@ -21,14 +21,6 @@ ifeq ($(GORELEASER_MOUNT_CONFIG),true)
 	GORELEASER_IMAGE := -v $(HOME)/.docker/config.json:/root/.docker/config.json $(GORELEASER_IMAGE)
 endif
 
-# if go.mod contains replace for any modules on local filesystem
-# mount them into docker during goreleaser build to exactly same path
-#REPLACED_MODULES              := $(shell go list -mod=readonly -m -f '{{ .Replace }}' all 2>/dev/null | grep -v -x -F "<nil>" | grep "^/")
-#ifneq ($(REPLACED_MODULES), )
-#	GORELEASER_MOUNT_REPLACED := $(foreach mod, $(REPLACED_MODULES), -v $(mod):$(mod)\\)
-#endif
-#GORELEASER_MOUNT_REPLACED     := $(GORELEASER_MOUNT_REPLACED:\\=)
-
 .PHONY: bins
 bins: $(BINS)
 
@@ -68,9 +60,9 @@ docker-image:
 		-e DOCKER_IMAGE=$(RELEASE_DOCKER_IMAGE) \
 		-e GOPATH=/go \
 		-e GOTOOLCHAIN="$(GOTOOLCHAIN)" \
-		-v $(GOPATH):/go:ro \
 		-v /var/run/docker.sock:/var/run/docker.sock \
-		-v `pwd`:/go/src/$(GO_MOD_NAME) \
+		-v $(GOPATH):/go \
+		-v $(AKASH_ROOT):/go/src/$(GO_MOD_NAME) \
 		-w /go/src/$(GO_MOD_NAME) \
 		$(GORELEASER_IMAGE) \
 		-f .goreleaser-docker.yaml \
@@ -99,9 +91,9 @@ release: gen-changelog
 		-e DOCKER_IMAGE=$(RELEASE_DOCKER_IMAGE) \
 		-e GOTOOLCHAIN="$(GOTOOLCHAIN)" \
 		-e GOPATH=/go \
-		-v $(GOPATH):/go:ro \
 		-v /var/run/docker.sock:/var/run/docker.sock \
-		-v `pwd`:/go/src/$(GO_MOD_NAME) \
+		-v $(GOPATH):/go \
+		-v $(AKASH_ROOT):/go/src/$(GO_MOD_NAME) \
 		-w /go/src/$(GO_MOD_NAME) \
 		$(GORELEASER_IMAGE) \
 		-f "$(GORELEASER_CONFIG)" \
