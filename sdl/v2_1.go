@@ -1,10 +1,8 @@
 package sdl
 
 import (
-	"errors"
 	"fmt"
 	"path"
-	"regexp"
 	"sort"
 	"strconv"
 
@@ -15,40 +13,9 @@ import (
 	types "github.com/akash-network/akash-api/go/node/types/v1beta3"
 )
 
-const (
-	nextCaseError         = "error"
-	nextCaseTimeout       = "timeout"
-	nextCase500           = "500"
-	nextCase502           = "502"
-	nextCase503           = "503"
-	nextCase504           = "504"
-	nextCase403           = "403"
-	nextCase404           = "404"
-	nextCase400           = "429"
-	nextCaseOff           = "off"
-	defaultMaxBodySize    = uint32(1048576)
-	upperLimitBodySize    = uint32(104857600)
-	defaultReadTimeout    = uint32(60000)
-	upperLimitReadTimeout = defaultReadTimeout
-	defaultSendTimeout    = uint32(60000)
-	upperLimitSendTimeout = defaultSendTimeout
-	defaultNextTries      = uint32(3)
-	endpointKindIP        = "ip"
-)
+var _ SDL = (*v2_1)(nil)
 
-var (
-	defaultNextCases                 = []string{nextCaseError, nextCaseTimeout}
-	errCannotSpecifyOffAndOtherCases = errors.New("if 'off' is specified, no other cases may be specified")
-	errUnknownNextCase               = errors.New("next case is unknown")
-	errHTTPOptionNotAllowed          = errors.New("http option not allowed")
-	errSDLInvalid                    = errors.New("SDL invalid")
-)
-
-var endpointNameValidationRegex = regexp.MustCompile(`^[[:lower:]]+[[:lower:]-_\d]+$`)
-
-var _ SDL = (*v2)(nil)
-
-type v2 struct {
+type v2_1 struct {
 	Include     []string              `yaml:",omitempty"`
 	Services    map[string]v2Service  `yaml:"services,omitempty"`
 	Profiles    v2profiles            `yaml:"profiles,omitempty"`
@@ -61,161 +28,21 @@ type v2 struct {
 	}
 }
 
-type v2Deployments map[string]v2Deployment
-
-type v2Endpoint struct {
-	Kind string `yaml:"kind"`
-}
-
-type v2ExposeTo struct {
-	Service     string        `yaml:"service,omitempty"`
-	Global      bool          `yaml:"global,omitempty"`
-	HTTPOptions v2HTTPOptions `yaml:"http_options"`
-	IP          string        `yaml:"ip"`
-}
-
-type v2HTTPOptions struct {
-	MaxBodySize uint32   `yaml:"max_body_size"`
-	ReadTimeout uint32   `yaml:"read_timeout"`
-	SendTimeout uint32   `yaml:"send_timeout"`
-	NextTries   uint32   `yaml:"next_tries"`
-	NextTimeout uint32   `yaml:"next_timeout"`
-	NextCases   []string `yaml:"next_cases"`
-}
-
-func (ho v2HTTPOptions) asManifest() (manifest.ServiceExposeHTTPOptions, error) {
-	maxBodySize := ho.MaxBodySize
-
-	if maxBodySize == 0 {
-		maxBodySize = defaultMaxBodySize
-	} else if maxBodySize > upperLimitBodySize {
-		return manifest.ServiceExposeHTTPOptions{}, fmt.Errorf("%w: body size cannot be greater than %d bytes", errHTTPOptionNotAllowed, upperLimitBodySize)
-	}
-
-	readTimeout := ho.ReadTimeout
-	if readTimeout == 0 {
-		readTimeout = defaultReadTimeout
-	} else if readTimeout > upperLimitReadTimeout {
-		return manifest.ServiceExposeHTTPOptions{}, fmt.Errorf("%w: read timeout cannot be greater than %d ms", errHTTPOptionNotAllowed, upperLimitReadTimeout)
-	}
-
-	sendTimeout := ho.SendTimeout
-	if sendTimeout == 0 {
-		sendTimeout = defaultSendTimeout
-	} else if sendTimeout > upperLimitSendTimeout {
-		return manifest.ServiceExposeHTTPOptions{}, fmt.Errorf("%w: send timeout cannot be greater than %d ms", errHTTPOptionNotAllowed, upperLimitSendTimeout)
-	}
-
-	nextTries := ho.NextTries
-	if nextTries == 0 {
-		nextTries = defaultNextTries
-	}
-
-	nextCases := ho.NextCases
-	if len(nextCases) == 0 {
-		nextCases = defaultNextCases
-	} else {
-		for _, nextCase := range nextCases {
-			switch nextCase {
-			case nextCaseOff:
-				if len(nextCases) != 1 {
-					return manifest.ServiceExposeHTTPOptions{}, errCannotSpecifyOffAndOtherCases
-				}
-			case nextCaseError:
-			case nextCaseTimeout:
-			case nextCase500:
-			case nextCase502:
-			case nextCase503:
-			case nextCase504:
-			case nextCase403:
-			case nextCase404:
-			case nextCase400:
-			default:
-				return manifest.ServiceExposeHTTPOptions{}, fmt.Errorf("%w: %q", errUnknownNextCase, nextCase)
-			}
-		}
-	}
-
-	return manifest.ServiceExposeHTTPOptions{
-		MaxBodySize: maxBodySize,
-		ReadTimeout: readTimeout,
-		SendTimeout: sendTimeout,
-		NextTries:   nextTries,
-		NextTimeout: ho.NextTimeout,
-		NextCases:   nextCases,
-	}, nil
-}
-
-type v2Expose struct {
-	Port        uint32
-	As          uint32
-	Proto       string        `yaml:"proto,omitempty"`
-	To          []v2ExposeTo  `yaml:"to,omitempty"`
-	Accept      v2Accept      `yaml:"accept"`
-	HTTPOptions v2HTTPOptions `yaml:"http_options"`
-}
-
-type v2Exposes []v2Expose
-
-type v2Dependency struct {
-	Service string `yaml:"service"`
-}
-
-type v2ServiceParams struct {
-	Storage map[string]v2ServiceStorageParams `yaml:"storage,omitempty"`
-}
-
-type v2Service struct {
-	Image        string
-	Command      []string         `yaml:",omitempty"`
-	Args         []string         `yaml:",omitempty"`
-	Env          []string         `yaml:",omitempty"`
-	Expose       v2Exposes        `yaml:",omitempty"`
-	Dependencies []v2Dependency   `yaml:",omitempty"`
-	Params       *v2ServiceParams `yaml:",omitempty"`
-}
-
-type v2ServiceDeployment struct {
-	// Compute profile name
-	Profile string
-
-	// Number of instances
-	Count uint32
-}
-
-// placement-profile -> { compute-profile, count }
-type v2Deployment map[string]v2ServiceDeployment
-
-type v2ProfileCompute struct {
-	Resources *v2ComputeResources `yaml:"resources,omitempty"`
-}
-
-type v2ProfilePlacement struct {
-	Attributes v2PlacementAttributes `yaml:"attributes"`
-	SignedBy   types.SignedBy        `yaml:"signedBy"`
-	Pricing    v2PlacementPricing    `yaml:"pricing"`
-}
-
-type v2profiles struct {
-	Compute   map[string]v2ProfileCompute   `yaml:"compute"`
-	Placement map[string]v2ProfilePlacement `yaml:"placement"`
-}
-
-func (sdl *v2) DeploymentGroups() (dtypes.GroupSpecs, error) {
+func (sdl *v2_1) DeploymentGroups() (dtypes.GroupSpecs, error) {
 	return sdl.result.dgroups, nil
 }
 
-func (sdl *v2) Manifest() (manifest.Manifest, error) {
+func (sdl *v2_1) Manifest() (manifest.Manifest, error) {
 	return manifest.Manifest(sdl.result.mgroups), nil
 }
 
 // Version creates the deterministic Deployment Version hash from the SDL.
-func (sdl *v2) Version() ([]byte, error) {
+func (sdl *v2_1) Version() ([]byte, error) {
 	return manifest.Manifest(sdl.result.mgroups).Version()
 }
 
-func (sdl *v2) UnmarshalYAML(node *yaml.Node) error {
-	result := v2{}
+func (sdl *v2_1) UnmarshalYAML(node *yaml.Node) error {
+	result := v2_1{}
 
 loop:
 	for i := 0; i < len(node.Content); i += 2 {
@@ -252,7 +79,7 @@ loop:
 	return nil
 }
 
-func (sdl *v2) validate() error {
+func (sdl *v2_1) validate() error {
 	for endpointName, endpoint := range sdl.Endpoints {
 		if !endpointNameValidationRegex.MatchString(endpointName) {
 			return fmt.Errorf(
@@ -479,7 +306,7 @@ func (sdl *v2) validate() error {
 	return nil
 }
 
-func (sdl *v2) computeEndpointSequenceNumbers() map[string]uint32 {
+func (sdl *v2_1) computeEndpointSequenceNumbers() map[string]uint32 {
 	var endpointNames []string
 	res := make(map[string]uint32)
 
@@ -511,35 +338,4 @@ func (sdl *v2) computeEndpointSequenceNumbers() map[string]uint32 {
 	}
 
 	return res
-}
-
-func (sdl v2Deployments) svcNames() []string {
-	names := make([]string, 0, len(sdl))
-	for name := range sdl {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-
-	return names
-}
-
-// placementNames stable ordered placement names
-func (sdl v2Deployment) placementNames() []string {
-	names := make([]string, 0, len(sdl))
-	for name := range sdl {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-
-	return names
-}
-
-func v2DeploymentPlacementNames(m v2Deployment) []string {
-	names := make([]string, 0, len(m))
-	for name := range m {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-
-	return names
 }

@@ -3,59 +3,17 @@ package sdl
 import (
 	"testing"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
-
 	manifest "github.com/akash-network/akash-api/go/manifest/v2beta2"
 	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
 	"github.com/akash-network/akash-api/go/node/types/unit"
 	atypes "github.com/akash-network/akash-api/go/node/types/v1beta3"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	// "github.com/akash-network/node/testutil"
 )
 
-func TestV2Expose(t *testing.T) {
-	var stream = `
-- port: 80
-  as: 80
-  accept:
-    - hello.localhost
-  to:
-    - global: true
-`
-
-	var p []v2Expose
-
-	err := yaml.Unmarshal([]byte(stream), &p)
-	require.NoError(t, err)
-}
-
-func AkashDecCoin(t testing.TB, amount int64) sdk.DecCoin {
-	t.Helper()
-	amt := sdk.NewInt(amount)
-	return sdk.NewDecCoin("uakt", amt)
-}
-
-const (
-	randCPU     uint64 = 100
-	randGPU     uint64 = 1
-	randMemory  uint64 = 128 * unit.Mi
-	randStorage uint64 = 1 * unit.Gi
-)
-
-var (
-	defaultHTTPOptions = manifest.ServiceExposeHTTPOptions{
-		MaxBodySize: defaultMaxBodySize,
-		ReadTimeout: defaultReadTimeout,
-		SendTimeout: defaultSendTimeout,
-		NextTries:   defaultNextTries,
-		NextCases:   []string{"error", "timeout"},
-	}
-)
-
-func TestV2ParseSimpleGPU(t *testing.T) {
-	sdl, err := ReadFile("./_testdata/simple-gpu.yaml")
+func TestV2_1_ParseSimpleGPU(t *testing.T) {
+	sdl, err := ReadFile("./_testdata/v2.1-simple-gpu.yaml")
 	require.NoError(t, err)
 
 	groups, err := sdl.DeploymentGroups()
@@ -116,7 +74,7 @@ func TestV2ParseSimpleGPU(t *testing.T) {
 	assert.Len(t, mani.GetGroups(), 1)
 
 	expectedHosts := make([]string, 1)
-	expectedHosts[0] = "ahostname.com"
+	expectedHosts[0] = "ahostname.com" // nolint: goconst
 	assert.Equal(t, manifest.Group{
 		Name: "westcoast",
 		Services: []manifest.Service{
@@ -181,8 +139,8 @@ func TestV2ParseSimpleGPU(t *testing.T) {
 	}, mani.GetGroups()[0])
 }
 
-func TestV2Parse_Deployments(t *testing.T) {
-	sdl1, err := ReadFile("../x/deployment/testdata/deployment.yaml")
+func TestV2_1_Parse_Deployments(t *testing.T) {
+	sdl1, err := ReadFile("../x/deployment/testdata/deployment-v2.1.yaml")
 	require.NoError(t, err)
 	_, err = sdl1.DeploymentGroups()
 	require.NoError(t, err)
@@ -203,7 +161,7 @@ func TestV2Parse_Deployments(t *testing.T) {
 	require.NotEqual(t, sha1, sha2)
 }
 
-func Test_V2_Cross_Validates(t *testing.T) {
+func Test_V2_1_Cross_Validates(t *testing.T) {
 	sdl2, err := ReadFile("../x/deployment/testdata/deployment-v2.yaml")
 	require.NoError(t, err)
 	dgroups, err := sdl2.DeploymentGroups()
@@ -220,7 +178,7 @@ func Test_V2_Cross_Validates(t *testing.T) {
 	require.NoError(t, err)
 
 	// Repeat the same test with another file
-	sdl2, err = ReadFile("./_testdata/simple.yaml")
+	sdl2, err = ReadFile("./_testdata/v2.1-simple.yaml")
 	require.NoError(t, err)
 	dgroups, err = sdl2.DeploymentGroups()
 	require.NoError(t, err)
@@ -233,7 +191,7 @@ func Test_V2_Cross_Validates(t *testing.T) {
 	require.NoError(t, err)
 
 	// Repeat the same test with another file
-	sdl2, err = ReadFile("./_testdata/simple3.yaml")
+	sdl2, err = ReadFile("./_testdata/v2.1-simple3.yaml")
 	require.NoError(t, err)
 	dgroups, err = sdl2.DeploymentGroups()
 	require.NoError(t, err)
@@ -246,7 +204,7 @@ func Test_V2_Cross_Validates(t *testing.T) {
 	require.NoError(t, err)
 
 	// Repeat the same test with another file
-	sdl2, err = ReadFile("./_testdata/private_service.yaml")
+	sdl2, err = ReadFile("./_testdata/v2.1-private_service.yaml")
 	require.NoError(t, err)
 	dgroups, err = sdl2.DeploymentGroups()
 	require.NoError(t, err)
@@ -260,8 +218,8 @@ func Test_V2_Cross_Validates(t *testing.T) {
 
 }
 
-func Test_V2_Parse_simple(t *testing.T) {
-	sdl, err := ReadFile("./_testdata/simple.yaml")
+func Test_V2_1_Parse_simple(t *testing.T) {
+	sdl, err := ReadFile("./_testdata/v2.1-simple.yaml")
 	require.NoError(t, err)
 
 	groups, err := sdl.DeploymentGroups()
@@ -374,8 +332,8 @@ func Test_V2_Parse_simple(t *testing.T) {
 	}, mani.GetGroups()[0])
 }
 
-func Test_v1_Parse_ProfileNameNotServiceName(t *testing.T) {
-	sdl, err := ReadFile("./_testdata/profile-svc-name-mismatch.yaml")
+func Test_v2_1_Parse_ProfileNameNotServiceName(t *testing.T) {
+	sdl, err := ReadFile("./_testdata/v2.1-profile-svc-name-mismatch.yaml")
 	require.NoError(t, err)
 
 	dgroups, err := sdl.DeploymentGroups()
@@ -387,13 +345,13 @@ func Test_v1_Parse_ProfileNameNotServiceName(t *testing.T) {
 	assert.Len(t, mani.GetGroups(), 1)
 }
 
-func Test_v2_Parse_DeploymentNameServiceNameMismatch(t *testing.T) {
-	sdl, err := ReadFile("./_testdata/deployment-svc-mismatch.yaml")
+func Test_v2_1_Parse_DeploymentNameServiceNameMismatch(t *testing.T) {
+	sdl, err := ReadFile("./_testdata/v2.1-deployment-svc-mismatch.yaml")
 	require.Error(t, err)
 	require.Nil(t, sdl)
 	require.Contains(t, err.Error(), "no service profile named")
 
-	sdl, err = ReadFile("./_testdata/simple2.yaml")
+	sdl, err = ReadFile("./_testdata/v2.1-simple2.yaml")
 	require.NoError(t, err)
 	require.NotNil(t, sdl)
 
@@ -415,8 +373,8 @@ func Test_v2_Parse_DeploymentNameServiceNameMismatch(t *testing.T) {
 	require.Equal(t, mani.GetGroups()[0].Services[0].Expose[0].Hosts[0], "ahostname.com")
 }
 
-func TestV2ParseServiceMix(t *testing.T) {
-	sdl, err := ReadFile("./_testdata/service-mix.yaml")
+func TestV2_1_ParseServiceMix(t *testing.T) {
+	sdl, err := ReadFile("./_testdata/v2.1-service-mix.yaml")
 	require.NoError(t, err)
 
 	groups, err := sdl.DeploymentGroups()
@@ -601,8 +559,8 @@ func TestV2ParseServiceMix(t *testing.T) {
 	}, mani.GetGroups()[0])
 }
 
-func TestV2ParseServiceMix2(t *testing.T) {
-	sdl, err := ReadFile("./_testdata/service-mix2.yaml")
+func TestV2_1_ParseServiceMix2(t *testing.T) {
+	sdl, err := ReadFile("./_testdata/v2.1-service-mix2.yaml")
 	require.NoError(t, err)
 
 	groups, err := sdl.DeploymentGroups()
@@ -610,7 +568,7 @@ func TestV2ParseServiceMix2(t *testing.T) {
 	assert.Len(t, groups, 1)
 
 	group := groups[0]
-	assert.Len(t, group.GetResourceUnits(), 2)
+	assert.Len(t, group.GetResourceUnits(), 1)
 	assert.Len(t, group.Requirements.Attributes, 2)
 
 	assert.Equal(t, atypes.Attribute{
@@ -620,7 +578,7 @@ func TestV2ParseServiceMix2(t *testing.T) {
 
 	assert.Equal(t, dtypes.ResourceUnits{
 		{
-			Count: 1,
+			Count: 2,
 			Resources: atypes.Resources{
 				ID: 1,
 				CPU: &atypes.CPU{
@@ -651,36 +609,6 @@ func TestV2ParseServiceMix2(t *testing.T) {
 					{
 						Kind: atypes.Endpoint_RANDOM_PORT,
 					},
-				},
-			},
-			Price: AkashDecCoin(t, 50),
-		},
-		{
-			Count: 1,
-			Resources: atypes.Resources{
-				ID: 2,
-				CPU: &atypes.CPU{
-					Units: atypes.NewResourceValue(randCPU),
-				},
-				GPU: &atypes.GPU{
-					Units: atypes.NewResourceValue(randGPU),
-					Attributes: atypes.Attributes{
-						{
-							Key:   "vendor/nvidia/model/*",
-							Value: "true",
-						},
-					},
-				},
-				Memory: &atypes.Memory{
-					Quantity: atypes.NewResourceValue(randMemory),
-				},
-				Storage: atypes.Volumes{
-					{
-						Name:     "default",
-						Quantity: atypes.NewResourceValue(randStorage),
-					},
-				},
-				Endpoints: []atypes.Endpoint{
 					{
 						Kind: atypes.Endpoint_SHARED_HTTP,
 					},
@@ -752,7 +680,7 @@ func TestV2ParseServiceMix2(t *testing.T) {
 				Name:  "svcb",
 				Image: "nginx",
 				Resources: atypes.Resources{
-					ID: 2,
+					ID: 1,
 					CPU: &atypes.CPU{
 						Units: atypes.NewResourceValue(100),
 					},

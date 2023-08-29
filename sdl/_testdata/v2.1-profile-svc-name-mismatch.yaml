@@ -1,0 +1,38 @@
+---
+version: "2.1"
+
+services:
+  webapp:
+    image: ghcr.io/akash-network/demo-app
+    expose:
+      - port: 80
+        as: 80
+        accept:
+          - thehostname.com
+        to:
+          - global: true
+
+profiles:
+  compute:
+    web:
+      resources:
+        cpu:
+          units: "100m"
+        memory:
+          size: "512Mi"
+        storage:
+          size: "512Mi"
+  placement:
+    san-jose:
+      attributes:
+        region: sjc
+      pricing:
+        web:
+          denom: uakt
+          amount: 25
+
+deployment:
+  webapp:
+    san-jose:
+      profile: web
+      count: 1

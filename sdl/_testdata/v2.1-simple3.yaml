@@ -1,0 +1,45 @@
+---
+version: "2.1"
+
+services:
+  app:
+    image: ubuntu:22.04
+    command:
+      - "sh"
+      - "-c"
+    args:
+      - 'sleep infinity'
+    expose:
+      - port: 80
+        as: 80
+        to:
+          - global: true
+      - port: 22
+        as: 22
+        to:
+          - global: true
+
+profiles:
+  compute:
+    app:
+      resources:
+        cpu:
+          units: 1
+        memory:
+          size: 2Gi
+        storage:
+          size: 10Gi
+  placement:
+    akash:
+      attributes:
+        host: akash
+      pricing:
+        app:
+          denom: uakt
+          amount: 1000000
+
+deployment:
+  app:
+    akash:
+      profile: app
+      count: 1

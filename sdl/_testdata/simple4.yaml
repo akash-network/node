@@ -1,0 +1,90 @@
+---
+version: '2.0'
+services:
+  wordpress:
+    image: wordpress
+    depends_on:
+    - db
+    expose:
+      - port: 80
+        http_options:
+          max_body_size: 104857600
+        # accept:
+        # - "example.com"
+        to:
+          - global: true
+    env:
+      - WORDPRESS_DB_HOST=db
+      - WORDPRESS_DB_USER=wordpress
+      - WORDPRESS_DB_PASSWORD=testpass4you
+      - WORDPRESS_DB_NAME=wordpress
+    params:
+      storage:
+        wordpress-data:
+          mount: /var/www/html
+          readOnly: false
+  db:
+    # We use a mariadb image which supports both amd64 & arm64 architecture
+    image: mariadb:10.6.4
+    # If you really want to use MySQL, uncomment the following line
+    #image: mysql:8.0.27
+    expose:
+      - port: 3306
+        to:
+          - service: wordpress
+    env:
+      - MYSQL_RANDOM_ROOT_PASSWORD=1
+      - MYSQL_DATABASE=wordpress
+      - MYSQL_USER=wordpress
+      - MYSQL_PASSWORD=testpass4you
+    params:
+      storage:
+        wordpress-db:
+          mount: /var/lib/mysql
+          readOnly: false
+profiles:
+  compute:
+    wordpress:
+      resources:
+        cpu:
+          units: 1
+        memory:
+          size: 1Gi
+        storage:
+          - size: 1Gi
+          - name: wordpress-data
+            size: 1Gi
+            attributes:
+              persistent: true
+              class: beta3
+    db:
+      resources:
+        cpu:
+          units: 1
+        memory:
+          size: 1Gi
+        storage:
+          - size: 1Gi
+          - name: wordpress-db
+            size: 1Gi
+            attributes:
+              persistent: true
+              class: beta3
+  placement:
+    akash:
+      pricing:
+        wordpress:
+          denom: uakt
+          amount: 10000
+        db:
+          denom: uakt
+          amount: 10000
+deployment:
+  wordpress:
+    akash:
+      profile: wordpress
+      count: 1
+  db:
+    akash:
+      profile: db
+      count: 1

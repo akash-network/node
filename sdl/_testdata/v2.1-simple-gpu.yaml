@@ -1,0 +1,52 @@
+---
+version: "2.1"
+services:
+  web:
+    image: nginx
+    expose:
+      - port: 80
+        accept:
+          - ahostname.com
+        to:
+          - global: true
+      - port: 12345
+        to:
+          - global: true
+        proto: udp
+profiles:
+  compute:
+    web:
+      resources:
+        cpu:
+          units: "100m"
+        gpu:
+          units: 1
+          attributes:
+            vendor:
+              nvidia:
+              - model: a100
+        memory:
+          size: "128Mi"
+        storage:
+        - size: "1Gi"
+  placement:
+    westcoast:
+      attributes:
+        region: us-west
+        blalbla: foo
+      signedBy:
+        anyOf:
+          - 1
+          - 2
+        allOf:
+          - 3
+          - 4
+      pricing:
+        web:
+          denom: uakt
+          amount: 50
+deployment:
+  web:
+    westcoast:
+      profile: web
+      count: 2

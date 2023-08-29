@@ -12,8 +12,12 @@ import (
 	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
 )
 
+const (
+	sdlVersionField = "version"
+)
+
 var (
-	errUninitializedConfig = errors.New("uninitialized config")
+	errUninitializedConfig = errors.New("sdl: uninitialized")
 	errSDLInvalidNoVersion = fmt.Errorf("%w: no version found", errSDLInvalid)
 )
 
@@ -37,7 +41,7 @@ func (s *sdl) UnmarshalYAML(node *yaml.Node) error {
 
 	foundVersion := false
 	for idx := range node.Content {
-		if node.Content[idx].Value == "version" {
+		if node.Content[idx].Value == sdlVersionField {
 			var err error
 			if result.Ver, err = semver.ParseTolerant(node.Content[idx+1].Value); err != nil {
 				return err
@@ -52,8 +56,15 @@ func (s *sdl) UnmarshalYAML(node *yaml.Node) error {
 	}
 
 	// nolint: gocritic
-	if result.Ver.GE(semver.MustParse("2.0.0")) && result.Ver.LT(semver.MustParse("3.0.0")) {
+	if result.Ver.EQ(semver.MustParse("2.0.0")) {
 		var decoded v2
+		if err := node.Decode(&decoded); err != nil {
+			return err
+		}
+
+		result.data = &decoded
+	} else if result.Ver.GE(semver.MustParse("2.1.0")) {
+		var decoded v2_1
 		if err := node.Decode(&decoded); err != nil {
 			return err
 		}
