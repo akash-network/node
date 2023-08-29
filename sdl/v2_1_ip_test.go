@@ -11,25 +11,8 @@ import (
 	types "github.com/akash-network/akash-api/go/node/types/v1beta3"
 )
 
-func findIPEndpoint(t *testing.T, endpoints []types.Endpoint, id int) types.Endpoint {
-	t.Helper()
-
-	idx := 0
-	for _, endpoint := range endpoints {
-		if endpoint.Kind == types.Endpoint_LEASED_IP {
-			idx++
-			if id == idx {
-				return endpoint
-			}
-		}
-	}
-
-	t.Fatal("did not find any IP endpoints")
-	return types.Endpoint{}
-}
-
-func TestV2ParseSimpleWithIP(t *testing.T) {
-	sdl, err := ReadFile("./_testdata/simple-with-ip.yaml")
+func TestV2_1_ParseSimpleWithIP(t *testing.T) {
+	sdl, err := ReadFile("./_testdata/v2.1-simple-with-ip.yaml")
 	require.NoError(t, err)
 	require.NotNil(t, sdl)
 
@@ -60,8 +43,8 @@ func TestV2ParseSimpleWithIP(t *testing.T) {
 	require.True(t, exposeIP.Global)
 }
 
-func TestV2Parse_IP(t *testing.T) {
-	sdl1, err := ReadFile("../x/deployment/testdata/deployment-v2-ip-endpoint.yaml")
+func TestV2_1_Parse_IP(t *testing.T) {
+	sdl1, err := ReadFile("../x/deployment/testdata/deployment-v2.1-ip-endpoint.yaml")
 	require.NoError(t, err)
 	groups, err := sdl1.DeploymentGroups()
 	require.NoError(t, err)
@@ -104,9 +87,9 @@ func TestV2Parse_IP(t *testing.T) {
 	require.Greater(t, expose.EndpointSequenceNumber, uint32(0))
 }
 
-func TestV2Parse_SharedIP(t *testing.T) {
+func TestV2_1_Parse_SharedIP(t *testing.T) {
 	// Read a file with 1 group having 1 endpoint shared amongst containers
-	sdl1, err := ReadFile("../x/deployment/testdata/deployment-v2-shared-ip-endpoint.yaml")
+	sdl1, err := ReadFile("../x/deployment/testdata/deployment-v2.1-shared-ip-endpoint.yaml")
 	require.NoError(t, err)
 
 	groups, err := sdl1.DeploymentGroups()
@@ -116,13 +99,13 @@ func TestV2Parse_SharedIP(t *testing.T) {
 	group := groups[0]
 
 	resources := group.GetResourceUnits()
-	require.Len(t, resources, 2)
+	require.Len(t, resources, 1)
 
-	// resource := resources[0]
-	ipEndpoint1 := findIPEndpoint(t, resources[0].Resources.Endpoints, 1)
+	resource := resources[0]
+	ipEndpoint1 := findIPEndpoint(t, resource.Resources.Endpoints, 1)
 	require.Greater(t, ipEndpoint1.SequenceNumber, uint32(0))
 
-	ipEndpoint2 := findIPEndpoint(t, resources[1].Resources.Endpoints, 1)
+	ipEndpoint2 := findIPEndpoint(t, resource.Resources.Endpoints, 2)
 	require.Greater(t, ipEndpoint2.SequenceNumber, uint32(0))
 
 	mani, err := sdl1.Manifest()
@@ -144,9 +127,9 @@ func TestV2Parse_SharedIP(t *testing.T) {
 	require.Equal(t, serviceIPEndpoint.SequenceNumber, ipEndpoint2.SequenceNumber)
 }
 
-func TestV2Parse_MultipleIP(t *testing.T) {
+func TestV2_1_Parse_MultipleIP(t *testing.T) {
 	// Read a file with 1 group having two endpoints
-	sdl1, err := ReadFile("../x/deployment/testdata/deployment-v2-multi-ip-endpoint.yaml")
+	sdl1, err := ReadFile("../x/deployment/testdata/deployment-v2.1-multi-ip-endpoint.yaml")
 	require.NoError(t, err)
 
 	groups, err := sdl1.DeploymentGroups()
@@ -156,16 +139,16 @@ func TestV2Parse_MultipleIP(t *testing.T) {
 	group := groups[0]
 
 	resources := group.GetResourceUnits()
-	require.Len(t, resources, 2)
+	require.Len(t, resources, 1)
 
 	mani, err := sdl1.Manifest()
 	require.NoError(t, err)
 	_ = mani
 }
 
-func TestV2Parse_MultipleGroupsIP(t *testing.T) {
+func TestV2_1_Parse_MultipleGroupsIP(t *testing.T) {
 	// Read a file with two groups, each one having an IP endpoint that is distinct
-	sdl1, err := ReadFile("../x/deployment/testdata/deployment-v2-multi-groups-ip-endpoint.yaml")
+	sdl1, err := ReadFile("../x/deployment/testdata/deployment-v2.1-multi-groups-ip-endpoint.yaml")
 	require.NoError(t, err)
 
 	groups, err := sdl1.DeploymentGroups()
@@ -208,10 +191,10 @@ func TestV2Parse_MultipleGroupsIP(t *testing.T) {
 
 }
 
-func TestV2Parse_IPEndpointNaming(t *testing.T) {
+func TestV2_1_Parse_IPEndpointNaming(t *testing.T) {
 	makeSDLWithEndpointName := func(name string) []byte {
 		const originalSDL = `---
-version: "2.0"
+version: "2.1"
 
 services:
   web:
@@ -293,5 +276,4 @@ endpoints:
 	require.Error(t, err)
 	require.ErrorIs(t, err, errSDLInvalid)
 	require.Contains(t, err.Error(), "not a valid name")
-
 }
