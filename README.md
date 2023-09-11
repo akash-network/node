@@ -83,7 +83,7 @@ To become a contributor, please see the guide on [contributing](CONTRIBUTING.md)
 ## Development environment
 [This doc](https://github.com/akash-network/node/blob/main/_docs/development-environment.md) guides through setting up local development environment
 
-Akash is developed and tested with [golang 1.16.0+](https://golang.org/). 
+Akash is developed and tested with [golang 1.21.0+](https://golang.org/). 
 Building requires a working [golang](https://golang.org/) installation, a properly set `GOPATH`, and `$GOPATH/bin` present in `$PATH`.
 It is also required to have C/C++ compiler installed (gcc/clang) as there are C dependencies in use (libusb/libhid)
 Akash build process and examples are heavily tied to Makefile.
