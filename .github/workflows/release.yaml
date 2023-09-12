@@ -73,21 +73,14 @@ jobs:
         run: |
           cd tests/upgrade
           make test
-      - name: dump stderr
-        if: always() && steps.test.outcome != 'skipped'
-        run: cat .cache/run/upgrade/stderr.log
-      - name: upload stderr
+      - name: upload validator(s) stdout/stderr
         if: always() && steps.test.outcome != 'skipped'
         uses: actions/upload-artifact@v3
         with:
-          name: stderr.log
-          path: .cache/run/upgrade/stderr.log
-      - name: upload stdout
-        if: always() && steps.test.outcome != 'skipped'
-        uses: actions/upload-artifact@v3
-        with:
-          name: stdout.log
-          path: .cache/run/upgrade/stdout.log
+          name: logs
+          path: |
+            .cache/run/upgrade/.akash*-std*.log
+
   notify-homebrew:
     runs-on: ubuntu-latest
     needs:

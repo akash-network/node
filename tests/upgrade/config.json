@@ -1,0 +1,81 @@
+{
+    "mnemonics": [
+        {
+            "phrase": "wild random elephant refuse clock effort menu barely broccoli team mind magnet pretty fashion fame category turtle rug exclude card view civil purity powder",
+            "keys": [
+                {
+                    "name": "validator0",
+                    "index": 0
+                }
+            ]
+        }
+    ],
+    "validators": [
+        {
+            "moniker": "upgrade-tester-1",
+            "keys": {
+                "priv": {
+                    "address": "06DCDACF975BE69C039C62052F9FE0F3906575D1",
+                    "pub_key": {
+                        "type": "tendermint/PubKeyEd25519",
+                        "value": "d0sS1j4EdrAkBkpFXb50lkibj7+Kwh9UtGPO5O35Pes="
+                    },
+                    "priv_key": {
+                        "type": "tendermint/PrivKeyEd25519",
+                        "value": "ZVh/Fsra8CKOuGkBT7/dpdAy/dvfLaPeDZZ1suIw2h53SxLWPgR2sCQGSkVdvnSWSJuPv4rCH1S0Y87k7fk96w=="
+                    }
+                },
+                "node": {
+                    "priv_key": {
+                        "type": "tendermint/PrivKeyEd25519",
+                        "value": "CqhlpIrDubIvwohDeQSwcmr6uVvwqFOo4e2rMcO2ox1uxKiqymzwfrncsh61zm+5tfjG2wRdoAcHrzXzFurPew=="
+                    }
+                }
+            }
+        },
+        {
+            "moniker": "upgrade-tester-2",
+            "keys": {
+                "priv": {
+                    "address": "EF2A843757917205AF709CDFAAADF509EE841691",
+                    "pub_key": {
+                        "type": "tendermint/PubKeyEd25519",
+                        "value": "hkQAh/9Xg05tcv2Mry2Yv6IxQiibySOZYGYcz35IEfw="
+                    },
+                    "priv_key": {
+                        "type": "tendermint/PrivKeyEd25519",
+                        "value": "R1TZfMLW3fRy2OfE2JIHGGtofOG6tdiU30c3YYu8JqeGRACH/1eDTm1y/YyvLZi/ojFCKJvJI5lgZhzPfkgR/A=="
+                    }
+                },
+                "node": {
+                    "priv_key": {
+                        "type": "tendermint/PrivKeyEd25519",
+                        "value": "hW6OKKSBpB0Q5Gd0JbVMfi10E2TY4VxdvgwayZAY7SWGaHDtlWHZycWOCr79jQopNm3vhtGv1U0ghu/ftVUW7w=="
+                    }
+                }
+            }
+        },
+        {
+            "moniker": "upgrade-tester-3",
+            "keys": {
+                "priv": {
+                    "address": "9600E79FA0E1742419C6EEF1615D9C861D368B37",
+                    "pub_key": {
+                        "type": "tendermint/PubKeyEd25519",
+                        "value": "hwW2WpQRLfnxMYQWnxFyDd0X6LFegx2wcEBVnBXfNNM="
+                    },
+                    "priv_key": {
+                        "type": "tendermint/PrivKeyEd25519",
+                        "value": "98dShpeo9LqWVG3M2CWxkTHJ6GvygfeVYk/ljY7dOXuHBbZalBEt+fExhBafEXIN3RfosV6DHbBwQFWcFd800w=="
+                    }
+                },
+                "node": {
+                    "priv_key": {
+                        "type": "tendermint/PrivKeyEd25519",
+                        "value": "Bb9lZYefrwUpwh7Lz38mQW92+6aAXywWKOgq4KvQDLoCceeQi9Rr8CZl3lpCCWPwg4hQZhegLnsryr4rgbu+Yw=="
+                    }
+                }
+            }
+        }
+    ]
+}
