@@ -67,7 +67,7 @@ docker-image:
 		$(GORELEASER_IMAGE) \
 		-f .goreleaser-docker.yaml \
 		--debug=$(GORELEASER_DEBUG) \
-		--rm-dist \
+		--clean \
 		--skip-validate \
 		--skip-publish \
 		--snapshot
