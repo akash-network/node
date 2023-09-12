@@ -12,13 +12,17 @@ var ErrNotRunning = errors.New("not running")
 // Event interface
 type Event interface{}
 
+type Publisher interface {
+	Publish(Event) error
+}
+
 // Bus is an async event bus that allows subscriptions to behave as a bus themselves.
 // When an event is published, it is sent to all subscribers asynchronously - a subscriber
 // cannot block other subscribers.
 //
 // NOTE: this should probably be in util/event or something (not in provider/event)
 type Bus interface {
-	Publish(Event) error
+	Publisher
 	Subscribe() (Subscriber, error)
 	Close()
 	Done() <-chan struct{}
