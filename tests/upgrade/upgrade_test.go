@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
@@ -29,6 +30,7 @@ import (
 	_ "github.com/akash-network/akash-api/go/sdkutil"
 
 	"github.com/akash-network/node/pubsub"
+	uttypes "github.com/akash-network/node/tests/upgrade/types"
 	"github.com/akash-network/node/util/cli"
 )
 
@@ -38,6 +40,7 @@ const (
 
 type nodeEvent int
 type watchdogCtrl int
+type nodeTestStage int
 type testStage int
 type testModuleStatus int
 
@@ -60,6 +63,12 @@ const (
 )
 
 const (
+	nodeTestStagePreUpgrade nodeTestStage = iota
+	nodeTestStageUpgrade
+	nodeTestStagePostUpgrade
+)
+
+const (
 	testStagePreUpgrade testStage = iota
 	testStageUpgrade
 	testStagePostUpgrade
@@ -76,6 +85,12 @@ type publisher interface {
 }
 
 var (
+	nodeTestStageMapStr = map[nodeTestStage]string{
+		nodeTestStagePreUpgrade:  "preupgrade",
+		nodeTestStageUpgrade:     "upgrade",
+		nodeTestStagePostUpgrade: "postupgrade",
+	}
+
 	testStageMapStr = map[testStage]string{
 		testStagePreUpgrade:  "preupgrade",
 		testStageUpgrade:     "upgrade",
@@ -103,6 +118,18 @@ type event struct {
 	id  nodeEvent
 	ctx interface{}
 }
+
+type nodePreUpgradeReady struct {
+	name string
+}
+
+type nodePostUpgradeReady struct {
+	name string
+}
+
+type postUpgradeTestDone struct{}
+
+type eventShutdown struct{}
 
 type votingParams struct {
 	VotingPeriod string `json:"voting_period"`
@@ -155,35 +182,91 @@ type testCases struct {
 	} `json:"migrations"`
 }
 
-type launcherParams struct {
-	home          string
-	homeDir       string
-	chainID       string
-	upgradeName   string
-	upgradeHeight int64
+type validatorParams struct {
+	home        string
+	homedir     string
+	name        string
+	nodeID      string
+	cosmovisor  string
+	isRPC       bool
+	p2pPort     uint16
+	rpcPort     uint16
+	upgradeName string
+	env         []string
+	pub         pubsub.Publisher
 }
-type launcher struct {
+
+type validator struct {
+	t                 *testing.T
+	pubsub            pubsub.Bus
+	ctx               context.Context
+	cancel            context.CancelFunc
+	group             *errgroup.Group
+	upgradeInfo       string
+	params            validatorParams
+	tConfig           testCases
+	upgradeSuccessful chan struct{}
+	testErrsCh        chan []string
+}
+
+type testConfigWork struct {
+	Home string `json:"home"`
+	Key  string `json:"key"`
+}
+
+type testConfig struct {
+	ChainID    string         `json:"chain-id"`
+	Validators []string       `json:"validators"`
+	Work       testConfigWork `json:"work"`
+}
+
+type commander struct {
+	t   *testing.T
+	bin string
+	env []string
+}
+
+type upgradeTest struct {
 	t                 *testing.T
 	ctx               context.Context
 	cancel            context.CancelFunc
 	group             *errgroup.Group
-	cosmovisor        string
+	cmdr              *commander
+	upgradeName       string
 	upgradeInfo       string
-	params            launcherParams
-	tConfig           testCases
-	upgradeSuccessful chan struct{}
-	testErrs          []string
+	postUpgradeParams uttypes.TestParams
+	validators        map[string]*validator
+}
+
+type nodeInitParams struct {
+	nodeID    string
+	homedir   string
+	p2pPort   uint16
+	rpcPort   uint16
+	pprofPort uint16
 }
 
 var (
-	homedir        = flag.String("home", "", "akash home")
+	workdir        = flag.String("workdir", "", "work directory")
+	config         = flag.String("config", "", "config file")
 	cosmovisor     = flag.String("cosmovisor", "", "path to cosmovisor")
-	genesisBinary  = flag.String("genesis-binary", "", "path to the akash binary with version prior the upgrade")
 	upgradeVersion = flag.String("upgrade-version", "local", "akash release to download. local if it is built locally")
 	upgradeName    = flag.String("upgrade-name", "", "name of the upgrade")
-	chainID        = flag.String("chain-id", "", "chain-id")
 	testCasesFile  = flag.String("test-cases", "", "")
 )
+
+func (cmd *commander) execute(ctx context.Context, args string) ([]byte, error) {
+	cmdString := fmt.Sprintf("%s %s", cmd.bin, args)
+
+	cmd.t.Logf("executing cmd: %s\n", cmdString)
+	cmdRes, err := executeCommand(ctx, cmd.env, "bash", "-c", cmdString)
+	if err != nil {
+		cmd.t.Logf("executing cmd failed: %s\n", string(cmdRes))
+		return nil, err
+	}
+
+	return cmdRes, nil
+}
 
 func TestUpgrade(t *testing.T) {
 	ctx := context.Background()
@@ -193,31 +276,50 @@ func TestUpgrade(t *testing.T) {
 
 	t.Log("detecting arguments")
 
-	require.NotEqual(t, "", *homedir, "empty homedir flag")
-	require.NotEqual(t, "", *cosmovisor, "empty cosmovisor flag")
-	require.NotEqual(t, "", *genesisBinary, "empty genesis-binary flag")
-	require.NotEqual(t, "", *upgradeName, "empty upgrade-name flag")
+	require.NotEqual(t, "", *workdir, "empty workdir flag")
+	require.NotEqual(t, "", *config, "empty config flag")
 	require.NotEqual(t, "", *upgradeVersion, "empty upgrade-version flag")
-	require.NotEqual(t, "", *chainID, "empty chain-id flag")
+	require.NotEqual(t, "", *upgradeName, "empty upgrade-name flag")
+	require.NotEqual(t, "", *cosmovisor, "empty cosmovisor flag")
 	require.NotEqual(t, "", *testCasesFile, "empty test-cases flag")
 
 	if *upgradeVersion != "local" && !semver.IsValid(*upgradeVersion) {
 		require.Fail(t, "upgrade-name contains invalid value. expected local|<semver>")
 	}
 
-	info, err := os.Stat(*homedir)
+	info, err := os.Stat(*workdir)
 	require.NoError(t, err)
-	require.True(t, info.IsDir(), "homedir flag is not a dir")
+	require.True(t, info.IsDir(), "workdir flag is not a dir")
+
+	*workdir = strings.TrimSuffix(*workdir, "/")
 
 	info, err = os.Stat(*cosmovisor)
 	require.NoError(t, err)
 	require.False(t, info.IsDir(), "value in cosmovisor flag is not a file")
 	require.True(t, isOwnerExecutable(info.Mode()), "cosmovisor must be executable file")
 
-	info, err = os.Stat(*genesisBinary)
-	require.NoError(t, err)
-	require.False(t, info.IsDir(), "value in genesis-binary flag is not a file")
-	require.True(t, isOwnerExecutable(info.Mode()), "akash must be executable file")
+	var upgradeInfo string
+
+	if *upgradeVersion != "local" {
+		t.Logf("generating upgradeinfo from release %s", *upgradeVersion)
+		upgradeInfo, err = cli.UpgradeInfoFromTag(ctx, *upgradeVersion, false)
+		require.NoError(t, err)
+		require.NotEqual(t, "", upgradeInfo)
+	}
+
+	var cfg testConfig
+
+	{
+		cfgFile, err := os.Open(*config)
+		require.NoError(t, err)
+		defer func() {
+			_ = cfgFile.Close()
+		}()
+		cfgData, err := io.ReadAll(cfgFile)
+		require.NoError(t, err)
+		err = json.Unmarshal(cfgData, &cfg)
+		require.NoError(t, err)
+	}
 
 	var tConfig testCases
 	// load testcases config
@@ -235,68 +337,271 @@ func TestUpgrade(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	l := newLauncher(ctx, t)
+	cmdr := &commander{}
 
-	if *upgradeVersion != "local" {
-		t.Logf("generating upgradeinfo from release %s", *upgradeVersion)
-		l.upgradeInfo, err = cli.UpgradeInfoFromTag(ctx, *upgradeVersion, false)
+	validatorsParams := make(map[string]validatorParams)
+
+	bus := pubsub.NewBus()
+
+	initParams := make(map[string]nodeInitParams)
+
+	postUpgradeParams := uttypes.TestParams{}
+
+	for idx, name := range cfg.Validators {
+		homedir := fmt.Sprintf("%s/%s", *workdir, name)
+
+		genesisBin := fmt.Sprintf("%s/cosmovisor/genesis/bin/akash", homedir)
+
+		info, err = os.Stat(genesisBin)
 		require.NoError(t, err)
-		require.NotEqual(t, "", l.upgradeInfo)
+		require.False(t, info.IsDir(), "value in genesis-binary flag is not a file")
+		require.True(t, isOwnerExecutable(info.Mode()), "akash must be executable file")
+
+		valCmd := &commander{
+			t:   t,
+			bin: genesisBin,
+			env: []string{
+				fmt.Sprintf("HOME=%s", *workdir),
+				fmt.Sprintf("AKASH_HOME=%s", homedir),
+				fmt.Sprintf("AKASH_NODE=tcp://127.0.0.1:26657"),
+				fmt.Sprintf("AKASH_KEYRING_BACKEND=test"),
+				fmt.Sprintf("AKASH_BROADCAST_MODE=block"),
+				fmt.Sprintf("AKASH_CHAIN_ID=%s", cfg.ChainID),
+				fmt.Sprintf("AKASH_FROM=%s", cfg.Work.Key),
+				fmt.Sprintf("AKASH_GAS_PRICES=0.0025uakt"),
+				fmt.Sprintf("AKASH_GAS_ADJUSTMENT=1.5"),
+				// fmt.Sprintf("AKASH_GAS=auto"),
+				fmt.Sprintf("AKASH_YES=true"),
+			},
+		}
+
+		if cfg.Work.Home == name {
+			postUpgradeParams.Home = homedir
+			postUpgradeParams.ChainID = cfg.ChainID
+			postUpgradeParams.Node = "tcp://127.0.0.1:26657"
+			postUpgradeParams.KeyringBackend = "test"
+
+			cmdr = valCmd
+
+			_, err = cmdr.execute(ctx, fmt.Sprintf("keys show %s -a", cfg.Work.Key))
+			require.NoError(t, err)
+		}
+
+		cmdr.env = append(cmdr.env, fmt.Sprintf("AKASH_OUTPUT=json"))
+
+		if *upgradeVersion == "local" {
+			upgradeBin := fmt.Sprintf("%s/cosmovisor/upgrades/%s/bin/akash", homedir, *upgradeName)
+
+			info, err = os.Stat(upgradeBin)
+			require.NoError(t, err)
+			require.False(t, info.IsDir(), "value in upgrade-binary flag is not a file")
+			require.True(t, isOwnerExecutable(info.Mode()), "akash must be executable file")
+		}
+
+		res, err := valCmd.execute(ctx, "tendermint show-node-id")
+		require.NoError(t, err)
+
+		p2pPort := 26656 + uint16(idx*2)
+
+		initParams[name] = nodeInitParams{
+			nodeID:    strings.TrimSpace(string(res)),
+			homedir:   homedir,
+			p2pPort:   p2pPort,
+			rpcPort:   p2pPort + 1,
+			pprofPort: 6060 + uint16(idx),
+		}
 	}
 
-	l.cosmovisor = *cosmovisor
-	l.tConfig = tConfig
-	l.params = launcherParams{
-		home:          *homedir,
-		homeDir:       fmt.Sprintf("%s/.akash", *homedir),
-		chainID:       *chainID,
-		upgradeName:   *upgradeName,
-		upgradeHeight: 0,
+	for name, params := range initParams {
+		var unconditionalPeerIDs string
+		var persistentPeers string
+
+		for nm1, params1 := range initParams {
+			if name == nm1 {
+				continue
+			}
+
+			unconditionalPeerIDs += params1.nodeID + ","
+			persistentPeers += fmt.Sprintf("%s@127.0.0.1:%d,", params1.nodeID, params1.p2pPort)
+		}
+
+		validatorsParams[name] = validatorParams{
+			home:        *workdir,
+			homedir:     params.homedir,
+			name:        name,
+			nodeID:      params.nodeID,
+			cosmovisor:  *cosmovisor,
+			isRPC:       cfg.Work.Home == name,
+			p2pPort:     params.p2pPort,
+			rpcPort:     params.rpcPort,
+			upgradeName: *upgradeName,
+			pub:         bus,
+			env: []string{
+				fmt.Sprintf("DAEMON_NAME=akash"),
+				fmt.Sprintf("DAEMON_HOME=%s", params.homedir),
+				fmt.Sprintf("DAEMON_RESTART_AFTER_UPGRADE=true"),
+				fmt.Sprintf("DAEMON_ALLOW_DOWNLOAD_BINARIES=true"),
+				fmt.Sprintf("DAEMON_RESTART_DELAY=3s"),
+				fmt.Sprintf("COSMOVISOR_COLOR_LOGS=false"),
+				fmt.Sprintf("UNSAFE_SKIP_BACKUP=true"),
+				fmt.Sprintf("HOME=%s", *workdir),
+				fmt.Sprintf("AKASH_HOME=%s", params.homedir),
+				fmt.Sprintf("AKASH_CHAIN_ID=%s", cfg.ChainID),
+				fmt.Sprintf("AKASH_KEYRING_BACKEND=test"),
+				fmt.Sprintf("AKASH_P2P_SEEDS=%s", strings.TrimSuffix(persistentPeers, ",")),
+				fmt.Sprintf("AKASH_P2P_PERSISTENT_PEERS=%s", strings.TrimSuffix(persistentPeers, ",")),
+				fmt.Sprintf("AKASH_P2P_UNCONDITIONAL_PEER_IDS=%s", strings.TrimSuffix(unconditionalPeerIDs, ",")),
+				fmt.Sprintf("AKASH_P2P_LADDR=tcp://127.0.0.1:%d", params.p2pPort),
+				fmt.Sprintf("AKASH_RPC_LADDR=tcp://127.0.0.1:%d", params.rpcPort),
+				fmt.Sprintf("AKASH_RPC_PPROF_LADDR=localhost:%d", params.pprofPort),
+				"AKASH_P2P_PEX=true",
+				"AKASH_P2P_ADDR_BOOK_STRICT=false",
+				"AKASH_P2P_ALLOW_DUPLICATE_IP=true",
+				"AKASH_MINIMUM_GAS_PRICES=0.0025uakt",
+				"AKASH_FAST_SYNC=false",
+				"AKASH_LOG_COLOR=false",
+				"AKASH_LOG_TIMESTAMP=",
+				"AKASH_LOG_FORMAT=plain",
+				"AKASH_STATESYNC_ENABLE=false",
+				"AKASH_TX_INDEX_INDEXER=null",
+				"AKASH_GRPC_ENABLE=false",
+				"AKASH_GRPC_WEB_ENABLE=false",
+			},
+		}
 	}
 
 	group, ctx := errgroup.WithContext(ctx)
 
+	validators := make(map[string]*validator)
+
+	for val, params := range validatorsParams {
+		validators[val] = newValidator(ctx, t, params)
+	}
+
+	utester := &upgradeTest{
+		t:                 t,
+		ctx:               ctx,
+		group:             group,
+		cmdr:              cmdr,
+		upgradeName:       *upgradeName,
+		upgradeInfo:       upgradeInfo,
+		postUpgradeParams: postUpgradeParams,
+		validators:        validators,
+	}
+
 	group.Go(func() error {
-		t.Log("starting cosmovisor")
-		return l.run()
+		return utester.stateMachine(bus)
 	})
 
+	for name := range validators {
+		func(nm string) {
+			group.Go(func() error {
+				return validators[nm].run()
+			})
+		}(name)
+	}
+
 	err = group.Wait()
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
-	if len(l.testErrs) > 0 {
-		for _, msg := range l.testErrs {
-			t.Log(msg)
+	fail := false
+
+	for val, vl := range validators {
+		select {
+		case errs := <-vl.testErrsCh:
+			if len(errs) > 0 {
+				for _, msg := range errs {
+					t.Logf("[%s] %s", val, msg)
+				}
+
+				fail = true
+			}
+
+		case <-vl.ctx.Done():
 		}
+	}
 
+	if fail {
 		t.Fail()
 	}
 }
 
-func newLauncher(ctx context.Context, t *testing.T) *launcher {
-	ctx, cancel := context.WithCancel(ctx)
-	group, ctx := errgroup.WithContext(ctx)
-	return &launcher{
-		t:                 t,
-		ctx:               ctx,
-		cancel:            cancel,
-		group:             group,
-		upgradeSuccessful: make(chan struct{}, 1),
+func (l *upgradeTest) stateMachine(bus pubsub.Bus) error {
+	var err error
+
+	var sub pubsub.Subscriber
+
+	sub, err = bus.Subscribe()
+	if err != nil {
+		return err
 	}
+
+	nodesCount := len(l.validators)
+	stageCount := nodesCount
+
+loop:
+	for {
+		select {
+		case <-l.ctx.Done():
+			err = l.ctx.Err()
+			break loop
+		case ev := <-sub.Events():
+			switch ev.(type) {
+			case nodePreUpgradeReady:
+				stageCount--
+
+				if stageCount == 0 {
+					stageCount = nodesCount
+					l.t.Log("all nodes started signing blocks. submitting upgrade")
+					l.group.Go(func() error {
+						return l.submitUpgradeProposal()
+					})
+				}
+
+			case nodePostUpgradeReady:
+				stageCount--
+
+				if stageCount == 0 {
+					l.t.Log("all nodes performed upgrade")
+					for _, val := range l.validators {
+						_ = val.pubsub.Publish(eventShutdown{})
+					}
+
+					postUpgradeWorker := uttypes.GetPostUpgradeWorker(l.upgradeName)
+					if postUpgradeWorker == nil {
+						l.t.Log("no post upgrade handlers found. submitting shutdown")
+						break loop
+					}
+
+					l.t.Log("running post upgrade test handler")
+
+					l.group.Go(func() error {
+						defer func() {
+							_ = bus.Publish(postUpgradeTestDone{})
+						}()
+
+						result := l.t.Run(l.upgradeName, func(t *testing.T) {
+							postUpgradeWorker.Run(l.ctx, l.t, l.postUpgradeParams)
+						})
+
+						if !result {
+							l.t.Error("post upgrade test handler failed")
+							return fmt.Errorf("post-upgrade check failed")
+						}
+
+						return nil
+					})
+				}
+			case postUpgradeTestDone:
+				break loop
+			}
+		}
+	}
+
+	return err
 }
 
-func isOwnerExecutable(mode os.FileMode) bool {
-	return mode&0100 != 0
-}
-
-func executeCommand(ctx context.Context, env []string, cmd string, args ...string) ([]byte, error) {
-	c := exec.CommandContext(ctx, cmd, args...)
-	c.Env = env
-
-	return c.CombinedOutput()
-}
-
-func (l *launcher) submitUpgradeProposal() error {
+func (l *upgradeTest) submitUpgradeProposal() error {
 	var err error
 
 	defer func() {
@@ -305,25 +610,12 @@ func (l *launcher) submitUpgradeProposal() error {
 		}
 	}()
 
-	env := []string{
-		fmt.Sprintf("HOME=%s", *homedir),
-		fmt.Sprintf("AKASH_HOME=%s", l.params.homeDir),
-		fmt.Sprintf("AKASH_KEYRING_BACKEND=test"),
-		fmt.Sprintf("AKASH_BROADCAST_MODE=block"),
-		fmt.Sprintf("AKASH_CHAIN_ID=localakash"),
-		fmt.Sprintf("AKASH_FROM=validator"),
-		fmt.Sprintf("AKASH_GAS=auto"),
-		fmt.Sprintf("AKASH_YES=true"),
-	}
-
-	cmd := fmt.Sprintf(`%s status`, *genesisBinary)
-
 	var statusResp nodeStatus
 
 	var cmdRes []byte
 
 	for {
-		cmdRes, err = executeCommand(l.ctx, env, "bash", "-c", cmd)
+		cmdRes, err = l.cmdr.execute(l.ctx, "status")
 		if err != nil {
 			l.t.Logf("node status: %s\n", string(cmdRes))
 			return err
@@ -350,9 +642,7 @@ func (l *launcher) submitUpgradeProposal() error {
 	case <-tm.C:
 	}
 
-	cmd = fmt.Sprintf("%s query gov params --output=json", *genesisBinary)
-	l.t.Logf("executing cmd: %s\n", cmd)
-	cmdRes, err = executeCommand(l.ctx, env, "bash", "-c", cmd)
+	cmdRes, err = l.cmdr.execute(l.ctx, "query gov params")
 	if err != nil {
 		l.t.Logf("executing cmd failed: %s\n", string(cmdRes))
 		return err
@@ -372,7 +662,7 @@ func (l *launcher) submitUpgradeProposal() error {
 
 	votePeriod = votePeriod.QuoRaw(1e9)
 
-	cmdRes, err = executeCommand(l.ctx, env, "bash", "-c", cmd)
+	cmdRes, err = l.cmdr.execute(l.ctx, "status")
 	if err != nil {
 		l.t.Logf("executing cmd failed: %s\n", string(cmdRes))
 		return err
@@ -395,9 +685,8 @@ func (l *launcher) submitUpgradeProposal() error {
 		statusResp.SyncInfo.LatestBlockHeight,
 		upgradeHeight)
 
-	cmd = fmt.Sprintf(`%s tx gov submit-proposal software-upgrade %s --title=%[2]s --description="%[2]s" --upgrade-height=%d --deposit=%s`,
-		*genesisBinary,
-		l.params.upgradeName,
+	cmd := fmt.Sprintf(`tx gov submit-proposal software-upgrade %s --title=%[1]s --description="%[1]s" --upgrade-height=%d --deposit=%s`,
+		l.upgradeName,
 		upgradeHeight,
 		params.DepositParams.MinDeposit[0].String(),
 	)
@@ -406,16 +695,13 @@ func (l *launcher) submitUpgradeProposal() error {
 		cmd += fmt.Sprintf(` --upgrade-info='%s'`, l.upgradeInfo)
 	}
 
-	l.t.Logf("executing cmd: %s\n", cmd)
-	cmdRes, err = executeCommand(l.ctx, env, "bash", "-c", cmd)
+	cmdRes, err = l.cmdr.execute(l.ctx, cmd)
 	if err != nil {
 		l.t.Logf("executing cmd failed: %s\n", string(cmdRes))
 		return err
 	}
 
-	cmd = fmt.Sprintf(`%s query gov proposals --output=json`, *genesisBinary)
-	l.t.Logf("executing cmd: %s\n", cmd)
-	cmdRes, err = executeCommand(l.ctx, env, "bash", "-c", cmd)
+	cmdRes, err = l.cmdr.execute(l.ctx, "query gov proposals")
 	if err != nil {
 		l.t.Logf("executing cmd failed: %s\n", string(cmdRes))
 		return err
@@ -430,19 +716,18 @@ func (l *launcher) submitUpgradeProposal() error {
 
 	var propID string
 	for i := len(proposals.Proposals) - 1; i >= 0; i-- {
-		if proposals.Proposals[i].Content.Title == l.params.upgradeName {
+		if proposals.Proposals[i].Content.Title == l.upgradeName {
 			propID = proposals.Proposals[i].ProposalID
 			break
 		}
 	}
 
 	if propID == "" {
-		return fmt.Errorf(`unable to find proposal with title "%s"`, l.params.upgradeName)
+		return fmt.Errorf(`unable to find proposal with title "%s"`, l.upgradeName)
 	}
 
-	cmd = fmt.Sprintf(`%s tx gov vote %s yes`, *genesisBinary, propID)
-	l.t.Logf("executing cmd: %s\n", cmd)
-	cmdRes, err = executeCommand(l.ctx, env, "bash", "-c", cmd)
+	cmd = fmt.Sprintf(`tx gov vote %s yes`, propID)
+	cmdRes, err = l.cmdr.execute(l.ctx, cmd)
 	if err != nil {
 		l.t.Logf("executing cmd failed: %s\n", string(cmdRes))
 		return err
@@ -451,8 +736,35 @@ func (l *launcher) submitUpgradeProposal() error {
 	return nil
 }
 
-func (l *launcher) run() error {
-	lStdout, err := os.Create(fmt.Sprintf("%s/stdout.log", l.params.home))
+func newValidator(ctx context.Context, t *testing.T, params validatorParams) *validator {
+	ctx, cancel := context.WithCancel(ctx)
+	group, ctx := errgroup.WithContext(ctx)
+
+	return &validator{
+		t:                 t,
+		ctx:               ctx,
+		cancel:            cancel,
+		pubsub:            pubsub.NewBus(),
+		group:             group,
+		params:            params,
+		upgradeSuccessful: make(chan struct{}, 1),
+		testErrsCh:        make(chan []string, 1),
+	}
+}
+
+func isOwnerExecutable(mode os.FileMode) bool {
+	return mode&0100 != 0
+}
+
+func executeCommand(ctx context.Context, env []string, cmd string, args ...string) ([]byte, error) {
+	c := exec.CommandContext(ctx, cmd, args...)
+	c.Env = env
+
+	return c.CombinedOutput()
+}
+
+func (l *validator) run() error {
+	lStdout, err := os.Create(fmt.Sprintf("%s/%s-stdout.log", l.params.home, l.params.name))
 	if err != nil {
 		return err
 	}
@@ -461,7 +773,7 @@ func (l *launcher) run() error {
 		_ = lStdout.Close()
 	}()
 
-	lStderr, err := os.Create(fmt.Sprintf("%s/stderr.log", l.params.home))
+	lStderr, err := os.Create(fmt.Sprintf("%s/%s-stderr.log", l.params.home, l.params.name))
 	if err != nil {
 		return err
 	}
@@ -475,33 +787,12 @@ func (l *launcher) run() error {
 		_ = wStdout.Close()
 	}()
 
-	cmd := exec.CommandContext(l.ctx, l.cosmovisor, "run", "start", fmt.Sprintf("--home=%s", l.params.homeDir))
+	cmd := exec.CommandContext(l.ctx, l.params.cosmovisor, "run", "start", fmt.Sprintf("--home=%s", l.params.homedir))
 
 	cmd.Stdout = io.MultiWriter(lStdout, wStdout)
 	cmd.Stderr = io.MultiWriter(lStderr)
 
-	cmd.Env = []string{
-		fmt.Sprintf("HOME=%s", l.params.home),
-		fmt.Sprintf("DAEMON_NAME=akash"),
-		fmt.Sprintf("DAEMON_HOME=%s", l.params.homeDir),
-		fmt.Sprintf("DAEMON_RESTART_AFTER_UPGRADE=true"),
-		fmt.Sprintf("DAEMON_ALLOW_DOWNLOAD_BINARIES=true"),
-		fmt.Sprintf("DAEMON_RESTART_DELAY=3s"),
-		fmt.Sprintf("COSMOVISOR_COLOR_LOGS=false"),
-		fmt.Sprintf("UNSAFE_SKIP_BACKUP=true"),
-		fmt.Sprintf("AKASH_HOME=%s", l.params.homeDir),
-		fmt.Sprintf("AKASH_KEYRING_BACKEND=test"),
-		fmt.Sprintf("AKASH_FAST_SYNC=false"),
-		fmt.Sprintf("AKASH_P2P_PEX=false"),
-		fmt.Sprintf("AKASH_LOG_COLOR=false"),
-		fmt.Sprintf("AKASH_LOG_TIMESTAMP="),
-		fmt.Sprintf("AKASH_LOG_FORMAT=plain"),
-		fmt.Sprintf("AKASH_STATESYNC_ENABLE=false"),
-		fmt.Sprintf("AKASH_CHAIN_ID=%s", l.params.chainID),
-		fmt.Sprintf("AKASH_TX_INDEX_INDEXER=null"),
-	}
-
-	bus := pubsub.NewBus()
+	cmd.Env = l.params.env
 
 	err = cmd.Start()
 	if err != nil {
@@ -509,11 +800,23 @@ func (l *launcher) run() error {
 	}
 
 	l.group.Go(func() error {
-		return l.scanner(rStdout, bus)
+		defer func() {
+			if r := recover(); r != nil {
+				l.t.Fatal(r)
+			}
+		}()
+
+		return l.scanner(rStdout, l.pubsub)
 	})
 
 	l.group.Go(func() error {
-		sub, err := bus.Subscribe()
+		defer func() {
+			if r := recover(); r != nil {
+				l.t.Fatal(r)
+			}
+		}()
+
+		sub, err := l.pubsub.Subscribe()
 		if err != nil {
 			return err
 		}
@@ -522,14 +825,27 @@ func (l *launcher) run() error {
 	})
 
 	l.group.Go(func() error {
+		defer func() {
+			if r := recover(); r != nil {
+				l.t.Fatal(r)
+			}
+		}()
+
 		<-l.ctx.Done()
 		_ = rStdout.Close()
-		bus.Close()
+		l.pubsub.Close()
+
 		return l.ctx.Err()
 	})
 
 	l.group.Go(func() error {
-		sub, err := bus.Subscribe()
+		defer func() {
+			if r := recover(); r != nil {
+				l.t.Fatal(r)
+			}
+		}()
+
+		sub, err := l.pubsub.Subscribe()
 		if err != nil {
 			return err
 		}
@@ -539,27 +855,35 @@ func (l *launcher) run() error {
 
 	// state machine
 	l.group.Go(func() error {
-		return l.stateMachine(bus)
+		defer func() {
+			if r := recover(); r != nil {
+				l.t.Fatal(r)
+			}
+		}()
+
+		return l.stateMachine(l.pubsub)
 	})
 
 	err = cmd.Wait()
-	l.t.Log("cosmovisor stopped")
+	l.t.Logf("[%s] cosmovisor stopped", l.params.name)
 	l.cancel()
 
-	l.t.Log("waiting for workers to finish")
+	l.t.Logf("[%s] waiting for workers to finish", l.params.name)
 	_ = l.group.Wait()
 
 	select {
 	case <-l.upgradeSuccessful:
 		err = nil
 	default:
-		l.t.Log("cosmovisor finished with error. check stderr")
+		l.t.Logf("[%s] cosmovisor finished with error. check %[1]s-stderr.log", l.params.name)
 	}
 
 	return err
 }
 
-func (l *launcher) stateMachine(bus pubsub.Bus) error {
+func (l *validator) stateMachine(bus pubsub.Bus) error {
+	defer l.cancel()
+
 	var err error
 
 	var sub pubsub.Subscriber
@@ -571,7 +895,7 @@ func (l *launcher) stateMachine(bus pubsub.Bus) error {
 
 	blocksCount := 0
 	replayDone := false
-	stage := testStagePreUpgrade
+	stage := nodeTestStagePreUpgrade
 
 	wdCtrl := func(ctx context.Context, ctrl watchdogCtrl) {
 		resp := make(chan struct{}, 1)
@@ -597,16 +921,16 @@ loop:
 			case event:
 				switch evt.id {
 				case nodeEventStart:
-					l.t.Logf("[%s]: node started", testStageMapStr[stage])
-					if stage == testStageUpgrade {
-						stage = testStagePostUpgrade
+					l.t.Logf("[%s][%s]: node started", l.params.name, nodeTestStageMapStr[stage])
+					if stage == nodeTestStageUpgrade {
+						stage = nodeTestStagePostUpgrade
 						blocksCount = 0
 						replayDone = false
 					}
 				case nodeEventReplayBlocksStart:
-					l.t.Logf("[%s]: node started replaying blocks", testStageMapStr[stage])
+					l.t.Logf("[%s][%s]: node started replaying blocks", l.params.name, nodeTestStageMapStr[stage])
 				case nodeEventReplayBlocksDone:
-					l.t.Logf("[%s]: node done replaying blocks", testStageMapStr[stage])
+					l.t.Logf("[%s][%s]: node done replaying blocks", l.params.name, nodeTestStageMapStr[stage])
 					wdCtrl(l.ctx, watchdogCtrlStart)
 					replayDone = true
 				case nodeEventBlockIndexed:
@@ -619,46 +943,42 @@ loop:
 
 					blocksCount++
 					if blocksCount == 1 {
-						l.t.Logf("[%s]: node started producing blocks", testStageMapStr[stage])
+						l.t.Logf("[%s][%s]: node started producing blocks", l.params.name, nodeTestStageMapStr[stage])
 					}
 
-					if stage == testStagePreUpgrade && blocksCount == 1 {
-						l.group.Go(func() error {
-							return l.submitUpgradeProposal()
+					if stage == nodeTestStagePreUpgrade && blocksCount == 1 {
+						_ = l.params.pub.Publish(nodePreUpgradeReady{
+							name: l.params.name,
 						})
-					} else if stage == testStagePostUpgrade && blocksCount == 10 {
-						l.t.Logf("[%s]: counted 10 blocks. signaling to finish the test", testStageMapStr[stage])
+					} else if stage == nodeTestStagePostUpgrade && blocksCount == 10 {
+						l.t.Logf("[%s][%s]: counted 10 blocks. signaling has performed upgrade", l.params.name, nodeTestStageMapStr[stage])
 						l.upgradeSuccessful <- struct{}{}
-						l.cancel()
+
+						_ = l.params.pub.Publish(nodePostUpgradeReady{
+							name: l.params.name,
+						})
 					}
 				case nodeEventUpgradeDetected:
-					l.t.Logf("[%s]: node detected upgrade", testStageMapStr[stage])
-					stage = testStageUpgrade
+					l.t.Logf("[%s][%s]: node detected upgrade", l.params.name, nodeTestStageMapStr[stage])
+					stage = nodeTestStageUpgrade
 					wdCtrl(l.ctx, watchdogCtrlPause)
 				}
+			case eventShutdown:
+				l.t.Logf("[%s][%s]: received shutdown signal", l.params.name, nodeTestStageMapStr[stage])
+				wdCtrl(l.ctx, watchdogCtrlStop)
+				break loop
 			}
 		}
+	}
+
+	if err == nil {
+		err = context.Canceled
 	}
 
 	return err
 }
 
-type moduleMigrationVersions struct {
-	from string
-	to   string
-}
-
-type moduleMigrationStatus struct {
-	status   testModuleStatus
-	expected moduleMigrationVersions
-	actual   moduleMigrationVersions
-}
-
-func (v moduleMigrationVersions) compare(to moduleMigrationVersions) bool {
-	return (v.from == to.from) && (v.to == v.to)
-}
-
-func (l *launcher) watchTestCases(subs pubsub.Subscriber) error {
+func (l *validator) watchTestCases(subs pubsub.Subscriber) error {
 	added := make(map[string]testModuleStatus)
 	removed := make(map[string]testModuleStatus)
 	migrations := make(map[string]*moduleMigrationStatus)
@@ -758,12 +1078,12 @@ loop:
 		}
 	}
 
-	l.testErrs = errs
+	l.testErrsCh <- errs
 
 	return nil
 }
 
-func (l *launcher) blocksWatchdog(ctx context.Context, sub pubsub.Subscriber) error {
+func (l *validator) blocksWatchdog(ctx context.Context, sub pubsub.Subscriber) error {
 	var err error
 
 	defer func() {
@@ -786,6 +1106,8 @@ loop:
 		case evt := <-sub.Events():
 			switch req := evt.(type) {
 			case wdReq:
+				req.resp <- struct{}{}
+
 				switch req.event {
 				case watchdogCtrlStart:
 					fallthrough
@@ -797,8 +1119,6 @@ loop:
 					blocksTm.Stop()
 					break loop
 				}
-
-				req.resp <- struct{}{}
 			}
 		}
 	}
@@ -806,7 +1126,7 @@ loop:
 	return err
 }
 
-func (l *launcher) scanner(stdout io.Reader, p publisher) error {
+func (l *validator) scanner(stdout io.Reader, p publisher) error {
 	scanner := bufio.NewScanner(stdout)
 
 	serverStart := "INF starting node with ABCI Tendermint in-process"
@@ -867,4 +1187,19 @@ scan:
 	}
 
 	return nil
+}
+
+type moduleMigrationVersions struct {
+	from string
+	to   string
+}
+
+type moduleMigrationStatus struct {
+	status   testModuleStatus
+	expected moduleMigrationVersions
+	actual   moduleMigrationVersions
+}
+
+func (v moduleMigrationVersions) compare(to moduleMigrationVersions) bool {
+	return (v.from == to.from) && (v.to == v.to)
 }
