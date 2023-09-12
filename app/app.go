@@ -219,19 +219,24 @@ func NewApp(
 		app.BlockedAddrs(),
 	)
 
-	skeeper := stakingkeeper.NewKeeper(
-		appCodec,
-		app.keys[stakingtypes.StoreKey],
-		app.Keepers.Cosmos.Acct,
-		app.Keepers.Cosmos.Bank,
-		app.GetSubspace(stakingtypes.ModuleName),
-	)
+	// allocation of staking keeper is scoped deliberately,
+	// so it's being referenced by pointer within modules that need it
+	{
+		skeeper := stakingkeeper.NewKeeper(
+			appCodec,
+			app.keys[stakingtypes.StoreKey],
+			app.Keepers.Cosmos.Acct,
+			app.Keepers.Cosmos.Bank,
+			app.GetSubspace(stakingtypes.ModuleName),
+		)
+		app.Keepers.Cosmos.Staking = &skeeper
+	}
 
 	app.Keepers.Cosmos.Mint = mintkeeper.NewKeeper(
 		appCodec,
 		app.keys[minttypes.StoreKey],
 		app.GetSubspace(minttypes.ModuleName),
-		&skeeper,
+		app.Keepers.Cosmos.Staking,
 		app.Keepers.Cosmos.Acct,
 		app.Keepers.Cosmos.Bank,
 		authtypes.FeeCollectorName,
@@ -243,7 +248,7 @@ func NewApp(
 		app.GetSubspace(distrtypes.ModuleName),
 		app.Keepers.Cosmos.Acct,
 		app.Keepers.Cosmos.Bank,
-		&skeeper,
+		app.Keepers.Cosmos.Staking,
 		authtypes.FeeCollectorName,
 		app.ModuleAccountAddrs(),
 	)
@@ -251,8 +256,17 @@ func NewApp(
 	app.Keepers.Cosmos.Slashing = slashingkeeper.NewKeeper(
 		appCodec,
 		app.keys[slashingtypes.StoreKey],
-		&skeeper,
+		app.Keepers.Cosmos.Staking,
 		app.GetSubspace(slashingtypes.ModuleName),
+	)
+
+	// register the staking hooks
+	// NOTE: stakingKeeper above is passed by reference, so that it will contain these hooks
+	app.Keepers.Cosmos.Staking.SetHooks(
+		stakingtypes.NewMultiStakingHooks(
+			app.Keepers.Cosmos.Distr.Hooks(),
+			app.Keepers.Cosmos.Slashing.Hooks(),
+		),
 	)
 
 	app.Keepers.Cosmos.Crisis = crisiskeeper.NewKeeper(
@@ -262,15 +276,12 @@ func NewApp(
 		authtypes.FeeCollectorName,
 	)
 
-	app.Keepers.Cosmos.Upgrade = upgradekeeper.NewKeeper(skipUpgradeHeights, app.keys[upgradetypes.StoreKey], appCodec, homePath, app.BaseApp)
-
-	// register the staking hooks
-	// NOTE: stakingKeeper above is passed by reference, so that it will contain these hooks
-	app.Keepers.Cosmos.Staking = *skeeper.SetHooks(
-		stakingtypes.NewMultiStakingHooks(
-			app.Keepers.Cosmos.Distr.Hooks(),
-			app.Keepers.Cosmos.Slashing.Hooks(),
-		),
+	app.Keepers.Cosmos.Upgrade = upgradekeeper.NewKeeper(
+		skipUpgradeHeights,
+		app.keys[upgradetypes.StoreKey],
+		appCodec,
+		homePath,
+		app.BaseApp,
 	)
 
 	// register IBC Keeper
@@ -309,7 +320,7 @@ func NewApp(
 		app.GetSubspace(govtypes.ModuleName),
 		app.Keepers.Cosmos.Acct,
 		app.Keepers.Cosmos.Bank,
-		&skeeper,
+		app.Keepers.Cosmos.Staking,
 		govRouter,
 	)
 
@@ -339,7 +350,7 @@ func NewApp(
 	evidenceKeeper := evidencekeeper.NewKeeper(
 		appCodec,
 		app.keys[evidencetypes.StoreKey],
-		&app.Keepers.Cosmos.Staking,
+		app.Keepers.Cosmos.Staking,
 		app.Keepers.Cosmos.Slashing,
 	)
 
@@ -368,7 +379,7 @@ func NewApp(
 			// mint.NewAppModule(appCodec, app.Keepers.Cosmos.Mint, app.Keepers.Cosmos.Acct, nil),
 			slashing.NewAppModule(appCodec, app.Keepers.Cosmos.Slashing, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank, app.Keepers.Cosmos.Staking),
 			distr.NewAppModule(appCodec, app.Keepers.Cosmos.Distr, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank, app.Keepers.Cosmos.Staking),
-			staking.NewAppModule(appCodec, app.Keepers.Cosmos.Staking, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank),
+			staking.NewAppModule(appCodec, *app.Keepers.Cosmos.Staking, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank),
 			upgrade.NewAppModule(app.Keepers.Cosmos.Upgrade),
 			evidence.NewAppModule(app.Keepers.Cosmos.Evidence),
 			ibc.NewAppModule(app.Keepers.Cosmos.IBC),
@@ -414,9 +425,9 @@ func NewApp(
 			mint.NewAppModule(appCodec, app.Keepers.Cosmos.Mint, app.Keepers.Cosmos.Acct),
 			// todo akash-network/support#4
 			// mint.NewAppModule(appCodec, app.Keepers.Cosmos.Mint, app.Keepers.Cosmos.Acct, nil),
-			staking.NewAppModule(appCodec, app.Keepers.Cosmos.Staking, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank),
-			distr.NewAppModule(appCodec, app.Keepers.Cosmos.Distr, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank, app.Keepers.Cosmos.Staking),
-			slashing.NewAppModule(appCodec, app.Keepers.Cosmos.Slashing, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank, app.Keepers.Cosmos.Staking),
+			staking.NewAppModule(appCodec, *app.Keepers.Cosmos.Staking, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank),
+			distr.NewAppModule(appCodec, app.Keepers.Cosmos.Distr, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank, *app.Keepers.Cosmos.Staking),
+			slashing.NewAppModule(appCodec, app.Keepers.Cosmos.Slashing, app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank, *app.Keepers.Cosmos.Staking),
 			params.NewAppModule(app.Keepers.Cosmos.Params),
 			evidence.NewAppModule(app.Keepers.Cosmos.Evidence),
 			ibc.NewAppModule(app.Keepers.Cosmos.IBC),

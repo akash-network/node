@@ -44,7 +44,7 @@ type AppKeepers struct {
 		FeeGrant             feegrantkeeper.Keeper
 		Bank                 bankkeeper.Keeper
 		Cap                  *capabilitykeeper.Keeper
-		Staking              stakingkeeper.Keeper
+		Staking              *stakingkeeper.Keeper
 		Slashing             slashingkeeper.Keeper
 		Mint                 mintkeeper.Keeper
 		Distr                distrkeeper.Keeper
