@@ -36,10 +36,11 @@ func (min *MinCommissionDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simula
 
 func (min *MinCommissionDecorator) isValidMsg(ctx sdk.Context, m sdk.Msg) error {
 	var rate sdk.Dec
+	var maxRate *sdk.Dec
 
 	switch msg := m.(type) {
 	case *stakingtypes.MsgCreateValidator:
-
+		maxRate = &msg.Commission.MaxRate
 		rate = msg.Commission.Rate
 	case *stakingtypes.MsgEditValidator:
 		// if commission rate is nil, it means only
@@ -60,6 +61,10 @@ func (min *MinCommissionDecorator) isValidMsg(ctx sdk.Context, m sdk.Msg) error 
 	// commission set below 5%
 	if rate.LT(minRate) {
 		return sdkerrors.Wrap(sdkerrors.ErrUnauthorized, fmt.Sprintf("commission can't be lower than %s%%", minRate))
+	}
+
+	if maxRate != nil && maxRate.LT(minRate) {
+		return sdkerrors.Wrap(sdkerrors.ErrUnauthorized, fmt.Sprintf("commission max rate can't be lower than %s%%", minRate))
 	}
 
 	return nil

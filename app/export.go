@@ -44,7 +44,7 @@ func (app *AkashApp) ExportAppStateAndValidators(
 		return servertypes.ExportedApp{}, err
 	}
 
-	validators, err := staking.WriteValidators(ctx, app.Keepers.Cosmos.Staking)
+	validators, err := staking.WriteValidators(ctx, *app.Keepers.Cosmos.Staking)
 	if err != nil {
 		return servertypes.ExportedApp{}, err
 	}
