@@ -351,8 +351,8 @@ PROJECT_NAME="akash"
 OWNER="akash-network"
 REPO="node"
 FORMAT=zip
-OS=$(uname_os)
-ARCH=$(uname_arch)
+OS=${OS:=$(uname_os)}
+ARCH=${ARCH:=$(uname_arch)}
 PREFIX="$OWNER/$REPO"
 
 # use in logging routines
