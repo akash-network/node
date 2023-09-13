@@ -91,12 +91,6 @@ var (
 		nodeTestStagePostUpgrade: "postupgrade",
 	}
 
-	testStageMapStr = map[testStage]string{
-		testStagePreUpgrade:  "preupgrade",
-		testStageUpgrade:     "upgrade",
-		testStagePostUpgrade: "postupgrade",
-	}
-
 	testModuleStatusMapStr = map[testModuleStatus]string{
 		testModuleStatusUnexpected: "unexpected",
 		testModuleStatusNotChecked: "notchecked",
@@ -563,13 +557,12 @@ loop:
 
 				if stageCount == 0 {
 					l.t.Log("all nodes performed upgrade")
-					for _, val := range l.validators {
-						_ = val.pubsub.Publish(eventShutdown{})
-					}
 
 					postUpgradeWorker := uttypes.GetPostUpgradeWorker(l.upgradeName)
 					if postUpgradeWorker == nil {
 						l.t.Log("no post upgrade handlers found. submitting shutdown")
+						_ = bus.Publish(postUpgradeTestDone{})
+
 						break loop
 					}
 
@@ -593,6 +586,10 @@ loop:
 					})
 				}
 			case postUpgradeTestDone:
+				for _, val := range l.validators {
+					_ = val.pubsub.Publish(eventShutdown{})
+				}
+
 				break loop
 			}
 		}
@@ -764,7 +761,7 @@ func executeCommand(ctx context.Context, env []string, cmd string, args ...strin
 }
 
 func (l *validator) run() error {
-	lStdout, err := os.Create(fmt.Sprintf("%s/%s-stdout.log", l.params.home, l.params.name))
+	lStdout, err := os.Create(fmt.Sprintf("%s/logs/%s-stdout.log", l.params.home, l.params.name))
 	if err != nil {
 		return err
 	}
@@ -773,7 +770,7 @@ func (l *validator) run() error {
 		_ = lStdout.Close()
 	}()
 
-	lStderr, err := os.Create(fmt.Sprintf("%s/%s-stderr.log", l.params.home, l.params.name))
+	lStderr, err := os.Create(fmt.Sprintf("%s/logs/%s-stderr.log", l.params.home, l.params.name))
 	if err != nil {
 		return err
 	}

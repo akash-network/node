@@ -43,6 +43,10 @@ Goal of the upgrade here
 Add new upgrades after this line based on the template above
 -----
 
+##### v0.26.0
+
+1. Enforce **Minimum Validators commission** using onchain parameter. Default value is set to 5%. This is carry-over from v0.24.0 upgrade, as this change was dry-run
+ 
 ##### v0.24.0
 
 1. Update following stores to the `v1beta3`:
