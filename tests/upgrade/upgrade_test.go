@@ -764,7 +764,7 @@ func executeCommand(ctx context.Context, env []string, cmd string, args ...strin
 }
 
 func (l *validator) run() error {
-	lStdout, err := os.Create(fmt.Sprintf("%s/%s-stdout.log", l.params.home, l.params.name))
+	lStdout, err := os.Create(fmt.Sprintf("%s/logs/%s-stdout.log", l.params.home, l.params.name))
 	if err != nil {
 		return err
 	}
@@ -773,7 +773,7 @@ func (l *validator) run() error {
 		_ = lStdout.Close()
 	}()
 
-	lStderr, err := os.Create(fmt.Sprintf("%s/%s-stderr.log", l.params.home, l.params.name))
+	lStderr, err := os.Create(fmt.Sprintf("%s/logs/%s-stderr.log", l.params.home, l.params.name))
 	if err != nil {
 		return err
 	}

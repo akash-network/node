@@ -197,6 +197,8 @@ function init() {
     local cnt=0
     local validators_dir=${WORKDIR}/validators
 
+    mkdir -p "${WORKDIR}/validators/logs"
+
     for val in $(jq -c '.validators[]' <<<"$config"); do
         local valdir=$validators_dir/.akash${cnt}
         local cosmovisor_dir=$valdir/cosmovisor
@@ -284,8 +286,8 @@ function clean() {
         local valdir=$validators_dir/.akash${cnt}
         local cosmovisor_dir=$valdir/cosmovisor
 
-        rm -rf "$validators_dir/.akash${cnt}-stderr.log"
-        rm -rf "$validators_dir/.akash${cnt}-stdout.log"
+        rm -rf "$validators_dir/logs/.akash${cnt}-stderr.log"
+        rm -rf "$validators_dir/logs/.akash${cnt}-stdout.log"
 
         rm -rf "$valdir"/data/*
         rm -rf "$cosmovisor_dir/current"
@@ -336,7 +338,7 @@ test-required)
         fi
 
         # shellcheck disable=SC2086
-        if git tag -l $upgrade_name >/dev/null 2>&1; then
+        if git show-ref --tags $upgrade_name >/dev/null 2>&1; then
             if echo "$meta" | jq -e --arg name $upgrade_name '.revoked_releases[] | contains($name)' >/dev/null 2>&1; then
                 upgrade_name=v$($semver bump patch $upgrade_name)
             else

@@ -228,9 +228,9 @@ jobs:
         if: always() && steps.test.outcome != 'skipped'
         uses: actions/upload-artifact@v3
         with:
-          name: logs
+          name: validators-logs
           path: |
-            .cache/run/upgrade/.akash*-std*.log
+            .cache/run/upgrade/validators/logs/*.log
 
   dispatch-release:
     runs-on: ubuntu-latest

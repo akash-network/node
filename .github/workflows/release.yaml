@@ -79,7 +79,7 @@ jobs:
         with:
           name: logs
           path: |
-            .cache/run/upgrade/.akash*-std*.log
+            .cache/run/upgrade/validators/logs/*.log 
 
   notify-homebrew:
     runs-on: ubuntu-latest
