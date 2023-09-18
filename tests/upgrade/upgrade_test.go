@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -695,6 +696,14 @@ func (l *upgradeTest) submitUpgradeProposal() error {
 	cmdRes, err = l.cmdr.execute(l.ctx, cmd)
 	if err != nil {
 		l.t.Logf("executing cmd failed: %s\n", string(cmdRes))
+		return err
+	}
+
+	timeout, tCancel := context.WithTimeout(l.ctx, 7*time.Second)
+	defer tCancel()
+
+	<-timeout.Done()
+	if err := timeout.Err(); err != nil && !errors.Is(err, context.DeadlineExceeded) {
 		return err
 	}
 
