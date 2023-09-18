@@ -363,8 +363,9 @@ func TestUpgrade(t *testing.T) {
 				fmt.Sprintf("AKASH_CHAIN_ID=%s", cfg.ChainID),
 				fmt.Sprintf("AKASH_FROM=%s", cfg.Work.Key),
 				fmt.Sprintf("AKASH_GAS_PRICES=0.0025uakt"),
-				fmt.Sprintf("AKASH_GAS_ADJUSTMENT=1.5"),
-				// fmt.Sprintf("AKASH_GAS=auto"),
+				fmt.Sprintf("AKASH_GAS_ADJUSTMENT=2"),
+				// auto is failing with rpc error: code = Unknown desc = unknown query path: unknown request
+				fmt.Sprintf("AKASH_GAS=500000"),
 				fmt.Sprintf("AKASH_YES=true"),
 			},
 		}
