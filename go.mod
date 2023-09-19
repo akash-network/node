@@ -1,8 +1,6 @@
 module github.com/akash-network/node
 
-go 1.20
-
-toolchain go1.21.0
+go 1.21
 
 require (
 	github.com/akash-network/akash-api v0.0.27
@@ -36,6 +34,11 @@ require (
 	golang.org/x/sync v0.3.0
 	google.golang.org/grpc v1.57.0
 	gopkg.in/yaml.v3 v3.0.1
+)
+
+retract (
+	v0.22.1
+	v0.26.0
 )
 
 replace (

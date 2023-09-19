@@ -7,33 +7,24 @@ UNAME_ARCH            := $(shell uname -m)
 BASH_PATH := $(shell which bash)
 
 ifeq (, $(shell which direnv))
-$(warning "No direnv in $(PATH), consider installing. https://direnv.net")
+$(error "No direnv in $(PATH), consider installing. https://direnv.net")
+endif
+
+ifneq (1, $(AKASH_DIRENV_SET))
+$(error "no envrc detected. might need to run \"direnv allow\"")
 endif
 
 # AKASH_ROOT may not be set if environment does not support/use direnv
 # in this case define it manually as well as all required env variables
 ifndef AKASH_ROOT
-	AKASH_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/../)
-	include $(AKASH_ROOT)/.env
+$(error "AKASH_ROOT is not set. might need to run \"direnv allow\"")
+endif
 
-	AKASH               := $(AKASH_DEVCACHE_BIN)/akash
-	# setup .cache bins first in paths to have precedence over already installed same tools for system wide use
-	PATH                := $(AKASH_DEVCACHE_BIN):$(AKASH_DEVCACHE_NODE_BIN):$(PATH)
+ifeq (, $(GOTOOLCHAIN))
+$(error "GOTOOLCHAIN is not set")
 endif
 
 BINS                         := $(AKASH)
-SEMVER                       := $(AKASH_ROOT)/script/semver.sh
-
-__local_go                   := $(shell GOTOOLCHAIN=local go version | cut -d ' ' -f 3 | sed 's/go*//' | tr -d '\n')
-__is_local_go_satisfies      := $(shell $(SEMVER) compare "v$(__local_go)" "v1.20.7"; echo $?)
-
-ifeq (-1, $(__is_local_go_satisfies))
-$(error "unsupported local go$(__local_go) version . min required go1.21.0")
-endif
-
-GO_VERSION                   := $(shell go mod edit -json | jq -r .Go | tr -d '\n')
-GOTOOLCHAIN                  := $(shell go mod edit -json | jq -r .Toolchain | tr -d '\n')
-GOTOOLCHAIN_SEMVER           := v$(shell echo "$(GOTOOLCHAIN)" | sed 's/go*//' | tr -d '\n')
 
 GO                           := GO111MODULE=$(GO111MODULE) go
 GOWORK                       ?= on
@@ -51,21 +42,6 @@ ifeq ($(OS),Windows_NT)
 	DETECTED_OS := Windows
 else
 	DETECTED_OS := $(shell sh -c 'uname 2>/dev/null || echo Unknown')
-endif
-
-ifeq ($(DETECTED_OS), Darwin)
-	# on MacOS disable deprecation warnings security framework
-	export CGO_CFLAGS=-Wno-deprecated-declarations
-
-	# on MacOS Sonoma Beta there is a bit of discrepancy between Go and new prime linker
-	clang_version := $(shell echo | clang -dM -E - | grep __clang_major__ | cut -d ' ' -f 3 | tr -d '\n')
-	go_has_ld_fix := $(shell $(SEMVER) compare "$(GOTOOLCHAIN_SEMVER)" "v1.22.0" | tr -d '\n')
-
-	ifeq (15,$(clang_version))
-		ifeq (-1,$(go_has_ld_fix))
-			export CGO_LDFLAGS=-Wl,-ld_classic -Wno-deprecated-declarations
-		endif
-	endif
 endif
 
 # ==== Build tools versions ====

@@ -13,9 +13,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
-      - run: |
-          toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
-          echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
+      - name: Detect required Go version
+        run: |
+          toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
           echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
       - uses: actions/setup-go@v4
         with:
@@ -50,9 +50,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
-      - run: |
-          toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
-          echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
+      - name: Detect required Go version
+        run: |
+          toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
           echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
       - uses: actions/setup-go@v4
         with:
