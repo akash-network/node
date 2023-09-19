@@ -1,9 +1,4 @@
 {
-    "releases": {
-        "revoked": [
-            "v0.22.1"
-        ]
-    },
     "upgrades": {
         "v0.24.0": {
             "skipped": false,

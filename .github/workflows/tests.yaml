@@ -17,30 +17,35 @@ jobs:
   build-macos:
     runs-on: macos-latest
     steps:
-      - run: |
+      - name: Install dependencies
+        run: |
           brew install bash direnv
           sudo chsh -s /usr/local/bin/bash
+      - name: Hook direnv to bash
+        run: echo 'eval "$(direnv hook bash)"' >> $HOME/.bashrc
       - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
-      - name: set environment
-        run: direnv allow
-      - run: |
-          toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
-          echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
+      - name: Detect required Go version
+        run: |
+          toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
           echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
       - uses: actions/setup-go@v4
         with:
           go-version: "${{ env.GOVERSION }}"
           check-latest: true
+      - name: Setup direnv
+        run: |
+          direnv allow
+          direnv export gha >> "$GITHUB_ENV"
       - run: make bins
   build-bins:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
-      - run: |
-          toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
-          echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
+      - name: Detect required Go version
+        run: |
+          toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
           echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
       - uses: actions/setup-go@v4
         with:
@@ -56,9 +61,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
-      - run: |
-          toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
-          echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
+      - name: Detect required Go version
+        run: |
+          toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
           echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
       - uses: actions/setup-go@v4
         with:
@@ -72,9 +77,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
-      - run: |
-          toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
-          echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
+      - name: Detect required Go version
+        run: |
+          toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
           echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
       - uses: actions/setup-go@v4
         with:
@@ -89,9 +94,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
-      - run: |
-          toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
-          echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
+      - name: Detect required Go version
+        run: |
+          toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
           echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
       - uses: actions/setup-go@v4
         with:
@@ -111,9 +116,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
-      - run: |
-          toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
-          echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
+      - name: Detect required Go version
+        run: |
+          toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
           echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
       - uses: actions/setup-go@v4
         with:
@@ -129,9 +134,9 @@ jobs:
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
       - uses: actions/checkout@v3
-      - run: |
-          toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
-          echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
+      - name: Detect required Go version
+        run: |
+          toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
           echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
       - uses: actions/setup-go@v4
         with:
@@ -152,9 +157,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
-      - run: |
-          toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
-          echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
+      - name: Detect required Go version
+        run: |
+          toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
           echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
       - uses: actions/setup-go@v4
         with:
@@ -178,9 +183,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
-      - run: |
-          toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
-          echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
+      - name: Detect required Go version
+        run: |
+          toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
           echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
       - uses: actions/setup-go@v4
         with:
@@ -205,9 +210,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: git fetch --prune --unshallow
-      - run: |
-          toolchain=$(cat go.mod | grep toolchain | cut -d ' ' -f 2 | sed 's/go*//')
-          echo "GOTOOLCHAIN=go${toolchain}" >> $GITHUB_ENV
+      - name: Detect required Go version
+        run: |
+          toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
           echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
       - uses: actions/setup-go@v4
         with:

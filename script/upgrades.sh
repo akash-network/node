@@ -315,10 +315,6 @@ test-required)
     upgrades_dir=${ROOT_DIR}/upgrades/software
     upgrade_name=$(find "${upgrades_dir}" -mindepth 1 -maxdepth 1 -type d | awk -F/ '{print $NF}' | sort -r | head -n 1)
 
-    meta=$(cat "${ROOT_DIR}/meta.json")
-    # upgrade under test is always highest semver in the upgrades list
-    #uut=$(echo "$meta" | jq -er '.upgrades | keys | .[]' | sort -r | head -n 1)
-
     # shellcheck disable=SC2086
     $semver validate $upgrade_name
 
@@ -330,6 +326,9 @@ test-required)
     fi
 
     cnt=0
+
+    retracted_versions=$(go mod edit --json | jq -cr .Retract)
+
     while :; do
         cnt=$((cnt+1))
         if [[ $cnt -gt 100 ]];then
@@ -339,7 +338,29 @@ test-required)
 
         # shellcheck disable=SC2086
         if git show-ref --tags $upgrade_name >/dev/null 2>&1; then
-            if echo "$meta" | jq -e --arg name $upgrade_name '.revoked_releases[] | contains($name)' >/dev/null 2>&1; then
+            is_retracted=false
+            for retracted in $(jq -c '.[]' <<<"$retracted_versions"); do
+                vLow=$(jq -rc '.Low' <<<"$retracted")
+                vHigh=$(jq -rc '.High' <<<"$retracted")
+                tagsAreEqual=$($semver compare $vLow $vHigh)
+
+                isTagInHigh=$($semver compare $upgrade_name $vHigh)
+                if [[ $isTagInHigh -le 0 ]]; then
+                    if [[ $isTagInHigh -eq 0 ]]; then
+                        is_retracted=true
+                        break
+                    elif [[ $tagsAreEqual -ne 0 ]]; then
+                        isTagInLow=$($semver compare $upgrade_name $vLow)
+                        if [[ $isTagInLow -ge 0 ]]; then
+                            upgrade_name=$vHigh
+                            is_retracted=true
+                            break
+                        fi
+                    fi
+                fi
+            done
+
+            if [[ $is_retracted == "true" ]]; then
                 upgrade_name=v$($semver bump patch $upgrade_name)
             else
                 upgrade_name=""
