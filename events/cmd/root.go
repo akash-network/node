@@ -11,7 +11,6 @@ import (
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/akash-network/node/cmd/common"
 	cmdcommon "github.com/akash-network/node/cmd/common"
 	"github.com/akash-network/node/events"
 	"github.com/akash-network/node/pubsub"
@@ -23,7 +22,7 @@ func EventCmd() *cobra.Command {
 		Use:   "events",
 		Short: "Prints out akash events in real time",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return common.RunForeverWithContext(cmd.Context(), func(ctx context.Context) error {
+			return cmdcommon.RunForeverWithContext(cmd.Context(), func(ctx context.Context) error {
 				return getEvents(ctx, cmd, args)
 			})
 		},

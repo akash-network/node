@@ -19,7 +19,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
-	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	cosmosauthtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
@@ -132,7 +131,7 @@ func (nts *NetworkTestSuite) SetupSuite() {
 
 	for lctx.Err() == nil {
 		// check the TX
-		txStatus, err := authtx.QueryTx(nts.Context(), txr.TxHash)
+		txStatus, err := cosmosauthtx.QueryTx(nts.Context(), txr.TxHash)
 		if err != nil {
 			if strings.Contains(err.Error(), ") not found") {
 				continue

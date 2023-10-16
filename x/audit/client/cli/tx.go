@@ -12,7 +12,6 @@ import (
 	types "github.com/akash-network/akash-api/go/node/audit/v1beta3"
 	ptypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
 	akashtypes "github.com/akash-network/akash-api/go/node/types/v1beta3"
-	atypes "github.com/akash-network/akash-api/go/node/types/v1beta3"
 
 	"github.com/akash-network/node/client/broadcaster"
 )
@@ -152,7 +151,7 @@ func readAttributes(cmd *cobra.Command, cctx client.Context, provider string, ar
 
 	if len(args) != 0 {
 		for i := 0; i < len(args); i += 2 {
-			attr = append(attr, atypes.Attribute{
+			attr = append(attr, akashtypes.Attribute{
 				Key:   args[i],
 				Value: args[i+1],
 			})
