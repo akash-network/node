@@ -14,7 +14,7 @@ import (
 	deploymentTypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
 	types "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
 
-	marketTypes "github.com/akash-network/akash-api/go/node/market/v1beta3"
+	marketTypes "github.com/akash-network/akash-api/go/node/market/v1beta4"
 
 	netutil "github.com/akash-network/node/util/network"
 	"github.com/akash-network/node/x/deployment/client/cli"

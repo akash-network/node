@@ -3,7 +3,7 @@ package simulation
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	types "github.com/akash-network/akash-api/go/node/market/v1beta3"
+	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
 
 	ptypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
 

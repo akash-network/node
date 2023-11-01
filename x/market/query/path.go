@@ -7,7 +7,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	types "github.com/akash-network/akash-api/go/node/market/v1beta3"
+	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
 
 	dpath "github.com/akash-network/node/x/deployment/query"
 )
@@ -101,7 +101,7 @@ func parseBidPath(parts []string) (types.BidID, error) {
 	return types.MakeBidID(oid, provider), nil
 }
 
-// parseLeasePath returns leaseID details with provided queries, and return
+// ParseLeasePath returns leaseID details with provided queries, and return
 // error if occurred due to wrong query
 func ParseLeasePath(parts []string) (types.LeaseID, error) {
 	bid, err := parseBidPath(parts)

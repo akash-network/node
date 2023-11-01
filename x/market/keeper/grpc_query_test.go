@@ -12,7 +12,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 
-	types "github.com/akash-network/akash-api/go/node/market/v1beta3"
+	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
 
 	"github.com/akash-network/node/testutil"
 	"github.com/akash-network/node/testutil/state"

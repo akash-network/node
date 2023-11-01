@@ -11,9 +11,9 @@ import (
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 
 	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
-	types "github.com/akash-network/akash-api/go/node/market/v1beta3"
+	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
 
-	keys "github.com/akash-network/node/x/market/keeper/keys/v1beta3"
+	keys "github.com/akash-network/node/x/market/keeper/keys/v1beta4"
 )
 
 // Querier is used as Keeper will have duplicate methods if used directly, and gRPC names take precedence over keeper

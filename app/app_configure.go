@@ -28,7 +28,7 @@ import (
 	deploymenttypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
 	escrowtypes "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
 	inflationtypes "github.com/akash-network/akash-api/go/node/inflation/v1beta3"
-	markettypes "github.com/akash-network/akash-api/go/node/market/v1beta3"
+	markettypes "github.com/akash-network/akash-api/go/node/market/v1beta4"
 	providertypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
 	taketypes "github.com/akash-network/akash-api/go/node/take/v1beta3"
 

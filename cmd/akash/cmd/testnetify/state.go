@@ -30,7 +30,7 @@ import (
 	ctypes "github.com/akash-network/akash-api/go/node/cert/v1beta3"
 	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
 	etypes "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
-	mtypes "github.com/akash-network/akash-api/go/node/market/v1beta3"
+	mtypes "github.com/akash-network/akash-api/go/node/market/v1beta4"
 
 	"github.com/akash-network/node/x/audit"
 	"github.com/akash-network/node/x/cert"
