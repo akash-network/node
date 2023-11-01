@@ -11,7 +11,7 @@ import (
 	"github.com/tendermint/tendermint/crypto/ed25519"
 
 	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
-	mtypes "github.com/akash-network/akash-api/go/node/market/v1beta3"
+	mtypes "github.com/akash-network/akash-api/go/node/market/v1beta4"
 )
 
 func Keyring(t testing.TB) keyring.Keyring {

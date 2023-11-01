@@ -7,7 +7,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	mtypes "github.com/akash-network/akash-api/go/node/market/v1beta3"
+	mtypes "github.com/akash-network/akash-api/go/node/market/v1beta4"
 
 	types "github.com/akash-network/akash-api/go/node/provider/v1beta3"
 

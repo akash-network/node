@@ -14,10 +14,8 @@ import (
 	"github.com/tendermint/tendermint/libs/rand"
 
 	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
-	types "github.com/akash-network/akash-api/go/node/market/v1beta3"
-
+	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
 	ptypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
-
 	akashtypes "github.com/akash-network/akash-api/go/node/types/v1beta3"
 
 	"github.com/akash-network/node/testutil"

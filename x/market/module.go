@@ -23,7 +23,8 @@ import (
 
 	v1beta1types "github.com/akash-network/akash-api/go/node/market/v1beta1"
 	v1beta2types "github.com/akash-network/akash-api/go/node/market/v1beta2"
-	types "github.com/akash-network/akash-api/go/node/market/v1beta3"
+	v1beta3types "github.com/akash-network/akash-api/go/node/market/v1beta3"
+	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
 
 	utypes "github.com/akash-network/node/upgrades/types"
 	akeeper "github.com/akash-network/node/x/audit/keeper"
@@ -59,6 +60,7 @@ func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 // RegisterInterfaces registers the module's interface types
 func (b AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 	types.RegisterInterfaces(registry)
+	v1beta3types.RegisterInterfaces(registry)
 	v1beta2types.RegisterInterfaces(registry)
 	v1beta1types.RegisterInterfaces(registry)
 }

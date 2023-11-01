@@ -5,7 +5,7 @@ import (
 
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 
-	types "github.com/akash-network/akash-api/go/node/market/v1beta3"
+	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
 )
 
 // RawClient interface

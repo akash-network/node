@@ -1,0 +1,8 @@
+{
+    "migrations": {
+        "market": {
+            "from": "3",
+            "to": "4"
+        }
+    }
+}

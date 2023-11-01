@@ -15,7 +15,7 @@ import (
 	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 
-	types "github.com/akash-network/akash-api/go/node/market/v1beta3"
+	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
 
 	appparams "github.com/akash-network/node/app/params"
 	testsim "github.com/akash-network/node/testutil/sim"

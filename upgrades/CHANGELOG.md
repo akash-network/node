@@ -12,7 +12,7 @@
 |   escrow   |       2 |
 |    agov    |       1 |
 | inflation  |       1 |
-|   market   |       3 |
+|   market   |       4 |
 |  provider  |       2 |
 |  astaking  |       1 |
 |    take    |       1 |
@@ -42,6 +42,13 @@ Goal of the upgrade here
 
 Add new upgrades after this line based on the template above
 -----
+
+##### v0.28.0
+
+1. Add resource offer for the bid, allowing providers to show details on the resources they offer, when order has wildcard resources, for example GPU.
+
+- Migrations
+    - market `3 -> 4`
 
 ##### v0.26.0
 
