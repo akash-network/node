@@ -470,7 +470,7 @@ func TestUpgrade(t *testing.T) {
 	validators := make(map[string]*validator)
 
 	for val, params := range validatorsParams {
-		validators[val] = newValidator(ctx, t, params)
+		validators[val] = newValidator(ctx, t, params, tConfig)
 	}
 
 	utester := &upgradeTest{
@@ -735,7 +735,7 @@ func (l *upgradeTest) submitUpgradeProposal() error {
 	return nil
 }
 
-func newValidator(ctx context.Context, t *testing.T, params validatorParams) *validator {
+func newValidator(ctx context.Context, t *testing.T, params validatorParams, tConfig testCases) *validator {
 	ctx, cancel := context.WithCancel(ctx)
 	group, ctx := errgroup.WithContext(ctx)
 
@@ -746,6 +746,7 @@ func newValidator(ctx context.Context, t *testing.T, params validatorParams) *va
 		pubsub:            pubsub.NewBus(),
 		group:             group,
 		params:            params,
+		tConfig:           tConfig,
 		upgradeSuccessful: make(chan struct{}, 1),
 		testErrsCh:        make(chan []string, 1),
 	}
