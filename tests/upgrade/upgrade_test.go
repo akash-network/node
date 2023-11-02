@@ -564,7 +564,7 @@ loop:
 						l.t.Log("no post upgrade handlers found. submitting shutdown")
 						_ = bus.Publish(postUpgradeTestDone{})
 
-						break loop
+						break
 					}
 
 					l.t.Log("running post upgrade test handler")
@@ -587,6 +587,7 @@ loop:
 					})
 				}
 			case postUpgradeTestDone:
+				l.t.Log("shutting down validator(s)")
 				for _, val := range l.validators {
 					_ = val.pubsub.Publish(eventShutdown{})
 				}
@@ -1055,7 +1056,8 @@ loop:
 	}
 
 	for name, module := range migrations {
-		if module.status == testModuleStatusChecked {
+		switch module.status {
+		case testModuleStatusChecked:
 			if !module.expected.compare(module.actual) {
 				merr := fmt.Sprintf("migration for module (%s) finished with mismatched versions:\n"+
 					"\texpected:\n"+
@@ -1070,8 +1072,11 @@ loop:
 
 				errs = append(errs, merr)
 			}
-		} else {
-			merr := fmt.Sprintf("detected unexpected pmigration in module (%s)", name)
+		case testModuleStatusNotChecked:
+			merr := fmt.Sprintf("required migration for module module (%s) was not detected", name)
+			errs = append(errs, merr)
+		case testModuleStatusUnexpected:
+			merr := fmt.Sprintf("detected unexpected migration in module (%s)", name)
 			errs = append(errs, merr)
 		}
 	}

@@ -69,4 +69,6 @@ GOLANGCI_LINT                    := $(AKASH_DEVCACHE_BIN)/golangci-lint
 STATIK                           := $(AKASH_DEVCACHE_BIN)/statik
 COSMOVISOR                       := $(AKASH_DEVCACHE_BIN)/cosmovisor
 
+RELEASE_TAG           ?= $(shell git describe --tags --abbrev=0)
+
 include $(AKASH_ROOT)/make/setup-cache.mk

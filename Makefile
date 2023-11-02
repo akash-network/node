@@ -20,7 +20,6 @@ GIT_HEAD_COMMIT_LONG  := $(shell git log -1 --format='%H')
 GIT_HEAD_COMMIT_SHORT := $(shell git rev-parse --short HEAD)
 GIT_HEAD_ABBREV       := $(shell git rev-parse --abbrev-ref HEAD)
 
-RELEASE_TAG           ?= $(shell git describe --tags --abbrev=0)
 IS_PREREL             := $(shell $(ROOT_DIR)/script/is_prerelease.sh "$(RELEASE_TAG)" && echo "true" || echo "false")
 IS_MAINNET            := $(shell $(ROOT_DIR)/script/mainnet-from-tag.sh "$(RELEASE_TAG)" && echo "true" || echo "false")
 IS_STABLE             ?= false
