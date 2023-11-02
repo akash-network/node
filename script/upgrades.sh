@@ -321,7 +321,7 @@ test-required)
     # current git reference is matching upgrade name. looks like release has been cut
     # so lets run the last test
     if [[ "$curr_ref" == "$upgrade_name" ]]; then
-        echo -e "true"
+        echo -e "$upgrade_name"
         exit 0
     fi
 
@@ -371,11 +371,7 @@ test-required)
         fi
     done
 
-    if [[ "$upgrade_name" == "" ]]; then
-        echo -n "false"
-    else
-        echo -n "true"
-    fi
+    echo -n "$upgrade_name"
 
     exit 0
     ;;

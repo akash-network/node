@@ -14,7 +14,8 @@ export AKASH_LOG_COLOR          = true
 
 KEY_OPTS                := --keyring-backend=$(AKASH_KEYRING_BACKEND)
 KEY_NAME                ?= validator
-UPGRADE_TO              ?= v0.26.0
+UPGRADE_TO              ?= $(shell $(ROOT_DIR)/script/upgrades.sh test-required $(RELEASE_TAG))
+# v0.28.0
 UPGRADE_FROM            := $(shell cat $(ROOT_DIR)/meta.json | jq -r --arg name $(UPGRADE_TO) '.upgrades[$$name].from_version' | tr -d '\n')
 GENESIS_BINARY_VERSION  := $(shell cat $(ROOT_DIR)/meta.json | jq -r --arg name $(UPGRADE_TO) '.upgrades[$$name].from_binary' | tr -d '\n')
 UPGRADE_BINARY_VERSION  ?= local
@@ -42,7 +43,7 @@ test: $(COSMOVISOR) init
 
 .PHONY: test-reset
 test-reset:
-	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --uname=$(UPGRADE_TO) --config="$(PWD)/config.json" clean
+	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" clean
 
 .PHONY: clean
 clean:

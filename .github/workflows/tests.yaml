@@ -195,7 +195,7 @@ jobs:
       - name: Ensure only directories exists in upgrades dir
         run: |
           dir=./upgrades/software
-          if [[ $(find "$dir" ! -path "$dir"  -maxdepth 1 -type f | wc -c) -ne 0 ]]; then
+          if [[ $(find "$dir" ! -path "$dir" -maxdepth 1 -type f | wc -c) -ne 0 ]]; then
               echo "$dir must contain only directories"
               exit 1
           fi
@@ -204,7 +204,7 @@ jobs:
           dir=./upgrades/software
           while read upgrade; do
               ./script/semver.sh validate "$upgrade"
-          done <<< $(find "$dir" ! -path "$dir"  -maxdepth 1 -type d -exec basename {} \;)
+          done <<< $(find "$dir" ! -path "$dir" -maxdepth 1 -type d -exec basename {} \;)
   network-upgrade:
     runs-on: upgrade-tester
     steps:
@@ -225,7 +225,7 @@ jobs:
           echo "TEST_REQUIRED=$test_required" >> $GITHUB_ENV
       - name: run test
         id: test
-        if: env.TEST_REQUIRED == 'true'
+        if: env.TEST_REQUIRED != ''
         run: |
           cd tests/upgrade
           make test
