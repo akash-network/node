@@ -61,26 +61,26 @@ func PlacementRequirements(t testing.TB) types.PlacementRequirements {
 
 func RandCPUUnits() uint {
 	return RandRangeUint(
-		dtypes.GetValidationConfig().MinUnitCPU,
-		dtypes.GetValidationConfig().MaxUnitCPU)
+		dtypes.GetValidationConfig().Unit.Min.CPU,
+		dtypes.GetValidationConfig().Unit.Max.CPU)
 }
 
 func RandGPUUnits() uint {
 	return RandRangeUint(
-		dtypes.GetValidationConfig().MinUnitGPU,
-		dtypes.GetValidationConfig().MaxUnitGPU)
+		dtypes.GetValidationConfig().Unit.Min.GPU,
+		dtypes.GetValidationConfig().Unit.Max.GPU)
 }
 
 func RandMemoryQuantity() uint64 {
 	return RandRangeUint64(
-		dtypes.GetValidationConfig().MinUnitMemory,
-		dtypes.GetValidationConfig().MaxUnitMemory)
+		dtypes.GetValidationConfig().Unit.Min.Memory,
+		dtypes.GetValidationConfig().Unit.Max.Memory)
 }
 
 func RandStorageQuantity() uint64 {
 	return RandRangeUint64(
-		dtypes.GetValidationConfig().MinUnitStorage,
-		dtypes.GetValidationConfig().MaxUnitStorage)
+		dtypes.GetValidationConfig().Unit.Min.Storage,
+		dtypes.GetValidationConfig().Unit.Max.Storage)
 }
 
 // Resources produces an attribute list for populating a Group's
@@ -96,17 +96,17 @@ func Resources(t testing.TB) []dtypes.ResourceUnit {
 			Resources: types.Resources{
 				ID: uint32(i) + 1,
 				CPU: &types.CPU{
-					Units: types.NewResourceValue(uint64(dtypes.GetValidationConfig().MinUnitCPU)),
+					Units: types.NewResourceValue(uint64(dtypes.GetValidationConfig().Unit.Min.CPU)),
 				},
 				GPU: &types.GPU{
-					Units: types.NewResourceValue(uint64(dtypes.GetValidationConfig().MinUnitGPU)),
+					Units: types.NewResourceValue(uint64(dtypes.GetValidationConfig().Unit.Min.GPU)),
 				},
 				Memory: &types.Memory{
-					Quantity: types.NewResourceValue(dtypes.GetValidationConfig().MinUnitMemory),
+					Quantity: types.NewResourceValue(dtypes.GetValidationConfig().Unit.Min.Memory),
 				},
 				Storage: types.Volumes{
 					types.Storage{
-						Quantity: types.NewResourceValue(dtypes.GetValidationConfig().MinUnitStorage),
+						Quantity: types.NewResourceValue(dtypes.GetValidationConfig().Unit.Min.Storage),
 					},
 				},
 			},
