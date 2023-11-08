@@ -1,12 +1,11 @@
 package cli
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/client"
+	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -16,6 +15,7 @@ import (
 
 	marketTypes "github.com/akash-network/akash-api/go/node/market/v1beta4"
 
+	aclient "github.com/akash-network/node/client"
 	netutil "github.com/akash-network/node/util/network"
 	"github.com/akash-network/node/x/deployment/client/cli"
 	"github.com/akash-network/node/x/escrow/client/util"
@@ -26,7 +26,7 @@ func GetQueryCmd() *cobra.Command {
 		Use:                        types.ModuleName,
 		Short:                      "Escrow query commands",
 		SuggestionsMinimumDistance: 2,
-		RunE:                       client.ValidateCmd,
+		RunE:                       sdkclient.ValidateCmd,
 	}
 
 	cmd.AddCommand(
@@ -44,13 +44,17 @@ func cmdBlocksRemaining() *cobra.Command {
 		Short: "Compute the number of blocks remaining for an ecrow account",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientQueryContext(cmd)
+			ctx := cmd.Context()
+
+			cctx, err := sdkclient.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
 
-			marketClient := marketTypes.NewQueryClient(clientCtx)
-			ctx := context.Background()
+			qq, err := aclient.DiscoverQueryClient(ctx, cctx)
+			if err != nil {
+				return err
+			}
 
 			id, err := cli.DeploymentIDFromFlags(cmd.Flags())
 			if err != nil {
@@ -70,7 +74,7 @@ func cmdBlocksRemaining() *cobra.Command {
 				Pagination: nil,
 			}
 
-			leasesResponse, err := marketClient.Leases(ctx, &leaseRequest)
+			leasesResponse, err := qq.Leases(cmd.Context(), &leaseRequest)
 			if err != nil {
 				return err
 			}
@@ -80,14 +84,13 @@ func cmdBlocksRemaining() *cobra.Command {
 			}
 
 			// Fetch the balance of the escrow account
-			deploymentClient := deploymentTypes.NewQueryClient(clientCtx)
 			totalLeaseAmount := leasesResponse.TotalPriceAmount()
-			blockchainHeight, err := cli.CurrentBlockHeight(clientCtx)
+			blockchainHeight, err := cli.CurrentBlockHeight(qq.ClientContext())
 			if err != nil {
 				return err
 			}
 
-			res, err := deploymentClient.Deployment(ctx, &deploymentTypes.QueryDeploymentRequest{
+			res, err := qq.Deployment(cmd.Context(), &deploymentTypes.QueryDeploymentRequest{
 				ID: deploymentTypes.DeploymentID{Owner: id.Owner, DSeq: id.DSeq},
 			})
 			if err != nil {
@@ -127,7 +130,7 @@ func cmdBlocksRemaining() *cobra.Command {
 				return err
 			}
 
-			return clientCtx.PrintBytes(data)
+			return qq.ClientContext().PrintBytes(data)
 
 		},
 	}

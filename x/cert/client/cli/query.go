@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/cosmos/cosmos-sdk/client"
+	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
 
 	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+
+	aclient "github.com/akash-network/node/client"
 )
 
 const (
@@ -22,7 +24,7 @@ func GetQueryCmd() *cobra.Command {
 		Use:                        types.ModuleName,
 		Short:                      "Certificate query commands",
 		SuggestionsMinimumDistance: 2,
-		RunE:                       client.ValidateCmd,
+		RunE:                       sdkclient.ValidateCmd,
 	}
 
 	cmd.AddCommand(
@@ -38,14 +40,19 @@ func cmdGetCertificates() *cobra.Command {
 		Short:        "Query for all certificates",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cctx, err := client.GetClientQueryContext(cmd)
+			ctx := cmd.Context()
+
+			cctx, err := sdkclient.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
 
-			queryClient := types.NewQueryClient(cctx)
+			qq, err := aclient.DiscoverQueryClient(ctx, cctx)
+			if err != nil {
+				return err
+			}
 
-			pageReq, err := client.ReadPageRequest(cmd.Flags())
+			pageReq, err := sdkclient.ReadPageRequest(cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -83,12 +90,12 @@ func cmdGetCertificates() *cobra.Command {
 				params.Filter.State = value
 			}
 
-			res, err := queryClient.Certificates(cmd.Context(), params)
+			res, err := qq.Certificates(cmd.Context(), params)
 			if err != nil {
 				return err
 			}
 
-			return cctx.PrintProto(res)
+			return qq.ClientContext().PrintProto(res)
 		},
 	}
 

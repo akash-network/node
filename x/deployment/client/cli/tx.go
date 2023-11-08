@@ -10,7 +10,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/cosmos/cosmos-sdk/client"
+	tmrpc "github.com/tendermint/tendermint/rpc/core/types"
+
+	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
@@ -18,7 +20,7 @@ import (
 	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
 	"github.com/akash-network/akash-api/go/node/types/constants"
 
-	"github.com/akash-network/node/client/broadcaster"
+	aclient "github.com/akash-network/node/client"
 	"github.com/akash-network/node/cmd/common"
 	"github.com/akash-network/node/sdl"
 	cutils "github.com/akash-network/node/x/cert/utils"
@@ -35,7 +37,7 @@ func GetTxCmd(key string) *cobra.Command {
 		Use:                        types.ModuleName,
 		Short:                      "Deployment transaction subcommands",
 		SuggestionsMinimumDistance: 2,
-		RunE:                       client.ValidateCmd,
+		RunE:                       sdkclient.ValidateCmd,
 	}
 	cmd.AddCommand(
 		cmdCreate(key),
@@ -54,16 +56,23 @@ func cmdCreate(key string) *cobra.Command {
 		Short: fmt.Sprintf("Create %s", key),
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientTxContext(cmd)
+			ctx := cmd.Context()
+
+			cctx, err := sdkclient.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
 			if err != nil {
 				return err
 			}
 
 			// first lets validate certificate exists for given account
-			if _, err = cutils.LoadAndQueryCertificateForAccount(cmd.Context(), clientCtx, nil); err != nil {
+			if _, err = cutils.LoadAndQueryCertificateForAccount(ctx, cctx, nil); err != nil {
 				if os.IsNotExist(err) {
 					err = fmt.Errorf("no certificate file found for account %q.\n"+
-						"consider creating it as certificate required to submit manifest", clientCtx.FromAddress.String())
+						"consider creating it as certificate required to submit manifest", cctx.FromAddress.String())
 				}
 
 				return err
@@ -79,18 +88,25 @@ func cmdCreate(key string) *cobra.Command {
 				return err
 			}
 
-			warnIfGroupVolumesExceeds(clientCtx, groups)
+			warnIfGroupVolumesExceeds(cctx, groups)
 
-			id, err := DeploymentIDFromFlags(cmd.Flags(), WithOwner(clientCtx.FromAddress))
+			id, err := DeploymentIDFromFlags(cmd.Flags(), WithOwner(cctx.FromAddress))
 			if err != nil {
 				return err
 			}
 
 			// Default DSeq to the current block height
 			if id.DSeq == 0 {
-				if id.DSeq, err = CurrentBlockHeight(clientCtx); err != nil {
+				var syncInfo *tmrpc.SyncInfo
+				if syncInfo, err = cl.Node().SyncInfo(ctx); err != nil {
 					return err
 				}
+
+				if syncInfo.CatchingUp {
+					return fmt.Errorf("cannot generate DSEQ from last block height. node is catching up")
+				}
+
+				id.DSeq = uint64(syncInfo.LatestBlockHeight)
 			}
 
 			version, err := sdlManifest.Version()
@@ -124,7 +140,12 @@ func cmdCreate(key string) *cobra.Command {
 				return err
 			}
 
-			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			resp, err := cl.Tx().Broadcast(ctx, msg)
+			if err != nil {
+				return err
+			}
+
+			return cctx.PrintProto(resp)
 		},
 	}
 
@@ -142,12 +163,19 @@ func cmdDeposit(key string) *cobra.Command {
 		Short: fmt.Sprintf("Deposit %s", key),
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientTxContext(cmd)
+			ctx := cmd.Context()
+
+			cctx, err := sdkclient.GetClientTxContext(cmd)
 			if err != nil {
 				return err
 			}
 
-			id, err := DeploymentIDFromFlags(cmd.Flags(), WithOwner(clientCtx.FromAddress))
+			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			id, err := DeploymentIDFromFlags(cmd.Flags(), WithOwner(cctx.FromAddress))
 			if err != nil {
 				return err
 			}
@@ -168,7 +196,12 @@ func cmdDeposit(key string) *cobra.Command {
 				Depositor: depositorAcc,
 			}
 
-			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			resp, err := cl.Tx().Broadcast(ctx, msg)
+			if err != nil {
+				return err
+			}
+
+			return cctx.PrintProto(resp)
 		},
 	}
 
@@ -185,19 +218,31 @@ func cmdClose(key string) *cobra.Command {
 		Short: fmt.Sprintf("Close %s", key),
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientTxContext(cmd)
+			ctx := cmd.Context()
+
+			cctx, err := sdkclient.GetClientTxContext(cmd)
 			if err != nil {
 				return err
 			}
 
-			id, err := DeploymentIDFromFlags(cmd.Flags(), WithOwner(clientCtx.FromAddress))
+			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			id, err := DeploymentIDFromFlags(cmd.Flags(), WithOwner(cctx.FromAddress))
 			if err != nil {
 				return err
 			}
 
 			msg := &types.MsgCloseDeployment{ID: id}
 
-			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			resp, err := cl.Tx().Broadcast(ctx, msg)
+			if err != nil {
+				return err
+			}
+
+			return cctx.PrintProto(resp)
 		},
 	}
 
@@ -212,12 +257,19 @@ func cmdUpdate(key string) *cobra.Command {
 		Short: fmt.Sprintf("update %s", key),
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientTxContext(cmd)
+			ctx := cmd.Context()
+
+			cctx, err := sdkclient.GetClientTxContext(cmd)
 			if err != nil {
 				return err
 			}
 
-			id, err := DeploymentIDFromFlags(cmd.Flags(), WithOwner(clientCtx.FromAddress))
+			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			id, err := DeploymentIDFromFlags(cmd.Flags(), WithOwner(cctx.FromAddress))
 			if err != nil {
 				return err
 			}
@@ -238,8 +290,7 @@ func cmdUpdate(key string) *cobra.Command {
 			}
 
 			// Query the RPC node to make sure the existing groups are identical
-			queryClient := types.NewQueryClient(clientCtx)
-			existingDeployment, err := queryClient.Deployment(cmd.Context(), &types.QueryDeploymentRequest{
+			existingDeployment, err := cl.Query().Deployment(cmd.Context(), &types.QueryDeploymentRequest{
 				ID: id,
 			})
 			if err != nil {
@@ -258,14 +309,19 @@ func cmdUpdate(key string) *cobra.Command {
 				}
 			}
 
-			warnIfGroupVolumesExceeds(clientCtx, groups)
+			warnIfGroupVolumesExceeds(cctx, groups)
 
 			msg := &types.MsgUpdateDeployment{
 				ID:      id,
 				Version: version,
 			}
 
-			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			resp, err := cl.Tx().Broadcast(ctx, msg)
+			if err != nil {
+				return err
+			}
+
+			return cctx.PrintProto(resp)
 		},
 	}
 
@@ -297,7 +353,14 @@ func cmdGroupClose(_ string) *cobra.Command {
 		Example: "akash tx deployment group-close --owner=[Account Address] --dseq=[uint64] --gseq=[uint32]",
 		Args:    cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientTxContext(cmd)
+			ctx := cmd.Context()
+
+			cctx, err := sdkclient.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -315,7 +378,12 @@ func cmdGroupClose(_ string) *cobra.Command {
 				return err
 			}
 
-			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			resp, err := cl.Tx().Broadcast(ctx, msg)
+			if err != nil {
+				return err
+			}
+
+			return cctx.PrintProto(resp)
 		},
 	}
 
@@ -333,7 +401,14 @@ func cmdGroupPause(_ string) *cobra.Command {
 		Example: "akash tx deployment group pause --owner=[Account Address] --dseq=[uint64] --gseq=[uint32]",
 		Args:    cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientTxContext(cmd)
+			ctx := cmd.Context()
+
+			cctx, err := sdkclient.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -351,7 +426,12 @@ func cmdGroupPause(_ string) *cobra.Command {
 				return err
 			}
 
-			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			resp, err := cl.Tx().Broadcast(ctx, msg)
+			if err != nil {
+				return err
+			}
+
+			return cctx.PrintProto(resp)
 		},
 	}
 
@@ -369,7 +449,14 @@ func cmdGroupStart(_ string) *cobra.Command {
 		Example: "akash tx deployment group pause --owner=[Account Address] --dseq=[uint64] --gseq=[uint32]",
 		Args:    cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientTxContext(cmd)
+			ctx := cmd.Context()
+
+			cctx, err := sdkclient.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -387,7 +474,12 @@ func cmdGroupStart(_ string) *cobra.Command {
 				return err
 			}
 
-			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			resp, err := cl.Tx().Broadcast(ctx, msg)
+			if err != nil {
+				return err
+			}
+
+			return cctx.PrintProto(resp)
 		},
 	}
 
@@ -427,7 +519,14 @@ Examples:
 		),
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientTxContext(cmd)
+			ctx := cmd.Context()
+
+			cctx, err := sdkclient.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -450,7 +549,7 @@ Examples:
 				return err
 			}
 
-			granter := clientCtx.GetFromAddress()
+			granter := cctx.GetFromAddress()
 			authorization := types.NewDepositDeploymentAuthorization(spendLimit)
 
 			msg, err := authz.NewMsgGrant(granter, grantee, authorization, time.Unix(exp, 0))
@@ -458,7 +557,12 @@ Examples:
 				return err
 			}
 
-			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			resp, err := cl.Tx().Broadcast(ctx, msg)
+			if err != nil {
+				return err
+			}
+
+			return cctx.PrintProto(resp)
 		},
 	}
 
@@ -481,7 +585,14 @@ Example:
 		),
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientTxContext(cmd)
+			ctx := cmd.Context()
+
+			cctx, err := sdkclient.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -491,11 +602,16 @@ Example:
 				return err
 			}
 
-			granter := clientCtx.GetFromAddress()
+			granter := cctx.GetFromAddress()
 			msgTypeURL := types.DepositDeploymentAuthorization{}.MsgTypeURL()
 			msg := authz.NewMsgRevoke(granter, grantee, msgTypeURL)
 
-			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), &msg)
+			resp, err := cl.Tx().Broadcast(ctx, &msg)
+			if err != nil {
+				return err
+			}
+
+			return cctx.PrintProto(resp)
 		},
 	}
 
@@ -505,7 +621,7 @@ Example:
 	return cmd
 }
 
-func warnIfGroupVolumesExceeds(cctx client.Context, dgroups []*types.GroupSpec) {
+func warnIfGroupVolumesExceeds(cctx sdkclient.Context, dgroups []*types.GroupSpec) {
 	for _, group := range dgroups {
 		for _, resources := range group.GetResourceUnits() {
 			if len(resources.Resources.Storage) > constants.DefaultMaxGroupVolumes {

@@ -295,9 +295,8 @@ func (s *IntegrationTestSuite) TestFundedDeployment() {
 
 	prevFunderBal := s.getAccountBalance(s.keyFunder.GetAddress())
 
-	// Creating deployment paid by funder's account without any authorization from funder should
-	// fail
-	res, err := cli.TxCreateDeploymentExec(
+	// Creating deployment paid by funder's account without any authorization from funder should fail
+	_, err = cli.TxCreateDeploymentExec(
 		val.ClientCtx,
 		val.Address,
 		deploymentPath,
@@ -307,15 +306,13 @@ func (s *IntegrationTestSuite) TestFundedDeployment() {
 		fmt.Sprintf("--dseq=%v", deploymentID.DSeq),
 		fmt.Sprintf("--depositor-account=%s", s.keyFunder.GetAddress().String()),
 	)
-	s.Require().NoError(err)
-	s.Require().NoError(s.network.WaitForNextBlock())
-	clitestutil.ValidateTxUnSuccessful(s.T(), val.ClientCtx, res.Bytes())
+	s.Require().Error(err)
 
 	// funder's balance shouldn't be deducted
 	s.Require().Equal(prevFunderBal, s.getAccountBalance(s.keyFunder.GetAddress()))
 
 	// Grant the tenant authorization to use funds from the funder's account
-	res, err = cli.TxGrantAuthorizationExec(
+	res, err := cli.TxGrantAuthorizationExec(
 		val.ClientCtx,
 		s.keyFunder.GetAddress(),
 		val.Address,
@@ -409,13 +406,14 @@ func (s *IntegrationTestSuite) TestFundedDeployment() {
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 	)
+
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
 	clitestutil.ValidateTxSuccessful(s.T(), val.ClientCtx, res.Bytes())
 	prevFunderBal = s.getAccountBalance(s.keyFunder.GetAddress())
 
 	// depositing additional funds from the funder's account should fail now
-	res, err = cli.TxDepositDeploymentExec(
+	_, err = cli.TxDepositDeploymentExec(
 		val.ClientCtx,
 		s.defaultDeposit,
 		val.Address,
@@ -426,9 +424,7 @@ func (s *IntegrationTestSuite) TestFundedDeployment() {
 		fmt.Sprintf("--dseq=%v", deploymentID.DSeq),
 		fmt.Sprintf("--depositor-account=%s", s.keyFunder.GetAddress().String()),
 	)
-	s.Require().NoError(err)
-	s.Require().NoError(s.network.WaitForNextBlock())
-	clitestutil.ValidateTxUnSuccessful(s.T(), val.ClientCtx, res.Bytes())
+	s.Require().Error(err)
 
 	// funder's balance shouldn't be deducted
 	s.Require().Equal(prevFunderBal, s.getAccountBalance(s.keyFunder.GetAddress()))

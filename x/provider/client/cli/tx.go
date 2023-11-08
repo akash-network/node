@@ -3,13 +3,13 @@ package cli
 import (
 	"fmt"
 
-	"github.com/cosmos/cosmos-sdk/client"
+	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
 
 	types "github.com/akash-network/akash-api/go/node/provider/v1beta3"
 
-	"github.com/akash-network/node/client/broadcaster"
+	aclient "github.com/akash-network/node/client"
 	"github.com/akash-network/node/x/provider/config"
 )
 
@@ -19,7 +19,7 @@ func GetTxCmd(key string) *cobra.Command {
 		Use:                        types.ModuleName,
 		Short:                      "Provider transaction subcommands",
 		SuggestionsMinimumDistance: 2,
-		RunE:                       client.ValidateCmd,
+		RunE:                       sdkclient.ValidateCmd,
 	}
 	cmd.AddCommand(
 		cmdCreate(key),
@@ -34,7 +34,14 @@ func cmdCreate(key string) *cobra.Command {
 		Short: fmt.Sprintf("Create a %s", key),
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientTxContext(cmd)
+			ctx := cmd.Context()
+
+			cctx, err := sdkclient.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -47,7 +54,7 @@ func cmdCreate(key string) *cobra.Command {
 			}
 
 			msg := &types.MsgCreateProvider{
-				Owner:      clientCtx.GetFromAddress().String(),
+				Owner:      cctx.GetFromAddress().String(),
 				HostURI:    cfg.Host,
 				Info:       cfg.Info,
 				Attributes: cfg.GetAttributes(),
@@ -57,7 +64,12 @@ func cmdCreate(key string) *cobra.Command {
 				return err
 			}
 
-			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			resp, err := cl.Tx().Broadcast(ctx, msg)
+			if err != nil {
+				return err
+			}
+
+			return cctx.PrintProto(resp)
 		},
 	}
 
@@ -72,7 +84,14 @@ func cmdUpdate(key string) *cobra.Command {
 		Short: fmt.Sprintf("Update %s", key),
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientTxContext(cmd)
+			ctx := cmd.Context()
+
+			cctx, err := sdkclient.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -83,7 +102,7 @@ func cmdUpdate(key string) *cobra.Command {
 			}
 
 			msg := &types.MsgUpdateProvider{
-				Owner:      clientCtx.GetFromAddress().String(),
+				Owner:      cctx.GetFromAddress().String(),
 				HostURI:    cfg.Host,
 				Info:       cfg.Info,
 				Attributes: cfg.GetAttributes(),
@@ -93,7 +112,12 @@ func cmdUpdate(key string) *cobra.Command {
 				return err
 			}
 
-			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			resp, err := cl.Tx().Broadcast(ctx, msg)
+			if err != nil {
+				return err
+			}
+
+			return cctx.PrintProto(resp)
 		},
 	}
 

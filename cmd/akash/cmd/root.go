@@ -10,8 +10,15 @@ import (
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
 
+	cmtcfg "github.com/tendermint/tendermint/config"
+	cmtcli "github.com/tendermint/tendermint/libs/cli"
+	cmtlog "github.com/tendermint/tendermint/libs/log"
+	cmtrpc "github.com/tendermint/tendermint/rpc/core"
+	cmtrpcsrv "github.com/tendermint/tendermint/rpc/jsonrpc/server"
+	dbm "github.com/tendermint/tm-db"
+
 	"github.com/cosmos/cosmos-sdk/baseapp"
-	"github.com/cosmos/cosmos-sdk/client"
+	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/debug"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/keys"
@@ -30,12 +37,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 
-	tmcfg "github.com/tendermint/tendermint/config"
-	tmcli "github.com/tendermint/tendermint/libs/cli"
-	"github.com/tendermint/tendermint/libs/log"
-	dbm "github.com/tendermint/tm-db"
-
 	"github.com/akash-network/node/app"
+	"github.com/akash-network/node/client"
 	"github.com/akash-network/node/cmd/akash/cmd/testnetify"
 	ecmd "github.com/akash-network/node/events/cmd"
 	utilcli "github.com/akash-network/node/util/cli"
@@ -55,6 +58,9 @@ func NewRootCmd() (*cobra.Command, params.EncodingConfig) {
 		PersistentPreRunE: GetPersistentPreRunE(encodingConfig, []string{"AKASH"}),
 	}
 
+	// register akash api routes
+	cmtrpc.Routes["akash"] = cmtrpcsrv.NewRPCFunc(client.RPCAkash, "")
+
 	initRootCmd(rootCmd, encodingConfig)
 
 	return rootCmd, encodingConfig
@@ -67,7 +73,7 @@ func GetPersistentPreRunE(encodingConfig params.EncodingConfig, envPrefixes []st
 			return err
 		}
 
-		initClientCtx := client.Context{}.
+		initClientCtx := sdkclient.Context{}.
 			WithCodec(encodingConfig.Marshaler).
 			WithInterfaceRegistry(encodingConfig.InterfaceRegistry).
 			WithTxConfig(encodingConfig.TxConfig).
@@ -77,7 +83,11 @@ func GetPersistentPreRunE(encodingConfig params.EncodingConfig, envPrefixes []st
 			WithBroadcastMode(flags.BroadcastBlock).
 			WithHomeDir(app.DefaultHome)
 
-		return client.SetCmdClientContextHandler(initClientCtx, cmd)
+		if err := sdkclient.SetCmdClientContextHandler(initClientCtx, cmd); err != nil {
+			return err
+		}
+
+		return nil
 	}
 }
 
@@ -85,21 +95,21 @@ func GetPersistentPreRunE(encodingConfig params.EncodingConfig, envPrefixes []st
 func Execute(rootCmd *cobra.Command, envPrefix string) error {
 	// Create and set a client.Context on the command's Context. During the pre-run
 	// of the root command, a default initialized client.Context is provided to
-	// seed child command execution with values such as AccountRetriver, Keyring,
+	// seed child command execution with values such as AccountRetriever, Keyring,
 	// and a Tendermint RPC. This requires the use of a pointer reference when
 	// getting and setting the client.Context. Ideally, we utilize
 	// https://github.com/spf13/cobra/pull/1118.
 	srvCtx := sdkserver.NewDefaultContext()
 	ctx := context.Background()
-	ctx = context.WithValue(ctx, client.ClientContextKey, &client.Context{})
+	ctx = context.WithValue(ctx, sdkclient.ClientContextKey, &sdkclient.Context{})
 	ctx = context.WithValue(ctx, sdkserver.ServerContextKey, srvCtx)
 
 	rootCmd.PersistentFlags().String(flags.FlagLogLevel, zerolog.InfoLevel.String(), "The logging level (trace|debug|info|warn|error|fatal|panic)")
-	rootCmd.PersistentFlags().String(flags.FlagLogFormat, tmcfg.LogFormatPlain, "The logging format (json|plain)")
+	rootCmd.PersistentFlags().String(flags.FlagLogFormat, cmtcfg.LogFormatPlain, "The logging format (json|plain)")
 	rootCmd.PersistentFlags().Bool(utilcli.FlagLogColor, false, "Pretty logging output. Applied only when log_format=plain")
 	rootCmd.PersistentFlags().String(utilcli.FlagLogTimestamp, "", "Add timestamp prefix to the logs (rfc3339|rfc3339nano|kitchen)")
 
-	executor := tmcli.PrepareBaseCmd(rootCmd, envPrefix, app.DefaultHome)
+	executor := cmtcli.PrepareBaseCmd(rootCmd, envPrefix, app.DefaultHome)
 	return executor.ExecuteContext(ctx)
 }
 
@@ -113,15 +123,15 @@ func ExecuteWithCtx(ctx context.Context, rootCmd *cobra.Command, envPrefix strin
 	// https://github.com/spf13/cobra/pull/1118.
 	srvCtx := sdkserver.NewDefaultContext()
 
-	ctx = context.WithValue(ctx, client.ClientContextKey, &client.Context{})
+	ctx = context.WithValue(ctx, sdkclient.ClientContextKey, &sdkclient.Context{})
 	ctx = context.WithValue(ctx, sdkserver.ServerContextKey, srvCtx)
 
 	rootCmd.PersistentFlags().String(flags.FlagLogLevel, zerolog.InfoLevel.String(), "The logging level (trace|debug|info|warn|error|fatal|panic)")
-	rootCmd.PersistentFlags().String(flags.FlagLogFormat, tmcfg.LogFormatPlain, "The logging format (json|plain)")
+	rootCmd.PersistentFlags().String(flags.FlagLogFormat, cmtcfg.LogFormatPlain, "The logging format (json|plain)")
 	rootCmd.PersistentFlags().Bool(utilcli.FlagLogColor, false, "Pretty logging output. Applied only when log_format=plain")
 	rootCmd.PersistentFlags().String(utilcli.FlagLogTimestamp, "", "Add timestamp prefix to the logs (rfc3339|rfc3339nano|kitchen)")
 
-	executor := tmcli.PrepareBaseCmd(rootCmd, envPrefix, app.DefaultHome)
+	executor := cmtcli.PrepareBaseCmd(rootCmd, envPrefix, app.DefaultHome)
 	return executor.ExecuteContext(ctx)
 }
 
@@ -142,7 +152,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
 		genutilcli.GenTxCmd(app.ModuleBasics(), encodingConfig.TxConfig, banktypes.GenesisBalancesIterator{}, app.DefaultHome),
 		genutilcli.ValidateGenesisCmd(app.ModuleBasics()),
 		AddGenesisAccountCmd(app.DefaultHome),
-		tmcli.NewCompletionCmd(rootCmd, true),
+		cmtcli.NewCompletionCmd(rootCmd, true),
 		debugCmd,
 		sdkserver.RosettaCommand(encodingConfig.InterfaceRegistry, encodingConfig.Marshaler),
 	)
@@ -157,7 +167,7 @@ func addModuleInitFlags(startCmd *cobra.Command) {
 	crisis.AddModuleInitFlags(startCmd)
 }
 
-func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts servertypes.AppOptions) servertypes.Application {
+func newApp(logger cmtlog.Logger, db dbm.DB, traceStore io.Writer, appOpts servertypes.AppOptions) servertypes.Application {
 	var cache sdk.MultiStorePersistentCache
 
 	if cast.ToBool(appOpts.Get(sdkserver.FlagInterBlockCache)) {
@@ -203,8 +213,14 @@ func newApp(logger log.Logger, db dbm.DB, traceStore io.Writer, appOpts serverty
 }
 
 func createAppAndExport(
-	logger log.Logger, db dbm.DB, tio io.Writer, height int64, forZeroHeight bool, jailAllowedAddrs []string, appOpts servertypes.AppOptions) (servertypes.ExportedApp, error) {
-
+	logger cmtlog.Logger,
+	db dbm.DB,
+	tio io.Writer,
+	height int64,
+	forZeroHeight bool,
+	jailAllowedAddrs []string,
+	appOpts servertypes.AppOptions,
+) (servertypes.ExportedApp, error) {
 	var akashApp *app.AkashApp
 
 	if height != -1 {
