@@ -84,7 +84,7 @@ func (ms msgServer) CreateBid(goCtx context.Context, msg *types.MsgCreateBid) (*
 		return nil, types.ErrCapabilitiesMismatch
 	}
 
-	bid, err := ms.keepers.Market.CreateBid(ctx, msg.Order, provider, msg.Price)
+	bid, err := ms.keepers.Market.CreateBid(ctx, msg.Order, provider, msg.Price, msg.ResourcesOffer)
 	if err != nil {
 		return nil, err
 	}
