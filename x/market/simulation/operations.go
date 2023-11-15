@@ -124,7 +124,7 @@ func SimulateMsgCreateBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simtype
 			return simtypes.NoOpMsg(types.ModuleName, types.MsgTypeCreateBid, "unable to generate fees"), nil, err
 		}
 
-		msg := types.NewMsgCreateBid(order.OrderID, simAccount.Address, order.Price(), depositAmount)
+		msg := types.NewMsgCreateBid(order.OrderID, simAccount.Address, order.Price(), depositAmount, nil)
 
 		txGen := simappparams.MakeTestEncodingConfig().TxConfig
 		tx, err := helpers.GenTx(
@@ -150,7 +150,6 @@ func SimulateMsgCreateBid(ak govtypes.AccountKeeper, ks keepers.Keepers) simtype
 		default:
 			return simtypes.NoOpMsg(types.ModuleName, msg.Type(), "unable to deliver mock tx"), nil, err
 		}
-
 	}
 }
 
