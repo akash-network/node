@@ -389,8 +389,9 @@ func TestCloseBidUnknownOrder(t *testing.T) {
 	orderID := types.MakeOrderID(group.ID(), 1)
 	provider := testutil.AccAddress(t)
 	price := sdk.NewDecCoin(testutil.CoinDenom, sdk.NewInt(int64(rand.Uint16())))
+	roffer := types.ResourceOfferFromRU(group.GroupSpec.Resources)
 
-	bid, err := suite.MarketKeeper().CreateBid(suite.Context(), orderID, provider, price)
+	bid, err := suite.MarketKeeper().CreateBid(suite.Context(), orderID, provider, price, roffer)
 	require.NoError(t, err)
 
 	suite.MarketKeeper().CreateLease(suite.Context(), bid)
@@ -418,10 +419,12 @@ func (st *testSuite) createLease() (types.LeaseID, types.Bid, types.Order) {
 
 func (st *testSuite) createBid() (types.Bid, types.Order) {
 	st.t.Helper()
-	order, _ := st.createOrder(testutil.Resources(st.t))
+	order, gspec := st.createOrder(testutil.Resources(st.t))
 	provider := testutil.AccAddress(st.t)
 	price := sdk.NewDecCoin(testutil.CoinDenom, sdk.NewInt(int64(rand.Uint16())))
-	bid, err := st.MarketKeeper().CreateBid(st.Context(), order.ID(), provider, price)
+	roffer := types.ResourceOfferFromRU(gspec.Resources)
+
+	bid, err := st.MarketKeeper().CreateBid(st.Context(), order.ID(), provider, price, roffer)
 	require.NoError(st.t, err)
 	require.Equal(st.t, order.ID(), bid.ID().OrderID())
 	require.Equal(st.t, price, bid.Price)

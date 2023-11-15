@@ -59,6 +59,10 @@ func (ms msgServer) CreateBid(goCtx context.Context, msg *types.MsgCreateBid) (*
 		return nil, types.ErrBidOverOrder
 	}
 
+	if !msg.ResourcesOffer.MatchGSpec(order.Spec) {
+		return nil, types.ErrCapabilitiesMismatch
+	}
+
 	provider, err := sdk.AccAddressFromBech32(msg.Provider)
 	if err != nil {
 		return nil, types.ErrEmptyProvider
@@ -84,7 +88,7 @@ func (ms msgServer) CreateBid(goCtx context.Context, msg *types.MsgCreateBid) (*
 		return nil, types.ErrCapabilitiesMismatch
 	}
 
-	bid, err := ms.keepers.Market.CreateBid(ctx, msg.Order, provider, msg.Price)
+	bid, err := ms.keepers.Market.CreateBid(ctx, msg.Order, provider, msg.Price, msg.ResourcesOffer)
 	if err != nil {
 		return nil, err
 	}
