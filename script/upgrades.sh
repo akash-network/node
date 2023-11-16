@@ -308,6 +308,17 @@ clean)
     shift
     clean
     ;;
+upgrade-from-release)
+    shift
+    upgrades_dir=${ROOT_DIR}/upgrades/software
+    upgrade_name=$(find "${upgrades_dir}" -mindepth 1 -maxdepth 1 -type d | awk -F/ '{print $NF}' | sort -r | head -n 1)
+
+    # shellcheck disable=SC2086
+    $semver validate $upgrade_name
+    echo -e "$upgrade_name"
+    exit 0
+
+    ;;
 test-required)
     shift
     curr_ref=$1

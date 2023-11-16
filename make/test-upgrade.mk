@@ -14,7 +14,8 @@ export AKASH_LOG_COLOR          = true
 
 KEY_OPTS                := --keyring-backend=$(AKASH_KEYRING_BACKEND)
 KEY_NAME                ?= validator
-UPGRADE_TO              ?= $(shell $(ROOT_DIR)/script/upgrades.sh test-required $(RELEASE_TAG))
+#UPGRADE_TO              ?= $(shell $(ROOT_DIR)/script/upgrades.sh test-required $(RELEASE_TAG))
+UPGRADE_TO              ?= $(shell $(ROOT_DIR)/script/upgrades.sh upgrade-from-release $(RELEASE_TAG))
 # v0.28.0
 UPGRADE_FROM            := $(shell cat $(ROOT_DIR)/meta.json | jq -r --arg name $(UPGRADE_TO) '.upgrades[$$name].from_version' | tr -d '\n')
 GENESIS_BINARY_VERSION  := $(shell cat $(ROOT_DIR)/meta.json | jq -r --arg name $(UPGRADE_TO) '.upgrades[$$name].from_binary' | tr -d '\n')
