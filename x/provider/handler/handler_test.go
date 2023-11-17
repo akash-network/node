@@ -9,6 +9,7 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/stretchr/testify/require"
 
+	mtypes "github.com/akash-network/akash-api/go/node/market/v1beta4"
 	types "github.com/akash-network/akash-api/go/node/provider/v1beta3"
 
 	akashtypes "github.com/akash-network/akash-api/go/node/types/v1beta3"
@@ -234,8 +235,9 @@ func TestProviderUpdateAttributes(t *testing.T) {
 	require.NoError(t, err)
 
 	price := testutil.DecCoin(t)
+	roffer := mtypes.ResourceOfferFromRU(group.GroupSpec.Resources)
 
-	bid, err := suite.mkeeper.CreateBid(suite.ctx, order.ID(), addr, price)
+	bid, err := suite.mkeeper.CreateBid(suite.ctx, order.ID(), addr, price, roffer)
 	require.NoError(t, err)
 
 	suite.mkeeper.CreateLease(suite.ctx, bid)

@@ -299,10 +299,12 @@ func createLease(t testing.TB, suite *state.TestSuite) types.LeaseID {
 func createBid(t testing.TB, suite *state.TestSuite) (types.Bid, types.Order) {
 	t.Helper()
 	ctx := suite.Context()
-	order, _ := createOrder(t, suite.Context(), suite.MarketKeeper())
+	order, gspec := createOrder(t, suite.Context(), suite.MarketKeeper())
 	provider := testutil.AccAddress(t)
 	price := testutil.AkashDecCoinRandom(t)
-	bid, err := suite.MarketKeeper().CreateBid(ctx, order.ID(), provider, price)
+	roffer := types.ResourceOfferFromRU(gspec.Resources)
+
+	bid, err := suite.MarketKeeper().CreateBid(ctx, order.ID(), provider, price, roffer)
 	require.NoError(t, err)
 	assert.Equal(t, order.ID(), bid.ID().OrderID())
 	assert.Equal(t, price, bid.Price)

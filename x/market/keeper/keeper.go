@@ -19,7 +19,7 @@ type IKeeper interface {
 	Codec() codec.BinaryCodec
 	StoreKey() sdk.StoreKey
 	CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.GroupSpec) (types.Order, error)
-	CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAddress, price sdk.DecCoin) (types.Bid, error)
+	CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAddress, price sdk.DecCoin, roffer types.ResourcesOffer) (types.Bid, error)
 	CreateLease(ctx sdk.Context, bid types.Bid)
 	OnOrderMatched(ctx sdk.Context, order types.Order)
 	OnBidMatched(ctx sdk.Context, bid types.Bid)
@@ -52,7 +52,6 @@ type Keeper struct {
 
 // NewKeeper creates and returns an instance for Market keeper
 func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey, pspace paramtypes.Subspace, ekeeper EscrowKeeper) IKeeper {
-
 	if !pspace.HasKeyTable() {
 		pspace = pspace.WithKeyTable(types.ParamKeyTable())
 	}
@@ -122,14 +121,15 @@ func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypes.Gro
 }
 
 // CreateBid creates a bid for a order with given orderID, price for bid and provider
-func (k Keeper) CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAddress, price sdk.DecCoin) (types.Bid, error) {
+func (k Keeper) CreateBid(ctx sdk.Context, oid types.OrderID, provider sdk.AccAddress, price sdk.DecCoin, roffer types.ResourcesOffer) (types.Bid, error) {
 	store := ctx.KVStore(k.skey)
 
 	bid := types.Bid{
-		BidID:     types.MakeBidID(oid, provider),
-		State:     types.BidOpen,
-		Price:     price,
-		CreatedAt: ctx.BlockHeight(),
+		BidID:          types.MakeBidID(oid, provider),
+		State:          types.BidOpen,
+		Price:          price,
+		CreatedAt:      ctx.BlockHeight(),
+		ResourcesOffer: roffer,
 	}
 
 	key := keys.BidKey(bid.ID())
