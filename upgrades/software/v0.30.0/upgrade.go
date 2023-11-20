@@ -1,6 +1,6 @@
-// Package v0_28_0
+// Package v0_30_0
 // nolint revive
-package v0_28_0
+package v0_30_0
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	UpgradeName = "v0.28.0"
+	UpgradeName = "v0.30.0"
 )
 
 type upgrade struct {
