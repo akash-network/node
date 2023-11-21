@@ -43,6 +43,10 @@ Goal of the upgrade here
 Add new upgrades after this line based on the template above
 -----
 
+##### v0.30.0
+
+1. fix `MatchGSpec` which used during Bid validation. Previous upgrade **v0.28.0** brought up resources offer.Existing implementation of `MatchGSpec` improperly validates offer against group spec, which rejects bids on multi-service deployments with unequal amount of replicas.
+
 ##### v0.28.0
 
 1. Add resource offer for the bid, allowing providers to show details on the resources they offer, when order has wildcard resources, for example GPU.
