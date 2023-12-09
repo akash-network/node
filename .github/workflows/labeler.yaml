@@ -6,13 +6,15 @@ permissions:
   contents: read
 
 jobs:
-  pr-labeler:
+  labeler:
     permissions:
       contents: read  # for actions/labeler to determine modified files
       pull-requests: write  # for actions/labeler to add labels to PRs
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/labeler@main
+      - uses: actions/checkout@v3
+      - uses: actions/labeler@v5
         with:
-          configuration-path: .github/pr_labeler.yaml
+          configuration-path: .github/labeler.yaml
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
+          dot: true
