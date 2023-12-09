@@ -1,0 +1,52 @@
+"C:x/audit":
+  - changed-files:
+      - any-glob-to-any-file: x/audit/**/*
+"C:x/cert":
+  - changed-files:
+      - any-glob-to-any-file: x/cert/**/*
+"C:x/deployment":
+  - changed-files:
+      - any-glob-to-any-file: x/deployment/**/*
+"C:x/escrow":
+  - changed-files:
+      - any-glob-to-any-file: x/escrow/**/*
+"C:x/gov":
+  - changed-files:
+      - any-glob-to-any-file: x/gov/**/*
+"C:x/inflation":
+  - changed-files:
+      - any-glob-to-any-file: x/inflation/**/*
+"C:x/market":
+  - changed-files:
+      - any-glob-to-any-file: x/market/**/*
+"C:x/provider":
+  - changed-files:
+      - any-glob-to-any-file: x/provider/**/*
+"C:x/staking":
+  - changed-files:
+      - any-glob-to-any-file: x/staking/**/*
+"C:x/take":
+  - changed-files:
+      - any-glob-to-any-file: x/take/**/*
+"C:CLI":
+  - changed-files:
+      - any-glob-to-any-file: cmd/**/*
+  - changed-files:
+      - any-glob-to-any-file: x/*/client/cli/*
+"C:upgrades":
+  - changed-files:
+      - any-glob-to-any-file: upgrades/**/*
+"Type: Build":
+  - changed-files:
+      - any-glob-to-any-file: Makefile
+  - changed-files:
+      - any-glob-to-any-file: Dockerfile
+  - changed-files:
+      - any-glob-to-any-file: script/*
+  - changed-files:
+      - any-glob-to-any-file: make/*
+  - changed-files:
+      - any-glob-to-any-file: .goreleaser*
+"Type: CI":
+  - changed-files:
+      - any-glob-to-any-file: .github/**/*
