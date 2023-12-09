@@ -1,6 +1,7 @@
 package sdl
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 
@@ -9,25 +10,27 @@ import (
 	types "github.com/akash-network/akash-api/go/node/types/v1beta3"
 )
 
-type v2GPUNvidia struct {
+var (
+	ErrResourceGPUEmptyVendors = errors.New("sdl: invalid GPU attributes. at least one vendor must be set")
+)
+
+type v2GPU struct {
 	Model string          `yaml:"model"`
 	RAM   *memoryQuantity `yaml:"ram,omitempty"`
 }
 
-func (sdl *v2GPUNvidia) String() string {
+func (sdl *v2GPU) String() string {
 	key := sdl.Model
 	if sdl.RAM != nil {
-		key += "/" + sdl.RAM.StringWithSuffix("Gi")
+		key += "/ram/" + sdl.RAM.StringWithSuffix("Gi")
 	}
 
 	return key
 }
 
-type v2GPUsNvidia []v2GPUNvidia
+type v2GPUs []v2GPU
 
-type gpuVendor struct {
-	Nvidia v2GPUsNvidia `yaml:"nvidia,omitempty"`
-}
+type gpuVendors map[string]v2GPUs
 
 type v2GPUAttributes types.Attributes
 
@@ -66,12 +69,12 @@ func (sdl *v2ResourceGPU) UnmarshalYAML(node *yaml.Node) error {
 func (sdl *v2GPUAttributes) UnmarshalYAML(node *yaml.Node) error {
 	var res types.Attributes
 
-	var vendor *gpuVendor
+	vendors := make(gpuVendors)
 
 	for i := 0; i < len(node.Content); i += 2 {
 		switch node.Content[i].Value {
 		case "vendor":
-			if err := node.Content[i+1].Decode(&vendor); err != nil {
+			if err := node.Content[i+1].Decode(&vendors); err != nil {
 				return err
 			}
 		default:
@@ -79,24 +82,41 @@ func (sdl *v2GPUAttributes) UnmarshalYAML(node *yaml.Node) error {
 		}
 	}
 
-	if vendor == nil {
-		return fmt.Errorf("sdl: invalid GPU attributes. at least one vendor must be set")
+	if len(vendors) == 0 {
+		return ErrResourceGPUEmptyVendors
 	}
 
-	res = make(types.Attributes, 0, len(vendor.Nvidia))
+	resPrealloc := 0
 
-	for _, model := range vendor.Nvidia {
-		res = append(res, types.Attribute{
-			Key:   fmt.Sprintf("vendor/nvidia/model/%s", model.String()),
-			Value: "true",
-		})
+	for _, models := range vendors {
+		if len(models) == 0 {
+			resPrealloc++
+		} else {
+			resPrealloc += len(models)
+		}
 	}
 
-	if len(res) == 0 {
-		res = append(res, types.Attribute{
-			Key:   "vendor/nvidia/model/*",
-			Value: "true",
-		})
+	for vendor, models := range vendors {
+		switch vendor {
+		case "nvidia":
+		case "amd":
+		default:
+			return fmt.Errorf("sdl: unsupported GPU vendor (%s)", vendor)
+		}
+
+		for _, model := range models {
+			res = append(res, types.Attribute{
+				Key:   fmt.Sprintf("vendor/%s/model/%s", vendor, model.String()),
+				Value: "true",
+			})
+		}
+
+		if len(models) == 0 {
+			res = append(res, types.Attribute{
+				Key:   fmt.Sprintf("vendor/%s/model/*", vendor),
+				Value: "true",
+			})
+		}
 	}
 
 	sort.Sort(res)

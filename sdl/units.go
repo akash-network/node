@@ -1,6 +1,7 @@
 package sdl
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -11,7 +12,8 @@ import (
 )
 
 var (
-	errNegativeValue = fmt.Errorf("invalid: negative value not allowed")
+	errNegativeValue         = errors.New("sdl: negative value not allowed")
+	errResourceMemoryInvalid = errors.New("sdl: invalid memory quantity")
 )
 
 var unitSuffixes = map[string]uint64{
@@ -100,7 +102,7 @@ func (u *byteQuantity) UnmarshalYAML(node *yaml.Node) error {
 func (u *memoryQuantity) UnmarshalYAML(node *yaml.Node) error {
 	val, err := parseWithSuffix(node.Value, memorySuffixes)
 	if err != nil {
-		return err
+		return errResourceMemoryInvalid
 	}
 	*u = memoryQuantity(val)
 	return nil

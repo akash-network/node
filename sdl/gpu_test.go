@@ -3,93 +3,155 @@ package sdl
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
+type testGpuAttributes map[string]string
+type testGpuResource struct {
+	units gpuQuantity
+	attr  testGpuAttributes
+}
+
+type gpuTestCase struct {
+	name        string
+	sdl         string
+	expResource testGpuResource
+}
+
 func TestV2ResourceGPU_EmptyVendor(t *testing.T) {
-	var stream = `
+	tests := []gpuTestCase{
+		{
+
+			name: "missing-vendor",
+			sdl: `
 units: 1
 attributes:
   vendor:
-`
-	var p v2ResourceGPU
+`,
+		},
+	}
 
-	err := yaml.Unmarshal([]byte(stream), &p)
-	require.Error(t, err)
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			var p v2ResourceGPU
+
+			err := yaml.Unmarshal([]byte(test.sdl), &p)
+			assert.Error(t, err)
+			assert.EqualError(t, err, ErrResourceGPUEmptyVendors.Error())
+		})
+	}
 }
 
-func TestV2ResourceGPU_Wildcard(t *testing.T) {
-	var stream = `
+func TestV2ResourceGPU_UnknownVendor(t *testing.T) {
+	tests := []gpuTestCase{
+		{
+
+			name: "missing-vendor",
+			sdl: `
 units: 1
 attributes:
   vendor:
-    nvidia:
-`
-	var p v2ResourceGPU
+    foo:
+`,
+		},
+	}
 
-	err := yaml.Unmarshal([]byte(stream), &p)
-	require.NoError(t, err)
-	require.Equal(t, gpuQuantity(1), p.Units)
-	require.Equal(t, 1, len(p.Attributes))
-	require.Equal(t, "vendor/nvidia/model/*", p.Attributes[0].Key)
-	require.Equal(t, "true", p.Attributes[0].Value)
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			var p v2ResourceGPU
+
+			err := yaml.Unmarshal([]byte(test.sdl), &p)
+			assert.Error(t, err)
+			assert.ErrorContains(t, err, "sdl: unsupported GPU vendor")
+		})
+	}
 }
 
-func TestV2ResourceGPU_SingleModel(t *testing.T) {
-	var stream = `
-units: 1
-attributes:
-  vendor:
-    nvidia:
-      - model: a100
-`
-	var p v2ResourceGPU
+func TestV2ResourceGPU_InvalidRAM(t *testing.T) {
+	tests := []gpuTestCase{
+		{
 
-	err := yaml.Unmarshal([]byte(stream), &p)
-	require.NoError(t, err)
-	require.Equal(t, gpuQuantity(1), p.Units)
-	require.Equal(t, 1, len(p.Attributes))
-	require.Equal(t, "vendor/nvidia/model/a100", p.Attributes[0].Key)
-	require.Equal(t, "true", p.Attributes[0].Value)
-}
-
-func TestV2ResourceGPU_SingleModelWithRAM(t *testing.T) {
-	var stream = `
-units: 1
-attributes:
-  vendor:
-    nvidia:
-      - model: a100
-        ram: 80Gi
-`
-	var p v2ResourceGPU
-
-	err := yaml.Unmarshal([]byte(stream), &p)
-	require.NoError(t, err)
-	require.Equal(t, gpuQuantity(1), p.Units)
-	require.Equal(t, 1, len(p.Attributes))
-	require.Equal(t, "vendor/nvidia/model/a100/80Gi", p.Attributes[0].Key)
-	require.Equal(t, "true", p.Attributes[0].Value)
-}
-
-func TestV2ResourceGPU_InvalidRAMUnit(t *testing.T) {
-	var stream = `
+			name: "invalid-ram",
+			sdl: `
 units: 1
 attributes:
   vendor:
     nvidia:
       - model: a100
         ram: 80G
-`
-	var p v2ResourceGPU
+`,
+		},
+	}
 
-	err := yaml.Unmarshal([]byte(stream), &p)
-	require.Error(t, err)
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			var p v2ResourceGPU
+
+			err := yaml.Unmarshal([]byte(test.sdl), &p)
+			assert.Error(t, err)
+			assert.EqualError(t, err, errResourceMemoryInvalid.Error())
+		})
+	}
 }
 
-func TestV2ResourceGPU_MultipleModels(t *testing.T) {
-	var stream = `
+func TestV2ResourceGPU(t *testing.T) {
+	tests := []gpuTestCase{
+		{
+			name: "wildcard-nvidia",
+			sdl: `
+units: 1
+attributes:
+  vendor:
+    nvidia:
+`,
+			expResource: testGpuResource{
+				units: 1,
+				attr: testGpuAttributes{
+					"vendor/nvidia/model/*": "true",
+				},
+			},
+		},
+		{
+			name: "single-model-nvidia",
+			sdl: `
+units: 1
+attributes:
+  vendor:
+    nvidia:
+      - model: a100
+`,
+			expResource: testGpuResource{
+				units: 1,
+				attr: testGpuAttributes{
+					"vendor/nvidia/model/a100": "true",
+				},
+			},
+		},
+		{
+			name: "single-model-with-ram-nvidia",
+			sdl: `
+units: 1
+attributes:
+  vendor:
+    nvidia:
+      - model: a100
+        ram: 80Gi
+`,
+			expResource: testGpuResource{
+				units: 1,
+				attr: testGpuAttributes{
+					"vendor/nvidia/model/a100/ram/80Gi": "true",
+				},
+			},
+		},
+		{
+			name: "multiple-models-with-ram-nvidia",
+			sdl: `
 units: 1
 attributes:
   vendor:
@@ -98,21 +160,18 @@ attributes:
         ram: 80Gi
       - model: a100
         ram: 40Gi
-`
-	var p v2ResourceGPU
-
-	err := yaml.Unmarshal([]byte(stream), &p)
-	require.NoError(t, err)
-	require.Equal(t, gpuQuantity(1), p.Units)
-	require.Equal(t, 2, len(p.Attributes))
-	require.Equal(t, "vendor/nvidia/model/a100/40Gi", p.Attributes[0].Key)
-	require.Equal(t, "true", p.Attributes[0].Value)
-	require.Equal(t, "vendor/nvidia/model/a100/80Gi", p.Attributes[1].Key)
-	require.Equal(t, "true", p.Attributes[1].Value)
-}
-
-func TestV2ResourceGPU_MultipleModels2(t *testing.T) {
-	var stream = `
+`,
+			expResource: testGpuResource{
+				units: 1,
+				attr: testGpuAttributes{
+					"vendor/nvidia/model/a100/ram/40Gi": "true",
+					"vendor/nvidia/model/a100/ram/80Gi": "true",
+				},
+			},
+		},
+		{
+			name: "multiple-models-mix-nvidia",
+			sdl: `
 units: 1
 attributes:
   vendor:
@@ -120,36 +179,98 @@ attributes:
       - model: a100
         ram: 80Gi
       - model: a100
-`
-	var p v2ResourceGPU
-
-	err := yaml.Unmarshal([]byte(stream), &p)
-	require.NoError(t, err)
-	require.Equal(t, gpuQuantity(1), p.Units)
-	require.Equal(t, 2, len(p.Attributes))
-	require.Equal(t, "vendor/nvidia/model/a100", p.Attributes[0].Key)
-	require.Equal(t, "true", p.Attributes[0].Value)
-	require.Equal(t, "vendor/nvidia/model/a100/80Gi", p.Attributes[1].Key)
-	require.Equal(t, "true", p.Attributes[1].Value)
-}
-
-func TestV2ResourceGPU_MultipleModels3(t *testing.T) {
-	var stream = `
+`,
+			expResource: testGpuResource{
+				units: 1,
+				attr: testGpuAttributes{
+					"vendor/nvidia/model/a100":          "true",
+					"vendor/nvidia/model/a100/ram/80Gi": "true",
+				},
+			},
+		},
+		{
+			name: "multiple-models-nvidia",
+			sdl: `
 units: 1
 attributes:
   vendor:
     nvidia:
-      - model: a6000
+      - model: a100
       - model: a40
-`
-	var p v2ResourceGPU
+`,
+			expResource: testGpuResource{
+				units: 1,
+				attr: testGpuAttributes{
+					"vendor/nvidia/model/a40":  "true",
+					"vendor/nvidia/model/a100": "true",
+				},
+			},
+		},
+		{
+			name: "multiple-vendors-wildcard",
+			sdl: `
+units: 1
+attributes:
+  vendor:
+    nvidia:
+    amd:
+`,
+			expResource: testGpuResource{
+				units: 1,
+				attr: testGpuAttributes{
+					"vendor/nvidia/model/*": "true",
+					"vendor/amd/model/*":    "true",
+				},
+			},
+		},
+		{
+			name: "wildcard-amd",
+			sdl: `
+units: 1
+attributes:
+  vendor:
+    amd:
+`,
+			expResource: testGpuResource{
+				units: 1,
+				attr: testGpuAttributes{
+					"vendor/amd/model/*": "true",
+				},
+			},
+		},
+		{
+			name: "single-model-amd",
+			sdl: `
+units: 1
+attributes:
+  vendor:
+    amd:
+      - model: mi250
+`,
+			expResource: testGpuResource{
+				units: 1,
+				attr: testGpuAttributes{
+					"vendor/amd/model/mi250": "true",
+				},
+			},
+		},
+	}
 
-	err := yaml.Unmarshal([]byte(stream), &p)
-	require.NoError(t, err)
-	require.Equal(t, gpuQuantity(1), p.Units)
-	require.Equal(t, 2, len(p.Attributes))
-	require.Equal(t, "vendor/nvidia/model/a40", p.Attributes[0].Key)
-	require.Equal(t, "true", p.Attributes[0].Value)
-	require.Equal(t, "vendor/nvidia/model/a6000", p.Attributes[1].Key)
-	require.Equal(t, "true", p.Attributes[1].Value)
+	for idx := range tests {
+		tc := tests[idx]
+		t.Run(tc.name, func(t *testing.T) {
+			var p v2ResourceGPU
+
+			err := yaml.Unmarshal([]byte(tc.sdl), &p)
+			require.NoError(t, err)
+
+			assert.Equal(t, tc.expResource.units, p.Units)
+			assert.Equal(t, len(tc.expResource.attr), len(p.Attributes))
+
+			for i := range p.Attributes {
+				assert.Contains(t, tc.expResource.attr, p.Attributes[i].Key)
+				assert.Equal(t, tc.expResource.attr[p.Attributes[i].Key], p.Attributes[i].Value)
+			}
+		})
+	}
 }
