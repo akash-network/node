@@ -1,6 +1,5 @@
 GON_CONFIGFILE           ?= gon.json
 
-GORELEASER_SKIP_VALIDATE ?= false
 GORELEASER_DEBUG         ?= false
 GORELEASER_IMAGE         := ghcr.io/goreleaser/goreleaser-cross:$(GOTOOLCHAIN_SEMVER)
 GORELEASER_RELEASE       ?= false
@@ -8,13 +7,20 @@ GORELEASER_MOUNT_CONFIG  ?= false
 
 RELEASE_DOCKER_IMAGE     ?= ghcr.io/akash-network/node
 
-ifeq ($(GORELEASER_RELEASE),true)
-	GORELEASER_SKIP_VALIDATE := false
-	GORELEASER_SKIP_PUBLISH  := release --skip-publish=false
-else
-	GORELEASER_SKIP_PUBLISH  := --skip-publish=true
-	GORELEASER_SKIP_VALIDATE ?= false
+GORELEASER_SKIP_FLAGS    := $(GORELEASER_SKIP)
+GORELEASER_SKIP          :=
+
+null  :=
+space := $(null) #
+comma := ,
+
+ifneq ($(GORELEASER_RELEASE),true)
 	GITHUB_TOKEN=
+	GORELEASER_SKIP_FLAGS += publish
+endif
+
+ifneq ($(GORELEASER_SKIP_FLAGS),)
+	GORELEASER_SKIP := --skip=$(subst $(space),$(comma),$(strip $(GORELEASER_SKIP_FLAGS)))
 endif
 
 ifeq ($(GORELEASER_MOUNT_CONFIG),true)
@@ -68,8 +74,7 @@ docker-image:
 		-f .goreleaser-docker.yaml \
 		--debug=$(GORELEASER_DEBUG) \
 		--clean \
-		--skip-validate \
-		--skip-publish \
+		--skip=publish,validate \
 		--snapshot
 
 .PHONY: gen-changelog
@@ -97,8 +102,8 @@ release: gen-changelog
 		-w /go/src/$(GO_MOD_NAME) \
 		$(GORELEASER_IMAGE) \
 		-f "$(GORELEASER_CONFIG)" \
-		$(GORELEASER_SKIP_PUBLISH) \
-		--skip-validate=$(GORELEASER_SKIP_VALIDATE) \
+		release \
+		$(GORELEASER_SKIP) \
 		--debug=$(GORELEASER_DEBUG) \
 		--clean \
 		--release-notes=/go/src/$(GO_MOD_NAME)/.cache/changelog.md
