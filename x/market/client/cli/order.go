@@ -1,13 +1,13 @@
 package cli
 
 import (
-	"context"
-
-	"github.com/cosmos/cosmos-sdk/client"
+	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
 
 	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
+
+	aclient "github.com/akash-network/node/client"
 )
 
 func cmdGetOrders() *cobra.Command {
@@ -15,19 +15,24 @@ func cmdGetOrders() *cobra.Command {
 		Use:   "list",
 		Short: "Query for all orders",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientQueryContext(cmd)
+			ctx := cmd.Context()
+
+			cctx, err := sdkclient.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
 
-			queryClient := types.NewQueryClient(clientCtx)
+			qq, err := aclient.DiscoverQueryClient(ctx, cctx)
+			if err != nil {
+				return err
+			}
 
 			ofilters, err := OrderFiltersFromFlags(cmd.Flags())
 			if err != nil {
 				return err
 			}
 
-			pageReq, err := client.ReadPageRequest(cmd.Flags())
+			pageReq, err := sdkclient.ReadPageRequest(cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -37,12 +42,12 @@ func cmdGetOrders() *cobra.Command {
 				Pagination: pageReq,
 			}
 
-			res, err := queryClient.Orders(context.Background(), params)
+			res, err := qq.Orders(cmd.Context(), params)
 			if err != nil {
 				return err
 			}
 
-			return clientCtx.PrintProto(res)
+			return qq.ClientContext().PrintProto(res)
 		},
 	}
 
@@ -58,24 +63,29 @@ func cmdGetOrder() *cobra.Command {
 		Short: "Query order",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientQueryContext(cmd)
+			ctx := cmd.Context()
+
+			cctx, err := sdkclient.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
 
-			queryClient := types.NewQueryClient(clientCtx)
+			qq, err := aclient.DiscoverQueryClient(ctx, cctx)
+			if err != nil {
+				return err
+			}
 
 			id, err := OrderIDFromFlags(cmd.Flags())
 			if err != nil {
 				return err
 			}
 
-			res, err := queryClient.Order(context.Background(), &types.QueryOrderRequest{ID: id})
+			res, err := qq.Order(cmd.Context(), &types.QueryOrderRequest{ID: id})
 			if err != nil {
 				return err
 			}
 
-			return clientCtx.PrintProto(&res.Order)
+			return qq.ClientContext().PrintProto(&res.Order)
 		},
 	}
 

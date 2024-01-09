@@ -3,14 +3,14 @@ package cli
 import (
 	"fmt"
 
-	"github.com/cosmos/cosmos-sdk/client"
+	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
 
 	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
 
-	"github.com/akash-network/node/client/broadcaster"
+	aclient "github.com/akash-network/node/client"
 	"github.com/akash-network/node/cmd/common"
 	dcli "github.com/akash-network/node/x/deployment/client/cli"
 )
@@ -21,7 +21,7 @@ func GetTxCmd(key string) *cobra.Command {
 		Use:                        types.ModuleName,
 		Short:                      "Transaction subcommands",
 		SuggestionsMinimumDistance: 2,
-		RunE:                       client.ValidateCmd,
+		RunE:                       sdkclient.ValidateCmd,
 	}
 	cmd.AddCommand(
 		cmdBid(key),
@@ -35,7 +35,7 @@ func cmdBid(key string) *cobra.Command {
 		Use:                        "bid",
 		Short:                      "Bid subcommands",
 		SuggestionsMinimumDistance: 2,
-		RunE:                       client.ValidateCmd,
+		RunE:                       sdkclient.ValidateCmd,
 	}
 	cmd.AddCommand(
 		cmdBidCreate(key),
@@ -50,7 +50,14 @@ func cmdBidCreate(key string) *cobra.Command {
 		Short: fmt.Sprintf("Create a %s bid", key),
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientTxContext(cmd)
+			ctx := cmd.Context()
+
+			cctx, err := sdkclient.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -65,7 +72,7 @@ func cmdBidCreate(key string) *cobra.Command {
 				return err
 			}
 
-			id, err := OrderIDFromFlags(cmd.Flags(), dcli.WithProvider(clientCtx.FromAddress))
+			id, err := OrderIDFromFlags(cmd.Flags(), dcli.WithProvider(cctx.FromAddress))
 			if err != nil {
 				return err
 			}
@@ -77,7 +84,7 @@ func cmdBidCreate(key string) *cobra.Command {
 
 			msg := &types.MsgCreateBid{
 				Order:    id,
-				Provider: clientCtx.GetFromAddress().String(),
+				Provider: cctx.GetFromAddress().String(),
 				Price:    coin,
 				Deposit:  deposit,
 			}
@@ -86,7 +93,12 @@ func cmdBidCreate(key string) *cobra.Command {
 				return err
 			}
 
-			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			resp, err := cl.Tx().Broadcast(ctx, msg)
+			if err != nil {
+				return err
+			}
+
+			return cctx.PrintProto(resp)
 		},
 	}
 
@@ -104,12 +116,19 @@ func cmdBidClose(key string) *cobra.Command {
 		Short: fmt.Sprintf("Close a %s bid", key),
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientTxContext(cmd)
+			ctx := cmd.Context()
+
+			cctx, err := sdkclient.GetClientTxContext(cmd)
 			if err != nil {
 				return err
 			}
 
-			id, err := BidIDFromFlags(cmd.Flags(), dcli.WithProvider(clientCtx.FromAddress))
+			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			id, err := BidIDFromFlags(cmd.Flags(), dcli.WithProvider(cctx.FromAddress))
 			if err != nil {
 				return err
 			}
@@ -122,7 +141,12 @@ func cmdBidClose(key string) *cobra.Command {
 				return err
 			}
 
-			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			resp, err := cl.Tx().Broadcast(ctx, msg)
+			if err != nil {
+				return err
+			}
+
+			return cctx.PrintProto(resp)
 		},
 	}
 
@@ -137,7 +161,7 @@ func cmdLease(key string) *cobra.Command {
 		Use:                        "lease",
 		Short:                      "Lease subcommands",
 		SuggestionsMinimumDistance: 2,
-		RunE:                       client.ValidateCmd,
+		RunE:                       sdkclient.ValidateCmd,
 	}
 	cmd.AddCommand(
 		cmdLeaseCreate(key),
@@ -153,12 +177,19 @@ func cmdLeaseCreate(key string) *cobra.Command {
 		Short: fmt.Sprintf("Create a %s lease", key),
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientTxContext(cmd)
+			ctx := cmd.Context()
+
+			cctx, err := sdkclient.GetClientTxContext(cmd)
 			if err != nil {
 				return err
 			}
 
-			id, err := LeaseIDFromFlags(cmd.Flags(), dcli.WithOwner(clientCtx.FromAddress))
+			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			id, err := LeaseIDFromFlags(cmd.Flags(), dcli.WithOwner(cctx.FromAddress))
 			if err != nil {
 				return err
 			}
@@ -171,7 +202,12 @@ func cmdLeaseCreate(key string) *cobra.Command {
 				return err
 			}
 
-			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			resp, err := cl.Tx().Broadcast(ctx, msg)
+			if err != nil {
+				return err
+			}
+
+			return cctx.PrintProto(resp)
 		},
 	}
 
@@ -188,12 +224,19 @@ func cmdLeaseWithdraw(key string) *cobra.Command {
 		Short: fmt.Sprintf("Settle and withdraw available funds from %s order escrow account", key),
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientTxContext(cmd)
+			ctx := cmd.Context()
+
+			cctx, err := sdkclient.GetClientTxContext(cmd)
 			if err != nil {
 				return err
 			}
 
-			id, err := LeaseIDFromFlags(cmd.Flags(), dcli.WithOwner(clientCtx.FromAddress))
+			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			id, err := LeaseIDFromFlags(cmd.Flags(), dcli.WithOwner(cctx.FromAddress))
 			if err != nil {
 				return err
 			}
@@ -206,7 +249,12 @@ func cmdLeaseWithdraw(key string) *cobra.Command {
 				return err
 			}
 
-			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			resp, err := cl.Tx().Broadcast(ctx, msg)
+			if err != nil {
+				return err
+			}
+
+			return cctx.PrintProto(resp)
 		},
 	}
 
@@ -223,12 +271,19 @@ func cmdLeaseClose(key string) *cobra.Command {
 		Short: fmt.Sprintf("Close a %s order", key),
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientTxContext(cmd)
+			ctx := cmd.Context()
+
+			cctx, err := sdkclient.GetClientTxContext(cmd)
 			if err != nil {
 				return err
 			}
 
-			id, err := LeaseIDFromFlags(cmd.Flags(), dcli.WithOwner(clientCtx.FromAddress))
+			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			id, err := LeaseIDFromFlags(cmd.Flags(), dcli.WithOwner(cctx.FromAddress))
 			if err != nil {
 				return err
 			}
@@ -241,7 +296,12 @@ func cmdLeaseClose(key string) *cobra.Command {
 				return err
 			}
 
-			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			resp, err := cl.Tx().Broadcast(ctx, msg)
+			if err != nil {
+				return err
+			}
+
+			return cctx.PrintProto(resp)
 		},
 	}
 

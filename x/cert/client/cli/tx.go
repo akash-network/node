@@ -13,7 +13,7 @@ import (
 
 	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
 
-	"github.com/akash-network/node/client/broadcaster"
+	aclient "github.com/akash-network/node/client"
 	certerrors "github.com/akash-network/node/x/cert/errors"
 	"github.com/akash-network/node/x/cert/utils"
 )
@@ -96,10 +96,18 @@ func doGenerateCmd(cmd *cobra.Command, domains []string) error {
 func doPublishCmd(cmd *cobra.Command) error {
 	toGenesis := viper.GetBool(flagToGenesis)
 
+	ctx := cmd.Context()
+
 	cctx, err := sdkclient.GetClientTxContext(cmd)
 	if err != nil {
 		return err
 	}
+
+	cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+	if err != nil {
+		return err
+	}
+
 	fromAddress := cctx.GetFromAddress()
 
 	kpm, err := utils.NewKeyPairManager(cctx, fromAddress)
@@ -148,15 +156,22 @@ func doPublishCmd(cmd *cobra.Command) error {
 
 	}
 
-	return broadcaster.BroadcastTX(cmd.Context(), cctx, cmd.Flags(), msg)
+	resp, err := cl.Tx().Broadcast(ctx, msg)
+	if err != nil {
+		return err
+	}
+
+	return cctx.PrintProto(resp)
 }
 
 func doRevokeCmd(cmd *cobra.Command) error {
 	serial := viper.GetString(flagSerial)
+
 	cctx, err := sdkclient.GetClientTxContext(cmd)
 	if err != nil {
 		return err
 	}
+
 	fromAddress := cctx.GetFromAddress()
 
 	if len(serial) != 0 {
@@ -190,9 +205,14 @@ func doRevokeCmd(cmd *cobra.Command) error {
 		},
 	}
 
-	queryClient := types.NewQueryClient(cctx)
+	ctx := cmd.Context()
 
-	res, err := queryClient.Certificates(cmd.Context(), params)
+	cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+	if err != nil {
+		return err
+	}
+
+	res, err := cl.Query().Certificates(cmd.Context(), params)
 	if err != nil {
 		return err
 	}
@@ -209,5 +229,10 @@ func doRevokeCmd(cmd *cobra.Command) error {
 		},
 	}
 
-	return broadcaster.BroadcastTX(cmd.Context(), cctx, cmd.Flags(), msg)
+	resp, err := cl.Tx().Broadcast(ctx, msg)
+	if err != nil {
+		return err
+	}
+
+	return cctx.PrintProto(resp)
 }

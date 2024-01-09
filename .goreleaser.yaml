@@ -1,4 +1,5 @@
 project_name: node
+dist: ./.cache/goreleaser
 env:
   - GO111MODULE=on
   - CGO_ENABLED=1

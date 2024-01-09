@@ -3,12 +3,14 @@ package cli
 import (
 	"context"
 
-	"github.com/cosmos/cosmos-sdk/client"
+	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
 
 	types "github.com/akash-network/akash-api/go/node/audit/v1beta3"
+
+	aclient "github.com/akash-network/node/client"
 )
 
 func GetQueryCmd() *cobra.Command {
@@ -16,7 +18,7 @@ func GetQueryCmd() *cobra.Command {
 		Use:                        types.ModuleName,
 		Short:                      "Audit query commands",
 		SuggestionsMinimumDistance: 2,
-		RunE:                       client.ValidateCmd,
+		RunE:                       sdkclient.ValidateCmd,
 	}
 
 	cmd.AddCommand(
@@ -32,14 +34,19 @@ func cmdGetProviders() *cobra.Command {
 		Use:   "list",
 		Short: "Query for all providers",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientQueryContext(cmd)
+			ctx := cmd.Context()
+
+			cctx, err := sdkclient.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
 
-			queryClient := types.NewQueryClient(clientCtx)
+			qq, err := aclient.DiscoverQueryClient(ctx, cctx)
+			if err != nil {
+				return err
+			}
 
-			pageReq, err := client.ReadPageRequest(cmd.Flags())
+			pageReq, err := sdkclient.ReadPageRequest(cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -48,12 +55,12 @@ func cmdGetProviders() *cobra.Command {
 				Pagination: pageReq,
 			}
 
-			res, err := queryClient.AllProvidersAttributes(context.Background(), params)
+			res, err := qq.AllProvidersAttributes(context.Background(), params)
 			if err != nil {
 				return err
 			}
 
-			return clientCtx.PrintProto(res)
+			return qq.ClientContext().PrintProto(res)
 		},
 	}
 
@@ -69,12 +76,17 @@ func cmdGetProvider() *cobra.Command {
 		Short: "Query provider",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			clientCtx, err := client.GetClientQueryContext(cmd)
+			ctx := cmd.Context()
+
+			cctx, err := sdkclient.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
 
-			queryClient := types.NewQueryClient(clientCtx)
+			qq, err := aclient.DiscoverQueryClient(ctx, cctx)
+			if err != nil {
+				return err
+			}
 
 			owner, err := sdk.AccAddressFromBech32(args[0])
 			if err != nil {
@@ -83,7 +95,7 @@ func cmdGetProvider() *cobra.Command {
 
 			var res *types.QueryProvidersResponse
 			if len(args) == 1 {
-				res, err = queryClient.ProviderAttributes(context.Background(),
+				res, err = qq.ProviderAttributes(context.Background(),
 					&types.QueryProviderAttributesRequest{
 						Owner: owner.String(),
 					},
@@ -94,7 +106,7 @@ func cmdGetProvider() *cobra.Command {
 					return err
 				}
 
-				res, err = queryClient.ProviderAuditorAttributes(context.Background(),
+				res, err = qq.ProviderAuditorAttributes(context.Background(),
 					&types.QueryProviderAuditorRequest{
 						Auditor: auditor.String(),
 						Owner:   owner.String(),
@@ -106,7 +118,7 @@ func cmdGetProvider() *cobra.Command {
 				return err
 			}
 
-			return clientCtx.PrintProto(res)
+			return qq.ClientContext().PrintProto(res)
 		},
 	}
 

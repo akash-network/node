@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/google/go-github/v53/github"
+	"github.com/google/go-github/v56/github"
 	"github.com/gregjones/httpcache"
 	"golang.org/x/oauth2"
 )

@@ -4,37 +4,20 @@ GORELEASER_DEBUG         ?= false
 GORELEASER_IMAGE         := ghcr.io/goreleaser/goreleaser-cross:$(GOTOOLCHAIN_SEMVER)
 GORELEASER_RELEASE       ?= false
 GORELEASER_MOUNT_CONFIG  ?= false
+GORELEASER_SKIP          := $(subst $(COMMA),$(SPACE),$(GORELEASER_SKIP))
 
 RELEASE_DOCKER_IMAGE     ?= ghcr.io/akash-network/node
 
-<<<<<<< Updated upstream
-GORELEASER_SKIP_FLAGS    := $(GORELEASER_SKIP)
-GORELEASER_SKIP          :=
-
-null  :=
-space := $(null) #
-comma := ,
-
-ifneq ($(GORELEASER_RELEASE),true)
-||||||| Stash base
 ifneq ($(GORELEASER_RELEASE),true)
 	ifeq (,$(findstring publish,$(GORELEASER_SKIP)))
 		GORELEASER_SKIP += publish
 	endif
 
-=======
-ifneq ($(GORELEASER_RELEASE),true)
-	ifeq (,$(findstring publish,$(GORELEASER_SKIP)))
-		GORELEASER_SKIP += publish
-	endif
-else
->>>>>>> Stashed changes
 	GITHUB_TOKEN=
-	GORELEASER_SKIP_FLAGS += publish
 endif
 
-ifneq ($(GORELEASER_SKIP_FLAGS),)
-	GORELEASER_SKIP := --skip=$(subst $(space),$(comma),$(strip $(GORELEASER_SKIP_FLAGS)))
+ifneq (,$(GORELEASER_SKIP))
+	GORELEASER_SKIP := --skip=$(subst $(SPACE),$(COMMA),$(strip $(GORELEASER_SKIP)))
 endif
 
 ifeq ($(GORELEASER_MOUNT_CONFIG),true)
@@ -95,6 +78,7 @@ docker-image:
 gen-changelog: $(GIT_CHGLOG)
 	@echo "generating changelog to .cache/changelog"
 	./script/genchangelog.sh "$(RELEASE_TAG)" .cache/changelog.md
+
 .PHONY: release
 release: gen-changelog
 	docker run \

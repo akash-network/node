@@ -15,16 +15,19 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
 	tmcfg "github.com/tendermint/tendermint/config"
 	tmflags "github.com/tendermint/tendermint/libs/cli/flags"
 	"github.com/tendermint/tendermint/libs/log"
 	"github.com/tendermint/tendermint/node"
 	tmclient "github.com/tendermint/tendermint/rpc/client"
+	cmtrpc "github.com/tendermint/tendermint/rpc/core"
+	cmtrpcsrv "github.com/tendermint/tendermint/rpc/jsonrpc/server"
 	dbm "github.com/tendermint/tm-db"
 	"google.golang.org/grpc"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
-	"github.com/cosmos/cosmos-sdk/client"
+	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -43,7 +46,14 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+
+	"github.com/akash-network/node/client"
 )
+
+func init() {
+	// register akash api routes
+	cmtrpc.Routes["akash"] = cmtrpcsrv.NewRPCFunc(client.RPCAkash, "")
+}
 
 // package-wide network lock to only allow one test network at a time
 var lock = new(sync.Mutex)
@@ -72,8 +82,8 @@ type Config struct {
 	LegacyAmino       *codec.LegacyAmino // TODO: Remove!
 	InterfaceRegistry codectypes.InterfaceRegistry
 
-	TxConfig         client.TxConfig
-	AccountRetriever client.AccountRetriever
+	TxConfig         sdkclient.TxConfig
+	AccountRetriever sdkclient.AccountRetriever
 	AppConstructor   AppConstructor             // the ABCI application constructor
 	GenesisState     map[string]json.RawMessage // custom genesis state to provide
 	TimeoutCommit    time.Duration              // the consensus commitment timeout
@@ -116,7 +126,7 @@ type Network struct {
 // or handler.
 type Validator struct {
 	AppConfig  *srvconfig.Config
-	ClientCtx  client.Context
+	ClientCtx  sdkclient.Context
 	Ctx        *server.Context
 	Dir        string
 	NodeID     string
@@ -318,7 +328,7 @@ func New(t *testing.T, cfg Config) *Network {
 
 		srvconfig.WriteConfigFile(filepath.Join(nodeDir, "config/app.toml"), appCfg)
 
-		cctx := client.Context{}.
+		cctx := sdkclient.Context{}.
 			WithKeyringDir(clientDir).
 			WithKeyring(kb).
 			WithHomeDir(tmCfg.RootDir).
@@ -327,7 +337,8 @@ func New(t *testing.T, cfg Config) *Network {
 			WithCodec(cfg.Codec).
 			WithLegacyAmino(cfg.LegacyAmino).
 			WithTxConfig(cfg.TxConfig).
-			WithAccountRetriever(cfg.AccountRetriever)
+			WithAccountRetriever(cfg.AccountRetriever).
+			WithNodeURI(tmCfg.RPC.ListenAddress)
 
 		network.Validators[i] = &Validator{
 			AppConfig:  appCfg,

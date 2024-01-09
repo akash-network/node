@@ -4,17 +4,18 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/spf13/cobra"
+
+	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/spf13/cobra"
 
 	types "github.com/akash-network/akash-api/go/node/audit/v1beta3"
 	ptypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
 	akashtypes "github.com/akash-network/akash-api/go/node/types/v1beta3"
 	atypes "github.com/akash-network/akash-api/go/node/types/v1beta3"
 
-	"github.com/akash-network/node/client/broadcaster"
+	aclient "github.com/akash-network/node/client"
 )
 
 // GetTxCmd returns the transaction commands for audit module
@@ -23,7 +24,7 @@ func GetTxCmd() *cobra.Command {
 		Use:                        types.ModuleName,
 		Short:                      "Audit transaction subcommands",
 		SuggestionsMinimumDistance: 2,
-		RunE:                       client.ValidateCmd,
+		RunE:                       sdkclient.ValidateCmd,
 	}
 
 	cmd.AddCommand(
@@ -57,17 +58,24 @@ func cmdCreateProviderAttributes() *cobra.Command {
 				return fmt.Errorf("attributes must be provided as pairs")
 			}
 
+			ctx := cmd.Context()
+
+			cctx, err := sdkclient.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+			if err != nil {
+				return err
+			}
+
 			providerAddress, err := sdk.AccAddressFromBech32(args[0])
 			if err != nil {
 				return err
 			}
 
-			clientCtx, err := client.GetClientTxContext(cmd)
-			if err != nil {
-				return err
-			}
-
-			attr, err := readAttributes(cmd, clientCtx, providerAddress.String(), args[1:])
+			attr, err := readAttributes(cmd, cctx, providerAddress.String(), args[1:])
 			if err != nil {
 				return err
 			}
@@ -77,7 +85,7 @@ func cmdCreateProviderAttributes() *cobra.Command {
 			}
 
 			msg := &types.MsgSignProviderAttributes{
-				Auditor:    clientCtx.GetFromAddress().String(),
+				Auditor:    cctx.GetFromAddress().String(),
 				Owner:      providerAddress.String(),
 				Attributes: attr,
 			}
@@ -86,7 +94,12 @@ func cmdCreateProviderAttributes() *cobra.Command {
 				return err
 			}
 
-			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			resp, err := cl.Tx().Broadcast(ctx, msg)
+			if err != nil {
+				return err
+			}
+
+			return cctx.PrintProto(resp)
 		},
 	}
 
@@ -101,6 +114,18 @@ func cmdDeleteProviderAttributes() *cobra.Command {
 		Short: "Delete provider attributes",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+
+			cctx, err := sdkclient.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+			if err != nil {
+				return err
+			}
+
 			providerAddress, err := sdk.AccAddressFromBech32(args[0])
 			if err != nil {
 				return err
@@ -111,13 +136,8 @@ func cmdDeleteProviderAttributes() *cobra.Command {
 				return err
 			}
 
-			clientCtx, err := client.GetClientTxContext(cmd)
-			if err != nil {
-				return err
-			}
-
 			msg := &types.MsgDeleteProviderAttributes{
-				Auditor: clientCtx.GetFromAddress().String(),
+				Auditor: cctx.GetFromAddress().String(),
 				Owner:   providerAddress.String(),
 				Keys:    keys,
 			}
@@ -126,7 +146,12 @@ func cmdDeleteProviderAttributes() *cobra.Command {
 				return err
 			}
 
-			return broadcaster.BroadcastTX(cmd.Context(), clientCtx, cmd.Flags(), msg)
+			resp, err := cl.Tx().Broadcast(ctx, msg)
+			if err != nil {
+				return err
+			}
+
+			return cctx.PrintProto(resp)
 		},
 	}
 
@@ -147,7 +172,7 @@ func setCmdProviderFlags(cmd *cobra.Command) {
 // if no arguments were provided then query provider and sign all found
 // read from stdin uses trick to check if it's file descriptor is a pipe
 // which happens when some data is piped for example cat attr.yaml | akash ...
-func readAttributes(cmd *cobra.Command, cctx client.Context, provider string, args []string) (akashtypes.Attributes, error) {
+func readAttributes(cmd *cobra.Command, cctx sdkclient.Context, provider string, args []string) (akashtypes.Attributes, error) {
 	var attr akashtypes.Attributes
 
 	if len(args) != 0 {

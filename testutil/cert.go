@@ -19,7 +19,7 @@ import (
 
 	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
 
-	"github.com/akash-network/node/client/mocks"
+	clientmocks "github.com/akash-network/akash-api/go/node/client/v1beta2/mocks"
 
 	certutils "github.com/akash-network/node/x/cert/utils"
 )
@@ -38,7 +38,7 @@ type certificateOption struct {
 	domains []string
 	nbf     time.Time
 	naf     time.Time
-	qclient *mocks.QueryClient
+	qclient *clientmocks.QueryClient
 }
 
 type CertificateOption func(*certificateOption)
@@ -61,7 +61,7 @@ func CertificateOptionNotAfter(tm time.Time) CertificateOption {
 	}
 }
 
-func CertificateOptionMocks(val *mocks.QueryClient) CertificateOption {
+func CertificateOptionMocks(val *clientmocks.QueryClient) CertificateOption {
 	return func(opt *certificateOption) {
 		opt.qclient = val
 	}

@@ -3,7 +3,7 @@ package pubsub
 import (
 	"errors"
 
-	lifecycle "github.com/boz/go-lifecycle"
+	"github.com/boz/go-lifecycle"
 )
 
 // ErrNotRunning is the error with message "not running"
