@@ -140,7 +140,7 @@ func cmdCreate(key string) *cobra.Command {
 				return err
 			}
 
-			resp, err := cl.Tx().Broadcast(ctx, msg)
+			resp, err := cl.Tx().Broadcast(ctx, []sdk.Msg{msg})
 			if err != nil {
 				return err
 			}
@@ -196,7 +196,7 @@ func cmdDeposit(key string) *cobra.Command {
 				Depositor: depositorAcc,
 			}
 
-			resp, err := cl.Tx().Broadcast(ctx, msg)
+			resp, err := cl.Tx().Broadcast(ctx, []sdk.Msg{msg})
 			if err != nil {
 				return err
 			}
@@ -237,7 +237,7 @@ func cmdClose(key string) *cobra.Command {
 
 			msg := &types.MsgCloseDeployment{ID: id}
 
-			resp, err := cl.Tx().Broadcast(ctx, msg)
+			resp, err := cl.Tx().Broadcast(ctx, []sdk.Msg{msg})
 			if err != nil {
 				return err
 			}
@@ -316,7 +316,7 @@ func cmdUpdate(key string) *cobra.Command {
 				Version: version,
 			}
 
-			resp, err := cl.Tx().Broadcast(ctx, msg)
+			resp, err := cl.Tx().Broadcast(ctx, []sdk.Msg{msg})
 			if err != nil {
 				return err
 			}
@@ -378,7 +378,7 @@ func cmdGroupClose(_ string) *cobra.Command {
 				return err
 			}
 
-			resp, err := cl.Tx().Broadcast(ctx, msg)
+			resp, err := cl.Tx().Broadcast(ctx, []sdk.Msg{msg})
 			if err != nil {
 				return err
 			}
@@ -426,7 +426,7 @@ func cmdGroupPause(_ string) *cobra.Command {
 				return err
 			}
 
-			resp, err := cl.Tx().Broadcast(ctx, msg)
+			resp, err := cl.Tx().Broadcast(ctx, []sdk.Msg{msg})
 			if err != nil {
 				return err
 			}
@@ -474,7 +474,7 @@ func cmdGroupStart(_ string) *cobra.Command {
 				return err
 			}
 
-			resp, err := cl.Tx().Broadcast(ctx, msg)
+			resp, err := cl.Tx().Broadcast(ctx, []sdk.Msg{msg})
 			if err != nil {
 				return err
 			}
@@ -557,7 +557,7 @@ Examples:
 				return err
 			}
 
-			resp, err := cl.Tx().Broadcast(ctx, msg)
+			resp, err := cl.Tx().Broadcast(ctx, []sdk.Msg{msg})
 			if err != nil {
 				return err
 			}
@@ -606,7 +606,7 @@ Example:
 			msgTypeURL := types.DepositDeploymentAuthorization{}.MsgTypeURL()
 			msg := authz.NewMsgRevoke(granter, grantee, msgTypeURL)
 
-			resp, err := cl.Tx().Broadcast(ctx, &msg)
+			resp, err := cl.Tx().Broadcast(ctx, []sdk.Msg{&msg})
 			if err != nil {
 				return err
 			}

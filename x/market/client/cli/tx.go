@@ -93,7 +93,7 @@ func cmdBidCreate(key string) *cobra.Command {
 				return err
 			}
 
-			resp, err := cl.Tx().Broadcast(ctx, msg)
+			resp, err := cl.Tx().Broadcast(ctx, []sdk.Msg{msg})
 			if err != nil {
 				return err
 			}
@@ -141,7 +141,7 @@ func cmdBidClose(key string) *cobra.Command {
 				return err
 			}
 
-			resp, err := cl.Tx().Broadcast(ctx, msg)
+			resp, err := cl.Tx().Broadcast(ctx, []sdk.Msg{msg})
 			if err != nil {
 				return err
 			}
@@ -202,7 +202,7 @@ func cmdLeaseCreate(key string) *cobra.Command {
 				return err
 			}
 
-			resp, err := cl.Tx().Broadcast(ctx, msg)
+			resp, err := cl.Tx().Broadcast(ctx, []sdk.Msg{msg})
 			if err != nil {
 				return err
 			}
@@ -249,7 +249,7 @@ func cmdLeaseWithdraw(key string) *cobra.Command {
 				return err
 			}
 
-			resp, err := cl.Tx().Broadcast(ctx, msg)
+			resp, err := cl.Tx().Broadcast(ctx, []sdk.Msg{msg})
 			if err != nil {
 				return err
 			}
@@ -296,7 +296,7 @@ func cmdLeaseClose(key string) *cobra.Command {
 				return err
 			}
 
-			resp, err := cl.Tx().Broadcast(ctx, msg)
+			resp, err := cl.Tx().Broadcast(ctx, []sdk.Msg{msg})
 			if err != nil {
 				return err
 			}
