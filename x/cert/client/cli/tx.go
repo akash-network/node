@@ -8,6 +8,7 @@ import (
 	"time"
 
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -156,7 +157,7 @@ func doPublishCmd(cmd *cobra.Command) error {
 
 	}
 
-	resp, err := cl.Tx().Broadcast(ctx, msg)
+	resp, err := cl.Tx().Broadcast(ctx, []sdk.Msg{msg})
 	if err != nil {
 		return err
 	}
@@ -229,7 +230,7 @@ func doRevokeCmd(cmd *cobra.Command) error {
 		},
 	}
 
-	resp, err := cl.Tx().Broadcast(ctx, msg)
+	resp, err := cl.Tx().Broadcast(ctx, []sdk.Msg{msg})
 	if err != nil {
 		return err
 	}

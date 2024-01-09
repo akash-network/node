@@ -94,7 +94,7 @@ func cmdCreateProviderAttributes() *cobra.Command {
 				return err
 			}
 
-			resp, err := cl.Tx().Broadcast(ctx, msg)
+			resp, err := cl.Tx().Broadcast(ctx, []sdk.Msg{msg})
 			if err != nil {
 				return err
 			}
@@ -146,7 +146,7 @@ func cmdDeleteProviderAttributes() *cobra.Command {
 				return err
 			}
 
-			resp, err := cl.Tx().Broadcast(ctx, msg)
+			resp, err := cl.Tx().Broadcast(ctx, []sdk.Msg{msg})
 			if err != nil {
 				return err
 			}
