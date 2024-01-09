@@ -7,6 +7,7 @@ GORELEASER_MOUNT_CONFIG  ?= false
 
 RELEASE_DOCKER_IMAGE     ?= ghcr.io/akash-network/node
 
+<<<<<<< Updated upstream
 GORELEASER_SKIP_FLAGS    := $(GORELEASER_SKIP)
 GORELEASER_SKIP          :=
 
@@ -15,6 +16,19 @@ space := $(null) #
 comma := ,
 
 ifneq ($(GORELEASER_RELEASE),true)
+||||||| Stash base
+ifneq ($(GORELEASER_RELEASE),true)
+	ifeq (,$(findstring publish,$(GORELEASER_SKIP)))
+		GORELEASER_SKIP += publish
+	endif
+
+=======
+ifneq ($(GORELEASER_RELEASE),true)
+	ifeq (,$(findstring publish,$(GORELEASER_SKIP)))
+		GORELEASER_SKIP += publish
+	endif
+else
+>>>>>>> Stashed changes
 	GITHUB_TOKEN=
 	GORELEASER_SKIP_FLAGS += publish
 endif
