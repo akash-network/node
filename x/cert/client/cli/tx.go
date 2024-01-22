@@ -104,11 +104,6 @@ func doPublishCmd(cmd *cobra.Command) error {
 		return err
 	}
 
-	cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
-	if err != nil {
-		return err
-	}
-
 	fromAddress := cctx.GetFromAddress()
 
 	kpm, err := utils.NewKeyPairManager(cctx, fromAddress)
@@ -155,6 +150,11 @@ func doPublishCmd(cmd *cobra.Command) error {
 			},
 		})
 
+	}
+
+	cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+	if err != nil {
+		return err
 	}
 
 	resp, err := cl.Tx().Broadcast(ctx, []sdk.Msg{msg})
