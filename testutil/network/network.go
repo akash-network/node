@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -55,8 +56,14 @@ func init() {
 	cmtrpc.Routes["akash"] = cmtrpcsrv.NewRPCFunc(client.RPCAkash, "")
 }
 
+const (
+	portsPerValidator = 4
+)
+
 // package-wide network lock to only allow one test network at a time
-var lock = new(sync.Mutex)
+var (
+	lock = new(sync.Mutex)
+)
 
 // AppConstructor defines a function which accepts a network configuration and
 // creates an ABCI Application to provide to Tendermint.
@@ -145,6 +152,36 @@ type Validator struct {
 	grpcWeb *http.Server
 }
 
+// GetFreePorts asks the kernel for free open ports that are ready to use.
+func GetFreePorts(count int) ([]int, error) {
+	var ports []int
+
+	listeners := make([]*net.TCPListener, 0, count)
+
+	defer func() {
+		for _, l := range listeners {
+			_ = l.Close()
+		}
+	}()
+
+	for i := 0; i < count; i++ {
+		addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
+		if err != nil {
+			return nil, err
+		}
+
+		l, err := net.ListenTCP("tcp", addr)
+		if err != nil {
+			return nil, err
+		}
+
+		listeners = append(listeners, l)
+		ports = append(ports, l.Addr().(*net.TCPAddr).Port)
+	}
+
+	return ports, nil
+}
+
 // New creates a new Network for integration tests.
 func New(t *testing.T, cfg Config) *Network {
 	// only one caller/test can create and use a network at a time
@@ -195,27 +232,25 @@ func New(t *testing.T, cfg Config) *Network {
 		tmCfg.RPC.ListenAddress = ""
 		appCfg.GRPC.Enable = false
 		appCfg.GRPCWeb.Enable = false
+
 		if i == 0 {
-			apiListenAddr, _, err := server.FreeTCPAddr()
+			ports, err := GetFreePorts(portsPerValidator)
 			require.NoError(t, err)
+			require.Equal(t, portsPerValidator, len(ports))
+
+			apiListenAddr := fmt.Sprintf("tcp://0.0.0.0:%d", ports[0])
 			appCfg.API.Address = apiListenAddr
 
 			apiURL, err := url.Parse(apiListenAddr)
 			require.NoError(t, err)
 			apiAddr = fmt.Sprintf("http://%s:%s", apiURL.Hostname(), apiURL.Port())
 
-			rpcAddr, _, err := server.FreeTCPAddr()
-			require.NoError(t, err)
-			tmCfg.RPC.ListenAddress = rpcAddr
+			tmCfg.RPC.ListenAddress = fmt.Sprintf("tcp://0.0.0.0:%d", ports[1])
 
-			_, grpcPort, err := server.FreeTCPAddr()
-			require.NoError(t, err)
-			appCfg.GRPC.Address = fmt.Sprintf("0.0.0.0:%s", grpcPort)
+			appCfg.GRPC.Address = fmt.Sprintf("0.0.0.0:%d", ports[2])
 			appCfg.GRPC.Enable = true
 
-			_, grpcWebPort, err := server.FreeTCPAddr()
-			require.NoError(t, err)
-			appCfg.GRPCWeb.Address = fmt.Sprintf("0.0.0.0:%s", grpcWebPort)
+			appCfg.GRPCWeb.Address = fmt.Sprintf("0.0.0.0:%d", ports[3])
 			appCfg.GRPCWeb.Enable = true
 		}
 
