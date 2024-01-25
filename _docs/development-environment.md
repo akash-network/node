@@ -24,8 +24,13 @@ sudo apt install -y jq curl wget build-essentials ca-certificates npm direnv gcc
 ```
 
 ## Direnv
-Both [akash](https://github.com/akash-network/node) [provider-services](https://github.com/akash-network/provider) are extensively using `direnv` to setup and seamlessly update environment
+
+Both [akash](https://github.com/akash-network/node) [provider-services](https://github.com/akash-network/provider) are extensively using `direnv` to set up and seamlessly update environment
 while traversing across various directories. It is especially handy for running `provider-services` examples.
+
+> [!WARNING]
+> Some distributions may provider outdated version of `direnv`. Currently minimum required version is `2.32.x`.
+> Latest version can be installed using [binary builds](https://direnv.net/docs/installation.html#from-binary-builds)
 
 You may enable auto allow by whitelisting specific directories in `direnv.toml`.
 To do so use following template to edit `${XDG_CONFIG_HOME:-$HOME/.config}/direnv/direnv.toml`
@@ -96,3 +101,35 @@ Following are added to `make/init.mk`
     	touch $@
     $(MODVENDOR): $(MODVENDOR_VERSION_FILE)
     ```
+
+## Releasing
+
+With following release instructions Akash Network team attempted to unify build and release processes:
+- reproducible builds
+- correct Go toolchains and CGO environment (required for Ledger devices support)
+
+Build is performed by [Goreleaser-cross](https://github.com/goreleaser/goreleaser-cross).
+This project was created and is maintained by [Akash Network](https://github.com/akash-network) core member @troian, and it solves cross-compilation for Golang project with CGO on various hosts for various platforms.
+
+> [!CAUTION]
+> The goreleaser-cross image is roughly 7GB in size. You've been warned!
+
+1. To start build simply type
+
+   ```shell
+   make release
+   ```
+2. To release with custom docker image names prepend release command with `RELEASE_DOCKER_IMAGE` variable
+
+   ```shell
+   RELEASE_DOCKER_IMAGE=ghcr.io/akash-network/node make release
+   ```
+
+3. To build just docker images one case use following command. 
+   ```shell
+   make docker-image
+   ```
+   or one with custom registry
+   ```shell
+   RELEASE_DOCKER_IMAGE=ghcr.io/akash-network/node make docker-image
+   ```
