@@ -17,8 +17,8 @@ found in the [design documentation](https://docs.akash.network); and the target 
 
 The `main` branch contains new features and is under active development; the `mainnet/main` branch contains the current, stable release.
 
-* **stable** releases will have even minor numbers ( `v0.8.0` ) and be cut from the `mainnet/main` branch.
-* **unstable** releases will have odd minor numbers ( `v0.9.0` ) and be cut from the `main` branch.
+* **stable** releases will have even minor numbers (e.g. `v0.8.0`) and be cut from the `mainnet/main` branch.
+* **unstable** releases will have odd minor numbers (e.g. `v0.9.0`) and be cut from the `main` branch.
 
 ## Akash Suite
 
