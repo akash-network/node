@@ -228,12 +228,14 @@ func (sdl *v2_1) validate() error {
 				}
 			}
 
-			attr := make(map[string]string)
-			mounts := make(map[string]string)
-
 			if svc.Params != nil {
+				mounts := make(map[string]string)
+
 				for name, params := range svc.Params.Storage {
-					if _, exists := volumes[name]; !exists {
+
+					volume, exists := volumes[name]
+
+					if !exists {
 						return fmt.Errorf(
 							"%w: service \"%s\" references to no-existing compute volume named \"%s\"",
 							errSDLInvalid,
@@ -251,42 +253,51 @@ func (sdl *v2_1) validate() error {
 						)
 					}
 
-					attr[StorageAttributeMount] = params.Mount
-					attr[StorageAttributeReadOnly] = strconv.FormatBool(params.ReadOnly)
-
-					mount := attr[StorageAttributeMount]
-					if vlname, exists := mounts[mount]; exists {
-						if mount == "" {
+					if vlname, exists := mounts[params.Mount]; exists {
+						if params.Mount == "" {
 							return errStorageMultipleRootEphemeral
 						}
 
 						return fmt.Errorf(
 							"%w: mount %q already in use by volume %q",
 							errStorageDupMountPoint,
-							mount,
+							params.Mount,
 							vlname,
 						)
 					}
 
-					mounts[mount] = name
-				}
-			}
+					mounts[params.Mount] = name
 
-			for name, volume := range volumes {
-				for _, nd := range types.Attributes(volume.Attributes) {
-					attr[nd.Key] = nd.Value
-				}
+					attr := make(map[string]string)
+					attr[StorageAttributeMount] = params.Mount
+					attr[StorageAttributeReadOnly] = strconv.FormatBool(params.ReadOnly)
 
-				persistent, _ := strconv.ParseBool(attr[StorageAttributePersistent])
+					for _, nd := range types.Attributes(volume.Attributes) {
+						attr[nd.Key] = nd.Value
+					}
 
-				if persistent && attr[StorageAttributeMount] == "" {
-					return fmt.Errorf(
-						"%w: compute.storage.%s has persistent=true which requires service.%s.params.storage.%s to have mount",
-						errSDLInvalid,
-						name,
-						svcName,
-						name,
-					)
+					persistent, _ := strconv.ParseBool(attr[StorageAttributePersistent])
+					class := attr[StorageAttributeClass]
+
+					if persistent && params.Mount == "" {
+						return fmt.Errorf(
+							"%w: compute.storage.%s has persistent=true which requires service.%s.params.storage.%s to have mount",
+							errSDLInvalid,
+							name,
+							svcName,
+							name,
+						)
+					}
+
+					if class == StorageClassRAM && params.ReadOnly {
+						return fmt.Errorf(
+							"%w: services.%s.params.storage.%s has readOnly=true which is not allowed for storage class \"%s\"",
+							errSDLInvalid,
+							svcName,
+							name,
+							class,
+						)
+					}
 				}
 			}
 		}
