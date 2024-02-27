@@ -17,7 +17,7 @@ type v2GPUNvidia struct {
 func (sdl *v2GPUNvidia) String() string {
 	key := sdl.Model
 	if sdl.RAM != nil {
-		key += "/" + sdl.RAM.StringWithSuffix("Gi")
+		key += "/ram/" + sdl.RAM.StringWithSuffix("Gi")
 	}
 
 	return key

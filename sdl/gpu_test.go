@@ -69,7 +69,7 @@ attributes:
 	require.NoError(t, err)
 	require.Equal(t, gpuQuantity(1), p.Units)
 	require.Equal(t, 1, len(p.Attributes))
-	require.Equal(t, "vendor/nvidia/model/a100/80Gi", p.Attributes[0].Key)
+	require.Equal(t, "vendor/nvidia/model/a100/ram/80Gi", p.Attributes[0].Key)
 	require.Equal(t, "true", p.Attributes[0].Value)
 }
 
@@ -105,9 +105,9 @@ attributes:
 	require.NoError(t, err)
 	require.Equal(t, gpuQuantity(1), p.Units)
 	require.Equal(t, 2, len(p.Attributes))
-	require.Equal(t, "vendor/nvidia/model/a100/40Gi", p.Attributes[0].Key)
+	require.Equal(t, "vendor/nvidia/model/a100/ram/40Gi", p.Attributes[0].Key)
 	require.Equal(t, "true", p.Attributes[0].Value)
-	require.Equal(t, "vendor/nvidia/model/a100/80Gi", p.Attributes[1].Key)
+	require.Equal(t, "vendor/nvidia/model/a100/ram/80Gi", p.Attributes[1].Key)
 	require.Equal(t, "true", p.Attributes[1].Value)
 }
 
@@ -129,7 +129,7 @@ attributes:
 	require.Equal(t, 2, len(p.Attributes))
 	require.Equal(t, "vendor/nvidia/model/a100", p.Attributes[0].Key)
 	require.Equal(t, "true", p.Attributes[0].Value)
-	require.Equal(t, "vendor/nvidia/model/a100/80Gi", p.Attributes[1].Key)
+	require.Equal(t, "vendor/nvidia/model/a100/ram/80Gi", p.Attributes[1].Key)
 	require.Equal(t, "true", p.Attributes[1].Value)
 }
 
