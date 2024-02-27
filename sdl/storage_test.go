@@ -140,6 +140,38 @@ func TestStorage_PersistentClass(t *testing.T) {
 	require.Equal(t, p[0].Attributes[0].Value, "beta1")
 }
 
+func TestStorage_RAMClass_Valid(t *testing.T) {
+	var stream = `
+- size: 1Gi
+  attributes:
+    persistent: false
+    class: ram
+`
+
+	var p v2ResourceStorageArray
+
+	err := yaml.Unmarshal([]byte(stream), &p)
+	require.NoError(t, err)
+	require.Len(t, p[0].Attributes, 2)
+
+	require.Equal(t, p[0].Attributes[0].Key, "class")
+	require.Equal(t, p[0].Attributes[0].Value, "ram")
+}
+
+func TestStorage_RamClass_Invalid(t *testing.T) {
+	var stream = `
+- size: 1Gi
+  attributes:
+    persistent: true
+    class: ram
+`
+
+	var p v2ResourceStorageArray
+
+	err := yaml.Unmarshal([]byte(stream), &p)
+	require.Error(t, err)
+}
+
 func TestStorage_StableSort(t *testing.T) {
 	storage := v2ResourceStorageArray{
 		{

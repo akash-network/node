@@ -17,6 +17,7 @@ const (
 	StorageAttributeMount      = "mount"
 	StorageAttributeReadOnly   = "readOnly" // we might not need it at this point of time
 	StorageClassDefault        = "default"
+	StorageClassRAM            = "ram"
 )
 
 var (
@@ -25,6 +26,7 @@ var (
 	errStorageMultipleRootEphemeral = errors.New("sdl: multiple root ephemeral storages are not allowed")
 	errStorageDuplicatedVolumeName  = errors.New("sdl: duplicated volume name")
 	errStorageEphemeralClass        = errors.New("sdl: ephemeral storage should not set attribute class")
+	errStorageRAMClass              = errors.New("sdl: ram storage class cannot be persistent")
 )
 
 type v2StorageAttributes types.Attributes
@@ -45,10 +47,11 @@ type v2ResourceStorageArray []v2ResourceStorage
 type validateAttrFn func(string, *string) error
 
 var allowedStorageClasses = map[string]bool{
-	"default": true,
-	"beta1":   true,
-	"beta2":   true,
-	"beta3":   true,
+	"default":       true,
+	"beta1":         true,
+	"beta2":         true,
+	"beta3":         true,
+	StorageClassRAM: true,
 }
 
 var validateStorageAttributes = map[string]validateAttrFn{
@@ -162,11 +165,20 @@ func (sdl *v2StorageAttributes) UnmarshalYAML(node *yaml.Node) error {
 
 	persistent := res[StorageAttributePersistent]
 	class := res[StorageAttributeClass]
-	if persistent == valueFalse && class != "" {
-		return errStorageEphemeralClass
-	}
-	if persistent == valueTrue && class == "" {
-		res[StorageAttributeClass] = StorageClassDefault
+
+	switch class {
+	case "":
+		if persistent == valueTrue {
+			res[StorageAttributeClass] = StorageClassDefault
+		}
+	case StorageClassRAM:
+		if persistent != valueFalse {
+			return errStorageRAMClass
+		}
+	default:
+		if persistent == valueFalse {
+			return errStorageEphemeralClass
+		}
 	}
 
 	for k, v := range res {
