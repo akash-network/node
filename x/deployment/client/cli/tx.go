@@ -145,7 +145,7 @@ func cmdCreate(key string) *cobra.Command {
 				return err
 			}
 
-			return cctx.PrintProto(resp)
+			return cl.PrintMessage(resp)
 		},
 	}
 
@@ -201,7 +201,7 @@ func cmdDeposit(key string) *cobra.Command {
 				return err
 			}
 
-			return cctx.PrintProto(resp)
+			return cl.PrintMessage(resp)
 		},
 	}
 
@@ -242,7 +242,7 @@ func cmdClose(key string) *cobra.Command {
 				return err
 			}
 
-			return cctx.PrintProto(resp)
+			return cl.PrintMessage(resp)
 		},
 	}
 
@@ -321,7 +321,7 @@ func cmdUpdate(key string) *cobra.Command {
 				return err
 			}
 
-			return cctx.PrintProto(resp)
+			return cl.PrintMessage(resp)
 		},
 	}
 
@@ -383,7 +383,7 @@ func cmdGroupClose(_ string) *cobra.Command {
 				return err
 			}
 
-			return cctx.PrintProto(resp)
+			return cl.PrintMessage(resp)
 		},
 	}
 
@@ -431,7 +431,7 @@ func cmdGroupPause(_ string) *cobra.Command {
 				return err
 			}
 
-			return cctx.PrintProto(resp)
+			return cl.PrintMessage(resp)
 		},
 	}
 
@@ -479,7 +479,7 @@ func cmdGroupStart(_ string) *cobra.Command {
 				return err
 			}
 
-			return cctx.PrintProto(resp)
+			return cl.PrintMessage(resp)
 		},
 	}
 
@@ -562,7 +562,7 @@ Examples:
 				return err
 			}
 
-			return cctx.PrintProto(resp)
+			return cl.PrintMessage(resp)
 		},
 	}
 
@@ -611,7 +611,7 @@ Example:
 				return err
 			}
 
-			return cctx.PrintProto(resp)
+			return cl.PrintMessage(resp)
 		},
 	}
 

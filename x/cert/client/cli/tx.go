@@ -162,7 +162,7 @@ func doPublishCmd(cmd *cobra.Command) error {
 		return err
 	}
 
-	return cctx.PrintProto(resp)
+	return cl.PrintMessage(resp)
 }
 
 func doRevokeCmd(cmd *cobra.Command) error {
@@ -235,5 +235,5 @@ func doRevokeCmd(cmd *cobra.Command) error {
 		return err
 	}
 
-	return cctx.PrintProto(resp)
+	return cl.PrintMessage(resp)
 }

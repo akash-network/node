@@ -70,7 +70,7 @@ func cmdCreate(key string) *cobra.Command {
 				return err
 			}
 
-			return cctx.PrintProto(resp)
+			return cl.PrintMessage(resp)
 		},
 	}
 
@@ -118,7 +118,7 @@ func cmdUpdate(key string) *cobra.Command {
 				return err
 			}
 
-			return cctx.PrintProto(resp)
+			return cl.PrintMessage(resp)
 		},
 	}
 

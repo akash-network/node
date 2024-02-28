@@ -98,7 +98,7 @@ func cmdBidCreate(key string) *cobra.Command {
 				return err
 			}
 
-			return cctx.PrintProto(resp)
+			return cl.PrintMessage(resp)
 		},
 	}
 
@@ -146,7 +146,7 @@ func cmdBidClose(key string) *cobra.Command {
 				return err
 			}
 
-			return cctx.PrintProto(resp)
+			return cl.PrintMessage(resp)
 		},
 	}
 
@@ -207,7 +207,7 @@ func cmdLeaseCreate(key string) *cobra.Command {
 				return err
 			}
 
-			return cctx.PrintProto(resp)
+			return cl.PrintMessage(resp)
 		},
 	}
 
@@ -254,7 +254,7 @@ func cmdLeaseWithdraw(key string) *cobra.Command {
 				return err
 			}
 
-			return cctx.PrintProto(resp)
+			return cl.PrintMessage(resp)
 		},
 	}
 
@@ -301,7 +301,7 @@ func cmdLeaseClose(key string) *cobra.Command {
 				return err
 			}
 
-			return cctx.PrintProto(resp)
+			return cl.PrintMessage(resp)
 		},
 	}
 
