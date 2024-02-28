@@ -99,7 +99,7 @@ func cmdCreateProviderAttributes() *cobra.Command {
 				return err
 			}
 
-			return cctx.PrintProto(resp)
+			return cl.PrintMessage(resp)
 		},
 	}
 
@@ -151,7 +151,7 @@ func cmdDeleteProviderAttributes() *cobra.Command {
 				return err
 			}
 
-			return cctx.PrintProto(resp)
+			return cl.PrintMessage(resp)
 		},
 	}
 
