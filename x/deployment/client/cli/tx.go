@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	cltypes "github.com/akash-network/akash-api/go/node/client/types"
 	"github.com/spf13/cobra"
 
 	tmrpc "github.com/tendermint/tendermint/rpc/core/types"
@@ -63,7 +64,12 @@ func cmdCreate(key string) *cobra.Command {
 				return err
 			}
 
-			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+			opts, err := cltypes.ClientOptionsFromFlags(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			cl, err := aclient.DiscoverClient(ctx, cctx, opts...)
 			if err != nil {
 				return err
 			}
@@ -170,7 +176,12 @@ func cmdDeposit(key string) *cobra.Command {
 				return err
 			}
 
-			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+			opts, err := cltypes.ClientOptionsFromFlags(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			cl, err := aclient.DiscoverClient(ctx, cctx, opts...)
 			if err != nil {
 				return err
 			}
@@ -225,7 +236,12 @@ func cmdClose(key string) *cobra.Command {
 				return err
 			}
 
-			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+			opts, err := cltypes.ClientOptionsFromFlags(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			cl, err := aclient.DiscoverClient(ctx, cctx, opts...)
 			if err != nil {
 				return err
 			}
@@ -264,7 +280,12 @@ func cmdUpdate(key string) *cobra.Command {
 				return err
 			}
 
-			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+			opts, err := cltypes.ClientOptionsFromFlags(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			cl, err := aclient.DiscoverClient(ctx, cctx, opts...)
 			if err != nil {
 				return err
 			}
@@ -360,7 +381,12 @@ func cmdGroupClose(_ string) *cobra.Command {
 				return err
 			}
 
-			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+			opts, err := cltypes.ClientOptionsFromFlags(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			cl, err := aclient.DiscoverClient(ctx, cctx, opts...)
 			if err != nil {
 				return err
 			}
@@ -408,7 +434,12 @@ func cmdGroupPause(_ string) *cobra.Command {
 				return err
 			}
 
-			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+			opts, err := cltypes.ClientOptionsFromFlags(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			cl, err := aclient.DiscoverClient(ctx, cctx, opts...)
 			if err != nil {
 				return err
 			}
@@ -456,7 +487,12 @@ func cmdGroupStart(_ string) *cobra.Command {
 				return err
 			}
 
-			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+			opts, err := cltypes.ClientOptionsFromFlags(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			cl, err := aclient.DiscoverClient(ctx, cctx, opts...)
 			if err != nil {
 				return err
 			}
@@ -526,7 +562,12 @@ Examples:
 				return err
 			}
 
-			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+			opts, err := cltypes.ClientOptionsFromFlags(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			cl, err := aclient.DiscoverClient(ctx, cctx, opts...)
 			if err != nil {
 				return err
 			}
@@ -592,7 +633,12 @@ Example:
 				return err
 			}
 
-			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+			opts, err := cltypes.ClientOptionsFromFlags(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			cl, err := aclient.DiscoverClient(ctx, cctx, opts...)
 			if err != nil {
 				return err
 			}

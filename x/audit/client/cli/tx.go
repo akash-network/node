@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 
+	cltypes "github.com/akash-network/akash-api/go/node/client/types"
 	"github.com/spf13/cobra"
 
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
@@ -65,7 +66,12 @@ func cmdCreateProviderAttributes() *cobra.Command {
 				return err
 			}
 
-			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+			opts, err := cltypes.ClientOptionsFromFlags(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			cl, err := aclient.DiscoverClient(ctx, cctx, opts...)
 			if err != nil {
 				return err
 			}
@@ -121,7 +127,12 @@ func cmdDeleteProviderAttributes() *cobra.Command {
 				return err
 			}
 
-			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+			opts, err := cltypes.ClientOptionsFromFlags(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			cl, err := aclient.DiscoverClient(ctx, cctx, opts...)
 			if err != nil {
 				return err
 			}
