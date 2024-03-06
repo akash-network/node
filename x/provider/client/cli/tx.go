@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 
+	cltypes "github.com/akash-network/akash-api/go/node/client/types"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -42,7 +43,12 @@ func cmdCreate(key string) *cobra.Command {
 				return err
 			}
 
-			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+			opts, err := cltypes.ClientOptionsFromFlags(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			cl, err := aclient.DiscoverClient(ctx, cctx, opts...)
 			if err != nil {
 				return err
 			}
@@ -92,7 +98,12 @@ func cmdUpdate(key string) *cobra.Command {
 				return err
 			}
 
-			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+			opts, err := cltypes.ClientOptionsFromFlags(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			cl, err := aclient.DiscoverClient(ctx, cctx, opts...)
 			if err != nil {
 				return err
 			}

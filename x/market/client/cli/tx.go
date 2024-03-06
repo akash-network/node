@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 
+	cltypes "github.com/akash-network/akash-api/go/node/client/types"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -57,7 +58,12 @@ func cmdBidCreate(key string) *cobra.Command {
 				return err
 			}
 
-			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+			opts, err := cltypes.ClientOptionsFromFlags(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			cl, err := aclient.DiscoverClient(ctx, cctx, opts...)
 			if err != nil {
 				return err
 			}
@@ -123,7 +129,12 @@ func cmdBidClose(key string) *cobra.Command {
 				return err
 			}
 
-			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+			opts, err := cltypes.ClientOptionsFromFlags(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			cl, err := aclient.DiscoverClient(ctx, cctx, opts...)
 			if err != nil {
 				return err
 			}
@@ -184,7 +195,12 @@ func cmdLeaseCreate(key string) *cobra.Command {
 				return err
 			}
 
-			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+			opts, err := cltypes.ClientOptionsFromFlags(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			cl, err := aclient.DiscoverClient(ctx, cctx, opts...)
 			if err != nil {
 				return err
 			}
@@ -231,7 +247,12 @@ func cmdLeaseWithdraw(key string) *cobra.Command {
 				return err
 			}
 
-			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+			opts, err := cltypes.ClientOptionsFromFlags(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			cl, err := aclient.DiscoverClient(ctx, cctx, opts...)
 			if err != nil {
 				return err
 			}
@@ -278,7 +299,12 @@ func cmdLeaseClose(key string) *cobra.Command {
 				return err
 			}
 
-			cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+			opts, err := cltypes.ClientOptionsFromFlags(cmd.Flags())
+			if err != nil {
+				return err
+			}
+
+			cl, err := aclient.DiscoverClient(ctx, cctx, opts...)
 			if err != nil {
 				return err
 			}

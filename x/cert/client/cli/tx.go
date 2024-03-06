@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"time"
 
+	cltypes "github.com/akash-network/akash-api/go/node/client/types"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
@@ -152,7 +153,12 @@ func doPublishCmd(cmd *cobra.Command) error {
 
 	}
 
-	cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+	opts, err := cltypes.ClientOptionsFromFlags(cmd.Flags())
+	if err != nil {
+		return err
+	}
+
+	cl, err := aclient.DiscoverClient(ctx, cctx, opts...)
 	if err != nil {
 		return err
 	}
@@ -208,7 +214,12 @@ func doRevokeCmd(cmd *cobra.Command) error {
 
 	ctx := cmd.Context()
 
-	cl, err := aclient.DiscoverClient(ctx, cctx, cmd.Flags())
+	opts, err := cltypes.ClientOptionsFromFlags(cmd.Flags())
+	if err != nil {
+		return err
+	}
+
+	cl, err := aclient.DiscoverClient(ctx, cctx, opts...)
 	if err != nil {
 		return err
 	}

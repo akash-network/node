@@ -20,7 +20,9 @@ type certificateCLISuite struct {
 }
 
 func (s *certificateCLISuite) TestGeneratePublishAndRevokeServer() {
-	result, err := cli.TxGenerateServerExec(s.GoContextForTest(), s.ContextForTest(), s.WalletForTest(), testHost)
+	result, err := cli.TxGenerateServerExec(s.GoContextForTest(), s.ContextForTest(), s.WalletForTest(),
+		testHost,
+		fmt.Sprintf("--fees=%d%s", 1000, s.Config().BondDenom))
 	require.NoError(s.T(), err)
 	require.NotNil(s.T(), result)
 
