@@ -12,7 +12,7 @@
 |   escrow   |       2 |
 |    agov    |       1 |
 | inflation  |       1 |
-|   market   |       4 |
+|   market   |       5 |
 |  provider  |       2 |
 |  astaking  |       1 |
 |    take    |       1 |
@@ -42,6 +42,14 @@ Goal of the upgrade here
 
 Add new upgrades after this line based on the template above
 -----
+
+##### v0.32.0
+
+1. remove checking if provider has active leases during provider update transactions. This check was iterating thru all existing leases on the network causing gas and thus transaction fees go to up to 3AKT which is way above desired values. Initial intention of check was to prevent provider changing attributes that is in use by active leases. Akash Network team will reintroduce check by adding secondary indexes in future network upgrades.
+2. remove secondary index for market store which was never user.
+
+- Migrations
+    - market `4 -> 5`
 
 ##### v0.30.0
 

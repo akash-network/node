@@ -375,6 +375,7 @@ func TestUpgrade(t *testing.T) {
 			postUpgradeParams.ChainID = cfg.ChainID
 			postUpgradeParams.Node = "tcp://127.0.0.1:26657"
 			postUpgradeParams.KeyringBackend = "test"
+			postUpgradeParams.From = cfg.Work.Key
 
 			cmdr = valCmd
 

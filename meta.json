@@ -19,6 +19,11 @@
             "skipped": false,
             "from_binary": "v0.28.2",
             "from_version": "v0.28.0"
+        },
+        "v0.32.0": {
+            "skipped": false,
+            "from_binary": "v0.30.3",
+            "from_version": "v0.30.0"
         }
     }
 }

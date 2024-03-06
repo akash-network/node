@@ -9,7 +9,6 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/stretchr/testify/require"
 
-	mtypes "github.com/akash-network/akash-api/go/node/market/v1beta4"
 	types "github.com/akash-network/akash-api/go/node/provider/v1beta3"
 
 	akashtypes "github.com/akash-network/akash-api/go/node/types/v1beta3"
@@ -224,42 +223,10 @@ func TestProviderUpdateAttributes(t *testing.T) {
 	err := suite.keeper.Create(suite.ctx, types.Provider(*createMsg))
 	require.NoError(t, err)
 
-	group := testutil.DeploymentGroup(t, testutil.DeploymentID(t), 0)
-
-	group.GroupSpec.Resources = testutil.Resources(t)
-	group.GroupSpec.Requirements = akashtypes.PlacementRequirements{
-		Attributes: createMsg.Attributes,
-	}
-
-	order, err := suite.mkeeper.CreateOrder(suite.ctx, group.ID(), group.GroupSpec)
-	require.NoError(t, err)
-
-	price := testutil.DecCoin(t)
-	roffer := mtypes.ResourceOfferFromRU(group.GroupSpec.Resources)
-
-	bid, err := suite.mkeeper.CreateBid(suite.ctx, order.ID(), addr, price, roffer)
-	require.NoError(t, err)
-
-	suite.mkeeper.CreateLease(suite.ctx, bid)
-
+	updateMsg.Attributes = nil
 	res, err := suite.handler(suite.ctx, updateMsg)
 	require.NoError(t, err)
 	require.NotNil(t, res)
-
-	t.Run("ensure event created", func(t *testing.T) {
-
-		iev := testutil.ParseProviderEvent(t, res.Events[4:])
-		require.IsType(t, types.EventProviderUpdated{}, iev)
-
-		dev := iev.(types.EventProviderUpdated)
-
-		require.Equal(t, updateMsg.Owner, dev.Owner.String())
-	})
-
-	updateMsg.Attributes = nil
-	res, err = suite.handler(suite.ctx, updateMsg)
-	require.Error(t, err, types.ErrIncompatibleAttributes.Error())
-	require.Nil(t, res)
 }
 
 func TestProviderDeleteExisting(t *testing.T) {
