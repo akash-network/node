@@ -123,6 +123,15 @@ func (sdl *v2_1) buildGroups() error {
 				msvc.Params = params
 			}
 
+			if svc.Credentials != nil {
+				msvc.Credentials = &manifest.ServiceImageCredentials{
+					Host:     svc.Credentials.Host,
+					Email:    svc.Credentials.Email,
+					Username: svc.Credentials.Username,
+					Password: svc.Credentials.Password,
+				}
+			}
+
 			group.mgroup.Services = append(group.mgroup.Services, msvc)
 		}
 	}

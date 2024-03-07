@@ -167,12 +167,20 @@ type v2ServiceParams struct {
 
 type v2Service struct {
 	Image        string
-	Command      []string         `yaml:",omitempty"`
-	Args         []string         `yaml:",omitempty"`
-	Env          []string         `yaml:",omitempty"`
-	Expose       v2Exposes        `yaml:",omitempty"`
-	Dependencies []v2Dependency   `yaml:",omitempty"`
-	Params       *v2ServiceParams `yaml:",omitempty"`
+	Command      []string              `yaml:",omitempty"`
+	Args         []string              `yaml:",omitempty"`
+	Env          []string              `yaml:",omitempty"`
+	Expose       v2Exposes             `yaml:",omitempty"`
+	Dependencies []v2Dependency        `yaml:",omitempty"`
+	Params       *v2ServiceParams      `yaml:",omitempty"`
+	Credentials  *v2ServiceCredentials `yaml:",omitempty"`
+}
+
+type v2ServiceCredentials struct {
+	Host     string `yaml:",omitempty"`
+	Email    string `yaml:",omitempty"`
+	Username string `yaml:",omitempty"`
+	Password string `yaml:",omitempty"`
 }
 
 type v2ServiceDeployment struct {

@@ -330,6 +330,33 @@ func Test_V2_1_Parse_simple(t *testing.T) {
 			},
 		},
 	}, mani.GetGroups()[0])
+
+	assert.Nil(t, mani.GetGroups()[0].Services[0].Credentials)
+
+}
+
+func Test_V2_1_Parse_credentials(t *testing.T) {
+	sdl, err := ReadFile("./_testdata/v2.1-credentials.yaml")
+	require.NoError(t, err)
+
+	mani, err := sdl.Manifest()
+	require.NoError(t, err)
+
+	assert.Len(t, mani.GetGroups(), 1)
+
+	grp := mani.GetGroups()[0]
+	assert.Len(t, grp.Services, 1)
+
+	svc := grp.Services[0]
+
+	assert.NotNil(t, svc)
+
+	creds := svc.Credentials
+	assert.NotNil(t, creds)
+
+	assert.Equal(t, "https://test.com/v1", creds.Host)
+	assert.Equal(t, "foo", creds.Username)
+	assert.Equal(t, "foo", creds.Password)
 }
 
 func Test_v2_1_Parse_ProfileNameNotServiceName(t *testing.T) {
