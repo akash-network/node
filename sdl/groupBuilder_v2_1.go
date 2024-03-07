@@ -2,6 +2,7 @@ package sdl
 
 import (
 	"sort"
+	"strings"
 
 	manifest "github.com/akash-network/akash-api/go/manifest/v2beta2"
 	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
@@ -121,6 +122,15 @@ func (sdl *v2_1) buildGroups() error {
 				}
 
 				msvc.Params = params
+			}
+
+			if svc.Credentials != nil {
+				msvc.Credentials = &manifest.ServiceImageCredentials{
+					Host:     strings.TrimSpace(svc.Credentials.Host),
+					Email:    strings.TrimSpace(svc.Credentials.Email),
+					Username: strings.TrimSpace(svc.Credentials.Username),
+					Password: strings.TrimSpace(svc.Credentials.Password),
+				}
 			}
 
 			group.mgroup.Services = append(group.mgroup.Services, msvc)

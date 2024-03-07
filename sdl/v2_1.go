@@ -155,6 +155,18 @@ func (sdl *v2_1) validate() error {
 				)
 			}
 
+			if svc.Credentials != nil {
+				if err := svc.Credentials.validate(); err != nil {
+					return fmt.Errorf(
+						"%w: %v.%v: %v",
+						errSDLInvalid,
+						svcName,
+						placementName,
+						err,
+					)
+				}
+			}
+
 			for _, serviceExpose := range svc.Expose {
 				for _, to := range serviceExpose.To {
 					// Check to see if an IP endpoint is also specified
