@@ -7,8 +7,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	mtypes "github.com/akash-network/akash-api/go/node/market/v1beta4"
-
 	types "github.com/akash-network/akash-api/go/node/provider/v1beta3"
 
 	mkeeper "github.com/akash-network/node/x/market/keeper"
@@ -62,34 +60,9 @@ func (ms msgServer) UpdateProvider(goCtx context.Context, msg *types.MsgUpdatePr
 	}
 
 	owner, _ := sdk.AccAddressFromBech32(msg.Owner)
-	prov, found := ms.provider.Get(ctx, owner)
+	_, found := ms.provider.Get(ctx, owner)
 	if !found {
 		return nil, fmt.Errorf("%w: id: %s", types.ErrProviderNotFound, msg.Owner)
-	}
-
-	// all filtering code below is madness!. should make an index to not melt the cpu
-	// TODO: use WithActiveLeases, filter by lease.Provider
-	ms.market.WithLeases(ctx, func(lease mtypes.Lease) bool {
-		if prov.Owner == lease.ID().Provider && (lease.State == mtypes.LeaseActive) {
-			var order mtypes.Order
-			order, found = ms.market.GetOrder(ctx, lease.ID().OrderID())
-			if !found {
-				err = fmt.Errorf("%w: order \"%s\" for lease \"%s\" has not been found",
-					ErrInternal,
-					order.ID(),
-					lease.ID())
-				return true
-			}
-			if !order.MatchAttributes(msg.Attributes) {
-				err = types.ErrIncompatibleAttributes
-				return true
-			}
-		}
-		return false
-	})
-
-	if err != nil {
-		return nil, err
 	}
 
 	if err := ms.provider.Update(ctx, types.Provider(*msg)); err != nil {

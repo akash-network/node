@@ -114,7 +114,7 @@ func LeaseKey(id types.LeaseID) []byte {
 	return buf.Bytes()
 }
 
-func secondaryLeaseKeyByProvider(id types.LeaseID) []byte {
+func SecondaryLeaseKeyByProvider(id types.LeaseID) []byte {
 	buf := bytes.NewBuffer(types.SecondaryLeasePrefix())
 	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Provider)))
 	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
@@ -132,7 +132,7 @@ func secondaryLeaseKeyByProvider(id types.LeaseID) []byte {
 
 func SecondaryKeysForLease(id types.LeaseID) [][]byte {
 	return [][]byte{
-		secondaryLeaseKeyByProvider(id),
+		SecondaryLeaseKeyByProvider(id),
 	}
 }
 

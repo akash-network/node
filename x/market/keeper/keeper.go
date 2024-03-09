@@ -169,11 +169,6 @@ func (k Keeper) CreateLease(ctx sdk.Context, bid types.Bid) {
 		types.NewEventLeaseCreated(lease.ID(), lease.Price).
 			ToSDKEvent(),
 	)
-
-	secondaryKeys := keys.SecondaryKeysForLease(lease.ID())
-	for _, secondaryKey := range secondaryKeys {
-		store.Set(secondaryKey, key)
-	}
 }
 
 // OnOrderMatched updates order state to matched
