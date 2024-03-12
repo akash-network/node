@@ -405,7 +405,7 @@ func TestFundedDeployment(t *testing.T) {
 	// make some payment from the escrow account
 	pid := "test_pid"
 	providerAddr := testutil.AccAddress(t)
-	rate := sdk.NewDecCoin(msg.Deposit.Denom, sdk.NewInt(12500000))
+	rate := sdk.NewDecCoin(msg.Deposit.Denom, suite.defaultDeposit.Amount)
 	require.NoError(t, suite.EscrowKeeper().PaymentCreate(suite.ctx, accID, pid, providerAddr, rate))
 	ctx := suite.ctx.WithBlockHeight(acc.SettledAt + 1)
 	require.NoError(t, suite.EscrowKeeper().PaymentWithdraw(ctx, accID, pid))
@@ -413,8 +413,8 @@ func TestFundedDeployment(t *testing.T) {
 	// ensure that the escrow account's state gets updated correctly
 	acc, err = suite.EscrowKeeper().GetAccount(ctx, accID)
 	require.NoError(t, err)
-	require.Equal(t, sdk.NewDecCoin(msg.Deposit.Denom, sdk.NewInt(2500000)), acc.Balance)
-	require.Equal(t, sdk.NewDecCoin(msg.Deposit.Denom, sdk.ZeroInt()), acc.Funds)
+	require.Equal(t, sdk.NewDecCoin(msg.Deposit.Denom, suite.defaultDeposit.Amount), acc.Balance)
+	require.Equal(t, sdk.NewDecCoin(msg.Deposit.Denom, suite.defaultDeposit.Amount), acc.Funds)
 
 	// close the deployment
 	closeMsg := &types.MsgCloseDeployment{ID: deployment.ID()}
