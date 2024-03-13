@@ -83,7 +83,7 @@ func cmdBidCreate(key string) *cobra.Command {
 				return err
 			}
 
-			deposit, err := common.DepositFromFlags(cmd.Flags())
+			deposit, err := common.DetectDeposit(ctx, cmd.Flags(), cl.Query(), "market", "BidMinDeposit")
 			if err != nil {
 				return err
 			}
@@ -111,7 +111,7 @@ func cmdBidCreate(key string) *cobra.Command {
 	flags.AddTxFlagsToCmd(cmd)
 	AddOrderIDFlags(cmd.Flags())
 	cmd.Flags().String("price", "", "Bid Price")
-	common.AddDepositFlags(cmd.Flags(), DefaultDeposit)
+	common.AddDepositFlags(cmd.Flags())
 
 	return cmd
 }

@@ -10,7 +10,6 @@ import (
 
 	cltypes "github.com/akash-network/akash-api/go/node/client/types"
 	"github.com/spf13/cobra"
-
 	tmrpc "github.com/tendermint/tendermint/rpc/core/types"
 
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
@@ -120,7 +119,7 @@ func cmdCreate(key string) *cobra.Command {
 				return err
 			}
 
-			deposit, err := common.DepositFromFlags(cmd.Flags())
+			deposit, err := common.DetectDeposit(ctx, cmd.Flags(), cl.Query(), "deployment", "MinDeposits")
 			if err != nil {
 				return err
 			}
@@ -157,8 +156,8 @@ func cmdCreate(key string) *cobra.Command {
 
 	flags.AddTxFlagsToCmd(cmd)
 	AddDeploymentIDFlags(cmd.Flags())
-	common.AddDepositFlags(cmd.Flags(), DefaultDeposit)
 	AddDepositorFlag(cmd.Flags())
+	common.AddDepositFlags(cmd.Flags())
 
 	return cmd
 }
