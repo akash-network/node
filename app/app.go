@@ -85,7 +85,10 @@ import (
 	ibc "github.com/cosmos/ibc-go/v4/modules/core"
 	porttypes "github.com/cosmos/ibc-go/v4/modules/core/05-port/types"
 
+	ica "github.com/cosmos/ibc-go/v4/modules/apps/27-interchain-accounts"
 	icacontrollertypes "github.com/cosmos/ibc-go/v4/modules/apps/27-interchain-accounts/controller/types"
+	icahost "github.com/cosmos/ibc-go/v4/modules/apps/27-interchain-accounts/host"
+	icahostkeeper "github.com/cosmos/ibc-go/v4/modules/apps/27-interchain-accounts/host/keeper"
 	icahosttypes "github.com/cosmos/ibc-go/v4/modules/apps/27-interchain-accounts/host/types"
 	ibctransferkeeper "github.com/cosmos/ibc-go/v4/modules/apps/transfer/keeper"
 	ibctransfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
@@ -189,6 +192,7 @@ func NewApp(
 
 	scopedIBCKeeper := app.Keepers.Cosmos.Cap.ScopeToModule(ibchost.ModuleName)
 	scopedTransferKeeper := app.Keepers.Cosmos.Cap.ScopeToModule(ibctransfertypes.ModuleName)
+	scopedICAHostKeeper := app.Keepers.Cosmos.Cap.ScopeToModule(icahosttypes.SubModuleName)
 
 	// seal the capability keeper so all persistent capabilities are loaded in-memory and prevent
 	// any further modules from creating scoped sub-keepers.
@@ -340,9 +344,24 @@ func NewApp(
 	transferModule := transfer.NewAppModule(app.Keepers.Cosmos.Transfer)
 	transferIBCModule := transfer.NewIBCModule(app.Keepers.Cosmos.Transfer)
 
+	app.Keepers.Cosmos.ICAHostKeeper = icahostkeeper.NewKeeper(
+		appCodec,
+		app.keys[icahosttypes.StoreKey],
+		app.GetSubspace(icahosttypes.SubModuleName),
+		app.Keepers.Cosmos.IBC.ChannelKeeper,
+		&app.Keepers.Cosmos.IBC.PortKeeper,
+		app.Keepers.Cosmos.Acct,
+		app.Keepers.Cosmos.ScopedICAHostKeeper,
+		app.MsgServiceRouter(),
+	)
+
+	var icaHostStack porttypes.IBCModule
+	icaHostStack = icahost.NewIBCModule(app.Keepers.Cosmos.ICAHostKeeper)
+
 	// Create static IBC router, add transfer route, then set and seal it
 	ibcRouter := porttypes.NewRouter()
-	ibcRouter.AddRoute(ibctransfertypes.ModuleName, transferIBCModule)
+	ibcRouter.AddRoute(ibctransfertypes.ModuleName, transferIBCModule).
+		AddRoute(icahosttypes.SubModuleName, icaHostStack)
 
 	app.Keepers.Cosmos.IBC.SetRouter(ibcRouter)
 
@@ -385,6 +404,7 @@ func NewApp(
 			ibc.NewAppModule(app.Keepers.Cosmos.IBC),
 			params.NewAppModule(app.Keepers.Cosmos.Params),
 			transferModule,
+			ica.NewAppModule(nil, &app.Keepers.Cosmos.ICAHostKeeper),
 		}, app.akashAppModules()...)...,
 	)
 
@@ -482,6 +502,7 @@ func NewApp(
 
 	app.Keepers.Cosmos.ScopedIBCKeeper = scopedIBCKeeper
 	app.Keepers.Cosmos.ScopedTransferKeeper = scopedTransferKeeper
+	app.Keepers.Cosmos.ScopedICAHostKeeper = scopedICAHostKeeper
 
 	return app
 }

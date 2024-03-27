@@ -20,6 +20,7 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 
+	icatypes "github.com/cosmos/ibc-go/v4/modules/apps/27-interchain-accounts/types"
 	transfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
 	ibchost "github.com/cosmos/ibc-go/v4/modules/core/24-host"
 
@@ -258,6 +259,7 @@ func (app *AkashApp) akashBeginBlockModules() []string {
 		astaking.ModuleName,
 		transfertypes.ModuleName,
 		ibchost.ModuleName,
+		icatypes.ModuleName,
 		feegrant.ModuleName,
 	}
 }
@@ -292,6 +294,7 @@ func (app *AkashApp) akashEndBlockModules() []string {
 		evidencetypes.ModuleName,
 		transfertypes.ModuleName,
 		ibchost.ModuleName,
+		icatypes.ModuleName,
 		feegrant.ModuleName,
 	}
 }
@@ -325,6 +328,7 @@ func (app *AkashApp) akashInitGenesisOrder() []string {
 		inflation.ModuleName,
 		astaking.ModuleName,
 		agov.ModuleName,
+		icatypes.ModuleName,
 		genutiltypes.ModuleName,
 	}
 }
