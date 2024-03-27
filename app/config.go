@@ -37,6 +37,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	upgradeclient "github.com/cosmos/cosmos-sdk/x/upgrade/client"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
+	ica "github.com/cosmos/ibc-go/v4/modules/apps/27-interchain-accounts"
+	icahosttypes "github.com/cosmos/ibc-go/v4/modules/apps/27-interchain-accounts/host/types"
 	"github.com/cosmos/ibc-go/v4/modules/apps/transfer"
 	ibctransfertypes "github.com/cosmos/ibc-go/v4/modules/apps/transfer/types"
 	ibc "github.com/cosmos/ibc-go/v4/modules/core"
@@ -77,6 +79,8 @@ var mbasics = module.NewBasicManager(
 		upgrade.AppModuleBasic{},
 		evidence.AppModuleBasic{},
 		transfer.AppModuleBasic{},
+		transfer.AppModuleBasic{},
+		ica.AppModuleBasic{},
 		vesting.AppModuleBasic{},
 		feegrantmodule.AppModuleBasic{},
 	},
@@ -119,6 +123,7 @@ func kvStoreKeys() map[string]*sdk.KVStoreKey {
 			upgradetypes.StoreKey,
 			evidencetypes.StoreKey,
 			ibctransfertypes.StoreKey,
+			icahosttypes.StoreKey,
 			capabilitytypes.StoreKey,
 		},
 			akashKVStoreKeys()...,

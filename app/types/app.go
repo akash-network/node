@@ -20,6 +20,7 @@ import (
 	slashingkeeper "github.com/cosmos/cosmos-sdk/x/slashing/keeper"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	upgradekeeper "github.com/cosmos/cosmos-sdk/x/upgrade/keeper"
+	icahostkeeper "github.com/cosmos/ibc-go/v4/modules/apps/27-interchain-accounts/host/keeper"
 	ibctransferkeeper "github.com/cosmos/ibc-go/v4/modules/apps/transfer/keeper"
 	ibckeeper "github.com/cosmos/ibc-go/v4/modules/core/keeper"
 
@@ -55,8 +56,10 @@ type AppKeepers struct {
 		IBC                  *ibckeeper.Keeper
 		Evidence             evidencekeeper.Keeper
 		Transfer             ibctransferkeeper.Keeper
+		ICAHostKeeper        icahostkeeper.Keeper
 		ScopedIBCKeeper      capabilitykeeper.ScopedKeeper
 		ScopedTransferKeeper capabilitykeeper.ScopedKeeper
+		ScopedICAHostKeeper  capabilitykeeper.ScopedKeeper
 	}
 
 	Akash struct {
