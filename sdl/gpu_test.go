@@ -88,6 +88,41 @@ attributes:
 	require.Error(t, err)
 }
 
+func TestV2ResourceGPU_InterfaceInvalid(t *testing.T) {
+	var stream = `
+units: 1
+attributes:
+  vendor:
+    nvidia:
+      - model: a100
+        interface: pciex
+`
+	var p v2ResourceGPU
+
+	err := yaml.Unmarshal([]byte(stream), &p)
+	require.Error(t, err)
+}
+
+func TestV2ResourceGPU_RamWithInterface(t *testing.T) {
+	var stream = `
+units: 1
+attributes:
+  vendor:
+    nvidia:
+      - model: a100
+        ram: 80Gi
+        interface: pcie
+`
+	var p v2ResourceGPU
+
+	err := yaml.Unmarshal([]byte(stream), &p)
+	require.NoError(t, err)
+	require.Equal(t, gpuQuantity(1), p.Units)
+	require.Equal(t, 1, len(p.Attributes))
+	require.Equal(t, "vendor/nvidia/model/a100/ram/80Gi/interface/pcie", p.Attributes[0].Key)
+	require.Equal(t, "true", p.Attributes[0].Value)
+}
+
 func TestV2ResourceGPU_MultipleModels(t *testing.T) {
 	var stream = `
 units: 1
