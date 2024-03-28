@@ -9,15 +9,22 @@ import (
 	types "github.com/akash-network/akash-api/go/node/types/v1beta3"
 )
 
+type gpuInterface string
+
 type v2GPUNvidia struct {
-	Model string          `yaml:"model"`
-	RAM   *memoryQuantity `yaml:"ram,omitempty"`
+	Model     string          `yaml:"model"`
+	RAM       *memoryQuantity `yaml:"ram,omitempty"`
+	Interface *gpuInterface   `yaml:"interface,omitempty"`
 }
 
 func (sdl *v2GPUNvidia) String() string {
 	key := sdl.Model
 	if sdl.RAM != nil {
-		key += "/ram/" + sdl.RAM.StringWithSuffix("Gi")
+		key = fmt.Sprintf("%s/ram/%s", key, sdl.RAM.StringWithSuffix("Gi"))
+	}
+
+	if sdl.Interface != nil {
+		key = fmt.Sprintf("%s/interface/%s", key, *sdl.Interface)
 	}
 
 	return key
@@ -106,6 +113,19 @@ func (sdl *v2GPUAttributes) UnmarshalYAML(node *yaml.Node) error {
 	}
 
 	*sdl = v2GPUAttributes(res)
+
+	return nil
+}
+
+func (sdl *gpuInterface) UnmarshalYAML(node *yaml.Node) error {
+	switch node.Value {
+	case "pcie":
+	case "sxm":
+	default:
+		return fmt.Errorf("sdl: invalid GPU interface %s. expected \"pcie|sxm\"", node.Value)
+	}
+
+	*sdl = gpuInterface(node.Value)
 
 	return nil
 }
