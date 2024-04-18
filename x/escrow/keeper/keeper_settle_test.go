@@ -11,7 +11,7 @@ import (
 
 const denom = "uakt"
 
-func TestSettleFullblocks(t *testing.T) {
+func TestSettleFullBlocks(t *testing.T) {
 	for _, tt := range []struct {
 		name string
 		cfg  distTestConfig
@@ -165,7 +165,7 @@ func TestSettleFullblocks(t *testing.T) {
 	} {
 		account, payments, blocks, blockRate := setupDistTest(tt.cfg)
 
-		account, payments, overdrawn, remaining := accountSettleFullblocks(
+		account, payments, overdrawn, remaining := accountSettleFullBlocks(
 			account, payments, blocks, blockRate)
 
 		assertCoinsEqual(t, sdk.NewInt64DecCoin(denom, tt.cfg.balanceEnd), account.Balance, tt.name)

@@ -105,6 +105,7 @@ func (app *AkashApp) setAkashKeepers() {
 		app.Keepers.Cosmos.Bank,
 		app.Keepers.Akash.Take,
 		app.Keepers.Cosmos.Distr,
+		app.Keepers.Cosmos.Authz,
 	)
 
 	app.Keepers.Akash.Deployment = deployment.NewKeeper(

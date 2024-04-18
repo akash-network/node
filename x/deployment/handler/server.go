@@ -112,10 +112,12 @@ func (ms msgServer) authorizeDeposit(ctx sdk.Context, owner, depositor sdk.AccAd
 	if authorization == nil {
 		return sdkerrors.ErrUnauthorized.Wrap("authorization not found")
 	}
+
 	resp, err := authorization.Accept(ctx, msg)
 	if err != nil {
 		return err
 	}
+
 	if resp.Delete {
 		err = ms.authzKeeper.DeleteGrant(ctx, owner, depositor, sdk.MsgTypeURL(msg))
 	} else if resp.Updated != nil {
@@ -124,6 +126,7 @@ func (ms msgServer) authorizeDeposit(ctx sdk.Context, owner, depositor sdk.AccAd
 	if err != nil {
 		return err
 	}
+
 	if !resp.Accept {
 		return sdkerrors.ErrUnauthorized
 	}
@@ -153,12 +156,24 @@ func (ms msgServer) DepositDeployment(goCtx context.Context, msg *types.MsgDepos
 		return &types.MsgDepositDeploymentResponse{}, err
 	}
 
+	eID := types.EscrowAccountForDeployment(msg.ID)
+
+	eAccount, err := ms.escrow.GetAccount(ctx, eID)
+	if err != nil {
+		return &types.MsgDepositDeploymentResponse{}, err
+	}
+
+	// error if depositor is not an owner and there is already exists authorization from another account
+	if (msg.Depositor != msg.ID.Owner) && eAccount.HasDepositor() && (eAccount.Depositor != msg.Depositor) {
+		return &types.MsgDepositDeploymentResponse{}, types.ErrInvalidDeploymentDepositor
+	}
+
 	if err = ms.authorizeDeposit(ctx, owner, depositor, msg.Amount); err != nil {
 		return nil, err
 	}
 
 	if err := ms.escrow.AccountDeposit(ctx,
-		types.EscrowAccountForDeployment(msg.ID),
+		eID,
 		depositor,
 		msg.Amount); err != nil {
 		return &types.MsgDepositDeploymentResponse{}, err
