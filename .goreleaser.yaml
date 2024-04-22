@@ -193,7 +193,7 @@ nfpms:
       - rpm
     license: Apache 2.0
   - id: wo/version
-    vendor: "Akash Netowrk"
+    vendor: "Akash Network"
     homepage: "https://akash.network"
     maintainer: "Akash Network <hello@akash.network>"
     file_name_template: "akash_{{ .Os }}_{{ .Arch }}"
