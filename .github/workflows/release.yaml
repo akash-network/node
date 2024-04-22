@@ -1,3 +1,4 @@
+---
 name: release
 
 defaults:
@@ -75,11 +76,11 @@ jobs:
           make test
       - name: upload validator(s) stdout/stderr
         if: always() && steps.test.outcome != 'skipped'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: logs
           path: |
-            .cache/run/upgrade/validators/logs/*.log 
+            .cache/run/upgrade/validators/logs/*.log
 
   notify-homebrew:
     runs-on: ubuntu-latest
