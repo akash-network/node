@@ -53,7 +53,7 @@ endif
 GOLANGCI_LINT_VERSION        ?= v1.51.2
 STATIK_VERSION               ?= v0.1.7
 GIT_CHGLOG_VERSION           ?= v0.15.1
-MOCKERY_VERSION              ?= 2.24.0
+MOCKERY_VERSION              ?= 2.42.0
 COSMOVISOR_VERSION           ?= v1.5.0
 
 # ==== Build tools version tracking ====

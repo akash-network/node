@@ -17,10 +17,10 @@ import (
 	ptypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
 
 	"github.com/akash-network/node/app"
+	emocks "github.com/akash-network/node/testutil/cosmos/mocks"
 	akeeper "github.com/akash-network/node/x/audit/keeper"
 	dkeeper "github.com/akash-network/node/x/deployment/keeper"
 	ekeeper "github.com/akash-network/node/x/escrow/keeper"
-	emocks "github.com/akash-network/node/x/escrow/keeper/mocks"
 	mhooks "github.com/akash-network/node/x/market/hooks"
 	mkeeper "github.com/akash-network/node/x/market/keeper"
 	pkeeper "github.com/akash-network/node/x/provider/keeper"
@@ -46,6 +46,7 @@ type Keepers struct {
 	Provider   pkeeper.IKeeper
 	Bank       *emocks.BankKeeper
 	Distr      *emocks.DistrKeeper
+	Authz      *emocks.AuthzKeeper
 }
 
 // SetupTestSuite provides toolkit for accessing stores and keepers
@@ -80,6 +81,12 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 		keepers.Distr = dkeeper
 	}
 
+	if keepers.Authz == nil {
+		keeper := &emocks.AuthzKeeper{}
+
+		keepers.Authz = keeper
+	}
+
 	app := app.Setup(false)
 
 	if keepers.Audit == nil {
@@ -91,7 +98,7 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 	}
 
 	if keepers.Escrow == nil {
-		keepers.Escrow = ekeeper.NewKeeper(etypes.ModuleCdc, app.GetKey(etypes.StoreKey), keepers.Bank, keepers.Take, keepers.Distr)
+		keepers.Escrow = ekeeper.NewKeeper(etypes.ModuleCdc, app.GetKey(etypes.StoreKey), keepers.Bank, keepers.Take, keepers.Distr, keepers.Authz)
 	}
 	if keepers.Market == nil {
 		keepers.Market = mkeeper.NewKeeper(mtypes.ModuleCdc, app.GetKey(mtypes.StoreKey), app.GetSubspace(mtypes.ModuleName), keepers.Escrow)
@@ -163,4 +170,9 @@ func (ts *TestSuite) ProviderKeeper() pkeeper.IKeeper {
 // BankKeeper key store
 func (ts *TestSuite) BankKeeper() *emocks.BankKeeper {
 	return ts.keepers.Bank
+}
+
+// AuthzKeeper key store
+func (ts *TestSuite) AuthzKeeper() *emocks.AuthzKeeper {
+	return ts.keepers.Authz
 }

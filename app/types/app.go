@@ -26,7 +26,7 @@ import (
 	akeeper "github.com/akash-network/node/x/audit/keeper"
 	ckeeper "github.com/akash-network/node/x/cert/keeper"
 	dkeeper "github.com/akash-network/node/x/deployment/keeper"
-	escrowkeeper "github.com/akash-network/node/x/escrow/keeper"
+	ekeeper "github.com/akash-network/node/x/escrow/keeper"
 	agovkeeper "github.com/akash-network/node/x/gov/keeper"
 	ikeeper "github.com/akash-network/node/x/inflation/keeper"
 	mkeeper "github.com/akash-network/node/x/market/keeper"
@@ -60,7 +60,7 @@ type AppKeepers struct {
 	}
 
 	Akash struct {
-		Escrow     escrowkeeper.Keeper
+		Escrow     ekeeper.Keeper
 		Deployment dkeeper.IKeeper
 		Take       tkeeper.IKeeper
 		Market     mkeeper.IKeeper

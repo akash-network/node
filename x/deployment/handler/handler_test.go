@@ -20,37 +20,44 @@ import (
 	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
 
 	"github.com/akash-network/node/testutil"
+	cmocks "github.com/akash-network/node/testutil/cosmos/mocks"
 	"github.com/akash-network/node/testutil/state"
-	"github.com/akash-network/node/x/deployment/handler/mocks"
 	"github.com/akash-network/node/x/deployment/keeper"
 	mkeeper "github.com/akash-network/node/x/market/keeper"
 )
 
 type testSuite struct {
 	*state.TestSuite
-	t           *testing.T
-	ctx         sdk.Context
-	mkeeper     mkeeper.IKeeper
-	dkeeper     keeper.IKeeper
-	authzKeeper handler.AuthzKeeper
-	depositor   string
-	handler     sdk.Handler
-
+	t              *testing.T
+	ctx            sdk.Context
+	mkeeper        mkeeper.IKeeper
+	dkeeper        keeper.IKeeper
+	authzKeeper    handler.AuthzKeeper
+	depositor      string
+	handler        sdk.Handler
 	defaultDeposit sdk.Coin
 }
 
 func setupTestSuite(t *testing.T) *testSuite {
-	ssuite := state.SetupTestSuite(t)
-
 	defaultDeposit, err := types.DefaultParams().MinDepositFor("uakt")
 	require.NoError(t, err)
 
 	depositor := testutil.AccAddress(t)
-	authzKeeper := &mocks.AuthzKeeper{}
+	authzKeeper := &cmocks.AuthzKeeper{}
 	authzKeeper.
 		On("GetCleanAuthorization", mock.Anything, mock.Anything, depositor, sdk.MsgTypeURL(&types.MsgDepositDeployment{})).
 		Return(&types.DepositDeploymentAuthorization{
 			SpendLimit: defaultDeposit.Add(defaultDeposit),
+		}, time.Time{}).
+		Once().
+		On("GetCleanAuthorization", mock.Anything, mock.Anything, depositor, sdk.MsgTypeURL(&types.MsgDepositDeployment{})).
+		Return(&types.DepositDeploymentAuthorization{
+			SpendLimit: defaultDeposit,
+		}, time.Time{}).
+		Once().
+		On("GetCleanAuthorization", mock.Anything, mock.Anything, depositor, sdk.MsgTypeURL(&types.MsgDepositDeployment{})).
+		Return(&types.DepositDeploymentAuthorization{
+			SpendLimit: defaultDeposit,
 		}, time.Time{}).
 		Once().
 		On("GetCleanAuthorization", mock.Anything, mock.Anything, depositor, sdk.MsgTypeURL(&types.MsgDepositDeployment{})).
@@ -70,13 +77,18 @@ func setupTestSuite(t *testing.T) *testSuite {
 		On("SaveGrant", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(nil)
 
+	keepers := state.Keepers{
+		Authz: authzKeeper,
+	}
+	ssuite := state.SetupTestSuiteWithKeepers(t, keepers)
+
 	suite := &testSuite{
 		TestSuite:      ssuite,
 		t:              t,
 		ctx:            ssuite.Context(),
 		mkeeper:        ssuite.MarketKeeper(),
 		dkeeper:        ssuite.DeploymentKeeper(),
-		authzKeeper:    authzKeeper,
+		authzKeeper:    ssuite.AuthzKeeper(),
 		depositor:      depositor.String(),
 		defaultDeposit: defaultDeposit,
 	}

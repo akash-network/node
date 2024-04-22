@@ -10,9 +10,9 @@ import (
 	types "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
 
 	"github.com/akash-network/node/testutil"
+	"github.com/akash-network/node/testutil/cosmos/mocks"
 	"github.com/akash-network/node/testutil/state"
 	"github.com/akash-network/node/x/escrow/keeper"
-	"github.com/akash-network/node/x/escrow/keeper/mocks"
 )
 
 func Test_AccountCreate(t *testing.T) {

@@ -22,6 +22,7 @@ type EscrowKeeper interface {
 	AccountCreate(ctx sdk.Context, id etypes.AccountID, owner, depositor sdk.AccAddress, deposit sdk.Coin) error
 	AccountDeposit(ctx sdk.Context, id etypes.AccountID, depositor sdk.AccAddress, amount sdk.Coin) error
 	AccountClose(ctx sdk.Context, id etypes.AccountID) error
+	GetAccount(ctx sdk.Context, id etypes.AccountID) (etypes.Account, error)
 }
 
 //go:generate mockery --name AuthzKeeper --output ./mocks
