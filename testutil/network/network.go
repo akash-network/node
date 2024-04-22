@@ -57,7 +57,7 @@ func init() {
 }
 
 const (
-	portsPerValidator = 4
+	portsPerValidator = 2
 )
 
 // package-wide network lock to only allow one test network at a time
@@ -233,24 +233,29 @@ func New(t *testing.T, cfg Config) *Network {
 		appCfg.GRPC.Enable = false
 		appCfg.GRPCWeb.Enable = false
 
+		allocPortsCount := portsPerValidator
 		if i == 0 {
-			ports, err := GetFreePorts(portsPerValidator)
-			require.NoError(t, err)
-			require.Equal(t, portsPerValidator, len(ports))
+			allocPortsCount += 4
+		}
 
-			apiListenAddr := fmt.Sprintf("tcp://0.0.0.0:%d", ports[0])
+		ports, err := GetFreePorts(allocPortsCount)
+		require.NoError(t, err)
+		require.Equal(t, allocPortsCount, len(ports))
+
+		if i == 0 {
+			apiListenAddr := fmt.Sprintf("tcp://0.0.0.0:%d", ports[2])
 			appCfg.API.Address = apiListenAddr
 
 			apiURL, err := url.Parse(apiListenAddr)
 			require.NoError(t, err)
 			apiAddr = fmt.Sprintf("http://%s:%s", apiURL.Hostname(), apiURL.Port())
 
-			tmCfg.RPC.ListenAddress = fmt.Sprintf("tcp://0.0.0.0:%d", ports[1])
+			tmCfg.RPC.ListenAddress = fmt.Sprintf("tcp://0.0.0.0:%d", ports[3])
 
-			appCfg.GRPC.Address = fmt.Sprintf("0.0.0.0:%d", ports[2])
+			appCfg.GRPC.Address = fmt.Sprintf("0.0.0.0:%d", ports[4])
 			appCfg.GRPC.Enable = true
 
-			appCfg.GRPCWeb.Address = fmt.Sprintf("0.0.0.0:%d", ports[3])
+			appCfg.GRPCWeb.Address = fmt.Sprintf("0.0.0.0:%d", ports[5])
 			appCfg.GRPCWeb.Enable = true
 		}
 
@@ -274,14 +279,8 @@ func New(t *testing.T, cfg Config) *Network {
 		tmCfg.Moniker = nodeDirName
 		monikers[i] = nodeDirName
 
-		proxyAddr, _, err := server.FreeTCPAddr()
-		require.NoError(t, err)
-		tmCfg.ProxyApp = proxyAddr
-
-		p2pAddr, _, err := server.FreeTCPAddr()
-		require.NoError(t, err)
-
-		tmCfg.P2P.ListenAddress = p2pAddr
+		tmCfg.ProxyApp = fmt.Sprintf("tcp://0.0.0.0:%d", ports[0])
+		tmCfg.P2P.ListenAddress = fmt.Sprintf("tcp://0.0.0.0:%d", ports[1])
 		tmCfg.P2P.AddrBookStrict = false
 		tmCfg.P2P.AllowDuplicateIP = true
 
@@ -336,7 +335,7 @@ func New(t *testing.T, cfg Config) *Network {
 		)
 		require.NoError(t, err)
 
-		p2pURL, err := url.Parse(p2pAddr)
+		p2pURL, err := url.Parse(tmCfg.P2P.ListenAddress)
 		require.NoError(t, err)
 
 		memo := fmt.Sprintf("%s@%s:%s", nodeIDs[i], p2pURL.Hostname(), p2pURL.Port())
