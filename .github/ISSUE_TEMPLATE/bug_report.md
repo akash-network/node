@@ -12,7 +12,7 @@ sessions. Instead, copy & paste the terminal session text into the report
 
 # Steps to reproduce
 
-Please describe the steps neccessary to reproduce this bug
+Please describe the steps necessary to reproduce this bug
 
 1.
 2.
@@ -20,7 +20,7 @@ Please describe the steps neccessary to reproduce this bug
 
 # Blockchain details (if it applies)
 
-Please include blockchain deatils if it applies, this section is not require
+Please include blockchain details if it applies, this section is not require
 
 * **wallet address** -
 * **deployment sequence number** -
