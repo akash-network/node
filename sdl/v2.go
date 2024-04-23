@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"sort"
 	"strconv"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
@@ -42,6 +43,9 @@ var (
 	errUnknownNextCase               = errors.New("next case is unknown")
 	errHTTPOptionNotAllowed          = errors.New("http option not allowed")
 	errSDLInvalid                    = errors.New("SDL invalid")
+	errCredentialNoHost              = errors.New("Service Credentials missing Host")
+	errCredentialNoUsername          = errors.New("Service Credentials missing Username")
+	errCredentialNoPassword          = errors.New("Service Credentials missing Password")
 )
 
 var endpointNameValidationRegex = regexp.MustCompile(`^[[:lower:]]+[[:lower:]-_\d]+$`)
@@ -167,12 +171,33 @@ type v2ServiceParams struct {
 
 type v2Service struct {
 	Image        string
-	Command      []string         `yaml:",omitempty"`
-	Args         []string         `yaml:",omitempty"`
-	Env          []string         `yaml:",omitempty"`
-	Expose       v2Exposes        `yaml:",omitempty"`
-	Dependencies []v2Dependency   `yaml:",omitempty"`
-	Params       *v2ServiceParams `yaml:",omitempty"`
+	Command      []string              `yaml:",omitempty"`
+	Args         []string              `yaml:",omitempty"`
+	Env          []string              `yaml:",omitempty"`
+	Expose       v2Exposes             `yaml:",omitempty"`
+	Dependencies []v2Dependency        `yaml:",omitempty"`
+	Params       *v2ServiceParams      `yaml:",omitempty"`
+	Credentials  *v2ServiceCredentials `yaml:",omitempty"`
+}
+
+type v2ServiceCredentials struct {
+	Host     string `yaml:",omitempty"`
+	Email    string `yaml:",omitempty"`
+	Username string `yaml:",omitempty"`
+	Password string `yaml:",omitempty"`
+}
+
+func (c v2ServiceCredentials) validate() error {
+	if strings.TrimSpace(c.Host) == "" {
+		return errCredentialNoHost
+	}
+	if strings.TrimSpace(c.Username) == "" {
+		return errCredentialNoUsername
+	}
+	if strings.TrimSpace(c.Password) == "" {
+		return errCredentialNoPassword
+	}
+	return nil
 }
 
 type v2ServiceDeployment struct {
@@ -326,6 +351,18 @@ func (sdl *v2) validate() error {
 					placementName,
 					svcName,
 				)
+			}
+
+			if svc.Credentials != nil {
+				if err := svc.Credentials.validate(); err != nil {
+					return fmt.Errorf(
+						"%w: %v.%v: %v",
+						errSDLInvalid,
+						svcName,
+						placementName,
+						err,
+					)
+				}
 			}
 
 			for _, serviceExpose := range svc.Expose {
