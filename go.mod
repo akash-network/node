@@ -3,7 +3,7 @@ module github.com/akash-network/node
 go 1.21
 
 require (
-	github.com/akash-network/akash-api v0.0.65
+	github.com/akash-network/akash-api v0.0.67
 	github.com/blang/semver/v4 v4.0.0
 	github.com/boz/go-lifecycle v0.1.1
 	github.com/cosmos/cosmos-sdk v0.45.16
