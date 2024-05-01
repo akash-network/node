@@ -43,6 +43,21 @@ Goal of the upgrade here
 Add new upgrades after this line based on the template above
 -----
 
+##### v0.34.0
+
+1. Extend authz implementation for DeploymentDeposit to allow grantee re-use of unspent funds.
+    - Example of previous behavior:
+      Deployment authz granted from account B (grantor) to account A (grantee) in amount of 5AKT.
+      Deployment is created with authorized spend and deposit amount of 3AKT.
+      Deployment spends 1.5AKT and lease was closed. 1.5AKT remainder is returned to the grantor, and authorization has 2AKT left to spend
+    - Example of new behavior:
+      Deployment authz granted from account B (grantor) to account A (grantee) in amount of 5AKT.
+      Deployment is created with authorized spend and deposit amount of 3AKT.Deployment spends 1.5AKT and lease was closed.
+      1.5AKT remainder is returned to the grantor, and authorization is updated and has 3.5AKT left to spend.
+2. Don’t allow multiple grants from different grantors to be used for deposit on same deployment.
+   This issue may lead to a case where all remaining funds after deployment is closed are returned to last grantor.
+   Such use case has been guarded against and only one authz depositor will be allowed per deployment
+
 ##### v0.32.0
 
 1. remove checking if provider has active leases during provider update transactions. This check was iterating thru all existing leases on the network causing gas and thus transaction fees go to up to 3AKT which is way above desired values. Initial intention of check was to prevent provider changing attributes that is in use by active leases. Akash Network team will reintroduce check by adding secondary indexes in future network upgrades.
