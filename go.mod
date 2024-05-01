@@ -7,8 +7,8 @@ require (
 	github.com/blang/semver/v4 v4.0.0
 	github.com/boz/go-lifecycle v0.1.1
 	github.com/cosmos/cosmos-sdk v0.45.16
-	github.com/cosmos/ibc-go/v4 v4.6.0
 	github.com/cosmos/go-bip39 v1.0.0
+	github.com/cosmos/ibc-go/v4 v4.6.0
 	github.com/gogo/protobuf v1.3.3
 	github.com/google/go-github/v56 v56.0.0
 	github.com/gorilla/mux v1.8.1
@@ -39,6 +39,7 @@ require (
 )
 
 retract (
+	v0.34.0
 	v0.28.1
 	v0.28.0
 	v0.26.0
