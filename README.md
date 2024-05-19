@@ -33,14 +33,14 @@ The easiest way to get started with Akash is by following the [Quick Start Guide
 
 ## Join the Community
 
-- [Join Developer Chat](https://discord.gg/6Rtn8aJkU4)
+- [Join Developer Chat](https://discord.com/invite/akash)
 - [Become a validator](https://docs.akash.network/validating/validator)
 
 ## Official blog and documentation
 
 - Read the documentation: [docs.akash.network](https://docs.akash.network)
 - Send a PR or raise an issue for the docs [akash-network/docs](https://github.com/akash-network/docs)
-- Read latest news and tutorials on the [Official Blog](https://blog.akash.network)
+- Read latest news and tutorials on the [Official Blog](https://akash.network/blog/)
 
 # Supported platforms
 
