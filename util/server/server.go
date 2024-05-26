@@ -6,15 +6,13 @@ import (
 	"os"
 	"path/filepath"
 
+	dbm "github.com/cometbft/cometbft-db"
+	tmcmd "github.com/cometbft/cometbft/cmd/cometbft/commands"
+	tmjson "github.com/cometbft/cometbft/libs/json"
+	tmtypes "github.com/cometbft/cometbft/types"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
-	tmjson "github.com/tendermint/tendermint/libs/json"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
-	tmtypes "github.com/tendermint/tendermint/types"
-	dbm "github.com/tendermint/tm-db"
-
-	tmcmd "github.com/tendermint/tendermint/cmd/cometbft/commands"
 
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/server/types"
@@ -23,8 +21,10 @@ import (
 
 const (
 	// Tendermint full-node start flags
-	flagTraceStore = "trace-store"
-	flagToFile     = "to-file"
+	flagTraceStore      = "trace-store"
+	flagToFile          = "to-file"
+	FlagModulesToExport = "modules-to-export"
+	FlagOutputDocument  = "output-document"
 )
 
 // Commands server commands
@@ -63,8 +63,8 @@ func ExportCmd(appExporter types.AppExporter, defaultNodeHome string) *cobra.Com
 		Use:   "export",
 		Short: "Export state to JSON",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			serverCtx := sdkserver.GetServerContextFromCmd(cmd)
-			config := serverCtx.Config
+			sctx := sdkserver.GetServerContextFromCmd(cmd)
+			config := sctx.Config
 
 			homeDir, _ := cmd.Flags().GetString(flags.FlagHome)
 			config.SetRoot(homeDir)
@@ -73,7 +73,7 @@ func ExportCmd(appExporter types.AppExporter, defaultNodeHome string) *cobra.Com
 				return err
 			}
 
-			db, err := openDB(config.RootDir)
+			db, err := openDB(config.RootDir, sdkserver.GetAppDBBackend(sctx.Viper))
 			if err != nil {
 				return err
 			}
@@ -119,13 +119,24 @@ func ExportCmd(appExporter types.AppExporter, defaultNodeHome string) *cobra.Com
 			height, _ := cmd.Flags().GetInt64(sdkserver.FlagHeight)
 			forZeroHeight, _ := cmd.Flags().GetBool(sdkserver.FlagForZeroHeight)
 			jailAllowedAddrs, _ := cmd.Flags().GetStringSlice(sdkserver.FlagJailAllowedAddrs)
+			modulesToExport, _ := cmd.Flags().GetStringSlice(FlagModulesToExport)
 
-			exported, err := appExporter(serverCtx.Logger, db, traceWriter, height, forZeroHeight, jailAllowedAddrs, serverCtx.Viper)
+			exported, err := appExporter(
+				sctx.Logger,
+				db,
+				traceWriter,
+				height,
+				forZeroHeight,
+				jailAllowedAddrs,
+				sctx.Viper,
+				modulesToExport,
+			)
+
 			if err != nil {
 				return fmt.Errorf("error exporting state: %v", err)
 			}
 
-			doc, err := tmtypes.GenesisDocFromFile(serverCtx.Config.GenesisFile())
+			doc, err := tmtypes.GenesisDocFromFile(sctx.Config.GenesisFile())
 			if err != nil {
 				return err
 			}
@@ -133,18 +144,17 @@ func ExportCmd(appExporter types.AppExporter, defaultNodeHome string) *cobra.Com
 			doc.AppState = exported.AppState
 			doc.Validators = exported.Validators
 			doc.InitialHeight = exported.Height
-			doc.ConsensusParams = &tmproto.ConsensusParams{
-				Block: tmproto.BlockParams{
-					MaxBytes:   exported.ConsensusParams.Block.MaxBytes,
-					MaxGas:     exported.ConsensusParams.Block.MaxGas,
-					TimeIotaMs: doc.ConsensusParams.Block.TimeIotaMs,
+			doc.ConsensusParams = &tmtypes.ConsensusParams{
+				Block: tmtypes.BlockParams{
+					MaxBytes: exported.ConsensusParams.Block.MaxBytes,
+					MaxGas:   exported.ConsensusParams.Block.MaxGas,
 				},
-				Evidence: tmproto.EvidenceParams{
+				Evidence: tmtypes.EvidenceParams{
 					MaxAgeNumBlocks: exported.ConsensusParams.Evidence.MaxAgeNumBlocks,
 					MaxAgeDuration:  exported.ConsensusParams.Evidence.MaxAgeDuration,
 					MaxBytes:        exported.ConsensusParams.Evidence.MaxBytes,
 				},
-				Validator: tmproto.ValidatorParams{
+				Validator: tmtypes.ValidatorParams{
 					PubKeyTypes: exported.ConsensusParams.Validator.PubKeyTypes,
 				},
 			}
@@ -175,9 +185,9 @@ func ExportCmd(appExporter types.AppExporter, defaultNodeHome string) *cobra.Com
 	return cmd
 }
 
-func openDB(rootDir string) (dbm.DB, error) {
+func openDB(rootDir string, backendType dbm.BackendType) (dbm.DB, error) {
 	dataDir := filepath.Join(rootDir, "data")
-	return sdk.NewLevelDB("application", dataDir)
+	return dbm.NewDB("application", backendType, dataDir)
 }
 
 func openTraceWriter(traceWriterFile string) (w io.Writer, err error) {

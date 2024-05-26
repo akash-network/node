@@ -4,10 +4,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	types "github.com/akash-network/akash-api/go/node/provider/v1beta3"
+	types "pkg.akt.dev/go/node/provider/v1beta4"
 
-	mkeeper "github.com/akash-network/node/x/market/keeper"
-	"github.com/akash-network/node/x/provider/keeper"
+	mkeeper "pkg.akt.dev/akashd/x/market/keeper"
+	"pkg.akt.dev/akashd/x/provider/keeper"
 )
 
 // NewHandler returns a handler for "provider" type messages.
@@ -29,7 +29,7 @@ func NewHandler(keeper keeper.IKeeper, mkeeper mkeeper.IKeeper) sdk.Handler {
 			return sdk.WrapServiceResult(ctx, res, err)
 
 		default:
-			return nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "unrecognized bank message type: %T", msg)
+			return nil, sdkerrors.ErrUnknownRequest.Wrapf("unrecognized bank message type: %T", msg)
 		}
 	}
 }

@@ -9,12 +9,13 @@ import (
 	clitestutil "github.com/cosmos/cosmos-sdk/testutil/cli"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+	dv1 "pkg.akt.dev/go/node/deployment/v1"
+	dv1beta4 "pkg.akt.dev/go/node/deployment/v1beta4"
 
-	testutilcli "github.com/akash-network/node/testutil/cli"
+	testutilcli "pkg.akt.dev/akashd/testutil/cli"
 )
 
-const key string = types.StoreKey
+const key string = dv1.StoreKey
 
 // XXX: WHY TF DON'T THESE RETURN OBJECTS
 
@@ -67,7 +68,7 @@ func TxDepositDeploymentExec(clientCtx client.Context, deposit sdk.Coin, from fm
 }
 
 // TxCloseGroupExec is used for testing close group tx
-func TxCloseGroupExec(clientCtx client.Context, groupID types.GroupID, from fmt.Stringer, extraArgs ...string) (sdktest.BufferWriter, error) {
+func TxCloseGroupExec(clientCtx client.Context, groupID dv1.GroupID, from fmt.Stringer, extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
 		fmt.Sprintf("--from=%s", from.String()),
 		fmt.Sprintf("--owner=%s", groupID.Owner),
@@ -86,7 +87,7 @@ func QueryDeploymentsExec(clientCtx client.Context, extraArgs ...string) (sdktes
 }
 
 // QueryDeploymentExec is used for testing deployment query
-func QueryDeploymentExec(clientCtx client.Context, id types.DeploymentID, extraArgs ...string) (sdktest.BufferWriter, error) {
+func QueryDeploymentExec(clientCtx client.Context, id dv1.DeploymentID, extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
 		fmt.Sprintf("--owner=%s", id.Owner),
 		fmt.Sprintf("--dseq=%v", id.DSeq),
@@ -98,7 +99,7 @@ func QueryDeploymentExec(clientCtx client.Context, id types.DeploymentID, extraA
 }
 
 // QueryGroupExec is used for testing group query
-func QueryGroupExec(clientCtx client.Context, id types.GroupID, extraArgs ...string) (sdktest.BufferWriter, error) {
+func QueryGroupExec(clientCtx client.Context, id dv1.GroupID, extraArgs ...string) (sdktest.BufferWriter, error) {
 	args := []string{
 		fmt.Sprintf("--owner=%s", id.Owner),
 		fmt.Sprintf("--dseq=%v", id.DSeq),
@@ -111,8 +112,7 @@ func QueryGroupExec(clientCtx client.Context, id types.GroupID, extraArgs ...str
 }
 
 func TxGrantAuthorizationExec(clientCtx client.Context, granter, grantee sdk.AccAddress, extraArgs ...string) (sdktest.BufferWriter, error) {
-
-	dmin, _ := types.DefaultParams().MinDepositFor("uakt")
+	dmin, _ := dv1beta4.DefaultParams().MinDepositFor("uakt")
 
 	spendLimit := sdk.NewCoin(dmin.Denom, dmin.Amount.MulRaw(3))
 	args := []string{

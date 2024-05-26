@@ -8,17 +8,19 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/cosmos/cosmos-sdk/client/flags"
+	sdktestutil "github.com/cosmos/cosmos-sdk/testutil"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkrest "github.com/cosmos/cosmos-sdk/types/rest"
 
-	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+	v1 "pkg.akt.dev/go/node/deployment/v1"
+	"pkg.akt.dev/go/node/deployment/v1beta4"
 
-	"github.com/akash-network/node/testutil"
-	"github.com/akash-network/node/testutil/network"
-	atypes "github.com/akash-network/node/types"
-	ccli "github.com/akash-network/node/x/cert/client/cli"
-	"github.com/akash-network/node/x/deployment/client/cli"
+	"pkg.akt.dev/go/cli"
+
+	"pkg.akt.dev/akashd/testutil"
+	"pkg.akt.dev/akashd/testutil/network"
+	atypes "pkg.akt.dev/akashd/types"
+	ccli "pkg.akt.dev/akashd/x/cert/client/cli"
+	dcli "pkg.akt.dev/akashd/x/deployment/client/cli"
 )
 
 type GRPCRestTestSuite struct {
@@ -26,7 +28,7 @@ type GRPCRestTestSuite struct {
 
 	cfg        network.Config
 	network    *network.Network
-	deployment types.QueryDeploymentResponse
+	deployment v1beta4.QueryDeploymentResponse
 }
 
 func (s *GRPCRestTestSuite) SetupSuite() {
@@ -60,39 +62,39 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 		context.Background(),
 		val.ClientCtx,
 		val.Address,
-		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+		fmt.Sprintf("--%s=true", cli.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", cli.FlagBroadcastMode, cli.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", cli.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
+		fmt.Sprintf("--gas=%d", cli.DefaultGasLimit),
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
 
 	// create deployment
-	_, err = cli.TxCreateDeploymentExec(
+	_, err = dcli.TxCreateDeploymentExec(
 		val.ClientCtx,
 		val.Address,
 		deploymentPath,
-		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
-		fmt.Sprintf("--deposit=%s", cli.DefaultDeposit),
+		fmt.Sprintf("--%s=true", cli.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", cli.FlagBroadcastMode, cli.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", cli.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
+		fmt.Sprintf("--gas=%d", cli.DefaultGasLimit),
+		fmt.Sprintf("--deposit=%s", dcli.DefaultDeposit),
 	)
 	s.Require().NoError(err)
 
 	s.Require().NoError(s.network.WaitForNextBlock())
 
 	// get deployment
-	resp, err := cli.QueryDeploymentsExec(val.ClientCtx.WithOutputFormat("json"))
+	resp, err := dcli.QueryDeploymentsExec(val.ClientCtx.WithOutputFormat("json"))
 	s.Require().NoError(err)
 
-	out := &types.QueryDeploymentsResponse{}
+	out := &v1beta4.QueryDeploymentsResponse{}
 	err = val.ClientCtx.Codec.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Deployments, 1, "Cert Create Failed")
 	deployments := out.Deployments
-	s.Require().Equal(val.Address.String(), deployments[0].Deployment.DeploymentID.Owner)
+	s.Require().Equal(val.Address.String(), deployments[0].Deployment.ID.Owner)
 
 	s.deployment = deployments[0]
 }
@@ -105,12 +107,12 @@ func (s *GRPCRestTestSuite) TestGetDeployments() {
 		name    string
 		url     string
 		expErr  bool
-		expResp types.QueryDeploymentResponse
+		expResp v1beta4.QueryDeploymentResponse
 		expLen  int
 	}{
 		{
 			"get deployments without filters",
-			fmt.Sprintf("%s/akash/deployment/%s/deployments/list", val.APIAddress, atypes.ProtoAPIVersion),
+			fmt.Sprintf("%s/akash/deployment/%s/deployments/list", val.APIAddress, v1beta4.GatewayVersion),
 			false,
 			deployment,
 			1,
@@ -118,24 +120,24 @@ func (s *GRPCRestTestSuite) TestGetDeployments() {
 		{
 			"get deployments with filters",
 			fmt.Sprintf("%s/akash/deployment/%s/deployments/list?filters.owner=%s", val.APIAddress,
-				atypes.ProtoAPIVersion,
-				deployment.Deployment.DeploymentID.Owner),
+				v1beta4.GatewayVersion,
+				deployment.Deployment.ID.Owner),
 			false,
 			deployment,
 			1,
 		},
 		{
 			"get deployments with wrong state filter",
-			fmt.Sprintf("%s/akash/deployment/%s/deployments/list?filters.state=%s", val.APIAddress, atypes.ProtoAPIVersion,
-				types.DeploymentStateInvalid.String()),
+			fmt.Sprintf("%s/akash/deployment/%s/deployments/list?filters.state=%s", val.APIAddress, v1beta4.GatewayVersion,
+				v1.DeploymentStateInvalid.String()),
 			true,
-			types.QueryDeploymentResponse{},
+			v1beta4.QueryDeploymentResponse{},
 			0,
 		},
 		{
 			"get deployments with two filters",
 			fmt.Sprintf("%s/akash/deployment/%s/deployments/list?filters.state=%s&filters.dseq=%d",
-				val.APIAddress, atypes.ProtoAPIVersion, deployment.Deployment.State.String(), deployment.Deployment.DeploymentID.DSeq),
+				val.APIAddress, v1beta4.GatewayVersion, deployment.Deployment.State.String(), deployment.Deployment.ID.DSeq),
 			false,
 			deployment,
 			1,
@@ -145,10 +147,10 @@ func (s *GRPCRestTestSuite) TestGetDeployments() {
 	for _, tc := range testCases {
 		tc := tc
 		s.Run(tc.name, func() {
-			resp, err := sdkrest.GetRequest(tc.url)
+			resp, err := sdktestutil.GetRequest(tc.url)
 			s.Require().NoError(err)
 
-			var deployments types.QueryDeploymentsResponse
+			var deployments v1beta4.QueryDeploymentsResponse
 			err = val.ClientCtx.Codec.UnmarshalJSON(resp, &deployments)
 
 			if tc.expErr {
@@ -171,38 +173,38 @@ func (s *GRPCRestTestSuite) TestGetDeployment() {
 		name    string
 		url     string
 		expErr  bool
-		expResp types.QueryDeploymentResponse
+		expResp v1beta4.QueryDeploymentResponse
 	}{
 		{
 			"get deployment with empty input",
 			fmt.Sprintf("%s/akash/deployment/%s/deployments/info", val.APIAddress, atypes.ProtoAPIVersion),
 			true,
-			types.QueryDeploymentResponse{},
+			v1beta4.QueryDeploymentResponse{},
 		},
 		{
 			"get deployment with invalid input",
 			fmt.Sprintf("%s/akash/deployment/%s/deployments/info?id.owner=%s", val.APIAddress,
 				atypes.ProtoAPIVersion,
-				deployment.Deployment.DeploymentID.Owner),
+				deployment.Deployment.ID.Owner),
 			true,
-			types.QueryDeploymentResponse{},
+			v1beta4.QueryDeploymentResponse{},
 		},
 		{
 			"deployment not found",
 			fmt.Sprintf("%s/akash/deployment/%s/deployments/info?id.owner=%s&id.dseq=%d", val.APIAddress,
 				atypes.ProtoAPIVersion,
-				deployment.Deployment.DeploymentID.Owner,
+				deployment.Deployment.ID.Owner,
 				249),
 			true,
-			types.QueryDeploymentResponse{},
+			v1beta4.QueryDeploymentResponse{},
 		},
 		{
 			"valid get deployment request",
 			fmt.Sprintf("%s/akash/deployment/%s/deployments/info?id.owner=%s&id.dseq=%d",
 				val.APIAddress,
 				atypes.ProtoAPIVersion,
-				deployment.Deployment.DeploymentID.Owner,
-				deployment.Deployment.DeploymentID.DSeq),
+				deployment.Deployment.ID.Owner,
+				deployment.Deployment.ID.DSeq),
 			false,
 			deployment,
 		},
@@ -211,10 +213,10 @@ func (s *GRPCRestTestSuite) TestGetDeployment() {
 	for _, tc := range testCases {
 		tc := tc
 		s.Run(tc.name, func() {
-			resp, err := sdkrest.GetRequest(tc.url)
+			resp, err := sdktestutil.GetRequest(tc.url)
 			s.Require().NoError(err)
 
-			var out types.QueryDeploymentResponse
+			var out v1beta4.QueryDeploymentResponse
 			err = val.ClientCtx.Codec.UnmarshalJSON(resp, &out)
 
 			if tc.expErr {
@@ -237,39 +239,39 @@ func (s *GRPCRestTestSuite) TestGetGroup() {
 		name    string
 		url     string
 		expErr  bool
-		expResp types.Group
+		expResp v1beta4.Group
 	}{
 		{
 			"get group with empty input",
 			fmt.Sprintf("%s/akash/deployment/%s/groups/info", val.APIAddress, atypes.ProtoAPIVersion),
 			true,
-			types.Group{},
+			v1beta4.Group{},
 		},
 		{
 			"get group with invalid input",
 			fmt.Sprintf("%s/akash/deployment/%s/groups/info?id.owner=%s", val.APIAddress,
 				atypes.ProtoAPIVersion,
-				group.GroupID.Owner),
+				group.ID.Owner),
 			true,
-			types.Group{},
+			v1beta4.Group{},
 		},
 		{
 			"group not found",
 			fmt.Sprintf("%s/akash/deployment/%s/groups/info?id.owner=%s&id.dseq=%d", val.APIAddress,
 				atypes.ProtoAPIVersion,
-				group.GroupID.Owner,
+				group.ID.Owner,
 				249),
 			true,
-			types.Group{},
+			v1beta4.Group{},
 		},
 		{
 			"valid get group request",
 			fmt.Sprintf("%s/akash/deployment/%s/groups/info?id.owner=%s&id.dseq=%d&id.gseq=%d",
 				val.APIAddress,
 				atypes.ProtoAPIVersion,
-				group.GroupID.Owner,
-				group.GroupID.DSeq,
-				group.GroupID.GSeq),
+				group.ID.Owner,
+				group.ID.DSeq,
+				group.ID.GSeq),
 			false,
 			group,
 		},
@@ -278,10 +280,10 @@ func (s *GRPCRestTestSuite) TestGetGroup() {
 	for _, tc := range testCases {
 		tc := tc
 		s.Run(tc.name, func() {
-			resp, err := sdkrest.GetRequest(tc.url)
+			resp, err := sdktestutil.GetRequest(tc.url)
 			s.Require().NoError(err)
 
-			var out types.QueryGroupResponse
+			var out v1beta4.QueryGroupResponse
 			err = val.ClientCtx.Codec.UnmarshalJSON(resp, &out)
 
 			if tc.expErr {

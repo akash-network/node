@@ -26,11 +26,12 @@ import (
 	cltypes "github.com/akash-network/akash-api/go/node/client/types"
 	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
 
-	"github.com/akash-network/node/app"
-	"github.com/akash-network/node/client"
-	"github.com/akash-network/node/cmd/common"
-	"github.com/akash-network/node/sdl"
-	uttypes "github.com/akash-network/node/tests/upgrade/types"
+	"pkg.akt.dev/go/sdl"
+
+	"pkg.akt.dev/akashd/app"
+	"pkg.akt.dev/akashd/client"
+	"pkg.akt.dev/akashd/cmd/common"
+	uttypes "pkg.akt.dev/akashd/tests/upgrade/types"
 )
 
 const (

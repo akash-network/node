@@ -5,10 +5,11 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	gov "github.com/cosmos/cosmos-sdk/x/gov/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
-	ibchost "github.com/cosmos/ibc-go/v4/modules/core/24-host"
-	ibccoretypes "github.com/cosmos/ibc-go/v4/modules/core/types"
+	ibchost "github.com/cosmos/ibc-go/v7/modules/core/exported"
+	ibccoretypes "github.com/cosmos/ibc-go/v7/modules/core/types"
 )
 
 func GetIBCGenesisStateFromAppState(cdc codec.JSONCodec, appState map[string]json.RawMessage) *ibccoretypes.GenesisState {
@@ -24,8 +25,8 @@ func GetIBCGenesisStateFromAppState(cdc codec.JSONCodec, appState map[string]jso
 func GetGovGenesisStateFromAppState(cdc codec.JSONCodec, appState map[string]json.RawMessage) *govtypes.GenesisState {
 	var genesisState govtypes.GenesisState
 
-	if appState[govtypes.ModuleName] != nil {
-		cdc.MustUnmarshalJSON(appState[govtypes.ModuleName], &genesisState)
+	if appState[gov.ModuleName] != nil {
+		cdc.MustUnmarshalJSON(appState[gov.ModuleName], &genesisState)
 	}
 
 	return &genesisState

@@ -4,19 +4,18 @@ import (
 	"fmt"
 	"sort"
 
-	cltypes "github.com/akash-network/akash-api/go/node/client/types"
 	"github.com/spf13/cobra"
 
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	types "github.com/akash-network/akash-api/go/node/audit/v1beta3"
-	ptypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
-	akashtypes "github.com/akash-network/akash-api/go/node/types/v1beta3"
-	atypes "github.com/akash-network/akash-api/go/node/types/v1beta3"
+	types "pkg.akt.dev/go/node/audit/v1"
+	cltypes "pkg.akt.dev/go/node/client/types"
+	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
+	attrtypes "pkg.akt.dev/go/node/types/attributes/v1"
 
-	aclient "github.com/akash-network/node/client"
+	aclient "pkg.akt.dev/akashd/client"
 )
 
 // GetTxCmd returns the transaction commands for audit module
@@ -183,12 +182,12 @@ func setCmdProviderFlags(cmd *cobra.Command) {
 // if no arguments were provided then query provider and sign all found
 // read from stdin uses trick to check if it's file descriptor is a pipe
 // which happens when some data is piped for example cat attr.yaml | akash ...
-func readAttributes(cmd *cobra.Command, cctx sdkclient.Context, provider string, args []string) (akashtypes.Attributes, error) {
-	var attr akashtypes.Attributes
+func readAttributes(cmd *cobra.Command, cctx sdkclient.Context, provider string, args []string) (attrtypes.Attributes, error) {
+	var attr attrtypes.Attributes
 
 	if len(args) != 0 {
 		for i := 0; i < len(args); i += 2 {
-			attr = append(attr, atypes.Attribute{
+			attr = append(attr, attrtypes.Attribute{
 				Key:   args[i],
 				Value: args[i+1],
 			})
@@ -225,7 +224,7 @@ func readKeys(args []string) ([]string, error) {
 	return args, nil
 }
 
-func checkAttributeDuplicates(attr akashtypes.Attributes) bool {
+func checkAttributeDuplicates(attr attrtypes.Attributes) bool {
 	keys := make(map[string]bool)
 
 	for _, entry := range attr {

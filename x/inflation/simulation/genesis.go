@@ -4,7 +4,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 
-	types "github.com/akash-network/akash-api/go/node/inflation/v1beta3"
+	types "pkg.akt.dev/go/node/inflation/v1beta3"
 )
 
 // RandomizedGenState generates a random GenesisState for supply

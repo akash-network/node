@@ -9,14 +9,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
 
-	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+	types "pkg.akt.dev/go/node/cert/v1"
 
-	aclient "github.com/akash-network/node/client"
-)
-
-const (
-	stateValid   = "valid"
-	stateRevoked = "revoked"
+	aclient "pkg.akt.dev/akashd/client"
 )
 
 func GetQueryCmd() *cobra.Command {
@@ -83,7 +78,7 @@ func cmdGetCertificates() *cobra.Command {
 			}
 
 			if value := cmd.Flag("state").Value.String(); value != "" {
-				if value != stateValid && value != stateRevoked {
+				if val, exists := types.State_value[value]; !exists || types.State(val) == types.CertificateStateInvalid {
 					return fmt.Errorf("invalid value of --state flag. expected valid|revoked")
 				}
 

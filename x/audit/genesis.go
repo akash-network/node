@@ -3,13 +3,13 @@ package audit
 import (
 	"encoding/json"
 
+	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	abci "github.com/tendermint/tendermint/abci/types"
 
-	"github.com/akash-network/node/x/audit/keeper"
+	types "pkg.akt.dev/go/node/audit/v1"
 
-	types "github.com/akash-network/akash-api/go/node/audit/v1beta3"
+	"pkg.akt.dev/akashd/x/audit/keeper"
 )
 
 // ValidateGenesis does validation check of the Genesis and returns error incase of failure

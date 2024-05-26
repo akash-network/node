@@ -3,28 +3,31 @@ package state
 import (
 	"testing"
 
+	"github.com/cosmos/cosmos-sdk/codec"
+	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
+	"github.com/stretchr/testify/mock"
+
+	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
-	"github.com/stretchr/testify/mock"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 
-	atypes "github.com/akash-network/akash-api/go/node/audit/v1beta3"
-	ttypes "github.com/akash-network/akash-api/go/node/take/v1beta3"
+	atypes "pkg.akt.dev/go/node/audit/v1"
+	dtypes "pkg.akt.dev/go/node/deployment/v1"
+	etypes "pkg.akt.dev/go/node/escrow/v1"
+	mtypes "pkg.akt.dev/go/node/market/v1beta5"
+	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
+	ttypes "pkg.akt.dev/go/node/take/v1beta3"
 
-	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
-	etypes "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
-	mtypes "github.com/akash-network/akash-api/go/node/market/v1beta4"
-	ptypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
+	"pkg.akt.dev/akashd/app"
 
-	"github.com/akash-network/node/app"
-	emocks "github.com/akash-network/node/testutil/cosmos/mocks"
-	akeeper "github.com/akash-network/node/x/audit/keeper"
-	dkeeper "github.com/akash-network/node/x/deployment/keeper"
-	ekeeper "github.com/akash-network/node/x/escrow/keeper"
-	mhooks "github.com/akash-network/node/x/market/hooks"
-	mkeeper "github.com/akash-network/node/x/market/keeper"
-	pkeeper "github.com/akash-network/node/x/provider/keeper"
-	tkeeper "github.com/akash-network/node/x/take/keeper"
+	emocks "pkg.akt.dev/akashd/testutil/cosmos/mocks"
+	akeeper "pkg.akt.dev/akashd/x/audit/keeper"
+	dkeeper "pkg.akt.dev/akashd/x/deployment/keeper"
+	ekeeper "pkg.akt.dev/akashd/x/escrow/keeper"
+	mhooks "pkg.akt.dev/akashd/x/market/hooks"
+	mkeeper "pkg.akt.dev/akashd/x/market/keeper"
+	pkeeper "pkg.akt.dev/akashd/x/provider/keeper"
+	tkeeper "pkg.akt.dev/akashd/x/take/keeper"
 )
 
 // TestSuite encapsulates a functional Akash nodes data stores for
@@ -56,6 +59,8 @@ func SetupTestSuite(t testing.TB) *TestSuite {
 }
 
 func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
+	cdc := codec.NewProtoCodec(cdctypes.NewInterfaceRegistry())
+
 	if keepers.Bank == nil {
 		bkeeper := &emocks.BankKeeper{}
 		bkeeper.
@@ -90,24 +95,24 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 	app := app.Setup(false)
 
 	if keepers.Audit == nil {
-		keepers.Audit = akeeper.NewKeeper(atypes.ModuleCdc, app.GetKey(atypes.StoreKey))
+		keepers.Audit = akeeper.NewKeeper(cdc, app.GetKey(atypes.StoreKey))
 	}
 
 	if keepers.Take == nil {
-		keepers.Take = tkeeper.NewKeeper(ttypes.ModuleCdc, app.GetKey(ttypes.StoreKey), app.GetSubspace(ttypes.ModuleName))
+		keepers.Take = tkeeper.NewKeeper(cdc, app.GetKey(ttypes.StoreKey), app.GetSubspace(ttypes.ModuleName))
 	}
 
 	if keepers.Escrow == nil {
-		keepers.Escrow = ekeeper.NewKeeper(etypes.ModuleCdc, app.GetKey(etypes.StoreKey), keepers.Bank, keepers.Take, keepers.Distr, keepers.Authz)
+		keepers.Escrow = ekeeper.NewKeeper(cdc, app.GetKey(etypes.StoreKey), keepers.Bank, keepers.Take, keepers.Distr, keepers.Authz)
 	}
 	if keepers.Market == nil {
-		keepers.Market = mkeeper.NewKeeper(mtypes.ModuleCdc, app.GetKey(mtypes.StoreKey), app.GetSubspace(mtypes.ModuleName), keepers.Escrow)
+		keepers.Market = mkeeper.NewKeeper(cdc, app.GetKey(mtypes.StoreKey), app.GetSubspace(mtypes.ModuleName), keepers.Escrow)
 	}
 	if keepers.Deployment == nil {
-		keepers.Deployment = dkeeper.NewKeeper(dtypes.ModuleCdc, app.GetKey(dtypes.StoreKey), app.GetSubspace(dtypes.ModuleName), keepers.Escrow)
+		keepers.Deployment = dkeeper.NewKeeper(cdc, app.GetKey(dtypes.StoreKey), app.GetSubspace(dtypes.ModuleName), keepers.Escrow)
 	}
 	if keepers.Provider == nil {
-		keepers.Provider = pkeeper.NewKeeper(ptypes.ModuleCdc, app.GetKey(ptypes.StoreKey))
+		keepers.Provider = pkeeper.NewKeeper(cdc, app.GetKey(ptypes.StoreKey))
 	}
 
 	hook := mhooks.New(keepers.Deployment, keepers.Market)

@@ -6,7 +6,7 @@ import (
 
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 
-	types "github.com/akash-network/akash-api/go/node/inflation/v1beta3"
+	types "pkg.akt.dev/go/node/inflation/v1beta3"
 )
 
 type IKeeper interface {

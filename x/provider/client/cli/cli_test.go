@@ -10,11 +10,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	types "github.com/akash-network/akash-api/go/node/provider/v1beta3"
+	types "pkg.akt.dev/go/node/provider/v1beta4"
 
-	"github.com/akash-network/node/testutil"
-	"github.com/akash-network/node/testutil/network"
-	"github.com/akash-network/node/x/provider/client/cli"
+	"pkg.akt.dev/go/cli"
+
+	"pkg.akt.dev/akashd/testutil"
+	"pkg.akt.dev/akashd/testutil/network"
+	pcli "pkg.akt.dev/akashd/x/provider/client/cli"
 )
 
 type IntegrationTestSuite struct {
@@ -52,21 +54,21 @@ func (s *IntegrationTestSuite) TestProvider() {
 	s.Require().NoError(err)
 
 	// create deployment
-	_, err = cli.TxCreateProviderExec(
+	_, err = pcli.TxCreateProviderExec(
 		val.ClientCtx,
 		val.Address,
 		providerPath,
-		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+		fmt.Sprintf("--%s=true", cli.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", cli.FlagBroadcastMode, cli.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", cli.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
+		fmt.Sprintf("--gas=%d", cli.DefaultGasLimit),
 	)
 	s.Require().NoError(err)
 
 	s.Require().NoError(s.network.WaitForNextBlock())
 
 	// test query providers
-	resp, err := cli.QueryProvidersExec(val.ClientCtx.WithOutputFormat("json"))
+	resp, err := pcli.QueryProvidersExec(val.ClientCtx.WithOutputFormat("json"))
 	s.Require().NoError(err)
 
 	out := &types.QueryProvidersResponse{}
@@ -78,7 +80,7 @@ func (s *IntegrationTestSuite) TestProvider() {
 
 	// test query provider
 	createdProvider := providers[0]
-	resp, err = cli.QueryProviderExec(val.ClientCtx.WithOutputFormat("json"), createdProvider.Owner)
+	resp, err = pcli.QueryProviderExec(val.ClientCtx.WithOutputFormat("json"), createdProvider.Owner)
 	s.Require().NoError(err)
 
 	var provider types.Provider
@@ -87,12 +89,12 @@ func (s *IntegrationTestSuite) TestProvider() {
 	s.Require().Equal(createdProvider, provider)
 
 	// test updating provider
-	_, err = cli.TxUpdateProviderExec(
+	_, err = pcli.TxUpdateProviderExec(
 		val.ClientCtx,
 		val.Address,
 		providerPath2,
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, cli.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 	)
@@ -100,7 +102,7 @@ func (s *IntegrationTestSuite) TestProvider() {
 
 	s.Require().NoError(s.network.WaitForNextBlock())
 
-	resp, err = cli.QueryProviderExec(val.ClientCtx.WithOutputFormat("json"), createdProvider.Owner)
+	resp, err = pcli.QueryProviderExec(val.ClientCtx.WithOutputFormat("json"), createdProvider.Owner)
 	s.Require().NoError(err)
 
 	var providerV2 types.Provider

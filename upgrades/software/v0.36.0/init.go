@@ -3,7 +3,7 @@
 package v0_36_0
 
 import (
-	utypes "github.com/akash-network/node/upgrades/types"
+	utypes "pkg.akt.dev/akashd/upgrades/types"
 )
 
 func init() {

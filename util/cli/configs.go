@@ -9,12 +9,14 @@ import (
 	"strings"
 	"time"
 
+	// "cosmossdk.io/log"
+
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
-	tmcfg "github.com/tendermint/tendermint/config"
+	tmcfg "github.com/cometbft/cometbft/config"
 
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/server"
@@ -109,7 +111,7 @@ func InterceptConfigsPreRunHandler(
 		logger = logger.With().Timestamp().Logger()
 	}
 
-	serverCtx.Logger = server.ZeroLogWrapper{Logger: logger}
+	// serverCtx.Logger = server.ZeroLogWrapper{Logger: logger}
 
 	if err = bindFlags(cmd, serverCtx.Viper, envPrefixes); err != nil {
 		return err

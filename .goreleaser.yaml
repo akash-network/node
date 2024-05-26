@@ -1,3 +1,4 @@
+---
 project_name: node
 dist: ./.cache/goreleaser
 env:

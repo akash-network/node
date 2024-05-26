@@ -4,9 +4,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+	types "pkg.akt.dev/go/node/cert/v1"
 
-	"github.com/akash-network/node/x/cert/keeper"
+	"pkg.akt.dev/akashd/x/cert/keeper"
 )
 
 // NewHandler returns a handler for "provider" type messages.
@@ -23,6 +23,6 @@ func NewHandler(keeper keeper.Keeper) sdk.Handler {
 			return sdk.WrapServiceResult(ctx, res, err)
 		}
 
-		return nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownRequest, "unrecognized message type: %T", msg)
+		return nil, sdkerrors.ErrUnknownRequest.Wrapf("unrecognized message type: %T", msg)
 	}
 }

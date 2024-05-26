@@ -3,13 +3,13 @@ package provider
 import (
 	"encoding/json"
 
+	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	abci "github.com/tendermint/tendermint/abci/types"
 
-	types "github.com/akash-network/akash-api/go/node/provider/v1beta3"
+	types "pkg.akt.dev/go/node/provider/v1beta4"
 
-	"github.com/akash-network/node/x/provider/keeper"
+	"pkg.akt.dev/akashd/x/provider/keeper"
 )
 
 // ValidateGenesis does validation check of the Genesis and returns error in case of failure

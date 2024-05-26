@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/akash-network/node/x/provider/query"
 	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/rest"
+
+	"pkg.akt.dev/akashd/x/provider/query"
+
 	"github.com/gorilla/mux"
 )
 

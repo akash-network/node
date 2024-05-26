@@ -8,9 +8,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
 
-	types "github.com/akash-network/akash-api/go/node/audit/v1beta3"
+	types "pkg.akt.dev/go/node/audit/v1"
 
-	aclient "github.com/akash-network/node/client"
+	aclient "pkg.akt.dev/akashd/client"
 )
 
 func GetQueryCmd() *cobra.Command {

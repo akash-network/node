@@ -3,19 +3,22 @@ package cli
 import (
 	"context"
 
-	sdkclient "github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
 
-	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+	sdkclient "github.com/cosmos/cosmos-sdk/client"
 
-	aclient "github.com/akash-network/node/client"
+	"pkg.akt.dev/go/cli"
+
+	"pkg.akt.dev/go/node/deployment/v1"
+	"pkg.akt.dev/go/node/deployment/v1beta4"
+
+	aclient "pkg.akt.dev/akashd/client"
 )
 
 // GetQueryCmd returns the query commands for the deployment module
 func GetQueryCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:                        types.ModuleName,
+		Use:                        v1.ModuleName,
 		Short:                      "Deployment query commands",
 		SuggestionsMinimumDistance: 2,
 		RunE:                       sdkclient.ValidateCmd,
@@ -58,7 +61,7 @@ func cmdDeployments() *cobra.Command {
 				return err
 			}
 
-			params := &types.QueryDeploymentsRequest{
+			params := &v1beta4.QueryDeploymentsRequest{
 				Filters:    dfilters,
 				Pagination: pageReq,
 			}
@@ -72,8 +75,8 @@ func cmdDeployments() *cobra.Command {
 		},
 	}
 
-	flags.AddQueryFlagsToCmd(cmd)
-	flags.AddPaginationFlagsToCmd(cmd, "deployments")
+	cli.AddQueryFlagsToCmd(cmd)
+	cli.AddPaginationFlagsToCmd(cmd, "deployments")
 	AddDeploymentFilterFlags(cmd.Flags())
 
 	return cmd
@@ -102,7 +105,7 @@ func cmdDeployment() *cobra.Command {
 				return err
 			}
 
-			res, err := qq.Deployment(context.Background(), &types.QueryDeploymentRequest{ID: id})
+			res, err := qq.Deployment(context.Background(), &v1beta4.QueryDeploymentRequest{ID: id})
 			if err != nil {
 				return err
 			}
@@ -111,7 +114,7 @@ func cmdDeployment() *cobra.Command {
 		},
 	}
 
-	flags.AddQueryFlagsToCmd(cmd)
+	cli.AddQueryFlagsToCmd(cmd)
 	AddDeploymentIDFlags(cmd.Flags())
 	MarkReqDeploymentIDFlags(cmd)
 
@@ -156,7 +159,7 @@ func cmdGetGroup() *cobra.Command {
 				return err
 			}
 
-			res, err := qq.Group(cmd.Context(), &types.QueryGroupRequest{ID: id})
+			res, err := qq.Group(cmd.Context(), &v1beta4.QueryGroupRequest{ID: id})
 			if err != nil {
 				return err
 			}
@@ -165,7 +168,7 @@ func cmdGetGroup() *cobra.Command {
 		},
 	}
 
-	flags.AddQueryFlagsToCmd(cmd)
+	cli.AddQueryFlagsToCmd(cmd)
 	AddGroupIDFlags(cmd.Flags())
 	MarkReqGroupIDFlags(cmd)
 

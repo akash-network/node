@@ -7,20 +7,21 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	v1 "pkg.akt.dev/go/node/market/v1"
 
+	"github.com/cometbft/cometbft/libs/rand"
 	sdktestdata "github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/tendermint/tendermint/libs/rand"
 
-	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
-	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
-	ptypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
-	akashtypes "github.com/akash-network/akash-api/go/node/types/v1beta3"
+	dtypes "pkg.akt.dev/go/node/deployment/v1beta4"
+	types "pkg.akt.dev/go/node/market/v1beta5"
+	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
+	attr "pkg.akt.dev/go/node/types/attributes/v1"
 
-	"github.com/akash-network/node/testutil"
-	"github.com/akash-network/node/testutil/state"
-	"github.com/akash-network/node/x/market/handler"
+	"pkg.akt.dev/akashd/testutil"
+	"pkg.akt.dev/akashd/testutil/state"
+	"pkg.akt.dev/akashd/x/market/handler"
 )
 
 type testSuite struct {
@@ -65,7 +66,7 @@ func TestCreateBidValid(t *testing.T) {
 	provider := suite.createProvider(gspec.Requirements.Attributes).Owner
 
 	msg := &types.MsgCreateBid{
-		Order:    order.ID(),
+		OrderID:  order.ID,
 		Provider: provider,
 		Price:    sdk.NewDecCoin(testutil.CoinDenom, sdk.NewInt(1)),
 		Deposit:  types.DefaultBidMinDeposit,
@@ -78,7 +79,7 @@ func TestCreateBidValid(t *testing.T) {
 	providerAddr, err := sdk.AccAddressFromBech32(provider)
 	require.NoError(t, err)
 
-	bid := types.MakeBidID(order.ID(), providerAddr)
+	bid := v1.MakeBidID(order.ID, providerAddr)
 
 	t.Run("ensure event created", func(t *testing.T) {
 		t.Skip("EVENTS TESTING")
@@ -102,7 +103,7 @@ func TestCreateBidInvalidPrice(t *testing.T) {
 	provider := suite.createProvider(gspec.Requirements.Attributes).Owner
 
 	msg := &types.MsgCreateBid{
-		Order:    order.ID(),
+		OrderID:  order.ID,
 		Provider: provider,
 		Price:    sdk.DecCoin{},
 	}
@@ -113,7 +114,7 @@ func TestCreateBidInvalidPrice(t *testing.T) {
 	providerAddr, err := sdk.AccAddressFromBech32(provider)
 	require.NoError(t, err)
 
-	_, found := suite.MarketKeeper().GetBid(suite.Context(), types.MakeBidID(order.ID(), providerAddr))
+	_, found := suite.MarketKeeper().GetBid(suite.Context(), v1.MakeBidID(order.ID, providerAddr))
 	require.False(t, found)
 }
 
@@ -121,7 +122,7 @@ func TestCreateBidNonExistingOrder(t *testing.T) {
 	suite := setupTestSuite(t)
 
 	msg := &types.MsgCreateBid{
-		Order:    types.OrderID{Owner: testutil.AccAddress(t).String()},
+		OrderID:  v1.OrderID{Owner: testutil.AccAddress(t).String()},
 		Provider: testutil.AccAddress(t).String(),
 		Price:    testutil.AkashDecCoinRandom(t),
 	}
@@ -132,7 +133,7 @@ func TestCreateBidNonExistingOrder(t *testing.T) {
 
 	providerAddr, _ := sdk.AccAddressFromBech32(msg.Provider)
 
-	_, found := suite.MarketKeeper().GetBid(suite.Context(), types.MakeBidID(msg.Order, providerAddr))
+	_, found := suite.MarketKeeper().GetBid(suite.Context(), v1.MakeBidID(msg.OrderID, providerAddr))
 	require.False(t, found)
 }
 
@@ -141,10 +142,10 @@ func TestCreateBidClosedOrder(t *testing.T) {
 
 	order, gspec := suite.createOrder(nil)
 
-	suite.MarketKeeper().OnOrderClosed(suite.Context(), order)
+	_ = suite.MarketKeeper().OnOrderClosed(suite.Context(), order)
 
 	msg := &types.MsgCreateBid{
-		Order:    order.ID(),
+		OrderID:  order.ID,
 		Provider: suite.createProvider(gspec.Requirements.Attributes).Owner,
 		Price:    sdk.NewDecCoin(testutil.CoinDenom, sdk.NewInt(math.MaxInt64)),
 	}
@@ -165,7 +166,7 @@ func TestCreateBidOverprice(t *testing.T) {
 	order, gspec := suite.createOrder(resources)
 
 	msg := &types.MsgCreateBid{
-		Order:    order.ID(),
+		OrderID:  order.ID,
 		Provider: suite.createProvider(gspec.Requirements.Attributes).Owner,
 		Price:    sdk.NewDecCoin(testutil.CoinDenom, sdk.NewInt(math.MaxInt64)),
 	}
@@ -181,7 +182,7 @@ func TestCreateBidInvalidProvider(t *testing.T) {
 	order, _ := suite.createOrder(testutil.Resources(t))
 
 	msg := &types.MsgCreateBid{
-		Order:    order.ID(),
+		OrderID:  order.ID,
 		Provider: "",
 		Price:    sdk.NewDecCoin(testutil.CoinDenom, sdk.NewInt(1)),
 	}
@@ -197,7 +198,7 @@ func TestCreateBidInvalidAttributes(t *testing.T) {
 	order, _ := suite.createOrder(testutil.Resources(t))
 
 	msg := &types.MsgCreateBid{
-		Order:    order.ID(),
+		OrderID:  order.ID,
 		Provider: suite.createProvider(testutil.Attributes(t)).Owner,
 		Price:    sdk.NewDecCoin(testutil.CoinDenom, sdk.NewInt(1)),
 	}
@@ -213,7 +214,7 @@ func TestCreateBidAlreadyExists(t *testing.T) {
 	order, gspec := suite.createOrder(testutil.Resources(t))
 
 	msg := &types.MsgCreateBid{
-		Order:    order.ID(),
+		OrderID:  order.ID,
 		Provider: suite.createProvider(gspec.Requirements.Attributes).Owner,
 		Price:    sdk.NewDecCoin(testutil.CoinDenom, sdk.NewInt(1)),
 		Deposit:  types.DefaultBidMinDeposit,
@@ -292,7 +293,7 @@ func TestCloseBidNonExisting(t *testing.T) {
 	require.NoError(t, err)
 
 	msg := &types.MsgCloseBid{
-		BidID: types.MakeBidID(order.ID(), providerAddr),
+		ID: v1.MakeBidID(order.ID, providerAddr),
 	}
 
 	res, err := suite.handler(suite.Context(), msg)
@@ -308,7 +309,7 @@ func TestCloseBidUnknownLease(t *testing.T) {
 	suite.MarketKeeper().OnBidMatched(suite.Context(), bid)
 
 	msg := &types.MsgCloseBid{
-		BidID: bid.ID(),
+		ID: bid.ID,
 	}
 
 	res, err := suite.handler(suite.Context(), msg)
@@ -322,7 +323,7 @@ func TestCloseBidValid(t *testing.T) {
 	_, bid, _ := suite.createLease()
 
 	msg := &types.MsgCloseBid{
-		BidID: bid.ID(),
+		ID: bid.ID,
 	}
 
 	res, err := suite.handler(suite.Context(), msg)
@@ -336,7 +337,7 @@ func TestCloseBidValid(t *testing.T) {
 
 		dev := iev.(types.EventBidClosed)
 
-		require.Equal(t, msg.BidID, dev.ID)
+		require.Equal(t, msg.ID, dev.ID)
 	})
 }
 
@@ -346,7 +347,7 @@ func TestCloseBidWithStateOpen(t *testing.T) {
 	bid, _ := suite.createBid()
 
 	msg := &types.MsgCloseBid{
-		BidID: bid.ID(),
+		ID: bid.ID,
 	}
 
 	res, err := suite.handler(suite.Context(), msg)
@@ -360,7 +361,7 @@ func TestCloseBidWithStateOpen(t *testing.T) {
 
 		dev := iev.(types.EventBidClosed)
 
-		require.Equal(t, msg.BidID, dev.ID)
+		require.Equal(t, msg.ID, dev.ID)
 	})
 }
 
@@ -386,7 +387,7 @@ func TestCloseBidUnknownOrder(t *testing.T) {
 	suite := setupTestSuite(t)
 
 	group := testutil.DeploymentGroup(t, testutil.DeploymentID(t), 0)
-	orderID := types.MakeOrderID(group.ID(), 1)
+	orderID := v1.MakeOrderID(group.ID, 1)
 	provider := testutil.AccAddress(t)
 	price := sdk.NewDecCoin(testutil.CoinDenom, sdk.NewInt(int64(rand.Uint16())))
 	roffer := types.ResourceOfferFromRU(group.GroupSpec.Resources)
@@ -394,10 +395,11 @@ func TestCloseBidUnknownOrder(t *testing.T) {
 	bid, err := suite.MarketKeeper().CreateBid(suite.Context(), orderID, provider, price, roffer)
 	require.NoError(t, err)
 
-	suite.MarketKeeper().CreateLease(suite.Context(), bid)
+	err = suite.MarketKeeper().CreateLease(suite.Context(), bid)
+	require.NoError(t, err)
 
 	msg := &types.MsgCloseBid{
-		BidID: bid.ID(),
+		ID: bid.ID,
 	}
 
 	res, err := suite.handler(suite.Context(), msg)
@@ -405,15 +407,17 @@ func TestCloseBidUnknownOrder(t *testing.T) {
 	require.Error(t, err)
 }
 
-func (st *testSuite) createLease() (types.LeaseID, types.Bid, types.Order) {
+func (st *testSuite) createLease() (v1.LeaseID, types.Bid, types.Order) {
 	st.t.Helper()
 	bid, order := st.createBid()
 
-	st.MarketKeeper().CreateLease(st.Context(), bid)
+	err := st.MarketKeeper().CreateLease(st.Context(), bid)
+	require.NoError(st.t, err)
+
 	st.MarketKeeper().OnBidMatched(st.Context(), bid)
 	st.MarketKeeper().OnOrderMatched(st.Context(), order)
 
-	lid := types.MakeLeaseID(bid.ID())
+	lid := v1.MakeLeaseID(bid.ID)
 	return lid, bid, order
 }
 
@@ -424,11 +428,11 @@ func (st *testSuite) createBid() (types.Bid, types.Order) {
 	price := sdk.NewDecCoin(testutil.CoinDenom, sdk.NewInt(int64(rand.Uint16())))
 	roffer := types.ResourceOfferFromRU(gspec.Resources)
 
-	bid, err := st.MarketKeeper().CreateBid(st.Context(), order.ID(), provider, price, roffer)
+	bid, err := st.MarketKeeper().CreateBid(st.Context(), order.ID, provider, price, roffer)
 	require.NoError(st.t, err)
-	require.Equal(st.t, order.ID(), bid.ID().OrderID())
+	require.Equal(st.t, order.ID, bid.ID.OrderID())
 	require.Equal(st.t, price, bid.Price)
-	require.Equal(st.t, provider.String(), bid.ID().Provider)
+	require.Equal(st.t, provider.String(), bid.ID.Provider)
 	return bid, order
 }
 
@@ -436,22 +440,22 @@ func (st *testSuite) createOrder(resources dtypes.ResourceUnits) (types.Order, d
 	st.t.Helper()
 
 	deployment := testutil.Deployment(st.t)
-	group := testutil.DeploymentGroup(st.t, deployment.ID(), 0)
+	group := testutil.DeploymentGroup(st.t, deployment.ID, 0)
 	group.GroupSpec.Resources = resources
 
 	err := st.DeploymentKeeper().Create(st.Context(), deployment, []dtypes.Group{group})
 	require.NoError(st.t, err)
 
-	order, err := st.MarketKeeper().CreateOrder(st.Context(), group.ID(), group.GroupSpec)
+	order, err := st.MarketKeeper().CreateOrder(st.Context(), group.ID, group.GroupSpec)
 	require.NoError(st.t, err)
-	require.Equal(st.t, group.ID(), order.ID().GroupID())
-	require.Equal(st.t, uint32(1), order.ID().OSeq)
-	require.Equal(st.t, types.OrderOpen, order.State)
+	require.Equal(st.t, group.ID, order.ID.GroupID())
+	require.Equal(st.t, uint32(1), order.ID.OSeq)
+	require.Equal(st.t, v1.OrderOpen, order.State)
 
 	return order, group.GroupSpec
 }
 
-func (st *testSuite) createProvider(attr []akashtypes.Attribute) ptypes.Provider {
+func (st *testSuite) createProvider(attr attr.Attributes) ptypes.Provider {
 	st.t.Helper()
 
 	prov := ptypes.Provider{

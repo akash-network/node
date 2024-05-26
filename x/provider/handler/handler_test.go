@@ -4,20 +4,21 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	sdktestdata "github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/stretchr/testify/require"
 
-	types "github.com/akash-network/akash-api/go/node/provider/v1beta3"
+	types "pkg.akt.dev/go/node/provider/v1beta4"
 
-	akashtypes "github.com/akash-network/akash-api/go/node/types/v1beta3"
+	akashtypes "pkg.akt.dev/go/node/types/attributes/v1"
 
-	"github.com/akash-network/node/testutil"
-	"github.com/akash-network/node/testutil/state"
-	mkeeper "github.com/akash-network/node/x/market/keeper"
-	"github.com/akash-network/node/x/provider/handler"
-	"github.com/akash-network/node/x/provider/keeper"
+	"pkg.akt.dev/akashd/testutil"
+	"pkg.akt.dev/akashd/testutil/state"
+	mkeeper "pkg.akt.dev/akashd/x/market/keeper"
+	"pkg.akt.dev/akashd/x/provider/handler"
+	"pkg.akt.dev/akashd/x/provider/keeper"
 )
 
 const (
@@ -67,13 +68,14 @@ func TestProviderCreate(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("ensure event created", func(t *testing.T) {
+		ev, err := sdk.ParseTypedEvent(res.Events[0])
+		require.NoError(t, err)
 
-		iev := testutil.ParseProviderEvent(t, res.Events)
-		require.IsType(t, types.EventProviderCreated{}, iev)
+		require.IsType(t, &types.EventProviderCreated{}, ev)
 
-		dev := iev.(types.EventProviderCreated)
+		dev := ev.(*types.EventProviderCreated)
 
-		require.Equal(t, msg.Owner, dev.Owner.String())
+		require.Equal(t, msg.Owner, dev.Owner)
 	})
 
 	res, err = suite.handler(suite.ctx, msg)
@@ -88,7 +90,7 @@ func TestProviderCreateWithInfo(t *testing.T) {
 	msg := &types.MsgCreateProvider{
 		Owner:   testutil.AccAddress(t).String(),
 		HostURI: testutil.ProviderHostname(t),
-		Info: types.ProviderInfo{
+		Info: types.Info{
 			EMail:   emailValid,
 			Website: testutil.Hostname(t),
 		},
@@ -99,13 +101,14 @@ func TestProviderCreateWithInfo(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("ensure event created", func(t *testing.T) {
+		ev, err := sdk.ParseTypedEvent(res.Events[0])
+		require.NoError(t, err)
 
-		iev := testutil.ParseProviderEvent(t, res.Events)
-		require.IsType(t, types.EventProviderCreated{}, iev)
+		require.IsType(t, &types.EventProviderCreated{}, ev)
 
-		dev := iev.(types.EventProviderCreated)
+		dev := ev.(*types.EventProviderCreated)
 
-		require.Equal(t, msg.Owner, dev.Owner.String())
+		require.Equal(t, msg.Owner, dev.Owner)
 	})
 
 	res, err = suite.handler(suite.ctx, msg)
@@ -178,12 +181,14 @@ func TestProviderUpdateExisting(t *testing.T) {
 	res, err := suite.handler(suite.ctx, updateMsg)
 
 	t.Run("ensure event created", func(t *testing.T) {
-		iev := testutil.ParseProviderEvent(t, res.Events[1:])
-		require.IsType(t, types.EventProviderUpdated{}, iev)
+		ev, err := sdk.ParseTypedEvent(res.Events[1])
+		require.NoError(t, err)
 
-		dev := iev.(types.EventProviderUpdated)
+		require.IsType(t, &types.EventProviderUpdated{}, ev)
 
-		require.Equal(t, updateMsg.Owner, dev.Owner.String())
+		dev := ev.(*types.EventProviderUpdated)
+
+		require.Equal(t, updateMsg.Owner, dev.Owner)
 	})
 
 	require.NoError(t, err)

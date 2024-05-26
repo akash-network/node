@@ -14,18 +14,18 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
-	"github.com/cosmos/cosmos-sdk/simapp"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	types "pkg.akt.dev/go/node/types/v1beta3"
 
-	tmrand "github.com/tendermint/tendermint/libs/rand"
-	dbm "github.com/tendermint/tm-db"
+	dbm "github.com/cometbft/cometbft-db"
+	tmrand "github.com/cometbft/cometbft/libs/rand"
 
-	types "github.com/akash-network/akash-api/go/node/types/v1beta3"
+	rtypes "pkg.akt.dev/go/node/types/resources/v1beta4"
 
-	"github.com/akash-network/node/app"
-	"github.com/akash-network/node/testutil/network"
+	"pkg.akt.dev/akashd/app"
+	"pkg.akt.dev/akashd/testutil/network"
 )
 
 type InterceptState func(codec.Codec, string, json.RawMessage) json.RawMessage
@@ -61,21 +61,21 @@ func RandRangeUint64(min, max uint64) uint64 {
 	return val
 }
 
-func ResourceUnits(_ testing.TB) types.Resources {
-	return types.Resources{
+func ResourceUnits(_ testing.TB) rtypes.Resources {
+	return rtypes.Resources{
 		ID: 1,
-		CPU: &types.CPU{
-			Units: types.NewResourceValue(uint64(RandCPUUnits())),
+		CPU: &rtypes.CPU{
+			Units: rtypes.NewResourceValue(uint64(RandCPUUnits())),
 		},
-		Memory: &types.Memory{
-			Quantity: types.NewResourceValue(RandMemoryQuantity()),
+		Memory: &rtypes.Memory{
+			Quantity: rtypes.NewResourceValue(RandMemoryQuantity()),
 		},
-		GPU: &types.GPU{
-			Units: types.NewResourceValue(uint64(RandGPUUnits())),
+		GPU: &rtypes.GPU{
+			Units: rtypes.NewResourceValue(uint64(RandGPUUnits())),
 		},
-		Storage: types.Volumes{
-			types.Storage{
-				Quantity: types.NewResourceValue(RandStorageQuantity()),
+		Storage: rtypes.Volumes{
+			rtypes.Storage{
+				Quantity: rtypes.NewResourceValue(RandStorageQuantity()),
 			},
 		},
 	}
@@ -84,7 +84,7 @@ func ResourceUnits(_ testing.TB) types.Resources {
 func NewApp(val network.Validator) servertypes.Application {
 	return app.NewApp(
 		val.Ctx.Logger, dbm.NewMemDB(), nil, true, 0, make(map[int64]bool), val.Ctx.Config.RootDir,
-		simapp.EmptyAppOptions{},
+		// simapp.EmptyAppOptions{},
 		baseapp.SetPruning(storetypes.NewPruningOptionsFromString(val.AppConfig.Pruning)),
 		baseapp.SetMinGasPrices(val.AppConfig.MinGasPrices),
 	)

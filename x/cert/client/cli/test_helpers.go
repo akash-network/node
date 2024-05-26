@@ -7,7 +7,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	sdktest "github.com/cosmos/cosmos-sdk/testutil"
 
-	testutilcli "github.com/akash-network/node/testutil/cli"
+	testutilcli "pkg.akt.dev/akashd/testutil/cli"
 )
 
 // TxGenerateServerExec is used for testing create server certificate tx

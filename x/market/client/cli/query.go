@@ -4,14 +4,14 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/spf13/cobra"
 
-	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
+	"pkg.akt.dev/go/node/market/v1beta5"
 )
 
 // GetQueryCmd returns the transaction commands for the market module
 func GetQueryCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:                        types.ModuleName,
+		Use:                        v1beta5.ModuleName,
 		Short:                      "Market query commands",
 		SuggestionsMinimumDistance: 2,
 		RunE:                       client.ValidateCmd,

@@ -8,27 +8,33 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
+	sdkmath "cosmossdk.io/math"
+
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	sdktestutil "github.com/cosmos/cosmos-sdk/testutil/cli"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	banktestutil "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
-	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+	dv1 "pkg.akt.dev/go/node/deployment/v1"
+	dv1beta4 "pkg.akt.dev/go/node/deployment/v1beta4"
+	types "pkg.akt.dev/go/node/deployment/v1beta4"
 
-	"github.com/akash-network/node/testutil"
-	clitestutil "github.com/akash-network/node/testutil/cli"
-	"github.com/akash-network/node/testutil/network"
-	ccli "github.com/akash-network/node/x/cert/client/cli"
-	"github.com/akash-network/node/x/deployment/client/cli"
+	"pkg.akt.dev/go/cli"
+
+	"pkg.akt.dev/akashd/testutil"
+	clitestutil "pkg.akt.dev/akashd/testutil/cli"
+	"pkg.akt.dev/akashd/testutil/network"
+	ccli "pkg.akt.dev/akashd/x/cert/client/cli"
+	dcli "pkg.akt.dev/akashd/x/deployment/client/cli"
 )
 
 type IntegrationTestSuite struct {
 	suite.Suite
 	cfg            network.Config
 	network        *network.Network
-	keyFunder      keyring.Info
+	keyFunder      *keyring.Record
 	defaultDeposit sdk.Coin
 }
 
@@ -55,16 +61,19 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	s.keyFunder, err = val.ClientCtx.Keyring.Key("keyFoo")
 	s.Require().NoError(err)
 
-	s.defaultDeposit, err = types.DefaultParams().MinDepositFor("uakt")
+	addrFunder, err := s.keyFunder.GetAddress()
+	s.Require().Error(err)
+
+	s.defaultDeposit, err = dv1beta4.DefaultParams().MinDepositFor("uakt")
 	s.Require().NoError(err)
 
-	res, err := banktestutil.MsgSendExec(
+	res, err := sdktestutil.MsgSendExec(
 		val.ClientCtx,
 		val.Address,
-		s.keyFunder.GetAddress(),
+		addrFunder,
 		sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, s.defaultDeposit.Amount.MulRaw(4))),
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastSync),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 	)
@@ -85,8 +94,8 @@ func (s *IntegrationTestSuite) SetupSuite() {
 		context.Background(),
 		val.ClientCtx,
 		val.Address,
-		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=true", cli.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, cli.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 	)
@@ -109,34 +118,34 @@ func (s *IntegrationTestSuite) TestDeployment() {
 	s.Require().NoError(err)
 
 	// create deployment
-	_, err = cli.TxCreateDeploymentExec(
+	_, err = dcli.TxCreateDeploymentExec(
 		val.ClientCtx,
 		val.Address,
 		deploymentPath,
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, cli.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
-		fmt.Sprintf("--deposit=%s", cli.DefaultDeposit),
+		fmt.Sprintf("--deposit=%s", dcli.DefaultDeposit),
 	)
 	s.Require().NoError(err)
 
 	s.Require().NoError(s.network.WaitForNextBlock())
 
 	// test query deployments
-	resp, err := cli.QueryDeploymentsExec(val.ClientCtx.WithOutputFormat("json"))
+	resp, err := dcli.QueryDeploymentsExec(val.ClientCtx.WithOutputFormat("json"))
 	s.Require().NoError(err)
 
-	out := &types.QueryDeploymentsResponse{}
+	out := &dv1beta4.QueryDeploymentsResponse{}
 	err = val.ClientCtx.Codec.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Deployments, 1, "Deployment Create Failed")
 	deployments := out.Deployments
-	s.Require().Equal(val.Address.String(), deployments[0].Deployment.DeploymentID.Owner)
+	s.Require().Equal(val.Address.String(), deployments[0].Deployment.ID.Owner)
 
 	// test query deployment
 	createdDep := deployments[0]
-	resp, err = cli.QueryDeploymentExec(val.ClientCtx.WithOutputFormat("json"), createdDep.Deployment.DeploymentID)
+	resp, err = dcli.QueryDeploymentExec(val.ClientCtx.WithOutputFormat("json"), createdDep.Deployment.ID)
 	s.Require().NoError(err)
 
 	var deployment types.QueryDeploymentResponse
@@ -145,26 +154,26 @@ func (s *IntegrationTestSuite) TestDeployment() {
 	s.Require().Equal(createdDep, deployment)
 
 	// test query deployments with filters
-	resp, err = cli.QueryDeploymentsExec(
+	resp, err = dcli.QueryDeploymentsExec(
 		val.ClientCtx.WithOutputFormat("json"),
 		fmt.Sprintf("--owner=%s", val.Address.String()),
-		fmt.Sprintf("--dseq=%v", createdDep.Deployment.DeploymentID.DSeq),
+		fmt.Sprintf("--dseq=%v", createdDep.Deployment.ID.DSeq),
 	)
 	s.Require().NoError(err, "Error when fetching deployments with owner filter")
 
-	out = &types.QueryDeploymentsResponse{}
+	out = &dv1beta4.QueryDeploymentsResponse{}
 	err = val.ClientCtx.Codec.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Deployments, 1)
 
 	// test updating deployment
-	_, err = cli.TxUpdateDeploymentExec(
+	_, err = dcli.TxUpdateDeploymentExec(
 		val.ClientCtx,
 		val.Address,
 		deploymentPath2,
-		fmt.Sprintf("--dseq=%v", createdDep.Deployment.DeploymentID.DSeq),
+		fmt.Sprintf("--dseq=%v", createdDep.Deployment.ID.DSeq),
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, cli.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 	)
@@ -172,50 +181,50 @@ func (s *IntegrationTestSuite) TestDeployment() {
 
 	s.Require().NoError(s.network.WaitForNextBlock())
 
-	resp, err = cli.QueryDeploymentExec(val.ClientCtx.WithOutputFormat("json"), createdDep.Deployment.DeploymentID)
+	resp, err = dcli.QueryDeploymentExec(val.ClientCtx.WithOutputFormat("json"), createdDep.Deployment.ID)
 	s.Require().NoError(err)
 
 	var deploymentV2 types.QueryDeploymentResponse
 	err = val.ClientCtx.Codec.UnmarshalJSON(resp.Bytes(), &deploymentV2)
 	s.Require().NoError(err)
-	s.Require().NotEqual(deployment.Deployment.Version, deploymentV2.Deployment.Version)
+	s.Require().NotEqual(deployment.Deployment.Hash, deploymentV2.Deployment.Hash)
 
 	// test query deployments with wrong owner value
-	_, err = cli.QueryDeploymentsExec(
+	_, err = dcli.QueryDeploymentsExec(
 		val.ClientCtx.WithOutputFormat("json"),
 		"--owner=cosmos102ruvpv2srmunfffxavttxnhezln6fnc3pf7tt",
 	)
 	s.Require().Error(err)
 
 	// test query deployments with wrong state value
-	_, err = cli.QueryDeploymentsExec(
+	_, err = dcli.QueryDeploymentsExec(
 		val.ClientCtx.WithOutputFormat("json"),
 		"--state=hello",
 	)
 	s.Require().Error(err)
 
 	// test close deployment
-	_, err = cli.TxCloseDeploymentExec(
+	_, err = dcli.TxCloseDeploymentExec(
 		val.ClientCtx,
 		val.Address,
-		fmt.Sprintf("--dseq=%v", createdDep.Deployment.DeploymentID.DSeq),
-		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+		fmt.Sprintf("--dseq=%v", createdDep.Deployment.ID.DSeq),
+		fmt.Sprintf("--%s=true", cli.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", cli.FlagBroadcastMode, cli.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", cli.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
+		fmt.Sprintf("--gas=%d", cli.DefaultGasLimit),
 	)
 	s.Require().NoError(err)
 
 	s.Require().NoError(s.network.WaitForNextBlock())
 
 	// test query deployments with state filter closed
-	resp, err = cli.QueryDeploymentsExec(
+	resp, err = dcli.QueryDeploymentsExec(
 		val.ClientCtx.WithOutputFormat("json"),
 		"--state=closed",
 	)
 	s.Require().NoError(err)
 
-	out = &types.QueryDeploymentsResponse{}
+	out = &dv1beta4.QueryDeploymentsResponse{}
 	err = val.ClientCtx.Codec.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Deployments, 1, "Deployment Close Failed")
@@ -228,52 +237,52 @@ func (s *IntegrationTestSuite) TestGroup() {
 	s.Require().NoError(err)
 
 	// create deployment
-	_, err = cli.TxCreateDeploymentExec(
+	_, err = dcli.TxCreateDeploymentExec(
 		val.ClientCtx,
 		val.Address,
 		deploymentPath,
-		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
-		fmt.Sprintf("--deposit=%s", cli.DefaultDeposit),
+		fmt.Sprintf("--%s=true", cli.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", cli.FlagBroadcastMode, cli.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", cli.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
+		fmt.Sprintf("--gas=%d", cli.DefaultGasLimit),
+		fmt.Sprintf("--deposit=%s", dcli.DefaultDeposit),
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
 
 	// test query deployments
-	resp, err := cli.QueryDeploymentsExec(
+	resp, err := dcli.QueryDeploymentsExec(
 		val.ClientCtx.WithOutputFormat("json"),
 		"--state=active",
 	)
 	s.Require().NoError(err)
 
-	out := &types.QueryDeploymentsResponse{}
+	out := &dv1beta4.QueryDeploymentsResponse{}
 	err = val.ClientCtx.Codec.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Deployments, 1, "Deployment Create Failed")
 	deployments := out.Deployments
-	s.Require().Equal(val.Address.String(), deployments[0].Deployment.DeploymentID.Owner)
+	s.Require().Equal(val.Address.String(), deployments[0].Deployment.ID.Owner)
 
 	createdDep := deployments[0]
 
 	s.Require().NotEqual(0, len(createdDep.Groups))
 
 	// test close group tx
-	_, err = cli.TxCloseGroupExec(
+	_, err = dcli.TxCloseGroupExec(
 		val.ClientCtx,
-		createdDep.Groups[0].GroupID,
+		createdDep.Groups[0].ID,
 		val.Address,
-		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+		fmt.Sprintf("--%s=true", cli.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", cli.FlagBroadcastMode, cli.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", cli.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
+		fmt.Sprintf("--gas=%d", cli.DefaultGasLimit),
 	)
 	s.Require().NoError(err)
 
 	s.Require().NoError(s.network.WaitForNextBlock())
 
-	resp, err = cli.QueryGroupExec(val.ClientCtx.WithOutputFormat("json"), createdDep.Groups[0].GroupID)
+	resp, err = dcli.QueryGroupExec(val.ClientCtx.WithOutputFormat("json"), createdDep.Groups[0].ID)
 	s.Require().NoError(err)
 
 	var group types.Group
@@ -288,64 +297,67 @@ func (s *IntegrationTestSuite) TestFundedDeployment() {
 	deploymentPath, err := filepath.Abs("../../testdata/deployment-v2.yaml")
 	s.Require().NoError(err)
 
-	deploymentID := types.DeploymentID{
+	deploymentID := dv1.DeploymentID{
 		Owner: val.Address.String(),
 		DSeq:  uint64(105),
 	}
 
-	prevFunderBal := s.getAccountBalance(s.keyFunder.GetAddress())
+	addrFunder, err := s.keyFunder.GetAddress()
+	s.Require().Error(err)
+
+	prevFunderBal := s.getAccountBalance(addrFunder)
 
 	// Creating deployment paid by funder's account without any authorization from funder should fail
-	_, err = cli.TxCreateDeploymentExec(
+	_, err = dcli.TxCreateDeploymentExec(
 		val.ClientCtx,
 		val.Address,
 		deploymentPath,
-		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
+		fmt.Sprintf("--%s", cli.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", cli.FlagBroadcastMode, cli.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", cli.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
 		fmt.Sprintf("--dseq=%v", deploymentID.DSeq),
-		fmt.Sprintf("--depositor-account=%s", s.keyFunder.GetAddress().String()),
+		fmt.Sprintf("--depositor-account=%s", addrFunder.String()),
 	)
 	s.Require().Error(err)
 
 	// funder's balance shouldn't be deducted
-	s.Require().Equal(prevFunderBal, s.getAccountBalance(s.keyFunder.GetAddress()))
+	s.Require().Equal(prevFunderBal, s.getAccountBalance(addrFunder))
 
 	// Grant the tenant authorization to use funds from the funder's account
-	res, err := cli.TxGrantAuthorizationExec(
+	res, err := dcli.TxGrantAuthorizationExec(
 		val.ClientCtx,
-		s.keyFunder.GetAddress(),
+		addrFunder,
 		val.Address,
-		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+		fmt.Sprintf("--%s=true", cli.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", cli.FlagBroadcastMode, cli.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", cli.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
+		fmt.Sprintf("--gas=%d", cli.DefaultGasLimit),
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
 	clitestutil.ValidateTxSuccessful(s.T(), val.ClientCtx, res.Bytes())
-	prevFunderBal = s.getAccountBalance(s.keyFunder.GetAddress())
+	prevFunderBal = s.getAccountBalance(addrFunder)
 
 	ownerBal := s.getAccountBalance(val.Address)
 
 	// Creating deployment paid by funder's account should work now
-	res, err = cli.TxCreateDeploymentExec(
+	res, err = dcli.TxCreateDeploymentExec(
 		val.ClientCtx,
 		val.Address,
 		deploymentPath,
-		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+		fmt.Sprintf("--%s", cli.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", cli.FlagBroadcastMode, cli.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", cli.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
+		fmt.Sprintf("--gas=%d", cli.DefaultGasLimit),
 		fmt.Sprintf("--dseq=%v", deploymentID.DSeq),
-		fmt.Sprintf("--depositor-account=%s", s.keyFunder.GetAddress().String()),
+		fmt.Sprintf("--depositor-account=%s", addrFunder.String()),
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
 	clitestutil.ValidateTxSuccessful(s.T(), val.ClientCtx, res.Bytes())
 
 	// funder's balance should be deducted correctly
-	curFunderBal := s.getAccountBalance(s.keyFunder.GetAddress())
+	curFunderBal := s.getAccountBalance(addrFunder)
 	s.Require().Equal(prevFunderBal.Sub(s.defaultDeposit.Amount), curFunderBal)
 	prevFunderBal = curFunderBal
 
@@ -355,14 +367,14 @@ func (s *IntegrationTestSuite) TestFundedDeployment() {
 	ownerBal = curOwnerBal
 
 	// depositing additional funds from the owner's account should work
-	res, err = cli.TxDepositDeploymentExec(
+	res, err = dcli.TxDepositDeploymentExec(
 		val.ClientCtx,
 		s.defaultDeposit,
 		val.Address,
-		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+		fmt.Sprintf("--%s", cli.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", cli.FlagBroadcastMode, cli.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", cli.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
+		fmt.Sprintf("--gas=%d", cli.DefaultGasLimit),
 		fmt.Sprintf("--dseq=%v", deploymentID.DSeq),
 	)
 	s.Require().NoError(err)
@@ -376,75 +388,76 @@ func (s *IntegrationTestSuite) TestFundedDeployment() {
 	ownerBal = curOwnerBal
 
 	// depositing additional funds from the funder's account should work
-	res, err = cli.TxDepositDeploymentExec(
+	res, err = dcli.TxDepositDeploymentExec(
 		val.ClientCtx,
 		s.defaultDeposit,
 		val.Address,
-		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+		fmt.Sprintf("--%s", cli.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", cli.FlagBroadcastMode, cli.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", cli.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
+		fmt.Sprintf("--gas=%d", cli.DefaultGasLimit),
 		fmt.Sprintf("--dseq=%v", deploymentID.DSeq),
-		fmt.Sprintf("--depositor-account=%s", s.keyFunder.GetAddress().String()),
+		fmt.Sprintf("--depositor-account=%s", addrFunder.String()),
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
 	clitestutil.ValidateTxSuccessful(s.T(), val.ClientCtx, res.Bytes())
 
 	// funder's balance should be deducted correctly
-	curFunderBal = s.getAccountBalance(s.keyFunder.GetAddress())
+	curFunderBal = s.getAccountBalance(addrFunder)
 	s.Require().Equal(prevFunderBal.Sub(s.defaultDeposit.Amount), curFunderBal)
 	prevFunderBal = curFunderBal
 
 	// revoke the authorization given to the deployment owner by the funder
-	res, err = cli.TxRevokeAuthorizationExec(
+	res, err = dcli.TxRevokeAuthorizationExec(
 		val.ClientCtx,
-		s.keyFunder.GetAddress(),
+		addrFunder,
 		val.Address,
-		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+		fmt.Sprintf("--%s=true", cli.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", cli.FlagBroadcastMode, cli.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", cli.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
+		fmt.Sprintf("--gas=%d", cli.DefaultGasLimit),
 	)
 
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
 	clitestutil.ValidateTxSuccessful(s.T(), val.ClientCtx, res.Bytes())
-	prevFunderBal = s.getAccountBalance(s.keyFunder.GetAddress())
+
+	prevFunderBal = s.getAccountBalance(addrFunder)
 
 	// depositing additional funds from the funder's account should fail now
-	_, err = cli.TxDepositDeploymentExec(
+	_, err = dcli.TxDepositDeploymentExec(
 		val.ClientCtx,
 		s.defaultDeposit,
 		val.Address,
-		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+		fmt.Sprintf("--%s", cli.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", cli.FlagBroadcastMode, cli.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", cli.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
+		fmt.Sprintf("--gas=%d", cli.DefaultGasLimit),
 		fmt.Sprintf("--dseq=%v", deploymentID.DSeq),
-		fmt.Sprintf("--depositor-account=%s", s.keyFunder.GetAddress().String()),
+		fmt.Sprintf("--depositor-account=%s", addrFunder.String()),
 	)
 	s.Require().Error(err)
 
 	// funder's balance shouldn't be deducted
-	s.Require().Equal(prevFunderBal, s.getAccountBalance(s.keyFunder.GetAddress()))
+	s.Require().Equal(prevFunderBal, s.getAccountBalance(addrFunder))
 	ownerBal = s.getAccountBalance(val.Address)
 
 	// closing the deployment should return the funds and balance in escrow to the funder and
 	// owner's account
-	res, err = cli.TxCloseDeploymentExec(
+	res, err = dcli.TxCloseDeploymentExec(
 		val.ClientCtx,
 		val.Address,
-		fmt.Sprintf("--%s", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
-		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
-		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
+		fmt.Sprintf("--%s", cli.FlagSkipConfirmation),
+		fmt.Sprintf("--%s=%s", cli.FlagBroadcastMode, cli.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", cli.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(20))).String()),
+		fmt.Sprintf("--gas=%d", cli.DefaultGasLimit),
 		fmt.Sprintf("--dseq=%v", deploymentID.DSeq),
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.network.WaitForNextBlock())
 	clitestutil.ValidateTxSuccessful(s.T(), val.ClientCtx, res.Bytes())
-	s.Require().Equal(prevFunderBal.Add(s.defaultDeposit.Amount.MulRaw(2)), s.getAccountBalance(s.keyFunder.GetAddress()))
+	s.Require().Equal(prevFunderBal.Add(s.defaultDeposit.Amount.MulRaw(2)), s.getAccountBalance(addrFunder))
 	s.Require().Equal(ownerBal.Add(s.defaultDeposit.Amount).SubRaw(20), s.getAccountBalance(val.Address))
 }
 
@@ -452,9 +465,9 @@ func TestIntegrationTestSuite(t *testing.T) {
 	suite.Run(t, new(IntegrationTestSuite))
 }
 
-func (s *IntegrationTestSuite) getAccountBalance(address sdk.AccAddress) sdk.Int {
+func (s *IntegrationTestSuite) getAccountBalance(address sdk.AccAddress) sdkmath.Int {
 	cctxJSON := s.network.Validators[0].ClientCtx.WithOutputFormat("json")
-	res, err := banktestutil.QueryBalancesExec(cctxJSON, address)
+	res, err := sdktestutil.QueryBalancesExec(cctxJSON, address)
 	s.Require().NoError(err)
 	var balRes banktypes.QueryAllBalancesResponse
 	err = cctxJSON.Codec.UnmarshalJSON(res.Bytes(), &balRes)

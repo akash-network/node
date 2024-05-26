@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/akash-network/node/testutil"
-	"github.com/akash-network/node/x/cert/client/cli"
+	"pkg.akt.dev/akashd/testutil"
+	"pkg.akt.dev/akashd/x/cert/client/cli"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	certerrors "github.com/akash-network/node/x/cert/errors"
+	certerrors "pkg.akt.dev/akashd/x/cert/errors"
 )
 
 const testHost = "foobar.dev"

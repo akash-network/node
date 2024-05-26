@@ -1,14 +1,15 @@
 package cli
 
 import (
+	"github.com/spf13/cobra"
+
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/spf13/cobra"
 
-	types "github.com/akash-network/akash-api/go/node/provider/v1beta3"
+	types "pkg.akt.dev/go/node/provider/v1beta4"
 
-	aclient "github.com/akash-network/node/client"
+	aclient "pkg.akt.dev/akashd/client"
 )
 
 // GetQueryCmd returns the transaction commands for the provider module

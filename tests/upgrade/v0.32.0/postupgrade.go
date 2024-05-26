@@ -19,9 +19,9 @@ import (
 	cltypes "github.com/akash-network/akash-api/go/node/client/types"
 	ptypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
 
-	"github.com/akash-network/node/app"
-	"github.com/akash-network/node/client"
-	uttypes "github.com/akash-network/node/tests/upgrade/types"
+	"pkg.akt.dev/akashd/app"
+	"pkg.akt.dev/akashd/client"
+	uttypes "pkg.akt.dev/akashd/tests/upgrade/types"
 )
 
 func init() {

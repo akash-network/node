@@ -27,11 +27,11 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	// init sdk config
-	_ "github.com/akash-network/akash-api/go/sdkutil"
+	_ "pkg.akt.dev/go/sdkutil"
 
-	"github.com/akash-network/node/pubsub"
-	uttypes "github.com/akash-network/node/tests/upgrade/types"
-	"github.com/akash-network/node/util/cli"
+	"pkg.akt.dev/akashd/pubsub"
+	uttypes "pkg.akt.dev/akashd/tests/upgrade/types"
+	"pkg.akt.dev/akashd/util/cli"
 )
 
 const (

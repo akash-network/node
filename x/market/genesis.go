@@ -3,17 +3,18 @@ package market
 import (
 	"encoding/json"
 
+	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	abci "github.com/tendermint/tendermint/abci/types"
 
-	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
+	"pkg.akt.dev/go/node/market/v1"
+	"pkg.akt.dev/go/node/market/v1beta5"
 
-	"github.com/akash-network/node/x/market/keeper"
+	"pkg.akt.dev/akashd/x/market/keeper"
 )
 
 // ValidateGenesis does validation check of the Genesis
-func ValidateGenesis(data *types.GenesisState) error {
+func ValidateGenesis(data *v1beta5.GenesisState) error {
 	if err := data.Params.Validate(); err != nil {
 		return err
 	}
@@ -23,42 +24,42 @@ func ValidateGenesis(data *types.GenesisState) error {
 
 // DefaultGenesisState returns default genesis state as raw bytes for the market
 // module.
-func DefaultGenesisState() *types.GenesisState {
-	return &types.GenesisState{
-		Params: types.DefaultParams(),
+func DefaultGenesisState() *v1beta5.GenesisState {
+	return &v1beta5.GenesisState{
+		Params: v1beta5.DefaultParams(),
 	}
 }
 
 // InitGenesis initiate genesis state and return updated validator details
-func InitGenesis(ctx sdk.Context, keeper keeper.IKeeper, data *types.GenesisState) []abci.ValidatorUpdate {
+func InitGenesis(ctx sdk.Context, keeper keeper.IKeeper, data *v1beta5.GenesisState) []abci.ValidatorUpdate {
 	keeper.SetParams(ctx, data.Params)
 	return []abci.ValidatorUpdate{}
 }
 
 // ExportGenesis returns genesis state as raw bytes for the market module
-func ExportGenesis(ctx sdk.Context, k keeper.IKeeper) *types.GenesisState {
+func ExportGenesis(ctx sdk.Context, k keeper.IKeeper) *v1beta5.GenesisState {
 	params := k.GetParams(ctx)
 
-	var bids []types.Bid
-	var leases []types.Lease
-	var orders []types.Order
+	var bids v1beta5.Bids
+	var leases v1.Leases
+	var orders v1beta5.Orders
 
-	k.WithLeases(ctx, func(lease types.Lease) bool {
+	k.WithLeases(ctx, func(lease v1.Lease) bool {
 		leases = append(leases, lease)
 		return false
 	})
 
-	k.WithOrders(ctx, func(order types.Order) bool {
+	k.WithOrders(ctx, func(order v1beta5.Order) bool {
 		orders = append(orders, order)
 		return false
 	})
 
-	k.WithBids(ctx, func(bid types.Bid) bool {
+	k.WithBids(ctx, func(bid v1beta5.Bid) bool {
 		bids = append(bids, bid)
 		return false
 	})
 
-	return &types.GenesisState{
+	return &v1beta5.GenesisState{
 		Params: params,
 		Orders: orders,
 		Leases: leases,
@@ -68,8 +69,8 @@ func ExportGenesis(ctx sdk.Context, k keeper.IKeeper) *types.GenesisState {
 
 // GetGenesisStateFromAppState returns x/market GenesisState given raw application
 // genesis state.
-func GetGenesisStateFromAppState(cdc codec.JSONCodec, appState map[string]json.RawMessage) *types.GenesisState {
-	var genesisState types.GenesisState
+func GetGenesisStateFromAppState(cdc codec.JSONCodec, appState map[string]json.RawMessage) *v1beta5.GenesisState {
+	var genesisState v1beta5.GenesisState
 
 	if appState[ModuleName] != nil {
 		cdc.MustUnmarshalJSON(appState[ModuleName], &genesisState)

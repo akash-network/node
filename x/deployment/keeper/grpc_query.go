@@ -11,7 +11,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 
-	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+	"pkg.akt.dev/go/node/deployment/v1"
+	types "pkg.akt.dev/go/node/deployment/v1beta4"
 )
 
 // Querier is used as Keeper will have duplicate methods if used directly, and gRPC names take precedence over keeper
@@ -27,9 +28,9 @@ func (k Querier) Deployments(c context.Context, req *types.QueryDeploymentsReque
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
-	stateVal := types.Deployment_State(types.Deployment_State_value[req.Filters.State])
+	stateVal := v1.DeploymentState(v1.DeploymentState_value[req.Filters.State])
 
-	if req.Filters.State != "" && stateVal == types.DeploymentStateInvalid {
+	if req.Filters.State != "" && stateVal == v1.DeploymentStateInvalid {
 		return nil, status.Error(codes.InvalidArgument, "invalid state value")
 	}
 
@@ -44,7 +45,7 @@ func (k Querier) Deployments(c context.Context, req *types.QueryDeploymentsReque
 	depStore := prefix.NewStore(ctx.KVStore(k.skey), searchPrefix)
 
 	pageRes, err := sdkquery.FilteredPaginate(depStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
-		var deployment types.Deployment
+		var deployment v1.Deployment
 
 		err := k.cdc.Unmarshal(value, &deployment)
 		if err != nil {
@@ -57,15 +58,15 @@ func (k Querier) Deployments(c context.Context, req *types.QueryDeploymentsReque
 
 				account, err := k.ekeeper.GetAccount(
 					ctx,
-					types.EscrowAccountForDeployment(deployment.ID()),
+					types.EscrowAccountForDeployment(deployment.ID),
 				)
 				if err != nil {
-					return true, fmt.Errorf("%w: fetching escrow account for DeploymentID=%s", err, deployment.DeploymentID)
+					return true, fmt.Errorf("%w: fetching escrow account for DeploymentID=%s", err, deployment.ID)
 				}
 
 				value := types.QueryDeploymentResponse{
 					Deployment:    deployment,
-					Groups:        k.GetGroups(ctx, deployment.ID()),
+					Groups:        k.GetGroups(ctx, deployment.ID),
 					EscrowAccount: account,
 				}
 
@@ -101,7 +102,7 @@ func (k Querier) Deployment(c context.Context, req *types.QueryDeploymentRequest
 
 	deployment, found := k.GetDeployment(ctx, req.ID)
 	if !found {
-		return nil, types.ErrDeploymentNotFound
+		return nil, v1.ErrDeploymentNotFound
 	}
 
 	account, err := k.ekeeper.GetAccount(
@@ -135,7 +136,7 @@ func (k Querier) Group(c context.Context, req *types.QueryGroupRequest) (*types.
 
 	group, found := k.GetGroup(ctx, req.ID)
 	if !found {
-		return nil, types.ErrGroupNotFound
+		return nil, v1.ErrGroupNotFound
 	}
 
 	return &types.QueryGroupResponse{Group: group}, nil

@@ -1,7 +1,7 @@
 package query
 
 import (
-	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
+	types "pkg.akt.dev/go/node/market/v1beta4"
 )
 
 // Client interface

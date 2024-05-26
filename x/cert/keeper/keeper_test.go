@@ -4,16 +4,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/store"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
-	dbm "github.com/tendermint/tm-db"
 
-	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+	dbm "github.com/cometbft/cometbft-db"
+	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 
-	"github.com/akash-network/node/testutil"
-	"github.com/akash-network/node/x/cert/keeper"
+	"github.com/cosmos/cosmos-sdk/store"
+	storetypes "github.com/cosmos/cosmos-sdk/store/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	types "pkg.akt.dev/go/node/cert/v1"
+
+	"pkg.akt.dev/akashd/testutil"
+	"pkg.akt.dev/akashd/x/cert/keeper"
 )
 
 func TestCertKeeperCreate(t *testing.T) {
@@ -193,7 +196,7 @@ func setupKeeper(t testing.TB) (sdk.Context, keeper.Keeper) {
 	key := sdk.NewKVStoreKey(types.StoreKey)
 	db := dbm.NewMemDB()
 	ms := store.NewCommitMultiStore(db)
-	ms.MountStoreWithDB(key, sdk.StoreTypeIAVL, db)
+	ms.MountStoreWithDB(key, storetypes.StoreTypeIAVL, db)
 	err := ms.LoadLatestVersion()
 	require.NoError(t, err)
 	ctx := sdk.NewContext(ms, tmproto.Header{Time: time.Unix(0, 0)}, false, testutil.Logger(t))

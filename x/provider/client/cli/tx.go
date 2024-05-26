@@ -3,16 +3,18 @@ package cli
 import (
 	"fmt"
 
-	cltypes "github.com/akash-network/akash-api/go/node/client/types"
+	"github.com/spf13/cobra"
+
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/spf13/cobra"
 
-	types "github.com/akash-network/akash-api/go/node/provider/v1beta3"
+	cltypes "pkg.akt.dev/go/node/client/types"
 
-	aclient "github.com/akash-network/node/client"
-	"github.com/akash-network/node/x/provider/config"
+	types "pkg.akt.dev/go/node/provider/v1beta4"
+
+	aclient "pkg.akt.dev/akashd/client"
+	"pkg.akt.dev/akashd/x/provider/config"
 )
 
 // GetTxCmd returns the transaction commands for provider module

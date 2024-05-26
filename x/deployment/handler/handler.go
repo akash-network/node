@@ -4,9 +4,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+	v1 "pkg.akt.dev/go/node/deployment/v1"
+	types "pkg.akt.dev/go/node/deployment/v1beta4"
 
-	"github.com/akash-network/node/x/deployment/keeper"
+	"pkg.akt.dev/akashd/x/deployment/keeper"
 )
 
 // NewHandler returns a handler for "deployment" type messages
@@ -19,7 +20,7 @@ func NewHandler(keeper keeper.IKeeper, mkeeper MarketKeeper, ekeeper EscrowKeepe
 			res, err := ms.CreateDeployment(sdk.WrapSDKContext(ctx), msg)
 			return sdk.WrapServiceResult(ctx, res, err)
 
-		case *types.MsgDepositDeployment:
+		case *v1.MsgDepositDeployment:
 			res, err := ms.DepositDeployment(sdk.WrapSDKContext(ctx), msg)
 			return sdk.WrapServiceResult(ctx, res, err)
 
