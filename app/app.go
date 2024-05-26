@@ -452,6 +452,7 @@ func NewApp(
 		HandlerOptions: ante.HandlerOptions{
 			AccountKeeper:   app.Keepers.Cosmos.Acct,
 			BankKeeper:      app.Keepers.Cosmos.Bank,
+			FeegrantKeeper:  app.Keepers.Cosmos.FeeGrant,
 			SignModeHandler: encodingConfig.TxConfig.SignModeHandler(),
 			SigGasConsumer:  ante.DefaultSigVerificationGasConsumer,
 		},
