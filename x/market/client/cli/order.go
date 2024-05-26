@@ -2,12 +2,11 @@ package cli
 
 import (
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
+	"pkg.akt.dev/go/cli"
+	"pkg.akt.dev/go/node/market/v1beta5"
 
-	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
-
-	aclient "github.com/akash-network/node/client"
+	aclient "pkg.akt.dev/akashd/client"
 )
 
 func cmdGetOrders() *cobra.Command {
@@ -27,7 +26,7 @@ func cmdGetOrders() *cobra.Command {
 				return err
 			}
 
-			ofilters, err := OrderFiltersFromFlags(cmd.Flags())
+			ofilters, err := cli.OrderFiltersFromFlags(cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -37,7 +36,7 @@ func cmdGetOrders() *cobra.Command {
 				return err
 			}
 
-			params := &types.QueryOrdersRequest{
+			params := &v1beta5.QueryOrdersRequest{
 				Filters:    ofilters,
 				Pagination: pageReq,
 			}
@@ -51,9 +50,9 @@ func cmdGetOrders() *cobra.Command {
 		},
 	}
 
-	flags.AddQueryFlagsToCmd(cmd)
-	flags.AddPaginationFlagsToCmd(cmd, "orders")
-	AddOrderFilterFlags(cmd.Flags())
+	cli.AddQueryFlagsToCmd(cmd)
+	cli.AddPaginationFlagsToCmd(cmd, "orders")
+	cli.AddOrderFilterFlags(cmd.Flags())
 	return cmd
 }
 
@@ -75,12 +74,12 @@ func cmdGetOrder() *cobra.Command {
 				return err
 			}
 
-			id, err := OrderIDFromFlags(cmd.Flags())
+			id, err := cli.OrderIDFromFlags(cmd.Flags())
 			if err != nil {
 				return err
 			}
 
-			res, err := qq.Order(cmd.Context(), &types.QueryOrderRequest{ID: id})
+			res, err := qq.Order(cmd.Context(), &v1beta5.QueryOrderRequest{ID: id})
 			if err != nil {
 				return err
 			}
@@ -89,9 +88,9 @@ func cmdGetOrder() *cobra.Command {
 		},
 	}
 
-	flags.AddQueryFlagsToCmd(cmd)
-	AddOrderIDFlags(cmd.Flags())
-	MarkReqOrderIDFlags(cmd)
+	cli.AddQueryFlagsToCmd(cmd)
+	cli.AddOrderIDFlags(cmd.Flags())
+	cli.MarkReqOrderIDFlags(cmd)
 
 	return cmd
 }

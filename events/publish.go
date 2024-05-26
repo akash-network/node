@@ -3,49 +3,41 @@ package events
 import (
 	"context"
 
+	"github.com/cosmos/gogoproto/proto"
 	"golang.org/x/sync/errgroup"
+	atypes "pkg.akt.dev/go/node/audit/v1"
+	dtypes "pkg.akt.dev/go/node/deployment/v1"
+	mtypes "pkg.akt.dev/go/node/market/v1"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	abci "github.com/tendermint/tendermint/abci/types"
-	tmclient "github.com/tendermint/tendermint/rpc/client"
-	ctypes "github.com/tendermint/tendermint/rpc/core/types"
-	tmtmtypes "github.com/tendermint/tendermint/types"
+	abcitypes "github.com/cometbft/cometbft/abci/types"
+	cmclient "github.com/cometbft/cometbft/rpc/client"
+	ctypes "github.com/cometbft/cometbft/rpc/core/types"
+	cmtypes "github.com/cometbft/cometbft/types"
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
 
-	atypes "github.com/akash-network/akash-api/go/node/audit/v1beta3"
-	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
-	mtypes "github.com/akash-network/akash-api/go/node/market/v1beta4"
-	ptypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
-	"github.com/akash-network/akash-api/go/sdkutil"
-
-	"github.com/akash-network/node/pubsub"
+	"pkg.akt.dev/akashd/pubsub"
 )
 
-// Publish events using tm buses to clients. Waits on context
-// shutdown signals to exit.
-func Publish(ctx context.Context, tmbus tmclient.EventsClient, name string, bus pubsub.Bus) (err error) {
+// Publish events using cometbft buses to clients. Waits on context
+func Publish(ctx context.Context, evbus cmclient.EventsClient, name string, bus pubsub.Bus) (err error) {
+	const queuesz = 100
+	var txname = name + "-tx"
+	var blkname = name + "-blk"
 
-	const (
-		queuesz = 100
-	)
-	var (
-		txname  = name + "-tx"
-		blkname = name + "-blk"
-	)
-
-	txch, err := tmbus.Subscribe(ctx, txname, txQuery().String(), queuesz)
+	txch, err := evbus.Subscribe(ctx, txname, txQuery().String(), queuesz)
 	if err != nil {
 		return err
 	}
 	defer func() {
-		err = tmbus.UnsubscribeAll(ctx, txname)
+		err = evbus.UnsubscribeAll(ctx, txname)
 	}()
 
-	blkch, err := tmbus.Subscribe(ctx, blkname, blkQuery().String(), queuesz)
+	blkch, err := evbus.Subscribe(ctx, blkname, blkQuery().String(), queuesz)
 	if err != nil {
 		return err
 	}
 	defer func() {
-		err = tmbus.UnsubscribeAll(ctx, blkname)
+		err = evbus.UnsubscribeAll(ctx, blkname)
 	}()
 
 	g, ctx := errgroup.WithContext(ctx)
@@ -62,6 +54,8 @@ func Publish(ctx context.Context, tmbus tmclient.EventsClient, name string, bus 
 }
 
 func publishEvents(ctx context.Context, ch <-chan ctypes.ResultEvent, bus pubsub.Bus) error {
+	defer bus.Close()
+
 	var err error
 
 loop:
@@ -71,13 +65,18 @@ loop:
 			break loop
 		case ed := <-ch:
 			switch evt := ed.Data.(type) {
-			case tmtmtypes.EventDataTx:
+			case cmtypes.EventDataTx:
 				if !evt.Result.IsOK() {
 					continue
 				}
-				processEvents(bus, evt.Result.GetEvents())
-			case tmtmtypes.EventDataNewBlockHeader:
-				processEvents(bus, evt.ResultEndBlock.GetEvents())
+
+				if err = processEvents(bus, evt.Result.GetEvents()); err != nil {
+					return err
+				}
+			case cmtypes.EventDataNewBlockHeader:
+				if err = processEvents(bus, evt.ResultEndBlock.GetEvents()); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -85,39 +84,44 @@ loop:
 	return err
 }
 
-func processEvents(bus pubsub.Bus, events []abci.Event) {
+func processEvents(bus pubsub.Bus, events []abcitypes.Event) error {
 	for _, ev := range events {
-		if mev, ok := processEvent(ev); ok {
-			if err := bus.Publish(mev); err != nil {
-				bus.Close()
-				return
-			}
+		evt, err := sdktypes.ParseTypedEvent(ev)
+		if err != nil {
 			continue
 		}
+
+		if evt = filterEvent(evt); evt == nil {
+			continue
+		}
+
+		if err := bus.Publish(evt); err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
-func processEvent(bev abci.Event) (interface{}, bool) {
-	ev, err := sdkutil.ParseEvent(sdk.StringifyEvent(bev))
-	if err != nil {
-		return nil, false
+func filterEvent(bev proto.Message) proto.Message {
+	switch bev.(type) {
+	case *atypes.EventTrustedAuditorCreated:
+	case *atypes.EventTrustedAuditorDeleted:
+	case *dtypes.EventDeploymentCreated:
+	case *dtypes.EventDeploymentUpdated:
+	case *dtypes.EventDeploymentClosed:
+	case *dtypes.EventGroupStarted:
+	case *dtypes.EventGroupPaused:
+	case *dtypes.EventGroupClosed:
+	case *mtypes.EventOrderCreated:
+	case *mtypes.EventOrderClosed:
+	case *mtypes.EventBidCreated:
+	case *mtypes.EventBidClosed:
+	case *mtypes.EventLeaseCreated:
+	case *mtypes.EventLeaseClosed:
+	default:
+		return nil
 	}
 
-	if mev, err := dtypes.ParseEvent(ev); err == nil {
-		return mev, true
-	}
-
-	if mev, err := mtypes.ParseEvent(ev); err == nil {
-		return mev, true
-	}
-
-	if mev, err := ptypes.ParseEvent(ev); err == nil {
-		return mev, true
-	}
-
-	if mev, err := atypes.ParseEvent(ev); err == nil {
-		return mev, true
-	}
-
-	return nil, false
+	return bev
 }

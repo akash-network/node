@@ -7,19 +7,16 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/cosmos/cosmos-sdk/simapp/helpers"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
 
-	simappparams "github.com/cosmos/cosmos-sdk/simapp/params"
-	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
+	types "pkg.akt.dev/go/node/market/v1beta4"
 
-	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
-
-	appparams "github.com/akash-network/node/app/params"
-	testsim "github.com/akash-network/node/testutil/sim"
-	keepers "github.com/akash-network/node/x/market/handler"
+	appparams "pkg.akt.dev/akashd/app/params"
+	testsim "pkg.akt.dev/akashd/testutil/sim"
+	keepers "pkg.akt.dev/akashd/x/market/handler"
 )
 
 // Simulation operation weights constants

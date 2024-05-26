@@ -2,12 +2,12 @@ package cli
 
 import (
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
+	"pkg.akt.dev/go/cli"
+	v1 "pkg.akt.dev/go/node/market/v1"
+	"pkg.akt.dev/go/node/market/v1beta5"
 
-	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
-
-	aclient "github.com/akash-network/node/client"
+	aclient "pkg.akt.dev/akashd/client"
 )
 
 func cmdGetLeases() *cobra.Command {
@@ -27,7 +27,7 @@ func cmdGetLeases() *cobra.Command {
 				return err
 			}
 
-			lfilters, err := LeaseFiltersFromFlags(cmd.Flags())
+			lfilters, err := cli.LeaseFiltersFromFlags(cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -37,7 +37,7 @@ func cmdGetLeases() *cobra.Command {
 				return err
 			}
 
-			params := &types.QueryLeasesRequest{
+			params := &v1beta5.QueryLeasesRequest{
 				Filters:    lfilters,
 				Pagination: pageReq,
 			}
@@ -51,9 +51,9 @@ func cmdGetLeases() *cobra.Command {
 		},
 	}
 
-	flags.AddQueryFlagsToCmd(cmd)
-	flags.AddPaginationFlagsToCmd(cmd, "leases")
-	AddLeaseFilterFlags(cmd.Flags())
+	cli.AddQueryFlagsToCmd(cmd)
+	cli.AddPaginationFlagsToCmd(cmd, "leases")
+	cli.AddLeaseFilterFlags(cmd.Flags())
 
 	return cmd
 }
@@ -76,12 +76,12 @@ func cmdGetLease() *cobra.Command {
 				return err
 			}
 
-			bidID, err := BidIDFromFlags(cmd.Flags())
+			bidID, err := cli.BidIDFromFlags(cmd.Flags())
 			if err != nil {
 				return err
 			}
 
-			res, err := qq.Lease(cmd.Context(), &types.QueryLeaseRequest{ID: types.MakeLeaseID(bidID)})
+			res, err := qq.Lease(cmd.Context(), &v1beta5.QueryLeaseRequest{ID: v1.MakeLeaseID(bidID)})
 			if err != nil {
 				return err
 			}
@@ -90,9 +90,9 @@ func cmdGetLease() *cobra.Command {
 		},
 	}
 
-	flags.AddQueryFlagsToCmd(cmd)
-	AddQueryBidIDFlags(cmd.Flags())
-	MarkReqBidIDFlags(cmd)
+	cli.AddQueryFlagsToCmd(cmd)
+	cli.AddQueryBidIDFlags(cmd.Flags())
+	cli.MarkReqBidIDFlags(cmd)
 
 	return cmd
 }

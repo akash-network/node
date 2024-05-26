@@ -7,9 +7,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	ptypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
-
-	types "github.com/akash-network/akash-api/go/node/types/v1beta3"
+	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
+	tattr "pkg.akt.dev/go/node/types/attributes/v1"
 )
 
 var (
@@ -18,13 +17,13 @@ var (
 
 // Config is the struct that stores provider config
 type Config struct {
-	Host       string              `json:"host" yaml:"host"`
-	Info       ptypes.ProviderInfo `json:"info" yaml:"info"`
-	Attributes types.Attributes    `json:"attributes" yaml:"attributes"`
+	Host       string           `json:"host" yaml:"host"`
+	Info       ptypes.Info      `json:"info" yaml:"info"`
+	Attributes tattr.Attributes `json:"attributes" yaml:"attributes"`
 }
 
 // GetAttributes returns config attributes into key value pairs
-func (c Config) GetAttributes() types.Attributes {
+func (c Config) GetAttributes() tattr.Attributes {
 	return c.Attributes
 }
 

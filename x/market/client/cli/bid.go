@@ -2,12 +2,13 @@ package cli
 
 import (
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
 
-	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
+	"pkg.akt.dev/go/cli"
 
-	aclient "github.com/akash-network/node/client"
+	types "pkg.akt.dev/go/node/market/v1beta5"
+
+	aclient "pkg.akt.dev/akashd/client"
 )
 
 func cmdGetBids() *cobra.Command {
@@ -27,7 +28,7 @@ func cmdGetBids() *cobra.Command {
 				return err
 			}
 
-			bfilters, err := BidFiltersFromFlags(cmd.Flags())
+			bfilters, err := cli.BidFiltersFromFlags(cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -51,9 +52,9 @@ func cmdGetBids() *cobra.Command {
 		},
 	}
 
-	flags.AddQueryFlagsToCmd(cmd)
-	flags.AddPaginationFlagsToCmd(cmd, "bids")
-	AddBidFilterFlags(cmd.Flags())
+	cli.AddQueryFlagsToCmd(cmd)
+	cli.AddPaginationFlagsToCmd(cmd, "bids")
+	cli.AddBidFilterFlags(cmd.Flags())
 
 	return cmd
 }
@@ -76,7 +77,7 @@ func cmdGetBid() *cobra.Command {
 				return err
 			}
 
-			bidID, err := BidIDFromFlags(cmd.Flags())
+			bidID, err := cli.BidIDFromFlags(cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -90,9 +91,9 @@ func cmdGetBid() *cobra.Command {
 		},
 	}
 
-	flags.AddQueryFlagsToCmd(cmd)
-	AddQueryBidIDFlags(cmd.Flags())
-	MarkReqBidIDFlags(cmd)
+	cli.AddQueryFlagsToCmd(cmd)
+	cli.AddQueryBidIDFlags(cmd.Flags())
+	cli.MarkReqBidIDFlags(cmd)
 
 	return cmd
 }

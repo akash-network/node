@@ -6,11 +6,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	abci "github.com/tendermint/tendermint/abci/types"
+	abci "github.com/cometbft/cometbft/abci/types"
 
-	types "github.com/akash-network/akash-api/go/node/inflation/v1beta3"
+	types "pkg.akt.dev/go/node/inflation/v1beta3"
 
-	"github.com/akash-network/node/x/inflation/keeper"
+	"pkg.akt.dev/akashd/x/inflation/keeper"
 )
 
 // ValidateGenesis does validation check of the Genesis and return error in case of failure

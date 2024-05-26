@@ -6,15 +6,15 @@ import (
 	"os"
 	"testing"
 
+	tmcli "github.com/cometbft/cometbft/libs/cli"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
-	tmcli "github.com/tendermint/tendermint/libs/cli"
 
-	"github.com/akash-network/node/app"
-	"github.com/akash-network/node/testutil"
-	testutilcli "github.com/akash-network/node/testutil/cli"
+	"pkg.akt.dev/akashd/app"
+	"pkg.akt.dev/akashd/testutil"
+	testutilcli "pkg.akt.dev/akashd/testutil/cli"
 )
 
 // TestContextFlags tests that all the flags which are set in client.Context are parsed correctly.

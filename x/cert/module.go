@@ -4,35 +4,30 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math/rand"
-
-	"github.com/cosmos/cosmos-sdk/client"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	sim "github.com/cosmos/cosmos-sdk/types/simulation"
-	"github.com/spf13/cobra"
 
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
-	abci "github.com/tendermint/tendermint/abci/types"
+	"github.com/spf13/cobra"
 
-	"github.com/akash-network/akash-api/go/node/cert/v1beta1"
-	"github.com/akash-network/akash-api/go/node/cert/v1beta2"
-	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+	abci "github.com/cometbft/cometbft/abci/types"
+
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 
-	utypes "github.com/akash-network/node/upgrades/types"
-	"github.com/akash-network/node/x/cert/client/cli"
-	"github.com/akash-network/node/x/cert/handler"
-	"github.com/akash-network/node/x/cert/keeper"
-	"github.com/akash-network/node/x/cert/simulation"
+	types "pkg.akt.dev/go/node/cert/v1"
+
+	utypes "pkg.akt.dev/akashd/upgrades/types"
+	"pkg.akt.dev/akashd/x/cert/client/cli"
+	"pkg.akt.dev/akashd/x/cert/handler"
+	"pkg.akt.dev/akashd/x/cert/keeper"
 )
 
 var (
-	_ module.AppModule           = AppModule{}
-	_ module.AppModuleBasic      = AppModuleBasic{}
-	_ module.AppModuleSimulation = AppModuleSimulation{}
+	_ module.AppModule      = AppModule{}
+	_ module.AppModuleBasic = AppModuleBasic{}
 )
 
 // AppModuleBasic defines the basic application module used by the provider module.
@@ -53,8 +48,6 @@ func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 // RegisterInterfaces registers the module's interface types
 func (b AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 	types.RegisterInterfaces(registry)
-	v1beta2.RegisterInterfaces(registry)
-	v1beta1.RegisterInterfaces(registry)
 }
 
 // DefaultGenesis returns default genesis state as raw bytes for the provider
@@ -129,19 +122,9 @@ func (AppModule) Name() string {
 // RegisterInvariants registers module invariants
 func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
 
-// Route returns the message routing key for the audit module.
-func (am AppModule) Route() sdk.Route {
-	return sdk.NewRoute(types.RouterKey, handler.NewHandler(am.keeper))
-}
-
 // QuerierRoute returns the audit module's querier route name.
 func (am AppModule) QuerierRoute() string {
 	return ""
-}
-
-// LegacyQuerierHandler returns the sdk.Querier for audit module
-func (am AppModule) LegacyQuerierHandler(_ *codec.LegacyAmino) sdk.Querier {
-	return nil
 }
 
 // RegisterServices registers the module's services
@@ -183,45 +166,4 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 // ConsensusVersion implements module.AppModule#ConsensusVersion
 func (am AppModule) ConsensusVersion() uint64 {
 	return utypes.ModuleVersion(ModuleName)
-}
-
-// ____________________________________________________________________________
-
-// AppModuleSimulation implements an application simulation module for the audit module.
-type AppModuleSimulation struct {
-	keeper keeper.Keeper
-}
-
-// NewAppModuleSimulation creates a new AppModuleSimulation instance
-func NewAppModuleSimulation(k keeper.Keeper) AppModuleSimulation {
-	return AppModuleSimulation{
-		keeper: k,
-	}
-}
-
-// AppModuleSimulation functions
-
-// GenerateGenesisState creates a randomized GenState of the staking module.
-func (AppModuleSimulation) GenerateGenesisState(simState *module.SimulationState) {
-	simulation.RandomizedGenState(simState)
-}
-
-// ProposalContents doesn't return any content functions for governance proposals.
-func (AppModuleSimulation) ProposalContents(_ module.SimulationState) []sim.WeightedProposalContent {
-	return nil
-}
-
-// RandomizedParams creates randomized staking param changes for the simulator.
-func (AppModuleSimulation) RandomizedParams(_ *rand.Rand) []sim.ParamChange {
-	return nil
-}
-
-// RegisterStoreDecoder registers a decoder for staking module's types
-func (AppModuleSimulation) RegisterStoreDecoder(_ sdk.StoreDecoderRegistry) {
-
-}
-
-// WeightedOperations returns the all the staking module operations with their respective weights.
-func (am AppModuleSimulation) WeightedOperations(_ module.SimulationState) []sim.WeightedOperation {
-	return nil
 }

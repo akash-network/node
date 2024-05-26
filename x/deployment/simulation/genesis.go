@@ -4,7 +4,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 
-	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+	"pkg.akt.dev/go/node/deployment/v1"
+	types "pkg.akt.dev/go/node/deployment/v1beta4"
 )
 
 var (
@@ -21,5 +22,5 @@ func RandomizedGenState(simState *module.SimulationState) {
 		},
 	}
 
-	simState.GenState[types.ModuleName] = simState.Cdc.MustMarshalJSON(deploymentGenesis)
+	simState.GenState[v1.ModuleName] = simState.Cdc.MustMarshalJSON(deploymentGenesis)
 }

@@ -8,14 +8,16 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/cosmos/cosmos-sdk/client/flags"
+	sdktestutil "github.com/cosmos/cosmos-sdk/testutil"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkrest "github.com/cosmos/cosmos-sdk/types/rest"
 
-	types "github.com/akash-network/akash-api/go/node/provider/v1beta3"
+	"pkg.akt.dev/go/cli"
 
-	"github.com/akash-network/node/testutil"
-	"github.com/akash-network/node/testutil/network"
-	"github.com/akash-network/node/x/provider/client/cli"
+	types "pkg.akt.dev/go/node/provider/v1beta4"
+
+	"pkg.akt.dev/akashd/testutil"
+	"pkg.akt.dev/akashd/testutil/network"
+	pcli "pkg.akt.dev/akashd/x/provider/client/cli"
 )
 
 type GRPCRestTestSuite struct {
@@ -44,12 +46,12 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 
 	// create deployment
-	_, err = cli.TxCreateProviderExec(
+	_, err = pcli.TxCreateProviderExec(
 		val.ClientCtx,
 		val.Address,
 		providerPath,
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, cli.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 	)
@@ -58,7 +60,7 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 	s.Require().NoError(s.network.WaitForNextBlock())
 
 	// get provider
-	resp, err := cli.QueryProvidersExec(val.ClientCtx.WithOutputFormat("json"))
+	resp, err := pcli.QueryProvidersExec(val.ClientCtx.WithOutputFormat("json"))
 	s.Require().NoError(err)
 
 	out := &types.QueryProvidersResponse{}
@@ -98,7 +100,7 @@ func (s *GRPCRestTestSuite) TestGetProviders() {
 	for _, tc := range testCases {
 		tc := tc
 		s.Run(tc.name, func() {
-			resp, err := sdkrest.GetRequest(tc.url)
+			resp, err := sdktestutil.GetRequest(tc.url)
 			s.Require().NoError(err)
 
 			var providers types.QueryProvidersResponse
@@ -146,7 +148,7 @@ func (s *GRPCRestTestSuite) TestGetProvider() {
 	for _, tc := range testCases {
 		tc := tc
 		s.Run(tc.name, func() {
-			resp, err := sdkrest.GetRequest(tc.url)
+			resp, err := sdktestutil.GetRequest(tc.url)
 			s.Require().NoError(err)
 
 			var out types.QueryProviderResponse

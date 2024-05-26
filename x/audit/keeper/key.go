@@ -3,11 +3,10 @@ package keeper
 import (
 	"bytes"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/address"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-
-	types "github.com/akash-network/akash-api/go/node/audit/v1beta3"
+	types "pkg.akt.dev/go/node/audit/v1"
 )
 
 func providerKey(id types.ProviderID) []byte {

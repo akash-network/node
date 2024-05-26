@@ -4,7 +4,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
+	types "pkg.akt.dev/go/node/market/v1beta5"
 )
 
 // NewHandler returns a handler for "market" type messages

@@ -10,10 +10,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+	types "pkg.akt.dev/go/node/cert/v1"
 )
 
 func cmdGenerate() *cobra.Command {

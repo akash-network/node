@@ -8,22 +8,24 @@ import (
 	"strings"
 	"time"
 
-	cltypes "github.com/akash-network/akash-api/go/node/client/types"
+	tmrpc "github.com/cometbft/cometbft/rpc/core/types"
 	"github.com/spf13/cobra"
-	tmrpc "github.com/tendermint/tendermint/rpc/core/types"
 
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
 
-	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
-	"github.com/akash-network/akash-api/go/node/types/constants"
+	cltypes "pkg.akt.dev/go/node/client/types"
+	"pkg.akt.dev/go/sdl"
 
-	aclient "github.com/akash-network/node/client"
-	"github.com/akash-network/node/cmd/common"
-	"github.com/akash-network/node/sdl"
-	cutils "github.com/akash-network/node/x/cert/utils"
+	"pkg.akt.dev/go/node/deployment/v1"
+	"pkg.akt.dev/go/node/deployment/v1beta4"
+	"pkg.akt.dev/go/node/types/constants"
+
+	aclient "pkg.akt.dev/akashd/client"
+	"pkg.akt.dev/akashd/cmd/common"
+	cutils "pkg.akt.dev/akashd/x/cert/utils"
 )
 
 var (
@@ -34,7 +36,7 @@ var (
 // GetTxCmd returns the transaction commands for this module
 func GetTxCmd(key string) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:                        types.ModuleName,
+		Use:                        v1.ModuleName,
 		Short:                      "Deployment transaction subcommands",
 		SuggestionsMinimumDistance: 2,
 		RunE:                       sdkclient.ValidateCmd,
@@ -129,16 +131,16 @@ func cmdCreate(key string) *cobra.Command {
 				return err
 			}
 
-			msg := &types.MsgCreateDeployment{
+			msg := &v1beta4.MsgCreateDeployment{
 				ID:        id,
-				Version:   version,
-				Groups:    make([]types.GroupSpec, 0, len(groups)),
+				Hash:      version,
+				Groups:    make(v1beta4.GroupSpecs, 0, len(groups)),
 				Deposit:   deposit,
 				Depositor: depositorAcc,
 			}
 
 			for _, group := range groups {
-				msg.Groups = append(msg.Groups, *group)
+				msg.Groups = append(msg.Groups, group)
 			}
 
 			if err := msg.ValidateBasic(); err != nil {
@@ -200,7 +202,7 @@ func cmdDeposit(key string) *cobra.Command {
 				return err
 			}
 
-			msg := &types.MsgDepositDeployment{
+			msg := &v1.MsgDepositDeployment{
 				ID:        id,
 				Amount:    deposit,
 				Depositor: depositorAcc,
@@ -250,7 +252,7 @@ func cmdClose(key string) *cobra.Command {
 				return err
 			}
 
-			msg := &types.MsgCloseDeployment{ID: id}
+			msg := &v1beta4.MsgCloseDeployment{ID: id}
 
 			resp, err := cl.Tx().Broadcast(ctx, []sdk.Msg{msg})
 			if err != nil {
@@ -299,7 +301,7 @@ func cmdUpdate(key string) *cobra.Command {
 				return err
 			}
 
-			version, err := sdlManifest.Version()
+			hash, err := sdlManifest.Version()
 			if err != nil {
 				return err
 			}
@@ -310,7 +312,7 @@ func cmdUpdate(key string) *cobra.Command {
 			}
 
 			// Query the RPC node to make sure the existing groups are identical
-			existingDeployment, err := cl.Query().Deployment(cmd.Context(), &types.QueryDeploymentRequest{
+			existingDeployment, err := cl.Query().Deployment(cmd.Context(), &v1beta4.QueryDeploymentRequest{
 				ID: id,
 			})
 			if err != nil {
@@ -331,9 +333,9 @@ func cmdUpdate(key string) *cobra.Command {
 
 			warnIfGroupVolumesExceeds(cctx, groups)
 
-			msg := &types.MsgUpdateDeployment{
-				ID:      id,
-				Version: version,
+			msg := &v1beta4.MsgUpdateDeployment{
+				ID:   id,
+				Hash: hash,
 			}
 
 			resp, err := cl.Tx().Broadcast(ctx, []sdk.Msg{msg})
@@ -395,7 +397,7 @@ func cmdGroupClose(_ string) *cobra.Command {
 				return err
 			}
 
-			msg := &types.MsgCloseGroup{
+			msg := &v1beta4.MsgCloseGroup{
 				ID: id,
 			}
 
@@ -448,7 +450,7 @@ func cmdGroupPause(_ string) *cobra.Command {
 				return err
 			}
 
-			msg := &types.MsgPauseGroup{
+			msg := &v1beta4.MsgPauseGroup{
 				ID: id,
 			}
 
@@ -501,7 +503,7 @@ func cmdGroupStart(_ string) *cobra.Command {
 				return err
 			}
 
-			msg := &types.MsgStartGroup{
+			msg := &v1beta4.MsgStartGroup{
 				ID: id,
 			}
 
@@ -550,7 +552,7 @@ func cmdGrantAuthorization() *cobra.Command {
 Examples:
  $ akash tx %s authz grant akash1skjw.. 50akt --from=akash1skl..
  $ akash tx %s authz grant akash1skjw.. 50akt --from=akash1skl.. --expiration=1661020200
-	`, types.ModuleName, types.ModuleName),
+	`, v1.ModuleName, v1.ModuleName),
 		),
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -590,9 +592,10 @@ Examples:
 			}
 
 			granter := cctx.GetFromAddress()
-			authorization := types.NewDepositDeploymentAuthorization(spendLimit)
+			authorization := v1.NewDepositAuthorization(spendLimit)
 
-			msg, err := authz.NewMsgGrant(granter, grantee, authorization, time.Unix(exp, 0))
+			expiry := time.Unix(exp, 0)
+			msg, err := authz.NewMsgGrant(granter, grantee, authorization, &expiry)
 			if err != nil {
 				return err
 			}
@@ -621,7 +624,7 @@ func cmdRevokeAuthorization() *cobra.Command {
 			fmt.Sprintf(`revoke deposit deployment authorization from a granter to a grantee:
 Example:
  $ akash tx %s authz revoke akash1skj.. --from=akash1skj..
-			`, types.ModuleName),
+			`, v1.ModuleName),
 		),
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -648,7 +651,7 @@ Example:
 			}
 
 			granter := cctx.GetFromAddress()
-			msgTypeURL := types.DepositDeploymentAuthorization{}.MsgTypeURL()
+			msgTypeURL := v1.DepositAuthorization{}.MsgTypeURL()
 			msg := authz.NewMsgRevoke(granter, grantee, msgTypeURL)
 
 			resp, err := cl.Tx().Broadcast(ctx, []sdk.Msg{&msg})
@@ -666,7 +669,7 @@ Example:
 	return cmd
 }
 
-func warnIfGroupVolumesExceeds(cctx sdkclient.Context, dgroups []*types.GroupSpec) {
+func warnIfGroupVolumesExceeds(cctx sdkclient.Context, dgroups v1beta4.GroupSpecs) {
 	for _, group := range dgroups {
 		for _, resources := range group.GetResourceUnits() {
 			if len(resources.Resources.Storage) > constants.DefaultMaxGroupVolumes {

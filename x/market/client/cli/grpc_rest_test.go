@@ -6,23 +6,25 @@ import (
 	"path/filepath"
 	"testing"
 
+	sdktestutil "github.com/cosmos/cosmos-sdk/testutil"
+	sdktestutilcli "github.com/cosmos/cosmos-sdk/testutil/cli"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkrest "github.com/cosmos/cosmos-sdk/types/rest"
-	bankcli "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
 
-	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
+	"pkg.akt.dev/go/cli"
+	"pkg.akt.dev/go/node/market/v1"
+	"pkg.akt.dev/go/node/market/v1beta5"
 
-	"github.com/akash-network/node/testutil"
-	"github.com/akash-network/node/testutil/network"
-	ccli "github.com/akash-network/node/x/cert/client/cli"
-	dcli "github.com/akash-network/node/x/deployment/client/cli"
-	"github.com/akash-network/node/x/market/client/cli"
-	pcli "github.com/akash-network/node/x/provider/client/cli"
+	"pkg.akt.dev/akashd/testutil"
+	"pkg.akt.dev/akashd/testutil/network"
+	ccli "pkg.akt.dev/akashd/x/cert/client/cli"
+	dcli "pkg.akt.dev/akashd/x/deployment/client/cli"
+	mcli "pkg.akt.dev/akashd/x/market/client/cli"
+	pcli "pkg.akt.dev/akashd/x/provider/client/cli"
 )
 
 type GRPCRestTestSuite struct {
@@ -30,9 +32,9 @@ type GRPCRestTestSuite struct {
 
 	cfg     network.Config
 	network *network.Network
-	order   types.Order
-	bid     types.Bid
-	lease   types.Lease
+	order   v1beta5.Order
+	bid     v1beta5.Bid
+	lease   v1.Lease
 }
 
 func (s *GRPCRestTestSuite) SetupSuite() {
@@ -45,8 +47,10 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 	s.network = network.New(s.T(), cfg)
 
 	kb := s.network.Validators[0].ClientCtx.Keyring
-	keyBar, _, err := kb.NewMnemonic("keyBar", keyring.English, sdk.FullFundraiserPath, "",
-		hd.Secp256k1)
+	keyBar, _, err := kb.NewMnemonic("keyBar", keyring.English, sdk.FullFundraiserPath, "", hd.Secp256k1)
+	s.Require().NoError(err)
+
+	keyAddr, err := keyBar.GetAddress()
 	s.Require().NoError(err)
 
 	_, err = s.network.WaitForHeight(1)
@@ -68,7 +72,7 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 		val.ClientCtx,
 		val.Address,
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, cli.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 	)
@@ -87,7 +91,7 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 		val.Address,
 		deploymentPath,
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, cli.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 		fmt.Sprintf("--deposit=%s", dcli.DefaultDeposit),
@@ -97,28 +101,28 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 	s.Require().NoError(s.network.WaitForNextBlock())
 
 	// test query orders
-	resp, err := cli.QueryOrdersExec(val.ClientCtx.WithOutputFormat("json"))
+	resp, err := mcli.QueryOrdersExec(val.ClientCtx.WithOutputFormat("json"))
 	s.Require().NoError(err)
 
-	result := &types.QueryOrdersResponse{}
+	result := &v1beta5.QueryOrdersResponse{}
 	err = val.ClientCtx.Codec.UnmarshalJSON(resp.Bytes(), result)
 	s.Require().NoError(err)
 	s.Require().Len(result.Orders, 1)
 	orders := result.Orders
-	s.Require().Equal(val.Address.String(), orders[0].OrderID.Owner)
+	s.Require().Equal(val.Address.String(), orders[0].ID.Owner)
 
 	// test query order
 	s.order = orders[0]
 
 	// Send coins from validator to keyBar
-	sendTokens := cli.DefaultDeposit.Add(cli.DefaultDeposit)
-	_, err = bankcli.MsgSendExec(
+	sendTokens := dcli.DefaultDeposit.Add(dcli.DefaultDeposit)
+	_, err = sdktestutilcli.MsgSendExec(
 		val.ClientCtx,
 		val.Address,
-		keyBar.GetAddress(),
+		keyAddr,
 		sdk.NewCoins(sendTokens),
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, cli.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 	)
@@ -129,10 +133,10 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 	// create provider
 	_, err = pcli.TxCreateProviderExec(
 		val.ClientCtx,
-		keyBar.GetAddress(),
+		keyAddr,
 		providerPath,
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, cli.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 	)
@@ -140,41 +144,41 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 
 	s.Require().NoError(s.network.WaitForNextBlock())
 
-	_, err = cli.TxCreateBidExec(
+	_, err = mcli.TxCreateBidExec(
 		val.ClientCtx,
-		s.order.OrderID,
+		s.order.ID,
 		sdk.NewDecCoinFromDec(testutil.CoinDenom, sdk.MustNewDecFromStr("1.1")),
-		keyBar.GetAddress(),
+		keyAddr,
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, cli.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
-		fmt.Sprintf("--deposit=%s", cli.DefaultDeposit),
+		fmt.Sprintf("--deposit=%s", dcli.DefaultDeposit),
 	)
 	s.Require().NoError(err)
 
 	s.Require().NoError(s.network.WaitForNextBlock())
 
 	// get bid
-	resp, err = cli.QueryBidsExec(val.ClientCtx.WithOutputFormat("json"))
+	resp, err = mcli.QueryBidsExec(val.ClientCtx.WithOutputFormat("json"))
 	s.Require().NoError(err)
 
-	bidRes := &types.QueryBidsResponse{}
+	bidRes := &v1beta5.QueryBidsResponse{}
 	err = val.ClientCtx.Codec.UnmarshalJSON(resp.Bytes(), bidRes)
 	s.Require().NoError(err)
 	s.Require().Len(bidRes.Bids, 1)
 	bids := bidRes.Bids
-	s.Require().Equal(keyBar.GetAddress().String(), bids[0].Bid.BidID.Provider)
+	s.Require().Equal(keyAddr.String(), bids[0].Bid.ID.Provider)
 
 	s.bid = bids[0].Bid
 
 	// create lease
-	_, err = cli.TxCreateLeaseExec(
+	_, err = mcli.TxCreateLeaseExec(
 		val.ClientCtx,
-		s.bid.BidID,
+		s.bid.ID,
 		val.Address,
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, cli.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 	)
@@ -183,18 +187,18 @@ func (s *GRPCRestTestSuite) SetupSuite() {
 	s.Require().NoError(s.network.WaitForNextBlock())
 
 	// test query leases
-	resp, err = cli.QueryLeasesExec(val.ClientCtx.WithOutputFormat("json"))
+	resp, err = mcli.QueryLeasesExec(val.ClientCtx.WithOutputFormat("json"))
 	s.Require().NoError(err)
 
-	leaseRes := &types.QueryLeasesResponse{}
+	leaseRes := &v1beta5.QueryLeasesResponse{}
 	err = val.ClientCtx.Codec.UnmarshalJSON(resp.Bytes(), leaseRes)
 	s.Require().NoError(err)
 	s.Require().Len(leaseRes.Leases, 1)
 	leases := leaseRes.Leases
-	s.Require().Equal(keyBar.GetAddress().String(), leases[0].Lease.LeaseID.Provider)
+	s.Require().Equal(keyAddr.String(), leases[0].Lease.ID.Provider)
 
-	s.order.State = types.OrderActive
-	s.bid.State = types.BidActive
+	s.order.State = v1.OrderActive
+	s.bid.State = v1.BidActive
 
 	// test query lease
 	s.lease = leases[0].Lease
@@ -208,12 +212,12 @@ func (s *GRPCRestTestSuite) TestGetOrders() {
 		name    string
 		url     string
 		expErr  bool
-		expResp types.Order
+		expResp v1beta5.Order
 		expLen  int
 	}{
 		{
 			"get orders without filters",
-			fmt.Sprintf("%s/akash/market/%s/orders/list", val.APIAddress, types.APIVersion),
+			fmt.Sprintf("%s/akash/market/%s/orders/list", val.APIAddress, v1beta5.GatewayVersion),
 			false,
 			order,
 			1,
@@ -221,8 +225,8 @@ func (s *GRPCRestTestSuite) TestGetOrders() {
 		{
 			"get orders with filters",
 			fmt.Sprintf("%s/akash/market/%s/orders/list?filters.owner=%s", val.APIAddress,
-				types.APIVersion,
-				order.OrderID.Owner),
+				v1beta5.GatewayVersion,
+				order.ID.Owner),
 			false,
 			order,
 			1,
@@ -230,16 +234,16 @@ func (s *GRPCRestTestSuite) TestGetOrders() {
 		{
 			"get orders with wrong state filter",
 			fmt.Sprintf("%s/akash/market/%s/orders/list?filters.state=%s", val.APIAddress,
-				types.APIVersion,
-				types.OrderStateInvalid.String()),
+				v1beta5.GatewayVersion,
+				v1.OrderStateInvalid.String()),
 			true,
-			types.Order{},
+			v1beta5.Order{},
 			0,
 		},
 		{
 			"get orders with two filters",
 			fmt.Sprintf("%s/akash/market/%s/orders/list?filters.state=%s&filters.oseq=%d",
-				val.APIAddress, types.APIVersion, order.State.String(), order.OrderID.OSeq),
+				val.APIAddress, v1beta5.GatewayVersion, order.State.String(), order.ID.OSeq),
 			false,
 			order,
 			1,
@@ -249,10 +253,10 @@ func (s *GRPCRestTestSuite) TestGetOrders() {
 	for _, tc := range testCases {
 		tc := tc
 		s.Run(tc.name, func() {
-			resp, err := sdkrest.GetRequest(tc.url)
+			resp, err := sdktestutil.GetRequest(tc.url)
 			s.Require().NoError(err)
 
-			var orders types.QueryOrdersResponse
+			var orders v1beta5.QueryOrdersResponse
 			err = val.ClientCtx.Codec.UnmarshalJSON(resp, &orders)
 
 			if tc.expErr {
@@ -275,40 +279,40 @@ func (s *GRPCRestTestSuite) TestGetOrder() {
 		name    string
 		url     string
 		expErr  bool
-		expResp types.Order
+		expResp v1beta5.Order
 	}{
 		{
 			"get order with empty input",
-			fmt.Sprintf("%s/akash/market/%s/orders/info", val.APIAddress, types.APIVersion),
+			fmt.Sprintf("%s/akash/market/%s/orders/info", val.APIAddress, v1beta5.GatewayVersion),
 			true,
-			types.Order{},
+			v1beta5.Order{},
 		},
 		{
 			"get order with invalid input",
 			fmt.Sprintf("%s/akash/market/%s/orders/info?id.owner=%s", val.APIAddress,
-				types.APIVersion,
-				order.OrderID.Owner),
+				v1beta5.GatewayVersion,
+				order.ID.Owner),
 			true,
-			types.Order{},
+			v1beta5.Order{},
 		},
 		{
 			"order not found",
 			fmt.Sprintf("%s/akash/market/%s/orders/info?id.owner=%s&id.dseq=%d&id.gseq=%d&id.oseq=%d",
 				val.APIAddress,
-				types.APIVersion,
-				order.OrderID.Owner, 249, 32, 235),
+				v1beta5.GatewayVersion,
+				order.ID.Owner, 249, 32, 235),
 			true,
-			types.Order{},
+			v1beta5.Order{},
 		},
 		{
 			"valid get order request",
 			fmt.Sprintf("%s/akash/market/%s/orders/info?id.owner=%s&id.dseq=%d&id.gseq=%d&id.oseq=%d",
 				val.APIAddress,
-				types.APIVersion,
-				order.OrderID.Owner,
-				order.OrderID.DSeq,
-				order.OrderID.GSeq,
-				order.OrderID.OSeq),
+				v1beta5.GatewayVersion,
+				order.ID.Owner,
+				order.ID.DSeq,
+				order.ID.GSeq,
+				order.ID.OSeq),
 			false,
 			order,
 		},
@@ -317,10 +321,10 @@ func (s *GRPCRestTestSuite) TestGetOrder() {
 	for _, tc := range testCases {
 		tc := tc
 		s.Run(tc.name, func() {
-			resp, err := sdkrest.GetRequest(tc.url)
+			resp, err := sdktestutil.GetRequest(tc.url)
 			s.Require().NoError(err)
 
-			var out types.QueryOrderResponse
+			var out v1beta5.QueryOrderResponse
 			err = val.ClientCtx.Codec.UnmarshalJSON(resp, &out)
 
 			if tc.expErr {
@@ -341,12 +345,12 @@ func (s *GRPCRestTestSuite) TestGetBids() {
 		name    string
 		url     string
 		expErr  bool
-		expResp types.Bid
+		expResp v1beta5.Bid
 		expLen  int
 	}{
 		{
 			"get bids without filters",
-			fmt.Sprintf("%s/akash/market/%s/bids/list", val.APIAddress, types.APIVersion),
+			fmt.Sprintf("%s/akash/market/%s/bids/list", val.APIAddress, v1beta5.GatewayVersion),
 			false,
 			bid,
 			1,
@@ -355,8 +359,8 @@ func (s *GRPCRestTestSuite) TestGetBids() {
 			"get bids with filters",
 			fmt.Sprintf("%s/akash/market/%s/bids/list?filters.owner=%s",
 				val.APIAddress,
-				types.APIVersion,
-				bid.BidID.Owner),
+				v1beta5.GatewayVersion,
+				bid.ID.Owner),
 			false,
 			bid,
 			1,
@@ -365,20 +369,20 @@ func (s *GRPCRestTestSuite) TestGetBids() {
 			"get bids with wrong state filter",
 			fmt.Sprintf("%s/akash/market/%s/bids/list?filters.state=%s",
 				val.APIAddress,
-				types.APIVersion,
-				types.BidStateInvalid.String()),
+				v1beta5.GatewayVersion,
+				v1.BidStateInvalid.String()),
 			true,
-			types.Bid{},
+			v1beta5.Bid{},
 			0,
 		},
 		{
 			"get bids with more filters",
 			fmt.Sprintf("%s/akash/market/%s/bids/list?filters.state=%s&filters.oseq=%d&filters.provider=%s",
 				val.APIAddress,
-				types.APIVersion,
+				v1beta5.GatewayVersion,
 				bid.State.String(),
-				bid.BidID.OSeq,
-				bid.BidID.Provider),
+				bid.ID.OSeq,
+				bid.ID.Provider),
 			false,
 			bid,
 			1,
@@ -388,10 +392,10 @@ func (s *GRPCRestTestSuite) TestGetBids() {
 	for _, tc := range testCases {
 		tc := tc
 		s.Run(tc.name, func() {
-			resp, err := sdkrest.GetRequest(tc.url)
+			resp, err := sdktestutil.GetRequest(tc.url)
 			s.Require().NoError(err)
 
-			var bids types.QueryBidsResponse
+			var bids v1beta5.QueryBidsResponse
 			err = val.ClientCtx.Codec.UnmarshalJSON(resp, &bids)
 
 			if tc.expErr {
@@ -414,46 +418,46 @@ func (s *GRPCRestTestSuite) TestGetBid() {
 		name    string
 		url     string
 		expErr  bool
-		expResp types.Bid
+		expResp v1beta5.Bid
 	}{
 		{
 			"get bid with empty input",
-			fmt.Sprintf("%s/akash/market/%s/bids/info", val.APIAddress, types.APIVersion),
+			fmt.Sprintf("%s/akash/market/%s/bids/info", val.APIAddress, v1beta5.GatewayVersion),
 			true,
-			types.Bid{},
+			v1beta5.Bid{},
 		},
 		{
 			"get bid with invalid input",
 			fmt.Sprintf("%s/akash/market/%s/bids/info?id.owner=%s",
 				val.APIAddress,
-				types.APIVersion,
-				bid.BidID.Owner),
+				v1beta5.GatewayVersion,
+				bid.ID.Owner),
 			true,
-			types.Bid{},
+			v1beta5.Bid{},
 		},
 		{
 			"bid not found",
 			fmt.Sprintf("%s/akash/market/%s/bids/info?id.owner=%s&id.dseq=%d&id.gseq=%d&id.oseq=%d&id.provider=%s",
 				val.APIAddress,
-				types.APIVersion,
-				bid.BidID.Provider,
+				v1beta5.GatewayVersion,
+				bid.ID.Provider,
 				249,
 				32,
 				235,
-				bid.BidID.Owner),
+				bid.ID.Owner),
 			true,
-			types.Bid{},
+			v1beta5.Bid{},
 		},
 		{
 			"valid get bid request",
 			fmt.Sprintf("%s/akash/market/%s/bids/info?id.owner=%s&id.dseq=%d&id.gseq=%d&id.oseq=%d&id.provider=%s",
 				val.APIAddress,
-				types.APIVersion,
-				bid.BidID.Owner,
-				bid.BidID.DSeq,
-				bid.BidID.GSeq,
-				bid.BidID.OSeq,
-				bid.BidID.Provider),
+				v1beta5.GatewayVersion,
+				bid.ID.Owner,
+				bid.ID.DSeq,
+				bid.ID.GSeq,
+				bid.ID.OSeq,
+				bid.ID.Provider),
 			false,
 			bid,
 		},
@@ -462,10 +466,10 @@ func (s *GRPCRestTestSuite) TestGetBid() {
 	for _, tc := range testCases {
 		tc := tc
 		s.Run(tc.name, func() {
-			resp, err := sdkrest.GetRequest(tc.url)
+			resp, err := sdktestutil.GetRequest(tc.url)
 			s.Require().NoError(err)
 
-			var out types.QueryBidResponse
+			var out v1beta5.QueryBidResponse
 			err = val.ClientCtx.Codec.UnmarshalJSON(resp, &out)
 
 			if tc.expErr {
@@ -486,12 +490,12 @@ func (s *GRPCRestTestSuite) TestGetLeases() {
 		name    string
 		url     string
 		expErr  bool
-		expResp types.Lease
+		expResp v1.Lease
 		expLen  int
 	}{
 		{
 			"get leases without filters",
-			fmt.Sprintf("%s/akash/market/%s/leases/list", val.APIAddress, types.APIVersion),
+			fmt.Sprintf("%s/akash/market/%s/leases/list", val.APIAddress, v1beta5.GatewayVersion),
 			false,
 			lease,
 			1,
@@ -500,8 +504,8 @@ func (s *GRPCRestTestSuite) TestGetLeases() {
 			"get leases with filters",
 			fmt.Sprintf("%s/akash/market/%s/leases/list?filters.owner=%s",
 				val.APIAddress,
-				types.APIVersion,
-				lease.LeaseID.Owner),
+				v1beta5.GatewayVersion,
+				lease.ID.Owner),
 			false,
 			lease,
 			1,
@@ -510,20 +514,20 @@ func (s *GRPCRestTestSuite) TestGetLeases() {
 			"get leases with wrong state filter",
 			fmt.Sprintf("%s/akash/market/%s/leases/list?filters.state=%s",
 				val.APIAddress,
-				types.APIVersion,
-				types.LeaseStateInvalid.String()),
+				v1beta5.GatewayVersion,
+				v1.LeaseStateInvalid.String()),
 			true,
-			types.Lease{},
+			v1.Lease{},
 			0,
 		},
 		{
 			"get leases with more filters",
 			fmt.Sprintf("%s/akash/market/%s/leases/list?filters.state=%s&filters.oseq=%d&filters.provider=%s",
 				val.APIAddress,
-				types.APIVersion,
+				v1beta5.GatewayVersion,
 				lease.State.String(),
-				lease.LeaseID.OSeq,
-				lease.LeaseID.Provider),
+				lease.ID.OSeq,
+				lease.ID.Provider),
 			false,
 			lease,
 			1,
@@ -533,10 +537,10 @@ func (s *GRPCRestTestSuite) TestGetLeases() {
 	for _, tc := range testCases {
 		tc := tc
 		s.Run(tc.name, func() {
-			resp, err := sdkrest.GetRequest(tc.url)
+			resp, err := sdktestutil.GetRequest(tc.url)
 			s.Require().NoError(err)
 
-			var leases types.QueryLeasesResponse
+			var leases v1beta5.QueryLeasesResponse
 			err = val.ClientCtx.Codec.UnmarshalJSON(resp, &leases)
 
 			if tc.expErr {
@@ -559,46 +563,46 @@ func (s *GRPCRestTestSuite) TestGetLease() {
 		name    string
 		url     string
 		expErr  bool
-		expResp types.Lease
+		expResp v1.Lease
 	}{
 		{
 			"get lease with empty input",
-			fmt.Sprintf("%s/akash/market/%s/leases/info", val.APIAddress, types.APIVersion),
+			fmt.Sprintf("%s/akash/market/%s/leases/info", val.APIAddress, v1beta5.GatewayVersion),
 			true,
-			types.Lease{},
+			v1.Lease{},
 		},
 		{
 			"get lease with invalid input",
 			fmt.Sprintf("%s/akash/market/%s/leases/info?id.owner=%s",
 				val.APIAddress,
-				types.APIVersion,
-				lease.LeaseID.Owner),
+				v1beta5.GatewayVersion,
+				lease.ID.Owner),
 			true,
-			types.Lease{},
+			v1.Lease{},
 		},
 		{
 			"lease not found",
 			fmt.Sprintf("%s/akash/market/%s/leases/info?id.owner=%s&id.dseq=%d&id.gseq=%d&id.oseq=%d&id.provider=%s",
 				val.APIAddress,
-				types.APIVersion,
-				lease.LeaseID.Provider,
+				v1beta5.GatewayVersion,
+				lease.ID.Provider,
 				249,
 				32,
 				235,
-				lease.LeaseID.Owner),
+				lease.ID.Owner),
 			true,
-			types.Lease{},
+			v1.Lease{},
 		},
 		{
 			"valid get lease request",
 			fmt.Sprintf("%s/akash/market/%s/leases/info?id.owner=%s&id.dseq=%d&id.gseq=%d&id.oseq=%d&id.provider=%s",
 				val.APIAddress,
-				types.APIVersion,
-				lease.LeaseID.Owner,
-				lease.LeaseID.DSeq,
-				lease.LeaseID.GSeq,
-				lease.LeaseID.OSeq,
-				lease.LeaseID.Provider),
+				v1beta5.GatewayVersion,
+				lease.ID.Owner,
+				lease.ID.DSeq,
+				lease.ID.GSeq,
+				lease.ID.OSeq,
+				lease.ID.Provider),
 			false,
 			lease,
 		},
@@ -607,10 +611,10 @@ func (s *GRPCRestTestSuite) TestGetLease() {
 	for _, tc := range testCases {
 		tc := tc
 		s.Run(tc.name, func() {
-			resp, err := sdkrest.GetRequest(tc.url)
+			resp, err := sdktestutil.GetRequest(tc.url)
 			s.Require().NoError(err)
 
-			var out types.QueryLeaseResponse
+			var out v1beta5.QueryLeaseResponse
 			err = val.ClientCtx.Codec.UnmarshalJSON(resp, &out)
 
 			if tc.expErr {

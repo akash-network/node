@@ -1,9 +1,9 @@
 package audit
 
 import (
-	types "github.com/akash-network/akash-api/go/node/audit/v1beta3"
+	types "pkg.akt.dev/go/node/audit/v1beta3"
 
-	"github.com/akash-network/node/x/audit/keeper"
+	"pkg.akt.dev/akashd/x/audit/keeper"
 )
 
 const (

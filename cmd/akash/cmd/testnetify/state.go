@@ -7,10 +7,9 @@ import (
 	"sync"
 	"time"
 
-	ptypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
 	"github.com/theckman/yacspin"
 
-	tmtypes "github.com/tendermint/tendermint/types"
+	tmtypes "github.com/cometbft/cometbft/types"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -20,24 +19,27 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	gov "github.com/cosmos/cosmos-sdk/x/gov/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	ibchost "github.com/cosmos/ibc-go/v4/modules/core/24-host"
-	ibccoretypes "github.com/cosmos/ibc-go/v4/modules/core/types"
+	ibchost "github.com/cosmos/ibc-go/v7/modules/core/exported"
+	ibccoretypes "github.com/cosmos/ibc-go/v7/modules/core/types"
 
-	atypes "github.com/akash-network/akash-api/go/node/audit/v1beta3"
-	ctypes "github.com/akash-network/akash-api/go/node/cert/v1beta3"
-	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
-	etypes "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
-	mtypes "github.com/akash-network/akash-api/go/node/market/v1beta4"
+	atypes "pkg.akt.dev/go/node/audit/v1"
+	ctypes "pkg.akt.dev/go/node/cert/v1"
+	dv1 "pkg.akt.dev/go/node/deployment/v1"
+	dtypes "pkg.akt.dev/go/node/deployment/v1beta4"
+	etypes "pkg.akt.dev/go/node/escrow/v1"
+	mtypes "pkg.akt.dev/go/node/market/v1beta5"
+	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 
-	"github.com/akash-network/node/x/audit"
-	"github.com/akash-network/node/x/cert"
-	"github.com/akash-network/node/x/deployment"
-	"github.com/akash-network/node/x/escrow"
-	"github.com/akash-network/node/x/market"
-	"github.com/akash-network/node/x/provider"
+	"pkg.akt.dev/akashd/x/audit"
+	"pkg.akt.dev/akashd/x/cert"
+	"pkg.akt.dev/akashd/x/deployment"
+	"pkg.akt.dev/akashd/x/escrow"
+	"pkg.akt.dev/akashd/x/market"
+	"pkg.akt.dev/akashd/x/provider"
 )
 
 type (
@@ -451,15 +453,9 @@ func (ga *AuthState) pack(cdc codec.Codec) error {
 }
 
 func (ga *BankState) unpack(cdc codec.Codec) error {
-	var err error
-
 	ga.once.Do(func() {
 		ga.state = banktypes.GetGenesisStateFromAppState(cdc, ga.gstate)
 	})
-
-	if err != nil {
-		return err
-	}
 
 	return nil
 }
@@ -482,15 +478,9 @@ func (ga *BankState) pack(cdc codec.Codec) error {
 }
 
 func (ga *GovState) unpack(cdc codec.Codec) error {
-	var err error
-
 	ga.once.Do(func() {
 		ga.state = GetGovGenesisStateFromAppState(cdc, ga.gstate)
 	})
-
-	if err != nil {
-		return err
-	}
 
 	return nil
 }
@@ -502,7 +492,7 @@ func (ga *GovState) pack(cdc codec.Codec) error {
 			return fmt.Errorf("failed to marshal gov genesis state: %s", err.Error()) // nolint: goerr113
 		}
 
-		ga.gstate[govtypes.ModuleName] = stateBz
+		ga.gstate[gov.ModuleName] = stateBz
 
 		ga.once = sync.Once{}
 	}
@@ -511,15 +501,9 @@ func (ga *GovState) pack(cdc codec.Codec) error {
 }
 
 func (ga *IBCState) unpack(cdc codec.Codec) error {
-	var err error
-
 	ga.once.Do(func() {
 		ga.state = GetIBCGenesisStateFromAppState(cdc, ga.gstate)
 	})
-
-	if err != nil {
-		return err
-	}
 
 	return nil
 }
@@ -540,15 +524,9 @@ func (ga *IBCState) pack(cdc codec.Codec) error {
 }
 
 func (ga *StakingState) unpack(cdc codec.Codec) error {
-	var err error
-
 	ga.once.Do(func() {
 		ga.state = stakingtypes.GetGenesisStateFromAppState(cdc, ga.gstate)
 	})
-
-	if err != nil {
-		return err
-	}
 
 	return nil
 }
@@ -569,15 +547,9 @@ func (ga *StakingState) pack(cdc codec.Codec) error {
 }
 
 func (ga *SlashingState) unpack(cdc codec.Codec) error {
-	var err error
-
 	ga.once.Do(func() {
 		ga.state = GetSlashingGenesisStateFromAppState(cdc, ga.gstate)
 	})
-
-	if err != nil {
-		return err
-	}
 
 	return nil
 }
@@ -598,15 +570,9 @@ func (ga *SlashingState) pack(cdc codec.Codec) error {
 }
 
 func (ga *DistributionState) unpack(cdc codec.Codec) error {
-	var err error
-
 	ga.once.Do(func() {
 		ga.state = GetDistributionGenesisStateFromAppState(cdc, ga.gstate)
 	})
-
-	if err != nil {
-		return err
-	}
 
 	return nil
 }
@@ -690,7 +656,7 @@ func (ga *DeploymentState) pack(cdc codec.Codec) error {
 			return fmt.Errorf("failed to marshal deployment genesis state: %s", err.Error()) // nolint: goerr113
 		}
 
-		ga.gstate[dtypes.ModuleName] = stateBz
+		ga.gstate[dv1.ModuleName] = stateBz
 
 		ga.once = sync.Once{}
 	}
@@ -994,7 +960,7 @@ func (ga *GenesisState) IncreaseDelegatorStake(
 	stake := sdk.NewDec(0)
 
 	for _, coin := range coins {
-		stake = stake.Add(coin.Amount.ToDec())
+		stake = stake.Add(coin.Amount.ToLegacyDec())
 		*sVal, _ = sVal.AddTokensFromDel(coin.Amount)
 	}
 

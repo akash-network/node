@@ -24,8 +24,8 @@ import (
 
 	astaking "github.com/akash-network/akash-api/go/node/staking/v1beta3"
 
-	"github.com/akash-network/node/app"
-	uttypes "github.com/akash-network/node/tests/upgrade/types"
+	"pkg.akt.dev/akashd/app"
+	uttypes "pkg.akt.dev/akashd/tests/upgrade/types"
 )
 
 func init() {

@@ -4,19 +4,21 @@ import (
 	"errors"
 	"testing"
 
+	dbm "github.com/cometbft/cometbft-db"
+	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
+	storetypes "github.com/cosmos/cosmos-sdk/store/types"
+
 	"github.com/cosmos/cosmos-sdk/store"
 	sdktestdata "github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/stretchr/testify/require"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
-	dbm "github.com/tendermint/tm-db"
 
-	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+	types "pkg.akt.dev/go/node/cert/v1"
 
-	"github.com/akash-network/node/testutil"
-	"github.com/akash-network/node/x/cert/handler"
-	"github.com/akash-network/node/x/cert/keeper"
+	"pkg.akt.dev/akashd/testutil"
+	"pkg.akt.dev/akashd/x/cert/handler"
+	"pkg.akt.dev/akashd/x/cert/keeper"
 )
 
 type testSuite struct {
@@ -36,7 +38,7 @@ func setupTestSuite(t *testing.T) *testSuite {
 
 	db := dbm.NewMemDB()
 	suite.ms = store.NewCommitMultiStore(db)
-	suite.ms.MountStoreWithDB(aKey, sdk.StoreTypeIAVL, db)
+	suite.ms.MountStoreWithDB(aKey, storetypes.StoreTypeIAVL, db)
 
 	err := suite.ms.LoadLatestVersion()
 	require.NoError(t, err)
@@ -191,7 +193,7 @@ func TestCertHandlerRevoke(t *testing.T) {
 	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateValid)
 
 	msgRevoke := &types.MsgRevokeCertificate{
-		ID: types.CertificateID{
+		ID: types.ID{
 			Owner:  owner.String(),
 			Serial: cert.Serial.String(),
 		},
@@ -238,7 +240,7 @@ func TestCertHandlerRevokeCreateRevoked(t *testing.T) {
 	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateValid)
 
 	msgRevoke := &types.MsgRevokeCertificate{
-		ID: types.CertificateID{
+		ID: types.ID{
 			Owner:  owner.String(),
 			Serial: cert.Serial.String(),
 		},
@@ -283,7 +285,7 @@ func TestCertHandlerRevokeCreate(t *testing.T) {
 	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateValid)
 
 	msgRevoke := &types.MsgRevokeCertificate{
-		ID: types.CertificateID{
+		ID: types.ID{
 			Owner:  owner.String(),
 			Serial: cert.Serial.String(),
 		},

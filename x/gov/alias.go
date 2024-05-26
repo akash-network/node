@@ -1,9 +1,9 @@
 package provider
 
 import (
-	types "github.com/akash-network/akash-api/go/node/gov/v1beta3"
+	types "pkg.akt.dev/go/node/gov/v1beta3"
 
-	"github.com/akash-network/node/x/gov/keeper"
+	"pkg.akt.dev/akashd/x/gov/keeper"
 )
 
 const (

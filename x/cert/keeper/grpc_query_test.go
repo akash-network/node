@@ -10,11 +10,11 @@ import (
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/stretchr/testify/require"
 
-	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+	types "pkg.akt.dev/go/node/cert/v1"
 
-	"github.com/akash-network/node/app"
-	"github.com/akash-network/node/testutil"
-	"github.com/akash-network/node/x/cert/keeper"
+	"pkg.akt.dev/akashd/app"
+	"pkg.akt.dev/akashd/testutil"
+	"pkg.akt.dev/akashd/x/cert/keeper"
 )
 
 type grpcTestSuite struct {
@@ -172,7 +172,7 @@ func TestCertGRPCQueryCertificates(t *testing.T) {
 			func() {
 				req = &types.QueryCertificatesRequest{
 					Filter: types.CertificateFilter{
-						State: types.Certificate_State_name[int32(types.CertificateValid)],
+						State: types.CertificateValid.String(),
 					},
 					Pagination: &sdkquery.PageRequest{
 						Limit: 10,

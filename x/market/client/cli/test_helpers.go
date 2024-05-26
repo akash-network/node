@@ -7,12 +7,13 @@ import (
 	sdktest "github.com/cosmos/cosmos-sdk/testutil"
 	clitestutil "github.com/cosmos/cosmos-sdk/testutil/cli"
 
-	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
+	types "pkg.akt.dev/go/node/market/v1"
+	"pkg.akt.dev/go/node/market/v1beta5"
 )
 
 // XXX: WHY TF DON'T THESE RETURN OBJECTS
 
-const key string = types.StoreKey
+const key string = v1beta5.StoreKey
 
 // TxCreateBidExec is used for testing create bid tx
 func TxCreateBidExec(clientCtx client.Context, orderID types.OrderID, price, from fmt.Stringer,

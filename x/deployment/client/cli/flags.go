@@ -4,11 +4,13 @@ import (
 	"errors"
 	"strings"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"pkg.akt.dev/go/node/deployment/v1"
+	"pkg.akt.dev/go/node/deployment/v1beta4"
 )
 
 const (
@@ -18,7 +20,7 @@ const (
 
 var (
 	ErrStateValue     = errors.New("query: invalid state value")
-	DefaultDeposit, _ = types.DefaultParams().MinDepositFor("uakt")
+	DefaultDeposit, _ = v1beta4.DefaultParams().MinDepositFor("uakt")
 )
 
 type DeploymentIDOptions struct {
@@ -84,8 +86,8 @@ func MarkReqDeploymentIDFlags(cmd *cobra.Command, opts ...DeploymentIDOption) {
 }
 
 // DeploymentIDFromFlags returns DeploymentID with given flags, owner and error if occurred
-func DeploymentIDFromFlags(flags *pflag.FlagSet, opts ...MarketOption) (types.DeploymentID, error) {
-	var id types.DeploymentID
+func DeploymentIDFromFlags(flags *pflag.FlagSet, opts ...MarketOption) (v1.DeploymentID, error) {
+	var id v1.DeploymentID
 	opt := &MarketOptions{}
 
 	for _, o := range opts {
@@ -115,8 +117,8 @@ func DeploymentIDFromFlags(flags *pflag.FlagSet, opts ...MarketOption) (types.De
 }
 
 // DeploymentIDFromFlagsForOwner returns DeploymentID with given flags, owner and error if occurred
-func DeploymentIDFromFlagsForOwner(flags *pflag.FlagSet, owner sdk.Address) (types.DeploymentID, error) {
-	id := types.DeploymentID{
+func DeploymentIDFromFlagsForOwner(flags *pflag.FlagSet, owner sdk.Address) (v1.DeploymentID, error) {
+	id := v1.DeploymentID{
 		Owner: owner.String(),
 	}
 
@@ -140,8 +142,8 @@ func MarkReqGroupIDFlags(cmd *cobra.Command, opts ...DeploymentIDOption) {
 }
 
 // GroupIDFromFlags returns GroupID with given flags and error if occurred
-func GroupIDFromFlags(flags *pflag.FlagSet, opts ...MarketOption) (types.GroupID, error) {
-	var id types.GroupID
+func GroupIDFromFlags(flags *pflag.FlagSet, opts ...MarketOption) (v1.GroupID, error) {
+	var id v1.GroupID
 	prev, err := DeploymentIDFromFlags(flags, opts...)
 	if err != nil {
 		return id, err
@@ -151,7 +153,7 @@ func GroupIDFromFlags(flags *pflag.FlagSet, opts ...MarketOption) (types.GroupID
 	if err != nil {
 		return id, err
 	}
-	return types.MakeGroupID(prev, gseq), nil
+	return v1.MakeGroupID(prev, gseq), nil
 }
 
 // AddDeploymentFilterFlags add flags to filter for deployment list
@@ -162,8 +164,8 @@ func AddDeploymentFilterFlags(flags *pflag.FlagSet) {
 }
 
 // DepFiltersFromFlags returns DeploymentFilters with given flags and error if occurred
-func DepFiltersFromFlags(flags *pflag.FlagSet) (types.DeploymentFilters, error) {
-	var dfilters types.DeploymentFilters
+func DepFiltersFromFlags(flags *pflag.FlagSet) (v1beta4.DeploymentFilters, error) {
+	var dfilters v1beta4.DeploymentFilters
 	owner, err := flags.GetString("owner")
 	if err != nil {
 		return dfilters, err

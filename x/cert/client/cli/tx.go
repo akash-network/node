@@ -7,17 +7,17 @@ import (
 	"math/big"
 	"time"
 
-	cltypes "github.com/akash-network/akash-api/go/node/client/types"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+	types "pkg.akt.dev/go/node/cert/v1"
+	cltypes "pkg.akt.dev/go/node/client/types"
 
-	aclient "github.com/akash-network/node/client"
-	certerrors "github.com/akash-network/node/x/cert/errors"
-	"github.com/akash-network/node/x/cert/utils"
+	aclient "pkg.akt.dev/akashd/client"
+	certerrors "pkg.akt.dev/akashd/x/cert/errors"
+	"pkg.akt.dev/akashd/x/cert/utils"
 )
 
 const (
@@ -204,11 +204,11 @@ func doRevokeCmd(cmd *cobra.Command) error {
 		serial = parsedCert.SerialNumber.String()
 	}
 
-	params := &types.QueryCertificatesRequest{
+	req := &types.QueryCertificatesRequest{
 		Filter: types.CertificateFilter{
 			Owner:  fromAddress.String(),
 			Serial: serial,
-			State:  stateValid,
+			State:  types.CertificateValid.String(),
 		},
 	}
 
@@ -224,7 +224,7 @@ func doRevokeCmd(cmd *cobra.Command) error {
 		return err
 	}
 
-	res, err := cl.Query().Certificates(cmd.Context(), params)
+	res, err := cl.Query().Certificates(cmd.Context(), req)
 	if err != nil {
 		return err
 	}
@@ -235,7 +235,7 @@ func doRevokeCmd(cmd *cobra.Command) error {
 	}
 
 	msg := &types.MsgRevokeCertificate{
-		ID: types.CertificateID{
+		ID: types.ID{
 			Owner:  cctx.FromAddress.String(),
 			Serial: serial,
 		},

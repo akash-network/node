@@ -5,10 +5,9 @@ import (
 	"net/http"
 
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/types/rest"
 	"github.com/gorilla/mux"
 
-	"github.com/akash-network/node/x/market/query"
+	"pkg.akt.dev/akashd/x/market/query"
 )
 
 // RegisterRoutes registers all query routes

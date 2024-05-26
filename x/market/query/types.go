@@ -3,7 +3,7 @@ package query
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
+	types "pkg.akt.dev/go/node/market/v1beta4"
 )
 
 type (

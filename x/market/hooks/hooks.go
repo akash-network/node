@@ -3,10 +3,11 @@ package hooks
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
-	etypes "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
-
-	mtypes "github.com/akash-network/akash-api/go/node/market/v1beta4"
+	dv1 "pkg.akt.dev/go/node/deployment/v1"
+	dtypes "pkg.akt.dev/go/node/deployment/v1beta4"
+	etypes "pkg.akt.dev/go/node/escrow/v1"
+	mv1 "pkg.akt.dev/go/node/market/v1"
+	mtypes "pkg.akt.dev/go/node/market/v1beta5"
 )
 
 type Hooks interface {
@@ -37,20 +38,20 @@ func (h *hooks) OnEscrowAccountClosed(ctx sdk.Context, obj etypes.Account) {
 		return
 	}
 
-	if deployment.State != dtypes.DeploymentActive {
+	if deployment.State != dv1.DeploymentActive {
 		return
 	}
-	h.dkeeper.CloseDeployment(ctx, deployment)
+	_ = h.dkeeper.CloseDeployment(ctx, deployment)
 
 	gstate := dtypes.GroupClosed
 	if obj.State == etypes.AccountOverdrawn {
 		gstate = dtypes.GroupInsufficientFunds
 	}
 
-	for _, group := range h.dkeeper.GetGroups(ctx, deployment.ID()) {
+	for _, group := range h.dkeeper.GetGroups(ctx, deployment.ID) {
 		if group.ValidateClosable() == nil {
 			_ = h.dkeeper.OnCloseGroup(ctx, group, gstate)
-			h.mkeeper.OnGroupClosed(ctx, group.ID())
+			_ = h.mkeeper.OnGroupClosed(ctx, group.ID)
 		}
 	}
 }
@@ -66,7 +67,7 @@ func (h *hooks) OnEscrowPaymentClosed(ctx sdk.Context, obj etypes.FractionalPaym
 		return
 	}
 
-	if bid.State != mtypes.BidActive {
+	if bid.State != mv1.BidActive {
 		return
 	}
 
@@ -80,12 +81,12 @@ func (h *hooks) OnEscrowPaymentClosed(ctx sdk.Context, obj etypes.FractionalPaym
 		return
 	}
 
-	h.mkeeper.OnOrderClosed(ctx, order)
-	h.mkeeper.OnBidClosed(ctx, bid)
+	_ = h.mkeeper.OnOrderClosed(ctx, order)
+	_ = h.mkeeper.OnBidClosed(ctx, bid)
 
 	if obj.State == etypes.PaymentOverdrawn {
-		h.mkeeper.OnLeaseClosed(ctx, lease, mtypes.LeaseInsufficientFunds)
+		_ = h.mkeeper.OnLeaseClosed(ctx, lease, mv1.LeaseInsufficientFunds)
 	} else {
-		h.mkeeper.OnLeaseClosed(ctx, lease, mtypes.LeaseClosed)
+		_ = h.mkeeper.OnLeaseClosed(ctx, lease, mv1.LeaseClosed)
 	}
 }

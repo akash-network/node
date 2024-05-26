@@ -1,9 +1,9 @@
 package inflation
 
 import (
-	types "github.com/akash-network/akash-api/go/node/inflation/v1beta3"
+	types "pkg.akt.dev/go/node/inflation/v1beta3"
 
-	"github.com/akash-network/node/x/inflation/keeper"
+	"pkg.akt.dev/akashd/x/inflation/keeper"
 )
 
 const (

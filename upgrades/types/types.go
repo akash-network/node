@@ -3,15 +3,15 @@ package types
 import (
 	"fmt"
 
-	"github.com/cosmos/cosmos-sdk/codec"
-	sdkmodule "github.com/cosmos/cosmos-sdk/types/module"
-	"github.com/tendermint/tendermint/libs/log"
+	"github.com/cometbft/cometbft/libs/log"
 
+	"github.com/cosmos/cosmos-sdk/codec"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkmodule "github.com/cosmos/cosmos-sdk/types/module"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 
-	apptypes "github.com/akash-network/node/app/types"
+	apptypes "pkg.akt.dev/akashd/app/types"
 )
 
 var (
@@ -58,7 +58,7 @@ type IHeightPatch interface {
 }
 
 type Migrator interface {
-	StoreKey() sdk.StoreKey
+	StoreKey() storetypes.StoreKey
 	Codec() codec.BinaryCodec
 }
 

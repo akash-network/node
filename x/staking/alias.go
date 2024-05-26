@@ -1,9 +1,9 @@
 package provider
 
 import (
-	types "github.com/akash-network/akash-api/go/node/staking/v1beta3"
+	types "pkg.akt.dev/go/node/staking/v1beta3"
 
-	"github.com/akash-network/node/x/staking/keeper"
+	"pkg.akt.dev/akashd/x/staking/keeper"
 )
 
 const (

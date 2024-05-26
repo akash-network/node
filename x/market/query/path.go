@@ -6,10 +6,9 @@ import (
 	"strconv"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	v1 "pkg.akt.dev/go/node/market/v1"
 
-	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
-
-	dpath "github.com/akash-network/node/x/deployment/query"
+	dpath "pkg.akt.dev/akashd/x/deployment/query"
 )
 
 const (
@@ -33,7 +32,7 @@ func getOrdersPath(ofilters OrderFilters) string {
 }
 
 // OrderPath return order path of given order id for queries
-func OrderPath(id types.OrderID) string {
+func OrderPath(id v1.OrderID) string {
 	return fmt.Sprintf("%s/%s", orderPath, orderParts(id))
 }
 
@@ -43,7 +42,7 @@ func getBidsPath(bfilters BidFilters) string {
 }
 
 // getBidPath return bid path of given bid id for queries
-func getBidPath(id types.BidID) string {
+func getBidPath(id v1.BidID) string {
 	return fmt.Sprintf("%s/%s/%s", bidPath, orderParts(id.OrderID()), id.Provider)
 }
 
@@ -53,61 +52,61 @@ func getLeasesPath(lfilters LeaseFilters) string {
 }
 
 // LeasePath return lease path of given lease id for queries
-func LeasePath(id types.LeaseID) string {
+func LeasePath(id v1.LeaseID) string {
 	return fmt.Sprintf("%s/%s/%s", leasePath, orderParts(id.OrderID()), id.Provider)
 }
 
-func orderParts(id types.OrderID) string {
+func orderParts(id v1.OrderID) string {
 	return fmt.Sprintf("%s/%v/%v/%v", id.Owner, id.DSeq, id.GSeq, id.OSeq)
 }
 
 // parseOrderPath returns orderID details with provided queries, and return
 // error if occurred due to wrong query
-func parseOrderPath(parts []string) (types.OrderID, error) {
+func parseOrderPath(parts []string) (v1.OrderID, error) {
 	if len(parts) < 4 {
-		return types.OrderID{}, ErrInvalidPath
+		return v1.OrderID{}, ErrInvalidPath
 	}
 
 	did, err := dpath.ParseGroupPath(parts[0:3])
 	if err != nil {
-		return types.OrderID{}, err
+		return v1.OrderID{}, err
 	}
 
 	oseq, err := strconv.ParseUint(parts[3], 10, 32)
 	if err != nil {
-		return types.OrderID{}, err
+		return v1.OrderID{}, err
 	}
 
-	return types.MakeOrderID(did, uint32(oseq)), nil
+	return v1.MakeOrderID(did, uint32(oseq)), nil
 }
 
 // parseBidPath returns bidID details with provided queries, and return
 // error if occurred due to wrong query
-func parseBidPath(parts []string) (types.BidID, error) {
+func parseBidPath(parts []string) (v1.BidID, error) {
 	if len(parts) < 5 {
-		return types.BidID{}, ErrInvalidPath
+		return v1.BidID{}, ErrInvalidPath
 	}
 
 	oid, err := parseOrderPath(parts[0:4])
 	if err != nil {
-		return types.BidID{}, err
+		return v1.BidID{}, err
 	}
 
 	provider, err := sdk.AccAddressFromBech32(parts[4])
 	if err != nil {
-		return types.BidID{}, err
+		return v1.BidID{}, err
 	}
 
-	return types.MakeBidID(oid, provider), nil
+	return v1.MakeBidID(oid, provider), nil
 }
 
 // ParseLeasePath returns leaseID details with provided queries, and return
 // error if occurred due to wrong query
-func ParseLeasePath(parts []string) (types.LeaseID, error) {
+func ParseLeasePath(parts []string) (v1.LeaseID, error) {
 	bid, err := parseBidPath(parts)
 	if err != nil {
-		return types.LeaseID{}, err
+		return v1.LeaseID{}, err
 	}
 
-	return types.MakeLeaseID(bid), nil
+	return v1.MakeLeaseID(bid), nil
 }

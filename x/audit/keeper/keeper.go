@@ -4,20 +4,18 @@ import (
 	"sort"
 
 	"github.com/cosmos/cosmos-sdk/codec"
+	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	types "github.com/akash-network/akash-api/go/node/audit/v1beta3"
-
-	akashtypes "github.com/akash-network/akash-api/go/node/types/v1beta3"
-	atypes "github.com/akash-network/akash-api/go/node/types/v1beta3"
+	types "pkg.akt.dev/go/node/audit/v1"
+	attrv1 "pkg.akt.dev/go/node/types/attributes/v1"
 )
 
 // TODO: use interfaces for keepers, queriers
 type IKeeper interface {
 	GetProviderByAuditor(ctx sdk.Context, id types.ProviderID) (types.Provider, bool)
 	GetProviderAttributes(ctx sdk.Context, id sdk.Address) (types.Providers, bool)
-	CreateOrUpdateProviderAttributes(ctx sdk.Context, id types.ProviderID, attr akashtypes.Attributes) error
+	CreateOrUpdateProviderAttributes(ctx sdk.Context, id types.ProviderID, attr attrv1.Attributes) error
 	DeleteProviderAttributes(ctx sdk.Context, id types.ProviderID, keys []string) error
 	WithProviders(ctx sdk.Context, fn func(types.Provider) bool)
 	WithProvider(ctx sdk.Context, id sdk.Address, fn func(types.Provider) bool)
@@ -25,12 +23,12 @@ type IKeeper interface {
 
 // Keeper of the provider store
 type Keeper struct {
-	skey sdk.StoreKey
+	skey storetypes.StoreKey
 	cdc  codec.BinaryCodec
 }
 
 // NewKeeper creates and returns an instance for Market keeper
-func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey) Keeper {
+func NewKeeper(cdc codec.BinaryCodec, skey storetypes.StoreKey) Keeper {
 	return Keeper{cdc: cdc, skey: skey}
 }
 
@@ -40,7 +38,7 @@ func (k Keeper) Codec() codec.BinaryCodec {
 }
 
 // StoreKey returns store key
-func (k Keeper) StoreKey() sdk.StoreKey {
+func (k Keeper) StoreKey() storetypes.StoreKey {
 	return k.skey
 }
 
@@ -86,7 +84,7 @@ func (k Keeper) GetProviderAttributes(ctx sdk.Context, id sdk.Address) (types.Pr
 // CreateOrUpdateProviderAttributes update signed provider attributes.
 // creates new if key does not exist
 // if key exists, existing values for matching pairs will be replaced
-func (k Keeper) CreateOrUpdateProviderAttributes(ctx sdk.Context, id types.ProviderID, attr akashtypes.Attributes) error {
+func (k Keeper) CreateOrUpdateProviderAttributes(ctx sdk.Context, id types.ProviderID, attr attrv1.Attributes) error {
 	store := ctx.KVStore(k.skey)
 	key := providerKey(id)
 
@@ -111,10 +109,10 @@ func (k Keeper) CreateOrUpdateProviderAttributes(ctx sdk.Context, id types.Provi
 			kv[entry.Key] = entry.Value
 		}
 
-		attr = akashtypes.Attributes{}
+		attr = attrv1.Attributes{}
 
 		for ky, val := range kv {
-			attr = append(attr, atypes.Attribute{
+			attr = append(attr, attrv1.Attribute{
 				Key:   ky,
 				Value: val,
 			})
@@ -129,9 +127,15 @@ func (k Keeper) CreateOrUpdateProviderAttributes(ctx sdk.Context, id types.Provi
 
 	store.Set(key, k.cdc.MustMarshal(&prov))
 
-	ctx.EventManager().EmitEvent(
-		types.NewEventTrustedAuditorCreated(id.Owner, id.Auditor).ToSDKEvent(),
+	err := ctx.EventManager().EmitTypedEvent(
+		&types.EventTrustedAuditorCreated{
+			Owner:   id.Owner.String(),
+			Auditor: id.Auditor.String(),
+		},
 	)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -164,7 +168,7 @@ func (k Keeper) DeleteProviderAttributes(ctx sdk.Context, id types.ProviderID, k
 
 		for _, entry := range keys {
 			if _, exists := kv[entry]; !exists {
-				return sdkerrors.Wrapf(types.ErrAttributeNotFound, "trying to delete non-existing attribute \"%s\" for auditor/provider \"%s/%s\"",
+				return types.ErrAttributeNotFound.Wrapf("trying to delete non-existing attribute \"%s\" for auditor/provider \"%s/%s\"",
 					entry,
 					prov.Auditor,
 					prov.Owner)
@@ -173,10 +177,10 @@ func (k Keeper) DeleteProviderAttributes(ctx sdk.Context, id types.ProviderID, k
 			delete(kv, entry)
 		}
 
-		var attr akashtypes.Attributes
+		var attr attrv1.Attributes
 
 		for ky, val := range kv {
-			attr = append(attr, atypes.Attribute{
+			attr = append(attr, attrv1.Attribute{
 				Key:   ky,
 				Value: val,
 			})
@@ -195,9 +199,15 @@ func (k Keeper) DeleteProviderAttributes(ctx sdk.Context, id types.ProviderID, k
 		}
 	}
 
-	ctx.EventManager().EmitEvent(
-		types.NewEventTrustedAuditorDeleted(id.Owner, id.Auditor).ToSDKEvent(),
+	err := ctx.EventManager().EmitTypedEvent(
+		&types.EventTrustedAuditorDeleted{
+			Owner:   id.Owner.String(),
+			Auditor: id.Auditor.String(),
+		},
 	)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

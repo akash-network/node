@@ -6,12 +6,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/akash-network/akash-api/go/node/client/v1beta2"
-	"github.com/cosmos/cosmos-sdk/x/params/types/proposal"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/params/types/proposal"
+
+	client "pkg.akt.dev/go/node/client/v1beta3"
 )
 
 const (
@@ -33,7 +34,7 @@ func AddDepositFlags(flags *pflag.FlagSet) {
 	flags.String(FlagDeposit, "", "Deposit amount")
 }
 
-func DetectDeposit(ctx context.Context, flags *pflag.FlagSet, cl v1beta2.QueryClient, subspace, paramKey string) (sdk.Coin, error) {
+func DetectDeposit(ctx context.Context, flags *pflag.FlagSet, cl client.QueryClient, subspace, paramKey string) (sdk.Coin, error) {
 	var deposit sdk.Coin
 	var depositStr string
 	var err error

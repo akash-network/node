@@ -3,13 +3,13 @@ package keeper
 import (
 	"bytes"
 
-	types "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
+	"pkg.akt.dev/go/node/escrow/v1"
 )
 
-func accountKey(id types.AccountID) []byte {
+func accountKey(id v1.AccountID) []byte {
 	// TODO: validate scope, xid
 	buf := bytes.Buffer{}
-	buf.Write(types.AccountKeyPrefix())
+	buf.Write(v1.AccountKeyPrefix())
 	buf.WriteRune('/')
 	buf.WriteString(id.Scope)
 	buf.WriteRune('/')
@@ -17,10 +17,10 @@ func accountKey(id types.AccountID) []byte {
 	return buf.Bytes()
 }
 
-func accountPaymentsKey(id types.AccountID) []byte {
+func accountPaymentsKey(id v1.AccountID) []byte {
 	// TODO: validate scope, xid, pid
 	buf := bytes.Buffer{}
-	buf.Write(types.PaymentKeyPrefix())
+	buf.Write(v1.PaymentKeyPrefix())
 	buf.WriteRune('/')
 	buf.WriteString(id.Scope)
 	buf.WriteRune('/')
@@ -29,10 +29,10 @@ func accountPaymentsKey(id types.AccountID) []byte {
 	return buf.Bytes()
 }
 
-func paymentKey(id types.AccountID, pid string) []byte {
+func paymentKey(id v1.AccountID, pid string) []byte {
 	// TODO: validate scope, xid, pid
 	buf := bytes.Buffer{}
-	buf.Write(types.PaymentKeyPrefix())
+	buf.Write(v1.PaymentKeyPrefix())
 	buf.WriteRune('/')
 	buf.WriteString(id.Scope)
 	buf.WriteRune('/')

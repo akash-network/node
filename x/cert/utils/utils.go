@@ -7,11 +7,11 @@ import (
 	"io"
 	"time"
 
-	certerrors "github.com/akash-network/node/x/cert/errors"
+	certerrors "pkg.akt.dev/akashd/x/cert/errors"
 
 	"github.com/cosmos/cosmos-sdk/client"
 
-	ctypes "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+	ctypes "pkg.akt.dev/go/node/cert/v1beta3"
 )
 
 // LoadAndQueryCertificateForAccount wraps LoadAndQueryPEMForAccount and tls.X509KeyPair

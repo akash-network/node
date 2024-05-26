@@ -4,42 +4,36 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
 
-	abci "github.com/tendermint/tendermint/abci/types"
+	abci "github.com/cometbft/cometbft/abci/types"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 
-	v1beta1types "github.com/akash-network/akash-api/go/node/market/v1beta1"
-	v1beta2types "github.com/akash-network/akash-api/go/node/market/v1beta2"
-	v1beta3types "github.com/akash-network/akash-api/go/node/market/v1beta3"
-	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
+	types "pkg.akt.dev/go/node/market/v1beta5"
 
-	utypes "github.com/akash-network/node/upgrades/types"
-	akeeper "github.com/akash-network/node/x/audit/keeper"
-	ekeeper "github.com/akash-network/node/x/escrow/keeper"
-	"github.com/akash-network/node/x/market/client/cli"
-	"github.com/akash-network/node/x/market/client/rest"
-	"github.com/akash-network/node/x/market/handler"
-	"github.com/akash-network/node/x/market/keeper"
-	"github.com/akash-network/node/x/market/simulation"
+	utypes "pkg.akt.dev/akashd/upgrades/types"
+	akeeper "pkg.akt.dev/akashd/x/audit/keeper"
+	ekeeper "pkg.akt.dev/akashd/x/escrow/keeper"
+	"pkg.akt.dev/akashd/x/market/client/cli"
+	"pkg.akt.dev/akashd/x/market/client/rest"
+	"pkg.akt.dev/akashd/x/market/handler"
+	"pkg.akt.dev/akashd/x/market/keeper"
 )
 
 var (
-	_ module.AppModule           = AppModule{}
-	_ module.AppModuleBasic      = AppModuleBasic{}
-	_ module.AppModuleSimulation = AppModuleSimulation{}
+	_ module.AppModule      = AppModule{}
+	_ module.AppModuleBasic = AppModuleBasic{}
+	// _ module.AppModuleSimulation = AppModuleSimulation{}
 )
 
 // AppModuleBasic defines the basic application module used by the market module.
@@ -60,9 +54,9 @@ func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 // RegisterInterfaces registers the module's interface types
 func (b AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 	types.RegisterInterfaces(registry)
-	v1beta3types.RegisterInterfaces(registry)
-	v1beta2types.RegisterInterfaces(registry)
-	v1beta1types.RegisterInterfaces(registry)
+	// v1beta3types.RegisterInterfaces(registry)
+	// v1beta2types.RegisterInterfaces(registry)
+	// v1beta1types.RegisterInterfaces(registry)
 }
 
 // DefaultGenesis returns default genesis state as raw bytes for the market
@@ -146,20 +140,20 @@ func (AppModule) Name() string {
 // RegisterInvariants registers module invariants
 func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
 
-// Route returns the message routing key for the market module.
-func (am AppModule) Route() sdk.Route {
-	return sdk.NewRoute(types.RouterKey, handler.NewHandler(am.keepers))
-}
+// // Route returns the message routing key for the market module.
+// func (am AppModule) Route() sdk.Route {
+// 	return sdk.NewRoute(types.RouterKey, handler.NewHandler(am.keepers))
+// }
 
 // QuerierRoute returns the market module's querier route name.
 func (am AppModule) QuerierRoute() string {
 	return ""
 }
 
-// LegacyQuerierHandler returns the sdk.Querier for market module
-func (am AppModule) LegacyQuerierHandler(_ *codec.LegacyAmino) sdk.Querier {
-	return nil
-}
+// // LegacyQuerierHandler returns the sdk.Querier for market module
+// func (am AppModule) LegacyQuerierHandler(_ *codec.LegacyAmino) sdk.Querier {
+// 	return nil
+// }
 
 // RegisterServices registers the module's services
 func (am AppModule) RegisterServices(cfg module.Configurator) {
@@ -228,30 +222,30 @@ func NewAppModuleSimulation(
 	}
 }
 
-// AppModuleSimulation functions
-
-// GenerateGenesisState creates a randomized GenState of the staking module.
-func (AppModuleSimulation) GenerateGenesisState(simState *module.SimulationState) {
-	simulation.RandomizedGenState(simState)
-}
-
-// ProposalContents doesn't return any content functions for governance proposals.
-func (AppModuleSimulation) ProposalContents(_ module.SimulationState) []simtypes.WeightedProposalContent {
-	return nil
-}
-
-// RandomizedParams creates randomized staking param changes for the simulator.
-func (AppModuleSimulation) RandomizedParams(_ *rand.Rand) []simtypes.ParamChange {
-	return nil
-}
-
-// RegisterStoreDecoder registers a decoder for staking module's types
-func (AppModuleSimulation) RegisterStoreDecoder(_ sdk.StoreDecoderRegistry) {
-	// sdr[StoreKey] = simulation.DecodeStore
-}
-
-// WeightedOperations returns the all the staking module operations with their respective weights.
-func (am AppModuleSimulation) WeightedOperations(simState module.SimulationState) []simtypes.WeightedOperation {
-	return simulation.WeightedOperations(simState.AppParams, simState.Cdc,
-		am.akeeper, am.keepers)
-}
+// // AppModuleSimulation functions
+//
+// // GenerateGenesisState creates a randomized GenState of the staking module.
+// func (AppModuleSimulation) GenerateGenesisState(simState *module.SimulationState) {
+// 	simulation.RandomizedGenState(simState)
+// }
+//
+// // ProposalContents doesn't return any content functions for governance proposals.
+// func (AppModuleSimulation) ProposalContents(_ module.SimulationState) []simtypes.WeightedProposalContent {
+// 	return nil
+// }
+//
+// // RandomizedParams creates randomized staking param changes for the simulator.
+// func (AppModuleSimulation) RandomizedParams(_ *rand.Rand) []simtypes.ParamChange {
+// 	return nil
+// }
+//
+// // RegisterStoreDecoder registers a decoder for staking module's types
+// func (AppModuleSimulation) RegisterStoreDecoder(_ sdk.StoreDecoderRegistry) {
+// 	// sdr[StoreKey] = simulation.DecodeStore
+// }
+//
+// // WeightedOperations returns the all the staking module operations with their respective weights.
+// func (am AppModuleSimulation) WeightedOperations(simState module.SimulationState) []simtypes.WeightedOperation {
+// 	return simulation.WeightedOperations(simState.AppParams, simState.Cdc,
+// 		am.akeeper, am.keepers)
+// }

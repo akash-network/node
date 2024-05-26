@@ -6,25 +6,27 @@ import (
 	"path/filepath"
 	"testing"
 
+	sdktestutil "github.com/cosmos/cosmos-sdk/testutil/cli"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	bankcli "github.com/cosmos/cosmos-sdk/x/bank/client/testutil"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
-	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
-	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
-	ptypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
+	dtypes "pkg.akt.dev/go/node/deployment/v1beta4"
+	types "pkg.akt.dev/go/node/market/v1beta5"
+	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 
-	"github.com/akash-network/node/testutil"
-	"github.com/akash-network/node/testutil/network"
-	ccli "github.com/akash-network/node/x/cert/client/cli"
-	dcli "github.com/akash-network/node/x/deployment/client/cli"
-	"github.com/akash-network/node/x/market/client/cli"
-	pcli "github.com/akash-network/node/x/provider/client/cli"
+	"pkg.akt.dev/go/cli"
+
+	"pkg.akt.dev/akashd/testutil"
+	"pkg.akt.dev/akashd/testutil/network"
+	ccli "pkg.akt.dev/akashd/x/cert/client/cli"
+	dcli "pkg.akt.dev/akashd/x/deployment/client/cli"
+	mcli "pkg.akt.dev/akashd/x/market/client/cli"
+	pcli "pkg.akt.dev/akashd/x/provider/client/cli"
 )
 
 type IntegrationTestSuite struct {
@@ -67,7 +69,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 		val.ClientCtx,
 		val.Address,
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, cli.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 	)
@@ -93,7 +95,7 @@ func (s *IntegrationTestSuite) Test1QueryOrders() {
 		val.Address,
 		deploymentPath,
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, cli.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 		fmt.Sprintf("--deposit=%s", dcli.DefaultDeposit),
@@ -110,10 +112,10 @@ func (s *IntegrationTestSuite) Test1QueryOrders() {
 	err = val.ClientCtx.Codec.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Deployments, 1)
-	s.Require().Equal(val.Address.String(), out.Deployments[0].Deployment.DeploymentID.Owner)
+	s.Require().Equal(val.Address.String(), out.Deployments[0].Deployment.ID.Owner)
 
 	// test query orders
-	resp, err = cli.QueryOrdersExec(val.ClientCtx.WithOutputFormat("json"))
+	resp, err = mcli.QueryOrdersExec(val.ClientCtx.WithOutputFormat("json"))
 	s.Require().NoError(err)
 
 	result := &types.QueryOrdersResponse{}
@@ -121,11 +123,11 @@ func (s *IntegrationTestSuite) Test1QueryOrders() {
 	s.Require().NoError(err)
 	s.Require().Len(result.Orders, 1)
 	orders := result.Orders
-	s.Require().Equal(val.Address.String(), orders[0].OrderID.Owner)
+	s.Require().Equal(val.Address.String(), orders[0].ID.Owner)
 
 	// test query order
 	createdOrder := orders[0]
-	resp, err = cli.QueryOrderExec(val.ClientCtx.WithOutputFormat("json"), createdOrder.OrderID)
+	resp, err = mcli.QueryOrderExec(val.ClientCtx.WithOutputFormat("json"), createdOrder.ID)
 	s.Require().NoError(err)
 
 	var order types.Order
@@ -134,7 +136,7 @@ func (s *IntegrationTestSuite) Test1QueryOrders() {
 	s.Require().Equal(createdOrder, order)
 
 	// test query orders with filters
-	resp, err = cli.QueryOrdersExec(
+	resp, err = mcli.QueryOrdersExec(
 		val.ClientCtx.WithOutputFormat("json"),
 		fmt.Sprintf("--owner=%s", val.Address.String()),
 		"--state=open",
@@ -148,14 +150,14 @@ func (s *IntegrationTestSuite) Test1QueryOrders() {
 	s.Require().Equal(createdOrder, result.Orders[0])
 
 	// test query orders with wrong owner value
-	_, err = cli.QueryOrdersExec(
+	_, err = mcli.QueryOrdersExec(
 		val.ClientCtx.WithOutputFormat("json"),
 		"--owner=cosmos102ruvpv2srmunfffxavttxnhezln6fnc3pf7tt",
 	)
 	s.Require().Error(err)
 
 	// test query orders with wrong state value
-	_, err = cli.QueryOrdersExec(
+	_, err = mcli.QueryOrdersExec(
 		val.ClientCtx.WithOutputFormat("json"),
 		"--state=hello",
 	)
@@ -172,15 +174,18 @@ func (s *IntegrationTestSuite) Test2CreateBid() {
 	keyBar, err := val.ClientCtx.Keyring.Key("keyBar")
 	s.Require().NoError(err)
 
+	keyAddr, err := keyBar.GetAddress()
+	s.Require().NoError(err)
+
 	// Send coins from validator to keyBar
-	sendTokens := sdk.NewCoin(s.cfg.BondDenom, cli.DefaultDeposit.Amount.MulRaw(2))
-	_, err = bankcli.MsgSendExec(
+	sendTokens := sdk.NewCoin(s.cfg.BondDenom, dcli.DefaultDeposit.Amount.MulRaw(2))
+	_, err = sdktestutil.MsgSendExec(
 		val.ClientCtx,
 		val.Address,
-		keyBar.GetAddress(),
+		keyAddr,
 		sdk.NewCoins(sendTokens),
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, cli.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 	)
@@ -188,7 +193,7 @@ func (s *IntegrationTestSuite) Test2CreateBid() {
 
 	s.Require().NoError(s.network.WaitForNextBlock())
 
-	resp, err := bankcli.QueryBalancesExec(val.ClientCtx.WithOutputFormat("json"), keyBar.GetAddress())
+	resp, err := sdktestutil.QueryBalancesExec(val.ClientCtx.WithOutputFormat("json"), keyAddr)
 	s.Require().NoError(err)
 
 	var balRes banktypes.QueryAllBalancesResponse
@@ -199,10 +204,10 @@ func (s *IntegrationTestSuite) Test2CreateBid() {
 	// create provider
 	_, err = pcli.TxCreateProviderExec(
 		val.ClientCtx,
-		keyBar.GetAddress(),
+		keyBar,
 		providerPath,
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, cli.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 	)
@@ -218,10 +223,10 @@ func (s *IntegrationTestSuite) Test2CreateBid() {
 	err = val.ClientCtx.Codec.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Providers, 1, "Provider Creation Failed in TestCreateBid")
-	s.Require().Equal(keyBar.GetAddress().String(), out.Providers[0].Owner)
+	s.Require().Equal(keyBar.String(), out.Providers[0].Owner)
 
 	// fetch orders
-	resp, err = cli.QueryOrdersExec(val.ClientCtx.WithOutputFormat("json"))
+	resp, err = mcli.QueryOrdersExec(val.ClientCtx.WithOutputFormat("json"))
 	s.Require().NoError(err)
 
 	result := &types.QueryOrdersResponse{}
@@ -232,23 +237,23 @@ func (s *IntegrationTestSuite) Test2CreateBid() {
 	createdOrder := result.Orders[0]
 
 	// create bid
-	_, err = cli.TxCreateBidExec(
+	_, err = mcli.TxCreateBidExec(
 		val.ClientCtx,
-		createdOrder.OrderID,
+		createdOrder.ID,
 		sdk.NewDecCoinFromDec(testutil.CoinDenom, sdk.MustNewDecFromStr("1.1")),
-		keyBar.GetAddress(),
+		keyBar,
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, cli.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
-		fmt.Sprintf("--deposit=%s", cli.DefaultDeposit),
+		fmt.Sprintf("--deposit=%s", dcli.DefaultDeposit),
 	)
 	s.Require().NoError(err)
 
 	s.Require().NoError(s.network.WaitForNextBlock())
 
 	// test query bids
-	resp, err = cli.QueryBidsExec(val.ClientCtx.WithOutputFormat("json"))
+	resp, err = mcli.QueryBidsExec(val.ClientCtx.WithOutputFormat("json"))
 	s.Require().NoError(err)
 
 	bidRes := &types.QueryBidsResponse{}
@@ -256,11 +261,11 @@ func (s *IntegrationTestSuite) Test2CreateBid() {
 	s.Require().NoError(err)
 	s.Require().Len(bidRes.Bids, 1)
 	bids := bidRes.Bids
-	s.Require().Equal(keyBar.GetAddress().String(), bids[0].Bid.BidID.Provider)
+	s.Require().Equal(keyBar.String(), bids[0].Bid.ID.Provider)
 
 	// test query bid
 	createdBid := bids[0].Bid
-	resp, err = cli.QueryBidExec(val.ClientCtx.WithOutputFormat("json"), createdBid.BidID)
+	resp, err = mcli.QueryBidExec(val.ClientCtx.WithOutputFormat("json"), createdBid.ID)
 	s.Require().NoError(err)
 
 	var bid types.QueryBidResponse
@@ -270,9 +275,9 @@ func (s *IntegrationTestSuite) Test2CreateBid() {
 	s.Require().Equal(createdBid, bid.Bid)
 
 	// test query bids with filters
-	resp, err = cli.QueryBidsExec(
+	resp, err = mcli.QueryBidsExec(
 		val.ClientCtx.WithOutputFormat("json"),
-		fmt.Sprintf("--provider=%s", keyBar.GetAddress().String()),
+		fmt.Sprintf("--provider=%s", keyBar.String()),
 		fmt.Sprintf("--state=%s", bid.Bid.State.String()),
 	)
 	s.Require().NoError(err)
@@ -284,26 +289,26 @@ func (s *IntegrationTestSuite) Test2CreateBid() {
 	s.Require().Equal(createdBid, bidRes.Bids[0].Bid)
 
 	// test query bids with wrong owner value
-	_, err = cli.QueryBidsExec(
+	_, err = mcli.QueryBidsExec(
 		val.ClientCtx.WithOutputFormat("json"),
 		"--owner=cosmos102ruvpv2srmunfffxavttxnhezln6fnc3pf7tt",
 	)
 	s.Require().Error(err)
 
 	// test query bids with wrong state value
-	_, err = cli.QueryBidsExec(
+	_, err = mcli.QueryBidsExec(
 		val.ClientCtx.WithOutputFormat("json"),
 		"--state=hello",
 	)
 	s.Require().Error(err)
 
 	// create lease
-	_, err = cli.TxCreateLeaseExec(
+	_, err = mcli.TxCreateLeaseExec(
 		val.ClientCtx,
-		bid.Bid.BidID,
+		bid.Bid.ID,
 		val.Address,
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, cli.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		fmt.Sprintf("--gas=%d", flags.DefaultGasLimit),
 	)
@@ -320,7 +325,7 @@ func (s *IntegrationTestSuite) Test3QueryLeasesAndCloseBid() {
 	s.Require().NoError(err)
 
 	// test query leases
-	resp, err := cli.QueryLeasesExec(val.ClientCtx.WithOutputFormat("json"))
+	resp, err := mcli.QueryLeasesExec(val.ClientCtx.WithOutputFormat("json"))
 	s.Require().NoError(err)
 
 	leaseRes := &types.QueryLeasesResponse{}
@@ -328,11 +333,11 @@ func (s *IntegrationTestSuite) Test3QueryLeasesAndCloseBid() {
 	s.Require().NoError(err)
 	s.Require().Len(leaseRes.Leases, 1)
 	leases := leaseRes.Leases
-	s.Require().Equal(keyBar.GetAddress().String(), leases[0].Lease.LeaseID.Provider)
+	s.Require().Equal(keyBar.String(), leases[0].Lease.ID.Provider)
 
 	// test query lease
 	createdLease := leases[0].Lease
-	resp, err = cli.QueryLeaseExec(val.ClientCtx.WithOutputFormat("json"), createdLease.LeaseID)
+	resp, err = mcli.QueryLeaseExec(val.ClientCtx.WithOutputFormat("json"), createdLease.ID)
 	s.Require().NoError(err)
 
 	var lease types.QueryLeaseResponse
@@ -341,12 +346,12 @@ func (s *IntegrationTestSuite) Test3QueryLeasesAndCloseBid() {
 	s.Require().Equal(createdLease, lease.Lease)
 
 	// create bid
-	_, err = cli.TxCloseBidExec(
+	_, err = mcli.TxCloseBidExec(
 		val.ClientCtx,
-		lease.Lease.LeaseID.OrderID(),
-		keyBar.GetAddress(),
+		lease.Lease.ID.OrderID(),
+		keyBar,
 		fmt.Sprintf("--%s=true", flags.FlagSkipConfirmation),
-		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, flags.BroadcastBlock),
+		fmt.Sprintf("--%s=%s", flags.FlagBroadcastMode, cli.BroadcastBlock),
 		fmt.Sprintf("--%s=%s", flags.FlagFees, sdk.NewCoins(sdk.NewCoin(s.cfg.BondDenom, sdk.NewInt(10))).String()),
 		"--gas=auto",
 		"--gas-adjustment=1.5",
@@ -355,17 +360,17 @@ func (s *IntegrationTestSuite) Test3QueryLeasesAndCloseBid() {
 	s.Require().NoError(s.network.WaitForNextBlock())
 
 	// test query closed bids
-	resp, err = cli.QueryBidsExec(val.ClientCtx.WithOutputFormat("json"), "--state=closed")
+	resp, err = mcli.QueryBidsExec(val.ClientCtx.WithOutputFormat("json"), "--state=closed")
 	s.Require().NoError(err)
 
 	bidRes := &types.QueryBidsResponse{}
 	err = val.ClientCtx.Codec.UnmarshalJSON(resp.Bytes(), bidRes)
 	s.Require().NoError(err)
 	s.Require().Len(bidRes.Bids, 1)
-	s.Require().Equal(keyBar.GetAddress().String(), bidRes.Bids[0].Bid.BidID.Provider)
+	s.Require().Equal(keyBar.String(), bidRes.Bids[0].Bid.ID.Provider)
 
 	// test query leases with state value filter
-	resp, err = cli.QueryLeasesExec(val.ClientCtx.WithOutputFormat("json"), "--state=closed")
+	resp, err = mcli.QueryLeasesExec(val.ClientCtx.WithOutputFormat("json"), "--state=closed")
 	s.Require().NoError(err)
 
 	leaseRes = &types.QueryLeasesResponse{}
@@ -374,14 +379,14 @@ func (s *IntegrationTestSuite) Test3QueryLeasesAndCloseBid() {
 	s.Require().Len(leaseRes.Leases, 1)
 
 	// test query leases with wrong owner value
-	_, err = cli.QueryLeasesExec(
+	_, err = mcli.QueryLeasesExec(
 		val.ClientCtx.WithOutputFormat("json"),
 		"--provider=cosmos102ruvpv2srmunfffxavttxnhezln6fnc3pf7tt",
 	)
 	s.Require().Error(err)
 
 	// test query leases with wrong state value
-	_, err = cli.QueryLeasesExec(
+	_, err = mcli.QueryLeasesExec(
 		val.ClientCtx.WithOutputFormat("json"),
 		"--state=hello",
 	)
@@ -393,7 +398,7 @@ func (s *IntegrationTestSuite) Test4CloseOrder() {
 	val := s.network.Validators[0]
 
 	// fetch open orders
-	resp, err := cli.QueryOrdersExec(
+	resp, err := mcli.QueryOrdersExec(
 		val.ClientCtx.WithOutputFormat("json"),
 		"--state=open",
 	)

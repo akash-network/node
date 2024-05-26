@@ -5,18 +5,17 @@ import (
 	"strconv"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"pkg.akt.dev/go/node/market/v1"
+	"pkg.akt.dev/go/node/market/v1beta5"
 
-	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
-
-	drest "github.com/akash-network/node/x/deployment/client/rest"
-	"github.com/akash-network/node/x/market/query"
+	drest "pkg.akt.dev/akashd/x/deployment/client/rest"
 )
 
 // OrderIDFromRequest returns OrderID from parsing request
-func OrderIDFromRequest(r *http.Request) (types.OrderID, string) {
+func OrderIDFromRequest(r *http.Request) (v1.OrderID, string) {
 	gID, errMsg := drest.GroupIDFromRequest(r)
 	if len(errMsg) != 0 {
-		return types.OrderID{}, errMsg
+		return v1.OrderID{}, errMsg
 	}
 	oseqNo := r.URL.Query().Get("oseq")
 
@@ -25,34 +24,34 @@ func OrderIDFromRequest(r *http.Request) (types.OrderID, string) {
 	if len(oseqNo) != 0 {
 		num, err := strconv.ParseUint(oseqNo, 10, 32)
 		if err != nil {
-			return types.OrderID{}, err.Error()
+			return v1.OrderID{}, err.Error()
 		}
 		oseq = uint32(num)
 	} else {
-		return types.OrderID{}, "Missing oseq query param"
+		return v1.OrderID{}, "Missing oseq query param"
 	}
-	return types.MakeOrderID(gID, oseq), ""
+	return v1.MakeOrderID(gID, oseq), ""
 }
 
 // OrderFiltersFromRequest  returns OrderFilters with given params in request
-func OrderFiltersFromRequest(r *http.Request) (query.OrderFilters, string) {
+func OrderFiltersFromRequest(r *http.Request) (v1beta5.OrderFilters, string) {
 	gfilters, errMsg := drest.GroupFiltersFromRequest(r)
 	if len(errMsg) != 0 {
-		return query.OrderFilters{}, errMsg
+		return v1beta5.OrderFilters{}, errMsg
 	}
 
-	ofilters := query.OrderFilters{
-		Owner:        gfilters.Owner,
-		StateFlagVal: gfilters.StateFlagVal,
+	ofilters := v1beta5.OrderFilters{
+		Owner: gfilters.Owner,
+		State: gfilters.State,
 	}
 	return ofilters, ""
 }
 
 // BidIDFromRequest returns BidID from parsing request
-func BidIDFromRequest(r *http.Request) (types.BidID, string) {
+func BidIDFromRequest(r *http.Request) (v1.BidID, string) {
 	oID, errMsg := OrderIDFromRequest(r)
 	if len(errMsg) != 0 {
-		return types.BidID{}, errMsg
+		return v1.BidID{}, errMsg
 	}
 	providerAddr := r.URL.Query().Get("provider")
 
@@ -61,50 +60,50 @@ func BidIDFromRequest(r *http.Request) (types.BidID, string) {
 	if len(providerAddr) != 0 {
 		addr, err := sdk.AccAddressFromBech32(providerAddr)
 		if err != nil {
-			return types.BidID{}, err.Error()
+			return v1.BidID{}, err.Error()
 		}
 		provider = addr
 	} else {
-		return types.BidID{}, "Missing provider query param"
+		return v1.BidID{}, "Missing provider query param"
 	}
 
-	return types.MakeBidID(oID, provider), ""
+	return v1.MakeBidID(oID, provider), ""
 }
 
 // BidFiltersFromRequest  returns BidFilters with given params in request
-func BidFiltersFromRequest(r *http.Request) (query.BidFilters, string) {
+func BidFiltersFromRequest(r *http.Request) (v1beta5.BidFilters, string) {
 	ofilters, errMsg := drest.GroupFiltersFromRequest(r)
 	if len(errMsg) != 0 {
-		return query.BidFilters{}, errMsg
+		return v1beta5.BidFilters{}, errMsg
 	}
 
-	bfilters := query.BidFilters{
-		Owner:        ofilters.Owner,
-		StateFlagVal: ofilters.StateFlagVal,
+	bfilters := v1beta5.BidFilters{
+		Owner: ofilters.Owner,
+		State: ofilters.State,
 	}
 	return bfilters, ""
 }
 
 // LeaseIDFromRequest returns LeaseID from parsing request
-func LeaseIDFromRequest(r *http.Request) (types.LeaseID, string) {
+func LeaseIDFromRequest(r *http.Request) (v1.LeaseID, string) {
 	bID, errMsg := BidIDFromRequest(r)
 	if len(errMsg) != 0 {
-		return types.LeaseID{}, errMsg
+		return v1.LeaseID{}, errMsg
 	}
 
-	return types.MakeLeaseID(bID), ""
+	return v1.MakeLeaseID(bID), ""
 }
 
 // LeaseFiltersFromRequest  returns LeaseFilters with given params in request
-func LeaseFiltersFromRequest(r *http.Request) (query.LeaseFilters, string) {
+func LeaseFiltersFromRequest(r *http.Request) (v1.LeaseFilters, string) {
 	bfilters, errMsg := drest.GroupFiltersFromRequest(r)
 	if len(errMsg) != 0 {
-		return query.LeaseFilters{}, errMsg
+		return v1.LeaseFilters{}, errMsg
 	}
 
-	lfilters := query.LeaseFilters{
-		Owner:        bfilters.Owner,
-		StateFlagVal: bfilters.StateFlagVal,
+	lfilters := v1.LeaseFilters{
+		Owner: bfilters.Owner,
+		State: bfilters.State,
 	}
 	return lfilters, ""
 }

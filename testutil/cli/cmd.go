@@ -5,17 +5,15 @@ import (
 	"context"
 	"testing"
 
-	"github.com/cosmos/cosmos-sdk/server"
-
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/x/auth/tx"
-	"github.com/gogo/protobuf/jsonpb"
-
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 
 	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/testutil"
-	"github.com/spf13/cobra"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth/tx"
+	"github.com/cosmos/gogoproto/jsonpb"
 )
 
 // ExecTestCLICmd builds the client context, mocks the output and executes the command.

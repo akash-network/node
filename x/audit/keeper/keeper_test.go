@@ -6,17 +6,20 @@ import (
 	"testing"
 	"time"
 
+	storetypes "github.com/cosmos/cosmos-sdk/store/types"
+	"github.com/stretchr/testify/require"
+
+	dbm "github.com/cometbft/cometbft-db"
+	"github.com/cometbft/cometbft/libs/rand"
+	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
+
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tendermint/libs/rand"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
-	dbm "github.com/tendermint/tm-db"
 
-	types "github.com/akash-network/akash-api/go/node/audit/v1beta3"
+	types "pkg.akt.dev/go/node/audit/v1"
 
-	"github.com/akash-network/node/testutil"
-	"github.com/akash-network/node/x/audit/keeper"
+	"pkg.akt.dev/akashd/testutil"
+	"pkg.akt.dev/akashd/x/audit/keeper"
 )
 
 func TestProviderCreate(t *testing.T) {
@@ -155,7 +158,7 @@ func setupKeeper(t testing.TB) (sdk.Context, keeper.Keeper) {
 	key := sdk.NewKVStoreKey(types.StoreKey)
 	db := dbm.NewMemDB()
 	ms := store.NewCommitMultiStore(db)
-	ms.MountStoreWithDB(key, sdk.StoreTypeIAVL, db)
+	ms.MountStoreWithDB(key, storetypes.StoreTypeIAVL, db)
 	err := ms.LoadLatestVersion()
 	require.NoError(t, err)
 	ctx := sdk.NewContext(ms, tmproto.Header{Time: time.Unix(0, 0)}, false, testutil.Logger(t))

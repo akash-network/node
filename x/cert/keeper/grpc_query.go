@@ -4,13 +4,14 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/cosmos/cosmos-sdk/store/prefix"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+	"github.com/cosmos/cosmos-sdk/store/prefix"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
+
+	types "pkg.akt.dev/go/node/cert/v1"
 )
 
 // Querier is used as Keeper will have duplicate methods if used directly, and gRPC names take precedence over keeper
@@ -32,16 +33,7 @@ func (q querier) Certificates(c context.Context, req *types.QueryCertificatesReq
 	ctx := sdk.UnwrapSDKContext(c)
 	store := ctx.KVStore(q.skey)
 
-	state := types.CertificateStateInvalid
-	if req.Filter.State != "" {
-		vl, exists := types.Certificate_State_value[req.Filter.State]
-
-		if !exists {
-			return nil, status.Error(codes.InvalidArgument, "invalid state value")
-		}
-
-		state = types.Certificate_State(vl)
-	}
+	state := req.Filter.State
 
 	if req.Filter.Owner != "" {
 		var owner sdk.Address
@@ -111,6 +103,6 @@ func (q querier) Certificates(c context.Context, req *types.QueryCertificatesReq
 	}, nil
 }
 
-func filterCertByState(state types.Certificate_State, cert types.Certificate_State) bool {
+func filterCertByState(state types.State, cert types.State) bool {
 	return (state == types.CertificateStateInvalid) || (cert == state)
 }

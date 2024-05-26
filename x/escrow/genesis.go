@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 
+	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	abci "github.com/tendermint/tendermint/abci/types"
 
-	"github.com/akash-network/node/x/escrow/keeper"
+	"pkg.akt.dev/akashd/x/escrow/keeper"
 
-	types "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
+	types "pkg.akt.dev/go/node/escrow/v1"
 )
 
 // ValidateGenesis does validation check of the Genesis and returns error in case of failure

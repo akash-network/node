@@ -1,9 +1,9 @@
 package market
 
 import (
-	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
+	types "pkg.akt.dev/go/node/market/v1beta5"
 
-	"github.com/akash-network/node/x/market/keeper"
+	"pkg.akt.dev/akashd/x/market/keeper"
 )
 
 const (

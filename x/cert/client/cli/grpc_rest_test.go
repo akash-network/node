@@ -9,16 +9,16 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkrest "github.com/cosmos/cosmos-sdk/types/rest"
+	// sdkrest "github.com/cosmos/cosmos-sdk/types/rest"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+	types "pkg.akt.dev/go/node/cert/v1"
 
-	"github.com/akash-network/node/testutil"
-	"github.com/akash-network/node/testutil/network"
-	atypes "github.com/akash-network/node/types"
-	ccli "github.com/akash-network/node/x/cert/client/cli"
+	"pkg.akt.dev/akashd/testutil"
+	"pkg.akt.dev/akashd/testutil/network"
+	atypes "pkg.akt.dev/akashd/types"
+	ccli "pkg.akt.dev/akashd/x/cert/client/cli"
 )
 
 type GRPCRestTestSuite struct {

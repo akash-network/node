@@ -2,20 +2,21 @@ package handler
 
 import (
 	"context"
-	"fmt"
+
+	errorsmod "cosmossdk.io/errors"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	types "github.com/akash-network/akash-api/go/node/provider/v1beta3"
+	types "pkg.akt.dev/go/node/provider/v1beta4"
 
-	mkeeper "github.com/akash-network/node/x/market/keeper"
-	"github.com/akash-network/node/x/provider/keeper"
+	mkeeper "pkg.akt.dev/akashd/x/market/keeper"
+	"pkg.akt.dev/akashd/x/provider/keeper"
 )
 
 var (
 	// ErrInternal defines registered error code for internal error
-	ErrInternal = sdkerrors.Register(types.ModuleName, 10, "internal error")
+	ErrInternal = errorsmod.Register(types.ModuleName, 10, "internal error")
 )
 
 type msgServer struct {
@@ -41,11 +42,11 @@ func (ms msgServer) CreateProvider(goCtx context.Context, msg *types.MsgCreatePr
 	owner, _ := sdk.AccAddressFromBech32(msg.Owner)
 
 	if _, ok := ms.provider.Get(ctx, owner); ok {
-		return nil, fmt.Errorf("%w: id: %s", types.ErrProviderExists, msg.Owner)
+		return nil, types.ErrProviderExists.Wrapf("id: %s", msg.Owner)
 	}
 
 	if err := ms.provider.Create(ctx, types.Provider(*msg)); err != nil {
-		return nil, sdkerrors.Wrapf(ErrInternal, "err: %v", err)
+		return nil, ErrInternal.Wrapf("err: %v", err)
 	}
 
 	return &types.MsgCreateProviderResponse{}, nil
@@ -62,7 +63,7 @@ func (ms msgServer) UpdateProvider(goCtx context.Context, msg *types.MsgUpdatePr
 	owner, _ := sdk.AccAddressFromBech32(msg.Owner)
 	_, found := ms.provider.Get(ctx, owner)
 	if !found {
-		return nil, fmt.Errorf("%w: id: %s", types.ErrProviderNotFound, msg.Owner)
+		return nil, types.ErrProviderNotFound.Wrapf("id: %s", msg.Owner)
 	}
 
 	if err := ms.provider.Update(ctx, types.Provider(*msg)); err != nil {
@@ -85,5 +86,5 @@ func (ms msgServer) DeleteProvider(goCtx context.Context, msg *types.MsgDeletePr
 	}
 
 	// TODO: cancel leases
-	return nil, sdkerrors.Wrapf(ErrInternal, "NOTIMPLEMENTED")
+	return nil, ErrInternal.Wrap("NOTIMPLEMENTED")
 }
