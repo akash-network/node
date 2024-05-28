@@ -161,7 +161,7 @@ type nodeStatus struct {
 	} `json:"SyncInfo"`
 }
 
-type testCases struct {
+type testCase struct {
 	Modules struct {
 		Added   []string `json:"added"`
 		Removed []string `json:"removed"`
@@ -175,6 +175,8 @@ type testCases struct {
 		To   string `json:"to"`
 	} `json:"migrations"`
 }
+
+type testCases map[string]testCase
 
 type validatorParams struct {
 	home        string
@@ -198,7 +200,7 @@ type validator struct {
 	group             *errgroup.Group
 	upgradeInfo       string
 	params            validatorParams
-	tConfig           testCases
+	tConfig           testCase
 	upgradeSuccessful chan struct{}
 	testErrsCh        chan []string
 }
@@ -315,9 +317,11 @@ func TestUpgrade(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	var tConfig testCases
+	var tConfig testCase
 	// load testcases config
 	{
+		tCases := make(testCases)
+
 		tFile, err := os.Open(*testCasesFile)
 		require.NoError(t, err)
 		defer func() {
@@ -327,8 +331,12 @@ func TestUpgrade(t *testing.T) {
 		data, err := io.ReadAll(tFile)
 		require.NoError(t, err)
 
-		err = json.Unmarshal(data, &tConfig)
+		err = json.Unmarshal(data, &tCases)
 		require.NoError(t, err)
+
+		var valid bool
+		tConfig, valid = tCases[*upgradeName]
+		require.True(t, valid)
 	}
 
 	cmdr := &commander{}
@@ -736,7 +744,7 @@ func (l *upgradeTest) submitUpgradeProposal() error {
 	return nil
 }
 
-func newValidator(ctx context.Context, t *testing.T, params validatorParams, tConfig testCases) *validator {
+func newValidator(ctx context.Context, t *testing.T, params validatorParams, tConfig testCase) *validator {
 	ctx, cancel := context.WithCancel(ctx)
 	group, ctx := errgroup.WithContext(ctx)
 

@@ -1,0 +1,58 @@
+{
+    "v0.36.0": {
+    },
+    "v0.34.0": {
+        "migrations": {
+        }
+    },
+    "v0.32.0": {
+        "migrations": {
+            "market": {
+                "from": "4",
+                "to": "5"
+            }
+        }
+    },
+    "v0.30.0": {
+    },
+    "v0.28.0": {
+        "migrations": {
+            "market": {
+                "from": "3",
+                "to": "4"
+            }
+        }
+    },
+    "v0.26.0": {
+        "modules": {
+            "added": [
+            ]
+        },
+        "migrations": {
+        }
+    },
+    "v0.24.0": {
+        "modules": {
+            "added": [
+                "agov",
+                "astaking",
+                "feegrant",
+                "take"
+            ]
+        },
+        "migrations": {
+            "deployment": {
+                "from": "2",
+                "to": "3"
+            },
+            "market": {
+                "from": "2",
+                "to": "3"
+            },
+            "transfer": {
+                "from": "1",
+                "to": "2"
+            }
+        }
+    }
+}

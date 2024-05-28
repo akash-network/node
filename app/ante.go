@@ -53,6 +53,10 @@ func NewAnteHandler(options HandlerOptions) (sdk.AnteHandler, error) {
 		return nil, sdkerrors.Wrap(sdkerrors.ErrLogic, "custom akash governance keeper is required for ante builder")
 	}
 
+	if options.FeegrantKeeper == nil {
+		return nil, sdkerrors.Wrap(sdkerrors.ErrLogic, "akash feegrant keeper is required for ante builder")
+	}
+
 	anteDecorators := []sdk.AnteDecorator{
 		ante.NewSetUpContextDecorator(), // outermost AnteDecorator. SetUpContext must be called first
 		ante.NewRejectExtensionOptionsDecorator(),

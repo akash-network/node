@@ -37,7 +37,7 @@ test: $(COSMOVISOR) init
 		-config=test-config.json \
 		-upgrade-name=$(UPGRADE_TO) \
 		-upgrade-version="$(UPGRADE_BINARY_VERSION)" \
-		-test-cases=upgrade-$(UPGRADE_TO).json
+		-test-cases=test-cases.json
 
 .PHONY: test-reset
 test-reset:
