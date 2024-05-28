@@ -43,6 +43,10 @@ Goal of the upgrade here
 Add new upgrades after this line based on the template above
 -----
 
+##### v0.36.0
+
+1. Init Feegrant Keeper reference for `NewDeductFeeDecorator`. Fixes issue with feegrant enabled but not actually working due to uninitialized reference in Ante config 
+
 ##### v0.34.0
 
 1. Extend authz implementation for DeploymentDeposit to allow grantee re-use of unspent funds.
