@@ -2,10 +2,11 @@ package network
 
 import (
 	"encoding/json"
+	"fmt"
+	"os"
 	"path/filepath"
 	"time"
 
-	tmos "github.com/cometbft/cometbft/libs/os"
 	"github.com/cometbft/cometbft/node"
 	"github.com/cometbft/cometbft/p2p"
 	pvm "github.com/cometbft/cometbft/privval"
@@ -38,9 +39,11 @@ func startInProcess(cfg Config, val *Validator) error {
 	}
 
 	app := cfg.AppConstructor(*val)
+	val.app = app
 
 	genDocProvider := node.DefaultGenesisDocProviderFunc(tmCfg)
-	tmNode, err := node.NewNode(
+
+	tmNode, err := node.NewNode( //resleak:notresource
 		tmCfg,
 		pvm.LoadOrGenFilePV(tmCfg.PrivValidatorKeyFile(), tmCfg.PrivValidatorStateFile()),
 		nodeKey,
@@ -57,24 +60,20 @@ func startInProcess(cfg Config, val *Validator) error {
 	if err := tmNode.Start(); err != nil {
 		return err
 	}
-
 	val.tmNode = tmNode
 
 	if val.RPCAddress != "" {
 		val.RPCClient = local.New(tmNode)
 	}
 
-	// We'll need an RPC client if the validator exposes a gRPC or REST endpoint.
+	// We'll need a RPC client if the validator exposes a gRPC or REST endpoint.
 	if val.APIAddress != "" || val.AppConfig.GRPC.Enable {
 		val.ClientCtx = val.ClientCtx.
 			WithClient(val.RPCClient)
 
 		app.RegisterTxService(val.ClientCtx)
 		app.RegisterTendermintService(val.ClientCtx)
-
-		if a, ok := app.(srvtypes.ApplicationQueryService); ok {
-			a.RegisterNodeService(val.ClientCtx)
-		}
+		app.RegisterNodeService(val.ClientCtx)
 	}
 
 	if val.APIAddress != "" {
@@ -99,7 +98,7 @@ func startInProcess(cfg Config, val *Validator) error {
 	}
 
 	if val.AppConfig.GRPC.Enable {
-		grpcSrv, err := servergrpc.StartGRPCServer(val.ClientCtx, app, val.AppConfig.GRPC.Address)
+		grpcSrv, err := servergrpc.StartGRPCServer(val.ClientCtx, app, val.AppConfig.GRPC)
 		if err != nil {
 			return err
 		}
@@ -113,7 +112,6 @@ func startInProcess(cfg Config, val *Validator) error {
 			}
 		}
 	}
-
 	return nil
 }
 
@@ -138,7 +136,7 @@ func collectGenFiles(cfg Config, vals []*Validator, outputDir string) error {
 		}
 
 		appState, err := genutil.GenAppStateFromConfig(cfg.Codec, cfg.TxConfig,
-			tmCfg, initCfg, *genDoc, banktypes.GenesisBalancesIterator{})
+			tmCfg, initCfg, *genDoc, banktypes.GenesisBalancesIterator{}, genutiltypes.DefaultMessageValidator)
 		if err != nil {
 			return err
 		}
@@ -194,16 +192,13 @@ func initGenFiles(cfg Config, genAccounts []authtypes.GenesisAccount, genBalance
 }
 
 func writeFile(name string, dir string, contents []byte) error {
-	writePath := filepath.Join(dir) //nolint:gocritic
-	file := filepath.Join(writePath, name)
+	file := filepath.Join(dir, name)
 
-	err := tmos.EnsureDir(writePath, 0o755)
-	if err != nil {
-		return err
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("could not create directory %q: %w", dir, err)
 	}
 
-	err = tmos.WriteFile(file, contents, 0o644)
-	if err != nil {
+	if err := os.WriteFile(file, contents, 0o644); err != nil { //nolint: gosec
 		return err
 	}
 

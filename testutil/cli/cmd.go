@@ -38,11 +38,17 @@ func ExecTestCLICmd(ctx context.Context, clientCtx client.Context, cmd *cobra.Co
 
 // ValidateTxSuccessful is a gentle response to inappropriate approach of cli test utils
 // send transaction may fail and calling cli routine won't know about it
-func ValidateTxSuccessful(t testing.TB, cctx client.Context, data []byte) {
+func ValidateTxSuccessful(t testing.TB, cctx client.Context, data []byte) (*sdk.TxResponse, sdk.Tx) {
 	t.Helper()
 
 	res := getTxResponse(t, cctx, data)
 	require.Zero(t, res.Code, res)
+
+	var tx sdk.Tx
+	err := cctx.Codec.UnpackAny(res.Tx, &tx)
+	require.NoError(t, err)
+
+	return res, tx
 }
 
 func ValidateTxUnSuccessful(t testing.TB, cctx client.Context, data []byte) {
@@ -62,4 +68,19 @@ func getTxResponse(t testing.TB, cctx client.Context, data []byte) *sdk.TxRespon
 	require.NoError(t, err)
 
 	return res
+}
+
+// GetTxFees is a gentle response to inappropriate approach of cli test utils
+// send transaction may fail and calling cli routine won't know about it
+func GetTxFees(t testing.TB, cctx client.Context, data []byte) sdk.FeeTx {
+	t.Helper()
+
+	res := getTxResponse(t, cctx, data)
+	require.Zero(t, res.Code, res)
+
+	var fees sdk.FeeTx
+	err := cctx.Codec.UnpackAny(res.Tx, &fees)
+	require.NoError(t, err)
+
+	return fees
 }

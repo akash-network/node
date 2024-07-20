@@ -79,7 +79,7 @@ func (k *keeper) StoreKey() storetypes.StoreKey {
 
 func (k *keeper) AccountCreate(ctx sdk.Context, id v1.AccountID, owner, depositor sdk.AccAddress, deposit sdk.Coin) error {
 	store := ctx.KVStore(k.skey)
-	key := accountKey(id)
+	key := AccountKey(id)
 
 	if store.Has(key) {
 		return v1.ErrAccountExists
@@ -147,7 +147,7 @@ func (k *keeper) GetAccountDepositor(ctx sdk.Context, id v1.AccountID) (sdk.AccA
 
 func (k *keeper) AccountDeposit(ctx sdk.Context, id v1.AccountID, depositor sdk.AccAddress, amount sdk.Coin) error {
 	store := ctx.KVStore(k.skey)
-	key := accountKey(id)
+	key := AccountKey(id)
 
 	obj, err := k.GetAccount(ctx, id)
 	if err != nil {
@@ -246,7 +246,7 @@ func (k *keeper) PaymentCreate(ctx sdk.Context, id v1.AccountID, pid string, own
 	}
 
 	store := ctx.KVStore(k.skey)
-	key := paymentKey(id, pid)
+	key := PaymentKey(id, pid)
 
 	if store.Has(key) {
 		return v1.ErrPaymentExists
@@ -343,7 +343,7 @@ func (k *keeper) AddOnPaymentClosedHook(hook PaymentHook) Keeper {
 
 func (k *keeper) GetAccount(ctx sdk.Context, id v1.AccountID) (v1.Account, error) {
 	store := ctx.KVStore(k.skey)
-	key := accountKey(id)
+	key := AccountKey(id)
 
 	if !store.Has(key) {
 		return v1.Account{}, v1.ErrAccountNotFound
@@ -360,7 +360,7 @@ func (k *keeper) GetAccount(ctx sdk.Context, id v1.AccountID) (v1.Account, error
 
 func (k *keeper) GetPayment(ctx sdk.Context, id v1.AccountID, pid string) (v1.FractionalPayment, error) {
 	store := ctx.KVStore(k.skey)
-	key := paymentKey(id, pid)
+	key := PaymentKey(id, pid)
 
 	if !store.Has(key) {
 		return v1.FractionalPayment{}, v1.ErrPaymentNotFound
@@ -521,19 +521,19 @@ func (k *keeper) doAccountSettle(ctx sdk.Context, id v1.AccountID) (v1.Account, 
 
 func (k *keeper) saveAccount(ctx sdk.Context, obj *v1.Account) {
 	store := ctx.KVStore(k.skey)
-	key := accountKey(obj.ID)
+	key := AccountKey(obj.ID)
 	store.Set(key, k.cdc.MustMarshal(obj))
 }
 
 func (k *keeper) savePayment(ctx sdk.Context, obj *v1.FractionalPayment) {
 	store := ctx.KVStore(k.skey)
-	key := paymentKey(obj.AccountID, obj.PaymentID)
+	key := PaymentKey(obj.AccountID, obj.PaymentID)
 	store.Set(key, k.cdc.MustMarshal(obj))
 }
 
 func (k *keeper) accountPayments(ctx sdk.Context, id v1.AccountID) []v1.FractionalPayment {
 	store := ctx.KVStore(k.skey)
-	iter := sdk.KVStorePrefixIterator(store, accountPaymentsKey(id))
+	iter := sdk.KVStorePrefixIterator(store, AccountPaymentsKey(id))
 
 	var payments []v1.FractionalPayment
 

@@ -1,7 +1,7 @@
 package escrow
 
 import (
-	types "pkg.akt.dev/go/node/escrow/v1beta3"
+	types "pkg.akt.dev/go/node/escrow/v1"
 )
 
 const (

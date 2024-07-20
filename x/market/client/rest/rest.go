@@ -6,8 +6,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/gorilla/mux"
-
-	"pkg.akt.dev/akashd/x/market/query"
+	// "pkg.akt.dev/akashd/x/market/query"
 )
 
 // RegisterRoutes registers all query routes
@@ -33,110 +32,107 @@ func RegisterRoutes(ctx client.Context, r *mux.Router, ns string) {
 
 func listOrdersHandler(ctx client.Context, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ofilters, errMsg := OrderFiltersFromRequest(r)
-
-		if len(errMsg) != 0 {
-			rest.WriteErrorResponse(w, http.StatusBadRequest, errMsg)
-			return
-		}
-
-		res, err := query.NewRawClient(ctx, ns).Orders(ofilters)
-		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusNotFound, "Not Found")
-			return
-		}
-		rest.PostProcessResponse(w, ctx, res)
+		// ofilters, errMsg := OrderFiltersFromRequest(r)
+		//
+		// if len(errMsg) != 0 {
+		// 	rest.WriteErrorResponse(w, http.StatusBadRequest, errMsg)
+		// 	return
+		// }
+		//
+		// res, err := query.NewRawClient(ctx, ns).Orders(ofilters)
+		// if err != nil {
+		// 	rest.WriteErrorResponse(w, http.StatusNotFound, "Not Found")
+		// 	return
+		// }
+		// rest.PostProcessResponse(w, ctx, res)
 	}
 }
 
 func listBidsHandler(ctx client.Context, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		bfilters, errMsg := BidFiltersFromRequest(r)
-
-		if len(errMsg) != 0 {
-			rest.WriteErrorResponse(w, http.StatusBadRequest, errMsg)
-			return
-		}
-
-		res, err := query.NewRawClient(ctx, ns).Bids(bfilters)
-		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusNotFound, "Not Found")
-			return
-		}
-		rest.PostProcessResponse(w, ctx, res)
+		// bfilters, errMsg := BidFiltersFromRequest(r)
+		//
+		// if len(errMsg) != 0 {
+		// 	rest.WriteErrorResponse(w, http.StatusBadRequest, errMsg)
+		// 	return
+		// }
+		//
+		// res, err := query.NewRawClient(ctx, ns).Bids(bfilters)
+		// if err != nil {
+		// 	rest.WriteErrorResponse(w, http.StatusNotFound, "Not Found")
+		// 	return
+		// }
+		// rest.PostProcessResponse(w, ctx, res)
 	}
 }
 
 func listLeasesHandler(ctx client.Context, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		lfilters, errMsg := LeaseFiltersFromRequest(r)
-
-		if len(errMsg) != 0 {
-			rest.WriteErrorResponse(w, http.StatusBadRequest, errMsg)
-			return
-		}
-		res, err := query.NewRawClient(ctx, ns).Leases(lfilters)
-		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusNotFound, "Not Found")
-			return
-		}
-		rest.PostProcessResponse(w, ctx, res)
+		// lfilters, errMsg := LeaseFiltersFromRequest(r)
+		//
+		// if len(errMsg) != 0 {
+		// 	rest.WriteErrorResponse(w, http.StatusBadRequest, errMsg)
+		// 	return
+		// }
+		// res, err := query.NewRawClient(ctx, ns).Leases(lfilters)
+		// if err != nil {
+		// 	rest.WriteErrorResponse(w, http.StatusNotFound, "Not Found")
+		// 	return
+		// }
+		// rest.PostProcessResponse(w, ctx, res)
 	}
 }
 
 func getOrderHandler(ctx client.Context, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		id, errMsg := OrderIDFromRequest(r)
-
-		if len(errMsg) != 0 {
-			rest.WriteErrorResponse(w, http.StatusBadRequest, errMsg)
-			return
-		}
-
-		res, err := query.NewRawClient(ctx, ns).Order(id)
-		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusNotFound, "Not Found")
-			return
-		}
-		rest.PostProcessResponse(w, ctx, res)
+		// id, errMsg := OrderIDFromRequest(r)
+		//
+		// if len(errMsg) != 0 {
+		// 	rest.WriteErrorResponse(w, http.StatusBadRequest, errMsg)
+		// 	return
+		// }
+		//
+		// res, err := query.NewRawClient(ctx, ns).Order(id)
+		// if err != nil {
+		// 	rest.WriteErrorResponse(w, http.StatusNotFound, "Not Found")
+		// 	return
+		// }
+		// rest.PostProcessResponse(w, ctx, res)
 	}
 }
 
 func getBidHandler(ctx client.Context, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		id, errMsg := BidIDFromRequest(r)
-
-		if len(errMsg) != 0 {
-			rest.WriteErrorResponse(w, http.StatusBadRequest, errMsg)
-			return
-		}
-
-		res, err := query.NewRawClient(ctx, ns).Bid(id)
-		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusNotFound, "Not Found")
-			return
-		}
-		rest.PostProcessResponse(w, ctx, res)
+		// id, errMsg := BidIDFromRequest(r)
+		//
+		// if len(errMsg) != 0 {
+		// 	rest.WriteErrorResponse(w, http.StatusBadRequest, errMsg)
+		// 	return
+		// }
+		//
+		// res, err := query.NewRawClient(ctx, ns).Bid(id)
+		// if err != nil {
+		// 	rest.WriteErrorResponse(w, http.StatusNotFound, "Not Found")
+		// 	return
+		// }
+		// rest.PostProcessResponse(w, ctx, res)
 	}
 }
 
 func getLeaseHandler(ctx client.Context, ns string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		id, errMsg := LeaseIDFromRequest(r)
-
-		if len(errMsg) != 0 {
-			rest.WriteErrorResponse(w, http.StatusBadRequest, errMsg)
-			return
-		}
-
-		res, err := query.NewRawClient(ctx, ns).Lease(id)
-		if err != nil {
-			rest.WriteErrorResponse(w, http.StatusNotFound, "Not Found")
-			return
-		}
-		rest.PostProcessResponse(w, ctx, res)
+		// id, errMsg := LeaseIDFromRequest(r)
+		//
+		// if len(errMsg) != 0 {
+		// 	rest.WriteErrorResponse(w, http.StatusBadRequest, errMsg)
+		// 	return
+		// }
+		//
+		// res, err := query.NewRawClient(ctx, ns).Lease(id)
+		// if err != nil {
+		// 	rest.WriteErrorResponse(w, http.StatusNotFound, "Not Found")
+		// 	return
+		// }
+		// rest.PostProcessResponse(w, ctx, res)
 	}
 }

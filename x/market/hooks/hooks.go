@@ -67,7 +67,7 @@ func (h *hooks) OnEscrowPaymentClosed(ctx sdk.Context, obj etypes.FractionalPaym
 		return
 	}
 
-	if bid.State != mv1.BidActive {
+	if bid.State != mtypes.BidActive {
 		return
 	}
 

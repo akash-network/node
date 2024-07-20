@@ -5,11 +5,12 @@ import (
 	"errors"
 
 	"github.com/cosmos/cosmos-sdk/client"
-	"pkg.akt.dev/go/cli"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
+
+	cflags "pkg.akt.dev/go/cli/flags"
 
 	"pkg.akt.dev/akashd/cmd/common"
 	cmdcommon "pkg.akt.dev/akashd/cmd/common"
@@ -28,8 +29,8 @@ func EventCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String(cli.FlagNode, "tcp://localhost:26657", "The node address")
-	if err := viper.BindPFlag(cli.FlagNode, cmd.Flags().Lookup(cli.FlagNode)); err != nil {
+	cmd.Flags().String(cflags.FlagNode, "tcp://localhost:26657", "The node address")
+	if err := viper.BindPFlag(cflags.FlagNode, cmd.Flags().Lookup(cflags.FlagNode)); err != nil {
 		return nil
 	}
 

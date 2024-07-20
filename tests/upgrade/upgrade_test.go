@@ -161,6 +161,13 @@ type nodeStatus struct {
 	} `json:"SyncInfo"`
 }
 
+type testMigration struct {
+	From string `json:"from"`
+	To   string `json:"to"`
+}
+
+type moduleMigrationVersions []testMigration
+
 type testCase struct {
 	Modules struct {
 		Added   []string `json:"added"`
@@ -170,10 +177,7 @@ type testCase struct {
 			To   string `json:"to"`
 		} `json:"renamed"`
 	} `json:"modules"`
-	Migrations map[string]struct {
-		From string `json:"from"`
-		To   string `json:"to"`
-	} `json:"migrations"`
+	Migrations map[string]moduleMigrationVersions `json:"migrations"`
 }
 
 type testCases map[string]testCase
@@ -511,8 +515,7 @@ func TestUpgrade(t *testing.T) {
 	fail := false
 
 	for val, vl := range validators {
-		select {
-		case errs := <-vl.testErrsCh:
+		for errs := range vl.testErrsCh {
 			if len(errs) > 0 {
 				for _, msg := range errs {
 					t.Logf("[%s] %s", val, msg)
@@ -520,9 +523,14 @@ func TestUpgrade(t *testing.T) {
 
 				fail = true
 			}
-
-		case <-vl.ctx.Done():
 		}
+
+		// select {
+		// case errs := <-vl.testErrsCh:
+		//
+		//
+		// case <-vl.ctx.Done():
+		// }
 	}
 
 	if fail {
@@ -884,7 +892,7 @@ func (l *validator) run() error {
 	case <-l.upgradeSuccessful:
 		err = nil
 	default:
-		l.t.Logf("[%s] cosmovisor finished with error. check %[1]s-stderr.log", l.params.name)
+		l.t.Logf("[%s] cosmovisor finished with error. check %s", l.params.name, lStderr.Name())
 	}
 
 	return err
@@ -988,6 +996,10 @@ loop:
 }
 
 func (l *validator) watchTestCases(subs pubsub.Subscriber) error {
+	defer func() {
+		close(l.testErrsCh)
+	}()
+
 	added := make(map[string]testModuleStatus)
 	removed := make(map[string]testModuleStatus)
 	migrations := make(map[string]*moduleMigrationStatus)
@@ -1002,11 +1014,8 @@ func (l *validator) watchTestCases(subs pubsub.Subscriber) error {
 
 	for name, vals := range l.tConfig.Migrations {
 		migrations[name] = &moduleMigrationStatus{
-			status: testModuleStatusNotChecked,
-			expected: moduleMigrationVersions{
-				from: vals.From,
-				to:   vals.To,
-			},
+			status:   testModuleStatusNotChecked,
+			expected: vals,
 		}
 	}
 
@@ -1041,8 +1050,10 @@ loop:
 						m := migrations[ctx.name]
 
 						m.status = testModuleStatusChecked
-						m.actual.to = ctx.to
-						m.actual.from = ctx.from
+						m.actual = append(m.actual, testMigration{
+							From: ctx.from,
+							To:   ctx.to,
+						})
 					}
 				}
 			}
@@ -1069,16 +1080,22 @@ loop:
 		switch module.status {
 		case testModuleStatusChecked:
 			if !module.expected.compare(module.actual) {
-				merr := fmt.Sprintf("migration for module (%s) finished with mismatched versions:\n"+
-					"\texpected:\n"+
-					"\t\tfrom: %s\n"+
-					"\t\tto:   %s\n"+
-					"\tactual:\n"+
-					"\t\tfrom: %s\n"+
-					"\t\tto:   %s",
-					name,
-					module.expected.from, module.expected.to,
-					module.actual.from, module.actual.to)
+				merr := "migration for module (%s) finished with mismatched versions:\n"
+				merr += "\texpected:\n"
+
+				for _, m := range module.expected {
+					merr += fmt.Sprintf(
+						"\t\t- from: %s\n"+
+							"\t\t  to:   %s\n", m.From, m.To)
+				}
+
+				merr += "\tactual:\n"
+
+				for _, m := range module.actual {
+					merr += fmt.Sprintf(
+						"\t\t- from: %s\n"+
+							"\t\t  to:   %s\n", m.From, m.To)
+				}
 
 				errs = append(errs, merr)
 			}
@@ -1155,7 +1172,7 @@ func (l *validator) scanner(stdout io.Reader, p publisher) error {
 		return err
 	}
 
-	rModuleMigration, err := regexp.Compile(`^` + migratingModule + `(\w+) from version (\d+) to version (\d+)$`)
+	rModuleMigration, err := regexp.Compile(`^` + migratingModule + `(\w+) from version (\d+) to version (\d+).*`)
 	if err != nil {
 		return err
 	}
@@ -1202,11 +1219,6 @@ scan:
 	return nil
 }
 
-type moduleMigrationVersions struct {
-	from string
-	to   string
-}
-
 type moduleMigrationStatus struct {
 	status   testModuleStatus
 	expected moduleMigrationVersions
@@ -1214,5 +1226,15 @@ type moduleMigrationStatus struct {
 }
 
 func (v moduleMigrationVersions) compare(to moduleMigrationVersions) bool {
-	return (v.from == to.from) && (v.to == v.to)
+	if len(v) != len(to) {
+		return false
+	}
+
+	for i := range v {
+		if (v[i].From != to[i].From) || (v[i].To != to[i].To) {
+			return false
+		}
+	}
+
+	return true
 }

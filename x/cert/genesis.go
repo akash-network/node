@@ -1,7 +1,9 @@
 package cert
 
 import (
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 
 	abci "github.com/cometbft/cometbft/abci/types"
@@ -42,7 +44,35 @@ func InitGenesis(ctx sdk.Context, keeper keeper.Keeper, data *types.GenesisState
 
 // ExportGenesis returns genesis state as raw bytes for the provider module
 func ExportGenesis(ctx sdk.Context, k keeper.Keeper) *types.GenesisState {
-	return &types.GenesisState{}
+	var res types.GenesisCertificates
+
+	k.WithCertificates(ctx, func(id types.CertID, certificate types.CertificateResponse) bool {
+		block, rest := pem.Decode(certificate.Certificate.Cert)
+		if len(rest) > 0 {
+			panic("unable to decode certificate")
+
+		}
+
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			panic(err.Error())
+		}
+
+		if cert.SerialNumber.String() != id.Serial.String() {
+			panic("certificate id does not match")
+		}
+
+		res = append(res, types.GenesisCertificate{
+			Owner:       id.Owner.String(),
+			Certificate: certificate.Certificate,
+		})
+
+		return false
+	})
+
+	return &types.GenesisState{
+		Certificates: res,
+	}
 }
 
 // DefaultGenesisState returns default genesis state as raw bytes for the provider

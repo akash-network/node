@@ -17,14 +17,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/gogoproto/grpc"
 
-	// v1beta1types "pkg.akt.dev/go/node/audit/v1beta1"
-	// v1beta2types "pkg.akt.dev/go/node/audit/v1beta2"
 	types "pkg.akt.dev/go/node/audit/v1"
 
-	// "pkg.akt.dev/akashd/x/audit/client/rest"
-
 	utypes "pkg.akt.dev/akashd/upgrades/types"
-	"pkg.akt.dev/akashd/x/audit/client/cli"
 	"pkg.akt.dev/akashd/x/audit/handler"
 	"pkg.akt.dev/akashd/x/audit/keeper"
 )
@@ -52,8 +47,6 @@ func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 // RegisterInterfaces registers the module's interface types
 func (b AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 	types.RegisterInterfaces(registry)
-	// v1beta2types.RegisterInterfaces(registry)
-	// v1beta1types.RegisterInterfaces(registry)
 }
 
 // DefaultGenesis returns default genesis state as raw bytes for the provider
@@ -103,12 +96,12 @@ func (AppModuleBasic) RegisterGRPCRoutes(clientCtx client.Context, mux *runtime.
 
 // GetQueryCmd returns the root query command of this module
 func (AppModuleBasic) GetQueryCmd() *cobra.Command {
-	return cli.GetQueryCmd()
+	panic("akash modules do not export cli commands via cosmos interface")
 }
 
 // GetTxCmd returns the transaction commands for this module
 func (AppModuleBasic) GetTxCmd() *cobra.Command {
-	return cli.GetTxCmd()
+	panic("akash modules do not export cli commands via cosmos interface")
 }
 
 // GetQueryClient returns a new query client for this module
@@ -191,5 +184,6 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 
 // ConsensusVersion implements module.AppModule#ConsensusVersion
 func (am AppModule) ConsensusVersion() uint64 {
-	return utypes.ModuleVersion(ModuleName)
+	return 3
+	// return utypes.ModuleVersion(ModuleName)
 }

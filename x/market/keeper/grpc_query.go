@@ -30,9 +30,9 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
-	stateVal := v1.OrderState(v1.OrderState_value[req.Filters.State])
+	stateVal := types.Order_State(types.Order_State_value[req.Filters.State])
 
-	if req.Filters.State != "" && stateVal == v1.OrderStateInvalid {
+	if req.Filters.State != "" && stateVal == types.OrderStateInvalid {
 		return nil, status.Error(codes.InvalidArgument, "invalid state value")
 	}
 
@@ -102,9 +102,9 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
-	stateVal := v1.BidState(v1.BidState_value[req.Filters.State])
+	stateVal := types.Bid_State(types.Bid_State_value[req.Filters.State])
 
-	if req.Filters.State != "" && stateVal == v1.BidStateInvalid {
+	if req.Filters.State != "" && stateVal == types.BidStateInvalid {
 		return nil, status.Error(codes.InvalidArgument, "invalid state value")
 	}
 
@@ -194,7 +194,7 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
-	stateVal := v1.LeaseState(v1.LeaseState_value[req.Filters.State])
+	stateVal := v1.Lease_State(v1.Lease_State_value[req.Filters.State])
 
 	if req.Filters.State != "" && stateVal == v1.LeaseStateInvalid {
 		return nil, status.Error(codes.InvalidArgument, "invalid state value")
@@ -287,4 +287,15 @@ func (k Querier) Lease(c context.Context, req *types.QueryLeaseRequest) (*types.
 		Lease:         lease,
 		EscrowPayment: payment,
 	}, nil
+}
+
+func (k Querier) Params(ctx context.Context, req *types.QueryParamsRequest) (*types.QueryParamsResponse, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "empty request")
+	}
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	params := k.GetParams(sdkCtx)
+
+	return &types.QueryParamsResponse{Params: params}, nil
 }

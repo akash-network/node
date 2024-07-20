@@ -82,11 +82,12 @@ func TestCreateBidValid(t *testing.T) {
 	bid := v1.MakeBidID(order.ID, providerAddr)
 
 	t.Run("ensure event created", func(t *testing.T) {
-		t.Skip("EVENTS TESTING")
-		iev := testutil.ParseMarketEvent(t, res.Events[2:])
-		require.IsType(t, types.EventBidCreated{}, iev)
+		iev, err := sdk.ParseTypedEvent(res.Events[3])
+		require.NoError(t, err)
 
-		dev := iev.(types.EventBidCreated)
+		require.IsType(t, &v1.EventBidCreated{}, iev)
+
+		dev := iev.(*v1.EventBidCreated)
 
 		require.Equal(t, bid, dev.ID)
 	})
@@ -331,11 +332,13 @@ func TestCloseBidValid(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("ensure event created", func(t *testing.T) {
-		t.Skip("EVENTS TESTING")
-		iev := testutil.ParseMarketEvent(t, res.Events[3:4])
-		require.IsType(t, types.EventBidClosed{}, iev)
+		iev, err := sdk.ParseTypedEvent(res.Events[6])
+		require.NoError(t, err)
 
-		dev := iev.(types.EventBidClosed)
+		// iev := testutil.ParseMarketEvent(t, res.Events[3:4])
+		require.IsType(t, &v1.EventBidClosed{}, iev)
+
+		dev := iev.(*v1.EventBidClosed)
 
 		require.Equal(t, msg.ID, dev.ID)
 	})
@@ -355,11 +358,13 @@ func TestCloseBidWithStateOpen(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("ensure event created", func(t *testing.T) {
-		t.Skip("EVENTS TESTING")
-		iev := testutil.ParseMarketEvent(t, res.Events[2:])
-		require.IsType(t, types.EventBidClosed{}, iev)
+		iev, err := sdk.ParseTypedEvent(res.Events[3])
+		require.NoError(t, err)
 
-		dev := iev.(types.EventBidClosed)
+		// iev := testutil.ParseMarketEvent(t, res.Events[2:])
+		require.IsType(t, &v1.EventBidClosed{}, iev)
+
+		dev := iev.(*v1.EventBidClosed)
 
 		require.Equal(t, msg.ID, dev.ID)
 	})
@@ -450,7 +455,7 @@ func (st *testSuite) createOrder(resources dtypes.ResourceUnits) (types.Order, d
 	require.NoError(st.t, err)
 	require.Equal(st.t, group.ID, order.ID.GroupID())
 	require.Equal(st.t, uint32(1), order.ID.OSeq)
-	require.Equal(st.t, v1.OrderOpen, order.State)
+	require.Equal(st.t, types.OrderOpen, order.State)
 
 	return order, group.GroupSpec
 }

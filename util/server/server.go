@@ -10,12 +10,15 @@ import (
 	tmcmd "github.com/cometbft/cometbft/cmd/cometbft/commands"
 	tmjson "github.com/cometbft/cometbft/libs/json"
 	tmtypes "github.com/cometbft/cometbft/types"
+	"github.com/spf13/cast"
+
 	"github.com/cosmos/cosmos-sdk/client/flags"
+	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/spf13/cobra"
 
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
-	"github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/version"
 )
 
@@ -28,7 +31,7 @@ const (
 )
 
 // Commands server commands
-func Commands(defaultNodeHome string, appCreator types.AppCreator, appExport types.AppExporter, addStartFlags types.ModuleInitFlags) []*cobra.Command {
+func Commands(defaultNodeHome string, appCreator servertypes.AppCreator, appExport servertypes.AppExporter, addStartFlags servertypes.ModuleInitFlags) []*cobra.Command {
 	tendermintCmd := &cobra.Command{
 		Use:   "tendermint",
 		Short: "Tendermint subcommands",
@@ -58,7 +61,7 @@ func Commands(defaultNodeHome string, appCreator types.AppCreator, appExport typ
 }
 
 // ExportCmd dumps app state to JSON.
-func ExportCmd(appExporter types.AppExporter, defaultNodeHome string) *cobra.Command {
+func ExportCmd(appExporter servertypes.AppExporter, defaultNodeHome string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "export",
 		Short: "Export state to JSON",
@@ -79,13 +82,15 @@ func ExportCmd(appExporter types.AppExporter, defaultNodeHome string) *cobra.Com
 			}
 
 			outFile := os.Stdout
-			if toFile, _ := cmd.Flags().GetString(flagToFile); toFile != "" {
-				outFile, err = os.Create(toFile)
+			var outputDocument string
+
+			if outputDocument, _ = cmd.Flags().GetString(FlagOutputDocument); outputDocument != "-" {
+				outFile, err = os.Create(outputDocument)
 				if err != nil {
 					return err
 				}
 			}
-
+			//
 			defer func() {
 				if outFile != os.Stdout {
 					_ = outFile.Close()
@@ -167,8 +172,21 @@ func ExportCmd(appExporter types.AppExporter, defaultNodeHome string) *cobra.Com
 				return err
 			}
 
-			_, err = fmt.Fprintln(outFile, string(sdk.MustSortJSON(encoded)))
-			if err != nil {
+			out := sdk.MustSortJSON(encoded)
+			if outputDocument == "-" {
+				cmd.Println(string(out))
+				_, err = fmt.Fprintln(outFile, string(out))
+				if err != nil {
+					return err
+				}
+				return nil
+			}
+
+			var exportedGenDoc tmtypes.GenesisDoc
+			if err = tmjson.Unmarshal(out, &exportedGenDoc); err != nil {
+				return err
+			}
+			if err = exportedGenDoc.SaveAs(outputDocument); err != nil {
 				return err
 			}
 
@@ -180,7 +198,8 @@ func ExportCmd(appExporter types.AppExporter, defaultNodeHome string) *cobra.Com
 	cmd.Flags().Int64(sdkserver.FlagHeight, -1, "Export state from a particular height (-1 means latest height)")
 	cmd.Flags().Bool(sdkserver.FlagForZeroHeight, false, "Export state to start at height zero (perform preprocessing)")
 	cmd.Flags().StringSlice(sdkserver.FlagJailAllowedAddrs, []string{}, "Comma-separated list of operator addresses of jailed validators to unjail")
-	cmd.Flags().String(flagToFile, "", "Export Genesis to specified file")
+	cmd.Flags().StringSlice(FlagModulesToExport, []string{}, "Comma-separated list of modules to export. If empty, will export all modules")
+	cmd.Flags().String(FlagOutputDocument, "-", "Exported state is written to the given file instead of STDOUT")
 
 	return cmd
 }
@@ -199,4 +218,17 @@ func openTraceWriter(traceWriterFile string) (w io.Writer, err error) {
 		os.O_WRONLY|os.O_APPEND|os.O_CREATE,
 		0o666,
 	)
+}
+
+// GetAppDBBackend gets the backend type to use for the application DBs.
+func GetAppDBBackend(opts servertypes.AppOptions) dbm.BackendType {
+	rv := cast.ToString(opts.Get("app-db-backend"))
+	if len(rv) == 0 {
+		rv = cast.ToString(opts.Get("db_backend"))
+	}
+	if len(rv) != 0 {
+		return dbm.BackendType(rv)
+	}
+
+	return dbm.GoLevelDBBackend
 }

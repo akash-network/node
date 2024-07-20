@@ -3,6 +3,7 @@ package handler
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 
 	atypes "pkg.akt.dev/go/node/audit/v1"
 	dtypes "pkg.akt.dev/go/node/deployment/v1"
@@ -29,7 +30,7 @@ type ProviderKeeper interface {
 }
 
 type AuditKeeper interface {
-	GetProviderAttributes(ctx sdk.Context, id sdk.Address) (atypes.Providers, bool)
+	GetProviderAttributes(ctx sdk.Context, id sdk.Address) (atypes.AuditedProviders, bool)
 }
 
 // DeploymentKeeper Interface includes deployment methods
@@ -46,5 +47,6 @@ type Keepers struct {
 	Deployment DeploymentKeeper
 	Provider   ProviderKeeper
 	Audit      AuditKeeper
+	Account    govtypes.AccountKeeper
 	Bank       bankkeeper.Keeper
 }

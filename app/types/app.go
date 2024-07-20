@@ -30,6 +30,7 @@ import (
 	feegrantkeeper "github.com/cosmos/cosmos-sdk/x/feegrant/keeper"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	govtypesv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	mintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
@@ -47,6 +48,8 @@ import (
 	icacontrollertypes "github.com/cosmos/ibc-go/v7/modules/apps/27-interchain-accounts/controller/types"
 	icahosttypes "github.com/cosmos/ibc-go/v7/modules/apps/27-interchain-accounts/host/types"
 	"github.com/cosmos/ibc-go/v7/modules/apps/transfer"
+
+	// "github.com/cosmos/ibc-go/v7/modules/apps/transfer"
 	ibctransferkeeper "github.com/cosmos/ibc-go/v7/modules/apps/transfer/keeper"
 	ibctransfertypes "github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
 	ibcclient "github.com/cosmos/ibc-go/v7/modules/core/02-client"
@@ -55,29 +58,28 @@ import (
 	ibchost "github.com/cosmos/ibc-go/v7/modules/core/exported"
 	ibckeeper "github.com/cosmos/ibc-go/v7/modules/core/keeper"
 	auctionkeeper "github.com/skip-mev/block-sdk/x/auction/keeper"
-	auctiontypes "github.com/skip-mev/block-sdk/x/auction/types"
+	// auctiontypes "github.com/skip-mev/block-sdk/x/auction/types"
+	etypes "pkg.akt.dev/go/node/escrow/v1"
+
+	atypes "pkg.akt.dev/go/node/audit/v1"
+	ctypes "pkg.akt.dev/go/node/cert/v1"
+	dtypes "pkg.akt.dev/go/node/deployment/v1"
+	agovtypes "pkg.akt.dev/go/node/gov/v1beta3"
+	itypes "pkg.akt.dev/go/node/inflation/v1beta3"
+	mtypes "pkg.akt.dev/go/node/market/v1beta5"
+	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
+	astakingtypes "pkg.akt.dev/go/node/staking/v1beta3"
+	ttypes "pkg.akt.dev/go/node/take/v1"
 
 	appparams "pkg.akt.dev/akashd/app/params"
-	"pkg.akt.dev/akashd/x/audit"
 	akeeper "pkg.akt.dev/akashd/x/audit/keeper"
-	"pkg.akt.dev/akashd/x/cert"
 	ckeeper "pkg.akt.dev/akashd/x/cert/keeper"
-	"pkg.akt.dev/akashd/x/deployment"
 	dkeeper "pkg.akt.dev/akashd/x/deployment/keeper"
-	"pkg.akt.dev/akashd/x/escrow"
 	ekeeper "pkg.akt.dev/akashd/x/escrow/keeper"
-	agov "pkg.akt.dev/akashd/x/gov"
-	agovkeeper "pkg.akt.dev/akashd/x/gov/keeper"
-	"pkg.akt.dev/akashd/x/inflation"
 	ikeeper "pkg.akt.dev/akashd/x/inflation/keeper"
-	"pkg.akt.dev/akashd/x/market"
 	mhooks "pkg.akt.dev/akashd/x/market/hooks"
 	mkeeper "pkg.akt.dev/akashd/x/market/keeper"
-	"pkg.akt.dev/akashd/x/provider"
 	pkeeper "pkg.akt.dev/akashd/x/provider/keeper"
-	astaking "pkg.akt.dev/akashd/x/staking"
-	astakingkeeper "pkg.akt.dev/akashd/x/staking/keeper"
-	"pkg.akt.dev/akashd/x/take"
 	tkeeper "pkg.akt.dev/akashd/x/take/keeper"
 )
 
@@ -119,8 +121,8 @@ type AppKeepers struct {
 		Audit      akeeper.Keeper
 		Cert       ckeeper.Keeper
 		Inflation  ikeeper.IKeeper
-		Staking    astakingkeeper.IKeeper
-		Gov        agovkeeper.IKeeper
+		// Staking    astakingkeeper.IKeeper
+		// Gov        agovkeeper.IKeeper
 	}
 
 	External struct {
@@ -156,7 +158,10 @@ func (app *App) GenerateKeys() {
 
 // GetSubspace gets existing substore from keeper.
 func (app *App) GetSubspace(moduleName string) paramstypes.Subspace {
-	subspace, _ := app.Keepers.Cosmos.Params.GetSubspace(moduleName)
+	subspace, found := app.Keepers.Cosmos.Params.GetSubspace(moduleName)
+	if !found {
+		panic(fmt.Sprintf("params subspace \"%s\" not found", moduleName))
+	}
 	return subspace
 }
 
@@ -198,8 +203,8 @@ func (app *App) GetMemKey(storeKey string) *storetypes.MemoryStoreKey {
 
 // InitSpecialKeepers initiates special keepers (crisis appkeeper, upgradekeeper, params keeper)
 func (app *App) InitSpecialKeepers(
-	appCodec codec.Codec,
-	cdc *codec.LegacyAmino,
+	cdc codec.Codec,
+	legacyAmino *codec.LegacyAmino,
 	bApp *baseapp.BaseApp,
 	invCheckPeriod uint,
 	skipUpgradeHeights map[int64]bool,
@@ -207,12 +212,17 @@ func (app *App) InitSpecialKeepers(
 
 	app.GenerateKeys()
 
-	app.Keepers.Cosmos.Params = initParamsKeeper(appCodec, cdc, app.keys[paramstypes.StoreKey], app.keys[paramstypes.TStoreKey])
+	app.Keepers.Cosmos.Params = initParamsKeeper(
+		cdc,
+		legacyAmino,
+		app.keys[paramstypes.StoreKey],
+		app.tkeys[paramstypes.TStoreKey],
+	)
 
 	// set the BaseApp's parameter store
 	{
 		keeper := consensusparamkeeper.NewKeeper(
-			appCodec,
+			cdc,
 			app.keys[consensusparamtypes.StoreKey],
 			authtypes.NewModuleAddress(govtypes.ModuleName).String())
 
@@ -223,7 +233,7 @@ func (app *App) InitSpecialKeepers(
 
 	// add capability keeper and ScopeToModule for ibc module
 	app.Keepers.Cosmos.Cap = capabilitykeeper.NewKeeper(
-		appCodec,
+		cdc,
 		app.keys[capabilitytypes.StoreKey],
 		app.memKeys[capabilitytypes.MemStoreKey],
 	)
@@ -236,7 +246,7 @@ func (app *App) InitSpecialKeepers(
 	app.Keepers.Cosmos.Cap.Seal()
 
 	app.Keepers.Cosmos.Crisis = crisiskeeper.NewKeeper(
-		appCodec,
+		cdc,
 		app.GetKey(crisistypes.ModuleName),
 		invCheckPeriod,
 		app.Keepers.Cosmos.Bank,
@@ -247,7 +257,7 @@ func (app *App) InitSpecialKeepers(
 	app.Keepers.Cosmos.Upgrade = upgradekeeper.NewKeeper(
 		skipUpgradeHeights,
 		app.GetKey(upgradetypes.StoreKey),
-		appCodec,
+		cdc,
 		homePath,
 		bApp,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
@@ -348,7 +358,11 @@ func (app *App) InitNormalKeepers(
 
 	// register the proposal types
 	govRouter := govtypesv1.NewRouter()
-	govRouter.AddRoute(govtypes.RouterKey, govtypesv1.ProposalHandler).
+	govRouter.
+		AddRoute(
+			govtypes.RouterKey,
+			govtypesv1.ProposalHandler,
+		).
 		AddRoute(
 			paramproposal.RouterKey,
 			params.NewParamChangeProposalHandler(app.Keepers.Cosmos.Params),
@@ -365,6 +379,10 @@ func (app *App) InitNormalKeepers(
 			ibchost.RouterKey,
 			ibcclient.NewClientProposalHandler(app.Keepers.Cosmos.IBC.ClientKeeper),
 		)
+	// AddRoute(
+	// 	astakingtypes.RouterKey,
+	// 	ibcclient.NewClientProposalHandler(app.Keepers.Cosmos.IBC.ClientKeeper),
+	// )
 
 	app.Keepers.Cosmos.Gov = govkeeper.NewKeeper(
 		cdc,
@@ -395,7 +413,8 @@ func (app *App) InitNormalKeepers(
 		&app.Keepers.Cosmos.IBC.PortKeeper,
 		app.Keepers.Cosmos.Acct,
 		app.Keepers.Cosmos.Bank,
-		app.Keepers.Cosmos.ScopedIBCKeeper)
+		app.Keepers.Cosmos.ScopedTransferKeeper,
+	)
 
 	transferIBCModule := transfer.NewIBCModule(app.Keepers.Cosmos.Transfer)
 
@@ -406,81 +425,81 @@ func (app *App) InitNormalKeepers(
 	app.Keepers.Cosmos.IBC.SetRouter(ibcRouter)
 
 	// initialize the auction keeper
-	{
-
-		auctionKeeper := auctionkeeper.NewKeeper(
-			cdc,
-			app.keys[auctiontypes.StoreKey],
-			app.Keepers.Cosmos.Acct,
-			app.Keepers.Cosmos.Bank,
-			app.Keepers.Cosmos.Distr,
-			app.Keepers.Cosmos.Staking,
-			authtypes.NewModuleAddress(govtypes.ModuleName).String(),
-		)
-		app.Keepers.External.Auction = &auctionKeeper
-	}
+	// {
+	//
+	// 	auctionKeeper := auctionkeeper.NewKeeper(
+	// 		cdc,
+	// 		app.keys[auctiontypes.StoreKey],
+	// 		app.Keepers.Cosmos.Acct,
+	// 		app.Keepers.Cosmos.Bank,
+	// 		app.Keepers.Cosmos.Distr,
+	// 		app.Keepers.Cosmos.Staking,
+	// 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+	// 	)
+	// 	app.Keepers.External.Auction = &auctionKeeper
+	// }
 
 	app.Keepers.Akash.Take = tkeeper.NewKeeper(
 		cdc,
-		app.keys[take.StoreKey],
-		app.GetSubspace(take.ModuleName),
+		app.keys[ttypes.StoreKey],
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 
 	app.Keepers.Akash.Escrow = ekeeper.NewKeeper(
 		cdc,
-		app.keys[escrow.StoreKey],
+		app.keys[etypes.StoreKey],
 		app.Keepers.Cosmos.Bank,
 		app.Keepers.Akash.Take,
 		app.Keepers.Cosmos.Distr,
 		app.Keepers.Cosmos.Authz,
 	)
 
-	app.Keepers.Akash.Deployment = deployment.NewKeeper(
+	app.Keepers.Akash.Deployment = dkeeper.NewKeeper(
 		cdc,
-		app.keys[deployment.StoreKey],
-		app.GetSubspace(deployment.ModuleName),
+		app.keys[dtypes.StoreKey],
 		app.Keepers.Akash.Escrow,
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 
-	app.Keepers.Akash.Market = market.NewKeeper(
+	app.Keepers.Akash.Market = mkeeper.NewKeeper(
 		cdc,
-		app.keys[market.StoreKey],
-		app.GetSubspace(market.ModuleName),
+		app.keys[mtypes.StoreKey],
 		app.Keepers.Akash.Escrow,
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 
-	app.Keepers.Akash.Provider = provider.NewKeeper(
+	app.Keepers.Akash.Provider = pkeeper.NewKeeper(
 		cdc,
-		app.keys[provider.StoreKey],
+		app.keys[ptypes.StoreKey],
 	)
 
 	app.Keepers.Akash.Audit = akeeper.NewKeeper(
 		cdc,
-		app.keys[audit.StoreKey],
+		app.keys[atypes.StoreKey],
 	)
 
 	app.Keepers.Akash.Cert = ckeeper.NewKeeper(
 		cdc,
-		app.keys[cert.StoreKey],
+		app.keys[ctypes.StoreKey],
 	)
 
 	app.Keepers.Akash.Inflation = ikeeper.NewKeeper(
 		cdc,
-		app.keys[inflation.StoreKey],
-		app.GetSubspace(inflation.ModuleName),
+		app.keys[itypes.StoreKey],
+		app.GetSubspace(itypes.ModuleName),
 	)
 
-	app.Keepers.Akash.Staking = astakingkeeper.NewKeeper(
-		cdc,
-		app.keys[astaking.StoreKey],
-		app.GetSubspace(astaking.ModuleName),
-	)
-
-	app.Keepers.Akash.Gov = agovkeeper.NewKeeper(
-		cdc,
-		app.keys[agov.StoreKey],
-		app.GetSubspace(agov.ModuleName),
-	)
+	// app.Keepers.Akash.Staking = astakingkeeper.NewKeeper(
+	// 	cdc,
+	// 	app.keys[astakingtypes.StoreKey],
+	// 	authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+	// )
+	//
+	// app.Keepers.Akash.Gov = agovkeeper.NewKeeper(
+	// 	cdc,
+	// 	app.keys[agovtypes.StoreKey],
+	// 	app.GetSubspace(agovtypes.ModuleName),
+	// )
 }
 
 func (app *App) SetupHooks() {
@@ -511,32 +530,33 @@ func (app *App) SetupHooks() {
 func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino, key, tkey storetypes.StoreKey) paramskeeper.Keeper {
 	paramsKeeper := paramskeeper.NewKeeper(appCodec, legacyAmino, key, tkey)
 
-	paramsKeeper.Subspace(authtypes.ModuleName)
-	paramsKeeper.Subspace(banktypes.ModuleName)
-	paramsKeeper.Subspace(stakingtypes.ModuleName)
-	paramsKeeper.Subspace(minttypes.ModuleName)
-	paramsKeeper.Subspace(distrtypes.ModuleName)
-	paramsKeeper.Subspace(slashingtypes.ModuleName)
-	paramsKeeper.Subspace(govtypes.ModuleName)
-	paramsKeeper.Subspace(crisistypes.ModuleName)
+	paramsKeeper.Subspace(authtypes.ModuleName).WithKeyTable(authtypes.ParamKeyTable())
+	paramsKeeper.Subspace(banktypes.ModuleName).WithKeyTable(banktypes.ParamKeyTable())         // nolint: staticcheck // SA1019
+	paramsKeeper.Subspace(stakingtypes.ModuleName).WithKeyTable(stakingtypes.ParamKeyTable())   // nolint: staticcheck // SA1019
+	paramsKeeper.Subspace(minttypes.ModuleName).WithKeyTable(minttypes.ParamKeyTable())         // nolint: staticcheck // SA1019
+	paramsKeeper.Subspace(distrtypes.ModuleName).WithKeyTable(distrtypes.ParamKeyTable())       // nolint: staticcheck // SA1019
+	paramsKeeper.Subspace(slashingtypes.ModuleName).WithKeyTable(slashingtypes.ParamKeyTable()) // nolint: staticcheck // SA1019
+	paramsKeeper.Subspace(govtypes.ModuleName).WithKeyTable(govv1.ParamKeyTable())              // nolint: staticcheck // SA1019
+	paramsKeeper.Subspace(crisistypes.ModuleName).WithKeyTable(crisistypes.ParamKeyTable())     // nolint: staticcheck // SA1019
 	paramsKeeper.Subspace(ibctransfertypes.ModuleName)
 	paramsKeeper.Subspace(ibchost.ModuleName)
 	paramsKeeper.Subspace(icacontrollertypes.SubModuleName)
 	paramsKeeper.Subspace(icahosttypes.SubModuleName)
 
 	// akash params subspaces
-	paramsKeeper.Subspace(deployment.ModuleName)
-	paramsKeeper.Subspace(market.ModuleName)
-	paramsKeeper.Subspace(inflation.ModuleName)
-	paramsKeeper.Subspace(astaking.ModuleName)
-	paramsKeeper.Subspace(agov.ModuleName)
-	paramsKeeper.Subspace(take.ModuleName)
+	paramsKeeper.Subspace(dtypes.ModuleName)
+	paramsKeeper.Subspace(mtypes.ModuleName)
+	paramsKeeper.Subspace(itypes.ModuleName)
+	paramsKeeper.Subspace(astakingtypes.ModuleName).WithKeyTable(astakingtypes.ParamKeyTable()) // nolint: staticcheck // SA1019
+	paramsKeeper.Subspace(agovtypes.ModuleName).WithKeyTable(agovtypes.ParamKeyTable())         // nolint: staticcheck // SA1019
+	paramsKeeper.Subspace(ttypes.ModuleName).WithKeyTable(ttypes.ParamKeyTable())               // nolint: staticcheck // SA1019
 
 	return paramsKeeper
 }
 
 func kvStoreKeys() []string {
 	keys := []string{
+		consensusparamtypes.StoreKey,
 		authtypes.StoreKey,
 		feegrant.StoreKey,
 		authzkeeper.StoreKey,
@@ -552,7 +572,8 @@ func kvStoreKeys() []string {
 		evidencetypes.StoreKey,
 		ibctransfertypes.StoreKey,
 		capabilitytypes.StoreKey,
-		auctiontypes.StoreKey,
+		crisistypes.StoreKey,
+		// auctiontypes.StoreKey,
 	}
 
 	keys = append(keys, akashKVStoreKeys()...,
@@ -562,16 +583,15 @@ func kvStoreKeys() []string {
 
 func akashKVStoreKeys() []string {
 	return []string{
-		take.StoreKey,
-		escrow.StoreKey,
-		deployment.StoreKey,
-		market.StoreKey,
-		provider.StoreKey,
-		audit.StoreKey,
-		cert.StoreKey,
-		inflation.StoreKey,
-		astaking.StoreKey,
-		agov.StoreKey,
+		ttypes.StoreKey,
+		etypes.StoreKey,
+		dtypes.StoreKey,
+		mtypes.StoreKey,
+		ptypes.StoreKey,
+		atypes.StoreKey,
+		ctypes.StoreKey,
+		itypes.StoreKey,
+		// astakingtypes.StoreKey,
 	}
 }
 

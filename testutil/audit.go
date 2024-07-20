@@ -6,7 +6,7 @@ import (
 	atypes "pkg.akt.dev/go/node/audit/v1"
 )
 
-func AuditedProvider(t testing.TB) (atypes.ProviderID, atypes.Provider) {
+func AuditedProvider(t testing.TB) (atypes.ProviderID, atypes.AuditedProvider) {
 	t.Helper()
 
 	id := atypes.ProviderID{
@@ -14,7 +14,7 @@ func AuditedProvider(t testing.TB) (atypes.ProviderID, atypes.Provider) {
 		Owner:   AccAddress(t),
 	}
 
-	return id, atypes.Provider{
+	return id, atypes.AuditedProvider{
 		Auditor:    id.Auditor.String(),
 		Owner:      id.Owner.String(),
 		Attributes: Attributes(t),

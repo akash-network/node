@@ -27,8 +27,11 @@ func (app *AkashApp) registerUpgradeHandlers() error {
 	}
 
 	for name, fn := range utypes.GetUpgradesList() {
-		app.Logger().Info(fmt.Sprintf("configuring upgrade `%s`", name))
-		upgrade, err := fn(app.Logger(), &app.App)
+		if upgradeInfo.Name != name {
+			continue
+		}
+
+		upgrade, err := fn(app.Logger(), app.App)
 		if err != nil {
 			return fmt.Errorf("unable to unitialize upgrade `%s`: %w", name, err)
 		}
@@ -36,6 +39,7 @@ func (app *AkashApp) registerUpgradeHandlers() error {
 		app.Keepers.Cosmos.Upgrade.SetUpgradeHandler(name, upgrade.UpgradeHandler())
 
 		if upgradeInfo.Name == name {
+			app.Logger().Info(fmt.Sprintf("configuring upgrade `%s`", name))
 			if storeUpgrades := upgrade.StoreLoader(); storeUpgrades != nil && upgradeInfo.Name == name {
 				app.Logger().Info(fmt.Sprintf("setting up store upgrades for `%s`", name))
 				app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, storeUpgrades))

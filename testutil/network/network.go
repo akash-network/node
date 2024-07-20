@@ -15,9 +15,14 @@ import (
 	"testing"
 	"time"
 
+	"cosmossdk.io/math"
+	tmrand "github.com/cometbft/cometbft/libs/rand"
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
+	pruningtypes "github.com/cosmos/cosmos-sdk/store/pruning/types"
+	moduletestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
 	"github.com/stretchr/testify/require"
+	cflags "pkg.akt.dev/go/cli/flags"
 
-	dbm "github.com/cometbft/cometbft-db"
 	tmcfg "github.com/cometbft/cometbft/config"
 	tmflags "github.com/cometbft/cometbft/libs/cli/flags"
 	"github.com/cometbft/cometbft/libs/log"
@@ -27,7 +32,6 @@ import (
 	cmtrpcsrv "github.com/cometbft/cometbft/rpc/jsonrpc/server"
 	"google.golang.org/grpc"
 
-	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -38,7 +42,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/api"
 	srvconfig "github.com/cosmos/cosmos-sdk/server/config"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
-	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/testutil"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
@@ -46,6 +49,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
+	"pkg.akt.dev/akashd/app"
 	"pkg.akt.dev/akashd/client"
 )
 
@@ -65,19 +69,15 @@ var (
 
 // AppConstructor defines a function which accepts a network configuration and
 // creates an ABCI Application to provide to Tendermint.
-type AppConstructor = func(val Validator) servertypes.Application
+type (
+	AppConstructor     = func(val ValidatorI) servertypes.Application
+	TestFixtureFactory = func() TestFixture
+)
 
-// NewAppConstructor returns a new simapp AppConstructor
-func NewAppConstructor(encodingCfg params.EncodingConfig) AppConstructor {
-	return func(val Validator) servertypes.Application {
-		return simapp.NewSimApp(
-			val.Ctx.Logger, dbm.NewMemDB(), nil, true, make(map[int64]bool), val.Ctx.Config.RootDir, 0,
-			encodingCfg,
-			simapp.EmptyAppOptions{},
-			baseapp.SetPruning(storetypes.NewPruningOptionsFromString(val.AppConfig.Pruning)),
-			baseapp.SetMinGasPrices(val.AppConfig.MinGasPrices),
-		)
-	}
+type TestFixture struct {
+	AppConstructor AppConstructor
+	GenesisState   map[string]json.RawMessage
+	EncodingConfig moduletestutil.TestEncodingConfig
 }
 
 // Config defines the necessary configuration used to bootstrap and start an
@@ -86,26 +86,25 @@ type Config struct {
 	Codec             codec.Codec
 	LegacyAmino       *codec.LegacyAmino // TODO: Remove!
 	InterfaceRegistry codectypes.InterfaceRegistry
-
-	TxConfig         sdkclient.TxConfig
-	AccountRetriever sdkclient.AccountRetriever
-	AppConstructor   AppConstructor             // the ABCI application constructor
-	GenesisState     map[string]json.RawMessage // custom genesis state to provide
-	TimeoutCommit    time.Duration              // the consensus commitment timeout
-	ChainID          string                     // the network chain-id
-	NumValidators    int                        // the total number of validators to create and bond
-	Mnemonics        []string                   // custom user-provided validator operator mnemonics
-	BondDenom        string                     // the staking bond denomination
-	Denoms           []string                   // list of additional denoms could be used on network
-	MinGasPrices     string                     // the minimum gas prices each validator will accept
-	AccountTokens    sdk.Int                    // the amount of unique validator tokens (e.g. 1000node0)
-	StakingTokens    sdk.Int                    // the amount of tokens each validator has available to stake
-	BondedTokens     sdk.Int                    // the amount of tokens each validator stakes
-	PruningStrategy  string                     // the pruning strategy each validator will have
-	EnableLogging    bool                       // enable Tendermint logging to STDOUT
-	CleanupDir       bool                       // remove base temporary directory during cleanup
-	SigningAlgo      string                     // signing algorithm for keys
-	KeyringOptions   []keyring.Option
+	TxConfig          sdkclient.TxConfig
+	AccountRetriever  sdkclient.AccountRetriever
+	AppConstructor    AppConstructor             // the ABCI application constructor
+	GenesisState      map[string]json.RawMessage // custom genesis state to provide
+	TimeoutCommit     time.Duration              // the consensus commitment timeout
+	ChainID           string                     // the network chain-id
+	NumValidators     int                        // the total number of validators to create and bond
+	Mnemonics         []string                   // custom user-provided validator operator mnemonics
+	BondDenom         string                     // the staking bond denomination
+	Denoms            []string                   // list of additional denoms could be used on network
+	MinGasPrices      string                     // the minimum gas prices each validator will accept
+	AccountTokens     math.Int                   // the amount of unique validator tokens (e.g. 1000node0)
+	StakingTokens     math.Int                   // the amount of tokens each validator has available to stake
+	BondedTokens      math.Int                   // the amount of tokens each validator stakes
+	PruningStrategy   string                     // the pruning strategy each validator will have
+	EnableLogging     bool                       // enable Tendermint logging to STDOUT
+	CleanupDir        bool                       // remove base temporary directory during cleanup
+	SigningAlgo       string                     // signing algorithm for keys
+	KeyringOptions    []keyring.Option
 }
 
 // Network defines a local in-process testing network using SimApp. It can be
@@ -144,10 +143,25 @@ type Validator struct {
 	ValAddress sdk.ValAddress
 	RPCClient  tmclient.Client
 
+	app     servertypes.Application
 	tmNode  *node.Node
 	api     *api.Server
 	grpc    *grpc.Server
 	grpcWeb *http.Server
+}
+
+// ValidatorI expose a validator's context and configuration
+type ValidatorI interface {
+	GetCtx() *server.Context
+	GetAppConfig() *srvconfig.Config
+}
+
+func (v Validator) GetCtx() *server.Context {
+	return v.Ctx
+}
+
+func (v Validator) GetAppConfig() *srvconfig.Config {
+	return v.AppConfig
 }
 
 // GetFreePorts asks the kernel for free open ports that are ready to use.
@@ -155,12 +169,6 @@ func GetFreePorts(count int) ([]int, error) {
 	var ports []int
 
 	listeners := make([]*net.TCPListener, 0, count)
-
-	defer func() {
-		for _, l := range listeners {
-			_ = l.Close()
-		}
-	}()
 
 	for i := 0; i < count; i++ {
 		addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
@@ -177,7 +185,40 @@ func GetFreePorts(count int) ([]int, error) {
 		ports = append(ports, l.Addr().(*net.TCPAddr).Port)
 	}
 
+	for _, l := range listeners {
+		if err := l.Close(); err != nil {
+			return nil, err
+		}
+	}
+
 	return ports, nil
+}
+
+type freePorts struct {
+	lock  sync.Mutex
+	idx   int
+	ports []int
+}
+
+func newFreePorts(ports []int) *freePorts {
+	return &freePorts{
+		idx:   0,
+		ports: ports,
+	}
+}
+
+func (p *freePorts) mustGetPort() int {
+	defer p.lock.Unlock()
+	p.lock.Lock()
+
+	if p.idx == len(p.ports) {
+		panic("no ports available")
+	}
+
+	port := p.ports[p.idx]
+	p.idx++
+
+	return port
 }
 
 // New creates a new Network for integration tests.
@@ -203,13 +244,19 @@ func New(t *testing.T, cfg Config) *Network {
 	nodeIDs := make([]string, cfg.NumValidators)
 	valPubKeys := make([]cryptotypes.PubKey, cfg.NumValidators)
 
-	var (
-		genAccounts []authtypes.GenesisAccount
-		genBalances []banktypes.Balance
-		genFiles    []string
-	)
+	var genAccounts []authtypes.GenesisAccount
+	var genBalances []banktypes.Balance
+	var genFiles []string
 
 	buf := bufio.NewReader(os.Stdin)
+
+	allocPortsCount := (portsPerValidator * cfg.NumValidators) + 4
+
+	availablePorts, err := GetFreePorts(allocPortsCount)
+	require.NoError(t, err)
+	require.Equal(t, allocPortsCount, len(availablePorts))
+
+	ports := newFreePorts(availablePorts)
 
 	// generate private keys, node IDs, and initial transactions
 	for i := 0; i < cfg.NumValidators; i++ {
@@ -219,41 +266,39 @@ func New(t *testing.T, cfg Config) *Network {
 		appCfg.API.Enable = true
 		appCfg.API.Swagger = false
 		appCfg.Telemetry.Enabled = false
+		appCfg.GRPC.Enable = false
+		appCfg.GRPCWeb.Enable = false
 
 		ctx := server.NewDefaultContext()
-		tmCfg := ctx.Config
-		tmCfg.Consensus.TimeoutCommit = cfg.TimeoutCommit
+		ctx.Viper.Set(cflags.FlagChainID, cfg.ChainID)
 
 		// Only allow the first validator to expose an RPC, API and gRPC
 		// server/client due to Tendermint in-process constraints.
 		apiAddr := ""
+
+		tmCfg := ctx.Config
+		tmCfg.Consensus.TimeoutCommit = cfg.TimeoutCommit
+
 		tmCfg.RPC.ListenAddress = ""
-		appCfg.GRPC.Enable = false
-		appCfg.GRPCWeb.Enable = false
-
-		allocPortsCount := portsPerValidator
-		if i == 0 {
-			allocPortsCount += 4
-		}
-
-		ports, err := GetFreePorts(allocPortsCount)
-		require.NoError(t, err)
-		require.Equal(t, allocPortsCount, len(ports))
+		tmCfg.ProxyApp = fmt.Sprintf("tcp://127.0.0.1:%d", ports.mustGetPort())
+		tmCfg.P2P.ListenAddress = fmt.Sprintf("tcp://127.0.0.1:%d", ports.mustGetPort())
+		tmCfg.P2P.AddrBookStrict = false
+		tmCfg.P2P.AllowDuplicateIP = true
 
 		if i == 0 {
-			apiListenAddr := fmt.Sprintf("tcp://0.0.0.0:%d", ports[2])
+			apiListenAddr := fmt.Sprintf("tcp://127.0.0.1:%d", ports.mustGetPort())
 			appCfg.API.Address = apiListenAddr
 
 			apiURL, err := url.Parse(apiListenAddr)
 			require.NoError(t, err)
 			apiAddr = fmt.Sprintf("http://%s:%s", apiURL.Hostname(), apiURL.Port())
 
-			tmCfg.RPC.ListenAddress = fmt.Sprintf("tcp://0.0.0.0:%d", ports[3])
+			tmCfg.RPC.ListenAddress = fmt.Sprintf("tcp://127.0.0.1:%d", ports.mustGetPort())
 
-			appCfg.GRPC.Address = fmt.Sprintf("0.0.0.0:%d", ports[4])
+			appCfg.GRPC.Address = fmt.Sprintf("127.0.0.1:%d", ports.mustGetPort())
 			appCfg.GRPC.Enable = true
 
-			appCfg.GRPCWeb.Address = fmt.Sprintf("0.0.0.0:%d", ports[5])
+			appCfg.GRPCWeb.Address = fmt.Sprintf("127.0.0.1:%d", ports.mustGetPort())
 			appCfg.GRPCWeb.Enable = true
 		}
 
@@ -277,17 +322,12 @@ func New(t *testing.T, cfg Config) *Network {
 		tmCfg.Moniker = nodeDirName
 		monikers[i] = nodeDirName
 
-		tmCfg.ProxyApp = fmt.Sprintf("tcp://0.0.0.0:%d", ports[0])
-		tmCfg.P2P.ListenAddress = fmt.Sprintf("tcp://0.0.0.0:%d", ports[1])
-		tmCfg.P2P.AddrBookStrict = false
-		tmCfg.P2P.AllowDuplicateIP = true
-
 		nodeID, pubKey, err := genutil.InitializeNodeValidatorFiles(tmCfg)
 		require.NoError(t, err)
 		nodeIDs[i] = nodeID
 		valPubKeys[i] = pubKey
 
-		kb, err := keyring.New(sdk.KeyringServiceName(), keyring.BackendTest, clientDir, buf, cfg.KeyringOptions...)
+		kb, err := keyring.New(sdk.KeyringServiceName(), keyring.BackendTest, clientDir, buf, cfg.Codec, cfg.KeyringOptions...)
 		require.NoError(t, err)
 
 		keyringAlgos, _ := kb.SupportedAlgorithms()
@@ -328,8 +368,7 @@ func New(t *testing.T, cfg Config) *Network {
 			valPubKeys[i],
 			sdk.NewCoin(cfg.BondDenom, cfg.BondedTokens),
 			stakingtypes.NewDescription(nodeDirName, "", "", "", ""),
-			stakingtypes.NewCommissionRates(commission, sdk.OneDec(), sdk.OneDec()),
-			sdk.OneInt(),
+			stakingtypes.NewCommissionRates(commission, math.LegacyOneDec(), math.LegacyOneDec()),
 		)
 		require.NoError(t, err)
 
@@ -370,7 +409,11 @@ func New(t *testing.T, cfg Config) *Network {
 			WithLegacyAmino(cfg.LegacyAmino).
 			WithTxConfig(cfg.TxConfig).
 			WithAccountRetriever(cfg.AccountRetriever).
-			WithNodeURI(tmCfg.RPC.ListenAddress)
+			WithNodeURI(tmCfg.RPC.ListenAddress).
+			WithBroadcastMode("block").
+			WithSignModeStr("direct").
+			WithFromAddress(addr).
+			WithSkipConfirmation(true)
 
 		network.Validators[i] = &Validator{
 			AppConfig:  appCfg,
@@ -473,10 +516,26 @@ func (n *Network) WaitForNextBlock() error {
 	return err
 }
 
+// WaitForBlocks waits for the next amount of blocks to be committed, returning an error
+// upon failure.
+func (n *Network) WaitForBlocks(blocks int64) error {
+	lastBlock, err := n.LatestHeight()
+	if err != nil {
+		return err
+	}
+
+	_, err = n.WaitForHeight(lastBlock + blocks)
+	if err != nil {
+		return err
+	}
+
+	return err
+}
+
 // Cleanup removes the root testing (temporary) directory and stops both the
 // Tendermint and API services. It allows other callers to create and start
 // test networks. This method must be called when a test is finished, typically
-// in a defer.
+// in defer.
 func (n *Network) Cleanup() {
 	defer func() {
 		lock.Unlock()
@@ -507,4 +566,53 @@ func (n *Network) Cleanup() {
 	}
 
 	n.T.Log("finished cleaning up test network")
+}
+
+// DefaultConfig returns a default configuration suitable for nearly all
+// testing requirements.
+func DefaultConfig(factory TestFixtureFactory, opts ...ConfigOption) Config {
+	fixture := factory()
+
+	cfg := &networkConfigOptions{}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	cdc := fixture.EncodingConfig.Codec
+	genesisState := app.NewDefaultGenesisState(cdc)
+
+	if cfg.interceptState != nil {
+		for k, v := range genesisState {
+			res := cfg.interceptState(cdc, k, v)
+			if res != nil {
+				genesisState[k] = res
+			}
+		}
+	}
+
+	const coinDenom = "uakt"
+	return Config{
+		Codec:             fixture.EncodingConfig.Codec,
+		TxConfig:          fixture.EncodingConfig.TxConfig,
+		LegacyAmino:       fixture.EncodingConfig.Amino,
+		InterfaceRegistry: fixture.EncodingConfig.InterfaceRegistry,
+		AccountRetriever:  authtypes.AccountRetriever{},
+		AppConstructor:    fixture.AppConstructor,
+		GenesisState:      fixture.GenesisState,
+		TimeoutCommit:     2 * time.Second,
+		ChainID:           "chain-" + tmrand.NewRand().Str(6),
+		NumValidators:     4,
+		BondDenom:         coinDenom,
+		Denoms: []string{
+			"ibc/12C6A0C374171B595A0A9E18B83FA09D295FB1F2D8C6DAA3AC28683471752D84",
+		},
+		MinGasPrices:    fmt.Sprintf("0.000006%s", coinDenom),
+		AccountTokens:   sdk.TokensFromConsensusPower(1000000000000, sdk.DefaultPowerReduction),
+		StakingTokens:   sdk.TokensFromConsensusPower(100000, sdk.DefaultPowerReduction),
+		BondedTokens:    sdk.TokensFromConsensusPower(100, sdk.DefaultPowerReduction),
+		PruningStrategy: pruningtypes.PruningOptionNothing,
+		CleanupDir:      true,
+		SigningAlgo:     string(hd.Secp256k1Type),
+		KeyringOptions:  []keyring.Option{},
+	}
 }

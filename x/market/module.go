@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/gorilla/mux"
+	"cosmossdk.io/core/appmodule"
+	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
 
@@ -17,28 +19,33 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
-
 	types "pkg.akt.dev/go/node/market/v1beta5"
 
 	utypes "pkg.akt.dev/akashd/upgrades/types"
 	akeeper "pkg.akt.dev/akashd/x/audit/keeper"
 	ekeeper "pkg.akt.dev/akashd/x/escrow/keeper"
-	"pkg.akt.dev/akashd/x/market/client/cli"
-	"pkg.akt.dev/akashd/x/market/client/rest"
 	"pkg.akt.dev/akashd/x/market/handler"
 	"pkg.akt.dev/akashd/x/market/keeper"
+	"pkg.akt.dev/akashd/x/market/simulation"
 )
 
 var (
-	_ module.AppModule      = AppModule{}
 	_ module.AppModuleBasic = AppModuleBasic{}
-	// _ module.AppModuleSimulation = AppModuleSimulation{}
+
+	_ module.BeginBlockAppModule = AppModule{}
+	_ appmodule.AppModule        = AppModule{}
+	_ module.AppModuleSimulation = AppModule{}
 )
 
 // AppModuleBasic defines the basic application module used by the market module.
 type AppModuleBasic struct {
 	cdc codec.Codec
+}
+
+// AppModule implements an application module for the market module.
+type AppModule struct {
+	AppModuleBasic
+	keepers handler.Keepers
 }
 
 // Name returns market module's name
@@ -54,9 +61,6 @@ func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 // RegisterInterfaces registers the module's interface types
 func (b AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 	types.RegisterInterfaces(registry)
-	// v1beta3types.RegisterInterfaces(registry)
-	// v1beta2types.RegisterInterfaces(registry)
-	// v1beta1types.RegisterInterfaces(registry)
 }
 
 // DefaultGenesis returns default genesis state as raw bytes for the market
@@ -75,11 +79,6 @@ func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, _ client.TxEncodingCo
 	return ValidateGenesis(&data)
 }
 
-// RegisterRESTRoutes registers rest routes for this module
-func (AppModuleBasic) RegisterRESTRoutes(clientCtx client.Context, rtr *mux.Router) {
-	rest.RegisterRoutes(clientCtx, rtr, StoreKey)
-}
-
 // RegisterGRPCGatewayRoutes registers the gRPC Gateway routes for the market module.
 func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *runtime.ServeMux) {
 	err := types.RegisterQueryHandlerClient(context.Background(), mux, types.NewQueryClient(clientCtx))
@@ -90,23 +89,17 @@ func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *r
 
 // GetQueryCmd returns the root query command of this module
 func (AppModuleBasic) GetQueryCmd() *cobra.Command {
-	return cli.GetQueryCmd()
+	panic("akash modules do not export cli commands via cosmos interface")
 }
 
 // GetTxCmd returns the root tx command of this module
 func (AppModuleBasic) GetTxCmd() *cobra.Command {
-	return cli.GetTxCmd(StoreKey)
+	panic("akash modules do not export cli commands via cosmos interface")
 }
 
 // GetQueryClient returns a new query client for this module
 func (AppModuleBasic) GetQueryClient(clientCtx client.Context) types.QueryClient {
 	return types.NewQueryClient(clientCtx)
-}
-
-// AppModule implements an application module for the market module.
-type AppModule struct {
-	AppModuleBasic
-	keepers handler.Keepers
 }
 
 // NewAppModule creates a new AppModule object
@@ -117,11 +110,13 @@ func NewAppModule(
 	akeeper akeeper.Keeper,
 	dkeeper handler.DeploymentKeeper,
 	pkeeper handler.ProviderKeeper,
+	acckeeper govtypes.AccountKeeper,
 	bkeeper bankkeeper.Keeper,
 ) AppModule {
 	return AppModule{
 		AppModuleBasic: AppModuleBasic{cdc: cdc},
 		keepers: handler.Keepers{
+			Account:    acckeeper,
 			Escrow:     ekeeper,
 			Audit:      akeeper,
 			Market:     keeper,
@@ -137,23 +132,14 @@ func (AppModule) Name() string {
 	return types.ModuleName
 }
 
+// IsOnePerModuleType implements the depinject.OnePerModuleType interface.
+func (am AppModule) IsOnePerModuleType() {}
+
+// IsAppModule implements the appmodule.AppModule interface.
+func (am AppModule) IsAppModule() {}
+
 // RegisterInvariants registers module invariants
 func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
-
-// // Route returns the message routing key for the market module.
-// func (am AppModule) Route() sdk.Route {
-// 	return sdk.NewRoute(types.RouterKey, handler.NewHandler(am.keepers))
-// }
-
-// QuerierRoute returns the market module's querier route name.
-func (am AppModule) QuerierRoute() string {
-	return ""
-}
-
-// // LegacyQuerierHandler returns the sdk.Querier for market module
-// func (am AppModule) LegacyQuerierHandler(_ *codec.LegacyAmino) sdk.Querier {
-// 	return nil
-// }
 
 // RegisterServices registers the module's services
 func (am AppModule) RegisterServices(cfg module.Configurator) {
@@ -194,32 +180,30 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 
 // ConsensusVersion implements module.AppModule#ConsensusVersion
 func (am AppModule) ConsensusVersion() uint64 {
-	return utypes.ModuleVersion(ModuleName)
+	return 5
+	// return utypes.ModuleVersion(ModuleName)
 }
 
-// AppModuleSimulation implements an application simulation module for the market module.
-type AppModuleSimulation struct {
-	keepers handler.Keepers
-	akeeper govtypes.AccountKeeper
+// AppModuleSimulation functions
+
+// GenerateGenesisState creates a randomized GenState of the staking module.
+func (AppModule) GenerateGenesisState(simState *module.SimulationState) {
+	simulation.RandomizedGenState(simState)
 }
 
-// NewAppModuleSimulation creates a new AppModuleSimulation instance
-func NewAppModuleSimulation(
-	keeper keeper.IKeeper,
-	akeeper govtypes.AccountKeeper,
-	dkeeper handler.DeploymentKeeper,
-	pkeeper handler.ProviderKeeper,
-	bkeeper bankkeeper.Keeper,
-) AppModuleSimulation {
-	return AppModuleSimulation{
-		keepers: handler.Keepers{
-			Market:     keeper,
-			Deployment: dkeeper,
-			Provider:   pkeeper,
-			Bank:       bkeeper,
-		},
-		akeeper: akeeper,
-	}
+// ProposalMsgs returns msgs used for governance proposals for simulations.
+func (AppModule) ProposalMsgs(_ module.SimulationState) []simtypes.WeightedProposalMsg {
+	return simulation.ProposalMsgs()
+}
+
+// RegisterStoreDecoder registers a decoder for take module's types.
+func (am AppModule) RegisterStoreDecoder(sdr sdk.StoreDecoderRegistry) {
+	// sdr[types.StoreKey] = simulation.NewDecodeStore(am.cdc)
+}
+
+// WeightedOperations doesn't return any take module operation.
+func (am AppModule) WeightedOperations(simState module.SimulationState) []simtypes.WeightedOperation {
+	return simulation.WeightedOperations(simState.AppParams, simState.Cdc, am.keepers)
 }
 
 // // AppModuleSimulation functions

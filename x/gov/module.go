@@ -3,7 +3,6 @@ package provider
 import (
 	"encoding/json"
 	"fmt"
-	"math/rand"
 
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
@@ -111,21 +110,6 @@ func (AppModule) Name() string {
 // RegisterInvariants registers module invariants
 func (am AppModule) RegisterInvariants(ir sdk.InvariantRegistry) {}
 
-// Route returns the message routing key for the provider module.
-func (am AppModule) Route() sdk.Route {
-	return sdk.Route{}
-}
-
-// QuerierRoute returns the provider module's querier route name.
-func (am AppModule) QuerierRoute() string {
-	return ""
-}
-
-// LegacyQuerierHandler returns the sdk.Querier for provider module
-func (am AppModule) LegacyQuerierHandler(_ *codec.LegacyAmino) sdk.Querier {
-	return nil
-}
-
 // RegisterServices registers the module's services
 func (am AppModule) RegisterServices(cfg module.Configurator) {
 	utypes.ModuleMigrations(ModuleName, am.keeper, func(name string, forVersion uint64, handler module.MigrationHandler) {
@@ -190,10 +174,10 @@ func (AppModuleSimulation) ProposalContents(_ module.SimulationState) []sim.Weig
 	return nil
 }
 
-// RandomizedParams creates randomized staking param changes for the simulator.
-func (AppModuleSimulation) RandomizedParams(r *rand.Rand) []sim.ParamChange {
-	return nil
-}
+// // RandomizedParams creates randomized staking param changes for the simulator.
+// func (AppModuleSimulation) RandomizedParams(r *rand.Rand) []sim.ParamChange {
+// 	return nil
+// }
 
 // RegisterStoreDecoder registers a decoder for staking module's types
 func (AppModuleSimulation) RegisterStoreDecoder(sdr sdk.StoreDecoderRegistry) {

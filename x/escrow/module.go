@@ -20,7 +20,6 @@ import (
 	v1 "pkg.akt.dev/go/node/escrow/v1"
 
 	utypes "pkg.akt.dev/akashd/upgrades/types"
-	"pkg.akt.dev/akashd/x/escrow/client/cli"
 	"pkg.akt.dev/akashd/x/escrow/client/rest"
 	"pkg.akt.dev/akashd/x/escrow/keeper"
 )
@@ -98,12 +97,12 @@ func (AppModuleBasic) RegisterGRPCRoutes(clientCtx client.Context, mux *runtime.
 
 // GetQueryCmd returns the root query command of this module
 func (AppModuleBasic) GetQueryCmd() *cobra.Command {
-	return cli.GetQueryCmd()
+	panic("akash modules do not export cli commands via cosmos interface")
 }
 
 // GetTxCmd returns the transaction commands for this module
 func (AppModuleBasic) GetTxCmd() *cobra.Command {
-	return cli.GetTxCmd()
+	panic("akash modules do not export cli commands via cosmos interface")
 }
 
 // GetQueryClient returns a new query client for this module
@@ -193,7 +192,8 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 
 // ConsensusVersion implements module.AppModule#ConsensusVersion
 func (am AppModule) ConsensusVersion() uint64 {
-	return utypes.ModuleVersion(ModuleName)
+	return 3
+	// return utypes.ModuleVersion(ModuleName)
 }
 
 // ____________________________________________________________________________

@@ -3,7 +3,7 @@ package simulation
 import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 
-	types "pkg.akt.dev/go/node/provider/v1beta3"
+	types "pkg.akt.dev/go/node/provider/v1beta4"
 )
 
 // RandomizedGenState generates a random GenesisState for supply

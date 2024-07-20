@@ -2,13 +2,19 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"io"
 	"os"
+	"path/filepath"
 
+	tmtypes "github.com/cometbft/cometbft/types"
+	"github.com/cosmos/cosmos-sdk/client/snapshot"
+	"github.com/cosmos/cosmos-sdk/snapshots"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cast"
 	"github.com/spf13/cobra"
-	// "pkg.akt.dev/go/cli"
+	"github.com/spf13/viper"
+	"pkg.akt.dev/go/cli"
 
 	dbm "github.com/cometbft/cometbft-db"
 	cmtcfg "github.com/cometbft/cometbft/config"
@@ -17,23 +23,24 @@ import (
 	cmtrpc "github.com/cometbft/cometbft/rpc/core"
 	cmtrpcsrv "github.com/cometbft/cometbft/rpc/jsonrpc/server"
 
+	rosettaCmd "cosmossdk.io/tools/rosetta/cmd"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/debug"
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/keys"
+	"github.com/cosmos/cosmos-sdk/client/pruning"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
+	snapshottypes "github.com/cosmos/cosmos-sdk/snapshots/types"
 	"github.com/cosmos/cosmos-sdk/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	authcmd "github.com/cosmos/cosmos-sdk/x/auth/client/cli"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	vestingcli "github.com/cosmos/cosmos-sdk/x/auth/vesting/client/cli"
-	bankcmd "github.com/cosmos/cosmos-sdk/x/bank/client/cli"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
+
+	cflags "pkg.akt.dev/go/cli/flags"
 
 	"pkg.akt.dev/akashd/app"
 	"pkg.akt.dev/akashd/app/params"
@@ -43,6 +50,10 @@ import (
 	utilcli "pkg.akt.dev/akashd/util/cli"
 	"pkg.akt.dev/akashd/util/server"
 )
+
+type appCreator struct {
+	encCfg params.EncodingConfig
+}
 
 // NewRootCmd creates a new root command for akash. It is called once in the
 // main function.
@@ -79,7 +90,7 @@ func GetPersistentPreRunE(encodingConfig params.EncodingConfig, envPrefixes []st
 			WithLegacyAmino(encodingConfig.Amino).
 			WithInput(os.Stdin).
 			WithAccountRetriever(authtypes.AccountRetriever{}).
-			WithBroadcastMode(cli.BroadcastBlock).
+			WithBroadcastMode(cflags.BroadcastBlock).
 			WithHomeDir(app.DefaultHome)
 
 		if err := sdkclient.SetCmdClientContextHandler(initClientCtx, cmd); err != nil {
@@ -98,18 +109,8 @@ func Execute(rootCmd *cobra.Command, envPrefix string) error {
 	// and a Tendermint RPC. This requires the use of a pointer reference when
 	// getting and setting the client.Context. Ideally, we utilize
 	// https://github.com/spf13/cobra/pull/1118.
-	srvCtx := sdkserver.NewDefaultContext()
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, sdkclient.ClientContextKey, &sdkclient.Context{})
-	ctx = context.WithValue(ctx, sdkserver.ServerContextKey, srvCtx)
 
-	rootCmd.PersistentFlags().String(flags.FlagLogLevel, zerolog.InfoLevel.String(), "The logging level (trace|debug|info|warn|error|fatal|panic)")
-	rootCmd.PersistentFlags().String(flags.FlagLogFormat, cmtcfg.LogFormatPlain, "The logging format (json|plain)")
-	rootCmd.PersistentFlags().Bool(utilcli.FlagLogColor, false, "Pretty logging output. Applied only when log_format=plain")
-	rootCmd.PersistentFlags().String(utilcli.FlagLogTimestamp, "", "Add timestamp prefix to the logs (rfc3339|rfc3339nano|kitchen)")
-
-	executor := cmtcli.PrepareBaseCmd(rootCmd, envPrefix, app.DefaultHome)
-	return executor.ExecuteContext(ctx)
+	return ExecuteWithCtx(context.Background(), rootCmd, envPrefix)
 }
 
 // ExecuteWithCtx executes the root command.
@@ -125,16 +126,20 @@ func ExecuteWithCtx(ctx context.Context, rootCmd *cobra.Command, envPrefix strin
 	ctx = context.WithValue(ctx, sdkclient.ClientContextKey, &sdkclient.Context{})
 	ctx = context.WithValue(ctx, sdkserver.ServerContextKey, srvCtx)
 
-	rootCmd.PersistentFlags().String(cli.FlagLogLevel, zerolog.InfoLevel.String(), "The logging level (trace|debug|info|warn|error|fatal|panic)")
-	rootCmd.PersistentFlags().String(cli.FlagLogFormat, cmtcfg.LogFormatPlain, "The logging format (json|plain)")
-	rootCmd.PersistentFlags().Bool(cli.FlagLogColor, false, "Pretty logging output. Applied only when log_format=plain")
-	rootCmd.PersistentFlags().String(cli.FlagLogTimestamp, "", "Add timestamp prefix to the logs (rfc3339|rfc3339nano|kitchen)")
+	rootCmd.PersistentFlags().String(cflags.FlagLogLevel, zerolog.InfoLevel.String(), "The logging level (trace|debug|info|warn|error|fatal|panic)")
+	rootCmd.PersistentFlags().String(cflags.FlagLogFormat, cmtcfg.LogFormatPlain, "The logging format (json|plain)")
+	rootCmd.PersistentFlags().Bool(cflags.FlagLogColor, false, "Pretty logging output. Applied only when log_format=plain")
+	rootCmd.PersistentFlags().String(cflags.FlagLogTimestamp, "", "Add timestamp prefix to the logs (rfc3339|rfc3339nano|kitchen)")
 
 	executor := cmtcli.PrepareBaseCmd(rootCmd, envPrefix, app.DefaultHome)
 	return executor.ExecuteContext(ctx)
 }
 
 func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
+	ac := appCreator{encodingConfig}
+
+	home := app.DefaultHome
+
 	debugCmd := debug.Cmd()
 	debugCmd.AddCommand(ConvertBech32Cmd())
 	debugCmd.AddCommand(testnetify.Cmd())
@@ -144,19 +149,17 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
 		ecmd.EventCmd(),
 		cli.QueryCmd(),
 		cli.TxCmd(),
-		keys.Commands(app.DefaultHome),
-		genutilcli.InitCmd(app.ModuleBasics(), app.DefaultHome),
-		genutilcli.CollectGenTxsCmd(banktypes.GenesisBalancesIterator{}, app.DefaultHome),
-		genutilcli.MigrateGenesisCmd(),
-		genutilcli.GenTxCmd(app.ModuleBasics(), encodingConfig.TxConfig, banktypes.GenesisBalancesIterator{}, app.DefaultHome),
-		genutilcli.ValidateGenesisCmd(app.ModuleBasics()),
-		AddGenesisAccountCmd(app.DefaultHome),
+		keys.Commands(home),
+		genesisCommand(encodingConfig),
+		genutilcli.InitCmd(app.ModuleBasics(), home),
 		cmtcli.NewCompletionCmd(rootCmd, true),
 		debugCmd,
-		// sdkserver.RosettaCommand(encodingConfig.InterfaceRegistry, encodingConfig.Marshaler),
+		rosettaCmd.RosettaCommand(encodingConfig.InterfaceRegistry, encodingConfig.Marshaler),
+		snapshot.Cmd(ac.newApp),
+		pruning.Cmd(ac.newApp, home),
 	)
 
-	rootCmd.AddCommand(server.Commands(app.DefaultHome, newApp, createAppAndExport, addModuleInitFlags)...)
+	rootCmd.AddCommand(server.Commands(home, ac.newApp, ac.appExport, addModuleInitFlags)...)
 
 	rootCmd.SetOut(rootCmd.OutOrStdout())
 	rootCmd.SetErr(rootCmd.ErrOrStderr())
@@ -166,7 +169,27 @@ func addModuleInitFlags(startCmd *cobra.Command) {
 	crisis.AddModuleInitFlags(startCmd)
 }
 
-func newApp(logger cmtlog.Logger, db dbm.DB, traceStore io.Writer, appOpts servertypes.AppOptions) servertypes.Application {
+// genesisCommand builds genesis-related `simd genesis` command. Users may provide application specific commands as a parameter
+func genesisCommand(encodingConfig params.EncodingConfig, cmds ...*cobra.Command) *cobra.Command {
+	home := app.DefaultHome
+
+	cmd := genutilcli.GenesisCoreCommand(encodingConfig.TxConfig, app.ModuleBasics(), app.DefaultHome)
+
+	for _, subCmd := range cmds {
+		cmd.AddCommand(subCmd)
+	}
+
+	cmd.AddCommand(AddGenesisAccountCmd(home))
+
+	return cmd
+}
+
+func (a appCreator) newApp(
+	logger cmtlog.Logger,
+	db dbm.DB,
+	traceStore io.Writer,
+	appOpts servertypes.AppOptions,
+) servertypes.Application {
 	var cache sdk.MultiStorePersistentCache
 
 	if cast.ToBool(appOpts.Get(sdkserver.FlagInterBlockCache)) {
@@ -183,20 +206,40 @@ func newApp(logger cmtlog.Logger, db dbm.DB, traceStore io.Writer, appOpts serve
 		panic(err)
 	}
 
-	// snapshotDir := filepath.Join(cast.ToString(appOpts.Get(flags.FlagHome)), "data", "snapshots")
-	// snapshotDB, err := sdk.NewLevelDB("metadata", snapshotDir)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// snapshotStore, err := snapshots.NewStore(snapshotDB, snapshotDir)
-	// if err != nil {
-	// 	panic(err)
-	// }
+	homeDir := cast.ToString(appOpts.Get(flags.FlagHome))
+	chainID := cast.ToString(appOpts.Get(flags.FlagChainID))
+	if chainID == "" {
+		// fallback to genesis chain-id
+		genDocFile := filepath.Join(homeDir, cast.ToString(appOpts.Get("genesis_file")))
+		appGenesis, err := tmtypes.GenesisDocFromFile(genDocFile)
+		if err != nil {
+			panic(err)
+		}
+
+		chainID = appGenesis.ChainID
+	}
+
+	snapshotDir := filepath.Join(homeDir, "data", "snapshots")
+	snapshotDB, err := dbm.NewDB("metadata", server.GetAppDBBackend(appOpts), snapshotDir)
+	if err != nil {
+		panic(err)
+	}
+	snapshotStore, err := snapshots.NewStore(snapshotDB, snapshotDir)
+	if err != nil {
+		panic(err)
+	}
+
+	// BaseApp Opts
+	snapshotOptions := snapshottypes.NewSnapshotOptions(
+		cast.ToUint64(appOpts.Get(sdkserver.FlagStateSyncSnapshotInterval)),
+		cast.ToUint32(appOpts.Get(sdkserver.FlagStateSyncSnapshotKeepRecent)),
+	)
 
 	return app.NewApp(
 		logger, db, traceStore, true, cast.ToUint(appOpts.Get(sdkserver.FlagInvCheckPeriod)), skipUpgradeHeights,
-		cast.ToString(appOpts.Get(flags.FlagHome)),
+		a.encCfg,
 		appOpts,
+		baseapp.SetChainID(chainID),
 		baseapp.SetPruning(pruningOpts),
 		baseapp.SetMinGasPrices(cast.ToString(appOpts.Get(sdkserver.FlagMinGasPrices))),
 		baseapp.SetHaltHeight(cast.ToUint64(appOpts.Get(sdkserver.FlagHaltHeight))),
@@ -205,13 +248,12 @@ func newApp(logger cmtlog.Logger, db dbm.DB, traceStore io.Writer, appOpts serve
 		baseapp.SetInterBlockCache(cache),
 		baseapp.SetTrace(cast.ToBool(appOpts.Get(sdkserver.FlagTrace))),
 		baseapp.SetIndexEvents(cast.ToStringSlice(appOpts.Get(sdkserver.FlagIndexEvents))),
-		// baseapp.SetSnapshotStore(snapshotStore),
-		// baseapp.SetSnapshotInterval(cast.ToUint64(appOpts.Get(sdkserver.FlagStateSyncSnapshotInterval))),
-		// baseapp.SetSnapshotKeepRecent(cast.ToUint32(appOpts.Get(sdkserver.FlagStateSyncSnapshotKeepRecent))),
+		baseapp.SetSnapshot(snapshotStore, snapshotOptions),
+		baseapp.SetIAVLCacheSize(cast.ToInt(appOpts.Get(sdkserver.FlagIAVLCacheSize))),
 	)
 }
 
-func createAppAndExport(
+func (a appCreator) appExport(
 	logger cmtlog.Logger,
 	db dbm.DB,
 	tio io.Writer,
@@ -219,68 +261,81 @@ func createAppAndExport(
 	forZeroHeight bool,
 	jailAllowedAddrs []string,
 	appOpts servertypes.AppOptions,
+	modulesToExport []string,
 ) (servertypes.ExportedApp, error) {
 	var akashApp *app.AkashApp
 
+	homePath, ok := appOpts.Get(flags.FlagHome).(string)
+	if !ok || homePath == "" {
+		return servertypes.ExportedApp{}, errors.New("application home is not set")
+	}
+	viperAppOpts, ok := appOpts.(*viper.Viper)
+	if !ok {
+		return servertypes.ExportedApp{}, errors.New("appOpts is not viper.Viper")
+	}
+	// overwrite the FlagInvCheckPeriod
+	viperAppOpts.Set(sdkserver.FlagInvCheckPeriod, 1)
+	appOpts = viperAppOpts
+
 	if height != -1 {
-		akashApp = app.NewApp(logger, db, tio, false, uint(1), map[int64]bool{}, "", appOpts)
+		akashApp = app.NewApp(logger, db, tio, false, uint(1), map[int64]bool{}, a.encCfg, appOpts)
 
 		if err := akashApp.LoadHeight(height); err != nil {
 			return servertypes.ExportedApp{}, err
 		}
 	} else {
-		akashApp = app.NewApp(logger, db, tio, true, uint(1), map[int64]bool{}, "", appOpts)
+		akashApp = app.NewApp(logger, db, tio, true, uint(1), map[int64]bool{}, a.encCfg, appOpts)
 	}
 
-	return akashApp.ExportAppStateAndValidators(forZeroHeight, jailAllowedAddrs, akashApp.MM.ModuleNames())
+	return akashApp.ExportAppStateAndValidators(forZeroHeight, jailAllowedAddrs, modulesToExport)
 }
 
-func QueryCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:     "query",
-		Aliases: []string{"q"},
-		Short:   "Querying subcommands",
-	}
-
-	cmd.AddCommand(
-		authcmd.GetAccountCmd(),
-		flags.LineBreak,
-		rpc.ValidatorCommand(),
-		rpc.BlockCommand(),
-		authcmd.QueryTxsByEventsCmd(),
-		authcmd.QueryTxCmd(),
-		flags.LineBreak,
-	)
-
-	app.ModuleBasics().AddQueryCommands(cmd)
-	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
-	return cmd
-}
-
-func TxCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "tx",
-		Short: "Transactions subcommands",
-	}
-
-	cmd.AddCommand(
-		bankcmd.NewSendTxCmd(),
-		flags.LineBreak,
-		authcmd.GetSignCommand(),
-		authcmd.GetSignBatchCommand(),
-		authcmd.GetMultiSignCommand(),
-		authcmd.GetValidateSignaturesCommand(),
-		flags.LineBreak,
-		authcmd.GetBroadcastCommand(),
-		authcmd.GetEncodeCommand(),
-		authcmd.GetDecodeCommand(),
-		flags.LineBreak,
-		vestingcli.GetTxCmd(),
-	)
-
-	// add modules' tx commands
-	app.ModuleBasics().AddTxCommands(cmd)
-	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
-
-	return cmd
-}
+// func QueryCmd() *cobra.Command {
+// 	cmd := &cobra.Command{
+// 		Use:     "query",
+// 		Aliases: []string{"q"},
+// 		Short:   "Querying subcommands",
+// 	}
+//
+// 	cmd.AddCommand(
+// 		authcmd.GetAccountCmd(),
+// 		flags.LineBreak,
+// 		rpc.ValidatorCommand(),
+// 		rpc.BlockCommand(),
+// 		authcmd.QueryTxsByEventsCmd(),
+// 		authcmd.QueryTxCmd(),
+// 		flags.LineBreak,
+// 	)
+//
+// 	app.ModuleBasics().AddQueryCommands(cmd)
+// 	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
+// 	return cmd
+// }
+//
+// func TxCmd() *cobra.Command {
+// 	cmd := &cobra.Command{
+// 		Use:   "tx",
+// 		Short: "Transactions subcommands",
+// 	}
+//
+// 	cmd.AddCommand(
+// 		bankcmd.NewSendTxCmd(),
+// 		flags.LineBreak,
+// 		authcmd.GetSignCommand(),
+// 		authcmd.GetSignBatchCommand(),
+// 		authcmd.GetMultiSignCommand(),
+// 		authcmd.GetValidateSignaturesCommand(),
+// 		flags.LineBreak,
+// 		authcmd.GetBroadcastCommand(),
+// 		authcmd.GetEncodeCommand(),
+// 		authcmd.GetDecodeCommand(),
+// 		flags.LineBreak,
+// 		vestingcli.GetTxCmd(),
+// 	)
+//
+// 	// add modules' tx commands
+// 	app.ModuleBasics().AddTxCommands(cmd)
+// 	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
+//
+// 	return cmd
+// }

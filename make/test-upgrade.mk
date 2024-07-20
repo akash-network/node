@@ -41,7 +41,11 @@ test: $(COSMOVISOR) init
 
 .PHONY: test-reset
 test-reset:
-	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" clean
+	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) clean
+
+.PHONY: bins
+bins:
+	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) bins
 
 .PHONY: clean
 clean:

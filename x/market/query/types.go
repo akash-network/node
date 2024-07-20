@@ -3,22 +3,23 @@ package query
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	types "pkg.akt.dev/go/node/market/v1beta4"
+	"pkg.akt.dev/go/node/market/v1"
+	"pkg.akt.dev/go/node/market/v1beta5"
 )
 
 type (
 	// Order type
-	Order types.Order
+	Order v1beta5.Order
 	// Orders - Slice of Order Struct
 	Orders []Order
 
 	// Bid type
-	Bid types.Bid
+	Bid v1beta5.Bid
 	// Bids - Slice of Bid Struct
 	Bids []Bid
 
 	// Lease type
-	Lease types.Lease
+	Lease v1.Lease
 	// Leases - Slice of Lease Struct
 	Leases []Lease
 )
@@ -33,7 +34,7 @@ type OrderFilters struct {
 	// State flag value given
 	StateFlagVal string
 	// Actual state value decoded from Order_State_value
-	State types.Order_State
+	State v1beta5.Order_State
 }
 
 // BidFilters defines flags for bid list filter
@@ -42,7 +43,7 @@ type BidFilters struct {
 	// State flag value given
 	StateFlagVal string
 	// Actual state value decoded from Bid_State_value
-	State types.Bid_State
+	State v1beta5.Bid_State
 }
 
 // LeaseFilters defines flags for lease list filter
@@ -51,15 +52,15 @@ type LeaseFilters struct {
 	// State flag value given
 	StateFlagVal string
 	// Actual state value decoded from Lease_State_value
-	State types.Lease_State
+	State v1.Lease_State
 }
 
 // Accept returns true if object matches filter requirements
-func (f OrderFilters) Accept(obj types.Order, isValidState bool) bool {
+func (f OrderFilters) Accept(obj v1beta5.Order, isValidState bool) bool {
 	if (f.Owner.Empty() && !isValidState) ||
 		(f.Owner.Empty() && (obj.State == f.State)) ||
-		(!isValidState && obj.OrderID.Owner == f.Owner.String()) ||
-		(obj.OrderID.Owner == f.Owner.String() && obj.State == f.State) {
+		(!isValidState && obj.ID.Owner == f.Owner.String()) ||
+		(obj.ID.Owner == f.Owner.String() && obj.State == f.State) {
 		return true
 	}
 
@@ -67,11 +68,11 @@ func (f OrderFilters) Accept(obj types.Order, isValidState bool) bool {
 }
 
 // Accept returns true if object matches filter requirements
-func (f BidFilters) Accept(obj types.Bid, isValidState bool) bool {
+func (f BidFilters) Accept(obj v1beta5.Bid, isValidState bool) bool {
 	if (f.Owner.Empty() && !isValidState) ||
 		(f.Owner.Empty() && (obj.State == f.State)) ||
-		(!isValidState && obj.BidID.Owner == f.Owner.String()) ||
-		(obj.BidID.Owner == f.Owner.String() && obj.State == f.State) {
+		(!isValidState && obj.ID.Owner == f.Owner.String()) ||
+		(obj.ID.Owner == f.Owner.String() && obj.State == f.State) {
 		return true
 	}
 
@@ -79,11 +80,11 @@ func (f BidFilters) Accept(obj types.Bid, isValidState bool) bool {
 }
 
 // Accept returns true if object matches filter requirements
-func (f LeaseFilters) Accept(obj types.Lease, isValidState bool) bool {
+func (f LeaseFilters) Accept(obj v1.Lease, isValidState bool) bool {
 	if (f.Owner.Empty() && !isValidState) ||
 		(f.Owner.Empty() && (obj.State == f.State)) ||
-		(!isValidState && (obj.LeaseID.Owner == f.Owner.String())) ||
-		(obj.LeaseID.Owner == f.Owner.String() && obj.State == f.State) {
+		(!isValidState && (obj.ID.Owner == f.Owner.String())) ||
+		(obj.ID.Owner == f.Owner.String() && obj.State == f.State) {
 		return true
 	}
 	return false

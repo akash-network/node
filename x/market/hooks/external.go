@@ -11,9 +11,9 @@ import (
 
 type DeploymentKeeper interface {
 	GetDeployment(ctx sdk.Context, id dv1.DeploymentID) (dv1.Deployment, bool)
-	GetGroups(ctx sdk.Context, id dv1.DeploymentID) []dtypes.Group
+	GetGroups(ctx sdk.Context, id dv1.DeploymentID) dtypes.Groups
 	CloseDeployment(ctx sdk.Context, deployment dv1.Deployment) error
-	OnCloseGroup(ctx sdk.Context, group dtypes.Group, state dtypes.GroupState) error
+	OnCloseGroup(ctx sdk.Context, group dtypes.Group, state dtypes.Group_State) error
 }
 
 type MarketKeeper interface {
@@ -23,5 +23,5 @@ type MarketKeeper interface {
 	OnGroupClosed(ctx sdk.Context, id dv1.GroupID) error
 	OnOrderClosed(ctx sdk.Context, order mtypes.Order) error
 	OnBidClosed(ctx sdk.Context, bid mtypes.Bid) error
-	OnLeaseClosed(ctx sdk.Context, lease mv1.Lease, state mv1.LeaseState) error
+	OnLeaseClosed(ctx sdk.Context, lease mv1.Lease, state mv1.Lease_State) error
 }

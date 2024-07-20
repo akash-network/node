@@ -6,6 +6,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	v1 "pkg.akt.dev/go/node/market/v1"
 
 	atypes "pkg.akt.dev/go/node/audit/v1"
@@ -76,7 +77,7 @@ func (ms msgServer) CreateBid(goCtx context.Context, msg *types.MsgCreateBid) (*
 
 	provAttr, _ := ms.keepers.Audit.GetProviderAttributes(ctx, provider)
 
-	provAttr = append([]atypes.Provider{{
+	provAttr = append([]atypes.AuditedProvider{{
 		Owner:      msg.Provider,
 		Attributes: prov.Attributes,
 	}}, provAttr...)
@@ -120,7 +121,7 @@ func (ms msgServer) CloseBid(goCtx context.Context, msg *types.MsgCloseBid) (*ty
 		return nil, types.ErrUnknownOrderForBid
 	}
 
-	if bid.State == v1.BidOpen {
+	if bid.State == types.BidOpen {
 		_ = ms.keepers.Market.OnBidClosed(ctx, bid)
 		return &types.MsgCloseBidResponse{}, nil
 	}
@@ -134,7 +135,7 @@ func (ms msgServer) CloseBid(goCtx context.Context, msg *types.MsgCloseBid) (*ty
 		return nil, types.ErrLeaseNotActive
 	}
 
-	if bid.State != v1.BidActive {
+	if bid.State != types.BidActive {
 		return nil, types.ErrBidNotActive
 	}
 
@@ -181,7 +182,7 @@ func (ms msgServer) CreateLease(goCtx context.Context, msg *types.MsgCreateLease
 		return &types.MsgCreateLeaseResponse{}, types.ErrBidNotFound
 	}
 
-	if bid.State != v1.BidOpen {
+	if bid.State != types.BidOpen {
 		return &types.MsgCreateLeaseResponse{}, types.ErrBidNotOpen
 	}
 
@@ -190,7 +191,7 @@ func (ms msgServer) CreateLease(goCtx context.Context, msg *types.MsgCreateLease
 		return &types.MsgCreateLeaseResponse{}, types.ErrOrderNotFound
 	}
 
-	if order.State != v1.OrderOpen {
+	if order.State != types.OrderOpen {
 		return &types.MsgCreateLeaseResponse{}, types.ErrOrderNotOpen
 	}
 
@@ -226,7 +227,7 @@ func (ms msgServer) CreateLease(goCtx context.Context, msg *types.MsgCreateLease
 		if bid.ID.Equals(msg.BidID) {
 			return false
 		}
-		if bid.State != v1.BidOpen {
+		if bid.State != types.BidOpen {
 			return false
 		}
 
@@ -253,7 +254,7 @@ func (ms msgServer) CloseLease(goCtx context.Context, msg *types.MsgCloseLease) 
 		return nil, types.ErrOrderNotFound
 	}
 
-	if order.State != v1.OrderActive {
+	if order.State != types.OrderActive {
 		return &types.MsgCloseLeaseResponse{}, types.ErrOrderClosed
 	}
 
@@ -261,7 +262,7 @@ func (ms msgServer) CloseLease(goCtx context.Context, msg *types.MsgCloseLease) 
 	if !found {
 		return &types.MsgCloseLeaseResponse{}, types.ErrBidNotFound
 	}
-	if bid.State != v1.BidActive {
+	if bid.State != types.BidActive {
 		return &types.MsgCloseLeaseResponse{}, types.ErrBidNotActive
 	}
 
@@ -292,9 +293,23 @@ func (ms msgServer) CloseLease(goCtx context.Context, msg *types.MsgCloseLease) 
 	if group.State != dbeta.GroupOpen {
 		return &types.MsgCloseLeaseResponse{}, nil
 	}
+
 	if _, err := ms.keepers.Market.CreateOrder(ctx, group.ID, group.GroupSpec); err != nil {
 		return &types.MsgCloseLeaseResponse{}, err
 	}
-	return &types.MsgCloseLeaseResponse{}, nil
 
+	return &types.MsgCloseLeaseResponse{}, nil
+}
+
+func (ms msgServer) UpdateParams(goCtx context.Context, req *types.MsgUpdateParams) (*types.MsgUpdateParamsResponse, error) {
+	if ms.keepers.Market.GetAuthority() != req.Authority {
+		return nil, govtypes.ErrInvalidSigner.Wrapf("invalid authority; expected %s, got %s", ms.keepers.Market.GetAuthority(), req.Authority)
+	}
+
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	if err := ms.keepers.Market.SetParams(ctx, req.Params); err != nil {
+		return nil, err
+	}
+
+	return &types.MsgUpdateParamsResponse{}, nil
 }

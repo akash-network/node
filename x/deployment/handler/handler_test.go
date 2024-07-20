@@ -43,31 +43,31 @@ func setupTestSuite(t *testing.T) *testSuite {
 	depositor := testutil.AccAddress(t)
 	authzKeeper := &cmocks.AuthzKeeper{}
 	authzKeeper.
-		On("GetCleanAuthorization", mock.Anything, mock.Anything, depositor, sdk.MsgTypeURL(&v1.MsgDepositDeployment{})).
+		On("GetAuthorization", mock.Anything, mock.Anything, depositor, sdk.MsgTypeURL(&v1.MsgDepositDeployment{})).
 		Return(&v1.DepositAuthorization{
 			SpendLimit: defaultDeposit.Add(defaultDeposit),
-		}, time.Time{}).
+		}, &time.Time{}).
 		Once().
-		On("GetCleanAuthorization", mock.Anything, mock.Anything, depositor, sdk.MsgTypeURL(&v1.MsgDepositDeployment{})).
+		On("GetAuthorization", mock.Anything, mock.Anything, depositor, sdk.MsgTypeURL(&v1.MsgDepositDeployment{})).
 		Return(&v1.DepositAuthorization{
 			SpendLimit: defaultDeposit,
-		}, time.Time{}).
+		}, &time.Time{}).
 		Once().
-		On("GetCleanAuthorization", mock.Anything, mock.Anything, depositor, sdk.MsgTypeURL(&v1.MsgDepositDeployment{})).
+		On("GetAuthorization", mock.Anything, mock.Anything, depositor, sdk.MsgTypeURL(&v1.MsgDepositDeployment{})).
 		Return(&v1.DepositAuthorization{
 			SpendLimit: defaultDeposit,
-		}, time.Time{}).
+		}, &time.Time{}).
 		Once().
-		On("GetCleanAuthorization", mock.Anything, mock.Anything, depositor, sdk.MsgTypeURL(&v1.MsgDepositDeployment{})).
+		On("GetAuthorization", mock.Anything, mock.Anything, depositor, sdk.MsgTypeURL(&v1.MsgDepositDeployment{})).
 		Return(&v1.DepositAuthorization{
 			SpendLimit: defaultDeposit,
-		}, time.Time{}).
+		}, &time.Time{}).
 		Once().
-		On("GetCleanAuthorization", mock.Anything, mock.Anything,
+		On("GetAuthorization", mock.Anything, mock.Anything,
 			mock.MatchedBy(func(addr sdk.AccAddress) bool {
 				return !depositor.Equals(addr)
 			}), sdk.MsgTypeURL(&v1.MsgDepositDeployment{})).
-		Return(nil, time.Time{})
+		Return(nil, &time.Time{})
 	authzKeeper.
 		On("DeleteGrant", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(nil)
@@ -126,15 +126,15 @@ func TestCreateDeployment(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, res)
 
-	t.Run("ensure event created", func(t *testing.T) {
-		t.Skip("now has more events")
-		iev := testutil.ParseDeploymentEvent(t, res.Events)
-		require.IsType(t, v1beta4.EventDeploymentCreated{}, iev)
-
-		dev := iev.(v1beta4.EventDeploymentCreated)
-
-		require.Equal(t, msg.ID, dev.ID)
-	})
+	// t.Run("ensure event created", func(t *testing.T) {
+	// 	t.Skip("now has more events")
+	// 	iev := testutil.ParseDeploymentEvent(t, res.Events)
+	// 	require.IsType(t, v1beta4.EventDeploymentCreated{}, iev)
+	//
+	// 	dev := iev.(v1beta4.EventDeploymentCreated)
+	//
+	// 	require.Equal(t, msg.ID, dev.ID)
+	// })
 
 	deploymentResult, exists := suite.dkeeper.GetDeployment(suite.ctx, deployment.ID)
 	require.True(t, exists)
@@ -187,8 +187,6 @@ func TestUpdateDeploymentExisting(t *testing.T) {
 
 	deployment, groups := suite.createDeployment()
 
-	testutil.GroupSpec(t)
-
 	msgGroupSpecs := make(v1beta4.GroupSpecs, 0)
 	for _, g := range groups {
 		msgGroupSpecs = append(msgGroupSpecs, g.GroupSpec)
@@ -202,10 +200,6 @@ func TestUpdateDeploymentExisting(t *testing.T) {
 		Hash:      testutil.DefaultDeploymentHash[:],
 		Deposit:   suite.defaultDeposit,
 		Depositor: deployment.ID.Owner,
-	}
-
-	for _, group := range groups {
-		msg.Groups = append(msg.Groups, group.GroupSpec)
 	}
 
 	res, err := suite.handler(suite.ctx, msg)
@@ -230,14 +224,15 @@ func TestUpdateDeploymentExisting(t *testing.T) {
 	require.NotNil(t, res)
 
 	t.Run("ensure event created", func(t *testing.T) {
-		t.Skip("now has more events")
-		iev := testutil.ParseDeploymentEvent(t, res.Events[1:])
-		require.IsType(t, v1beta4.EventDeploymentUpdated{}, iev)
+		iev, err := sdk.ParseTypedEvent(res.Events[2])
+		require.NoError(t, err)
+		require.IsType(t, &v1.EventDeploymentUpdated{}, iev)
 
-		dev := iev.(v1beta4.EventDeploymentUpdated)
+		dev := iev.(*v1.EventDeploymentUpdated)
 
 		require.Equal(t, msg.ID, dev.ID)
 	})
+
 	t.Run("assert version updated", func(t *testing.T) {
 		d, ok := suite.dkeeper.GetDeployment(suite.ctx, deployment.ID)
 		require.True(t, ok)
@@ -247,7 +242,7 @@ func TestUpdateDeploymentExisting(t *testing.T) {
 	// Run the same update, should fail since nothing is different
 	res, err = suite.handler(suite.ctx, msgUpdate)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "Invalid: deployment version")
+	require.Contains(t, err.Error(), "Invalid: deployment hash")
 
 }
 
@@ -286,11 +281,12 @@ func TestCloseDeploymentExisting(t *testing.T) {
 	require.NotNil(t, res)
 
 	t.Run("ensure event created", func(t *testing.T) {
-		t.Skip("now has more events")
-		iev := testutil.ParseDeploymentEvent(t, res.Events)
-		require.IsType(t, v1beta4.EventDeploymentCreated{}, iev)
+		iev, err := sdk.ParseTypedEvent(res.Events[0])
+		require.NoError(t, err)
 
-		dev := iev.(v1beta4.EventDeploymentCreated)
+		require.IsType(t, &v1.EventDeploymentCreated{}, iev)
+
+		dev := iev.(*v1.EventDeploymentCreated)
 
 		require.Equal(t, msg.ID, dev.ID)
 	})
@@ -303,22 +299,23 @@ func TestCloseDeploymentExisting(t *testing.T) {
 	require.NotNil(t, res)
 	require.NoError(t, err)
 
-	t.Run("ensure event updated", func(t *testing.T) {
-		t.Skip("now has more events")
-		iev := testutil.ParseDeploymentEvent(t, res.Events[1:2])
-		require.IsType(t, v1beta4.EventDeploymentUpdated{}, iev)
-
-		dev := iev.(v1beta4.EventDeploymentUpdated)
-
-		require.Equal(t, msg.ID, dev.ID)
-	})
+	// t.Run("ensure event updated", func(t *testing.T) {
+	// 	iev, err := sdk.ParseTypedEvent(res.Events[2])
+	// 	require.NoError(t, err)
+	// 	require.IsType(t, &v1.EventDeploymentUpdated{}, iev)
+	//
+	// 	dev := iev.(*v1.EventDeploymentUpdated)
+	//
+	// 	require.Equal(t, msg.ID, dev.ID)
+	// })
 
 	t.Run("ensure event close", func(t *testing.T) {
-		t.Skip("now has more events")
-		iev := testutil.ParseDeploymentEvent(t, res.Events[2:])
-		require.IsType(t, v1beta4.EventDeploymentClosed{}, iev)
+		iev, err := sdk.ParseTypedEvent(res.Events[2])
+		require.NoError(t, err)
 
-		dev := iev.(v1beta4.EventDeploymentClosed)
+		require.IsType(t, &v1.EventDeploymentClosed{}, iev)
+
+		dev := iev.(*v1.EventDeploymentClosed)
 
 		require.Equal(t, msg.ID, dev.ID)
 	})

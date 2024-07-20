@@ -6,7 +6,7 @@ import (
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	types "pkg.akt.dev/go/node/audit/v1beta3"
+	types "pkg.akt.dev/go/node/audit/v1"
 )
 
 // RawClient interface

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/cosmos/cosmos-sdk/codec"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/stretchr/testify/require"
 
@@ -31,7 +32,10 @@ func setupTest(t *testing.T) *grpcTestSuite {
 		t: t,
 	}
 
-	suite.app = app.Setup(false)
+	suite.app = app.Setup(app.WithGenesis(func(cdc codec.Codec) app.GenesisState {
+		return app.GenesisStateWithValSet(cdc)
+	}))
+
 	suite.ctx, suite.keeper = setupKeeper(t)
 	querier := keeper.Querier{Keeper: suite.keeper}
 

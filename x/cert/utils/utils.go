@@ -11,7 +11,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 
-	ctypes "pkg.akt.dev/go/node/cert/v1beta3"
+	ctypes "pkg.akt.dev/go/node/cert/v1"
 )
 
 // LoadAndQueryCertificateForAccount wraps LoadAndQueryPEMForAccount and tls.X509KeyPair

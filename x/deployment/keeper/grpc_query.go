@@ -28,7 +28,7 @@ func (k Querier) Deployments(c context.Context, req *types.QueryDeploymentsReque
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
-	stateVal := v1.DeploymentState(v1.DeploymentState_value[req.Filters.State])
+	stateVal := v1.Deployment_State(v1.Deployment_State_value[req.Filters.State])
 
 	if req.Filters.State != "" && stateVal == v1.DeploymentStateInvalid {
 		return nil, status.Error(codes.InvalidArgument, "invalid state value")
@@ -140,4 +140,15 @@ func (k Querier) Group(c context.Context, req *types.QueryGroupRequest) (*types.
 	}
 
 	return &types.QueryGroupResponse{Group: group}, nil
+}
+
+func (k Querier) Params(ctx context.Context, req *types.QueryParamsRequest) (*types.QueryParamsResponse, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "empty request")
+	}
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	params := k.GetParams(sdkCtx)
+
+	return &types.QueryParamsResponse{Params: params}, nil
 }

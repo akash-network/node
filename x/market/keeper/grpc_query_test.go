@@ -149,7 +149,7 @@ func TestGRPCQueryOrders(t *testing.T) {
 				req = &v1beta5.QueryOrdersRequest{
 					Filters: v1beta5.OrderFilters{
 						OSeq:  37,
-						State: types.OrderActive.String(),
+						State: v1beta5.OrderActive.String(),
 					}}
 			},
 			0,
@@ -157,7 +157,7 @@ func TestGRPCQueryOrders(t *testing.T) {
 		{
 			"query orders with state filter",
 			func() {
-				req = &v1beta5.QueryOrdersRequest{Filters: v1beta5.OrderFilters{State: types.OrderActive.String()}}
+				req = &v1beta5.QueryOrdersRequest{Filters: v1beta5.OrderFilters{State: v1beta5.OrderActive.String()}}
 			},
 			1,
 		},
@@ -963,7 +963,7 @@ func TestGRPCQueryBids(t *testing.T) {
 				req = &v1beta5.QueryBidsRequest{
 					Filters: v1beta5.BidFilters{
 						OSeq:     37,
-						State:    types.BidLost.String(),
+						State:    v1beta5.BidLost.String(),
 						Provider: testutil.AccAddress(t).String(),
 					}}
 			},
@@ -972,7 +972,7 @@ func TestGRPCQueryBids(t *testing.T) {
 		{
 			"query bids with state filter",
 			func() {
-				req = &v1beta5.QueryBidsRequest{Filters: v1beta5.BidFilters{State: types.BidLost.String()}}
+				req = &v1beta5.QueryBidsRequest{Filters: v1beta5.BidFilters{State: v1beta5.BidLost.String()}}
 			},
 			1,
 		},

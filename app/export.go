@@ -5,6 +5,7 @@ import (
 	"log"
 	"math/rand"
 
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/spf13/viper"
 
 	dbm "github.com/cometbft/cometbft-db"
@@ -18,7 +19,6 @@ import (
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	"github.com/cosmos/cosmos-sdk/x/staking"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/cosmos/ibc-go/v7/testing/simapp"
 )
 
 // ExportAppStateAndValidators exports the state of the application for a genesis
@@ -208,15 +208,51 @@ func (app *AkashApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllowedAddrs 
 }
 
 // Setup initializes a new AkashApp. A Nop logger is set in AkashApp.
-func Setup(isCheckTx bool) *AkashApp {
+func Setup(opts ...SetupAppOption) *AkashApp {
+	cfg := &setupAppOptions{
+		encCfg:  MakeEncodingConfig(),
+		home:    DefaultHome,
+		checkTx: false,
+		chainID: "akash-1",
+	}
+
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
 	db := dbm.NewMemDB()
 
-	// TODO: make this configurable via config or flag.
-	app := NewApp(logger.NewNopLogger(), db, nil, true, 5, map[int64]bool{}, DefaultHome, OptsWithGenesisTime(0))
-	if !isCheckTx {
-		// init chain must be called to stop deliverState from being nil
-		genesisState := NewDefaultGenesisState()
-		stateBytes, err := json.MarshalIndent(genesisState, "", "  ")
+	appOpts := viper.New()
+
+	appOpts.Set("home", cfg.home)
+
+	r := rand.New(rand.NewSource(0)) // nolint: gosec
+	genTime := simulation.RandTimestamp(r)
+
+	appOpts.Set("GenesisTime", genTime)
+
+	app := NewApp(
+		logger.NewNopLogger(),
+		db,
+		nil,
+		true,
+		5,
+		map[int64]bool{},
+		cfg.encCfg,
+		appOpts,
+		baseapp.SetChainID(cfg.chainID),
+	)
+
+	if !cfg.checkTx {
+		var state GenesisState
+		if cfg.genesisFn == nil {
+			// init chain must be called to stop deliverState from being nil
+			state = NewDefaultGenesisState(app.AppCodec())
+		} else {
+			state = cfg.genesisFn(app.cdc)
+		}
+
+		stateBytes, err := json.MarshalIndent(state, "", "  ")
 		if err != nil {
 			panic(err)
 		}
@@ -226,6 +262,7 @@ func Setup(isCheckTx bool) *AkashApp {
 			abci.RequestInitChain{
 				Validators:    []abci.ValidatorUpdate{},
 				AppStateBytes: stateBytes,
+				ChainId:       cfg.chainID,
 			},
 		)
 	}
@@ -233,13 +270,14 @@ func Setup(isCheckTx bool) *AkashApp {
 	return app
 }
 
-func OptsWithGenesisTime(seed int64) servertypes.AppOptions {
-	r := rand.New(rand.NewSource(seed)) // nolint: gosec
-	genTime := simulation.RandTimestamp(r)
-
-	appOpts := viper.New()
-	appOpts.Set("GenesisTime", genTime)
-	simapp.FlagGenesisTimeValue = genTime.Unix()
-
-	return appOpts
-}
+//
+// func OptsWithGenesisTime(seed int64) servertypes.AppOptions {
+// 	r := rand.New(rand.NewSource(seed)) // nolint: gosec
+// 	genTime := simulation.RandTimestamp(r)
+//
+// 	appOpts := viper.New()
+// 	appOpts.Set("GenesisTime", genTime)
+// 	simapp.FlagGenesisTimeValue = genTime.Unix()
+//
+// 	return appOpts
+// }

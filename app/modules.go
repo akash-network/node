@@ -29,17 +29,15 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/upgrade"
 	"github.com/cosmos/ibc-go/v7/modules/apps/transfer"
 	ibc "github.com/cosmos/ibc-go/v7/modules/core"
+	// "github.com/skip-mev/block-sdk/x/auction"
 
 	appparams "pkg.akt.dev/akashd/app/params"
 	"pkg.akt.dev/akashd/x/audit"
 	"pkg.akt.dev/akashd/x/cert"
 	"pkg.akt.dev/akashd/x/deployment"
 	"pkg.akt.dev/akashd/x/escrow"
-	agov "pkg.akt.dev/akashd/x/gov"
-	"pkg.akt.dev/akashd/x/inflation"
 	"pkg.akt.dev/akashd/x/market"
 	"pkg.akt.dev/akashd/x/provider"
-	astaking "pkg.akt.dev/akashd/x/staking"
 	"pkg.akt.dev/akashd/x/take"
 )
 
@@ -148,6 +146,10 @@ func appModules(
 			skipGenesisInvariants,
 			app.GetSubspace(crisistypes.ModuleName),
 		),
+		// auction.NewAppModule(
+		// 	app.cdc,
+		// 	*app.Keepers.External.Auction,
+		// ),
 
 		// akash modules
 		take.NewAppModule(
@@ -165,6 +167,7 @@ func appModules(
 			app.Keepers.Akash.Deployment,
 			app.Keepers.Akash.Market,
 			app.Keepers.Akash.Escrow,
+			app.Keepers.Cosmos.Acct,
 			app.Keepers.Cosmos.Bank,
 			app.Keepers.Cosmos.Authz,
 		),
@@ -176,12 +179,14 @@ func appModules(
 			app.Keepers.Akash.Audit,
 			app.Keepers.Akash.Deployment,
 			app.Keepers.Akash.Provider,
+			app.Keepers.Cosmos.Acct,
 			app.Keepers.Cosmos.Bank,
 		),
 
 		provider.NewAppModule(
 			app.cdc,
 			app.Keepers.Akash.Provider,
+			app.Keepers.Cosmos.Acct,
 			app.Keepers.Cosmos.Bank,
 			app.Keepers.Akash.Market,
 		),
@@ -196,20 +201,20 @@ func appModules(
 			app.Keepers.Akash.Cert,
 		),
 
-		inflation.NewAppModule(
-			app.cdc,
-			app.Keepers.Akash.Inflation,
-		),
+		// inflation.NewAppModule(
+		// 	app.cdc,
+		// 	app.Keepers.Akash.Inflation,
+		// ),
 
-		astaking.NewAppModule(
-			app.cdc,
-			app.Keepers.Akash.Staking,
-		),
-
-		agov.NewAppModule(
-			app.cdc,
-			app.Keepers.Akash.Gov,
-		),
+		// astaking.NewAppModule(
+		// 	app.cdc,
+		// 	app.Keepers.Akash.Staking,
+		// ),
+		//
+		// agov.NewAppModule(
+		// 	app.cdc,
+		// 	app.Keepers.Akash.Gov,
+		// ),
 	}
 }
 
@@ -304,46 +309,54 @@ func appSimModules(
 		transfer.NewAppModule(
 			app.Keepers.Cosmos.Transfer,
 		),
+		// auction.NewAppModule(
+		// 	app.cdc,
+		// 	*app.Keepers.External.Auction,
+		// ),
 
-		// // akash sim modules
-		// take.NewAppModuleSimulation(
-		// 	app.Keepers.Akash.Take,
-		// ),
-		//
-		// deployment.NewAppModuleSimulation(
-		// 	app.Keepers.Akash.Deployment,
-		// 	app.Keepers.Cosmos.Acct,
-		// 	app.Keepers.Cosmos.Bank,
-		// ),
-		//
-		// market.NewAppModuleSimulation(
-		// 	app.Keepers.Akash.Market,
-		// 	app.Keepers.Cosmos.Acct,
-		// 	app.Keepers.Akash.Deployment,
-		// 	app.Keepers.Akash.Provider,
-		// 	app.Keepers.Cosmos.Bank,
-		// ),
-		//
-		// provider.NewAppModuleSimulation(
-		// 	app.Keepers.Akash.Provider,
-		// 	app.Keepers.Cosmos.Acct,
-		// 	app.Keepers.Cosmos.Bank,
-		// ),
-		//
-		// cert.NewAppModuleSimulation(
-		// 	app.Keepers.Akash.Cert,
-		// ),
-		//
-		// inflation.NewAppModuleSimulation(
-		// 	app.Keepers.Akash.Inflation,
-		// ),
-		//
-		// astaking.NewAppModuleSimulation(
+		// akash sim modules
+		take.NewAppModule(
+			app.cdc,
+			app.Keepers.Akash.Take,
+		),
+
+		deployment.NewAppModule(
+			app.cdc,
+			app.Keepers.Akash.Deployment,
+			app.Keepers.Akash.Market,
+			app.Keepers.Akash.Escrow,
+			app.Keepers.Cosmos.Acct,
+			app.Keepers.Cosmos.Bank,
+			app.Keepers.Cosmos.Authz,
+		),
+
+		market.NewAppModule(
+			app.cdc,
+			app.Keepers.Akash.Market,
+			app.Keepers.Akash.Escrow,
+			app.Keepers.Akash.Audit,
+			app.Keepers.Akash.Deployment,
+			app.Keepers.Akash.Provider,
+			app.Keepers.Cosmos.Acct,
+			app.Keepers.Cosmos.Bank,
+		),
+
+		provider.NewAppModule(
+			app.cdc,
+			app.Keepers.Akash.Provider,
+			app.Keepers.Cosmos.Acct,
+			app.Keepers.Cosmos.Bank,
+			app.Keepers.Akash.Market,
+		),
+
+		cert.NewAppModule(
+			app.cdc,
+			app.Keepers.Akash.Cert,
+		),
+
+		// astaking.NewAppModule(
+		// 	app.cdc,
 		// 	app.Keepers.Akash.Staking,
-		// ),
-		//
-		// agov.NewAppModuleSimulation(
-		// 	app.Keepers.Akash.Gov,
 		// ),
 	}
 }

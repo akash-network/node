@@ -90,6 +90,10 @@ func GetHeightPatchesList() map[int64]IHeightPatch {
 	return heightPatches
 }
 
+// RegisterMigration registers module migration within particular network upgrade
+//   - module: module name
+//   - version: current module version
+//   - initFn: migrator fn
 func RegisterMigration(module string, version uint64, initFn NewMigrationFn) {
 	if _, exists := migrations[module]; !exists {
 		migrations[module] = make(moduleMigrations)

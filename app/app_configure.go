@@ -7,6 +7,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/authz"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
+	consensustypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	evidencetypes "github.com/cosmos/cosmos-sdk/x/evidence/types"
@@ -18,6 +19,7 @@ import (
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
+	// auctiontypes "github.com/skip-mev/block-sdk/x/auction/types"
 
 	transfertypes "github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
 	ibchost "github.com/cosmos/ibc-go/v7/modules/core/exported"
@@ -29,7 +31,7 @@ import (
 	inflationtypes "pkg.akt.dev/go/node/inflation/v1beta3"
 	markettypes "pkg.akt.dev/go/node/market/v1beta5"
 	providertypes "pkg.akt.dev/go/node/provider/v1beta4"
-	taketypes "pkg.akt.dev/go/node/take/v1beta3"
+	taketypes "pkg.akt.dev/go/node/take/v1"
 
 	"pkg.akt.dev/akashd/x/audit"
 	"pkg.akt.dev/akashd/x/cert"
@@ -52,173 +54,11 @@ func akashModuleBasics() []module.AppModuleBasic {
 		provider.AppModuleBasic{},
 		audit.AppModuleBasic{},
 		cert.AppModuleBasic{},
-		inflation.AppModuleBasic{},
+		// inflation.AppModuleBasic{},
 		astaking.AppModuleBasic{},
 		agov.AppModuleBasic{},
 	}
 }
-
-// func akashKVStoreKeys() []string {
-// 	return []string{
-// 		take.StoreKey,
-// 		escrow.StoreKey,
-// 		deployment.StoreKey,
-// 		market.StoreKey,
-// 		provider.StoreKey,
-// 		audit.StoreKey,
-// 		cert.StoreKey,
-// 		inflation.StoreKey,
-// 		astaking.StoreKey,
-// 		agov.StoreKey,
-// 	}
-// }
-
-// func akashSubspaces(k paramskeeper.Keeper) paramskeeper.Keeper {
-// 	k.Subspace(deployment.ModuleName)
-// 	k.Subspace(market.ModuleName)
-// 	k.Subspace(inflation.ModuleName)
-// 	k.Subspace(astaking.ModuleName)
-// 	k.Subspace(agov.ModuleName)
-// 	k.Subspace(take.ModuleName)
-// 	return k
-// }
-
-// func (app *AkashApp) setAkashKeepers() {
-// 	app.Keepers.Akash.Take = tkeeper.NewKeeper(
-// 		app.appCodec,
-// 		app.keys[take.StoreKey],
-// 		app.GetSubspace(take.ModuleName),
-// 	)
-//
-// 	app.Keepers.Akash.Escrow = ekeeper.NewKeeper(
-// 		app.appCodec,
-// 		app.keys[escrow.StoreKey],
-// 		app.Keepers.Cosmos.Bank,
-// 		app.Keepers.Akash.Take,
-// 		app.Keepers.Cosmos.Distr,
-// 		app.Keepers.Cosmos.Authz,
-// 	)
-//
-// 	app.Keepers.Akash.Deployment = deployment.NewKeeper(
-// 		app.appCodec,
-// 		app.keys[deployment.StoreKey],
-// 		app.GetSubspace(deployment.ModuleName),
-// 		app.Keepers.Akash.Escrow,
-// 	)
-//
-// 	app.Keepers.Akash.Market = market.NewKeeper(
-// 		app.appCodec,
-// 		app.keys[market.StoreKey],
-// 		app.GetSubspace(market.ModuleName),
-// 		app.Keepers.Akash.Escrow,
-// 	)
-//
-// 	hook := mhooks.New(
-// 		app.Keepers.Akash.Deployment,
-// 		app.Keepers.Akash.Market,
-// 	)
-//
-// 	app.Keepers.Akash.Escrow.AddOnAccountClosedHook(hook.OnEscrowAccountClosed)
-// 	app.Keepers.Akash.Escrow.AddOnPaymentClosedHook(hook.OnEscrowPaymentClosed)
-//
-// 	app.Keepers.Akash.Provider = provider.NewKeeper(
-// 		app.appCodec,
-// 		app.keys[provider.StoreKey],
-// 	)
-//
-// 	app.Keepers.Akash.Audit = akeeper.NewKeeper(
-// 		app.appCodec,
-// 		app.keys[audit.StoreKey],
-// 	)
-//
-// 	app.Keepers.Akash.Cert = ckeeper.NewKeeper(
-// 		app.appCodec,
-// 		app.keys[cert.StoreKey],
-// 	)
-//
-// 	app.Keepers.Akash.Inflation = ikeeper.NewKeeper(
-// 		app.appCodec,
-// 		app.keys[inflation.StoreKey],
-// 		app.GetSubspace(inflation.ModuleName),
-// 	)
-//
-// 	app.Keepers.Akash.Staking = astakingkeeper.NewKeeper(
-// 		app.appCodec,
-// 		app.keys[astaking.StoreKey],
-// 		app.GetSubspace(astaking.ModuleName),
-// 	)
-//
-// 	app.Keepers.Akash.Gov = agovkeeper.NewKeeper(
-// 		app.appCodec,
-// 		app.keys[agov.StoreKey],
-// 		app.GetSubspace(agov.ModuleName),
-// 	)
-// }
-
-// func (app *AkashApp) akashAppModules() []module.AppModule {
-// 	return []module.AppModule{
-// 		take.NewAppModule(
-// 			app.appCodec,
-// 			app.Keepers.Akash.Take,
-// 		),
-//
-// 		escrow.NewAppModule(
-// 			app.appCodec,
-// 			app.Keepers.Akash.Escrow,
-// 		),
-//
-// 		deployment.NewAppModule(
-// 			app.appCodec,
-// 			app.Keepers.Akash.Deployment,
-// 			app.Keepers.Akash.Market,
-// 			app.Keepers.Akash.Escrow,
-// 			app.Keepers.Cosmos.Bank,
-// 			app.Keepers.Cosmos.Authz,
-// 		),
-//
-// 		market.NewAppModule(
-// 			app.appCodec,
-// 			app.Keepers.Akash.Market,
-// 			app.Keepers.Akash.Escrow,
-// 			app.Keepers.Akash.Audit,
-// 			app.Keepers.Akash.Deployment,
-// 			app.Keepers.Akash.Provider,
-// 			app.Keepers.Cosmos.Bank,
-// 		),
-//
-// 		provider.NewAppModule(
-// 			app.appCodec,
-// 			app.Keepers.Akash.Provider,
-// 			app.Keepers.Cosmos.Bank,
-// 			app.Keepers.Akash.Market,
-// 		),
-//
-// 		audit.NewAppModule(
-// 			app.appCodec,
-// 			app.Keepers.Akash.Audit,
-// 		),
-//
-// 		cert.NewAppModule(
-// 			app.appCodec,
-// 			app.Keepers.Akash.Cert,
-// 		),
-//
-// 		inflation.NewAppModule(
-// 			app.appCodec,
-// 			app.Keepers.Akash.Inflation,
-// 		),
-//
-// 		astaking.NewAppModule(
-// 			app.appCodec,
-// 			app.Keepers.Akash.Staking,
-// 		),
-//
-// 		agov.NewAppModule(
-// 			app.appCodec,
-// 			app.Keepers.Akash.Gov,
-// 		),
-// 	}
-// }
 
 // akashBeginBlockModules returns all end block modules.
 func (app *AkashApp) akashBeginBlockModules() []string {
@@ -294,7 +134,7 @@ func (app *AkashApp) akashEndBlockModules() []string {
 // NOTE: Capability module must occur first so that it can initialize any capabilities
 // so that other modules that want to create or claim capabilities afterwards in InitChain
 // can do so safely.
-func OrderInitGenesis(allModuleNames []string) []string {
+func OrderInitGenesis(_ []string) []string {
 	return []string{
 		capabilitytypes.ModuleName,
 		authtypes.ModuleName,
@@ -313,6 +153,7 @@ func OrderInitGenesis(allModuleNames []string) []string {
 		ibchost.ModuleName,
 		evidencetypes.ModuleName,
 		transfertypes.ModuleName,
+		consensustypes.ModuleName,
 		feegrant.ModuleName,
 		cert.ModuleName,
 		taketypes.ModuleName,
@@ -324,5 +165,6 @@ func OrderInitGenesis(allModuleNames []string) []string {
 		astaking.ModuleName,
 		agov.ModuleName,
 		genutiltypes.ModuleName,
+		// auctiontypes.ModuleName,
 	}
 }

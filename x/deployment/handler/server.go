@@ -7,6 +7,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 
 	v1 "pkg.akt.dev/go/node/deployment/v1"
 	types "pkg.akt.dev/go/node/deployment/v1beta4"
@@ -26,7 +27,12 @@ type msgServer struct {
 // NewServer returns an implementation of the deployment MsgServer interface
 // for the provided Keeper.
 func NewServer(k keeper.IKeeper, mkeeper MarketKeeper, ekeeper EscrowKeeper, authzKeeper AuthzKeeper) types.MsgServer {
-	return &msgServer{deployment: k, market: mkeeper, escrow: ekeeper, authzKeeper: authzKeeper}
+	return &msgServer{
+		deployment:  k,
+		market:      mkeeper,
+		escrow:      ekeeper,
+		authzKeeper: authzKeeper,
+	}
 }
 
 func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreateDeployment) (*types.MsgCreateDeploymentResponse, error) {
@@ -252,7 +258,7 @@ func (ms msgServer) CloseGroup(goCtx context.Context, msg *types.MsgCloseGroup) 
 	if err != nil {
 		return nil, err
 	}
-	ms.market.OnGroupClosed(ctx, group.ID)
+	_ = ms.market.OnGroupClosed(ctx, group.ID)
 
 	return &types.MsgCloseGroupResponse{}, nil
 }
@@ -276,7 +282,7 @@ func (ms msgServer) PauseGroup(goCtx context.Context, msg *types.MsgPauseGroup) 
 	if err != nil {
 		return nil, err
 	}
-	ms.market.OnGroupClosed(ctx, group.ID)
+	_ = ms.market.OnGroupClosed(ctx, group.ID)
 
 	return &types.MsgPauseGroupResponse{}, nil
 }
@@ -303,4 +309,17 @@ func (ms msgServer) StartGroup(goCtx context.Context, msg *types.MsgStartGroup) 
 	}
 
 	return &types.MsgStartGroupResponse{}, nil
+}
+
+func (ms msgServer) UpdateParams(goCtx context.Context, req *types.MsgUpdateParams) (*types.MsgUpdateParamsResponse, error) {
+	if ms.deployment.GetAuthority() != req.Authority {
+		return nil, govtypes.ErrInvalidSigner.Wrapf("invalid authority; expected %s, got %s", ms.deployment.GetAuthority(), req.Authority)
+	}
+
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	if err := ms.deployment.SetParams(ctx, req.Params); err != nil {
+		return nil, err
+	}
+
+	return &types.MsgUpdateParamsResponse{}, nil
 }

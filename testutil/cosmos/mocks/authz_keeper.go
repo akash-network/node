@@ -137,6 +137,40 @@ func (_c *AuthzKeeper_GetAuthorization_Call) RunAndReturn(run func(types.Context
 	return _c
 }
 
+// IterateGrants provides a mock function with given fields: ctx, handler
+func (_m *AuthzKeeper) IterateGrants(ctx types.Context, handler func(types.AccAddress, types.AccAddress, authz.Grant) bool) {
+	_m.Called(ctx, handler)
+}
+
+// AuthzKeeper_IterateGrants_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IterateGrants'
+type AuthzKeeper_IterateGrants_Call struct {
+	*mock.Call
+}
+
+// IterateGrants is a helper method to define mock.On call
+//   - ctx types.Context
+//   - handler func(types.AccAddress , types.AccAddress , authz.Grant) bool
+func (_e *AuthzKeeper_Expecter) IterateGrants(ctx interface{}, handler interface{}) *AuthzKeeper_IterateGrants_Call {
+	return &AuthzKeeper_IterateGrants_Call{Call: _e.mock.On("IterateGrants", ctx, handler)}
+}
+
+func (_c *AuthzKeeper_IterateGrants_Call) Run(run func(ctx types.Context, handler func(types.AccAddress, types.AccAddress, authz.Grant) bool)) *AuthzKeeper_IterateGrants_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(types.Context), args[1].(func(types.AccAddress, types.AccAddress, authz.Grant) bool))
+	})
+	return _c
+}
+
+func (_c *AuthzKeeper_IterateGrants_Call) Return() *AuthzKeeper_IterateGrants_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *AuthzKeeper_IterateGrants_Call) RunAndReturn(run func(types.Context, func(types.AccAddress, types.AccAddress, authz.Grant) bool)) *AuthzKeeper_IterateGrants_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SaveGrant provides a mock function with given fields: ctx, grantee, granter, authorization, expiration
 func (_m *AuthzKeeper) SaveGrant(ctx types.Context, grantee types.AccAddress, granter types.AccAddress, authorization authz.Authorization, expiration *time.Time) error {
 	ret := _m.Called(ctx, grantee, granter, authorization, expiration)

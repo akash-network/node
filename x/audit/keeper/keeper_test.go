@@ -31,7 +31,7 @@ func TestProviderCreate(t *testing.T) {
 
 	foundProv, found := keeper.GetProviderAttributes(ctx, id.Owner)
 	require.True(t, found)
-	require.Equal(t, types.Providers{prov}, foundProv)
+	require.Equal(t, types.AuditedProviders{prov}, foundProv)
 }
 
 func TestProviderUpdateAppendNewAttributes(t *testing.T) {
@@ -57,7 +57,7 @@ func TestProviderUpdateAppendNewAttributes(t *testing.T) {
 
 	foundProv, found := keeper.GetProviderAttributes(ctx, id.Owner)
 	require.True(t, found)
-	require.Equal(t, types.Providers{prov}, foundProv)
+	require.Equal(t, types.AuditedProviders{prov}, foundProv)
 }
 
 func TestProviderUpdateOverrideAttributes(t *testing.T) {
@@ -80,7 +80,7 @@ func TestProviderUpdateOverrideAttributes(t *testing.T) {
 
 	foundProv, found := keeper.GetProviderAttributes(ctx, id.Owner)
 	require.True(t, found)
-	require.Equal(t, types.Providers{prov}, foundProv)
+	require.Equal(t, types.AuditedProviders{prov}, foundProv)
 }
 
 func TestProviderDeleteExistingAttributes(t *testing.T) {
@@ -104,7 +104,7 @@ func TestProviderDeleteExistingAttributes(t *testing.T) {
 
 	foundProv, found := keeper.GetProviderAttributes(ctx, id.Owner)
 	require.True(t, found)
-	require.Equal(t, types.Providers{prov}, foundProv)
+	require.Equal(t, types.AuditedProviders{prov}, foundProv)
 }
 
 func TestProviderDeleteNonExistingAttributes(t *testing.T) {

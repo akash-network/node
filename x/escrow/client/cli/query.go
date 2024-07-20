@@ -6,12 +6,13 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"pkg.akt.dev/go/cli"
 
 	"gopkg.in/yaml.v3"
 
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/flags"
+
+	"pkg.akt.dev/go/cli"
+	cflags "pkg.akt.dev/go/cli/flags"
 
 	dv1 "pkg.akt.dev/go/node/deployment/v1"
 	dv1beta4 "pkg.akt.dev/go/node/deployment/v1beta4"
@@ -20,7 +21,6 @@ import (
 	mv1beta5 "pkg.akt.dev/go/node/market/v1beta5"
 
 	netutil "pkg.akt.dev/akashd/util/network"
-	// "pkg.akt.dev/akashd/x/deployment/client/cli"
 	"pkg.akt.dev/akashd/x/escrow/client/util"
 )
 
@@ -59,7 +59,7 @@ func cmdBlocksRemaining() *cobra.Command {
 				return err
 			}
 
-			id, err := cli.DeploymentIDFromFlags(cmd.Flags())
+			id, err := cflags.DeploymentIDFromFlags(cmd.Flags())
 			if err != nil {
 				return err
 			}
@@ -77,7 +77,7 @@ func cmdBlocksRemaining() *cobra.Command {
 				Pagination: nil,
 			}
 
-			leasesResponse, err := qq.Query().Leases(ctx, &leaseRequest)
+			leasesResponse, err := qq.Query().Market().Leases(ctx, &leaseRequest)
 			if err != nil {
 				return err
 			}
@@ -93,7 +93,7 @@ func cmdBlocksRemaining() *cobra.Command {
 				return err
 			}
 
-			res, err := qq.Query().Deployment(cmd.Context(), &dv1beta4.QueryDeploymentRequest{
+			res, err := qq.Query().Deployment().Deployment(cmd.Context(), &dv1beta4.QueryDeploymentRequest{
 				ID: dv1.DeploymentID{Owner: id.Owner, DSeq: id.DSeq},
 			})
 			if err != nil {
@@ -138,8 +138,9 @@ func cmdBlocksRemaining() *cobra.Command {
 		},
 	}
 
-	flags.AddQueryFlagsToCmd(cmd)
-	cli.AddDeploymentIDFlags(cmd.Flags())
-	cli.MarkReqDeploymentIDFlags(cmd)
+	cflags.AddQueryFlagsToCmd(cmd)
+	cflags.AddDeploymentIDFlags(cmd.Flags())
+	cflags.MarkReqDeploymentIDFlags(cmd)
+
 	return cmd
 }

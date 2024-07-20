@@ -292,10 +292,42 @@ function clean() {
         rm -rf "$valdir"/data/*
         rm -rf "$cosmovisor_dir/current"
         rm -rf "$cosmovisor_dir/upgrades/${UPGRADE_TO}/upgrade-info.json"
+        rm -rf "$cosmovisor_dir/upgrades/${UPGRADE_TO}/bin/akash"
 
-        echo '{"height":"0","round": 0,"step": 0}' > "$valdir/data/priv_validator_state.json"
+        echo '{"height":"0","round": 0,"step": 0}' | jq > "$valdir/data/priv_validator_state.json"
 
         ((cnt++)) || true
+    done
+}
+
+function bins() {
+    if [[ -z "${WORKDIR}" ]]; then
+        echo "workdir is not set"
+        echo -e "$USAGE";
+        exit 1
+    fi
+
+    local config
+    config=$(cat "$CONFIG_FILE")
+
+    local cnt=0
+    local validators_dir=${WORKDIR}/validators
+
+    for val in $(jq -c '.validators[]' <<<"$config"); do
+        local valdir=$validators_dir/.akash${cnt}
+        local cosmovisor_dir=$valdir/cosmovisor
+        local upgrade_bin=$cosmovisor_dir/upgrades/$UPGRADE_TO/bin
+
+        mkdir -p "$upgrade_bin"
+
+        if [[ $cnt -eq 0 ]]; then
+#            "$ROOT_DIR"/install.sh -b "$genesis_bin" "$GENESIS_BINARY_VERSION"
+
+            AKASH=$upgrade_bin/akash make -sC "$ROOT_DIR" akash
+        else
+            cp "$validators_dir/.akash0/cosmovisor/genesis/bin/akash" "$genesis_bin/akash"
+            cp "$validators_dir/.akash0/cosmovisor/upgrades/$UPGRADE_TO/bin/akash" "$upgrade_bin/akash"
+        fi
     done
 }
 
@@ -303,6 +335,10 @@ case "$1" in
 init)
     shift
     init
+    ;;
+bins)
+    shift
+    bins
     ;;
 clean)
     shift

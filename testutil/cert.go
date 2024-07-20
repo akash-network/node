@@ -184,7 +184,7 @@ func Certificate(t testing.TB, addr sdk.Address, opts ...CertificateOption) Test
 				Filter: types.CertificateFilter{
 					Owner:  addr.String(),
 					Serial: res.Serial.String(),
-					State:  types.CertificateValid,
+					State:  types.CertificateValid.String(),
 				},
 			}).
 			Return(&types.QueryCertificatesResponse{

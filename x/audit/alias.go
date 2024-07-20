@@ -1,7 +1,7 @@
 package audit
 
 import (
-	types "pkg.akt.dev/go/node/audit/v1beta3"
+	types "pkg.akt.dev/go/node/audit/v1"
 
 	"pkg.akt.dev/akashd/x/audit/keeper"
 )

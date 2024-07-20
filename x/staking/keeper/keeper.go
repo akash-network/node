@@ -4,8 +4,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
-
 	types "pkg.akt.dev/go/node/staking/v1beta3"
 )
 
@@ -15,26 +13,32 @@ type IKeeper interface {
 	SetParams(ctx sdk.Context, params types.Params) error
 	GetParams(ctx sdk.Context) (params types.Params)
 	MinCommissionRate(ctx sdk.Context) sdk.Dec
+
+	NewQuerier() Querier
+	GetAuthority() string
 }
 
 // Keeper of the provider store
 type Keeper struct {
-	skey   storetypes.StoreKey
-	cdc    codec.BinaryCodec
-	pspace paramtypes.Subspace
+	skey storetypes.StoreKey
+	cdc  codec.BinaryCodec
+
+	// The address capable of executing a MsgUpdateParams message.
+	// This should be the x/gov module account.
+	authority string
 }
 
-// NewKeeper creates and returns an instance for Provider keeper
-func NewKeeper(cdc codec.BinaryCodec, skey storetypes.StoreKey, pspace paramtypes.Subspace) IKeeper {
-	if !pspace.HasKeyTable() {
-		pspace = pspace.WithKeyTable(types.ParamKeyTable())
-	}
-
+// NewKeeper creates and returns an instance for akash staking keeper
+func NewKeeper(cdc codec.BinaryCodec, skey storetypes.StoreKey, authority string) IKeeper {
 	return Keeper{
-		skey:   skey,
-		cdc:    cdc,
-		pspace: pspace,
+		skey:      skey,
+		cdc:       cdc,
+		authority: authority,
 	}
+}
+
+func (k Keeper) NewQuerier() Querier {
+	return Querier{k}
 }
 
 // Codec returns keeper codec
@@ -46,21 +50,37 @@ func (k Keeper) StoreKey() storetypes.StoreKey {
 	return k.skey
 }
 
-func (k Keeper) MinCommissionRate(ctx sdk.Context) sdk.Dec {
-	res := sdk.NewDec(0)
-	k.pspace.Get(ctx, types.KeyMinCommissionRate, &res)
-	return res
+// GetAuthority returns the x/mint module's authority.
+func (k Keeper) GetAuthority() string {
+	return k.authority
 }
 
-// SetParams sets the deployment parameters to the paramspace.
-func (k Keeper) SetParams(ctx sdk.Context, params types.Params) error {
-	k.pspace.SetParamSet(ctx, &params)
+// SetParams sets the x/take module parameters.
+func (k Keeper) SetParams(ctx sdk.Context, p types.Params) error {
+	if err := p.Validate(); err != nil {
+		return err
+	}
+
+	store := ctx.KVStore(k.skey)
+	bz := k.cdc.MustMarshal(&p)
+	store.Set(types.ParamsPrefix(), bz)
+
 	return nil
 }
 
-// GetParams returns the total set of deployment parameters.
-func (k Keeper) GetParams(ctx sdk.Context) (params types.Params) {
-	return types.NewParams(
-		k.MinCommissionRate(ctx),
-	)
+// GetParams returns the current x/take module parameters.
+func (k Keeper) GetParams(ctx sdk.Context) (p types.Params) {
+	store := ctx.KVStore(k.skey)
+	bz := store.Get(types.ParamsPrefix())
+	if bz == nil {
+		return p
+	}
+
+	k.cdc.MustUnmarshal(bz, &p)
+	return p
+}
+
+func (k Keeper) MinCommissionRate(ctx sdk.Context) sdk.Dec {
+	params := k.GetParams(ctx)
+	return params.MinCommissionRate
 }

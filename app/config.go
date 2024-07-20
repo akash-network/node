@@ -25,6 +25,7 @@ import (
 	"github.com/cosmos/ibc-go/v7/modules/apps/transfer"
 	ibc "github.com/cosmos/ibc-go/v7/modules/core"
 	ibcclient "github.com/cosmos/ibc-go/v7/modules/core/02-client/client"
+	ibclightclient "github.com/cosmos/ibc-go/v7/modules/light-clients/07-tendermint"
 
 	appparams "pkg.akt.dev/akashd/app/params"
 )
@@ -61,6 +62,7 @@ var mbasics = module.NewBasicManager(
 		params.AppModuleBasic{},
 		crisis.AppModuleBasic{},
 		slashing.AppModuleBasic{},
+		ibclightclient.AppModuleBasic{},
 		ibc.AppModuleBasic{},
 		upgrade.AppModuleBasic{},
 		evidence.AppModuleBasic{},
@@ -90,35 +92,3 @@ func MakeEncodingConfig() appparams.EncodingConfig {
 
 	return encodingConfig
 }
-
-// func kvStoreKeys() map[string]*storetypes.KVStoreKey {
-// 	return sdk.NewKVStoreKeys(
-// 		append([]string{
-// 			authtypes.StoreKey,
-// 			feegrant.StoreKey,
-// 			authzkeeper.StoreKey,
-// 			banktypes.StoreKey,
-// 			stakingtypes.StoreKey,
-// 			minttypes.StoreKey,
-// 			distrtypes.StoreKey,
-// 			slashingtypes.StoreKey,
-// 			govtypes.StoreKey,
-// 			paramstypes.StoreKey,
-// 			ibchost.StoreKey,
-// 			upgradetypes.StoreKey,
-// 			evidencetypes.StoreKey,
-// 			ibctransfertypes.StoreKey,
-// 			capabilitytypes.StoreKey,
-// 		},
-// 			akashKVStoreKeys()...,
-// 		)...,
-// 	)
-// }
-//
-// func transientStoreKeys() map[string]*storetypes.TransientStoreKey {
-// 	return sdk.NewTransientStoreKeys(paramstypes.TStoreKey)
-// }
-//
-// func memStoreKeys() map[string]*storetypes.MemoryStoreKey {
-// 	return sdk.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
-// }

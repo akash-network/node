@@ -6,8 +6,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
-
 	"pkg.akt.dev/go/node/deployment/v1"
 	types "pkg.akt.dev/go/node/deployment/v1beta4"
 )
@@ -17,18 +15,20 @@ type IKeeper interface {
 	Codec() codec.BinaryCodec
 	GetDeployment(ctx sdk.Context, id v1.DeploymentID) (v1.Deployment, bool)
 	GetGroup(ctx sdk.Context, id v1.GroupID) (types.Group, bool)
-	GetGroups(ctx sdk.Context, id v1.DeploymentID) []types.Group
+	GetGroups(ctx sdk.Context, id v1.DeploymentID) types.Groups
 	Create(ctx sdk.Context, deployment v1.Deployment, groups []types.Group) error
 	UpdateDeployment(ctx sdk.Context, deployment v1.Deployment) error
 	CloseDeployment(ctx sdk.Context, deployment v1.Deployment) error
-	OnCloseGroup(ctx sdk.Context, group types.Group, state types.GroupState) error
+	OnCloseGroup(ctx sdk.Context, group types.Group, state types.Group_State) error
 	OnPauseGroup(ctx sdk.Context, group types.Group) error
 	OnStartGroup(ctx sdk.Context, group types.Group) error
 	WithDeployments(ctx sdk.Context, fn func(v1.Deployment) bool)
 	OnBidClosed(ctx sdk.Context, id v1.GroupID) error
 	OnLeaseClosed(ctx sdk.Context, id v1.GroupID) (types.Group, error)
 	GetParams(ctx sdk.Context) (params types.Params)
-	SetParams(ctx sdk.Context, params types.Params)
+	SetParams(ctx sdk.Context, params types.Params) error
+	GetAuthority() string
+
 	updateDeployment(ctx sdk.Context, obj v1.Deployment)
 
 	NewQuerier() Querier
@@ -38,21 +38,20 @@ type IKeeper interface {
 type Keeper struct {
 	skey    storetypes.StoreKey
 	cdc     codec.BinaryCodec
-	pspace  paramtypes.Subspace
 	ekeeper EscrowKeeper
+
+	// The address capable of executing a MsgUpdateParams message.
+	// This should be the x/gov module account.
+	authority string
 }
 
 // NewKeeper creates and returns an instance for deployment keeper
-func NewKeeper(cdc codec.BinaryCodec, skey storetypes.StoreKey, pspace paramtypes.Subspace, ekeeper EscrowKeeper) IKeeper {
-	if !pspace.HasKeyTable() {
-		pspace = pspace.WithKeyTable(types.ParamKeyTable())
-	}
-
+func NewKeeper(cdc codec.BinaryCodec, skey storetypes.StoreKey, ekeeper EscrowKeeper, authority string) IKeeper {
 	return Keeper{
-		skey:    skey,
-		cdc:     cdc,
-		pspace:  pspace,
-		ekeeper: ekeeper,
+		skey:      skey,
+		cdc:       cdc,
+		ekeeper:   ekeeper,
+		authority: authority,
 	}
 }
 
@@ -69,11 +68,41 @@ func (k Keeper) StoreKey() storetypes.StoreKey {
 	return k.skey
 }
 
+// GetAuthority returns the x/mint module's authority.
+func (k Keeper) GetAuthority() string {
+	return k.authority
+}
+
+// SetParams sets the x/deployment module parameters.
+func (k Keeper) SetParams(ctx sdk.Context, p types.Params) error {
+	if err := p.Validate(); err != nil {
+		return err
+	}
+
+	store := ctx.KVStore(k.skey)
+	bz := k.cdc.MustMarshal(&p)
+	store.Set(v1.ParamsPrefix(), bz)
+
+	return nil
+}
+
+// GetParams returns the current x/deployment module parameters.
+func (k Keeper) GetParams(ctx sdk.Context) (p types.Params) {
+	store := ctx.KVStore(k.skey)
+	bz := store.Get(v1.ParamsPrefix())
+	if bz == nil {
+		return p
+	}
+
+	k.cdc.MustUnmarshal(bz, &p)
+	return p
+}
+
 // GetDeployment returns deployment details with provided DeploymentID
 func (k Keeper) GetDeployment(ctx sdk.Context, id v1.DeploymentID) (v1.Deployment, bool) {
 	store := ctx.KVStore(k.skey)
 
-	key := deploymentKey(id)
+	key := DeploymentKey(id)
 
 	if !store.Has(key) {
 		return v1.Deployment{}, false
@@ -92,7 +121,7 @@ func (k Keeper) GetDeployment(ctx sdk.Context, id v1.DeploymentID) (v1.Deploymen
 func (k Keeper) GetGroup(ctx sdk.Context, id v1.GroupID) (types.Group, bool) {
 	store := ctx.KVStore(k.skey)
 
-	key := groupKey(id)
+	key := GroupKey(id)
 
 	if !store.Has(key) {
 		return types.Group{}, false
@@ -108,11 +137,11 @@ func (k Keeper) GetGroup(ctx sdk.Context, id v1.GroupID) (types.Group, bool) {
 }
 
 // GetGroups returns all groups of a deployment with given DeploymentID from deployment store
-func (k Keeper) GetGroups(ctx sdk.Context, id v1.DeploymentID) []types.Group {
+func (k Keeper) GetGroups(ctx sdk.Context, id v1.DeploymentID) types.Groups {
 	store := ctx.KVStore(k.skey)
-	key := groupsKey(id)
+	key := GroupsKey(id)
 
-	var vals []types.Group
+	var vals types.Groups
 
 	iter := sdk.KVStorePrefixIterator(store, key)
 
@@ -133,7 +162,7 @@ func (k Keeper) GetGroups(ctx sdk.Context, id v1.DeploymentID) []types.Group {
 func (k Keeper) Create(ctx sdk.Context, deployment v1.Deployment, groups []types.Group) error {
 	store := ctx.KVStore(k.skey)
 
-	key := deploymentKey(deployment.ID)
+	key := DeploymentKey(deployment.ID)
 
 	if store.Has(key) {
 		return v1.ErrDeploymentExists
@@ -147,7 +176,7 @@ func (k Keeper) Create(ctx sdk.Context, deployment v1.Deployment, groups []types
 		if !group.ID.DeploymentID().Equals(deployment.ID) {
 			return v1.ErrInvalidGroupID
 		}
-		gkey := groupKey(group.ID)
+		gkey := GroupKey(group.ID)
 		store.Set(gkey, k.cdc.MustMarshal(&group))
 	}
 
@@ -169,7 +198,7 @@ func (k Keeper) Create(ctx sdk.Context, deployment v1.Deployment, groups []types
 // UpdateDeployment updates deployment details
 func (k Keeper) UpdateDeployment(ctx sdk.Context, deployment v1.Deployment) error {
 	store := ctx.KVStore(k.skey)
-	key := deploymentKey(deployment.ID)
+	key := DeploymentKey(deployment.ID)
 
 	if !store.Has(key) {
 		return v1.ErrDeploymentNotFound
@@ -196,7 +225,7 @@ func (k Keeper) CloseDeployment(ctx sdk.Context, deployment v1.Deployment) error
 	}
 
 	store := ctx.KVStore(k.skey)
-	key := deploymentKey(deployment.ID)
+	key := DeploymentKey(deployment.ID)
 
 	if !store.Has(key) {
 		return v1.ErrDeploymentNotFound
@@ -219,9 +248,9 @@ func (k Keeper) CloseDeployment(ctx sdk.Context, deployment v1.Deployment) error
 }
 
 // OnCloseGroup provides shutdown API for a Group
-func (k Keeper) OnCloseGroup(ctx sdk.Context, group types.Group, state types.GroupState) error {
+func (k Keeper) OnCloseGroup(ctx sdk.Context, group types.Group, state types.Group_State) error {
 	store := ctx.KVStore(k.skey)
-	key := groupKey(group.ID)
+	key := GroupKey(group.ID)
 
 	if !store.Has(key) {
 		return v1.ErrGroupNotFound
@@ -244,7 +273,7 @@ func (k Keeper) OnCloseGroup(ctx sdk.Context, group types.Group, state types.Gro
 // OnPauseGroup provides shutdown API for a Group
 func (k Keeper) OnPauseGroup(ctx sdk.Context, group types.Group) error {
 	store := ctx.KVStore(k.skey)
-	key := groupKey(group.ID)
+	key := GroupKey(group.ID)
 
 	if !store.Has(key) {
 		return v1.ErrGroupNotFound
@@ -267,7 +296,7 @@ func (k Keeper) OnPauseGroup(ctx sdk.Context, group types.Group) error {
 // OnStartGroup provides shutdown API for a Group
 func (k Keeper) OnStartGroup(ctx sdk.Context, group types.Group) error {
 	store := ctx.KVStore(k.skey)
-	key := groupKey(group.ID)
+	key := GroupKey(group.ID)
 
 	if !store.Has(key) {
 		return v1.ErrGroupNotFound
@@ -323,27 +352,16 @@ func (k Keeper) OnLeaseClosed(ctx sdk.Context, id v1.GroupID) (types.Group, erro
 	return group, nil
 }
 
-// GetParams returns the total set of deployment parameters.
-func (k Keeper) GetParams(ctx sdk.Context) (params types.Params) {
-	k.pspace.GetParamSet(ctx, &params)
-	return params
-}
-
-// SetParams sets the deployment parameters to the paramspace.
-func (k Keeper) SetParams(ctx sdk.Context, params types.Params) {
-	k.pspace.SetParamSet(ctx, &params)
-}
-
 func (k Keeper) updateDeployment(ctx sdk.Context, obj v1.Deployment) {
 	store := ctx.KVStore(k.skey)
-	key := deploymentKey(obj.ID)
+	key := DeploymentKey(obj.ID)
 	store.Set(key, k.cdc.MustMarshal(&obj))
 }
 
 // nolint: unused
 func (k Keeper) updateGroup(ctx sdk.Context, group types.Group) {
 	store := ctx.KVStore(k.skey)
-	key := groupKey(group.ID)
+	key := GroupKey(group.ID)
 
 	store.Set(key, k.cdc.MustMarshal(&group))
 }

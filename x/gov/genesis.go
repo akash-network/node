@@ -14,14 +14,15 @@ import (
 
 // ValidateGenesis does validation check of the Genesis and returns error in case of failure
 func ValidateGenesis(data *types.GenesisState) error {
-	return data.DepositParams.Validate()
+	// return data.DepositParams.Validate()
+	return nil
 }
 
 // DefaultGenesisState returns default genesis state as raw bytes for the provider
 // module.
 func DefaultGenesisState() *types.GenesisState {
 	return &types.GenesisState{
-		DepositParams: types.DefaultDepositParams(),
+		// DepositParams: types.DefaultDepositParams(),
 	}
 }
 

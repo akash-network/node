@@ -55,7 +55,7 @@ func filterToPrefix(prefix []byte, owner string, dseq uint64, gseq, oseq uint32,
 	return buf.Bytes(), nil
 }
 
-func OrderPrefixFromFilter(f types.OrderFilters) ([]byte, error) {
+func OrderPrefixFromFilter(f mv1beta.OrderFilters) ([]byte, error) {
 	return filterToPrefix(mv1beta.OrderPrefix(), f.Owner, f.DSeq, f.GSeq, f.OSeq, "")
 }
 
@@ -64,7 +64,7 @@ func LeasePrefixFromFilter(f types.LeaseFilters) ([]byte, bool, error) {
 	return prefix, false, err
 }
 
-func BidPrefixFromFilter(f types.BidFilters) ([]byte, error) {
+func BidPrefixFromFilter(f mv1beta.BidFilters) ([]byte, error) {
 	return filterToPrefix(mv1beta.BidPrefix(), f.Owner, f.DSeq, f.GSeq, f.OSeq, f.Provider)
 }
 

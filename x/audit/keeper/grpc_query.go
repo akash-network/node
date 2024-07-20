@@ -27,13 +27,13 @@ func (q Querier) AllProvidersAttributes(
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
-	var providers types.Providers
+	var providers types.AuditedProviders
 	ctx := sdk.UnwrapSDKContext(c)
 
 	store := ctx.KVStore(q.skey)
 
 	pageRes, err := sdkquery.Paginate(store, req.Pagination, func(key []byte, value []byte) error {
-		var provider types.Provider
+		var provider types.AuditedProvider
 
 		err := q.cdc.Unmarshal(value, &provider)
 		if err != nil {
@@ -108,7 +108,7 @@ func (q Querier) ProviderAuditorAttributes(
 	}
 
 	return &types.QueryProvidersResponse{
-		Providers:  types.Providers{provider},
+		Providers:  types.AuditedProviders{provider},
 		Pagination: nil,
 	}, nil
 }
@@ -121,13 +121,13 @@ func (q Querier) AuditorAttributes(
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
-	var providers types.Providers
+	var providers types.AuditedProviders
 	ctx := sdk.UnwrapSDKContext(c)
 
 	store := ctx.KVStore(q.skey)
 
 	pageRes, err := sdkquery.Paginate(store, req.Pagination, func(key []byte, value []byte) error {
-		var provider types.Provider
+		var provider types.AuditedProvider
 
 		err := q.cdc.Unmarshal(value, &provider)
 		if err != nil {

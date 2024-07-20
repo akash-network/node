@@ -1,10 +1,15 @@
 package state
 
 import (
+	"fmt"
+	"os"
 	"testing"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/codec"
-	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	"github.com/stretchr/testify/mock"
 
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
@@ -16,7 +21,7 @@ import (
 	etypes "pkg.akt.dev/go/node/escrow/v1"
 	mtypes "pkg.akt.dev/go/node/market/v1beta5"
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
-	ttypes "pkg.akt.dev/go/node/take/v1beta3"
+	ttypes "pkg.akt.dev/go/node/take/v1"
 
 	"pkg.akt.dev/akashd/app"
 
@@ -59,7 +64,16 @@ func SetupTestSuite(t testing.TB) *TestSuite {
 }
 
 func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
-	cdc := codec.NewProtoCodec(cdctypes.NewInterfaceRegistry())
+	dir, err := os.MkdirTemp("", "akashd-test-home")
+	if err != nil {
+		panic(fmt.Sprintf("failed creating temporary directory: %v", err))
+	}
+
+	t.Cleanup(func() {
+		_ = os.RemoveAll(dir)
+	})
+
+	// cdc := codec.NewProtoCodec(cdctypes.NewInterfaceRegistry())
 
 	if keepers.Bank == nil {
 		bkeeper := &emocks.BankKeeper{}
@@ -92,24 +106,44 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 		keepers.Authz = keeper
 	}
 
-	app := app.Setup(false)
+	app := app.Setup(app.WithCheckTx(false), app.WithHome(dir), app.WithGenesis(func(cdc codec.Codec) app.GenesisState {
+		return app.GenesisStateWithValSet(cdc)
+	}))
+
+	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
+
+	cdc := app.AppCodec()
+
+	// Manually set validator signing info, otherwise we panic
+	for _, val := range app.Keepers.Cosmos.Staking.GetAllValidators(ctx) {
+		consAddr, _ := val.GetConsAddr()
+		signingInfo := slashingtypes.NewValidatorSigningInfo(
+			consAddr,
+			0,
+			ctx.BlockHeight(),
+			time.Unix(0, 0),
+			false,
+			0,
+		)
+		app.Keepers.Cosmos.Slashing.SetValidatorSigningInfo(ctx, consAddr, signingInfo)
+	}
 
 	if keepers.Audit == nil {
 		keepers.Audit = akeeper.NewKeeper(cdc, app.GetKey(atypes.StoreKey))
 	}
 
 	if keepers.Take == nil {
-		keepers.Take = tkeeper.NewKeeper(cdc, app.GetKey(ttypes.StoreKey), app.GetSubspace(ttypes.ModuleName))
+		keepers.Take = tkeeper.NewKeeper(cdc, app.GetKey(ttypes.StoreKey), authtypes.NewModuleAddress(govtypes.ModuleName).String())
 	}
 
 	if keepers.Escrow == nil {
 		keepers.Escrow = ekeeper.NewKeeper(cdc, app.GetKey(etypes.StoreKey), keepers.Bank, keepers.Take, keepers.Distr, keepers.Authz)
 	}
 	if keepers.Market == nil {
-		keepers.Market = mkeeper.NewKeeper(cdc, app.GetKey(mtypes.StoreKey), app.GetSubspace(mtypes.ModuleName), keepers.Escrow)
+		keepers.Market = mkeeper.NewKeeper(cdc, app.GetKey(mtypes.StoreKey), keepers.Escrow, authtypes.NewModuleAddress(govtypes.ModuleName).String())
 	}
 	if keepers.Deployment == nil {
-		keepers.Deployment = dkeeper.NewKeeper(cdc, app.GetKey(dtypes.StoreKey), app.GetSubspace(dtypes.ModuleName), keepers.Escrow)
+		keepers.Deployment = dkeeper.NewKeeper(cdc, app.GetKey(dtypes.StoreKey), keepers.Escrow, authtypes.NewModuleAddress(govtypes.ModuleName).String())
 	}
 	if keepers.Provider == nil {
 		keepers.Provider = pkeeper.NewKeeper(cdc, app.GetKey(ptypes.StoreKey))
@@ -123,7 +157,7 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 	return &TestSuite{
 		t:       t,
 		app:     app,
-		ctx:     app.BaseApp.NewContext(false, tmproto.Header{}),
+		ctx:     ctx,
 		keepers: keepers,
 	}
 }

@@ -33,7 +33,17 @@ func (q querier) Certificates(c context.Context, req *types.QueryCertificatesReq
 	ctx := sdk.UnwrapSDKContext(c)
 	store := ctx.KVStore(q.skey)
 
-	state := req.Filter.State
+	state := types.CertificateStateInvalid
+
+	if req.Filter.State != "" {
+		vl, exists := types.State_value[req.Filter.State]
+
+		if !exists {
+			return nil, status.Error(codes.InvalidArgument, "invalid state value")
+		}
+
+		state = types.State(vl)
+	}
 
 	if req.Filter.Owner != "" {
 		var owner sdk.Address
@@ -56,10 +66,10 @@ func (q querier) Certificates(c context.Context, req *types.QueryCertificatesReq
 				certificates = append(certificates, item)
 			}
 		} else {
-			ownerStore := prefix.NewStore(store, certificatePrefix(owner))
+			ownerStore := prefix.NewStore(store, CertificatePrefix(owner))
 			pageRes, err = sdkquery.FilteredPaginate(ownerStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
 				// prefixed store returns key without prefix
-				key = append(certificatePrefix(owner), key...)
+				key = append(CertificatePrefix(owner), key...)
 				item, err := q.unmarshalIterator(key, value)
 				if err != nil {
 					return true, err

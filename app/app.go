@@ -53,6 +53,9 @@ import (
 	ibchost "github.com/cosmos/ibc-go/v7/modules/core/exported"
 	"github.com/cosmos/ibc-go/v7/testing/simapp"
 
+	cflags "pkg.akt.dev/go/cli/flags"
+
+	"pkg.akt.dev/akashd/app/params"
 	apptypes "pkg.akt.dev/akashd/app/types"
 	utypes "pkg.akt.dev/akashd/upgrades/types"
 	"pkg.akt.dev/akashd/util/partialord"
@@ -82,6 +85,7 @@ type AkashApp struct {
 
 	aminoCdc          *codec.LegacyAmino
 	cdc               codec.Codec
+	txConfig          client.TxConfig
 	interfaceRegistry codectypes.InterfaceRegistry
 	checkTxHandler    checktx.CheckTx
 	sm                *module.SimulationManager
@@ -96,15 +100,13 @@ func NewApp(
 	loadLatest bool,
 	invCheckPeriod uint,
 	skipUpgradeHeights map[int64]bool,
-	homePath string,
+	encodingConfig params.EncodingConfig,
 	appOpts servertypes.AppOptions,
 	options ...func(*baseapp.BaseApp),
 ) *AkashApp {
 	// find out the genesis time, to be used later in inflation calculation
 	// genesisTime := getGenesisTime(appOpts, homePath)
 
-	// TODO: Remove cdc in favor of appCodec once all modules are migrated.
-	encodingConfig := MakeEncodingConfig()
 	appCodec := encodingConfig.Marshaler
 	aminoCdc := encodingConfig.Amino
 	interfaceRegistry := encodingConfig.InterfaceRegistry
@@ -117,11 +119,17 @@ func NewApp(
 	bapp.SetInterfaceRegistry(interfaceRegistry)
 	bapp.SetTxEncoder(txConfig.TxEncoder())
 
+	homePath := cast.ToString(appOpts.Get(cflags.FlagHome))
+	if homePath == "" {
+		homePath = DefaultHome
+	}
+
 	app := &AkashApp{
 		BaseApp:           bapp,
 		App:               &apptypes.App{},
 		aminoCdc:          aminoCdc,
 		cdc:               appCodec,
+		txConfig:          txConfig,
 		interfaceRegistry: interfaceRegistry,
 		invCheckPeriod:    invCheckPeriod,
 	}
@@ -225,15 +233,15 @@ func NewApp(
 			SignModeHandler: encodingConfig.TxConfig.SignModeHandler(),
 			SigGasConsumer:  ante.DefaultSigVerificationGasConsumer,
 		},
-		CDC:            app.cdc,
-		AStakingKeeper: app.Keepers.Akash.Staking,
-		GovKeeper:      app.Keepers.Cosmos.Gov,
-		AGovKeeper:     app.Keepers.Akash.Gov,
-		BlockSDK: BlockSDKAnteHandlerParams{
-			mevLane:       mevLane,
-			auctionKeeper: *app.Keepers.External.Auction,
-			txConfig:      txConfig,
-		},
+		CDC: app.cdc,
+		// AStakingKeeper: app.Keepers.Akash.Staking,
+		GovKeeper: app.Keepers.Cosmos.Gov,
+		// AGovKeeper:     app.Keepers.Akash.Gov,
+		// BlockSDK: BlockSDKAnteHandlerParams{
+		// 	mevLane:       mevLane,
+		// 	auctionKeeper: *app.Keepers.External.Auction,
+		// 	txConfig:      txConfig,
+		// },
 	}
 
 	anteHandler, err := NewAnteHandler(anteOpts)
@@ -380,6 +388,11 @@ func (app *AkashApp) LegacyAmino() *codec.LegacyAmino {
 // AppCodec returns AkashApp's app codec.
 func (app *AkashApp) AppCodec() codec.Codec {
 	return app.cdc
+}
+
+// TxConfig returns SimApp's TxConfig
+func (app *AkashApp) TxConfig() client.TxConfig {
+	return app.txConfig
 }
 
 // ModuleAccountAddrs returns all the app's module account addresses.

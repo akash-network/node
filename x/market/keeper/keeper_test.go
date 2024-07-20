@@ -182,7 +182,7 @@ func Test_OnOrderMatched(t *testing.T) {
 
 	result, ok := keeper.GetOrder(ctx, id.OrderID())
 	require.True(t, ok)
-	assert.Equal(t, v1.OrderActive, result.State)
+	assert.Equal(t, types.OrderActive, result.State)
 }
 
 func Test_OnBidMatched(t *testing.T) {
@@ -191,7 +191,7 @@ func Test_OnBidMatched(t *testing.T) {
 
 	result, ok := keeper.GetBid(ctx, id.BidID())
 	require.True(t, ok)
-	assert.Equal(t, v1.BidActive, result.State)
+	assert.Equal(t, types.BidActive, result.State)
 }
 
 func Test_OnBidLost(t *testing.T) {
@@ -201,7 +201,7 @@ func Test_OnBidLost(t *testing.T) {
 	keeper.OnBidLost(ctx, bid)
 	result, ok := keeper.GetBid(ctx, bid.ID)
 	require.True(t, ok)
-	assert.Equal(t, v1.BidLost, result.State)
+	assert.Equal(t, types.BidLost, result.State)
 }
 
 func Test_OnOrderClosed(t *testing.T) {
@@ -213,7 +213,7 @@ func Test_OnOrderClosed(t *testing.T) {
 
 	result, ok := keeper.GetOrder(ctx, order.ID)
 	require.True(t, ok)
-	assert.Equal(t, v1.OrderClosed, result.State)
+	assert.Equal(t, types.OrderClosed, result.State)
 }
 
 func Test_OnLeaseClosed(t *testing.T) {
@@ -253,11 +253,11 @@ func Test_OnGroupClosed(t *testing.T) {
 
 	bid, ok := keeper.GetBid(suite.Context(), id.BidID())
 	require.True(t, ok)
-	assert.Equal(t, v1.BidClosed, bid.State)
+	assert.Equal(t, types.BidClosed, bid.State)
 
 	order, ok := keeper.GetOrder(suite.Context(), id.OrderID())
 	require.True(t, ok)
-	assert.Equal(t, v1.OrderClosed, order.State)
+	assert.Equal(t, types.OrderClosed, order.State)
 }
 
 func createLease(t testing.TB, suite *state.TestSuite) v1.LeaseID {
@@ -334,7 +334,7 @@ func createOrder(t testing.TB, ctx sdk.Context, keeper keeper.IKeeper) (types.Or
 
 	require.Equal(t, group.ID, order.ID.GroupID())
 	require.Equal(t, uint32(1), order.ID.OSeq)
-	require.Equal(t, v1.OrderOpen, order.State)
+	require.Equal(t, types.OrderOpen, order.State)
 	return order, group.GroupSpec
 }
 

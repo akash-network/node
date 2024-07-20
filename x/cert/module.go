@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/gorilla/mux"
+	"cosmossdk.io/core/appmodule"
+	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
 
@@ -20,19 +21,28 @@ import (
 	types "pkg.akt.dev/go/node/cert/v1"
 
 	utypes "pkg.akt.dev/akashd/upgrades/types"
-	"pkg.akt.dev/akashd/x/cert/client/cli"
 	"pkg.akt.dev/akashd/x/cert/handler"
 	"pkg.akt.dev/akashd/x/cert/keeper"
+	"pkg.akt.dev/akashd/x/cert/simulation"
 )
 
 var (
-	_ module.AppModule      = AppModule{}
 	_ module.AppModuleBasic = AppModuleBasic{}
+
+	_ module.BeginBlockAppModule = AppModule{}
+	_ appmodule.AppModule        = AppModule{}
+	_ module.AppModuleSimulation = AppModule{}
 )
 
 // AppModuleBasic defines the basic application module used by the provider module.
 type AppModuleBasic struct {
 	cdc codec.Codec
+}
+
+// AppModule implements an application module for the audit module.
+type AppModule struct {
+	AppModuleBasic
+	keeper keeper.Keeper
 }
 
 // Name returns provider module's name
@@ -72,11 +82,6 @@ func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, _ client.TxEncodingCo
 	return ValidateGenesis(&data)
 }
 
-// RegisterRESTRoutes registers rest routes for this module
-func (AppModuleBasic) RegisterRESTRoutes(_ client.Context, _ *mux.Router) {
-
-}
-
 // RegisterGRPCGatewayRoutes registers the gRPC Gateway routes for the provider module.
 func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *runtime.ServeMux) {
 	err := types.RegisterQueryHandlerClient(context.Background(), mux, types.NewQueryClient(clientCtx))
@@ -87,23 +92,17 @@ func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *r
 
 // GetQueryCmd returns the root query command of this module
 func (AppModuleBasic) GetQueryCmd() *cobra.Command {
-	return cli.GetQueryCmd()
+	panic("akash modules do not export cli commands via cosmos interface")
 }
 
 // GetTxCmd returns the transaction commands for this module
 func (AppModuleBasic) GetTxCmd() *cobra.Command {
-	return cli.GetTxCmd()
+	panic("akash modules do not export cli commands via cosmos interface")
 }
 
 // GetQueryClient returns a new query client for this module
 func (AppModuleBasic) GetQueryClient(clientCtx client.Context) types.QueryClient {
 	return types.NewQueryClient(clientCtx)
-}
-
-// AppModule implements an application module for the audit module.
-type AppModule struct {
-	AppModuleBasic
-	keeper keeper.Keeper
 }
 
 // NewAppModule creates a new AppModule object
@@ -119,13 +118,14 @@ func (AppModule) Name() string {
 	return types.ModuleName
 }
 
+// IsOnePerModuleType implements the depinject.OnePerModuleType interface.
+func (am AppModule) IsOnePerModuleType() {}
+
+// IsAppModule implements the appmodule.AppModule interface.
+func (am AppModule) IsAppModule() {}
+
 // RegisterInvariants registers module invariants
 func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
-
-// QuerierRoute returns the audit module's querier route name.
-func (am AppModule) QuerierRoute() string {
-	return ""
-}
 
 // RegisterServices registers the module's services
 func (am AppModule) RegisterServices(cfg module.Configurator) {
@@ -165,5 +165,28 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 
 // ConsensusVersion implements module.AppModule#ConsensusVersion
 func (am AppModule) ConsensusVersion() uint64 {
-	return utypes.ModuleVersion(ModuleName)
+	return 3
+	// return utypes.ModuleVersion(ModuleName)
+}
+
+// AppModuleSimulation functions
+
+// GenerateGenesisState creates a randomized GenState of the staking module.
+func (AppModule) GenerateGenesisState(simState *module.SimulationState) {
+	simulation.RandomizedGenState(simState)
+}
+
+// ProposalMsgs returns msgs used for governance proposals for simulations.
+func (AppModule) ProposalMsgs(_ module.SimulationState) []simtypes.WeightedProposalMsg {
+	return nil
+}
+
+// RegisterStoreDecoder registers a decoder for take module's types.
+func (am AppModule) RegisterStoreDecoder(sdr sdk.StoreDecoderRegistry) {
+	// sdr[types.StoreKey] = simulation.NewDecodeStore(am.cdc)
+}
+
+// WeightedOperations doesn't return any take module operation.
+func (am AppModule) WeightedOperations(_ module.SimulationState) []simtypes.WeightedOperation {
+	return nil
 }

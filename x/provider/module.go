@@ -5,15 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/gorilla/mux"
+	"cosmossdk.io/core/appmodule"
+	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
 
 	abci "github.com/cometbft/cometbft/abci/types"
 
-	// v1beta1types "pkg.akt.dev/go/node/provider/v1beta1"
-	// v1beta2types "pkg.akt.dev/go/node/provider/v1beta2"
-	// v1beta3types "pkg.akt.dev/go/node/provider/v1beta3"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -25,21 +24,32 @@ import (
 
 	utypes "pkg.akt.dev/akashd/upgrades/types"
 	mkeeper "pkg.akt.dev/akashd/x/market/keeper"
-	"pkg.akt.dev/akashd/x/provider/client/cli"
-	"pkg.akt.dev/akashd/x/provider/client/rest"
 	"pkg.akt.dev/akashd/x/provider/handler"
 	"pkg.akt.dev/akashd/x/provider/keeper"
+	"pkg.akt.dev/akashd/x/provider/simulation"
 )
 
 var (
-	_ module.AppModule      = AppModule{}
 	_ module.AppModuleBasic = AppModuleBasic{}
-	// _ module.AppModuleSimulation = AppModuleSimulation{}
+
+	_ module.BeginBlockAppModule = AppModule{}
+	_ appmodule.AppModule        = AppModule{}
+	_ module.AppModuleSimulation = AppModule{}
 )
 
 // AppModuleBasic defines the basic application module used by the provider module.
 type AppModuleBasic struct {
 	cdc codec.Codec
+}
+
+// AppModule implements an application module for the provider module.
+type AppModule struct {
+	AppModuleBasic
+
+	keeper    keeper.IKeeper
+	acckeeper govtypes.AccountKeeper
+	bkeeper   bankkeeper.Keeper
+	mkeeper   mkeeper.IKeeper
 }
 
 // Name returns provider module's name
@@ -55,9 +65,6 @@ func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 // RegisterInterfaces registers the module's interface types
 func (b AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 	types.RegisterInterfaces(registry)
-	// v1beta3types.RegisterInterfaces(registry)
-	// v1beta2types.RegisterInterfaces(registry)
-	// v1beta1types.RegisterInterfaces(registry)
 }
 
 // DefaultGenesis returns default genesis state as raw bytes for the provider
@@ -76,11 +83,6 @@ func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, config client.TxEncod
 	return ValidateGenesis(&data)
 }
 
-// RegisterRESTRoutes registers rest routes for this module
-func (AppModuleBasic) RegisterRESTRoutes(clientCtx client.Context, rtr *mux.Router) {
-	rest.RegisterRoutes(clientCtx, rtr, StoreKey)
-}
-
 // RegisterGRPCGatewayRoutes registers the gRPC Gateway routes for the provider module.
 func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *runtime.ServeMux) {
 	err := types.RegisterQueryHandlerClient(context.Background(), mux, types.NewQueryClient(clientCtx))
@@ -91,33 +93,26 @@ func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *r
 
 // GetQueryCmd returns the root query command of this module
 func (AppModuleBasic) GetQueryCmd() *cobra.Command {
-	return cli.GetQueryCmd()
+	panic("akash modules do not export cli commands via cosmos interface")
 }
 
 // GetTxCmd returns the transaction commands for this module
 func (AppModuleBasic) GetTxCmd() *cobra.Command {
-	return cli.GetTxCmd(StoreKey)
-}
-
-// GetQueryClient returns a new query client for this module
-func (AppModuleBasic) GetQueryClient(clientCtx client.Context) types.QueryClient {
-	return types.NewQueryClient(clientCtx)
-}
-
-// AppModule implements an application module for the provider module.
-type AppModule struct {
-	AppModuleBasic
-	keeper  keeper.IKeeper
-	bkeeper bankkeeper.Keeper
-	mkeeper mkeeper.IKeeper
+	panic("akash modules do not export cli commands via cosmos interface")
 }
 
 // NewAppModule creates a new AppModule object
-func NewAppModule(cdc codec.Codec, k keeper.IKeeper, bkeeper bankkeeper.Keeper,
-	mkeeper mkeeper.IKeeper) AppModule {
+func NewAppModule(
+	cdc codec.Codec,
+	k keeper.IKeeper,
+	acckeeper govtypes.AccountKeeper,
+	bkeeper bankkeeper.Keeper,
+	mkeeper mkeeper.IKeeper,
+) AppModule {
 	return AppModule{
 		AppModuleBasic: AppModuleBasic{cdc: cdc},
 		keeper:         k,
+		acckeeper:      acckeeper,
 		bkeeper:        bkeeper,
 		mkeeper:        mkeeper,
 	}
@@ -128,23 +123,14 @@ func (AppModule) Name() string {
 	return types.ModuleName
 }
 
+// IsOnePerModuleType implements the depinject.OnePerModuleType interface.
+func (am AppModule) IsOnePerModuleType() {}
+
+// IsAppModule implements the appmodule.AppModule interface.
+func (am AppModule) IsAppModule() {}
+
 // RegisterInvariants registers module invariants
 func (am AppModule) RegisterInvariants(ir sdk.InvariantRegistry) {}
-
-// // Route returns the message routing key for the provider module.
-// func (am AppModule) Route() sdk.Route {
-// 	return sdk.NewRoute(types.RouterKey, handler.NewHandler(am.keeper, am.mkeeper))
-// }
-
-// QuerierRoute returns the provider module's querier route name.
-func (am AppModule) QuerierRoute() string {
-	return ""
-}
-
-// // LegacyQuerierHandler returns the sdk.Querier for provider module
-// func (am AppModule) LegacyQuerierHandler(_ *codec.LegacyAmino) sdk.Querier {
-// 	return nil
-// }
 
 // RegisterServices registers the module's services
 func (am AppModule) RegisterServices(cfg module.Configurator) {
@@ -185,5 +171,26 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 
 // ConsensusVersion implements module.AppModule#ConsensusVersion
 func (am AppModule) ConsensusVersion() uint64 {
-	return utypes.ModuleVersion(ModuleName)
+	return 3
+	// return utypes.ModuleVersion(ModuleName)
+}
+
+// AppModuleSimulation functions
+
+// GenerateGenesisState creates a randomized GenState of the staking module.
+func (AppModule) GenerateGenesisState(simState *module.SimulationState) {
+	simulation.RandomizedGenState(simState)
+}
+
+// ProposalMsgs returns msgs used for governance proposals for simulations.
+func (AppModule) ProposalMsgs(simState module.SimulationState) []simtypes.WeightedProposalMsg {
+	return nil
+}
+
+// RegisterStoreDecoder registers a decoder for provider module's types.
+func (am AppModule) RegisterStoreDecoder(sdr sdk.StoreDecoderRegistry) {}
+
+// WeightedOperations doesn't return any mint module operation.
+func (am AppModule) WeightedOperations(simState module.SimulationState) []simtypes.WeightedOperation {
+	return simulation.WeightedOperations(simState.AppParams, simState.Cdc, am.acckeeper, am.bkeeper, am.keeper)
 }

@@ -3,7 +3,7 @@ package testutil
 import (
 	"testing"
 
-	ptypes "pkg.akt.dev/go/node/provider/v1beta3"
+	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 )
 
 func Provider(t testing.TB) ptypes.Provider {
@@ -13,7 +13,7 @@ func Provider(t testing.TB) ptypes.Provider {
 		Owner:      AccAddress(t).String(),
 		HostURI:    Hostname(t),
 		Attributes: Attributes(t),
-		Info: ptypes.ProviderInfo{
+		Info: ptypes.Info{
 			EMail:   "test@example.com",
 			Website: ProviderHostname(t),
 		},

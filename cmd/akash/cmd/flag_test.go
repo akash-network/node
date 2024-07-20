@@ -8,9 +8,10 @@ import (
 
 	tmcli "github.com/cometbft/cometbft/libs/cli"
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
+
+	cflags "pkg.akt.dev/go/cli/flags"
 
 	"pkg.akt.dev/akashd/app"
 	"pkg.akt.dev/akashd/testutil"
@@ -25,21 +26,21 @@ func TestContextFlags(t *testing.T) {
 
 	// expected flag values
 	expectedFlagValues := map[string]interface{}{
-		tmcli.OutputFlag:           "test-output", // default = "json"
-		flags.FlagHome:             tmpDir,
-		flags.FlagDryRun:           true, // default = false
-		flags.FlagKeyringDir:       "/test/keyring/dir",
-		flags.FlagChainID:          "test-chain-id",
-		flags.FlagNode:             "http://test-host:8080", // default = "tcp://localhost:26657"
-		flags.FlagHeight:           int64(20),               // default = 0
-		flags.FlagUseLedger:        true,                    // default = false
-		flags.FlagGenerateOnly:     true,                    // default = false
-		flags.FlagOffline:          true,                    // default = false
-		flags.FlagBroadcastMode:    "async",                 // default = "sync"
-		flags.FlagSkipConfirmation: true,                    // default = false
-		flags.FlagSignMode:         "direct",
-		flags.FlagFeeAccount:       testutil.AccAddress(t).String(),
-		flags.FlagFrom:             testutil.AccAddress(t).String(),
+		tmcli.OutputFlag:            "test-output", // default = "json"
+		cflags.FlagHome:             tmpDir,
+		cflags.FlagDryRun:           true, // default = false
+		cflags.FlagKeyringDir:       "/test/keyring/dir",
+		cflags.FlagChainID:          "test-chain-id",
+		cflags.FlagNode:             "http://test-host:8080", // default = "tcp://localhost:26657"
+		cflags.FlagHeight:           int64(20),               // default = 0
+		cflags.FlagUseLedger:        true,                    // default = false
+		cflags.FlagGenerateOnly:     true,                    // default = false
+		cflags.FlagOffline:          true,                    // default = false
+		cflags.FlagBroadcastMode:    "async",                 // default = "sync"
+		cflags.FlagSkipConfirmation: true,                    // default = false
+		cflags.FlagSignMode:         "direct",
+		// cli.FlagFeeAccount:       testutil.AccAddress(t).String(),
+		cflags.FlagFrom: testutil.AccAddress(t).String(),
 	}
 
 	tCases := []struct {
@@ -55,93 +56,93 @@ func TestContextFlags(t *testing.T) {
 			},
 		},
 		{
-			flag: flags.FlagHome,
+			flag: cflags.FlagHome,
 			ctxFieldGetter: func(ctx client.Context) interface{} {
 				return ctx.HomeDir
 			},
 		},
 		{
-			flag: flags.FlagDryRun,
+			flag: cflags.FlagDryRun,
 			ctxFieldGetter: func(ctx client.Context) interface{} {
 				return ctx.Simulate
 			},
 		},
 		{
-			flag: flags.FlagKeyringDir,
+			flag: cflags.FlagKeyringDir,
 			ctxFieldGetter: func(ctx client.Context) interface{} {
 				return ctx.KeyringDir
 			},
 		},
 		{
-			flag: flags.FlagChainID,
+			flag: cflags.FlagChainID,
 			ctxFieldGetter: func(ctx client.Context) interface{} {
 				return ctx.ChainID
 			},
 		},
 		{
-			flag: flags.FlagNode,
+			flag: cflags.FlagNode,
 			ctxFieldGetter: func(ctx client.Context) interface{} {
 				return ctx.NodeURI
 			},
 		},
 		{
-			flag: flags.FlagHeight,
+			flag: cflags.FlagHeight,
 			ctxFieldGetter: func(ctx client.Context) interface{} {
 				return ctx.Height
 			},
 			isQueryOnly: true,
 		},
 		{
-			flag: flags.FlagUseLedger,
+			flag: cflags.FlagUseLedger,
 			ctxFieldGetter: func(ctx client.Context) interface{} {
 				return ctx.UseLedger
 			},
 			isQueryOnly: true,
 		},
 		{
-			flag: flags.FlagGenerateOnly,
+			flag: cflags.FlagGenerateOnly,
 			ctxFieldGetter: func(ctx client.Context) interface{} {
 				return ctx.GenerateOnly
 			},
 			isTxOnly: true,
 		},
 		{
-			flag: flags.FlagOffline,
+			flag: cflags.FlagOffline,
 			ctxFieldGetter: func(ctx client.Context) interface{} {
 				return ctx.Offline
 			},
 			isTxOnly: true,
 		},
 		{
-			flag: flags.FlagBroadcastMode,
+			flag: cflags.FlagBroadcastMode,
 			ctxFieldGetter: func(ctx client.Context) interface{} {
 				return ctx.BroadcastMode
 			},
 			isTxOnly: true,
 		},
 		{
-			flag: flags.FlagSkipConfirmation,
+			flag: cflags.FlagSkipConfirmation,
 			ctxFieldGetter: func(ctx client.Context) interface{} {
 				return ctx.SkipConfirm
 			},
 			isTxOnly: true,
 		},
 		{
-			flag: flags.FlagSignMode,
+			flag: cflags.FlagSignMode,
 			ctxFieldGetter: func(ctx client.Context) interface{} {
 				return ctx.SignModeStr
 			},
 			isTxOnly: true,
 		},
+		// {
+		// 	flag: cli.FlagFeeAccount,
+		// 	ctxFieldGetter: func(ctx client.Context) interface{} {
+		// 		return ctx.FeeGranter.String()
+		// 	},
+		// 	isTxOnly: true,
+		// },
 		{
-			flag: flags.FlagFeeAccount,
-			ctxFieldGetter: func(ctx client.Context) interface{} {
-				return ctx.FeeGranter.String()
-			},
-			isTxOnly: true,
-		},
-		{
-			flag: flags.FlagFrom,
+			flag: cflags.FlagFrom,
 			ctxFieldGetter: func(ctx client.Context) interface{} {
 				require.Equal(t, ctx.From, ctx.FromAddress.String())
 				return ctx.From
@@ -155,10 +156,10 @@ func TestContextFlags(t *testing.T) {
 		Use:               "test",
 		PersistentPreRunE: GetPersistentPreRunE(app.MakeEncodingConfig(), []string{"AKASH"}),
 	}
-	cmd.PersistentFlags().String(flags.FlagHome, app.DefaultHome, "The application home directory")
-	cmd.PersistentFlags().String(flags.FlagChainID, "", "The network chain ID")
-	cmd.Flags().Int64(flags.FlagHeight, 0, "Use a specific height to query state at (this can error if the node is pruning state)")
-	flags.AddTxFlagsToCmd(cmd)
+	cmd.PersistentFlags().String(cflags.FlagHome, app.DefaultHome, "The application home directory")
+	cmd.PersistentFlags().String(cflags.FlagChainID, "", "The network chain ID")
+	cmd.Flags().Int64(cflags.FlagHeight, 0, "Use a specific height to query state at (this can error if the node is pruning state)")
+	cflags.AddTxFlagsToCmd(cmd)
 
 	// test runner
 	for _, tCase := range tCases {

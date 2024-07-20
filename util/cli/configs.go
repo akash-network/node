@@ -11,26 +11,133 @@ import (
 
 	// "cosmossdk.io/log"
 
+	"cosmossdk.io/log"
+	perrors "github.com/pkg/errors"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/pkgerrors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	cflags "pkg.akt.dev/go/cli/flags"
 
 	tmcfg "github.com/cometbft/cometbft/config"
+	tmlog "github.com/cometbft/cometbft/libs/log"
 
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/server/config"
-)
-
-const (
-	FlagLogColor     = "log_color"
-	FlagLogTimestamp = "log_timestamp"
+	serverlog "github.com/cosmos/cosmos-sdk/server/log"
 )
 
 var (
 	ErrEmptyEnvPrefix = errors.New("envPrefixes parameter must contain at least one prefix")
 )
+
+type zeroLogWrapper struct {
+	*zerolog.Logger
+}
+
+// Info takes a message and a set of key/value pairs and logs with level INFO.
+// The key of the tuple must be a string.
+func (l zeroLogWrapper) Info(msg string, keyVals ...interface{}) {
+	l.Logger.Info().Fields(keyVals).Msg(msg)
+}
+
+// Warn takes a message and a set of key/value pairs and logs with level INFO.
+// The key of the tuple must be a string.
+func (l zeroLogWrapper) Warn(msg string, keyVals ...interface{}) {
+	l.Logger.Warn().Fields(keyVals).Msg(msg)
+}
+
+// Error takes a message and a set of key/value pairs and logs with level DEBUG.
+// The key of the tuple must be a string.
+func (l zeroLogWrapper) Error(msg string, keyVals ...interface{}) {
+	l.Logger.Error().Fields(keyVals).Msg(msg)
+}
+
+// Debug takes a message and a set of key/value pairs and logs with level ERR.
+// The key of the tuple must be a string.
+func (l zeroLogWrapper) Debug(msg string, keyVals ...interface{}) {
+	l.Logger.Debug().Fields(keyVals).Msg(msg)
+}
+
+// With returns a new wrapped logger with additional context provided by a set.
+func (l zeroLogWrapper) With(keyVals ...interface{}) log.Logger {
+	logger := l.Logger.With().Fields(keyVals).Logger()
+	return zeroLogWrapper{&logger}
+}
+
+// Impl returns the underlying zerolog logger.
+// It can be used to used zerolog structured API directly instead of the wrapper.
+func (l zeroLogWrapper) Impl() interface{} {
+	return l.Logger
+}
+
+// NewLogger returns a new logger that writes to the given destination.
+//
+// Typical usage from a main function is:
+//
+//	logger := log.NewLogger(os.Stderr)
+//
+// Stderr is the typical destination for logs,
+// so that any output from your application can still be piped to other processes.
+func NewLogger(dst io.Writer, options ...log.Option) log.Logger {
+	logCfg := log.Config{
+		Level:      zerolog.NoLevel,
+		Filter:     nil,
+		OutputJSON: false,
+		Color:      true,
+		StackTrace: false,
+		TimeFormat: time.Kitchen,
+		Hooks:      nil,
+	}
+
+	for _, opt := range options {
+		opt(&logCfg)
+	}
+
+	output := dst
+	if !logCfg.OutputJSON {
+		cl := zerolog.ConsoleWriter{
+			Out:        dst,
+			NoColor:    !logCfg.Color,
+			TimeFormat: logCfg.TimeFormat,
+		}
+
+		if logCfg.TimeFormat == "" {
+			cl.PartsExclude = []string{
+				zerolog.TimestampFieldName,
+			}
+		}
+
+		output = cl
+	}
+
+	if logCfg.Filter != nil {
+		output = log.NewFilterWriter(output, logCfg.Filter)
+	}
+
+	logger := zerolog.New(output)
+	if logCfg.StackTrace {
+		zerolog.ErrorStackMarshaler = func(err error) interface{} {
+			return pkgerrors.MarshalStack(perrors.WithStack(err))
+		}
+
+		logger = logger.With().Stack().Logger()
+	}
+
+	if logCfg.TimeFormat != "" {
+		logger = logger.With().Timestamp().Logger()
+	}
+
+	if logCfg.Level != zerolog.NoLevel {
+		logger = logger.Level(logCfg.Level)
+	}
+
+	logger = logger.Hook(logCfg.Hooks...)
+
+	return zeroLogWrapper{&logger}
+}
 
 // InterceptConfigsPreRunHandler performs a pre-run function for the root daemon
 // application command. It will create a Viper literal and a default server
@@ -69,54 +176,149 @@ func InterceptConfigsPreRunHandler(
 	serverCtx.Viper.AllowEmptyEnv(allowEmptyEnv)
 	serverCtx.Viper.AutomaticEnv()
 
+	if err := bindFlags(cmd, serverCtx.Viper, envPrefixes); err != nil {
+		return err
+	}
+
 	// intercept configuration files, using both Viper instances separately
 	cfg, err := interceptConfigs(serverCtx.Viper, customAppConfigTemplate, customAppConfig)
 	if err != nil {
 		return err
 	}
+
+	// return value is a tendermint configuration object
 	serverCtx.Config = cfg
 
-	logTimeFmt, err := parseTimestampFormat(serverCtx.Viper.GetString(FlagLogTimestamp))
+	// logTimeFmt, err := parseTimestampFormat(serverCtx.Viper.GetString(FlagLogTimestamp))
+	// if err != nil {
+	// 	return err
+	// }
+	//
+	// logLvlStr := serverCtx.Viper.GetString(flags.FlagLogLevel)
+	// logLvl, err := zerolog.ParseLevel(logLvlStr)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to parse log level (%s): %w", logLvlStr, err)
+	// }
+	//
+	//
+	// logWriter := io.Writer(os.Stdout)
+	//
+	var opts []log.Option
+
+	logFmt := serverCtx.Viper.GetString(flags.FlagLogFormat)
+	switch logFmt {
+	case tmcfg.LogFormatJSON:
+		opts = append(opts, log.OutputJSONOption())
+	case "":
+		fallthrough
+	case tmcfg.LogFormatPlain:
+	// 	cl := zerolog.ConsoleWriter{
+	// 		Out:        os.Stdout,
+	// 		NoColor:    !serverCtx.Viper.GetBool(cflags.FlagLogColor),
+	// 		TimeFormat: logTimeFmt,
+	// 	}
+	//
+	// 	if logTimeFmt == "" {
+	// 		cl.PartsExclude = []string{
+	// 			zerolog.TimestampFieldName,
+	// 		}
+	// 	}
+	// 	logWriter = cl
+	default:
+		return fmt.Errorf("unsupported value \"%s\" for log_format flag. can be either plain|json", logFmt)
+	}
+
+	logTimeFmt, err := parseTimestampFormat(serverCtx.Viper.GetString(cflags.FlagLogTimestamp))
 	if err != nil {
 		return err
 	}
 
+	opts = append(opts,
+		log.ColorOption(serverCtx.Viper.GetBool(cflags.FlagLogColor)),
+		log.TraceOption(serverCtx.Viper.GetBool(cflags.FlagTrace)),
+		log.TimeFormatOption(logTimeFmt),
+	)
+
+	// check and set filter level or keys for the logger if any
 	logLvlStr := serverCtx.Viper.GetString(flags.FlagLogLevel)
-	serverCtx.Viper.GetString(flags.FlagLogLevel)
-	logLvl, err := zerolog.ParseLevel(logLvlStr)
-	if err != nil {
-		return fmt.Errorf("failed to parse log level (%s): %w", logLvlStr, err)
-	}
-
-	logWriter := io.Writer(os.Stdout)
-
-	if strings.ToLower(serverCtx.Viper.GetString(flags.FlagLogFormat)) == tmcfg.LogFormatPlain {
-		cl := zerolog.ConsoleWriter{
-			Out:        os.Stdout,
-			NoColor:    !serverCtx.Viper.GetBool(FlagLogColor),
-			TimeFormat: logTimeFmt,
-		}
-
-		if logTimeFmt == "" {
-			cl.PartsExclude = []string{
-				zerolog.TimestampFieldName,
+	if logLvlStr != "" {
+		logLvl, err := zerolog.ParseLevel(logLvlStr)
+		switch {
+		case err != nil:
+			// If the log level is not a valid zerolog level, then we try to parse it as a key filter.
+			filterFunc, err := log.ParseLogLevel(logLvlStr)
+			if err != nil {
+				return err
 			}
+
+			opts = append(opts, log.FilterOption(filterFunc))
+		default:
+			opts = append(opts, log.LevelOption(logLvl))
 		}
-		logWriter = cl
 	}
 
-	logger := zerolog.New(logWriter).Level(logLvl)
+	logger := NewLogger(tmlog.NewSyncWriter(os.Stdout), opts...).With(log.ModuleKey, "server")
 
-	if logTimeFmt != "" {
-		logger = logger.With().Timestamp().Logger()
-	}
+	// if strings.ToLower(serverCtx.Viper.GetString(flags.FlagLogFormat)) == tmcfg.LogFormatPlain {
+	// 	cl := zerolog.ConsoleWriter{
+	// 		Out:        os.Stdout,
+	// 		NoColor:    !serverCtx.Viper.GetBool(FlagLogColor),
+	// 		TimeFormat: logTimeFmt,
+	// 	}
+	//
+	// 	if logTimeFmt == "" {
+	// 		cl.PartsExclude = []string{
+	// 			zerolog.TimestampFieldName,
+	// 		}
+	// 	}
+	// 	logWriter = cl
+	// }
+
+	serverCtx.Logger = serverlog.CometLoggerWrapper{Logger: logger}
+
+	// serverCtx.Config = cfg
+	//
+	// logTimeFmt, err := parseTimestampFormat(serverCtx.Viper.GetString(FlagLogTimestamp))
+	// if err != nil {
+	// 	return err
+	// }
+	//
+	// logLvlStr := serverCtx.Viper.GetString(flags.FlagLogLevel)
+	// logLvl, err := zerolog.ParseLevel(logLvlStr)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to parse log level (%s): %w", logLvlStr, err)
+	// }
+	//
+	// logWriter := io.Writer(os.Stdout)
+	//
+	// if strings.ToLower(serverCtx.Viper.GetString(flags.FlagLogFormat)) == tmcfg.LogFormatPlain {
+	// 	cl := zerolog.ConsoleWriter{
+	// 		Out:        os.Stdout,
+	// 		NoColor:    !serverCtx.Viper.GetBool(FlagLogColor),
+	// 		TimeFormat: logTimeFmt,
+	// 	}
+	//
+	// 	if logTimeFmt == "" {
+	// 		cl.PartsExclude = []string{
+	// 			zerolog.TimestampFieldName,
+	// 		}
+	// 	}
+	// 	logWriter = cl
+	// }
+	//
+	// logger := zerolog.New(logWriter).Level(logLvl)
+	//
+	// if logTimeFmt != "" {
+	// 	logger = logger.With().Timestamp().Logger()
+	// }
 
 	// serverCtx.Logger = server.ZeroLogWrapper{Logger: logger}
 
-	if err = bindFlags(cmd, serverCtx.Viper, envPrefixes); err != nil {
-		return err
-	}
-
+	//
+	// if err = bindFlags(cmd, serverCtx.Viper, envPrefixes); err != nil {
+	// 	return err
+	// }
+	//
 	return server.SetCmdServerContext(cmd, serverCtx)
 }
 

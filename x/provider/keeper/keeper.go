@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/store/prefix"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -50,7 +51,7 @@ func (k Keeper) StoreKey() storetypes.StoreKey {
 // Get returns a provider with given provider id
 func (k Keeper) Get(ctx sdk.Context, id sdk.Address) (types.Provider, bool) {
 	store := ctx.KVStore(k.skey)
-	key := providerKey(id)
+	key := ProviderKey(id)
 
 	if !store.Has(key) {
 		return types.Provider{}, false
@@ -70,7 +71,7 @@ func (k Keeper) Create(ctx sdk.Context, provider types.Provider) error {
 		return err
 	}
 
-	key := providerKey(owner)
+	key := ProviderKey(owner)
 
 	if store.Has(key) {
 		return types.ErrProviderExists
@@ -93,7 +94,8 @@ func (k Keeper) Create(ctx sdk.Context, provider types.Provider) error {
 
 // WithProviders iterates all providers
 func (k Keeper) WithProviders(ctx sdk.Context, fn func(types.Provider) bool) {
-	store := ctx.KVStore(k.skey)
+	store := prefix.NewStore(ctx.KVStore(k.skey), types.ProviderPrefix())
+
 	iter := store.Iterator(nil, nil)
 	defer func() {
 		_ = iter.Close()
@@ -115,7 +117,7 @@ func (k Keeper) Update(ctx sdk.Context, provider types.Provider) error {
 		return err
 	}
 
-	key := providerKey(owner)
+	key := ProviderKey(owner)
 
 	if !store.Has(key) {
 		return types.ErrProviderNotFound

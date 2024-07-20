@@ -1,58 +1,144 @@
 {
-    "v0.36.0": {
-    },
-    "v0.34.0": {
+    "v1.0.0": {
         "migrations": {
-        }
-    },
-    "v0.32.0": {
-        "migrations": {
-            "market": {
-                "from": "4",
-                "to": "5"
-            }
-        }
-    },
-    "v0.30.0": {
-    },
-    "v0.28.0": {
-        "migrations": {
-            "market": {
-                "from": "3",
-                "to": "4"
-            }
-        }
-    },
-    "v0.26.0": {
-        "modules": {
-            "added": [
+            "auth": [
+                {
+                    "from": "2",
+                    "to": "3"
+                },
+                {
+                    "from": "3",
+                    "to": "4"
+                }
+            ],
+            "authz": [
+                {
+                    "from": "1",
+                    "to": "2"
+                }
+            ],
+            "bank": [
+                {
+                    "from": "2",
+                    "to": "3"
+                },
+                {
+                    "from": "3",
+                    "to": "4"
+                }
+            ],
+            "cert": [
+                {
+                    "from": "2",
+                    "to": "3"
+                }
+            ],
+            "crisis": [
+                {
+                    "from": "1",
+                    "to": "2"
+                }
+            ],
+            "deployment": [
+                {
+                    "from": "3",
+                    "to": "4"
+                }
+            ],
+            "distribution": [
+                {
+                    "from": "2",
+                    "to": "3"
+                }
+            ],
+            "audit": [
+                {
+                    "from": "2",
+                    "to": "3"
+                }
+            ],
+            "escrow": [
+                {
+                    "from": "2",
+                    "to": "3"
+                }
+            ],
+            "feegrant": [
+                {
+                    "from": "1",
+                    "to": "2"
+                }
+            ],
+            "gov": [
+                {
+                    "from": "2",
+                    "to": "3"
+                },
+                {
+                    "from": "3",
+                    "to": "4"
+                },
+                {
+                    "from": "4",
+                    "to": "5"
+                }
+            ],
+            "ibc": [
+                {
+                    "from": "2",
+                    "to": "3"
+                },
+                {
+                    "from": "3",
+                    "to": "4"
+                }
+            ],
+            "mint": [
+                {
+                    "from": "1",
+                    "to": "2"
+                }
+            ],
+            "provider": [
+                {
+                    "from": "2",
+                    "to": "3"
+                }
+            ],
+            "slashing": [
+                {
+                    "from": "2",
+                    "to": "3"
+                }
+            ],
+            "staking": [
+                {
+                    "from": "2",
+                    "to": "3"
+                },
+                {
+                    "from": "3",
+                    "to": "4"
+                }
+            ],
+            "take": [
+                {
+                    "from": "2",
+                    "to": "3"
+                }
+            ],
+            "transfer": [
+                {
+                    "from": "2",
+                    "to": "3"
+                }
+            ],
+            "upgrade": [
+                {
+                    "from": "1",
+                    "to": "2"
+                }
             ]
-        },
-        "migrations": {
-        }
-    },
-    "v0.24.0": {
-        "modules": {
-            "added": [
-                "agov",
-                "astaking",
-                "feegrant",
-                "take"
-            ]
-        },
-        "migrations": {
-            "deployment": {
-                "from": "2",
-                "to": "3"
-            },
-            "market": {
-                "from": "2",
-                "to": "3"
-            },
-            "transfer": {
-                "from": "1",
-                "to": "2"
-            }
         }
     }
 }
