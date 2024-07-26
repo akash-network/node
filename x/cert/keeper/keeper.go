@@ -16,6 +16,7 @@ type Keeper interface {
 	RevokeCertificate(sdk.Context, types.CertID) error
 	GetCertificateByID(ctx sdk.Context, id types.CertID) (types.CertificateResponse, bool)
 	WithCertificates(ctx sdk.Context, fn func(certificate types.CertificateResponse) bool)
+	WithCertificates1(ctx sdk.Context, fn func(id types.CertID, certificate types.CertificateResponse) bool)
 	WithCertificatesState(ctx sdk.Context, state types.Certificate_State, fn func(certificate types.CertificateResponse) bool)
 	WithOwner(ctx sdk.Context, id sdk.Address, fn func(types.CertificateResponse) bool)
 	WithOwnerState(ctx sdk.Context, id sdk.Address, state types.Certificate_State, fn func(types.CertificateResponse) bool)
@@ -129,6 +130,28 @@ func (k keeper) WithCertificates(ctx sdk.Context, fn func(certificate types.Cert
 	for ; iter.Valid(); iter.Next() {
 		item := k.mustUnmarshal(iter.Key(), iter.Value())
 		if stop := fn(item); stop {
+			break
+		}
+	}
+}
+
+// WithCertificates1 iterates all certificates
+func (k keeper) WithCertificates1(ctx sdk.Context, fn func(id types.CertID, certificate types.CertificateResponse) bool) {
+	store := ctx.KVStore(k.skey)
+	iter := store.Iterator(nil, nil)
+
+	defer func() {
+		_ = iter.Close()
+	}()
+
+	for ; iter.Valid(); iter.Next() {
+		id, err := parseCertID(iter.Key())
+		if err != nil {
+			panic(err.Error())
+		}
+
+		item := k.mustUnmarshal(iter.Key(), iter.Value())
+		if stop := fn(id, item); stop {
 			break
 		}
 	}
