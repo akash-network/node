@@ -50,3 +50,28 @@ func certificateSerialFromKey(key []byte) big.Int {
 
 	return *new(big.Int).SetBytes(key[keyAddrPrefixLen+addrLen:])
 }
+
+func parseCertID(from []byte) (types.CertID, error) {
+	res := types.CertID{
+		Serial: *big.NewInt(0),
+	}
+
+	// first byte is prefix id. skip it
+	from = from[1:]
+	addLen := from[0]
+
+	from = from[1:]
+
+	addr := from[:addLen-1]
+	serial := from[addLen:]
+
+	err := sdk.VerifyAddressFormat(addr)
+	if err != nil {
+		return res, err
+	}
+
+	res.Owner = sdk.AccAddress(addr)
+	res.Serial.SetBytes(serial)
+
+	return res, nil
+}
