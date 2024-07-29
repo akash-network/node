@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
@@ -137,7 +138,8 @@ func (k keeper) WithCertificates(ctx sdk.Context, fn func(certificate types.Cert
 
 // WithCertificates1 iterates all certificates
 func (k keeper) WithCertificates1(ctx sdk.Context, fn func(id types.CertID, certificate types.CertificateResponse) bool) {
-	store := ctx.KVStore(k.skey)
+	store := prefix.NewStore(ctx.KVStore(k.skey), types.PrefixCertificateID())
+
 	iter := store.Iterator(nil, nil)
 
 	defer func() {

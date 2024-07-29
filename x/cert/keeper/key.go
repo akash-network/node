@@ -56,22 +56,15 @@ func parseCertID(from []byte) (types.CertID, error) {
 		Serial: *big.NewInt(0),
 	}
 
-	// first byte is prefix id. skip it
-	from = from[1:]
-	addLen := from[0]
+	owner := make([]byte, from[0])
+	offset := copy(owner, from[1:])
+	offset++
 
-	from = from[1:]
+	res.Owner = sdk.AccAddress(owner)
+	res.Serial.SetBytes(from[offset:])
 
-	addr := from[:addLen-1]
-	serial := from[addLen:]
-
-	err := sdk.VerifyAddressFormat(addr)
-	if err != nil {
-		return res, err
-	}
-
-	res.Owner = sdk.AccAddress(addr)
-	res.Serial.SetBytes(serial)
+	strOwner := res.Owner.String()
+	_ = strOwner
 
 	return res, nil
 }
