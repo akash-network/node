@@ -49,7 +49,7 @@ func ExportGenesis(ctx sdk.Context, k keeper.Keeper) *types.GenesisState {
 	k.WithCertificates1(ctx, func(id types.CertID, certificate types.CertificateResponse) bool {
 		block, rest := pem.Decode(certificate.Certificate.Cert)
 		if len(rest) > 0 {
-			panic(fmt.Sprintf("unable to decode certificate"))
+			panic("unable to decode certificate")
 		}
 
 		cert, err := x509.ParseCertificate(block.Bytes)
@@ -58,7 +58,7 @@ func ExportGenesis(ctx sdk.Context, k keeper.Keeper) *types.GenesisState {
 		}
 
 		if cert.SerialNumber.String() != id.Serial.String() {
-			panic(fmt.Sprintf("certificate id does not match"))
+			panic("certificate id does not match")
 		}
 
 		res = append(res, types.GenesisCertificate{
@@ -69,7 +69,9 @@ func ExportGenesis(ctx sdk.Context, k keeper.Keeper) *types.GenesisState {
 		return false
 	})
 
-	return &types.GenesisState{}
+	return &types.GenesisState{
+		Certificates: res,
+	}
 }
 
 // DefaultGenesisState returns default genesis state as raw bytes for the provider

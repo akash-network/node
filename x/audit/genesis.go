@@ -25,7 +25,7 @@ func ValidateGenesis(data *types.GenesisState) error {
 		}
 
 		if err := record.Attributes.Validate(); err != nil {
-			sdkerrors.Wrap(err, "audited attributes: invalid attributes")
+			return sdkerrors.Wrap(err, "audited attributes: invalid attributes")
 		}
 	}
 
@@ -71,7 +71,9 @@ func ExportGenesis(ctx sdk.Context, k keeper.Keeper) *types.GenesisState {
 		return false
 	})
 
-	return &types.GenesisState{}
+	return &types.GenesisState{
+		Attributes: attr,
+	}
 }
 
 // DefaultGenesisState returns default genesis state as raw bytes for the provider
