@@ -147,10 +147,7 @@ func (k keeper) WithCertificates1(ctx sdk.Context, fn func(id types.CertID, cert
 	}()
 
 	for ; iter.Valid(); iter.Next() {
-		id, err := parseCertID(iter.Key())
-		if err != nil {
-			panic(err.Error())
-		}
+		id := parseCertID(iter.Key())
 
 		item := k.mustUnmarshal(iter.Key(), iter.Value())
 		if stop := fn(id, item); stop {

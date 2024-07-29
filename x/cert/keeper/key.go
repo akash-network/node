@@ -51,7 +51,7 @@ func certificateSerialFromKey(key []byte) big.Int {
 	return *new(big.Int).SetBytes(key[keyAddrPrefixLen+addrLen:])
 }
 
-func parseCertID(from []byte) (types.CertID, error) {
+func parseCertID(from []byte) types.CertID {
 	res := types.CertID{
 		Serial: *big.NewInt(0),
 	}
@@ -66,5 +66,5 @@ func parseCertID(from []byte) (types.CertID, error) {
 	strOwner := res.Owner.String()
 	_ = strOwner
 
-	return res, nil
+	return res
 }
