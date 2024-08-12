@@ -177,7 +177,7 @@ func (k Keeper) OnOrderMatched(ctx sdk.Context, order types.Order) {
 	k.updateOrder(ctx, order)
 }
 
-// OnBidActive updates bid state to matched
+// OnBidMatched updates bid state to matched
 func (k Keeper) OnBidMatched(ctx sdk.Context, bid types.Bid) {
 	bid.State = types.BidActive
 	k.updateBid(ctx, bid)

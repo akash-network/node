@@ -220,7 +220,7 @@ func (k Keeper) WithProviders(ctx sdk.Context, fn func(types.Provider) bool) {
 	}
 }
 
-// WithProviders iterates all signed provider's attributes
+// WithProvider iterates all signed provider's attributes
 func (k Keeper) WithProvider(ctx sdk.Context, id sdk.Address, fn func(types.Provider) bool) {
 	store := ctx.KVStore(k.skey)
 	iter := sdk.KVStorePrefixIterator(store, providerPrefix(id))
