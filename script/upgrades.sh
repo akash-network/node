@@ -350,9 +350,13 @@ upgrade-from-release)
     upgrade_name=$(find "${upgrades_dir}" -mindepth 1 -maxdepth 1 -type d | awk -F/ '{print $NF}' | sort -r | head -n 1)
 
     # shellcheck disable=SC2086
-    $semver validate $upgrade_name
-    echo -e "$upgrade_name"
-    exit 0
+    res=$($semver validate $upgrade_name)
+    if [[ "$res" == "valid" ]]; then
+        echo -e "$upgrade_name"
+        exit 0
+    else
+        exit 1
+    fi
 
     ;;
 test-required)

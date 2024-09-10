@@ -11,6 +11,12 @@ SEMVER_REGEX_STR="\
 (\\-(${IDENT})(\\.(${IDENT}))*)?\
 (\\+${FIELD}(\\.${FIELD})*)?$"
 
+SEMVER_REGEX_LEGACY="\
+[vV]?\
+($NAT)\\.($NAT)(\\.($NAT))?\
+(\\-(${IDENT})(\\.(${IDENT}))*)?\
+(\\+${FIELD}(\\.${FIELD})*)?$"
+
 SEMVER_REGEX="^$SEMVER_REGEX_STR"
 
 function error {
@@ -40,6 +46,18 @@ function validate_version {
 			local prere=${BASH_REMATCH[4]}
 			local build=${BASH_REMATCH[8]}
 			eval "$2=(\"$major\" \"$minor\" \"$patch\" \"$prere\" \"$build\")"
+		else
+			echo "$version"
+		fi
+	elif [[ "$version" =~ $SEMVER_REGEX_LEGACY ]]; then
+		# if a second argument is passed, store the result in var named by $2
+		if [[ "$#" -eq "2" ]]; then
+			local major=${BASH_REMATCH[1]}
+			local minor=${BASH_REMATCH[2]}
+			local patch=0
+			local prere=${BASH_REMATCH[4]}
+			local build=${BASH_REMATCH[6]}
+			eval "$2=(\"${major}\" \"${minor}\" \"${patch}\" \"${prere}\" \"${build}\")"
 		else
 			echo "$version"
 		fi
