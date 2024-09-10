@@ -4,6 +4,7 @@ package e2e
 
 import (
 	"github.com/stretchr/testify/require"
+	clitestutil "pkg.akt.dev/go/cli/testutil"
 
 	"pkg.akt.dev/akashd/testutil"
 
@@ -18,12 +19,12 @@ type certificateIntegrationTestSuite struct {
 }
 
 func (s *certificateIntegrationTestSuite) TestGeneratePublishAndRevokeServer() {
-	result, err := cli.TxGenerateServerExec(
+	result, err := clitestutil.TxGenerateServerExec(
 		s.ContextForTest(),
 		s.ClientContextForTest(),
-		certTestHost,
 		cli.TestFlags().
-			WithFrom(s.WalletForTest()).
+			With(certTestHost).
+			WithFrom(s.WalletForTest().String()).
 			WithGasAutoFlags().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
@@ -31,11 +32,11 @@ func (s *certificateIntegrationTestSuite) TestGeneratePublishAndRevokeServer() {
 	require.NoError(s.T(), err)
 	require.NotNil(s.T(), result)
 
-	result, err = cli.TxPublishServerExec(
+	result, err = clitestutil.TxPublishServerExec(
 		s.ContextForTest(),
 		s.ClientContextForTest(),
 		cli.TestFlags().
-			WithFrom(s.WalletForTest()).
+			WithFrom(s.WalletForTest().String()).
 			WithGasAutoFlags().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
@@ -44,11 +45,11 @@ func (s *certificateIntegrationTestSuite) TestGeneratePublishAndRevokeServer() {
 	require.NoError(s.T(), s.Network().WaitForNextBlock())
 	_ = s.ValidateTx(result.Bytes())
 
-	result, err = cli.TxRevokeServerExec(
+	result, err = clitestutil.TxRevokeServerExec(
 		s.ContextForTest(),
 		s.ClientContextForTest(),
 		cli.TestFlags().
-			WithFrom(s.WalletForTest()).
+			WithFrom(s.WalletForTest().String()).
 			WithGasAutoFlags().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
@@ -60,12 +61,12 @@ func (s *certificateIntegrationTestSuite) TestGeneratePublishAndRevokeServer() {
 }
 
 func (s *certificateIntegrationTestSuite) TestGenerateServerRequiresArguments() {
-	_, err := cli.TxGenerateServerExec(
+	_, err := clitestutil.TxGenerateServerExec(
 		s.ContextForTest(),
 		s.ClientContextForTest(),
-		"",
 		cli.TestFlags().
-			WithFrom(s.WalletForTest()).
+			With("").
+			WithFrom(s.WalletForTest().String()).
 			WithGasAutoFlags().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
@@ -75,13 +76,12 @@ func (s *certificateIntegrationTestSuite) TestGenerateServerRequiresArguments() 
 }
 
 func (s *certificateIntegrationTestSuite) TestGenerateServerAllowsManyArguments() {
-	_, err := cli.TxGenerateServerExec(
+	_, err := clitestutil.TxGenerateServerExec(
 		s.ContextForTest(),
 		s.ClientContextForTest(),
-		"a.dev",
 		cli.TestFlags().
-			With("b.dev").
-			WithFrom(s.WalletForTest()).
+			With("a.dev", "b.dev").
+			WithFrom(s.WalletForTest().String()).
 			WithGasAutoFlags().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
@@ -90,12 +90,12 @@ func (s *certificateIntegrationTestSuite) TestGenerateServerAllowsManyArguments(
 }
 
 func (s *certificateIntegrationTestSuite) TestGenerateClientRejectsArguments() {
-	_, err := cli.TxGenerateClientExec(
+	_, err := clitestutil.TxGenerateClientExec(
 		s.ContextForTest(),
 		s.ClientContextForTest(),
 		cli.TestFlags().
 			With("empty").
-			WithFrom(s.WalletForTest()).
+			WithFrom(s.WalletForTest().String()).
 			WithGasAutoFlags().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
@@ -105,11 +105,11 @@ func (s *certificateIntegrationTestSuite) TestGenerateClientRejectsArguments() {
 }
 
 func (s *certificateIntegrationTestSuite) TestGeneratePublishAndRevokeClient() {
-	result, err := cli.TxGenerateClientExec(
+	result, err := clitestutil.TxGenerateClientExec(
 		s.ContextForTest(),
 		s.ClientContextForTest(),
 		cli.TestFlags().
-			WithFrom(s.WalletForTest()).
+			WithFrom(s.WalletForTest().String()).
 			WithGasAutoFlags().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
@@ -117,11 +117,11 @@ func (s *certificateIntegrationTestSuite) TestGeneratePublishAndRevokeClient() {
 	require.NoError(s.T(), err)
 	require.NotNil(s.T(), result)
 
-	result, err = cli.TxPublishClientExec(
+	result, err = clitestutil.TxPublishClientExec(
 		s.ContextForTest(),
 		s.ClientContextForTest(),
 		cli.TestFlags().
-			WithFrom(s.WalletForTest()).
+			WithFrom(s.WalletForTest().String()).
 			WithGasAutoFlags().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
@@ -130,11 +130,11 @@ func (s *certificateIntegrationTestSuite) TestGeneratePublishAndRevokeClient() {
 	require.NoError(s.T(), s.Network().WaitForNextBlock())
 	_ = s.ValidateTx(result.Bytes())
 
-	result, err = cli.TxRevokeClientExec(
+	result, err = clitestutil.TxRevokeClientExec(
 		s.ContextForTest(),
 		s.ClientContextForTest(),
 		cli.TestFlags().
-			WithFrom(s.WalletForTest()).
+			WithFrom(s.WalletForTest().String()).
 			WithGasAutoFlags().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
@@ -146,12 +146,12 @@ func (s *certificateIntegrationTestSuite) TestGeneratePublishAndRevokeClient() {
 }
 
 func (s *certificateIntegrationTestSuite) TestGenerateAndRevokeFailsServer() {
-	result, err := cli.TxGenerateServerExec(
+	result, err := clitestutil.TxGenerateServerExec(
 		s.ContextForTest(),
 		s.ClientContextForTest(),
-		certTestHost,
 		cli.TestFlags().
-			WithFrom(s.WalletForTest()).
+			WithFrom(certTestHost).
+			WithFrom(s.WalletForTest().String()).
 			WithGasAutoFlags().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
@@ -159,11 +159,11 @@ func (s *certificateIntegrationTestSuite) TestGenerateAndRevokeFailsServer() {
 	require.NoError(s.T(), err)
 	require.NotNil(s.T(), result)
 
-	_, err = cli.TxRevokeServerExec(
+	_, err = clitestutil.TxRevokeServerExec(
 		s.ContextForTest(),
 		s.ClientContextForTest(),
 		cli.TestFlags().
-			WithFrom(s.WalletForTest()).
+			WithFrom(s.WalletForTest().String()).
 			WithGasAutoFlags().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
@@ -173,11 +173,11 @@ func (s *certificateIntegrationTestSuite) TestGenerateAndRevokeFailsServer() {
 }
 
 func (s *certificateIntegrationTestSuite) TestRevokeFailsServer() {
-	_, err := cli.TxRevokeServerExec(
+	_, err := clitestutil.TxRevokeServerExec(
 		s.ContextForTest(),
 		s.ClientContextForTest(),
 		cli.TestFlags().
-			WithFrom(s.WalletForTest()).
+			WithFrom(s.WalletForTest().String()).
 			WithSerial("1").
 			WithGasAutoFlags().
 			WithSkipConfirm().
@@ -188,11 +188,11 @@ func (s *certificateIntegrationTestSuite) TestRevokeFailsServer() {
 }
 
 func (s *certificateIntegrationTestSuite) TestRevokeFailsClient() {
-	_, err := cli.TxRevokeClientExec(
+	_, err := clitestutil.TxRevokeClientExec(
 		s.ContextForTest(),
 		s.ClientContextForTest(),
 		cli.TestFlags().
-			WithFrom(s.WalletForTest()).
+			WithFrom(s.WalletForTest().String()).
 			WithSerial("1").
 			WithGasAutoFlags().
 			WithSkipConfirm().
@@ -203,12 +203,12 @@ func (s *certificateIntegrationTestSuite) TestRevokeFailsClient() {
 }
 
 func (s *certificateIntegrationTestSuite) TestGenerateServerNoOverwrite() {
-	result, err := cli.TxGenerateServerExec(
+	result, err := clitestutil.TxGenerateServerExec(
 		s.ContextForTest(),
 		s.ClientContextForTest(),
-		certTestHost,
 		cli.TestFlags().
-			WithFrom(s.WalletForTest()).
+			WithFrom(certTestHost).
+			WithFrom(s.WalletForTest().String()).
 			WithGasAutoFlags().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
@@ -216,12 +216,12 @@ func (s *certificateIntegrationTestSuite) TestGenerateServerNoOverwrite() {
 	require.NoError(s.T(), err)
 	require.NotNil(s.T(), result)
 
-	_, err = cli.TxGenerateServerExec(
+	_, err = clitestutil.TxGenerateServerExec(
 		s.ContextForTest(),
 		s.ClientContextForTest(),
-		certTestHost,
 		cli.TestFlags().
-			WithFrom(s.WalletForTest()).
+			WithFrom(certTestHost).
+			WithFrom(s.WalletForTest().String()).
 			WithGasAutoFlags().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
@@ -231,11 +231,11 @@ func (s *certificateIntegrationTestSuite) TestGenerateServerNoOverwrite() {
 }
 
 func (s *certificateIntegrationTestSuite) TestGenerateClientNoOverwrite() {
-	result, err := cli.TxGenerateClientExec(
+	result, err := clitestutil.TxGenerateClientExec(
 		s.ContextForTest(),
 		s.ClientContextForTest(),
 		cli.TestFlags().
-			WithFrom(s.WalletForTest()).
+			WithFrom(s.WalletForTest().String()).
 			WithGasAutoFlags().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
@@ -243,11 +243,11 @@ func (s *certificateIntegrationTestSuite) TestGenerateClientNoOverwrite() {
 	require.NoError(s.T(), err)
 	require.NotNil(s.T(), result)
 
-	_, err = cli.TxGenerateClientExec(
+	_, err = clitestutil.TxGenerateClientExec(
 		s.ContextForTest(),
 		s.ClientContextForTest(),
 		cli.TestFlags().
-			WithFrom(s.WalletForTest()).
+			WithFrom(s.WalletForTest().String()).
 			WithGasAutoFlags().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,

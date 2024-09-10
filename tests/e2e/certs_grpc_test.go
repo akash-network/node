@@ -8,6 +8,7 @@ import (
 	"encoding/pem"
 
 	"pkg.akt.dev/go/cli"
+	clitestutil "pkg.akt.dev/go/cli/testutil"
 
 	"github.com/stretchr/testify/require"
 	types "pkg.akt.dev/go/node/cert/v1"
@@ -27,20 +28,20 @@ func (s *certsGRPCRestTestSuite) TestGenerateParse() {
 	addr := s.WalletForTest()
 
 	// Generate client certificate
-	_, err := cli.TxGenerateClientExec(
+	_, err := clitestutil.TxGenerateClientExec(
 		ctx,
 		cctx,
-		cli.TestFlags().WithFrom(addr)...,
-	)
+		cli.TestFlags().
+			WithFrom(addr.String())...)
 	s.Require().NoError(err)
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
 	// Publish client certificate
-	_, err = cli.TxPublishClientExec(
+	_, err = clitestutil.TxPublishClientExec(
 		ctx,
 		cctx,
 		cli.TestFlags().
-			WithFrom(addr).
+			WithFrom(addr.String()).
 			WithSkipConfirm().
 			WithBroadcastModeBlock().
 			WithGasAutoFlags()...,
@@ -49,7 +50,7 @@ func (s *certsGRPCRestTestSuite) TestGenerateParse() {
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
 	// get certs
-	resp, err := cli.QueryCertificatesExec(ctx, cctx, cli.TestFlags().WithOutputJSON()...)
+	resp, err := clitestutil.QueryCertificatesExec(ctx, cctx, cli.TestFlags().WithOutputJSON()...)
 	s.Require().NoError(err)
 
 	out := &types.QueryCertificatesResponse{}

@@ -10,7 +10,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	sdktestutil "github.com/cosmos/cosmos-sdk/testutil"
 	"pkg.akt.dev/go/cli"
-	cflags "pkg.akt.dev/go/cli/flags"
+	clitestutil "pkg.akt.dev/go/cli/testutil"
 	v1 "pkg.akt.dev/go/node/deployment/v1"
 	"pkg.akt.dev/go/node/deployment/v1beta4"
 
@@ -37,21 +37,21 @@ func (s *deploymentGRPCRestTestSuite) SetupSuite() {
 	ctx := context.Background()
 
 	// Generate client certificate
-	_, err = cli.TxGenerateClientExec(
+	_, err = clitestutil.TxGenerateClientExec(
 		ctx,
 		s.cctx,
 		cli.TestFlags().
-			WithFrom(val.Address)...,
+			WithFrom(val.Address.String())...,
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
 	// Publish client certificate
-	_, err = cli.TxPublishClientExec(
+	_, err = clitestutil.TxPublishClientExec(
 		ctx,
 		s.cctx,
 		cli.TestFlags().
-			WithFrom(val.Address).
+			WithFrom(val.Address.String()).
 			WithSkipConfirm().
 			WithBroadcastModeBlock().
 			WithGasAutoFlags()...,
@@ -60,22 +60,22 @@ func (s *deploymentGRPCRestTestSuite) SetupSuite() {
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
 	// create deployment
-	_, err = cli.TxCreateDeploymentExec(
+	_, err = clitestutil.TxCreateDeploymentExec(
 		ctx,
 		s.cctx,
 		deploymentPath,
 		cli.TestFlags().
-			WithFrom(val.Address).
+			WithFrom(val.Address.String()).
 			WithSkipConfirm().
 			WithBroadcastModeBlock().
-			WithDeposit(cflags.DefaultDeposit).
+			WithDeposit(DefaultDeposit).
 			WithGasAutoFlags()...,
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
 	// get deployment
-	resp, err := cli.QueryDeploymentsExec(
+	resp, err := clitestutil.QueryDeploymentsExec(
 		ctx,
 		s.cctx,
 		cli.TestFlags().

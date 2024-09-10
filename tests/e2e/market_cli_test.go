@@ -15,10 +15,9 @@ import (
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 
 	"pkg.akt.dev/go/cli"
-	cflags "pkg.akt.dev/go/cli/flags"
+	clitestutil "pkg.akt.dev/go/cli/testutil"
 
 	"pkg.akt.dev/akashd/testutil"
-	clitestutil "pkg.akt.dev/akashd/testutil/cli"
 )
 
 type marketIntegrationTestSuite struct {
@@ -61,52 +60,53 @@ func (s *marketIntegrationTestSuite) SetupSuite() {
 	s.addrProvider, err = s.keyProvider.GetAddress()
 	s.Require().NoError(err)
 
-	res, err := cli.MsgSendExec(
+	res, err := clitestutil.ExecSend(
 		ctx,
 		cctx,
-		s.Network().Validators[0].Address,
-		s.addrDeployer,
-		sdk.NewCoins(sdk.NewInt64Coin(s.Config().BondDenom, 10000000)),
 		cli.TestFlags().
-			WithFrom(s.Network().Validators[0].Address).
+			With(
+				s.Network().Validators[0].Address.String(),
+				s.addrDeployer.String(),
+				sdk.NewCoins(sdk.NewInt64Coin(s.Config().BondDenom, 10000000)).String()).
+			WithFrom(s.Network().Validators[0].Address.String()).
 			WithGasAutoFlags().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.Network().WaitForNextBlock())
-	clitestutil.ValidateTxSuccessful(s.T(), cctx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(ctx, s.T(), cctx, res.Bytes())
 
-	res, err = cli.MsgSendExec(
+	res, err = clitestutil.ExecSend(
 		ctx,
 		cctx,
-		s.Network().Validators[0].Address,
-		s.addrProvider,
-		sdk.NewCoins(sdk.NewInt64Coin(s.Config().BondDenom, 10000000)),
 		cli.TestFlags().
-			WithFrom(s.Network().Validators[0].Address).
+			With(
+				s.Network().Validators[0].Address.String(),
+				s.addrProvider.String(),
+				sdk.NewCoins(sdk.NewInt64Coin(s.Config().BondDenom, 10000000)).String()).
 			WithGasAutoFlags().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.Network().WaitForNextBlock())
-	clitestutil.ValidateTxSuccessful(s.T(), cctx, res.Bytes())
+	clitestutil.ValidateTxSuccessful(ctx, s.T(), cctx, res.Bytes())
 
 	// Create client certificate
-	_, err = cli.TxGenerateClientExec(
+	_, err = clitestutil.TxGenerateClientExec(
 		ctx,
 		cctx,
 		cli.TestFlags().
-			WithFrom(s.addrDeployer)...,
+			WithFrom(s.addrDeployer.String())...,
 	)
 	s.Require().NoError(err)
 
-	_, err = cli.TxPublishClientExec(
+	_, err = clitestutil.TxPublishClientExec(
 		ctx,
 		cctx,
 		cli.TestFlags().
-			WithFrom(s.addrDeployer).
+			WithFrom(s.addrDeployer.String()).
 			WithGasAutoFlags().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
@@ -124,13 +124,13 @@ func (s *marketIntegrationTestSuite) Test1QueryOrders() {
 	cctx := s.cctx
 
 	// create deployment
-	_, err = cli.TxCreateDeploymentExec(
+	_, err = clitestutil.TxCreateDeploymentExec(
 		ctx,
 		cctx,
 		deploymentPath,
 		cli.TestFlags().
-			WithFrom(s.addrDeployer).
-			WithDeposit(cflags.DefaultDeposit).
+			WithFrom(s.addrDeployer.String()).
+			WithDeposit(DefaultDeposit).
 			WithSkipConfirm().
 			WithGasAutoFlags().
 			WithBroadcastModeBlock()...,
@@ -139,7 +139,7 @@ func (s *marketIntegrationTestSuite) Test1QueryOrders() {
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
 	// test query deployments
-	resp, err := cli.QueryDeploymentsExec(
+	resp, err := clitestutil.QueryDeploymentsExec(
 		ctx,
 		cctx,
 		cli.TestFlags().WithOutputJSON()...,
@@ -153,7 +153,7 @@ func (s *marketIntegrationTestSuite) Test1QueryOrders() {
 	s.Require().Equal(s.addrDeployer.String(), out.Deployments[0].Deployment.ID.Owner)
 
 	// test query orders
-	resp, err = cli.QueryOrdersExec(
+	resp, err = clitestutil.QueryOrdersExec(
 		ctx,
 		cctx,
 		cli.TestFlags().WithOutputJSON()...,
@@ -169,7 +169,7 @@ func (s *marketIntegrationTestSuite) Test1QueryOrders() {
 
 	// test query order
 	createdOrder := orders[0]
-	resp, err = cli.QueryOrderExec(
+	resp, err = clitestutil.QueryOrderExec(
 		ctx,
 		cctx,
 		cli.TestFlags().
@@ -184,7 +184,7 @@ func (s *marketIntegrationTestSuite) Test1QueryOrders() {
 	s.Require().Equal(createdOrder, order)
 
 	// test query orders with filters
-	resp, err = cli.QueryOrdersExec(
+	resp, err = clitestutil.QueryOrdersExec(
 		ctx,
 		cctx,
 		cli.TestFlags().
@@ -201,7 +201,7 @@ func (s *marketIntegrationTestSuite) Test1QueryOrders() {
 	s.Require().Equal(createdOrder, result.Orders[0])
 
 	// test query orders with wrong owner value
-	_, err = cli.QueryOrdersExec(
+	_, err = clitestutil.QueryOrdersExec(
 		ctx,
 		cctx,
 		cli.TestFlags().
@@ -211,7 +211,7 @@ func (s *marketIntegrationTestSuite) Test1QueryOrders() {
 	s.Require().Error(err)
 
 	// test query orders with wrong state value
-	_, err = cli.QueryOrdersExec(
+	_, err = clitestutil.QueryOrdersExec(
 		ctx,
 		cctx,
 		cli.TestFlags().
@@ -232,12 +232,12 @@ func (s *marketIntegrationTestSuite) Test2CreateBid() {
 	addr := s.addrProvider
 
 	// create provider
-	_, err = cli.TxCreateProviderExec(
+	_, err = clitestutil.TxCreateProviderExec(
 		ctx,
 		cctx,
 		providerPath,
 		cli.TestFlags().
-			WithFrom(addr).
+			WithFrom(addr.String()).
 			WithSkipConfirm().
 			WithGasAutoFlags().
 			WithBroadcastModeBlock()...,
@@ -246,7 +246,7 @@ func (s *marketIntegrationTestSuite) Test2CreateBid() {
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
 	// test query providers
-	resp, err := cli.QueryProvidersExec(
+	resp, err := clitestutil.QueryProvidersExec(
 		ctx,
 		cctx,
 		cli.TestFlags().
@@ -261,7 +261,7 @@ func (s *marketIntegrationTestSuite) Test2CreateBid() {
 	s.Require().Equal(addr.String(), out.Providers[0].Owner)
 
 	// fetch orders
-	resp, err = cli.QueryOrdersExec(
+	resp, err = clitestutil.QueryOrdersExec(
 		ctx,
 		cctx,
 		cli.TestFlags().
@@ -277,13 +277,13 @@ func (s *marketIntegrationTestSuite) Test2CreateBid() {
 	createdOrder := result.Orders[0]
 
 	// create bid
-	_, err = cli.TxCreateBidExec(
+	_, err = clitestutil.TxCreateBidExec(
 		ctx,
 		cctx,
 		cli.TestFlags().
-			WithFrom(addr).
+			WithFrom(addr.String()).
 			WithOrderID(createdOrder.ID).
-			WithDeposit(cflags.DefaultDeposit).
+			WithDeposit(sdk.NewCoin("uakt", sdk.NewInt(5000000))).
 			WithPrice(sdk.NewDecCoinFromDec(testutil.CoinDenom, sdk.MustNewDecFromStr("1.1"))).
 			WithSkipConfirm().
 			WithGasAutoFlags().
@@ -293,7 +293,7 @@ func (s *marketIntegrationTestSuite) Test2CreateBid() {
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
 	// test query bids
-	resp, err = cli.QueryBidsExec(
+	resp, err = clitestutil.QueryBidsExec(
 		ctx,
 		cctx,
 		cli.TestFlags().
@@ -310,7 +310,7 @@ func (s *marketIntegrationTestSuite) Test2CreateBid() {
 
 	// test query bid
 	createdBid := bids[0].Bid
-	resp, err = cli.QueryBidExec(
+	resp, err = clitestutil.QueryBidExec(
 		ctx,
 		cctx,
 		cli.TestFlags().
@@ -325,7 +325,7 @@ func (s *marketIntegrationTestSuite) Test2CreateBid() {
 	s.Require().Equal(createdBid, bid.Bid)
 
 	// test query bids with filters
-	resp, err = cli.QueryBidsExec(
+	resp, err = clitestutil.QueryBidsExec(
 		ctx,
 		cctx,
 		cli.TestFlags().
@@ -342,17 +342,17 @@ func (s *marketIntegrationTestSuite) Test2CreateBid() {
 	s.Require().Equal(createdBid, bidRes.Bids[0].Bid)
 
 	// test query bids with wrong owner value
-	_, err = cli.QueryBidsExec(
+	_, err = clitestutil.QueryBidsExec(
 		ctx,
 		cctx,
 		cli.TestFlags().
 			WithOutputJSON().
-			WithOwner("cosmos102ruvpv2srmunfffxavttxnhezln6fnc3pf7tt")...,
+			WithOwner("akash102ruvpv2srmunfffxavttxnhezln6fnc3pf7tt")...,
 	)
 	s.Require().Error(err)
 
 	// test query bids with wrong state value
-	_, err = cli.QueryBidsExec(
+	_, err = clitestutil.QueryBidsExec(
 		ctx,
 		cctx,
 		cli.TestFlags().
@@ -362,11 +362,11 @@ func (s *marketIntegrationTestSuite) Test2CreateBid() {
 	s.Require().Error(err)
 
 	// create lease
-	_, err = cli.TxCreateLeaseExec(
+	_, err = clitestutil.TxCreateLeaseExec(
 		ctx,
 		cctx,
 		cli.TestFlags().
-			WithFrom(s.addrDeployer).
+			WithFrom(s.addrDeployer.String()).
 			WithBidID(bid.Bid.ID).
 			WithSkipConfirm().
 			WithGasAutoFlags().
@@ -382,7 +382,7 @@ func (s *marketIntegrationTestSuite) Test3QueryLeasesAndCloseBid() {
 	cctx := s.cctx
 
 	// test query leases
-	resp, err := cli.QueryLeasesExec(
+	resp, err := clitestutil.QueryLeasesExec(
 		ctx,
 		cctx,
 		cli.TestFlags().
@@ -399,7 +399,7 @@ func (s *marketIntegrationTestSuite) Test3QueryLeasesAndCloseBid() {
 
 	// test query lease
 	createdLease := leases[0].Lease
-	resp, err = cli.QueryLeaseExec(
+	resp, err = clitestutil.QueryLeaseExec(
 		ctx,
 		cctx,
 		cli.TestFlags().
@@ -414,11 +414,11 @@ func (s *marketIntegrationTestSuite) Test3QueryLeasesAndCloseBid() {
 	s.Require().Equal(createdLease, lease.Lease)
 
 	// create bid
-	_, err = cli.TxCloseBidExec(
+	_, err = clitestutil.TxCloseBidExec(
 		ctx,
 		cctx,
 		cli.TestFlags().
-			WithFrom(s.addrProvider).
+			WithFrom(s.addrProvider.String()).
 			WithBidID(lease.Lease.ID.BidID()).
 			WithSkipConfirm().
 			WithGasAutoFlags().
@@ -428,7 +428,7 @@ func (s *marketIntegrationTestSuite) Test3QueryLeasesAndCloseBid() {
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
 	// test query closed bids
-	resp, err = cli.QueryBidsExec(
+	resp, err = clitestutil.QueryBidsExec(
 		ctx,
 		cctx,
 		cli.TestFlags().
@@ -444,7 +444,7 @@ func (s *marketIntegrationTestSuite) Test3QueryLeasesAndCloseBid() {
 	s.Require().Equal(s.addrProvider.String(), bidRes.Bids[0].Bid.ID.Provider)
 
 	// test query leases with state value filter
-	resp, err = cli.QueryLeasesExec(
+	resp, err = clitestutil.QueryLeasesExec(
 		ctx,
 		cctx,
 		cli.TestFlags().
@@ -459,17 +459,17 @@ func (s *marketIntegrationTestSuite) Test3QueryLeasesAndCloseBid() {
 	s.Require().Len(leaseRes.Leases, 1)
 
 	// test query leases with wrong owner value
-	_, err = cli.QueryLeasesExec(
+	_, err = clitestutil.QueryLeasesExec(
 		ctx,
 		cctx,
 		cli.TestFlags().
-			WithOwner("cosmos102ruvpv2srmunfffxavttxnhezln6fnc3pf7tt").
+			WithOwner("akash102ruvpv2srmunfffxavttxnhezln6fnc3pf7tt").
 			WithOutputJSON()...,
 	)
 	s.Require().Error(err)
 
 	// test query leases with wrong state value
-	_, err = cli.QueryLeasesExec(
+	_, err = clitestutil.QueryLeasesExec(
 		ctx,
 		cctx,
 		cli.TestFlags().
@@ -485,7 +485,7 @@ func (s *marketIntegrationTestSuite) Test4CloseOrder() {
 	cctx := s.cctx
 
 	// fetch open orders
-	resp, err := cli.QueryOrdersExec(
+	resp, err := clitestutil.QueryOrdersExec(
 		ctx,
 		cctx,
 		cli.TestFlags().

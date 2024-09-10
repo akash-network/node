@@ -8,17 +8,16 @@ import (
 	"path/filepath"
 
 	"github.com/cosmos/cosmos-sdk/client"
-	sdktestutil "github.com/cosmos/cosmos-sdk/testutil"
-	"pkg.akt.dev/go/cli"
-
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	sdktestutil "github.com/cosmos/cosmos-sdk/testutil"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"pkg.akt.dev/go/node/market/v1"
 	"pkg.akt.dev/go/node/market/v1beta5"
 
-	cflags "pkg.akt.dev/go/cli/flags"
+	"pkg.akt.dev/go/cli"
+	clitestutil "pkg.akt.dev/go/cli/testutil"
 
 	"pkg.akt.dev/akashd/testutil"
 )
@@ -49,20 +48,20 @@ func (s *marketGRPCRestTestSuite) SetupSuite() {
 	ctx := context.Background()
 
 	// Generate client certificate
-	_, err = cli.TxGenerateClientExec(
+	_, err = clitestutil.TxGenerateClientExec(
 		ctx,
 		s.cctx,
 		cli.TestFlags().
-			WithFrom(val.Address)...,
+			WithFrom(val.Address.String())...,
 	)
 	s.Require().NoError(err)
 
 	// Publish client certificate
-	_, err = cli.TxPublishClientExec(
+	_, err = clitestutil.TxPublishClientExec(
 		ctx,
 		s.cctx,
 		cli.TestFlags().
-			WithFrom(val.Address).
+			WithFrom(val.Address.String()).
 			WithSkipConfirm().
 			WithBroadcastModeBlock().
 			WithGasAutoFlags()...,
@@ -77,22 +76,22 @@ func (s *marketGRPCRestTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 
 	// create deployment
-	_, err = cli.TxCreateDeploymentExec(
+	_, err = clitestutil.TxCreateDeploymentExec(
 		ctx,
 		s.cctx,
 		deploymentPath,
 		cli.TestFlags().
-			WithFrom(val.Address).
+			WithFrom(val.Address.String()).
 			WithSkipConfirm().
 			WithBroadcastModeBlock().
-			WithDeposit(cflags.DefaultDeposit).
+			WithDeposit(DefaultDeposit).
 			WithGasAutoFlags()...,
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.Network().WaitForBlocks(2))
 
 	// test query orders
-	resp, err := cli.QueryOrdersExec(
+	resp, err := clitestutil.QueryOrdersExec(
 		ctx, val.ClientCtx.WithOutputFormat("json"),
 	)
 	s.Require().NoError(err)
@@ -108,15 +107,15 @@ func (s *marketGRPCRestTestSuite) SetupSuite() {
 	s.order = orders[0]
 
 	// Send coins from validator to keyBar
-	sendTokens := cflags.DefaultDeposit.Add(cflags.DefaultDeposit)
-	_, err = cli.MsgSendExec(
+	sendTokens := DefaultDeposit.Add(DefaultDeposit)
+	_, err = clitestutil.ExecSend(
 		ctx,
 		val.ClientCtx,
-		val.Address,
-		keyAddr,
-		sdk.NewCoins(sendTokens),
 		cli.TestFlags().
-			WithFrom(val.Address).
+			With(
+				val.Address.String(),
+				keyAddr.String(),
+				sdk.NewCoins(sendTokens).String()).
 			WithGasAutoFlags().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
@@ -126,12 +125,12 @@ func (s *marketGRPCRestTestSuite) SetupSuite() {
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
 	// create provider
-	_, err = cli.TxCreateProviderExec(
+	_, err = clitestutil.TxCreateProviderExec(
 		ctx,
 		s.cctx,
 		providerPath,
 		cli.TestFlags().
-			WithFrom(keyAddr).
+			WithFrom(keyAddr.String()).
 			WithGasAutoFlags().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
@@ -140,14 +139,14 @@ func (s *marketGRPCRestTestSuite) SetupSuite() {
 
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
-	_, err = cli.TxCreateBidExec(
+	_, err = clitestutil.TxCreateBidExec(
 		ctx,
 		s.cctx,
 		cli.TestFlags().
-			WithFrom(keyAddr).
+			WithFrom(keyAddr.String()).
 			WithOrderID(s.order.ID).
 			WithPrice(sdk.NewDecCoinFromDec(testutil.CoinDenom, sdk.MustNewDecFromStr("1.1"))).
-			WithDeposit(cflags.DefaultDeposit).
+			WithDeposit(DefaultDeposit).
 			WithGasAutoFlags().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
@@ -157,7 +156,7 @@ func (s *marketGRPCRestTestSuite) SetupSuite() {
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
 	// get bid
-	resp, err = cli.QueryBidsExec(
+	resp, err = clitestutil.QueryBidsExec(
 		ctx, val.ClientCtx.WithOutputFormat("json"),
 	)
 	s.Require().NoError(err)
@@ -172,11 +171,11 @@ func (s *marketGRPCRestTestSuite) SetupSuite() {
 	s.bid = bids[0].Bid
 
 	// create lease
-	_, err = cli.TxCreateLeaseExec(
+	_, err = clitestutil.TxCreateLeaseExec(
 		ctx,
 		s.cctx,
 		cli.TestFlags().
-			WithFrom(val.Address).
+			WithFrom(val.Address.String()).
 			WithBidID(s.bid.ID).
 			WithGasAutoFlags().
 			WithSkipConfirm().
@@ -187,7 +186,7 @@ func (s *marketGRPCRestTestSuite) SetupSuite() {
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
 	// test query leases
-	resp, err = cli.QueryLeasesExec(
+	resp, err = clitestutil.QueryLeasesExec(
 		ctx,
 		s.cctx,
 		cli.TestFlags().

@@ -5,10 +5,13 @@ package e2e
 import (
 	"testing"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/suite"
 
 	"pkg.akt.dev/akashd/testutil"
 )
+
+var DefaultDeposit = sdk.NewCoin("uakt", sdk.NewInt(5000000))
 
 func TestIntegrationCLI(t *testing.T) {
 	di := &deploymentIntegrationTestSuite{}

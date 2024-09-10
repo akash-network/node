@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"pkg.akt.dev/go/cli"
+	clitestutil "pkg.akt.dev/go/cli/testutil"
 
 	sdktestutil "github.com/cosmos/cosmos-sdk/testutil"
 	types "pkg.akt.dev/go/node/provider/v1beta4"
@@ -33,12 +34,12 @@ func (s *providerGRPCRestTestSuite) SetupSuite() {
 	cctx := val.ClientCtx
 
 	// create deployment
-	_, err = cli.TxCreateProviderExec(
+	_, err = clitestutil.TxCreateProviderExec(
 		ctx,
 		cctx,
 		providerPath,
 		cli.TestFlags().
-			WithFrom(val.Address).
+			WithFrom(val.Address.String()).
 			WithGasAutoFlags().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
@@ -48,7 +49,7 @@ func (s *providerGRPCRestTestSuite) SetupSuite() {
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
 	// get provider
-	resp, err := cli.QueryProvidersExec(
+	resp, err := clitestutil.QueryProvidersExec(
 		ctx,
 		cctx,
 		cli.TestFlags().
