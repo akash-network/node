@@ -193,14 +193,14 @@ func TestProviderDeleteAttribute(t *testing.T) {
 	require.Equal(t, prov, msgSignProviderAttributesToResponse(msg))
 }
 
-func msgSignProviderAttributesToResponse(msg *types.MsgSignProviderAttributes) types.Providers {
+func msgSignProviderAttributesToResponse(msg *types.MsgSignProviderAttributes) types.AuditedProviders {
 	// create handler sorts attributes, so do we to ensure same order
 
 	sort.SliceStable(msg.Attributes, func(i, j int) bool {
 		return msg.Attributes[i].Key < msg.Attributes[j].Key
 	})
 
-	return types.Providers{
+	return types.AuditedProviders{
 		{
 			Owner:      msg.Owner,
 			Auditor:    msg.Auditor,

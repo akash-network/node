@@ -55,7 +55,7 @@ func TestGRPCQueryProvider(t *testing.T) {
 	require.NoError(t, err)
 
 	var req *types.QueryProviderAuditorRequest
-	var expProvider types.Provider
+	var expProvider types.AuditedProvider
 
 	testCases := []struct {
 		msg      string
