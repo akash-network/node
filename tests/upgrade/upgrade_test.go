@@ -238,12 +238,18 @@ type upgradeTest struct {
 	validators        map[string]*validator
 }
 
+type nodePortsRPC struct {
+	port uint16
+	grpc uint16
+}
 type nodeInitParams struct {
-	nodeID    string
-	homedir   string
-	p2pPort   uint16
-	rpcPort   uint16
-	pprofPort uint16
+	nodeID      string
+	homedir     string
+	rpc         nodePortsRPC
+	p2pPort     uint16
+	grpcPort    uint16
+	grpcWebPort uint16
+	pprofPort   uint16
 }
 
 var (
@@ -383,16 +389,22 @@ func TestUpgrade(t *testing.T) {
 		}
 
 		if cfg.Work.Home == name {
+			cmdr = valCmd
+
+			output, err := cmdr.execute(ctx, fmt.Sprintf("keys show %s -a", cfg.Work.Key))
+			require.NoError(t, err)
+
+			addr, err := sdk.AccAddressFromBech32(strings.Trim(string(output), "\n"))
+			require.NoError(t, err)
+
+			t.Logf("validator address: \"%s\"", addr.String())
+
 			postUpgradeParams.Home = homedir
 			postUpgradeParams.ChainID = cfg.ChainID
 			postUpgradeParams.Node = "tcp://127.0.0.1:26657"
 			postUpgradeParams.KeyringBackend = "test"
 			postUpgradeParams.From = cfg.Work.Key
-
-			cmdr = valCmd
-
-			_, err = cmdr.execute(ctx, fmt.Sprintf("keys show %s -a", cfg.Work.Key))
-			require.NoError(t, err)
+			postUpgradeParams.FromAddress = addr
 		}
 
 		cmdr.env = append(cmdr.env, fmt.Sprintf("AKASH_OUTPUT=json"))
@@ -412,11 +424,16 @@ func TestUpgrade(t *testing.T) {
 		p2pPort := 26656 + uint16(idx*2)
 
 		initParams[name] = nodeInitParams{
-			nodeID:    strings.TrimSpace(string(res)),
-			homedir:   homedir,
-			p2pPort:   p2pPort,
-			rpcPort:   p2pPort + 1,
-			pprofPort: 6060 + uint16(idx),
+			nodeID:  strings.TrimSpace(string(res)),
+			homedir: homedir,
+			p2pPort: p2pPort,
+			rpc: nodePortsRPC{
+				port: p2pPort + 1,
+				grpc: 9090 + uint16(idx*3),
+			},
+			grpcPort:    9090 + uint16(idx*3),
+			grpcWebPort: 9091 + uint16(idx*3),
+			pprofPort:   6060 + uint16(idx),
 		}
 	}
 
@@ -441,7 +458,7 @@ func TestUpgrade(t *testing.T) {
 			cosmovisor:  *cosmovisor,
 			isRPC:       cfg.Work.Home == name,
 			p2pPort:     params.p2pPort,
-			rpcPort:     params.rpcPort,
+			rpcPort:     params.rpc.port,
 			upgradeName: *upgradeName,
 			pub:         bus,
 			env: []string{
@@ -460,8 +477,11 @@ func TestUpgrade(t *testing.T) {
 				fmt.Sprintf("AKASH_P2P_PERSISTENT_PEERS=%s", strings.TrimSuffix(persistentPeers, ",")),
 				fmt.Sprintf("AKASH_P2P_UNCONDITIONAL_PEER_IDS=%s", strings.TrimSuffix(unconditionalPeerIDs, ",")),
 				fmt.Sprintf("AKASH_P2P_LADDR=tcp://127.0.0.1:%d", params.p2pPort),
-				fmt.Sprintf("AKASH_RPC_LADDR=tcp://127.0.0.1:%d", params.rpcPort),
+				fmt.Sprintf("AKASH_RPC_LADDR=tcp://127.0.0.1:%d", params.rpc.port),
+				fmt.Sprintf("AKASH_RPC_GRPC_LADDR=tcp://127.0.0.1:%d", params.rpc.grpc),
 				fmt.Sprintf("AKASH_RPC_PPROF_LADDR=localhost:%d", params.pprofPort),
+				fmt.Sprintf("AKASH_GRPC_ADDRESS=tcp://127.0.0.1:%d", params.grpcPort),
+				fmt.Sprintf("AKASH_GRPC_WEB_ADDRESS=tcp://127.0.0.1:%d", params.grpcWebPort),
 				"AKASH_P2P_PEX=true",
 				"AKASH_P2P_ADDR_BOOK_STRICT=false",
 				"AKASH_P2P_ALLOW_DUPLICATE_IP=true",
