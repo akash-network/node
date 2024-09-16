@@ -250,7 +250,13 @@ function init() {
 			cp "$validators_dir/.akash0/cosmovisor/upgrades/$UPGRADE_TO/bin/akash" "$upgrade_bin/akash"
 		fi
 
-		ln -snf
+		pushd "$(pwd)"
+		cd "$cosmovisor_dir"
+
+		ln -snf "current" "genesis"
+
+		popd
+
 		AKASH=$genesis_bin/akash
 
 		$AKASH init --home "$valdir" "$(jq -rc '.moniker' <<<"$val")" >/dev/null 2>&1
@@ -294,8 +300,8 @@ function init() {
 			done
 
 			cat > "$valdir/.envrc" <<EOL
-PATH_add "$(pwd)/cosmovisor/current/bin"
-AKASH_HOME=$valdir
+PATH_add "\$(pwd)/cosmovisor/current/bin"
+AKASH_HOME="\$(pwd)"
 AKASH_FROM=validator0
 AKASH_GAS=auto
 AKASH_MINIMUM_GAS_PRICES=0.0025uakt
@@ -303,6 +309,15 @@ AKASH_NODE=tcp://127.0.0.1:26657
 AKASH_CHAIN_ID=localakash
 AKASH_KEYRING_BACKEND=test
 AKASH_SIGN_MODE=direct
+
+export AKASH_HOME
+export AKASH_FROM
+export AKASH_GAS
+export AKASH_MINIMUM_GAS_PRICES
+export AKASH_NODE
+export AKASH_CHAIN_ID
+export AKASH_KEYRING_BACKEND
+export AKASH_SIGN_MODE
 EOL
 
 		else
@@ -316,7 +331,7 @@ EOL
 		fi
 
 		jq -r '.keys.priv' <<<"$val" >"$valdir/config/priv_validator_key.json"
-		jq -r '.keys.node' <<<"$val" >"$valdir/config/priv_validator_key.json"
+		jq -r '.keys.node' <<<"$val" >"$valdir/config/node_key.json"
 
 		((cnt++)) || true
 	done

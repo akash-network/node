@@ -73,16 +73,14 @@ func (pu *postUpgrade) Run(ctx context.Context, t *testing.T, params uttypes.Tes
 
 	require.True(t, paramsResp.Params.MinCommissionRate.GTE(sdk.NewDecWithPrec(5, 2)), "per upgrade v1.0.0 MinCommissionRate should be 5%")
 
-	// operator address is taken from testnetify
-	opAddr, err := sdk.AccAddressFromHexUnsafe("20DDEBCF73B805ACDC88277B472382FC9DEA8CBC")
-	require.NoError(t, err)
+	opAddr := sdk.ValAddress(cctx.FromAddress)
 
 	comVal := sdk.NewDecWithPrec(4, 2)
 
-	valResp, err := mcl.Query().Staking().Validator(ctx, &stakingtypes.QueryValidatorRequest{ValidatorAddr: sdk.ValAddress(opAddr).String()})
+	valResp, err := mcl.Query().Staking().Validator(ctx, &stakingtypes.QueryValidatorRequest{ValidatorAddr: opAddr.String()})
 	require.NoError(t, err)
 
-	tx := stakingtypes.NewMsgEditValidator(sdk.ValAddress(opAddr), valResp.Validator.Description, &comVal)
+	tx := stakingtypes.NewMsgEditValidator(opAddr, valResp.Validator.Description, &comVal)
 	broadcastResp, err := mcl.Tx().BroadcastMsgs(ctx, []sdk.Msg{tx})
 	require.Error(t, err)
 	require.NotNil(t, broadcastResp)
@@ -93,7 +91,7 @@ func (pu *postUpgrade) Run(ctx context.Context, t *testing.T, params uttypes.Tes
 
 	comVal = sdk.NewDecWithPrec(6, 2)
 
-	tx = stakingtypes.NewMsgEditValidator(sdk.ValAddress(opAddr), valResp.Validator.Description, &comVal)
+	tx = stakingtypes.NewMsgEditValidator(opAddr, valResp.Validator.Description, &comVal)
 
 	broadcastResp, err = mcl.Tx().BroadcastMsgs(ctx, []sdk.Msg{tx})
 	require.NoError(t, err)

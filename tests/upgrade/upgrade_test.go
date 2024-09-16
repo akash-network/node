@@ -1001,11 +1001,13 @@ loop:
 					l.t.Logf("[%s][%s]: node detected upgrade", l.params.name, nodeTestStageMapStr[stage])
 					stage = nodeTestStageUpgrade
 					wdCtrl(l.ctx, watchdogCtrlPause)
+				default:
 				}
 			case eventShutdown:
 				l.t.Logf("[%s][%s]: received shutdown signal", l.params.name, nodeTestStageMapStr[stage])
 				wdCtrl(l.ctx, watchdogCtrlStop)
 				break loop
+			default:
 			}
 		}
 	}

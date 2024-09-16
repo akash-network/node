@@ -34,12 +34,12 @@ import (
 	mtypes "pkg.akt.dev/go/node/market/v1beta5"
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 
-	"pkg.akt.dev/akashd/x/audit"
-	"pkg.akt.dev/akashd/x/cert"
-	"pkg.akt.dev/akashd/x/deployment"
-	"pkg.akt.dev/akashd/x/escrow"
-	"pkg.akt.dev/akashd/x/market"
-	"pkg.akt.dev/akashd/x/provider"
+	"pkg.akt.dev/node/x/audit"
+	"pkg.akt.dev/node/x/cert"
+	"pkg.akt.dev/node/x/deployment"
+	"pkg.akt.dev/node/x/escrow"
+	"pkg.akt.dev/node/x/market"
+	"pkg.akt.dev/node/x/provider"
 )
 
 type (
@@ -945,8 +945,8 @@ func (ga *GenesisState) IncreaseDelegatorStake(
 				DelegatorAddress: addr.String(),
 				ValidatorAddress: val.String(),
 				StartingInfo: distributiontypes.DelegatorStartingInfo{
-					PreviousPeriod: uint64(ga.doc.InitialHeight - 2),
-					Height:         uint64(ga.doc.InitialHeight),
+					PreviousPeriod: uint64(ga.doc.InitialHeight - 2), // nolint gosec
+					Height:         uint64(ga.doc.InitialHeight),     // nolint gosec
 				},
 			})
 
@@ -999,8 +999,8 @@ func (ga *GenesisState) ensureActiveSet(cdc codec.Codec) error {
 	sVals := ga.app.StakingState.state.Validators
 
 	vCount := ga.app.StakingState.state.Params.MaxValidators
-	if vCount > uint32(len(sVals)) {
-		vCount = uint32(len(sVals))
+	if vCount > uint32(len(sVals)) { // nolint gosec
+		vCount = uint32(len(sVals)) // nolint gosec
 	}
 
 	vals := make([]tmtypes.GenesisValidator, 0, vCount)
@@ -1011,7 +1011,7 @@ func (ga *GenesisState) ensureActiveSet(cdc codec.Codec) error {
 	for i, val := range sVals {
 		coins := sdk.NewCoins(sdk.NewCoin(ga.app.StakingState.state.Params.BondDenom, val.Tokens))
 
-		if uint32(len(vals)) < vCount {
+		if uint32(len(vals)) < vCount { // nolint gosec
 			if val.IsJailed() {
 				continue
 			}
@@ -1167,7 +1167,7 @@ func (ga *GenesisState) AddNewValidator(
 	ga.app.DistributionState.state.ValidatorHistoricalRewards = append(ga.app.DistributionState.state.ValidatorHistoricalRewards,
 		distributiontypes.ValidatorHistoricalRewardsRecord{
 			ValidatorAddress: addr.String(),
-			Period:           uint64(ga.doc.InitialHeight - 2),
+			Period:           uint64(ga.doc.InitialHeight - 2), // nolint gosec
 			Rewards: distributiontypes.ValidatorHistoricalRewards{
 				CumulativeRewardRatio: sdk.DecCoins{},
 				ReferenceCount:        2,
@@ -1179,7 +1179,7 @@ func (ga *GenesisState) AddNewValidator(
 			ValidatorAddress: addr.String(),
 			Rewards: distributiontypes.ValidatorCurrentRewards{
 				Rewards: sdk.DecCoins{},
-				Period:  uint64(ga.doc.InitialHeight - 1),
+				Period:  uint64(ga.doc.InitialHeight - 1), // nolint gosec
 			},
 		})
 
