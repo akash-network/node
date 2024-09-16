@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	ptypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
 	"github.com/theckman/yacspin"
 
 	tmtypes "github.com/tendermint/tendermint/types"
@@ -31,6 +30,7 @@ import (
 	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
 	etypes "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
 	mtypes "github.com/akash-network/akash-api/go/node/market/v1beta4"
+	ptypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
 
 	"github.com/akash-network/node/x/audit"
 	"github.com/akash-network/node/x/cert"
@@ -300,10 +300,6 @@ func (ga *GenesisState) validateBalances() error {
 		return fmt.Errorf("bonded pool balance is different from bonded coins: %s <-> %s", notBondedBalance, notBondedCoins) // nolint: goerr113
 	}
 
-	// if !notBondedBalance.IsEqual(notBondedCoins) {
-	// 	return fmt.Errorf("not bonded pool balance is different from not bonded coins: %s <-> %s", notBondedBalance, notBondedCoins) // nolint: goerr113
-	// }
-
 	return nil
 }
 
@@ -451,15 +447,9 @@ func (ga *AuthState) pack(cdc codec.Codec) error {
 }
 
 func (ga *BankState) unpack(cdc codec.Codec) error {
-	var err error
-
 	ga.once.Do(func() {
 		ga.state = banktypes.GetGenesisStateFromAppState(cdc, ga.gstate)
 	})
-
-	if err != nil {
-		return err
-	}
 
 	return nil
 }
@@ -482,15 +472,9 @@ func (ga *BankState) pack(cdc codec.Codec) error {
 }
 
 func (ga *GovState) unpack(cdc codec.Codec) error {
-	var err error
-
 	ga.once.Do(func() {
 		ga.state = GetGovGenesisStateFromAppState(cdc, ga.gstate)
 	})
-
-	if err != nil {
-		return err
-	}
 
 	return nil
 }
@@ -511,15 +495,9 @@ func (ga *GovState) pack(cdc codec.Codec) error {
 }
 
 func (ga *IBCState) unpack(cdc codec.Codec) error {
-	var err error
-
 	ga.once.Do(func() {
 		ga.state = GetIBCGenesisStateFromAppState(cdc, ga.gstate)
 	})
-
-	if err != nil {
-		return err
-	}
 
 	return nil
 }
@@ -540,15 +518,9 @@ func (ga *IBCState) pack(cdc codec.Codec) error {
 }
 
 func (ga *StakingState) unpack(cdc codec.Codec) error {
-	var err error
-
 	ga.once.Do(func() {
 		ga.state = stakingtypes.GetGenesisStateFromAppState(cdc, ga.gstate)
 	})
-
-	if err != nil {
-		return err
-	}
 
 	return nil
 }
@@ -569,15 +541,9 @@ func (ga *StakingState) pack(cdc codec.Codec) error {
 }
 
 func (ga *SlashingState) unpack(cdc codec.Codec) error {
-	var err error
-
 	ga.once.Do(func() {
 		ga.state = GetSlashingGenesisStateFromAppState(cdc, ga.gstate)
 	})
-
-	if err != nil {
-		return err
-	}
 
 	return nil
 }
@@ -598,15 +564,9 @@ func (ga *SlashingState) pack(cdc codec.Codec) error {
 }
 
 func (ga *DistributionState) unpack(cdc codec.Codec) error {
-	var err error
-
 	ga.once.Do(func() {
 		ga.state = GetDistributionGenesisStateFromAppState(cdc, ga.gstate)
 	})
-
-	if err != nil {
-		return err
-	}
 
 	return nil
 }
@@ -1063,7 +1023,10 @@ func (ga *GenesisState) ensureActiveSet(cdc codec.Codec) error {
 				}
 			}
 
-			pubkey, _ := val.ConsPubKey()
+			pubkey, err := val.ConsPubKey()
+			if err != nil {
+				return err
+			}
 
 			tmPk, err := cryptocodec.ToTmPubKeyInterface(pubkey)
 			if err != nil {
@@ -1074,7 +1037,7 @@ func (ga *GenesisState) ensureActiveSet(cdc codec.Codec) error {
 			totalPower += power
 
 			vals = append(vals, tmtypes.GenesisValidator{
-				Address: tmPk.Address(),
+				Address: sdk.ConsAddress(tmPk.Address()).Bytes(),
 				PubKey:  tmPk,
 				Power:   power,
 				Name:    val.Description.Moniker,
@@ -1096,7 +1059,6 @@ func (ga *GenesisState) ensureActiveSet(cdc codec.Codec) error {
 
 	ga.app.StakingState.state.LastTotalPower = sdk.NewInt(totalPower)
 	ga.app.StakingState.state.LastValidatorPowers = sPowers
-
 	sort.Sort(sort.Reverse(GenesisValidators(vals)))
 
 	ga.doc.Validators = vals
@@ -1176,6 +1138,8 @@ func (ga *GenesisState) AddNewValidator(
 		return err
 	}
 
+	consAddr := sdk.ConsAddress(pk.Address())
+
 	pkAny, err := codectypes.NewAnyWithValue(pk)
 	if err != nil {
 		return err
@@ -1219,9 +1183,9 @@ func (ga *GenesisState) AddNewValidator(
 
 	ga.app.SlashingState.state.SigningInfos = append(ga.app.SlashingState.state.SigningInfos,
 		slashingtypes.SigningInfo{
-			Address: sdk.ConsAddress(addr).String(),
+			Address: consAddr.String(),
 			ValidatorSigningInfo: slashingtypes.ValidatorSigningInfo{
-				Address:             sdk.ConsAddress(addr).String(),
+				Address:             consAddr.String(),
 				StartHeight:         ga.doc.InitialHeight - 3,
 				IndexOffset:         0,
 				JailedUntil:         time.Time{},
