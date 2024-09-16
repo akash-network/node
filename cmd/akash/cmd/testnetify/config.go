@@ -48,6 +48,7 @@ type Delegator struct {
 }
 
 type ValidatorConfig struct {
+	Operator   AccAddress                   `json:"operator"`
 	PubKey     PubKey                       `json:"pubkey"`
 	Name       string                       `json:"name"`
 	Bonded     bool                         `json:"bonded"`
