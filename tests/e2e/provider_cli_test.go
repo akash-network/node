@@ -11,7 +11,7 @@ import (
 
 	types "pkg.akt.dev/go/node/provider/v1beta4"
 
-	"pkg.akt.dev/akashd/testutil"
+	"pkg.akt.dev/node/testutil"
 )
 
 type providerIntegrationTestSuite struct {

@@ -42,13 +42,13 @@ import (
 
 	cflags "pkg.akt.dev/go/cli/flags"
 
-	"pkg.akt.dev/akashd/app"
-	"pkg.akt.dev/akashd/app/params"
-	"pkg.akt.dev/akashd/client"
-	"pkg.akt.dev/akashd/cmd/akash/cmd/testnetify"
-	ecmd "pkg.akt.dev/akashd/events/cmd"
-	utilcli "pkg.akt.dev/akashd/util/cli"
-	"pkg.akt.dev/akashd/util/server"
+	"pkg.akt.dev/node/app"
+	"pkg.akt.dev/node/app/params"
+	"pkg.akt.dev/node/client"
+	"pkg.akt.dev/node/cmd/akash/cmd/testnetify"
+	ecmd "pkg.akt.dev/node/events/cmd"
+	utilcli "pkg.akt.dev/node/util/cli"
+	"pkg.akt.dev/node/util/server"
 )
 
 type appCreator struct {

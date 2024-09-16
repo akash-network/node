@@ -7,7 +7,7 @@ import (
 
 	types "pkg.akt.dev/go/node/take/v1"
 
-	"pkg.akt.dev/akashd/x/take/keeper"
+	"pkg.akt.dev/node/x/take/keeper"
 )
 
 // ValidateGenesis does validation check of the Genesis and return error incase of failure
@@ -25,7 +25,11 @@ func DefaultGenesisState() *types.GenesisState {
 
 // InitGenesis initiate genesis state and return updated validator details
 func InitGenesis(ctx sdk.Context, keeper keeper.IKeeper, data *types.GenesisState) []abci.ValidatorUpdate {
-	keeper.SetParams(ctx, data.Params)
+	err := keeper.SetParams(ctx, data.Params)
+	if err != nil {
+		panic(err.Error())
+	}
+
 	return []abci.ValidatorUpdate{}
 }
 

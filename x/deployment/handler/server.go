@@ -12,7 +12,7 @@ import (
 	v1 "pkg.akt.dev/go/node/deployment/v1"
 	types "pkg.akt.dev/go/node/deployment/v1beta4"
 
-	"pkg.akt.dev/akashd/x/deployment/keeper"
+	"pkg.akt.dev/node/x/deployment/keeper"
 )
 
 var _ types.MsgServer = msgServer{}
@@ -76,7 +76,7 @@ func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreate
 
 	for idx, spec := range msg.Groups {
 		groups = append(groups, types.Group{
-			ID:        v1.MakeGroupID(deployment.ID, uint32(idx+1)),
+			ID:        v1.MakeGroupID(deployment.ID, uint32(idx+1)), // nolint gosec
 			State:     types.GroupOpen,
 			GroupSpec: spec,
 			CreatedAt: ctx.BlockHeight(),

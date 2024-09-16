@@ -19,9 +19,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 	v1 "pkg.akt.dev/go/node/escrow/v1"
 
-	utypes "pkg.akt.dev/akashd/upgrades/types"
-	"pkg.akt.dev/akashd/x/escrow/client/rest"
-	"pkg.akt.dev/akashd/x/escrow/keeper"
+	utypes "pkg.akt.dev/node/upgrades/types"
+	"pkg.akt.dev/node/x/escrow/client/rest"
+	"pkg.akt.dev/node/x/escrow/keeper"
 )
 
 var (
@@ -130,22 +130,12 @@ func (AppModule) Name() string {
 }
 
 // RegisterInvariants registers module invariants
-func (am AppModule) RegisterInvariants(ir sdk.InvariantRegistry) {}
-
-// // Route returns the message routing key for the audit module.
-// func (am AppModule) Route() sdk.Route {
-// 	return sdk.NewRoute(types.RouterKey, nil)
-// }
+func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
 
 // QuerierRoute returns the audit module's querier route name.
 func (am AppModule) QuerierRoute() string {
 	return v1.ModuleName
 }
-
-// // LegacyQuerierHandler returns the sdk.Querier for audit module
-// func (am AppModule) LegacyQuerierHandler(legacyQuerierCdc *codec.LegacyAmino) sdk.Querier {
-// 	return query.NewQuerier(am.keeper, legacyQuerierCdc)
-// }
 
 // RegisterServices registers the module's servicess
 func (am AppModule) RegisterServices(cfg module.Configurator) {
@@ -171,7 +161,7 @@ func (am AppModule) BeginBlock(_ sdk.Context, _ abci.RequestBeginBlock) {}
 
 // EndBlock returns the end blocker for the audit module. It returns no auditor
 // updates.
-func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
+func (am AppModule) EndBlock(_ sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
 	return []abci.ValidatorUpdate{}
 }
 

@@ -20,8 +20,8 @@ import (
 	mv1 "pkg.akt.dev/go/node/market/v1"
 	mv1beta5 "pkg.akt.dev/go/node/market/v1beta5"
 
-	netutil "pkg.akt.dev/akashd/util/network"
-	"pkg.akt.dev/akashd/x/escrow/client/util"
+	netutil "pkg.akt.dev/node/util/network"
+	"pkg.akt.dev/node/x/escrow/client/util"
 )
 
 func GetQueryCmd() *cobra.Command {
@@ -46,7 +46,7 @@ func cmdBlocksRemaining() *cobra.Command {
 		Use:   "blocks-remaining",
 		Short: "Compute the number of blocks remaining for an ecrow account",
 		Args:  cobra.ExactArgs(0),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := cmd.Context()
 
 			cctx, err := sdkclient.GetClientQueryContext(cmd)

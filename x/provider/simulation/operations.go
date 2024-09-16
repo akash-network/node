@@ -1,9 +1,10 @@
 package simulation
 
 import (
-	cerrors "cosmossdk.io/errors"
 	"fmt"
 	"math/rand"
+
+	cerrors "cosmossdk.io/errors"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -19,10 +20,10 @@ import (
 
 	types "pkg.akt.dev/go/node/provider/v1beta4"
 
-	appparams "pkg.akt.dev/akashd/app/params"
-	testsim "pkg.akt.dev/akashd/testutil/sim"
-	"pkg.akt.dev/akashd/x/provider/config"
-	"pkg.akt.dev/akashd/x/provider/keeper"
+	appparams "pkg.akt.dev/node/app/params"
+	testsim "pkg.akt.dev/node/testutil/sim"
+	"pkg.akt.dev/node/x/provider/config"
+	"pkg.akt.dev/node/x/provider/keeper"
 )
 
 // Simulation operation weights constants
@@ -45,13 +46,13 @@ func WeightedOperations(
 	)
 
 	appParams.GetOrGenerate(
-		cdc, OpWeightMsgCreate, &weightMsgCreate, nil, func(r *rand.Rand) {
+		cdc, OpWeightMsgCreate, &weightMsgCreate, nil, func(_ *rand.Rand) {
 			weightMsgCreate = appparams.DefaultWeightMsgCreateProvider
 		},
 	)
 
 	appParams.GetOrGenerate(
-		cdc, OpWeightMsgUpdate, &weightMsgUpdate, nil, func(r *rand.Rand) {
+		cdc, OpWeightMsgUpdate, &weightMsgUpdate, nil, func(_ *rand.Rand) {
 			weightMsgUpdate = appparams.DefaultWeightMsgUpdateProvider
 		},
 	)

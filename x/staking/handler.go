@@ -6,7 +6,7 @@ package provider
 // 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 // 	types "pkg.akt.dev/go/node/staking/v1beta3"
 //
-// 	"pkg.akt.dev/akashd/x/staking/keeper"
+// 	"pkg.akt.dev/node/x/staking/keeper"
 // )
 //
 // // NewUpdateParamsProposalHandler

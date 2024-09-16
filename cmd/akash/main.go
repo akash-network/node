@@ -7,7 +7,7 @@ import (
 
 	_ "pkg.akt.dev/go/sdkutil"
 
-	"pkg.akt.dev/akashd/cmd/akash/cmd"
+	"pkg.akt.dev/node/cmd/akash/cmd"
 )
 
 // In main we call the rootCmd

@@ -5,9 +5,9 @@ import (
 
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 
-	utypes "pkg.akt.dev/akashd/upgrades/types"
+	utypes "pkg.akt.dev/node/upgrades/types"
 	// nolint: revive
-	_ "pkg.akt.dev/akashd/upgrades"
+	_ "pkg.akt.dev/node/upgrades"
 )
 
 func (app *AkashApp) registerUpgradeHandlers() error {
@@ -23,7 +23,7 @@ func (app *AkashApp) registerUpgradeHandlers() error {
 	currentHeight := app.CommitMultiStore().LastCommitID().Version
 
 	if upgradeInfo.Height == currentHeight+1 {
-		// app.customPreUpgradeHandler(upgradeInfo)
+		app.customPreUpgradeHandler(upgradeInfo)
 	}
 
 	for name, fn := range utypes.GetUpgradesList() {
@@ -48,4 +48,7 @@ func (app *AkashApp) registerUpgradeHandlers() error {
 	}
 
 	return nil
+}
+
+func (app *AkashApp) customPreUpgradeHandler(_ upgradetypes.Plan) {
 }

@@ -7,7 +7,7 @@ import (
 	"io"
 	"time"
 
-	certerrors "pkg.akt.dev/akashd/x/cert/errors"
+	certerrors "pkg.akt.dev/node/x/cert/errors"
 
 	"github.com/cosmos/cosmos-sdk/client"
 

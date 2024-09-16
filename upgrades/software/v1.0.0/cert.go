@@ -1,3 +1,5 @@
+// Package v1_0_0
+// nolint revive
 package v1_0_0
 
 import (
@@ -6,8 +8,8 @@ import (
 	sdkmodule "github.com/cosmos/cosmos-sdk/types/module"
 	"pkg.akt.dev/go/node/migrate"
 
-	utypes "pkg.akt.dev/akashd/upgrades/types"
-	ckeeper "pkg.akt.dev/akashd/x/cert/keeper"
+	utypes "pkg.akt.dev/node/upgrades/types"
+	ckeeper "pkg.akt.dev/node/x/cert/keeper"
 )
 
 type certsMigrations struct {

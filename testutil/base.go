@@ -95,7 +95,7 @@ func Resources(t testing.TB) dtypes.ResourceUnits {
 		coin := sdk.NewDecCoin(CoinDenom, sdk.NewInt(rand.Int63n(9999)+1))
 		res := dtypes.ResourceUnit{
 			Resources: types.Resources{
-				ID: uint32(i) + 1,
+				ID: uint32(i) + 1, // nolint gosec
 				CPU: &types.CPU{
 					Units: types.NewResourceValue(uint64(dtypes.GetValidationConfig().Unit.Min.CPU)),
 				},

@@ -23,6 +23,8 @@ jobs:
           go-version: "${{ env.GOVERSION }}"
       - name: set environment
         uses: HatsuneMiku3939/direnv-action@v1
+        with:
+          masks: ''
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
@@ -60,6 +62,8 @@ jobs:
           go-version: "${{ env.GOVERSION }}"
       - name: set environment
         uses: HatsuneMiku3939/direnv-action@v1
+        with:
+          masks: ''
       - name: detect release tag
         run: echo "RELEASE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
       - name: configure variables

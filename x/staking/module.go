@@ -20,10 +20,10 @@ import (
 
 	types "pkg.akt.dev/go/node/staking/v1beta3"
 
-	utypes "pkg.akt.dev/akashd/upgrades/types"
-	"pkg.akt.dev/akashd/x/staking/handler"
-	"pkg.akt.dev/akashd/x/staking/keeper"
-	"pkg.akt.dev/akashd/x/staking/simulation"
+	utypes "pkg.akt.dev/node/upgrades/types"
+	"pkg.akt.dev/node/x/staking/handler"
+	"pkg.akt.dev/node/x/staking/keeper"
+	"pkg.akt.dev/node/x/staking/simulation"
 )
 
 var (
@@ -170,13 +170,13 @@ func (AppModule) GenerateGenesisState(simState *module.SimulationState) {
 }
 
 // ProposalMsgs returns msgs used for governance proposals for simulations.
-func (AppModule) ProposalMsgs(simState module.SimulationState) []simtypes.WeightedProposalMsg {
+func (AppModule) ProposalMsgs(_ module.SimulationState) []simtypes.WeightedProposalMsg {
 	return simulation.ProposalMsgs()
 }
 
 // RegisterStoreDecoder registers a decoder for staking module's types.
-func (am AppModule) RegisterStoreDecoder(sdr sdk.StoreDecoderRegistry) {
-	sdr[types.StoreKey] = simulation.NewDecodeStore(am.cdc)
+func (am AppModule) RegisterStoreDecoder(_ sdk.StoreDecoderRegistry) {
+	// sdr[types.StoreKey] = simulation.NewDecodeStore(am.cdc)
 }
 
 // WeightedOperations doesn't return any staking module operation.

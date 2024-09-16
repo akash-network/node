@@ -13,11 +13,34 @@ import (
 	reflectionv1 "cosmossdk.io/api/cosmos/reflection/v1"
 	tmtypes "github.com/cometbft/cometbft/types"
 	"github.com/cosmos/cosmos-sdk/runtime"
+	vestingtypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
+	"github.com/cosmos/cosmos-sdk/x/authz"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
+	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
+	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
+	evidencetypes "github.com/cosmos/cosmos-sdk/x/evidence/types"
+	"github.com/cosmos/cosmos-sdk/x/feegrant"
+	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
+	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
+	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
+	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
+	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
+	transfertypes "github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
+	ibchost "github.com/cosmos/ibc-go/v7/modules/core/exported"
 	"github.com/gorilla/mux"
 	"github.com/rakyll/statik/fs"
 	"github.com/skip-mev/block-sdk/block"
 	"github.com/skip-mev/block-sdk/block/base"
 	"github.com/spf13/cast"
+	audittypes "pkg.akt.dev/go/node/audit/v1"
+	certtypes "pkg.akt.dev/go/node/cert/v1"
+	deploymenttypes "pkg.akt.dev/go/node/deployment/v1"
+	escrowtypes "pkg.akt.dev/go/node/escrow/v1"
+	inflationtypes "pkg.akt.dev/go/node/inflation/v1beta3"
+	markettypes "pkg.akt.dev/go/node/market/v1beta5"
+	providertypes "pkg.akt.dev/go/node/provider/v1beta4"
+	taketypes "pkg.akt.dev/go/node/take/v1"
 
 	dbm "github.com/cometbft/cometbft-db"
 	abci "github.com/cometbft/cometbft/abci/types"
@@ -42,26 +65,21 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
-	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
-	evidencetypes "github.com/cosmos/cosmos-sdk/x/evidence/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
-	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
-	ibchost "github.com/cosmos/ibc-go/v7/modules/core/exported"
 	"github.com/cosmos/ibc-go/v7/testing/simapp"
 
 	cflags "pkg.akt.dev/go/cli/flags"
 
-	"pkg.akt.dev/akashd/app/params"
-	apptypes "pkg.akt.dev/akashd/app/types"
-	utypes "pkg.akt.dev/akashd/upgrades/types"
-	"pkg.akt.dev/akashd/util/partialord"
+	"pkg.akt.dev/node/app/params"
+	apptypes "pkg.akt.dev/node/app/types"
+	utypes "pkg.akt.dev/node/upgrades/types"
+	agov "pkg.akt.dev/node/x/gov"
+	astaking "pkg.akt.dev/node/x/staking"
 
 	// unnamed import of statik for swagger UI support
-	_ "pkg.akt.dev/akashd/client/docs/statik"
+	_ "pkg.akt.dev/node/client/docs/statik"
 )
 
 const (
@@ -294,33 +312,111 @@ func NewApp(
 }
 
 // orderBeginBlockers returns the order of BeginBlockers, by module name.
-func orderBeginBlockers(allModuleNames []string) []string {
-	ord := partialord.NewPartialOrdering(allModuleNames)
-	// Upgrades should be run VERY first
-	ord.FirstElements(upgradetypes.ModuleName, capabilitytypes.ModuleName)
-
-	// Staking ordering
-	// TODO: Perhaps this can be relaxed, left to future work to analyze.
-	ord.Sequence(distrtypes.ModuleName, slashingtypes.ModuleName, evidencetypes.ModuleName, stakingtypes.ModuleName)
-	// TODO: This can almost certainly be un-constrained, but we keep the constraint to match prior functionality.
-	// IBChost came after staking.
-	ord.Sequence(stakingtypes.ModuleName, ibchost.ModuleName)
-	// We leave downtime-detector un-constrained.
-	// every remaining module's begin block is a no-op.
-	return ord.TotalOrdering()
+func orderBeginBlockers(_ []string) []string {
+	return []string{
+		upgradetypes.ModuleName,
+		capabilitytypes.ModuleName,
+		banktypes.ModuleName,
+		paramstypes.ModuleName,
+		deploymenttypes.ModuleName,
+		govtypes.ModuleName,
+		agov.ModuleName,
+		providertypes.ModuleName,
+		certtypes.ModuleName,
+		markettypes.ModuleName,
+		audittypes.ModuleName,
+		genutiltypes.ModuleName,
+		vestingtypes.ModuleName,
+		crisistypes.ModuleName,
+		inflationtypes.ModuleName,
+		authtypes.ModuleName,
+		authz.ModuleName,
+		taketypes.ModuleName,
+		escrowtypes.ModuleName,
+		minttypes.ModuleName,
+		distrtypes.ModuleName,
+		slashingtypes.ModuleName,
+		evidencetypes.ModuleName,
+		stakingtypes.ModuleName,
+		astaking.ModuleName,
+		transfertypes.ModuleName,
+		ibchost.ModuleName,
+		feegrant.ModuleName,
+	}
+	// ord := partialord.NewPartialOrdering(allModuleNames)
+	// // Upgrades should be run VERY first
+	// ord.FirstElements(
+	// 	upgradetypes.ModuleName,
+	// 	capabilitytypes.ModuleName,
+	// )
+	//
+	// // Staking ordering
+	// // TODO: Perhaps this can be relaxed, left to future work to analyze.
+	// ord.Sequence(
+	// 	banktypes.ModuleName,
+	// 	paramstypes.ModuleName,
+	// 	govtypes.ModuleName,
+	// 	minttypes.ModuleName,
+	// 	distrtypes.ModuleName,
+	// 	slashingtypes.ModuleName,
+	// 	evidencetypes.ModuleName,
+	// 	stakingtypes.ModuleName,
+	// )
+	// // TODO: This can almost certainly be un-constrained, but we keep the constraint to match prior functionality.
+	// // IBChost came after staking.
+	// ord.Sequence(
+	// 	stakingtypes.ModuleName,
+	// 	ibchost.ModuleName,
+	// 	feegrant.ModuleName,
+	// )
+	//
+	//
+	// // We leave downtime-detector un-constrained.
+	// // every remaining module's begin block is a no-op.
+	// return ord.TotalOrdering()
 }
 
 // OrderEndBlockers returns EndBlockers (crisis, govtypes, staking) with no relative order.
-func OrderEndBlockers(allModuleNames []string) []string {
-	ord := partialord.NewPartialOrdering(allModuleNames)
-
-	// Staking must be after gov.
-	ord.FirstElements(govtypes.ModuleName)
-	ord.LastElements(stakingtypes.ModuleName)
-
-	// only Osmosis modules with endblock code are: twap, crisis, govtypes, staking
-	// we don't care about the relative ordering between them.
-	return ord.TotalOrdering()
+func OrderEndBlockers(_ []string) []string {
+	return []string{
+		crisistypes.ModuleName,
+		govtypes.ModuleName,
+		agov.ModuleName,
+		stakingtypes.ModuleName,
+		astaking.ModuleName,
+		upgradetypes.ModuleName,
+		capabilitytypes.ModuleName,
+		banktypes.ModuleName,
+		paramstypes.ModuleName,
+		deploymenttypes.ModuleName,
+		providertypes.ModuleName,
+		certtypes.ModuleName,
+		markettypes.ModuleName,
+		audittypes.ModuleName,
+		genutiltypes.ModuleName,
+		vestingtypes.ModuleName,
+		inflationtypes.ModuleName,
+		authtypes.ModuleName,
+		authz.ModuleName,
+		taketypes.ModuleName,
+		escrowtypes.ModuleName,
+		minttypes.ModuleName,
+		distrtypes.ModuleName,
+		slashingtypes.ModuleName,
+		evidencetypes.ModuleName,
+		transfertypes.ModuleName,
+		ibchost.ModuleName,
+		feegrant.ModuleName,
+	}
+	// ord := partialord.NewPartialOrdering(allModuleNames)
+	//
+	// // Staking must be after gov.
+	// ord.FirstElements(govtypes.ModuleName)
+	// ord.LastElements(stakingtypes.ModuleName)
+	//
+	// // only Akash modules with endblock code are: twap, crisis, govtypes, staking
+	// // we don't care about the relative ordering between them.
+	// return ord.TotalOrdering()
 }
 
 func getGenesisTime(appOpts servertypes.AppOptions, homePath string) time.Time { // nolint: unused,deadcode
@@ -501,7 +597,7 @@ func (app *AkashApp) ChainID() string {
 }
 
 // cache the reflectionService to save us time within tests.
-var cachedReflectionService *runtimeservices.ReflectionService = nil
+var cachedReflectionService *runtimeservices.ReflectionService
 
 func getReflectionService() *runtimeservices.ReflectionService {
 	if cachedReflectionService != nil {

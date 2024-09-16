@@ -3,7 +3,7 @@ package market
 import (
 	types "pkg.akt.dev/go/node/market/v1beta5"
 
-	"pkg.akt.dev/akashd/x/market/keeper"
+	"pkg.akt.dev/node/x/market/keeper"
 )
 
 const (

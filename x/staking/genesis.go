@@ -6,7 +6,7 @@ import (
 
 	types "pkg.akt.dev/go/node/staking/v1beta3"
 
-	"pkg.akt.dev/akashd/x/staking/keeper"
+	"pkg.akt.dev/node/x/staking/keeper"
 )
 
 // ValidateGenesis does validation check of the Genesis and returns error in case of failure

@@ -19,9 +19,9 @@ import (
 
 	types "pkg.akt.dev/go/node/audit/v1"
 
-	utypes "pkg.akt.dev/akashd/upgrades/types"
-	"pkg.akt.dev/akashd/x/audit/handler"
-	"pkg.akt.dev/akashd/x/audit/keeper"
+	utypes "pkg.akt.dev/node/upgrades/types"
+	"pkg.akt.dev/node/x/audit/handler"
+	"pkg.akt.dev/node/x/audit/keeper"
 )
 
 var (
@@ -41,7 +41,7 @@ func (AppModuleBasic) Name() string {
 
 // RegisterLegacyAminoCodec registers the provider module's types for the given codec.
 func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
-	types.RegisterLegacyAminoCodec(cdc)
+	types.RegisterLegacyAminoCodec(cdc) // nolint: staticcheck
 }
 
 // RegisterInterfaces registers the module's interface types
@@ -129,7 +129,7 @@ func (AppModule) Name() string {
 }
 
 // RegisterInvariants registers module invariants
-func (am AppModule) RegisterInvariants(ir sdk.InvariantRegistry) {}
+func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
 
 // QuerierRoute returns the audit module's querier route name.
 func (am AppModule) QuerierRoute() string {
@@ -163,7 +163,7 @@ func (am AppModule) BeginBlock(_ sdk.Context, _ abci.RequestBeginBlock) {}
 
 // EndBlock returns the end blocker for the audit module. It returns no auditor
 // updates.
-func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
+func (am AppModule) EndBlock(_ sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
 	return []abci.ValidatorUpdate{}
 }
 

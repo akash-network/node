@@ -6,16 +6,15 @@ import (
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
-	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/stretchr/testify/require"
 
 	types "pkg.akt.dev/go/node/cert/v1"
 
-	"pkg.akt.dev/akashd/app"
-	"pkg.akt.dev/akashd/testutil"
-	"pkg.akt.dev/akashd/x/cert/keeper"
+	"pkg.akt.dev/node/app"
+	"pkg.akt.dev/node/testutil"
+	"pkg.akt.dev/node/x/cert/keeper"
 )
 
 type grpcTestSuite struct {
@@ -31,9 +30,7 @@ func setupTest(t *testing.T) *grpcTestSuite {
 		t: t,
 	}
 
-	suite.app = app.Setup(app.WithGenesis(func(cdc codec.Codec) app.GenesisState {
-		return app.GenesisStateWithValSet(cdc)
-	}))
+	suite.app = app.Setup(app.WithGenesis(app.GenesisStateWithValSet))
 
 	suite.ctx, suite.keeper = setupKeeper(t)
 	querier := suite.keeper.Querier()
@@ -231,7 +228,6 @@ func TestCertGRPCQueryCertificates(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
 			ctx := sdk.WrapSDKContext(suite.ctx)

@@ -15,8 +15,8 @@ import (
 	"pkg.akt.dev/go/cli/flags"
 	cltypes "pkg.akt.dev/go/node/client/types"
 
-	"pkg.akt.dev/akashd/app"
-	uttypes "pkg.akt.dev/akashd/tests/upgrade/types"
+	"pkg.akt.dev/node/app"
+	uttypes "pkg.akt.dev/node/tests/upgrade/types"
 )
 
 func init() {
@@ -57,15 +57,6 @@ func (pu *postUpgrade) Run(ctx context.Context, t *testing.T, params uttypes.Tes
 
 	cctx = cctx.WithKeyring(kr)
 
-	// valInfo, err := kr.Key(params.From)
-	// require.NoError(t, err)
-	//
-	// valAddr, err := valInfo.GetAddress()
-	// require.NoError(t, err)
-	//
-	// cctx = cctx.WithFromName(valInfo.Name).
-	// 	WithFromAddress(valAddr)
-
 	opts := []cltypes.ClientOption{
 		cltypes.WithGasPrices("0.025uakt"),
 		cltypes.WithGas(cltypes.GasSetting{Simulate: false, Gas: 1000000}),
@@ -83,7 +74,7 @@ func (pu *postUpgrade) Run(ctx context.Context, t *testing.T, params uttypes.Tes
 	require.True(t, paramsResp.Params.MinCommissionRate.GTE(sdk.NewDecWithPrec(5, 2)), "per upgrade v1.0.0 MinCommissionRate should be 5%")
 
 	// operator address is taken from testnetify
-	opAddr, err := sdk.AccAddressFromHexUnsafe("06DCDACF975BE69C039C62052F9FE0F3906575D1")
+	opAddr, err := sdk.AccAddressFromHexUnsafe("20DDEBCF73B805ACDC88277B472382FC9DEA8CBC")
 	require.NoError(t, err)
 
 	comVal := sdk.NewDecWithPrec(4, 2)

@@ -17,11 +17,11 @@ import (
 	"pkg.akt.dev/go/node/deployment/v1beta4"
 	etypes "pkg.akt.dev/go/node/escrow/v1"
 
-	"pkg.akt.dev/akashd/app"
-	"pkg.akt.dev/akashd/testutil"
-	"pkg.akt.dev/akashd/testutil/state"
-	"pkg.akt.dev/akashd/x/deployment/keeper"
-	ekeeper "pkg.akt.dev/akashd/x/escrow/keeper"
+	"pkg.akt.dev/node/app"
+	"pkg.akt.dev/node/testutil"
+	"pkg.akt.dev/node/testutil/state"
+	"pkg.akt.dev/node/x/deployment/keeper"
+	ekeeper "pkg.akt.dev/node/x/escrow/keeper"
 )
 
 type grpcTestSuite struct {
@@ -111,7 +111,6 @@ func TestGRPCQueryDeployment(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
 			ctx := sdk.WrapSDKContext(suite.ctx)
@@ -190,7 +189,6 @@ func TestGRPCQueryDeployments(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
 			ctx := sdk.WrapSDKContext(suite.ctx)
@@ -457,7 +455,6 @@ func TestGRPCQueryGroup(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
 			ctx := sdk.WrapSDKContext(suite.ctx)

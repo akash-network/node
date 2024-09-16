@@ -8,7 +8,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/suite"
 
-	"pkg.akt.dev/akashd/testutil"
+	"pkg.akt.dev/node/testutil"
 )
 
 var DefaultDeposit = sdk.NewCoin("uakt", sdk.NewInt(5000000))

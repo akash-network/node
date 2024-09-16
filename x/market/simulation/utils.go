@@ -2,13 +2,28 @@ package simulation
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	v1 "pkg.akt.dev/go/node/market/v1"
 
 	"pkg.akt.dev/go/node/market/v1beta5"
 
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 
-	keepers "pkg.akt.dev/akashd/x/market/handler"
+	keepers "pkg.akt.dev/node/x/market/handler"
 )
+
+func getLeasesWithState(ctx sdk.Context, ks keepers.Keepers, state v1.Lease_State) v1.Leases {
+	var leases v1.Leases
+
+	ks.Market.WithLeases(ctx, func(lease v1.Lease) bool {
+		if lease.State == state {
+			leases = append(leases, lease)
+		}
+
+		return false
+	})
+
+	return leases
+}
 
 func getOrdersWithState(ctx sdk.Context, ks keepers.Keepers, state v1beta5.Order_State) v1beta5.Orders {
 	var orders v1beta5.Orders

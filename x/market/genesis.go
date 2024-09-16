@@ -10,7 +10,7 @@ import (
 	"pkg.akt.dev/go/node/market/v1"
 	"pkg.akt.dev/go/node/market/v1beta5"
 
-	"pkg.akt.dev/akashd/x/market/keeper"
+	"pkg.akt.dev/node/x/market/keeper"
 )
 
 // ValidateGenesis does validation check of the Genesis
@@ -32,7 +32,11 @@ func DefaultGenesisState() *v1beta5.GenesisState {
 
 // InitGenesis initiate genesis state and return updated validator details
 func InitGenesis(ctx sdk.Context, keeper keeper.IKeeper, data *v1beta5.GenesisState) []abci.ValidatorUpdate {
-	keeper.SetParams(ctx, data.Params)
+	err := keeper.SetParams(ctx, data.Params)
+	if err != nil {
+		panic(err.Error())
+	}
+
 	return []abci.ValidatorUpdate{}
 }
 

@@ -81,7 +81,7 @@ func GenesisStateWithValSet(cdc codec.Codec) GenesisState {
 	acc := authtypes.NewBaseAccountWithAddress(senderPrivKey.PubKey().Address().Bytes())
 
 	var balances []banktypes.Balance
-	var initValPowers []abci.ValidatorUpdate
+	initValPowers := make([]abci.ValidatorUpdate, 0, len(valSet.Validators))
 
 	genesisState := NewDefaultGenesisState(cdc)
 	genAccs := []authtypes.GenesisAccount{acc}

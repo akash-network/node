@@ -15,9 +15,9 @@ import (
 	types "pkg.akt.dev/go/node/market/v1"
 	"pkg.akt.dev/go/node/market/v1beta5"
 
-	"pkg.akt.dev/akashd/testutil"
-	"pkg.akt.dev/akashd/testutil/state"
-	"pkg.akt.dev/akashd/x/market/keeper"
+	"pkg.akt.dev/node/testutil"
+	"pkg.akt.dev/node/testutil/state"
+	"pkg.akt.dev/node/x/market/keeper"
 )
 
 type grpcTestSuite struct {
@@ -101,7 +101,6 @@ func TestGRPCQueryOrder(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
 			ctx := sdk.WrapSDKContext(suite.ctx)
@@ -171,7 +170,6 @@ func TestGRPCQueryOrders(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
 			ctx := sdk.WrapSDKContext(suite.ctx)
@@ -915,7 +913,6 @@ func TestGRPCQueryBid(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
 			ctx := sdk.WrapSDKContext(suite.ctx)
@@ -986,7 +983,6 @@ func TestGRPCQueryBids(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
 			ctx := sdk.WrapSDKContext(suite.ctx)
@@ -1056,7 +1052,6 @@ func TestGRPCQueryLease(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
 			ctx := sdk.WrapSDKContext(suite.ctx)
@@ -1133,7 +1128,6 @@ func TestGRPCQueryLeases(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
 			ctx := sdk.WrapSDKContext(suite.ctx)

@@ -1,3 +1,5 @@
+// Package v1_0_0
+// nolint revive
 package v1_0_0
 
 import (
@@ -8,8 +10,8 @@ import (
 
 	"pkg.akt.dev/go/node/migrate"
 
-	utypes "pkg.akt.dev/akashd/upgrades/types"
-	akeeper "pkg.akt.dev/akashd/x/audit/keeper"
+	utypes "pkg.akt.dev/node/upgrades/types"
+	akeeper "pkg.akt.dev/node/x/audit/keeper"
 )
 
 type auditMigrations struct {

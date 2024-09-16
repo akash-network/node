@@ -35,7 +35,7 @@ func SimulateMsgUpdateParams(r *rand.Rand, _ sdk.Context, _ []simtypes.Account) 
 
 	params := types.DefaultParams()
 	params.BidMinDeposit = sdk.NewInt64Coin("uakt", int64(simtypes.RandIntBetween(r, 500000, 50000000)))
-	params.OrderMaxBids = uint32(simtypes.RandIntBetween(r, 20, 500))
+	params.OrderMaxBids = uint32(simtypes.RandIntBetween(r, 20, 500)) // nolint gosec
 
 	return &types.MsgUpdateParams{
 		Authority: authority.String(),

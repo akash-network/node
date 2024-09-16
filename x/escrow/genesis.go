@@ -8,7 +8,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"pkg.akt.dev/akashd/x/escrow/keeper"
+	"pkg.akt.dev/node/x/escrow/keeper"
 
 	types "pkg.akt.dev/go/node/escrow/v1"
 )

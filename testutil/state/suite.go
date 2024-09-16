@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/codec"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
@@ -23,16 +22,16 @@ import (
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 	ttypes "pkg.akt.dev/go/node/take/v1"
 
-	"pkg.akt.dev/akashd/app"
+	"pkg.akt.dev/node/app"
 
-	emocks "pkg.akt.dev/akashd/testutil/cosmos/mocks"
-	akeeper "pkg.akt.dev/akashd/x/audit/keeper"
-	dkeeper "pkg.akt.dev/akashd/x/deployment/keeper"
-	ekeeper "pkg.akt.dev/akashd/x/escrow/keeper"
-	mhooks "pkg.akt.dev/akashd/x/market/hooks"
-	mkeeper "pkg.akt.dev/akashd/x/market/keeper"
-	pkeeper "pkg.akt.dev/akashd/x/provider/keeper"
-	tkeeper "pkg.akt.dev/akashd/x/take/keeper"
+	emocks "pkg.akt.dev/node/testutil/cosmos/mocks"
+	akeeper "pkg.akt.dev/node/x/audit/keeper"
+	dkeeper "pkg.akt.dev/node/x/deployment/keeper"
+	ekeeper "pkg.akt.dev/node/x/escrow/keeper"
+	mhooks "pkg.akt.dev/node/x/market/hooks"
+	mkeeper "pkg.akt.dev/node/x/market/keeper"
+	pkeeper "pkg.akt.dev/node/x/provider/keeper"
+	tkeeper "pkg.akt.dev/node/x/take/keeper"
 )
 
 // TestSuite encapsulates a functional Akash nodes data stores for
@@ -106,9 +105,11 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 		keepers.Authz = keeper
 	}
 
-	app := app.Setup(app.WithCheckTx(false), app.WithHome(dir), app.WithGenesis(func(cdc codec.Codec) app.GenesisState {
-		return app.GenesisStateWithValSet(cdc)
-	}))
+	app := app.Setup(
+		app.WithCheckTx(false),
+		app.WithHome(dir),
+		app.WithGenesis(app.GenesisStateWithValSet),
+	)
 
 	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
 

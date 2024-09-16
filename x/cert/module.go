@@ -20,10 +20,10 @@ import (
 
 	types "pkg.akt.dev/go/node/cert/v1"
 
-	utypes "pkg.akt.dev/akashd/upgrades/types"
-	"pkg.akt.dev/akashd/x/cert/handler"
-	"pkg.akt.dev/akashd/x/cert/keeper"
-	"pkg.akt.dev/akashd/x/cert/simulation"
+	utypes "pkg.akt.dev/node/upgrades/types"
+	"pkg.akt.dev/node/x/cert/handler"
+	"pkg.akt.dev/node/x/cert/keeper"
+	"pkg.akt.dev/node/x/cert/simulation"
 )
 
 var (
@@ -52,7 +52,7 @@ func (AppModuleBasic) Name() string {
 
 // RegisterLegacyAminoCodec registers the provider module's types for the given codec.
 func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
-	types.RegisterLegacyAminoCodec(cdc)
+	types.RegisterLegacyAminoCodec(cdc) // nolint: staticcheck
 }
 
 // RegisterInterfaces registers the module's interface types
@@ -182,7 +182,7 @@ func (AppModule) ProposalMsgs(_ module.SimulationState) []simtypes.WeightedPropo
 }
 
 // RegisterStoreDecoder registers a decoder for take module's types.
-func (am AppModule) RegisterStoreDecoder(sdr sdk.StoreDecoderRegistry) {
+func (am AppModule) RegisterStoreDecoder(_ sdk.StoreDecoderRegistry) {
 	// sdr[types.StoreKey] = simulation.NewDecodeStore(am.cdc)
 }
 

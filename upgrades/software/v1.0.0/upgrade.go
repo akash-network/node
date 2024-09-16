@@ -29,10 +29,10 @@ import (
 	astakingtypes "pkg.akt.dev/go/node/staking/v1beta3"
 	taketypes "pkg.akt.dev/go/node/take/v1"
 
-	apptypes "pkg.akt.dev/akashd/app/types"
-	utypes "pkg.akt.dev/akashd/upgrades/types"
-	agov "pkg.akt.dev/akashd/x/gov"
-	astaking "pkg.akt.dev/akashd/x/staking"
+	apptypes "pkg.akt.dev/node/app/types"
+	utypes "pkg.akt.dev/node/upgrades/types"
+	agov "pkg.akt.dev/node/x/gov"
+	astaking "pkg.akt.dev/node/x/staking"
 )
 
 const (

@@ -5,12 +5,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	_ "pkg.akt.dev/akashd/testutil"
+	_ "pkg.akt.dev/node/testutil"
 
 	"pkg.akt.dev/go/node/market/v1"
 	"pkg.akt.dev/go/node/market/v1beta5"
 
-	"pkg.akt.dev/akashd/x/market/keeper/keys"
+	"pkg.akt.dev/node/x/market/keeper/keys"
 )
 
 func TestKeysAndSecondaryKeysFilter(t *testing.T) {

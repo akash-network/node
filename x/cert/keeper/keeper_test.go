@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	testutilmod "github.com/cosmos/cosmos-sdk/types/module/testutil"
 	"github.com/stretchr/testify/require"
 
 	dbm "github.com/cometbft/cometbft-db"
@@ -15,8 +16,8 @@ import (
 
 	types "pkg.akt.dev/go/node/cert/v1"
 
-	"pkg.akt.dev/akashd/testutil"
-	"pkg.akt.dev/akashd/x/cert/keeper"
+	"pkg.akt.dev/node/testutil"
+	"pkg.akt.dev/node/x/cert/keeper"
 )
 
 func TestCertKeeperCreate(t *testing.T) {
@@ -193,12 +194,18 @@ func TestCertKeeperRevokeCreate(t *testing.T) {
 
 func setupKeeper(t testing.TB) (sdk.Context, keeper.Keeper) {
 	t.Helper()
+
+	cfg := testutilmod.MakeTestEncodingConfig()
+	cdc := cfg.Codec
+
 	key := sdk.NewKVStoreKey(types.StoreKey)
 	db := dbm.NewMemDB()
 	ms := store.NewCommitMultiStore(db)
 	ms.MountStoreWithDB(key, storetypes.StoreTypeIAVL, db)
+
 	err := ms.LoadLatestVersion()
 	require.NoError(t, err)
+
 	ctx := sdk.NewContext(ms, tmproto.Header{Time: time.Unix(0, 0)}, false, testutil.Logger(t))
-	return ctx, keeper.NewKeeper(types.ModuleCdc, key)
+	return ctx, keeper.NewKeeper(cdc, key)
 }

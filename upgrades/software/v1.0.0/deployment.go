@@ -1,3 +1,5 @@
+// Package v1_0_0
+// nolint revive
 package v1_0_0
 
 import (
@@ -7,8 +9,8 @@ import (
 	sdkmodule "github.com/cosmos/cosmos-sdk/types/module"
 	"pkg.akt.dev/go/node/migrate"
 
-	utypes "pkg.akt.dev/akashd/upgrades/types"
-	dkeeper "pkg.akt.dev/akashd/x/deployment/keeper"
+	utypes "pkg.akt.dev/node/upgrades/types"
+	dkeeper "pkg.akt.dev/node/x/deployment/keeper"
 )
 
 type deploymentsMigrations struct {

@@ -17,8 +17,8 @@ func RegisterRoutes(ctx client.Context, r *mux.Router, ns string) {
 	r.HandleFunc(fmt.Sprintf("/%s/info/{providerOwner}", ns), getProviderHandler(ctx, ns)).Methods("GET")
 }
 
-func listProvidersHandler(ctx client.Context, ns string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func listProvidersHandler(_ client.Context, _ string) http.HandlerFunc {
+	return func(_ http.ResponseWriter, _ *http.Request) {
 		// res, err := query.NewRawClient(ctx, ns).Providers()
 		// if err != nil {
 		// 	rest.WriteErrorResponse(w, http.StatusNotFound, "Not Found")
@@ -28,8 +28,8 @@ func listProvidersHandler(ctx client.Context, ns string) http.HandlerFunc {
 	}
 }
 
-func getProviderHandler(ctx client.Context, ns string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func getProviderHandler(_ client.Context, _ string) http.HandlerFunc {
+	return func(_ http.ResponseWriter, _ *http.Request) {
 		// bech32Addr := mux.Vars(r)["providerOwner"]
 		//
 		// id, err := sdk.AccAddressFromBech32(bech32Addr)

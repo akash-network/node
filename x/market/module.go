@@ -21,12 +21,12 @@ import (
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	types "pkg.akt.dev/go/node/market/v1beta5"
 
-	utypes "pkg.akt.dev/akashd/upgrades/types"
-	akeeper "pkg.akt.dev/akashd/x/audit/keeper"
-	ekeeper "pkg.akt.dev/akashd/x/escrow/keeper"
-	"pkg.akt.dev/akashd/x/market/handler"
-	"pkg.akt.dev/akashd/x/market/keeper"
-	"pkg.akt.dev/akashd/x/market/simulation"
+	utypes "pkg.akt.dev/node/upgrades/types"
+	akeeper "pkg.akt.dev/node/x/audit/keeper"
+	ekeeper "pkg.akt.dev/node/x/escrow/keeper"
+	"pkg.akt.dev/node/x/market/handler"
+	"pkg.akt.dev/node/x/market/keeper"
+	"pkg.akt.dev/node/x/market/simulation"
 )
 
 var (
@@ -55,7 +55,7 @@ func (AppModuleBasic) Name() string {
 
 // RegisterLegacyAminoCodec registers the market module's types for the given codec.
 func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
-	types.RegisterLegacyAminoCodec(cdc)
+	types.RegisterLegacyAminoCodec(cdc) // nolint staticcheck
 }
 
 // RegisterInterfaces registers the module's interface types
@@ -197,7 +197,7 @@ func (AppModule) ProposalMsgs(_ module.SimulationState) []simtypes.WeightedPropo
 }
 
 // RegisterStoreDecoder registers a decoder for take module's types.
-func (am AppModule) RegisterStoreDecoder(sdr sdk.StoreDecoderRegistry) {
+func (am AppModule) RegisterStoreDecoder(_ sdk.StoreDecoderRegistry) {
 	// sdr[types.StoreKey] = simulation.NewDecodeStore(am.cdc)
 }
 
@@ -205,31 +205,3 @@ func (am AppModule) RegisterStoreDecoder(sdr sdk.StoreDecoderRegistry) {
 func (am AppModule) WeightedOperations(simState module.SimulationState) []simtypes.WeightedOperation {
 	return simulation.WeightedOperations(simState.AppParams, simState.Cdc, am.keepers)
 }
-
-// // AppModuleSimulation functions
-//
-// // GenerateGenesisState creates a randomized GenState of the staking module.
-// func (AppModuleSimulation) GenerateGenesisState(simState *module.SimulationState) {
-// 	simulation.RandomizedGenState(simState)
-// }
-//
-// // ProposalContents doesn't return any content functions for governance proposals.
-// func (AppModuleSimulation) ProposalContents(_ module.SimulationState) []simtypes.WeightedProposalContent {
-// 	return nil
-// }
-//
-// // RandomizedParams creates randomized staking param changes for the simulator.
-// func (AppModuleSimulation) RandomizedParams(_ *rand.Rand) []simtypes.ParamChange {
-// 	return nil
-// }
-//
-// // RegisterStoreDecoder registers a decoder for staking module's types
-// func (AppModuleSimulation) RegisterStoreDecoder(_ sdk.StoreDecoderRegistry) {
-// 	// sdr[StoreKey] = simulation.DecodeStore
-// }
-//
-// // WeightedOperations returns the all the staking module operations with their respective weights.
-// func (am AppModuleSimulation) WeightedOperations(simState module.SimulationState) []simtypes.WeightedOperation {
-// 	return simulation.WeightedOperations(simState.AppParams, simState.Cdc,
-// 		am.akeeper, am.keepers)
-// }

@@ -7,7 +7,7 @@ import (
 )
 
 // RandomizedGenState generates a random GenesisState for supply
-func RandomizedGenState(simState *module.SimulationState) {
+func RandomizedGenState(_ *module.SimulationState) {
 	// deploymentGenesis := &types.GenesisState{
 	// 	Params: types.Params{
 	// 		InflationDecayFactor: types.DefaultInflationDecayFactor(),

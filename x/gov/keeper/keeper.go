@@ -42,14 +42,14 @@ func (k Keeper) StoreKey() storetypes.StoreKey {
 }
 
 // SetDepositParams sets the deployment parameters to the paramspace.
-func (k Keeper) SetDepositParams(ctx sdk.Context, params types.DepositParams) error {
+func (k Keeper) SetDepositParams(_ sdk.Context, _ types.DepositParams) error {
 	// k.pspace.Set(ctx, types.KeyDepositParams, &params)
 
 	return nil
 }
 
 // GetDepositParams returns the total set of x/gov parameters.
-func (k Keeper) GetDepositParams(ctx sdk.Context) types.DepositParams {
+func (k Keeper) GetDepositParams(_ sdk.Context) types.DepositParams {
 	var params types.DepositParams
 
 	// k.pspace.Get(ctx, types.KeyDepositParams, &params)

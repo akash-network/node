@@ -10,8 +10,8 @@ import (
 	"pkg.akt.dev/go/node/client/v1beta3/testutil"
 	types "pkg.akt.dev/go/node/provider/v1beta4"
 
-	"pkg.akt.dev/akashd/testutil/state"
-	"pkg.akt.dev/akashd/x/provider/keeper"
+	"pkg.akt.dev/node/testutil/state"
+	"pkg.akt.dev/node/x/provider/keeper"
 )
 
 func TestProviderCreate(t *testing.T) {

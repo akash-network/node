@@ -3,7 +3,7 @@ package inflation
 import (
 	types "pkg.akt.dev/go/node/inflation/v1beta3"
 
-	"pkg.akt.dev/akashd/x/inflation/keeper"
+	"pkg.akt.dev/node/x/inflation/keeper"
 )
 
 const (

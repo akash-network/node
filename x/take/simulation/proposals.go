@@ -54,7 +54,7 @@ func SimulateMsgUpdateParams(r *rand.Rand, _ sdk.Context, _ []simtypes.Account) 
 	for _, coin := range coins {
 		params.DenomTakeRates = append(params.DenomTakeRates, types.DenomTakeRate{
 			Denom: coin.Denom,
-			Rate:  uint32(simtypes.RandIntBetween(r, 0, 100)),
+			Rate:  uint32(simtypes.RandIntBetween(r, 0, 100)), // nolint gosec
 		})
 	}
 

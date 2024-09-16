@@ -10,9 +10,9 @@ import (
 
 	types "pkg.akt.dev/go/node/deployment/v1"
 
-	"pkg.akt.dev/akashd/testutil"
-	"pkg.akt.dev/akashd/testutil/state"
-	"pkg.akt.dev/akashd/x/deployment/keeper"
+	"pkg.akt.dev/node/testutil"
+	"pkg.akt.dev/node/testutil/state"
+	"pkg.akt.dev/node/x/deployment/keeper"
 )
 
 func Test_Create(t *testing.T) {

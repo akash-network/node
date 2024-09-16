@@ -43,12 +43,10 @@ func (k Keeper) StoreKey() storetypes.StoreKey {
 }
 
 // GetParams returns the total set of deployment parameters.
-func (k Keeper) GetParams(ctx sdk.Context) (params types.Params) {
-	// k.pspace.GetParamSet(ctx, &params)
+func (k Keeper) GetParams(_ sdk.Context) (params types.Params) {
 	return params
 }
 
 // SetParams sets the deployment parameters to the paramspace.
-func (k Keeper) SetParams(ctx sdk.Context, params types.Params) {
-	// k.pspace.SetParamSet(ctx, &params)
+func (k Keeper) SetParams(_ sdk.Context, _ types.Params) {
 }

@@ -49,8 +49,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	"pkg.akt.dev/akashd/app"
-	"pkg.akt.dev/akashd/client"
+	"pkg.akt.dev/node/app"
+	"pkg.akt.dev/node/client"
 )
 
 func init() {

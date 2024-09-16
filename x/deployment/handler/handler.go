@@ -7,7 +7,7 @@ import (
 	v1 "pkg.akt.dev/go/node/deployment/v1"
 	types "pkg.akt.dev/go/node/deployment/v1beta4"
 
-	"pkg.akt.dev/akashd/x/deployment/keeper"
+	"pkg.akt.dev/node/x/deployment/keeper"
 )
 
 // NewHandler returns a handler for "deployment" type messages

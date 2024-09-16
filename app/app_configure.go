@@ -25,24 +25,18 @@ import (
 	ibchost "github.com/cosmos/ibc-go/v7/modules/core/exported"
 
 	audittypes "pkg.akt.dev/go/node/audit/v1"
-	certtypes "pkg.akt.dev/go/node/cert/v1"
-	deploymenttypes "pkg.akt.dev/go/node/deployment/v1"
-	escrowtypes "pkg.akt.dev/go/node/escrow/v1"
-	inflationtypes "pkg.akt.dev/go/node/inflation/v1beta3"
-	markettypes "pkg.akt.dev/go/node/market/v1beta5"
-	providertypes "pkg.akt.dev/go/node/provider/v1beta4"
 	taketypes "pkg.akt.dev/go/node/take/v1"
 
-	"pkg.akt.dev/akashd/x/audit"
-	"pkg.akt.dev/akashd/x/cert"
-	"pkg.akt.dev/akashd/x/deployment"
-	"pkg.akt.dev/akashd/x/escrow"
-	agov "pkg.akt.dev/akashd/x/gov"
-	"pkg.akt.dev/akashd/x/inflation"
-	"pkg.akt.dev/akashd/x/market"
-	"pkg.akt.dev/akashd/x/provider"
-	astaking "pkg.akt.dev/akashd/x/staking"
-	"pkg.akt.dev/akashd/x/take"
+	"pkg.akt.dev/node/x/audit"
+	"pkg.akt.dev/node/x/cert"
+	"pkg.akt.dev/node/x/deployment"
+	"pkg.akt.dev/node/x/escrow"
+	agov "pkg.akt.dev/node/x/gov"
+	"pkg.akt.dev/node/x/inflation"
+	"pkg.akt.dev/node/x/market"
+	"pkg.akt.dev/node/x/provider"
+	astaking "pkg.akt.dev/node/x/staking"
+	"pkg.akt.dev/node/x/take"
 )
 
 func akashModuleBasics() []module.AppModuleBasic {
@@ -54,77 +48,8 @@ func akashModuleBasics() []module.AppModuleBasic {
 		provider.AppModuleBasic{},
 		audit.AppModuleBasic{},
 		cert.AppModuleBasic{},
-		// inflation.AppModuleBasic{},
 		astaking.AppModuleBasic{},
 		agov.AppModuleBasic{},
-	}
-}
-
-// akashBeginBlockModules returns all end block modules.
-func (app *AkashApp) akashBeginBlockModules() []string {
-	return []string{
-		upgradetypes.ModuleName,
-		capabilitytypes.ModuleName,
-		banktypes.ModuleName,
-		paramstypes.ModuleName,
-		deploymenttypes.ModuleName,
-		govtypes.ModuleName,
-		agov.ModuleName,
-		providertypes.ModuleName,
-		certtypes.ModuleName,
-		markettypes.ModuleName,
-		audittypes.ModuleName,
-		genutiltypes.ModuleName,
-		vestingtypes.ModuleName,
-		crisistypes.ModuleName,
-		inflationtypes.ModuleName,
-		authtypes.ModuleName,
-		authz.ModuleName,
-		taketypes.ModuleName,
-		escrowtypes.ModuleName,
-		minttypes.ModuleName,
-		distrtypes.ModuleName,
-		slashingtypes.ModuleName,
-		evidencetypes.ModuleName,
-		stakingtypes.ModuleName,
-		astaking.ModuleName,
-		transfertypes.ModuleName,
-		ibchost.ModuleName,
-		feegrant.ModuleName,
-	}
-}
-
-// akashEndBlockModules returns all end block modules.
-func (app *AkashApp) akashEndBlockModules() []string {
-	return []string{
-		crisistypes.ModuleName,
-		govtypes.ModuleName,
-		agov.ModuleName,
-		stakingtypes.ModuleName,
-		astaking.ModuleName,
-		upgradetypes.ModuleName,
-		capabilitytypes.ModuleName,
-		banktypes.ModuleName,
-		paramstypes.ModuleName,
-		deploymenttypes.ModuleName,
-		providertypes.ModuleName,
-		certtypes.ModuleName,
-		markettypes.ModuleName,
-		audittypes.ModuleName,
-		genutiltypes.ModuleName,
-		vestingtypes.ModuleName,
-		inflationtypes.ModuleName,
-		authtypes.ModuleName,
-		authz.ModuleName,
-		taketypes.ModuleName,
-		escrowtypes.ModuleName,
-		minttypes.ModuleName,
-		distrtypes.ModuleName,
-		slashingtypes.ModuleName,
-		evidencetypes.ModuleName,
-		transfertypes.ModuleName,
-		ibchost.ModuleName,
-		feegrant.ModuleName,
 	}
 }
 
@@ -165,6 +90,5 @@ func OrderInitGenesis(_ []string) []string {
 		astaking.ModuleName,
 		agov.ModuleName,
 		genutiltypes.ModuleName,
-		// auctiontypes.ModuleName,
 	}
 }

@@ -11,7 +11,7 @@ import (
 	sdkmodule "github.com/cosmos/cosmos-sdk/types/module"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 
-	apptypes "pkg.akt.dev/akashd/app/types"
+	apptypes "pkg.akt.dev/node/app/types"
 )
 
 var (

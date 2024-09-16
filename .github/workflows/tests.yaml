@@ -54,6 +54,8 @@ jobs:
           check-latest: true
       - name: set environment
         uses: HatsuneMiku3939/direnv-action@v1
+        with:
+          masks: ''
       - run: make bins
       - run: make docker-image
 
@@ -71,6 +73,8 @@ jobs:
           go-version: "${{ env.GOVERSION }}"
       - name: set environment
         uses: HatsuneMiku3939/direnv-action@v1
+        with:
+          masks: ''
       - run: make test-full
 
   coverage:
@@ -87,10 +91,12 @@ jobs:
           go-version: "${{ env.GOVERSION }}"
       - name: set environment
         uses: HatsuneMiku3939/direnv-action@v1
+        with:
+          masks: ''
       - run: make test-coverage
       - uses: codecov/codecov-action@v4
 
-  lint:
+  lint-go:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -104,15 +110,12 @@ jobs:
           go-version: "${{ env.GOVERSION }}"
       - name: set environment
         uses: HatsuneMiku3939/direnv-action@v1
+        with:
+          masks: ''
       - run: make deps-tidy
-      - run: make build
-      - run: make test-vet
-      - name: lint all
-        run: make test-lint-all
-      - name: lint make-sublinters
-        run: make test-sublinters
+      - run: make lint-go
 
-  shellcheck:
+  lint-shell:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -126,7 +129,9 @@ jobs:
           go-version: "${{ env.GOVERSION }}"
       - name: set environment
         uses: HatsuneMiku3939/direnv-action@v1
-      - run: make shellcheck
+        with:
+          masks: ''
+      - run: make lint-shell
 
   sims:
     runs-on: ubuntu-latest
@@ -144,6 +149,8 @@ jobs:
           go-version: "${{ env.GOVERSION }}"
       - name: set environment
         uses: HatsuneMiku3939/direnv-action@v1
+        with:
+          masks: ''
       - name: test-sim-nondeterminism
         run: make test-sim-nondeterminism
       - name: test-sim-import-export
@@ -167,6 +174,8 @@ jobs:
           go-version: "${{ env.GOVERSION }}"
       - name: set environment
         uses: HatsuneMiku3939/direnv-action@v1
+        with:
+          masks: ''
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
@@ -193,6 +202,8 @@ jobs:
           go-version: "${{ env.GOVERSION }}"
       - name: set environment
         uses: HatsuneMiku3939/direnv-action@v1
+        with:
+          masks: ''
       - name: Ensure only directories exists in upgrades dir
         run: |
           dir=./upgrades/software
@@ -220,6 +231,8 @@ jobs:
           go-version: "${{ env.GOVERSION }}"
       - name: set environment
         uses: HatsuneMiku3939/direnv-action@v1
+        with:
+          masks: ''
       - name: configure variables
         run: |
           test_required=$(./script/upgrades.sh test-required ${{ github.ref }})
@@ -246,11 +259,11 @@ jobs:
       - build-bins
       - tests
       - coverage
-      - lint
+      - lint-go
+      - lint-shell
       - sims
       - release-dry-run
       - network-upgrade
-      - shellcheck
     steps:
       - uses: actions/checkout@v4
         with:

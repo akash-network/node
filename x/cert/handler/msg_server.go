@@ -7,7 +7,7 @@ import (
 
 	types "pkg.akt.dev/go/node/cert/v1"
 
-	"pkg.akt.dev/akashd/x/cert/keeper"
+	"pkg.akt.dev/node/x/cert/keeper"
 )
 
 type msgServer struct {

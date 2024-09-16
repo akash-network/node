@@ -9,10 +9,10 @@ import (
 
 	"pkg.akt.dev/go/node/escrow/v1"
 
-	"pkg.akt.dev/akashd/testutil"
-	"pkg.akt.dev/akashd/testutil/cosmos/mocks"
-	"pkg.akt.dev/akashd/testutil/state"
-	"pkg.akt.dev/akashd/x/escrow/keeper"
+	"pkg.akt.dev/node/testutil"
+	"pkg.akt.dev/node/testutil/cosmos/mocks"
+	"pkg.akt.dev/node/testutil/state"
+	"pkg.akt.dev/node/x/escrow/keeper"
 )
 
 func Test_AccountCreate(t *testing.T) {

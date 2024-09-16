@@ -31,14 +31,14 @@ import (
 	ibc "github.com/cosmos/ibc-go/v7/modules/core"
 	// "github.com/skip-mev/block-sdk/x/auction"
 
-	appparams "pkg.akt.dev/akashd/app/params"
-	"pkg.akt.dev/akashd/x/audit"
-	"pkg.akt.dev/akashd/x/cert"
-	"pkg.akt.dev/akashd/x/deployment"
-	"pkg.akt.dev/akashd/x/escrow"
-	"pkg.akt.dev/akashd/x/market"
-	"pkg.akt.dev/akashd/x/provider"
-	"pkg.akt.dev/akashd/x/take"
+	appparams "pkg.akt.dev/node/app/params"
+	"pkg.akt.dev/node/x/audit"
+	"pkg.akt.dev/node/x/cert"
+	"pkg.akt.dev/node/x/deployment"
+	"pkg.akt.dev/node/x/escrow"
+	"pkg.akt.dev/node/x/market"
+	"pkg.akt.dev/node/x/provider"
+	"pkg.akt.dev/node/x/take"
 )
 
 func appModules(

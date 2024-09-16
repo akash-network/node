@@ -11,7 +11,7 @@ import (
 	pv1 "pkg.akt.dev/go/node/provider/v1beta4"
 	tv1 "pkg.akt.dev/go/node/take/v1"
 
-	utypes "pkg.akt.dev/akashd/upgrades/types"
+	utypes "pkg.akt.dev/node/upgrades/types"
 )
 
 func init() {

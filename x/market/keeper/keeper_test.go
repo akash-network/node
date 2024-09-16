@@ -12,9 +12,9 @@ import (
 	"pkg.akt.dev/go/node/market/v1"
 	types "pkg.akt.dev/go/node/market/v1beta5"
 
-	"pkg.akt.dev/akashd/testutil"
-	"pkg.akt.dev/akashd/testutil/state"
-	"pkg.akt.dev/akashd/x/market/keeper"
+	"pkg.akt.dev/node/testutil"
+	"pkg.akt.dev/node/testutil/state"
+	"pkg.akt.dev/node/x/market/keeper"
 )
 
 func Test_CreateOrder(t *testing.T) {
@@ -244,7 +244,8 @@ func Test_OnGroupClosed(t *testing.T) {
 
 	const testBlockHeight = 133
 	suite.SetBlockHeight(testBlockHeight)
-	keeper.OnGroupClosed(suite.Context(), id.BidID().GroupID())
+	err := keeper.OnGroupClosed(suite.Context(), id.BidID().GroupID())
+	require.NoError(t, err)
 
 	lease, ok := keeper.GetLease(suite.Context(), id)
 	require.True(t, ok)
@@ -265,7 +266,10 @@ func createLease(t testing.TB, suite *state.TestSuite) v1.LeaseID {
 	ctx := suite.Context()
 	bid, order := createBid(t, suite)
 	keeper := suite.MarketKeeper()
-	keeper.CreateLease(ctx, bid)
+
+	err := keeper.CreateLease(ctx, bid)
+	require.NoError(t, err)
+
 	keeper.OnBidMatched(ctx, bid)
 	keeper.OnOrderMatched(ctx, order)
 

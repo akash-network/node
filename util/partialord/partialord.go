@@ -3,7 +3,7 @@ package partialord
 import (
 	"sort"
 
-	"pkg.akt.dev/akashd/util/partialord/internal/dag"
+	"pkg.akt.dev/node/util/partialord/internal/dag"
 )
 
 type PartialOrdering struct {
@@ -35,20 +35,20 @@ func handleDAGErr(err error) {
 }
 
 // After marks that A should come after B
-func (ord *PartialOrdering) After(A string, B string) {
+func (ord *PartialOrdering) After(a string, b string) {
 	// Set that A depends on B / an edge from B -> A
-	err := ord.dag.AddEdge(B, A)
+	err := ord.dag.AddEdge(b, a)
 	handleDAGErr(err)
 }
 
-// After marks that A should come before B
-func (ord *PartialOrdering) Before(A string, B string) {
+// Before marks that A should come before B
+func (ord *PartialOrdering) Before(a string, b string) {
 	// Set that B depends on A / an edge from A -> B
-	err := ord.dag.AddEdge(A, B)
+	err := ord.dag.AddEdge(a, b)
 	handleDAGErr(err)
 }
 
-// Sets elems to be the first elements in the ordering.
+// FirstElements Sets elems to be the first elements in the ordering.
 // So if were making an ordering over {A, B, C, D, E}, and elems provided is {D, B, A}
 // then we are guaranteed that the total ordering will begin with {D, B, A}
 func (ord *PartialOrdering) FirstElements(elems ...string) {
@@ -62,7 +62,7 @@ func (ord *PartialOrdering) FirstElements(elems ...string) {
 	ord.firstSealed = true
 }
 
-// Sets elems to be the last elements in the ordering.
+// LastElements Sets elems to be the last elements in the ordering.
 // So if were making an ordering over {A, B, C, D, E}, and elems provided is {D, B, A}
 // then we are guaranteed that the total ordering will end with {D, B, A}
 func (ord *PartialOrdering) LastElements(elems ...string) {

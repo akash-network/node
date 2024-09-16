@@ -20,9 +20,9 @@ import (
 
 	sdlv1 "pkg.akt.dev/go/sdl"
 
-	appparams "pkg.akt.dev/akashd/app/params"
-	testsim "pkg.akt.dev/akashd/testutil/sim"
-	"pkg.akt.dev/akashd/x/deployment/keeper"
+	appparams "pkg.akt.dev/node/app/params"
+	testsim "pkg.akt.dev/node/testutil/sim"
+	"pkg.akt.dev/node/x/deployment/keeper"
 )
 
 // Simulation operation weights constants
@@ -45,25 +45,25 @@ func WeightedOperations(
 	)
 
 	appParams.GetOrGenerate(
-		cdc, OpWeightMsgCreateDeployment, &weightMsgCreateDeployment, nil, func(r *rand.Rand) {
+		cdc, OpWeightMsgCreateDeployment, &weightMsgCreateDeployment, nil, func(_ *rand.Rand) {
 			weightMsgCreateDeployment = appparams.DefaultWeightMsgCreateDeployment
 		},
 	)
 
 	appParams.GetOrGenerate(
-		cdc, OpWeightMsgUpdateDeployment, &weightMsgUpdateDeployment, nil, func(r *rand.Rand) {
+		cdc, OpWeightMsgUpdateDeployment, &weightMsgUpdateDeployment, nil, func(_ *rand.Rand) {
 			weightMsgUpdateDeployment = appparams.DefaultWeightMsgUpdateDeployment
 		},
 	)
 
 	appParams.GetOrGenerate(
-		cdc, OpWeightMsgCloseDeployment, &weightMsgCloseDeployment, nil, func(r *rand.Rand) {
+		cdc, OpWeightMsgCloseDeployment, &weightMsgCloseDeployment, nil, func(_ *rand.Rand) {
 			weightMsgCloseDeployment = appparams.DefaultWeightMsgCloseDeployment
 		},
 	)
 
 	appParams.GetOrGenerate(
-		cdc, OpWeightMsgCloseGroup, &weightMsgCloseGroup, nil, func(r *rand.Rand) {
+		cdc, OpWeightMsgCloseGroup, &weightMsgCloseGroup, nil, func(_ *rand.Rand) {
 			weightMsgCloseGroup = appparams.DefaultWeightMsgCloseGroup
 		},
 	)
@@ -96,7 +96,7 @@ func SimulateMsgCreateDeployment(ak govtypes.AccountKeeper, bk bankkeeper.Keeper
 
 		dID := v1.DeploymentID{
 			Owner: simAccount.Address.String(),
-			DSeq:  uint64(ctx.BlockHeight()),
+			DSeq:  uint64(ctx.BlockHeight()), // nolint gosec
 		}
 
 		_, found := k.GetDeployment(ctx, dID)

@@ -11,7 +11,7 @@ import (
 	etypes "pkg.akt.dev/go/node/escrow/v1"
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 
-	"pkg.akt.dev/akashd/x/market/keeper"
+	"pkg.akt.dev/node/x/market/keeper"
 )
 
 type EscrowKeeper interface {

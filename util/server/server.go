@@ -65,7 +65,7 @@ func ExportCmd(appExporter servertypes.AppExporter, defaultNodeHome string) *cob
 	cmd := &cobra.Command{
 		Use:   "export",
 		Short: "Export state to JSON",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			sctx := sdkserver.GetServerContextFromCmd(cmd)
 			config := sctx.Config
 

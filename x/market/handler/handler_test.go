@@ -19,9 +19,9 @@ import (
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 	attr "pkg.akt.dev/go/node/types/attributes/v1"
 
-	"pkg.akt.dev/akashd/testutil"
-	"pkg.akt.dev/akashd/testutil/state"
-	"pkg.akt.dev/akashd/x/market/handler"
+	"pkg.akt.dev/node/testutil"
+	"pkg.akt.dev/node/testutil/state"
+	"pkg.akt.dev/node/x/market/handler"
 )
 
 type testSuite struct {

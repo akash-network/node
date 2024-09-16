@@ -6,14 +6,6 @@ TEST_MODULES ?= $(shell $(GO) list ./... | grep -v '/mocks')
 ###                           Misc tests                                    ###
 ###############################################################################
 
-.PHONY: shellcheck
-shellcheck:
-	docker run --rm \
-	--volume ${PWD}:/shellcheck \
-	--entrypoint sh \
-	koalaman/shellcheck-alpine:stable \
-	-x /shellcheck/script/shellcheck.sh
-
 .PHONY: test
 test:
 	$(GO_TEST) -v -timeout 600s $(TEST_MODULES)

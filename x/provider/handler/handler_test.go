@@ -14,11 +14,11 @@ import (
 
 	akashtypes "pkg.akt.dev/go/node/types/attributes/v1"
 
-	"pkg.akt.dev/akashd/testutil"
-	"pkg.akt.dev/akashd/testutil/state"
-	mkeeper "pkg.akt.dev/akashd/x/market/keeper"
-	"pkg.akt.dev/akashd/x/provider/handler"
-	"pkg.akt.dev/akashd/x/provider/keeper"
+	"pkg.akt.dev/node/testutil"
+	"pkg.akt.dev/node/testutil/state"
+	mkeeper "pkg.akt.dev/node/x/market/keeper"
+	"pkg.akt.dev/node/x/provider/handler"
+	"pkg.akt.dev/node/x/provider/keeper"
 )
 
 const (
@@ -256,7 +256,7 @@ func TestProviderDeleteExisting(t *testing.T) {
 	require.EqualError(t, err, "NOTIMPLEMENTED: "+handler.ErrInternal.Error())
 	require.True(t, errors.Is(err, handler.ErrInternal))
 
-	t.Run("ensure event created", func(t *testing.T) {
+	t.Run("ensure event created", func(_ *testing.T) {
 		// TODO: this should emit a ProviderDelete
 	})
 }

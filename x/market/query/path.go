@@ -8,7 +8,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	v1 "pkg.akt.dev/go/node/market/v1"
 
-	dpath "pkg.akt.dev/akashd/x/deployment/query"
+	dpath "pkg.akt.dev/node/x/deployment/query"
 )
 
 const (

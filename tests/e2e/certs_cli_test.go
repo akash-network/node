@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 	clitestutil "pkg.akt.dev/go/cli/testutil"
 
-	"pkg.akt.dev/akashd/testutil"
+	"pkg.akt.dev/node/testutil"
 
 	"pkg.akt.dev/go/cli"
 	utiltls "pkg.akt.dev/go/util/tls"

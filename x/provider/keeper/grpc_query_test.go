@@ -13,9 +13,9 @@ import (
 	"pkg.akt.dev/go/node/client/v1beta3/testutil"
 	types "pkg.akt.dev/go/node/provider/v1beta4"
 
-	"pkg.akt.dev/akashd/app"
-	"pkg.akt.dev/akashd/testutil/state"
-	"pkg.akt.dev/akashd/x/provider/keeper"
+	"pkg.akt.dev/node/app"
+	"pkg.akt.dev/node/testutil/state"
+	"pkg.akt.dev/node/x/provider/keeper"
 )
 
 type grpcTestSuite struct {
@@ -87,7 +87,6 @@ func TestGRPCQueryProvider(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
 			ctx := sdk.WrapSDKContext(suite.ctx)
@@ -143,7 +142,6 @@ func TestGRPCQueryProviders(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
 			ctx := sdk.WrapSDKContext(suite.ctx)

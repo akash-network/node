@@ -12,7 +12,7 @@ import (
 	"pkg.akt.dev/go/node/deployment/v1"
 	"pkg.akt.dev/go/node/deployment/v1beta4"
 
-	"pkg.akt.dev/akashd/x/deployment/keeper"
+	"pkg.akt.dev/node/x/deployment/keeper"
 )
 
 // ValidateGenesis does validation check of the Genesis and return error in case of failure
@@ -40,7 +40,11 @@ func InitGenesis(ctx sdk.Context, keeper keeper.IKeeper, data *v1beta4.GenesisSt
 			return nil
 		}
 	}
-	keeper.SetParams(ctx, data.Params)
+	err := keeper.SetParams(ctx, data.Params)
+	if err != nil {
+		panic(err.Error())
+	}
+
 	return []abci.ValidatorUpdate{}
 }
 

@@ -15,7 +15,7 @@ import (
 	cmtypes "github.com/cometbft/cometbft/types"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 
-	"pkg.akt.dev/akashd/pubsub"
+	"pkg.akt.dev/node/pubsub"
 )
 
 // Publish events using cometbft buses to clients. Waits on context

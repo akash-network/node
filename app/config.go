@@ -27,7 +27,7 @@ import (
 	ibcclient "github.com/cosmos/ibc-go/v7/modules/core/02-client/client"
 	ibclightclient "github.com/cosmos/ibc-go/v7/modules/light-clients/07-tendermint"
 
-	appparams "pkg.akt.dev/akashd/app/params"
+	appparams "pkg.akt.dev/node/app/params"
 )
 
 var mbasics = module.NewBasicManager(

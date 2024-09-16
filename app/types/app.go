@@ -71,16 +71,16 @@ import (
 	astakingtypes "pkg.akt.dev/go/node/staking/v1beta3"
 	ttypes "pkg.akt.dev/go/node/take/v1"
 
-	appparams "pkg.akt.dev/akashd/app/params"
-	akeeper "pkg.akt.dev/akashd/x/audit/keeper"
-	ckeeper "pkg.akt.dev/akashd/x/cert/keeper"
-	dkeeper "pkg.akt.dev/akashd/x/deployment/keeper"
-	ekeeper "pkg.akt.dev/akashd/x/escrow/keeper"
-	ikeeper "pkg.akt.dev/akashd/x/inflation/keeper"
-	mhooks "pkg.akt.dev/akashd/x/market/hooks"
-	mkeeper "pkg.akt.dev/akashd/x/market/keeper"
-	pkeeper "pkg.akt.dev/akashd/x/provider/keeper"
-	tkeeper "pkg.akt.dev/akashd/x/take/keeper"
+	appparams "pkg.akt.dev/node/app/params"
+	akeeper "pkg.akt.dev/node/x/audit/keeper"
+	ckeeper "pkg.akt.dev/node/x/cert/keeper"
+	dkeeper "pkg.akt.dev/node/x/deployment/keeper"
+	ekeeper "pkg.akt.dev/node/x/escrow/keeper"
+	ikeeper "pkg.akt.dev/node/x/inflation/keeper"
+	mhooks "pkg.akt.dev/node/x/market/hooks"
+	mkeeper "pkg.akt.dev/node/x/market/keeper"
+	pkeeper "pkg.akt.dev/node/x/provider/keeper"
+	tkeeper "pkg.akt.dev/node/x/take/keeper"
 )
 
 const (
@@ -530,7 +530,7 @@ func (app *App) SetupHooks() {
 func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino, key, tkey storetypes.StoreKey) paramskeeper.Keeper {
 	paramsKeeper := paramskeeper.NewKeeper(appCodec, legacyAmino, key, tkey)
 
-	paramsKeeper.Subspace(authtypes.ModuleName).WithKeyTable(authtypes.ParamKeyTable())
+	paramsKeeper.Subspace(authtypes.ModuleName).WithKeyTable(authtypes.ParamKeyTable())         // nolint: staticcheck
 	paramsKeeper.Subspace(banktypes.ModuleName).WithKeyTable(banktypes.ParamKeyTable())         // nolint: staticcheck // SA1019
 	paramsKeeper.Subspace(stakingtypes.ModuleName).WithKeyTable(stakingtypes.ParamKeyTable())   // nolint: staticcheck // SA1019
 	paramsKeeper.Subspace(minttypes.ModuleName).WithKeyTable(minttypes.ParamKeyTable())         // nolint: staticcheck // SA1019

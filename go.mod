@@ -1,4 +1,4 @@
-module pkg.akt.dev/akashd
+module pkg.akt.dev/node
 
 go 1.23.0
 

@@ -1,3 +1,5 @@
+// Package v1_0_0
+// nolint revive
 package v1_0_0
 
 import (
@@ -8,8 +10,8 @@ import (
 	types "pkg.akt.dev/go/node/provider/v1beta4"
 	"pkg.akt.dev/go/sdkutil"
 
-	utypes "pkg.akt.dev/akashd/upgrades/types"
-	pkeeper "pkg.akt.dev/akashd/x/provider/keeper"
+	utypes "pkg.akt.dev/node/upgrades/types"
+	pkeeper "pkg.akt.dev/node/x/provider/keeper"
 )
 
 type providerMigrations struct {

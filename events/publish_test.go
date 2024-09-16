@@ -11,7 +11,7 @@ package events
 // 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 // 	"pkg.akt.dev/go/sdkutil"
 //
-// 	"pkg.akt.dev/akashd/testutil"
+// 	"pkg.akt.dev/node/testutil"
 // )
 //
 // func Test_processEvent(t *testing.T) {

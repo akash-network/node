@@ -29,9 +29,9 @@ import (
 	// init sdk config
 	_ "pkg.akt.dev/go/sdkutil"
 
-	"pkg.akt.dev/akashd/pubsub"
-	uttypes "pkg.akt.dev/akashd/tests/upgrade/types"
-	"pkg.akt.dev/akashd/util/cli"
+	"pkg.akt.dev/node/pubsub"
+	uttypes "pkg.akt.dev/node/tests/upgrade/types"
+	"pkg.akt.dev/node/util/cli"
 )
 
 const (
@@ -382,6 +382,8 @@ func TestUpgrade(t *testing.T) {
 				fmt.Sprintf("AKASH_FROM=%s", cfg.Work.Key),
 				fmt.Sprintf("AKASH_GAS_PRICES=0.0025uakt"),
 				fmt.Sprintf("AKASH_GAS_ADJUSTMENT=2"),
+				fmt.Sprintf("AKASH_P2P_PEX=false"),
+				fmt.Sprintf("AKASH_MINIMUM_GAS_PRICES=0.0025uakt"),
 				// auto is failing with rpc error: code = Unknown desc = unknown query path: unknown request
 				fmt.Sprintf("AKASH_GAS=500000"),
 				fmt.Sprintf("AKASH_YES=true"),

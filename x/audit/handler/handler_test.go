@@ -5,6 +5,7 @@ import (
 	"sort"
 	"testing"
 
+	testutilmod "github.com/cosmos/cosmos-sdk/types/module/testutil"
 	"github.com/stretchr/testify/require"
 
 	dbm "github.com/cometbft/cometbft-db"
@@ -18,9 +19,9 @@ import (
 
 	types "pkg.akt.dev/go/node/audit/v1"
 
-	"pkg.akt.dev/akashd/testutil"
-	"pkg.akt.dev/akashd/x/audit/handler"
-	"pkg.akt.dev/akashd/x/audit/keeper"
+	"pkg.akt.dev/node/testutil"
+	"pkg.akt.dev/node/x/audit/handler"
+	"pkg.akt.dev/node/x/audit/keeper"
 )
 
 type testSuite struct {
@@ -36,6 +37,9 @@ func setupTestSuite(t *testing.T) *testSuite {
 		t: t,
 	}
 
+	cfg := testutilmod.MakeTestEncodingConfig()
+	cdc := cfg.Codec
+
 	aKey := sdk.NewTransientStoreKey(types.StoreKey)
 
 	db := dbm.NewMemDB()
@@ -47,7 +51,7 @@ func setupTestSuite(t *testing.T) *testSuite {
 
 	suite.ctx = sdk.NewContext(suite.ms, tmproto.Header{}, true, testutil.Logger(t))
 
-	suite.keeper = keeper.NewKeeper(types.ModuleCdc, aKey)
+	suite.keeper = keeper.NewKeeper(cdc, aKey)
 
 	suite.handler = handler.NewHandler(suite.keeper)
 

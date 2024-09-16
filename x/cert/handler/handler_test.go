@@ -12,13 +12,14 @@ import (
 	sdktestdata "github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	testutilmod "github.com/cosmos/cosmos-sdk/types/module/testutil"
 	"github.com/stretchr/testify/require"
 
 	types "pkg.akt.dev/go/node/cert/v1"
 
-	"pkg.akt.dev/akashd/testutil"
-	"pkg.akt.dev/akashd/x/cert/handler"
-	"pkg.akt.dev/akashd/x/cert/keeper"
+	"pkg.akt.dev/node/testutil"
+	"pkg.akt.dev/node/x/cert/handler"
+	"pkg.akt.dev/node/x/cert/keeper"
 )
 
 type testSuite struct {
@@ -34,6 +35,9 @@ func setupTestSuite(t *testing.T) *testSuite {
 		t: t,
 	}
 
+	cfg := testutilmod.MakeTestEncodingConfig()
+	cdc := cfg.Codec
+
 	aKey := sdk.NewTransientStoreKey(types.StoreKey)
 
 	db := dbm.NewMemDB()
@@ -45,7 +49,7 @@ func setupTestSuite(t *testing.T) *testSuite {
 
 	suite.ctx = sdk.NewContext(suite.ms, tmproto.Header{}, true, testutil.Logger(t))
 
-	suite.keeper = keeper.NewKeeper(types.ModuleCdc, aKey)
+	suite.keeper = keeper.NewKeeper(cdc, aKey)
 
 	suite.handler = handler.NewHandler(suite.keeper)
 

@@ -22,7 +22,7 @@ import (
 	"pkg.akt.dev/go/cli"
 	clitestutil "pkg.akt.dev/go/cli/testutil"
 
-	"pkg.akt.dev/akashd/testutil"
+	"pkg.akt.dev/node/testutil"
 )
 
 type deploymentIntegrationTestSuite struct {

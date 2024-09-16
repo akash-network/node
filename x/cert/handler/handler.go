@@ -6,7 +6,7 @@ import (
 
 	types "pkg.akt.dev/go/node/cert/v1"
 
-	"pkg.akt.dev/akashd/x/cert/keeper"
+	"pkg.akt.dev/node/x/cert/keeper"
 )
 
 // NewHandler returns a handler for "provider" type messages.

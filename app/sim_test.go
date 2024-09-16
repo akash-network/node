@@ -47,8 +47,8 @@ import (
 	ibctransfertypes "github.com/cosmos/ibc-go/v7/modules/apps/transfer/types"
 	ibchost "github.com/cosmos/ibc-go/v7/modules/core/exported"
 
-	akash "pkg.akt.dev/akashd/app"
-	"pkg.akt.dev/akashd/app/sim"
+	akash "pkg.akt.dev/node/app"
+	"pkg.akt.dev/node/app/sim"
 )
 
 // AppChainID hardcoded chainID for simulation
@@ -80,7 +80,10 @@ func interBlockCacheOpt() func(*baseapp.BaseApp) {
 
 func simulateFromSeedFunc(t *testing.T, newApp *akash.AkashApp, config simtypes.Config) (bool, simulation.Params, error) {
 	return simulation.SimulateFromSeed(
-		t, os.Stdout, newApp.BaseApp, simtestutil.AppStateFn(newApp.AppCodec(), newApp.SimulationManager(), akash.NewDefaultGenesisState(newApp.AppCodec())),
+		t,
+		os.Stdout,
+		newApp.BaseApp,
+		simtestutil.AppStateFn(newApp.AppCodec(), newApp.SimulationManager(), akash.NewDefaultGenesisState(newApp.AppCodec())),
 		simtypes.RandomAccounts, // Replace with own random account function if using keys other than secp256k1
 		simtestutil.SimulationOperations(newApp, newApp.AppCodec(), config),
 		newApp.ModuleAccountAddrs(), config,

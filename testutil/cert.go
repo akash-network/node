@@ -20,7 +20,7 @@ import (
 	types "pkg.akt.dev/go/node/cert/v1"
 	clientmocks "pkg.akt.dev/go/node/client/v1beta3/mocks"
 
-	certutils "pkg.akt.dev/akashd/x/cert/utils"
+	certutils "pkg.akt.dev/node/x/cert/utils"
 )
 
 type TestCertificate struct {

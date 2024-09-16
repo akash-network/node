@@ -16,12 +16,12 @@ import (
 	"pkg.akt.dev/go/node/deployment/v1"
 	"pkg.akt.dev/go/node/deployment/v1beta4"
 
-	"pkg.akt.dev/akashd/testutil"
-	cmocks "pkg.akt.dev/akashd/testutil/cosmos/mocks"
-	"pkg.akt.dev/akashd/testutil/state"
-	"pkg.akt.dev/akashd/x/deployment/handler"
-	"pkg.akt.dev/akashd/x/deployment/keeper"
-	mkeeper "pkg.akt.dev/akashd/x/market/keeper"
+	"pkg.akt.dev/node/testutil"
+	cmocks "pkg.akt.dev/node/testutil/cosmos/mocks"
+	"pkg.akt.dev/node/testutil/state"
+	"pkg.akt.dev/node/x/deployment/handler"
+	"pkg.akt.dev/node/x/deployment/keeper"
+	mkeeper "pkg.akt.dev/node/x/market/keeper"
 )
 
 type testSuite struct {

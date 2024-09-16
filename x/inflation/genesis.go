@@ -10,11 +10,11 @@ import (
 
 	types "pkg.akt.dev/go/node/inflation/v1beta3"
 
-	"pkg.akt.dev/akashd/x/inflation/keeper"
+	"pkg.akt.dev/node/x/inflation/keeper"
 )
 
 // ValidateGenesis does validation check of the Genesis and return error in case of failure
-func ValidateGenesis(data *types.GenesisState) error {
+func ValidateGenesis(_ *types.GenesisState) error {
 	return nil
 	// return data.Params.Validate()
 }

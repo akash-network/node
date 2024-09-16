@@ -42,7 +42,7 @@ func ParseIDFromKey(key []byte) types.ProviderID {
 	key = key[offset+1:]
 	addrLen = key[0]
 	auditor := make([]byte, addrLen)
-	offset = copy(auditor, key[1:addrLen+1])
+	copy(auditor, key[1:addrLen+1])
 
 	key = key[addrLen+1:]
 
@@ -56,17 +56,17 @@ func ParseIDFromKey(key []byte) types.ProviderID {
 	}
 }
 
-func parseAuditorFromKey(key []byte) sdk.AccAddress {
-	addrLen := key[0]
-
-	auditor := make([]byte, addrLen)
-	copy(auditor, key[1:addrLen+1])
-
-	key = key[addrLen+1:]
-
-	if len(key) != 0 {
-		panic("auditor key must not have bytes left after key parse")
-	}
-
-	return auditor
-}
+// func parseAuditorFromKey(key []byte) sdk.AccAddress {
+// 	addrLen := key[0]
+//
+// 	auditor := make([]byte, addrLen)
+// 	copy(auditor, key[1:addrLen+1])
+//
+// 	key = key[addrLen+1:]
+//
+// 	if len(key) != 0 {
+// 		panic("auditor key must not have bytes left after key parse")
+// 	}
+//
+// 	return auditor
+// }

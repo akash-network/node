@@ -19,8 +19,8 @@ import (
 
 	rtypes "pkg.akt.dev/go/node/types/resources/v1beta4"
 
-	"pkg.akt.dev/akashd/app"
-	"pkg.akt.dev/akashd/testutil/network"
+	"pkg.akt.dev/node/app"
+	"pkg.akt.dev/node/testutil/network"
 )
 
 func RandRangeInt(min, max int) int {

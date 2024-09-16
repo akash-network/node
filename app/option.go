@@ -3,7 +3,7 @@ package app
 import (
 	"github.com/cosmos/cosmos-sdk/codec"
 
-	"pkg.akt.dev/akashd/app/params"
+	"pkg.akt.dev/node/app/params"
 )
 
 type SetupGenesisFn func(cdc codec.Codec) GenesisState

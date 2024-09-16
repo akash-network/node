@@ -1,22 +1,22 @@
 package app
 
 import (
-	"github.com/cosmos/cosmos-sdk/client"
+	// "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
-	auctionante "github.com/skip-mev/block-sdk/x/auction/ante"
-	auctionkeeper "github.com/skip-mev/block-sdk/x/auction/keeper"
+	// auctionante "github.com/skip-mev/block-sdk/x/auction/ante"
+	// auctionkeeper "github.com/skip-mev/block-sdk/x/auction/keeper"
 )
 
 // BlockSDKAnteHandlerParams are the parameters necessary to configure the block-sdk antehandlers
-type BlockSDKAnteHandlerParams struct {
-	mevLane       auctionante.MEVLane
-	auctionKeeper auctionkeeper.Keeper
-	txConfig      client.TxConfig
-}
+// type BlockSDKAnteHandlerParams struct {
+// 	mevLane       auctionante.MEVLane
+// 	auctionKeeper auctionkeeper.Keeper
+// 	txConfig      client.TxConfig
+// }
 
 // HandlerOptions extends the SDK's AnteHandler options
 type HandlerOptions struct {
@@ -25,7 +25,7 @@ type HandlerOptions struct {
 	// AStakingKeeper astakingkeeper.IKeeper
 	GovKeeper *govkeeper.Keeper
 	// AGovKeeper     agovkeeper.IKeeper
-	BlockSDK BlockSDKAnteHandlerParams
+	// BlockSDK BlockSDKAnteHandlerParams
 }
 
 // NewAnteHandler returns an AnteHandler that checks and increments sequence

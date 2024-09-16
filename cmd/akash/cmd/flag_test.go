@@ -13,9 +13,9 @@ import (
 
 	cflags "pkg.akt.dev/go/cli/flags"
 
-	"pkg.akt.dev/akashd/app"
-	"pkg.akt.dev/akashd/testutil"
-	testutilcli "pkg.akt.dev/akashd/testutil/cli"
+	"pkg.akt.dev/node/app"
+	"pkg.akt.dev/node/testutil"
+	testutilcli "pkg.akt.dev/node/testutil/cli"
 )
 
 // TestContextFlags tests that all the flags which are set in client.Context are parsed correctly.
@@ -166,7 +166,7 @@ func TestContextFlags(t *testing.T) {
 		testCase := tCase
 		t.Run(testCase.flag, func(t *testing.T) {
 			// set the run func
-			cmd.RunE = func(cmd *cobra.Command, args []string) error {
+			cmd.RunE = func(cmd *cobra.Command, _ []string) error {
 				var clientCtx client.Context
 
 				// prepare context

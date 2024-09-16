@@ -5,12 +5,12 @@ import (
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
 
-	"pkg.akt.dev/akashd/x/staking/keeper"
+	"pkg.akt.dev/node/x/staking/keeper"
 )
 
 // WeightedOperations returns all the operations from the module with their respective weights
 func WeightedOperations(
-	appParams simtypes.AppParams, cdc codec.JSONCodec, k keeper.IKeeper) simulation.WeightedOperations {
+	_ simtypes.AppParams, _ codec.JSONCodec, _ keeper.IKeeper) simulation.WeightedOperations {
 	return nil
 	// var (
 	// 	weightMsgCreate int

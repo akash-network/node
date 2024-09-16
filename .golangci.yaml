@@ -1,13 +1,34 @@
+---
 issues:
   exclude:
     - comment on exported (method|function|type|const|var)
   exclude-use-default: true
-
-# Skip generated k8s code
-run:
   skip-dirs:
-    - pkg/client
     - ".*/mocks"
 
   # Skip vendor/ etc
   skip-dirs-use-default: true
+linters:
+  disable-all: true
+  enable:
+#    - err113
+    - errcheck
+    - errchkjson
+    - unused
+    - misspell
+    - gofmt
+    - gocritic
+    - goconst
+    - govet
+    - ineffassign
+    - unparam
+    - staticcheck
+    - revive
+    - gosec
+    - copyloopvar
+    - prealloc
+linters-settings:
+  gocritic:
+    disabled-checks:
+      - ifElseChain
+      - singleCaseSwitch

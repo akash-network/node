@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	cmclient "github.com/cometbft/cometbft/rpc/client"
 	"github.com/cosmos/cosmos-sdk/client"
 
 	"github.com/spf13/cobra"
@@ -12,9 +13,10 @@ import (
 
 	cflags "pkg.akt.dev/go/cli/flags"
 
-	"pkg.akt.dev/akashd/cmd/common"
-	cmdcommon "pkg.akt.dev/akashd/cmd/common"
-	"pkg.akt.dev/akashd/pubsub"
+	"pkg.akt.dev/node/cmd/common"
+	cmdcommon "pkg.akt.dev/node/cmd/common"
+	"pkg.akt.dev/node/events"
+	"pkg.akt.dev/node/pubsub"
 )
 
 // EventCmd prints out events in real time
@@ -40,12 +42,13 @@ func EventCmd() *cobra.Command {
 func getEvents(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	cctx := client.GetClientContextFromCmd(cmd)
 
-	// node, err := cctx.GetNode()
-	// if err != nil {
-	// 	return err
-	// }
+	node, err := cctx.GetNode()
+	if err != nil {
+		return err
+	}
 
-	// node.
+	ws := node.(cmclient.EventsClient)
+
 	bus := pubsub.NewBus()
 	defer bus.Close()
 
@@ -57,9 +60,9 @@ func getEvents(ctx context.Context, cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	// group.Go(func() error {
-	// 	return events.Publish(ctx, node, "akash-cli", bus)
-	// })
+	group.Go(func() error {
+		return events.Publish(ctx, ws, "akash-cli", bus)
+	})
 
 	group.Go(func() error {
 		for {

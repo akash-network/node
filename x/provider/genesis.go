@@ -9,16 +9,16 @@ import (
 
 	types "pkg.akt.dev/go/node/provider/v1beta4"
 
-	"pkg.akt.dev/akashd/x/provider/keeper"
+	"pkg.akt.dev/node/x/provider/keeper"
 )
 
 // ValidateGenesis does validation check of the Genesis and returns error in case of failure
-func ValidateGenesis(data *types.GenesisState) error {
+func ValidateGenesis(_ *types.GenesisState) error {
 	return nil
 }
 
 // InitGenesis initiate genesis state and return updated validator details
-func InitGenesis(ctx sdk.Context, keeper keeper.IKeeper, data *types.GenesisState) []abci.ValidatorUpdate {
+func InitGenesis(_ sdk.Context, _ keeper.IKeeper, _ *types.GenesisState) []abci.ValidatorUpdate {
 	return []abci.ValidatorUpdate{}
 }
 

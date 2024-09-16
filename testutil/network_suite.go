@@ -24,7 +24,7 @@ import (
 	cltypes "pkg.akt.dev/go/node/client/types"
 	cclient "pkg.akt.dev/go/node/client/v1beta3"
 
-	"pkg.akt.dev/akashd/testutil/network"
+	"pkg.akt.dev/node/testutil/network"
 )
 
 // type NetworkTestSuite interface {

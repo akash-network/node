@@ -16,9 +16,9 @@ import (
 	"pkg.akt.dev/go/node/market/v1"
 	types "pkg.akt.dev/go/node/market/v1beta5"
 
-	appparams "pkg.akt.dev/akashd/app/params"
-	testsim "pkg.akt.dev/akashd/testutil/sim"
-	keepers "pkg.akt.dev/akashd/x/market/handler"
+	appparams "pkg.akt.dev/node/app/params"
+	testsim "pkg.akt.dev/node/testutil/sim"
+	keepers "pkg.akt.dev/node/x/market/handler"
 )
 
 // Simulation operation weights constants
@@ -38,19 +38,19 @@ func WeightedOperations(
 	)
 
 	appParams.GetOrGenerate(
-		cdc, OpWeightMsgCreateBid, &weightMsgCreateBid, nil, func(r *rand.Rand) {
+		cdc, OpWeightMsgCreateBid, &weightMsgCreateBid, nil, func(_ *rand.Rand) {
 			weightMsgCreateBid = appparams.DefaultWeightMsgCreateBid
 		},
 	)
 
 	appParams.GetOrGenerate(
-		cdc, OpWeightMsgCloseBid, &weightMsgCloseBid, nil, func(r *rand.Rand) {
+		cdc, OpWeightMsgCloseBid, &weightMsgCloseBid, nil, func(_ *rand.Rand) {
 			weightMsgCloseBid = appparams.DefaultWeightMsgCloseBid
 		},
 	)
 
 	appParams.GetOrGenerate(
-		cdc, OpWeightMsgCloseLease, &weightMsgCloseLease, nil, func(r *rand.Rand) {
+		cdc, OpWeightMsgCloseLease, &weightMsgCloseLease, nil, func(_ *rand.Rand) {
 			weightMsgCloseLease = appparams.DefaultWeightMsgCloseLease
 		},
 	)
@@ -224,25 +224,30 @@ func SimulateMsgCloseBid(ks keepers.Keepers) simtypes.Operation {
 
 // SimulateMsgCloseLease generates a MsgCloseLease with random values
 func SimulateMsgCloseLease(ks keepers.Keepers) simtypes.Operation {
-	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account,
-		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
-		// orders := getOrdersWithState(ctx, ks, v1.OrderActive)
-		// if len(orders) == 0 {
+	return func(
+		r *rand.Rand,
+		app *baseapp.BaseApp,
+		ctx sdk.Context,
+		accounts []simtypes.Account,
+		chainID string,
+	) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
+		// leases := getLeasesWithState(ctx, ks, v1.LeaseActive)
+		// if len(leases) == 0 {
 		// 	return simtypes.NoOpMsg(types.ModuleName, (&types.MsgCloseLease{}).Type(), "no orders with state matched found"), nil, nil
 		// }
 		//
 		// // Get random order
-		// order := orders[testsim.RandIdx(r, len(orders) - 1)]
+		// lease := leases[testsim.RandIdx(r, len(leases)-1)]
 		//
-		// ownerAddr, convertErr := sdk.AccAddressFromBech32(order.ID.Owner)
+		// ownerAddr, convertErr := sdk.AccAddressFromBech32(lease.ID.Owner)
 		// if convertErr != nil {
 		// 	return simtypes.NoOpMsg(types.ModuleName, (&types.MsgCloseLease{}).Type(), "error while converting address"), nil, convertErr
 		// }
 		//
 		// simAccount, found := simtypes.FindAccount(accounts, ownerAddr)
 		// if !found {
-		// 	return simtypes.NoOpMsg(types.ModuleName, (&types.MsgCloseLease{}).Type(), "unable to find order"),
-		// 		nil, fmt.Errorf("order with %s not found", order.ID.Owner)
+		// 	return simtypes.NoOpMsg(types.ModuleName, (&types.MsgCloseLease{}).Type(), "unable to find lease"),
+		// 		nil, fmt.Errorf("lease with %s not found", lease.ID.Owner)
 		// }
 		//
 		// account := ks.Account.GetAccount(ctx, simAccount.Address)
@@ -253,9 +258,12 @@ func SimulateMsgCloseLease(ks keepers.Keepers) simtypes.Operation {
 		// 	return simtypes.NoOpMsg(types.ModuleName, (&types.MsgCloseLease{}).Type(), "unable to generate fees"), nil, err
 		// }
 		//
-		// msg := types.NewMsgCloseLease(order.ID)
+		// lease.ID.Provider = "3425q"
+		//
+		// msg := types.NewMsgCloseLease(lease.ID)
 		//
 		// txGen := moduletestutil.MakeTestEncodingConfig().TxConfig
+		//
 		// tx, err := simtestutil.GenSignedMockTx(
 		// 	r,
 		// 	txGen,
@@ -275,6 +283,8 @@ func SimulateMsgCloseLease(ks keepers.Keepers) simtypes.Operation {
 		// if err != nil {
 		// 	return simtypes.NoOpMsg(types.ModuleName, msg.Type(), "unable to deliver tx"), nil, err
 		// }
+		//
+		// return simtypes.NoOpMsg(types.ModuleName, (&types.MsgCloseLease{}).Type(), "skipping"), nil, nil
 
 		return simtypes.NoOpMsg(types.ModuleName, (&types.MsgCloseLease{}).Type(), "skipping"), nil, nil
 	}

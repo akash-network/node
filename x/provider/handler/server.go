@@ -6,12 +6,10 @@ import (
 	errorsmod "cosmossdk.io/errors"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-
 	types "pkg.akt.dev/go/node/provider/v1beta4"
 
-	mkeeper "pkg.akt.dev/akashd/x/market/keeper"
-	"pkg.akt.dev/akashd/x/provider/keeper"
+	mkeeper "pkg.akt.dev/node/x/market/keeper"
+	"pkg.akt.dev/node/x/provider/keeper"
 )
 
 var (
@@ -67,7 +65,7 @@ func (ms msgServer) UpdateProvider(goCtx context.Context, msg *types.MsgUpdatePr
 	}
 
 	if err := ms.provider.Update(ctx, types.Provider(*msg)); err != nil {
-		return nil, sdkerrors.Wrapf(ErrInternal, "err: %v", err)
+		return nil, errorsmod.Wrapf(ErrInternal, "err: %v", err)
 	}
 
 	return &types.MsgUpdateProviderResponse{}, nil

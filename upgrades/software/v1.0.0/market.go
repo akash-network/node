@@ -1,3 +1,5 @@
+// Package v1_0_0
+// nolint revive
 package v1_0_0
 
 import (
@@ -6,8 +8,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkmodule "github.com/cosmos/cosmos-sdk/types/module"
 
-	utypes "pkg.akt.dev/akashd/upgrades/types"
-	mkeys "pkg.akt.dev/akashd/x/market/keeper/keys"
+	utypes "pkg.akt.dev/node/upgrades/types"
+	mkeys "pkg.akt.dev/node/x/market/keeper/keys"
 
 	"pkg.akt.dev/go/node/migrate"
 )
