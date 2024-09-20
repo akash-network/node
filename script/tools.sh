@@ -57,7 +57,7 @@ function replace_import_path() {
     local curr_version
     local new_module_name
 
-    curr_module_name=$(cd go; go list -m)
+    curr_module_name=$(cd go || exit; go list -m)
     curr_version=$(echo "$curr_module_name" | sed -n 's/.*v\([0-9]*\).*/\1/p')
     new_module_name=${curr_module_name%/"v$curr_version"}/$next_major_version
 
@@ -98,7 +98,7 @@ function replace_import_path() {
     done
 
     echo "updating go.mod"
-    for retract in $(cd go; go mod edit --json | jq -cr '.Retract | if . != null then .[] else empty end'); do
+    for retract in $(cd go || exit; go mod edit --json | jq -cr '.Retract | if . != null then .[] else empty end'); do
         local low
         local high
 
