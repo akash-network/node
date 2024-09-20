@@ -267,7 +267,6 @@ function init() {
 
 			if [[ "${GENESIS_ORIG}" =~ ^https?:\/\/.* ]]; then
 				echo "Downloading genesis from $GENESIS_ORIG"
-				wget -qO - "$GENESIS_ORIG" | lz4 - -d | tar xf - -C "$valdir/config"
 
 				pv_args="-petrafb -i 5"
 				sz=$(content_size "$GENESIS_ORIG")
