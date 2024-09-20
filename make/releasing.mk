@@ -130,4 +130,4 @@ release: gen-changelog
 		$(GORELEASER_SKIP) \
 		--verbose=$(GORELEASER_VERBOSE) \
 		--clean \
-		--release-notes=/go/src/$(GO_MOD_NAME)/.cache/changelog.md
+		--release-notes=/go/src/$(GORELEASER_MOD_MOUNT)/.cache/changelog.md
