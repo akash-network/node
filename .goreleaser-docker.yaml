@@ -78,4 +78,3 @@ dockers:
 
 archives:
   - format: binary
-    rlcp: true
