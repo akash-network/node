@@ -223,13 +223,13 @@ func SimulateMsgCloseBid(ks keepers.Keepers) simtypes.Operation {
 }
 
 // SimulateMsgCloseLease generates a MsgCloseLease with random values
-func SimulateMsgCloseLease(ks keepers.Keepers) simtypes.Operation {
+func SimulateMsgCloseLease(_ keepers.Keepers) simtypes.Operation {
 	return func(
-		r *rand.Rand,
-		app *baseapp.BaseApp,
-		ctx sdk.Context,
-		accounts []simtypes.Account,
-		chainID string,
+		r *rand.Rand, // nolint revive
+		app *baseapp.BaseApp, // nolint revive
+		ctx sdk.Context, // nolint revive
+		accounts []simtypes.Account, // nolint revive
+		chainID string, // nolint revive
 	) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		// leases := getLeasesWithState(ctx, ks, v1.LeaseActive)
 		// if len(leases) == 0 {
