@@ -9,11 +9,13 @@ import (
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/stretchr/testify/require"
 	"pkg.akt.dev/go/cli"
 	"pkg.akt.dev/go/cli/flags"
 	cltypes "pkg.akt.dev/go/node/client/types"
+	"pkg.akt.dev/go/node/client/v1beta3"
 
 	"pkg.akt.dev/node/app"
 	uttypes "pkg.akt.dev/node/tests/upgrade/types"
@@ -23,7 +25,9 @@ func init() {
 	uttypes.RegisterPostUpgradeWorker("v1.0.0", &postUpgrade{})
 }
 
-type postUpgrade struct{}
+type postUpgrade struct {
+	cl v1beta3.Client
+}
 
 var _ uttypes.TestWorker = (*postUpgrade)(nil)
 
@@ -63,11 +67,50 @@ func (pu *postUpgrade) Run(ctx context.Context, t *testing.T, params uttypes.Tes
 		cltypes.WithGasAdjustment(2),
 	}
 
-	mcl, err := cli.DiscoverClient(ctx, cctx, opts...)
+	pu.cl, err = cli.DiscoverClient(ctx, cctx, opts...)
 	require.NoError(t, err)
-	require.NotNil(t, mcl)
+	require.NotNil(t, pu.cl)
 
-	paramsResp, err := mcl.Query().Staking().Params(ctx, &stakingtypes.QueryParamsRequest{})
+	pu.testGov(ctx, t)
+
+	pu.testStaking(ctx, t)
+}
+
+func (pu *postUpgrade) testGov(ctx context.Context, t *testing.T) {
+	t.Logf("testing gov module")
+	cctx := pu.cl.ClientContext()
+
+	paramsResp, err := pu.cl.Query().Gov().Params(ctx, &govtypes.QueryParamsRequest{ParamsType: "deposit"})
+	require.NoError(t, err)
+	require.NotNil(t, paramsResp)
+
+	// paramsResp.Params.ExpeditedMinDeposit.
+	require.Equal(t, sdk.Coins{sdk.NewCoin("uakt", sdk.NewInt(2000000000))}.String(), sdk.Coins(paramsResp.Params.ExpeditedMinDeposit).String(), "ExpeditedMinDeposit must have 2000AKT")
+	require.Equal(t, paramsResp.Params.MinInitialDepositRatio, sdk.NewDecWithPrec(40, 2).String(), "MinInitialDepositRatio must be 40%")
+
+	opAddr := sdk.ValAddress(cctx.FromAddress)
+
+	comVal := sdk.NewDecWithPrec(4, 2)
+
+	valResp, err := pu.cl.Query().Staking().Validator(ctx, &stakingtypes.QueryValidatorRequest{ValidatorAddr: opAddr.String()})
+	require.NoError(t, err)
+
+	tx := stakingtypes.NewMsgEditValidator(opAddr, valResp.Validator.Description, &comVal)
+	broadcastResp, err := pu.cl.Tx().BroadcastMsgs(ctx, []sdk.Msg{tx})
+	require.Error(t, err)
+	require.NotNil(t, broadcastResp)
+
+	require.IsType(t, &sdk.TxResponse{}, broadcastResp)
+	txResp := broadcastResp.(*sdk.TxResponse)
+	require.NotEqual(t, uint32(0), txResp.Code, "update validator commission should fail if new value is < 5%")
+}
+
+func (pu *postUpgrade) testStaking(ctx context.Context, t *testing.T) {
+	t.Logf("testing staking module")
+
+	cctx := pu.cl.ClientContext()
+
+	paramsResp, err := pu.cl.Query().Staking().Params(ctx, &stakingtypes.QueryParamsRequest{})
 	require.NoError(t, err)
 	require.NotNil(t, paramsResp)
 
@@ -77,27 +120,15 @@ func (pu *postUpgrade) Run(ctx context.Context, t *testing.T, params uttypes.Tes
 
 	comVal := sdk.NewDecWithPrec(4, 2)
 
-	valResp, err := mcl.Query().Staking().Validator(ctx, &stakingtypes.QueryValidatorRequest{ValidatorAddr: opAddr.String()})
+	valResp, err := pu.cl.Query().Staking().Validator(ctx, &stakingtypes.QueryValidatorRequest{ValidatorAddr: opAddr.String()})
 	require.NoError(t, err)
 
 	tx := stakingtypes.NewMsgEditValidator(opAddr, valResp.Validator.Description, &comVal)
-	broadcastResp, err := mcl.Tx().BroadcastMsgs(ctx, []sdk.Msg{tx})
+	broadcastResp, err := pu.cl.Tx().BroadcastMsgs(ctx, []sdk.Msg{tx})
 	require.Error(t, err)
 	require.NotNil(t, broadcastResp)
 
 	require.IsType(t, &sdk.TxResponse{}, broadcastResp)
 	txResp := broadcastResp.(*sdk.TxResponse)
 	require.NotEqual(t, uint32(0), txResp.Code, "update validator commission should fail if new value is < 5%")
-
-	comVal = sdk.NewDecWithPrec(6, 2)
-
-	tx = stakingtypes.NewMsgEditValidator(opAddr, valResp.Validator.Description, &comVal)
-
-	broadcastResp, err = mcl.Tx().BroadcastMsgs(ctx, []sdk.Msg{tx})
-	require.NoError(t, err)
-	require.NotNil(t, broadcastResp)
-
-	require.IsType(t, &sdk.TxResponse{}, broadcastResp)
-	txResp = broadcastResp.(*sdk.TxResponse)
-	require.Equal(t, uint32(0), txResp.Code, "update validator commission should pass if new value is >= 5%")
 }

@@ -128,21 +128,6 @@ func CanCreateModuleAccountAtAddr(ctx sdk.Context, ak AccountKeeper, addr sdk.Ac
 		"due to an account at that address already existing & not being an overridable type")
 }
 
-// const (
-// 	// Noble USDC is used as the auction denom
-// 	AuctionUSDCDenom = "ibc/498A0751C798A0D9A389AA3691123DADA57DAA4FE165D5C75894505B876BA6E4"
-// )
-//
-// // AuctionParams expected initial params for the block-sdk
-// var AuctionParams = auctiontypes.Params{
-// 	MaxBundleSize:          5,
-// 	ReserveFee:             sdk.NewCoin(AuctionUSDCDenom, sdk.NewInt(1000000)),
-// 	MinBidIncrement:        sdk.NewCoin(AuctionUSDCDenom, sdk.NewInt(1000000)),
-// 	EscrowAccountAddress:   auctiontypes.DefaultEscrowAccountAddress,
-// 	FrontRunningProtection: true,
-// 	ProposerFee:            math.LegacyMustNewDecFromStr("0.05"),
-// }
-
 // CreateModuleAccountByName creates a module account at the provided name
 func CreateModuleAccountByName(ctx sdk.Context, ak AccountKeeper, name string) error {
 	addr := authtypes.NewModuleAddress(name)
@@ -219,25 +204,6 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 		dparams := agovtypes.DepositParams{}
 		sspace.Get(ctx, agovtypes.KeyDepositParams, &dparams)
 
-		// Migrate governance min deposit parameter to builtin gov params
-		gparams := up.Keepers.Cosmos.Gov.GetParams(ctx)
-		gparams.MinInitialDepositRatio = dparams.MinInitialDepositRate.String()
-		err = up.Keepers.Cosmos.Gov.SetParams(ctx, gparams)
-		if err != nil {
-			return nil, err
-		}
-
-		// // Ensure the auction module account is properly created to avoid sniping
-		// err = CreateModuleAccountByName(ctx, up.Keepers.Cosmos.Acct, auctiontypes.ModuleName)
-		// if err != nil {
-		// 	return nil, err
-		// }
-		//
-		// // update block-sdk params
-		// if err := up.Keepers.External.Auction.SetParams(ctx, AuctionParams); err != nil {
-		// 	return nil, err
-		// }
-
 		toVM, err := up.MM.RunMigrations(ctx, up.Configurator, fromVM)
 		if err != nil {
 			return nil, err
@@ -245,6 +211,23 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 
 		// patch deposit authorizations after authz store upgrade
 		err = up.patchDepositAuthorizations(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		// Migrate governance min deposit parameter to builtin gov params
+		gparams := up.Keepers.Cosmos.Gov.GetParams(ctx)
+		gparams.MinInitialDepositRatio = dparams.MinInitialDepositRate.String()
+
+		// min deposit for expedited proposal is set to 2000AKT
+		gparams.ExpeditedMinDeposit = sdk.NewCoins(sdk.NewCoin("uakt", sdk.NewInt(2000000000)))
+		gparams.ExpeditedThreshold = sdk.NewDecWithPrec(667, 3).String()
+
+		eVotePeriod := time.Hour * 24
+		gparams.ExpeditedVotingPeriod = &eVotePeriod
+
+		// gparams.ExpeditedMinDeposit
+		err = up.Keepers.Cosmos.Gov.SetParams(ctx, gparams)
 		if err != nil {
 			return nil, err
 		}
