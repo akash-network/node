@@ -1,6 +1,6 @@
 .PHONY: lint-go
 lint-go: $(GOLANGCI_LINT)
-	$(GOLANGCI_LINT_RUN) ./... --issues-exit-code=0
+	$(GOLANGCI_LINT_RUN) ./... --issues-exit-code=0 --timeout=10m
 
 .PHONY: lint-go-%
 lint-go-%: $(GOLANGCI_LINT)
