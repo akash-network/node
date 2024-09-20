@@ -405,14 +405,6 @@ function bins() {
 	done
 }
 
-#function deploy() {
-#	local host
-#
-#	host="$1"
-#
-#	rsync
-#}
-
 case "$1" in
 	init)
 		shift
@@ -426,10 +418,6 @@ case "$1" in
 		shift
 		clean
 		;;
-#	deploy)
-#		shift
-#		deploy
-#		;;
 	upgrade-from-release)
 		shift
 		upgrades_dir=${ROOT_DIR}/upgrades/software
@@ -453,7 +441,11 @@ case "$1" in
 		upgrade_name=$(find "${upgrades_dir}" -mindepth 1 -maxdepth 1 -type d | awk -F/ '{print $NF}' | sort -r | head -n 1)
 
 		# shellcheck disable=SC2086
-		$semver validate $upgrade_name
+		is_valid=$($semver validate $upgrade_name)
+		if [[ $is_valid != "valid" ]]; then
+			echoerr "upgrade name \"$upgrade_name\" does not comply with semver spec"
+			exit 1
+		fi
 
 		# current git reference is matching upgrade name. looks like release has been cut
 		# so lets run the last test
