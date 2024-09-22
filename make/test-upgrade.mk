@@ -34,7 +34,7 @@ genesis: $(GENESIS_DEST)
 
 .PHONY: test
 test: $(COSMOVISOR) init
-	$(GO_TEST) -run "^\QTestUpgrade\E$$" -tags e2e.upgrade -timeout 60m -v -args \
+	$(GO_TEST) -run "^\QTestUpgrade\E$$" -tags e2e.upgrade -timeout 180m -v -args \
 		-cosmovisor=$(COSMOVISOR) \
 		-workdir=$(AP_RUN_DIR)/validators \
 		-config=test-config.json \

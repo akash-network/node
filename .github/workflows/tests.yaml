@@ -191,6 +191,10 @@ jobs:
   network-upgrade-names:
     runs-on: upgrade-tester
     steps:
+      - name: Cleanup build folder
+        run: |
+          sudo rm -rf ./* || true
+          sudo rm -rf ./.??* || true
       - uses: actions/checkout@v4
       - run: git fetch --prune --unshallow
       - name: Detect required Go version
@@ -220,6 +224,10 @@ jobs:
   network-upgrade:
     runs-on: upgrade-tester
     steps:
+      - name: Cleanup build folder
+        run: |
+          sudo rm -rf ./* || true
+          sudo rm -rf ./.??* || true
       - uses: actions/checkout@v4
       - run: git fetch --prune --unshallow
       - name: Detect required Go version
