@@ -546,13 +546,6 @@ func TestUpgrade(t *testing.T) {
 				fail = true
 			}
 		}
-
-		// select {
-		// case errs := <-vl.testErrsCh:
-		//
-		//
-		// case <-vl.ctx.Done():
-		// }
 	}
 
 	if fail {

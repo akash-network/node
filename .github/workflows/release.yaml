@@ -14,6 +14,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: git fetch --prune --unshallow
+      - name: Install dependencies
+        run: ./script/tools.sh gha-deps
       - name: Detect required Go version
         run: |
           toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
@@ -47,7 +49,7 @@ jobs:
           # using PAT as homebrew is located in different repo
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   test-network-upgrade-on-release:
-    runs-on: upgrade-tester
+    runs-on: gh-runner-test
     needs:
       - publish
     steps:
@@ -57,6 +59,12 @@ jobs:
         run: |
           toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
           echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
+      - name: Install dependencies
+        run: sudo apt install -y make direnv unzip lz4 wget curl npm jq pv coreutils
+      - name: Install git-cliff
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: git-cliff
       - uses: actions/setup-go@v5
         with:
           go-version: "${{ env.GOVERSION }}"
@@ -75,6 +83,7 @@ jobs:
         env:
           UPGRADE_BINARY_VERSION: ${{ env.RELEASE_TAG }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TEST_CONFIG: test-config-gha.json
         run: |
           cd tests/upgrade
           make test

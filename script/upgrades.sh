@@ -258,13 +258,6 @@ function init() {
 			cp "$validators_dir/.akash0/cosmovisor/upgrades/$UPGRADE_TO/bin/akash" "$upgrade_bin/akash"
 		fi
 
-		pushd "$(pwd)"
-		cd "$cosmovisor_dir"
-
-		ln -snf "current" "genesis"
-
-		popd
-
 		AKASH=$genesis_bin/akash
 
 		$AKASH init --home "$valdir" "$(jq -rc '.moniker' <<<"$val")" >/dev/null 2>&1
@@ -286,6 +279,7 @@ function init() {
 
 					tar_cmd=$(content_type "$(content_name "$GENESIS_ORIG")")
 
+					# shellcheck disable=SC2086
 					wget -nv -O - "$GENESIS_ORIG" | pv $pv_args | eval "$tar_cmd"
 				else
 					echo "unable to download genesis"
@@ -440,13 +434,6 @@ function bins() {
 			cp "$validators_dir/.akash0/cosmovisor/genesis/bin/akash" "$genesis_bin/akash"
 			cp "$validators_dir/.akash0/cosmovisor/upgrades/$UPGRADE_TO/bin/akash" "$upgrade_bin/akash"
 		fi
-
-		pushd "$(pwd)"
-		cd "$cosmovisor_dir"
-
-		ln -snf "genesis" "current"
-
-		popd
 
 		((cnt++)) || true
 	done

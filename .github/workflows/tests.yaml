@@ -20,8 +20,12 @@ jobs:
     steps:
       - name: Install dependencies
         run: |
-          brew install bash direnv
+          brew install bash direnv pv lz4 git-cliff
           sudo chsh -s /usr/local/bin/bash
+      - name: Install git-cliff
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: git-cliff
       - name: Hook direnv to bash
         run: echo 'eval "$(direnv hook bash)"' >> $HOME/.bashrc
       - uses: actions/checkout@v4
@@ -44,6 +48,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: git fetch --prune --unshallow
+      - name: Install dependencies
+        run: sudo apt install -y make direnv unzip lz4 wget curl npm jq pv coreutils
+      - name: Install git-cliff
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: git-cliff
       - name: Detect required Go version
         run: |
           toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
@@ -64,6 +74,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: git fetch --prune --unshallow
+      - name: Install dependencies
+        run: sudo apt install -y make direnv unzip lz4 wget curl npm jq pv coreutils
+      - name: Install git-cliff
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: git-cliff
       - name: Detect required Go version
         run: |
           toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
@@ -82,6 +98,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: git fetch --prune --unshallow
+      - name: Install dependencies
+        run: sudo apt install -y make direnv unzip lz4 wget curl npm jq pv coreutils
+      - name: Install git-cliff
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: git-cliff
       - name: Detect required Go version
         run: |
           toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
@@ -101,6 +123,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: git fetch --prune --unshallow
+      - name: Install dependencies
+        run: sudo apt install -y make direnv unzip lz4 wget curl npm jq pv coreutils
+      - name: Install git-cliff
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: git-cliff
       - name: Detect required Go version
         run: |
           toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
@@ -119,6 +147,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: sudo apt install -y make direnv unzip lz4 wget curl npm jq pv coreutils
+      - name: Install git-cliff
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: git-cliff
       - run: git fetch --prune --unshallow
       - name: Detect required Go version
         run: |
@@ -140,6 +174,12 @@ jobs:
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
       - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: sudo apt install -y make direnv unzip lz4 wget curl npm jq pv coreutils
+      - name: Install git-cliff
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: git-cliff
       - name: Detect required Go version
         run: |
           toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
@@ -165,6 +205,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: git fetch --prune --unshallow
+      - name: Install dependencies
+        run: sudo apt install -y make direnv unzip lz4 wget curl npm jq pv coreutils
+      - name: Install git-cliff
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: git-cliff
       - name: Detect required Go version
         run: |
           toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
@@ -189,7 +235,7 @@ jobs:
         run: make release
 
   network-upgrade-names:
-    runs-on: upgrade-tester
+    runs-on: ubuntu-latest
     steps:
       - name: Cleanup build folder
         run: |
@@ -197,6 +243,12 @@ jobs:
           sudo rm -rf ./.??* || true
       - uses: actions/checkout@v4
       - run: git fetch --prune --unshallow
+      - name: Install dependencies
+        run: sudo apt install -y make direnv unzip lz4 wget curl npm jq pv coreutils
+      - name: Install git-cliff
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: git-cliff
       - name: Detect required Go version
         run: |
           toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
@@ -222,7 +274,7 @@ jobs:
               ./script/semver.sh validate "$upgrade"
           done <<< $(find "$dir" ! -path "$dir" -maxdepth 1 -type d -exec basename {} \;)
   network-upgrade:
-    runs-on: upgrade-tester
+    runs-on: gh-runner-test
     steps:
       - name: Cleanup build folder
         run: |
@@ -234,6 +286,12 @@ jobs:
         run: |
           toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
           echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
+      - name: Install dependencies
+        run: sudo apt install -y make direnv unzip lz4 wget curl npm jq pv coreutils
+      - name: Install git-cliff
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: git-cliff
       - uses: actions/setup-go@v5
         with:
           go-version: "${{ env.GOVERSION }}"
@@ -248,6 +306,8 @@ jobs:
       - name: run test
         id: test
         if: env.TEST_REQUIRED != ''
+        env:
+          TEST_CONFIG: test-config-gha.json
         run: |
           cd tests/upgrade
           make test
