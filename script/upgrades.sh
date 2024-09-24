@@ -113,6 +113,14 @@ shift "$((OPTIND - 1))"
 
 GENESIS_ORIG=${UTEST_GENESIS_ORIGIN:=https://github.com/akash-network/testnetify/releases/download/${UPGRADE_FROM}/genesis.json.tar.lz4}
 
+pushd() {
+	command pushd "$@" >/dev/null
+}
+
+popd() {
+	command popd >/dev/null
+}
+
 function content_type() {
 	case "$1" in
 		*.tar.cz*)
@@ -278,8 +286,7 @@ function init() {
 
 					tar_cmd=$(content_type "$(content_name "$GENESIS_ORIG")")
 
-					# shellcheck disable=SC2086
-					(wget -nv -O - "$GENESIS_ORIG" | pv $pv_args | eval " $tar_cmd") 2>&1 | stdbuf -o0 tr '\r' '\n'
+					wget -nv -O - "$GENESIS_ORIG" | pv $pv_args | eval "$tar_cmd"
 				else
 					echo "unable to download genesis"
 				fi
@@ -298,7 +305,7 @@ function init() {
 				done
 			done
 
-			cat > "$valdir/.envrc" <<EOL
+			cat >"$valdir/.envrc" <<EOL
 PATH_add "\$(pwd)/cosmovisor/current/bin"
 AKASH_HOME="\$(pwd)"
 AKASH_FROM=validator0
@@ -361,9 +368,42 @@ function clean() {
 		rm -rf "$cosmovisor_dir/upgrades/${UPGRADE_TO}/upgrade-info.json"
 		rm -rf "$cosmovisor_dir/upgrades/${UPGRADE_TO}/bin/akash"
 
-		echo '{"height":"0","round": 0,"step": 0}' | jq >"$valdir/data/priv_validator_state.json"
+		echo '{"height":"0","round": 0,"step": 0}' | jq > "$valdir/data/priv_validator_state.json"
 
 		((cnt++)) || true
+	done
+}
+
+function import_keys() {
+	if [[ -z "${WORKDIR}" ]]; then
+		echo "workdir is not set"
+		echo -e "$USAGE"
+		exit 1
+	fi
+
+	local config
+	local validators_dir
+	local cosmovisor_dir
+	local genesis_bin
+	local validators_dir
+
+	config=$(cat "$CONFIG_FILE")
+
+	validators_dir=${WORKDIR}/validators
+	valdir=$validators_dir/.akash0
+	cosmovisor_dir=$valdir/cosmovisor
+	genesis_bin=$cosmovisor_dir/genesis/bin
+
+	# upgrades may upgrade keys format so reset them as well
+	rm -rf "$valdir"/keyring-test
+
+	local AKASH
+	AKASH=$genesis_bin/akash
+
+	jq -c '.mnemonics[]' <<<"$config" | while read -r mnemonic; do
+		jq -c '.keys[]' <<<"$mnemonic" | while read -r key; do
+			jq -rc '.phrase' <<<"$mnemonic" | $AKASH --home="$valdir" --keyring-backend=test keys add "$(jq -rc '.name' <<<"$key")" --recover --index "$(jq -rc '.index' <<<"$key")"
+		done
 	done
 }
 
@@ -401,6 +441,13 @@ function bins() {
 			cp "$validators_dir/.akash0/cosmovisor/upgrades/$UPGRADE_TO/bin/akash" "$upgrade_bin/akash"
 		fi
 
+		pushd "$(pwd)"
+		cd "$cosmovisor_dir"
+
+		ln -snf "genesis" "current"
+
+		popd
+
 		((cnt++)) || true
 	done
 }
@@ -413,6 +460,10 @@ case "$1" in
 	bins)
 		shift
 		bins
+		;;
+	keys)
+		shift
+		import_keys
 		;;
 	clean)
 		shift
