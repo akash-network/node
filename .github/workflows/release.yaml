@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: git fetch --prune --unshallow
       - name: Install dependencies
-        run: ./script/tools.sh gha-deps
+        run: sudo apt install -y make direnv unzip lz4 wget curl npm jq pv coreutils
       - name: Detect required Go version
         run: |
           toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
