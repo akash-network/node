@@ -11,7 +11,7 @@
 [Akash](https://akash.network) is a secure, transparent, and decentralized cloud computing marketplace that connects those who need computing resources (tenants) with those that have computing capacity to lease (providers).
 
 For a high-level overview of the Akash protocol and network economics, check out the [whitepaper](https://ipfs.io/ipfs/QmVwsi5kTrg7UcUEGi5UfdheVLBWoHjze2pHy4tLqYvLYv); a detailed protocol definition can be 
-found in the [design documentation](https://docs.akash.network); and the target workload definition spec is [here](https://docs.akash.network/sdl).
+found in the [design documentation](https://docs.akash.network); and the target workload definition spec is [here](https://akash.network/docs/getting-started/stack-definition-language).
 
 # Branching and Versioning
 
@@ -29,12 +29,12 @@ implements the decentralized exchange as well as client functionality to access 
 
 ## Get Started with Akash
 
-The easiest way to get started with Akash is by following the [Quick Start Guide](https://docs.akash.network/guides/deploy) to get started. 
+The easiest way to get started with Akash is by following the [Quick Start Guide](https://akash.network/docs/getting-started/quickstart-guides/akash-cli) to get started. 
 
 ## Join the Community
 
 - [Join Developer Chat](https://discord.com/invite/akash)
-- [Become a validator](https://docs.akash.network/validating/validator)
+- [Become a validator](https://akash.network/docs/validators/running-a-validator)
 
 ## Official blog and documentation
 
