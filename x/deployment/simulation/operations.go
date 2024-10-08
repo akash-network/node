@@ -94,6 +94,8 @@ func SimulateMsgCreateDeployment(ak govtypes.AccountKeeper, bk bankkeeper.Keeper
 		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		simAccount, _ := simtypes.RandomAcc(r, accounts)
 
+		params := k.GetParams(ctx)
+
 		dID := v1.DeploymentID{
 			Owner: simAccount.Address.String(),
 			DSeq:  uint64(ctx.BlockHeight()), // nolint gosec
@@ -120,7 +122,7 @@ func SimulateMsgCreateDeployment(ak govtypes.AccountKeeper, bk bankkeeper.Keeper
 				nil, err
 		}
 
-		depositAmount := minDeposit
+		depositAmount := params.MinDeposits[0]
 		account := ak.GetAccount(ctx, simAccount.Address)
 		spendable := bk.SpendableCoins(ctx, account.GetAddress())
 
