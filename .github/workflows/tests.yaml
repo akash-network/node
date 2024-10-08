@@ -22,10 +22,6 @@ jobs:
         run: |
           brew install bash direnv pv lz4 git-cliff
           sudo chsh -s /usr/local/bin/bash
-      - name: Install git-cliff
-        uses: baptiste0928/cargo-install@v3
-        with:
-          crate: git-cliff
       - name: Hook direnv to bash
         run: echo 'eval "$(direnv hook bash)"' >> $HOME/.bashrc
       - uses: actions/checkout@v4
@@ -43,6 +39,7 @@ jobs:
           direnv allow
           direnv export gha >> "$GITHUB_ENV"
       - run: make bins
+
   build-bins:
     runs-on: ubuntu-latest
     steps:
@@ -64,8 +61,6 @@ jobs:
           check-latest: true
       - name: set environment
         uses: HatsuneMiku3939/direnv-action@v1
-        with:
-          masks: ''
       - run: make bins
       - run: make docker-image
 
