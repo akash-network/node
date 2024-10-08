@@ -2,8 +2,7 @@
     "chain-id": "localakash",
     "validators": [
         ".akash0",
-        ".akash1",
-        ".akash2"
+        ".akash1"
     ],
     "work": {
         "home": ".akash0",
