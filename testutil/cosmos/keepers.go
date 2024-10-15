@@ -29,6 +29,7 @@ type DistrKeeper interface {
 //go:generate mockery --name AuthzKeeper --output ./mocks
 type AuthzKeeper interface {
 	DeleteGrant(ctx sdk.Context, grantee, granter sdk.AccAddress, msgType string) error
-	GetCleanAuthorization(ctx sdk.Context, grantee, granter sdk.AccAddress, msgType string) (cap authz.Authorization, expiration time.Time)
-	SaveGrant(ctx sdk.Context, grantee, granter sdk.AccAddress, authorization authz.Authorization, expiration time.Time) error
+	GetAuthorization(ctx sdk.Context, grantee, granter sdk.AccAddress, msgType string) (cap authz.Authorization, expiration *time.Time)
+	SaveGrant(ctx sdk.Context, grantee, granter sdk.AccAddress, authorization authz.Authorization, expiration *time.Time) error
+	IterateGrants(ctx sdk.Context, handler func(granterAddr sdk.AccAddress, granteeAddr sdk.AccAddress, grant authz.Grant) bool)
 }

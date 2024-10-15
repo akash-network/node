@@ -5,19 +5,23 @@ import (
 	"sort"
 	"testing"
 
+	testutilmod "github.com/cosmos/cosmos-sdk/types/module/testutil"
+	"github.com/stretchr/testify/require"
+
+	dbm "github.com/cometbft/cometbft-db"
+	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
+
 	"github.com/cosmos/cosmos-sdk/store"
+	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdktestdata "github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/stretchr/testify/require"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
-	dbm "github.com/tendermint/tm-db"
 
-	types "github.com/akash-network/akash-api/go/node/audit/v1beta3"
+	types "pkg.akt.dev/go/node/audit/v1"
 
-	"github.com/akash-network/node/testutil"
-	"github.com/akash-network/node/x/audit/handler"
-	"github.com/akash-network/node/x/audit/keeper"
+	"pkg.akt.dev/node/testutil"
+	"pkg.akt.dev/node/x/audit/handler"
+	"pkg.akt.dev/node/x/audit/keeper"
 )
 
 type testSuite struct {
@@ -33,18 +37,21 @@ func setupTestSuite(t *testing.T) *testSuite {
 		t: t,
 	}
 
+	cfg := testutilmod.MakeTestEncodingConfig()
+	cdc := cfg.Codec
+
 	aKey := sdk.NewTransientStoreKey(types.StoreKey)
 
 	db := dbm.NewMemDB()
 	suite.ms = store.NewCommitMultiStore(db)
-	suite.ms.MountStoreWithDB(aKey, sdk.StoreTypeIAVL, db)
+	suite.ms.MountStoreWithDB(aKey, storetypes.StoreTypeIAVL, db)
 
 	err := suite.ms.LoadLatestVersion()
 	require.NoError(t, err)
 
 	suite.ctx = sdk.NewContext(suite.ms, tmproto.Header{}, true, testutil.Logger(t))
 
-	suite.keeper = keeper.NewKeeper(types.ModuleCdc, aKey)
+	suite.keeper = keeper.NewKeeper(cdc, aKey)
 
 	suite.handler = handler.NewHandler(suite.keeper)
 
@@ -190,14 +197,14 @@ func TestProviderDeleteAttribute(t *testing.T) {
 	require.Equal(t, prov, msgSignProviderAttributesToResponse(msg))
 }
 
-func msgSignProviderAttributesToResponse(msg *types.MsgSignProviderAttributes) types.Providers {
+func msgSignProviderAttributesToResponse(msg *types.MsgSignProviderAttributes) types.AuditedProviders {
 	// create handler sorts attributes, so do we to ensure same order
 
 	sort.SliceStable(msg.Attributes, func(i, j int) bool {
 		return msg.Attributes[i].Key < msg.Attributes[j].Key
 	})
 
-	return types.Providers{
+	return types.AuditedProviders{
 		{
 			Owner:      msg.Owner,
 			Auditor:    msg.Auditor,

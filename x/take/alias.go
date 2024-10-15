@@ -1,7 +1,7 @@
 package take
 
 import (
-	types "github.com/akash-network/akash-api/go/node/take/v1beta3"
+	types "pkg.akt.dev/go/node/take/v1"
 )
 
 const (

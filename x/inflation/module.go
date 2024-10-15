@@ -3,13 +3,12 @@ package inflation
 import (
 	"encoding/json"
 	"fmt"
-	"math/rand"
 
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
 
-	abci "github.com/tendermint/tendermint/abci/types"
+	abci "github.com/cometbft/cometbft/abci/types"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -18,11 +17,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 	sim "github.com/cosmos/cosmos-sdk/types/simulation"
 
-	types "github.com/akash-network/akash-api/go/node/inflation/v1beta3"
+	types "pkg.akt.dev/go/node/inflation/v1beta3"
 
-	utypes "github.com/akash-network/node/upgrades/types"
-	"github.com/akash-network/node/x/inflation/keeper"
-	"github.com/akash-network/node/x/inflation/simulation"
+	utypes "pkg.akt.dev/node/upgrades/types"
+	"pkg.akt.dev/node/x/inflation/keeper"
+	"pkg.akt.dev/node/x/inflation/simulation"
 )
 
 // type check to ensure the interface is properly implemented
@@ -43,12 +42,10 @@ func (AppModuleBasic) Name() string {
 }
 
 // RegisterLegacyAminoCodec registers the deployment module's types for the given codec.
-func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {}
+func (AppModuleBasic) RegisterLegacyAminoCodec(_ *codec.LegacyAmino) {}
 
 // RegisterInterfaces registers the module's interface types
-func (b AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
-
-}
+func (b AppModuleBasic) RegisterInterfaces(_ cdctypes.InterfaceRegistry) {}
 
 // DefaultGenesis returns default genesis state as raw bytes for the inflation
 // module.
@@ -57,7 +54,7 @@ func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
 }
 
 // ValidateGenesis does validation check of the Genesis and returns error incase of failure
-func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, config client.TxEncodingConfig, bz json.RawMessage) error {
+func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, _ client.TxEncodingConfig, bz json.RawMessage) error {
 	var data types.GenesisState
 	err := cdc.UnmarshalJSON(bz, &data)
 	if err != nil {
@@ -67,10 +64,10 @@ func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, config client.TxEncod
 }
 
 // RegisterRESTRoutes registers rest routes for this module
-func (AppModuleBasic) RegisterRESTRoutes(clientCtx client.Context, rtr *mux.Router) {}
+func (AppModuleBasic) RegisterRESTRoutes(_ client.Context, _ *mux.Router) {}
 
 // RegisterGRPCGatewayRoutes registers the gRPC Gateway routes for the deployment module.
-func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *runtime.ServeMux) {}
+func (AppModuleBasic) RegisterGRPCGatewayRoutes(_ client.Context, _ *runtime.ServeMux) {}
 
 // GetQueryCmd get the root query command of this module
 func (AppModuleBasic) GetQueryCmd() *cobra.Command {
@@ -102,22 +99,7 @@ func (AppModule) Name() string {
 }
 
 // RegisterInvariants registers module invariants
-func (am AppModule) RegisterInvariants(ir sdk.InvariantRegistry) {}
-
-// Route returns the message routing key for the deployment module
-func (am AppModule) Route() sdk.Route {
-	return sdk.NewRoute(types.RouterKey, nil)
-}
-
-// QuerierRoute returns the module's querier route name.
-func (am AppModule) QuerierRoute() string {
-	return ""
-}
-
-// LegacyQuerierHandler returns the sdk.Querier for deployment module
-func (am AppModule) LegacyQuerierHandler(_ *codec.LegacyAmino) sdk.Querier {
-	return nil
-}
+func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
 
 // RegisterServices registers the module's services
 func (am AppModule) RegisterServices(cfg module.Configurator) {
@@ -133,7 +115,7 @@ func (am AppModule) BeginBlock(_ sdk.Context, _ abci.RequestBeginBlock) {}
 
 // EndBlock returns the end blocker for the module. It returns no validator
 // updates.
-func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
+func (am AppModule) EndBlock(_ sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
 	return []abci.ValidatorUpdate{}
 }
 
@@ -159,14 +141,6 @@ func (am AppModule) ConsensusVersion() uint64 {
 
 // AppModuleSimulation implements an application simulation module for the deployment module.
 type AppModuleSimulation struct {
-	keeper keeper.IKeeper
-}
-
-// NewAppModuleSimulation creates a new AppModuleSimulation instance
-func NewAppModuleSimulation(k keeper.IKeeper) AppModuleSimulation {
-	return AppModuleSimulation{
-		keeper: k,
-	}
 }
 
 // AppModuleSimulation functions
@@ -177,21 +151,16 @@ func (AppModuleSimulation) GenerateGenesisState(simState *module.SimulationState
 }
 
 // ProposalContents doesn't return any content functions for governance proposals.
-func (AppModuleSimulation) ProposalContents(_ module.SimulationState) []sim.WeightedProposalContent {
-	return nil
-}
-
-// RandomizedParams creates randomized staking param changes for the simulator.
-func (AppModuleSimulation) RandomizedParams(r *rand.Rand) []sim.ParamChange {
+func (AppModuleSimulation) ProposalContents(_ module.SimulationState) []sim.WeightedProposalMsg {
 	return nil
 }
 
 // RegisterStoreDecoder registers a decoder for staking module's types
-func (AppModuleSimulation) RegisterStoreDecoder(sdr sdk.StoreDecoderRegistry) {
+func (AppModuleSimulation) RegisterStoreDecoder(_ sdk.StoreDecoderRegistry) {
 	// sdr[StoreKey] = simulation.DecodeStore
 }
 
 // WeightedOperations returns the all the staking module operations with their respective weights.
-func (am AppModuleSimulation) WeightedOperations(simState module.SimulationState) []sim.WeightedOperation {
+func (am AppModuleSimulation) WeightedOperations(_ module.SimulationState) []sim.WeightedOperation {
 	return nil
 }

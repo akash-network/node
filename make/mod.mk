@@ -7,3 +7,9 @@ deps-install:
 .PHONY: deps-tidy
 deps-tidy:
 	go mod tidy
+
+#.PHONY: mod
+#mod: go.mod
+#
+#go.mod:
+#	go mod tidy

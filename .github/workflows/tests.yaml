@@ -20,7 +20,7 @@ jobs:
     steps:
       - name: Install dependencies
         run: |
-          brew install bash direnv
+          brew install bash direnv pv lz4 git-cliff
           sudo chsh -s /usr/local/bin/bash
       - name: Hook direnv to bash
         run: echo 'eval "$(direnv hook bash)"' >> $HOME/.bashrc
@@ -39,11 +39,18 @@ jobs:
           direnv allow
           direnv export gha >> "$GITHUB_ENV"
       - run: make bins
+
   build-bins:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - run: git fetch --prune --unshallow
+      - name: Install dependencies
+        run: sudo apt install -y make direnv unzip lz4 wget curl npm jq pv coreutils
+      - name: Install git-cliff
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: git-cliff
       - name: Detect required Go version
         run: |
           toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
@@ -62,6 +69,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: git fetch --prune --unshallow
+      - name: Install dependencies
+        run: sudo apt install -y make direnv unzip lz4 wget curl npm jq pv coreutils
+      - name: Install git-cliff
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: git-cliff
       - name: Detect required Go version
         run: |
           toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
@@ -71,6 +84,8 @@ jobs:
           go-version: "${{ env.GOVERSION }}"
       - name: set environment
         uses: HatsuneMiku3939/direnv-action@v1
+        with:
+          masks: ''
       - run: make test-full
 
   coverage:
@@ -78,6 +93,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: git fetch --prune --unshallow
+      - name: Install dependencies
+        run: sudo apt install -y make direnv unzip lz4 wget curl npm jq pv coreutils
+      - name: Install git-cliff
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: git-cliff
       - name: Detect required Go version
         run: |
           toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
@@ -87,14 +108,22 @@ jobs:
           go-version: "${{ env.GOVERSION }}"
       - name: set environment
         uses: HatsuneMiku3939/direnv-action@v1
+        with:
+          masks: ''
       - run: make test-coverage
       - uses: codecov/codecov-action@v4
 
-  lint:
+  lint-go:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - run: git fetch --prune --unshallow
+      - name: Install dependencies
+        run: sudo apt install -y make direnv unzip lz4 wget curl npm jq pv coreutils
+      - name: Install git-cliff
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: git-cliff
       - name: Detect required Go version
         run: |
           toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
@@ -104,18 +133,21 @@ jobs:
           go-version: "${{ env.GOVERSION }}"
       - name: set environment
         uses: HatsuneMiku3939/direnv-action@v1
+        with:
+          masks: ''
       - run: make deps-tidy
-      - run: make build
-      - run: make test-vet
-      - name: lint all
-        run: make test-lint-all
-      - name: lint make-sublinters
-        run: make test-sublinters
+      - run: make lint-go
 
-  shellcheck:
+  lint-shell:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: sudo apt install -y make direnv unzip lz4 wget curl npm jq pv coreutils
+      - name: Install git-cliff
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: git-cliff
       - run: git fetch --prune --unshallow
       - name: Detect required Go version
         run: |
@@ -126,7 +158,9 @@ jobs:
           go-version: "${{ env.GOVERSION }}"
       - name: set environment
         uses: HatsuneMiku3939/direnv-action@v1
-      - run: make shellcheck
+        with:
+          masks: ''
+      - run: make lint-shell
 
   sims:
     runs-on: ubuntu-latest
@@ -135,6 +169,12 @@ jobs:
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
       - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: sudo apt install -y make direnv unzip lz4 wget curl npm jq pv coreutils
+      - name: Install git-cliff
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: git-cliff
       - name: Detect required Go version
         run: |
           toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
@@ -144,6 +184,8 @@ jobs:
           go-version: "${{ env.GOVERSION }}"
       - name: set environment
         uses: HatsuneMiku3939/direnv-action@v1
+        with:
+          masks: ''
       - name: test-sim-nondeterminism
         run: make test-sim-nondeterminism
       - name: test-sim-import-export
@@ -158,6 +200,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: git fetch --prune --unshallow
+      - name: Install dependencies
+        run: sudo apt install -y make direnv unzip lz4 wget curl npm jq pv coreutils
+      - name: Install git-cliff
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: git-cliff
       - name: Detect required Go version
         run: |
           toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
@@ -167,6 +215,8 @@ jobs:
           go-version: "${{ env.GOVERSION }}"
       - name: set environment
         uses: HatsuneMiku3939/direnv-action@v1
+        with:
+          masks: ''
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
@@ -180,10 +230,20 @@ jobs:
         run: make release
 
   network-upgrade-names:
-    runs-on: upgrade-tester
+    runs-on: ubuntu-latest
     steps:
+      - name: Cleanup build folder
+        run: |
+          sudo rm -rf ./* || true
+          sudo rm -rf ./.??* || true
       - uses: actions/checkout@v4
       - run: git fetch --prune --unshallow
+      - name: Install dependencies
+        run: sudo apt install -y make direnv unzip lz4 wget curl npm jq pv coreutils
+      - name: Install git-cliff
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: git-cliff
       - name: Detect required Go version
         run: |
           toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
@@ -193,6 +253,8 @@ jobs:
           go-version: "${{ env.GOVERSION }}"
       - name: set environment
         uses: HatsuneMiku3939/direnv-action@v1
+        with:
+          masks: ''
       - name: Ensure only directories exists in upgrades dir
         run: |
           dir=./upgrades/software
@@ -207,19 +269,31 @@ jobs:
               ./script/semver.sh validate "$upgrade"
           done <<< $(find "$dir" ! -path "$dir" -maxdepth 1 -type d -exec basename {} \;)
   network-upgrade:
-    runs-on: upgrade-tester
+    runs-on: gh-runner-test
     steps:
+      - name: Cleanup build folder
+        run: |
+          sudo rm -rf ./* || true
+          sudo rm -rf ./.??* || true
       - uses: actions/checkout@v4
       - run: git fetch --prune --unshallow
       - name: Detect required Go version
         run: |
           toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
           echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
+      - name: Install dependencies
+        run: sudo apt install -y make direnv unzip lz4 wget curl npm jq pv coreutils
+      - name: Install git-cliff
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: git-cliff
       - uses: actions/setup-go@v5
         with:
           go-version: "${{ env.GOVERSION }}"
       - name: set environment
         uses: HatsuneMiku3939/direnv-action@v1
+        with:
+          masks: ''
       - name: configure variables
         run: |
           test_required=$(./script/upgrades.sh test-required ${{ github.ref }})
@@ -227,6 +301,8 @@ jobs:
       - name: run test
         id: test
         if: env.TEST_REQUIRED != ''
+        env:
+          TEST_CONFIG: test-config-gha.json
         run: |
           cd tests/upgrade
           make test
@@ -236,7 +312,7 @@ jobs:
         with:
           name: validators-logs
           path: |
-            .cache/run/upgrade/validators/logs/*.log
+            .cache/run/upgrade/validators/logs/.akash*.log
 
   dispatch-release:
     runs-on: ubuntu-latest
@@ -246,11 +322,11 @@ jobs:
       - build-bins
       - tests
       - coverage
-      - lint
+      - lint-go
+      - lint-shell
       - sims
       - release-dry-run
       - network-upgrade
-      - shellcheck
     steps:
       - uses: actions/checkout@v4
         with:

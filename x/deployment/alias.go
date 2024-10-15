@@ -1,9 +1,9 @@
 package deployment
 
 import (
-	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+	types "pkg.akt.dev/go/node/deployment/v1"
 
-	"github.com/akash-network/node/x/deployment/keeper"
+	"pkg.akt.dev/node/x/deployment/keeper"
 )
 
 const (

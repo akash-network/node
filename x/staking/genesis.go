@@ -1,12 +1,12 @@
 package provider
 
 import (
+	abci "github.com/cometbft/cometbft/abci/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	abci "github.com/tendermint/tendermint/abci/types"
 
-	types "github.com/akash-network/akash-api/go/node/staking/v1beta3"
+	types "pkg.akt.dev/go/node/staking/v1beta3"
 
-	"github.com/akash-network/node/x/staking/keeper"
+	"pkg.akt.dev/node/x/staking/keeper"
 )
 
 // ValidateGenesis does validation check of the Genesis and returns error in case of failure

@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/google/go-github/v56/github"
+	"github.com/google/go-github/v62/github"
 	"github.com/gregjones/httpcache"
 	"golang.org/x/oauth2"
 )
@@ -73,14 +73,16 @@ func UpgradeInfoFromTag(ctx context.Context, tag string, pretty bool) (string, e
 			return "", fmt.Errorf("invalid checksum format")
 		}
 
+		link := fmt.Sprintf("%s/%s?checksum=sha256:%s", urlBase, tuple[1], tuple[0])
+
 		switch tuple[1] {
 		case "akash_linux_amd64.zip":
-			info.Binaries["linux/amd64"] = fmt.Sprintf("%s/%s?checksum=sha256:%s", urlBase, tuple[1], tuple[0])
+			info.Binaries["linux/amd64"] = link
 		case "akash_linux_arm64.zip":
-			info.Binaries["linux/arm64"] = fmt.Sprintf("%s/%s?checksum=sha256:%s", urlBase, tuple[1], tuple[0])
+			info.Binaries["linux/arm64"] = link
 		case "akash_darwin_all.zip":
-			info.Binaries["darwin/amd64"] = fmt.Sprintf("%s/%s?checksum=sha256:%s", urlBase, tuple[1], tuple[0])
-			info.Binaries["darwin/arm64"] = fmt.Sprintf("%s/%s?checksum=sha256:%s", urlBase, tuple[1], tuple[0])
+			info.Binaries["darwin/amd64"] = link
+			info.Binaries["darwin/arm64"] = link
 		}
 	}
 

@@ -6,12 +6,13 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/types/address"
 
-	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
-	"github.com/akash-network/akash-api/go/sdkutil"
+	"pkg.akt.dev/go/node/deployment/v1"
+	"pkg.akt.dev/go/node/deployment/v1beta4"
+	"pkg.akt.dev/go/sdkutil"
 )
 
-func deploymentKey(id types.DeploymentID) []byte {
-	buf := bytes.NewBuffer(types.DeploymentPrefix())
+func DeploymentKey(id v1.DeploymentID) []byte {
+	buf := bytes.NewBuffer(v1.DeploymentPrefix())
 	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
@@ -19,9 +20,9 @@ func deploymentKey(id types.DeploymentID) []byte {
 	return buf.Bytes()
 }
 
-// groupKey provides prefixed key for a Group's marshalled data.
-func groupKey(id types.GroupID) []byte {
-	buf := bytes.NewBuffer(types.GroupPrefix())
+// GroupKey provides prefixed key for a Group's marshalled data.
+func GroupKey(id v1.GroupID) []byte {
+	buf := bytes.NewBuffer(v1.GroupPrefix())
 	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
@@ -32,9 +33,9 @@ func groupKey(id types.GroupID) []byte {
 	return buf.Bytes()
 }
 
-// groupsKey provides default store Key for Group data.
-func groupsKey(id types.DeploymentID) []byte {
-	buf := bytes.NewBuffer(types.GroupPrefix())
+// GroupsKey provides default store Key for Group data.
+func GroupsKey(id v1.DeploymentID) []byte {
+	buf := bytes.NewBuffer(v1.GroupPrefix())
 	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
@@ -72,6 +73,6 @@ func filterToPrefix(prefix []byte, owner string, dseq uint64, gseq uint32) ([]by
 	return buf.Bytes(), nil
 }
 
-func deploymentPrefixFromFilter(f types.DeploymentFilters) ([]byte, error) {
-	return filterToPrefix(types.DeploymentPrefix(), f.Owner, f.DSeq, 0)
+func deploymentPrefixFromFilter(f v1beta4.DeploymentFilters) ([]byte, error) {
+	return filterToPrefix(v1.DeploymentPrefix(), f.Owner, f.DSeq, 0)
 }
