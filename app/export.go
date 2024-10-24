@@ -5,15 +5,15 @@ import (
 	"log"
 	"math/rand"
 
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/spf13/viper"
 
-	abci "github.com/tendermint/tendermint/abci/types"
-	logger "github.com/tendermint/tendermint/libs/log"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
-	dbm "github.com/tendermint/tm-db"
+	dbm "github.com/cometbft/cometbft-db"
+	abci "github.com/cometbft/cometbft/abci/types"
+	logger "github.com/cometbft/cometbft/libs/log"
+	cmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
-	"github.com/cosmos/cosmos-sdk/simapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/simulation"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
@@ -24,10 +24,12 @@ import (
 // ExportAppStateAndValidators exports the state of the application for a genesis
 // file.
 func (app *AkashApp) ExportAppStateAndValidators(
-	forZeroHeight bool, jailAllowedAddrs []string,
+	forZeroHeight bool,
+	jailAllowedAddrs []string,
+	modulesToExport []string,
 ) (servertypes.ExportedApp, error) {
 	// as if they could withdraw from the start of the next block
-	ctx := app.NewContext(true, tmproto.Header{Height: app.LastBlockHeight()})
+	ctx := app.NewContext(true, cmproto.Header{Height: app.LastBlockHeight()})
 
 	// We export at last height + 1, because that's the height at which
 	// Tendermint will start InitChain.
@@ -38,16 +40,17 @@ func (app *AkashApp) ExportAppStateAndValidators(
 		app.prepForZeroHeightGenesis(ctx, jailAllowedAddrs)
 	}
 
-	genState := app.MM.ExportGenesis(ctx, app.appCodec)
+	genState := app.MM.ExportGenesisForModules(ctx, app.cdc, modulesToExport)
 	appState, err := json.MarshalIndent(genState, "", "  ")
 	if err != nil {
 		return servertypes.ExportedApp{}, err
 	}
 
-	validators, err := staking.WriteValidators(ctx, *app.Keepers.Cosmos.Staking)
+	validators, err := staking.WriteValidators(ctx, app.Keepers.Cosmos.Staking)
 	if err != nil {
 		return servertypes.ExportedApp{}, err
 	}
+
 	return servertypes.ExportedApp{
 		AppState:        appState,
 		Validators:      validators,
@@ -121,7 +124,9 @@ func (app *AkashApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllowedAddrs 
 		feePool := app.Keepers.Cosmos.Distr.GetFeePool(ctx)
 		feePool.CommunityPool = feePool.CommunityPool.Add(scraps...)
 		app.Keepers.Cosmos.Distr.SetFeePool(ctx, feePool)
-		app.Keepers.Cosmos.Distr.Hooks().AfterValidatorCreated(ctx, val.GetOperator())
+
+		_ = app.Keepers.Cosmos.Distr.Hooks().AfterValidatorCreated(ctx, val.GetOperator())
+
 		return false
 	})
 
@@ -136,8 +141,8 @@ func (app *AkashApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllowedAddrs 
 		if err != nil {
 			panic(err)
 		}
-		app.Keepers.Cosmos.Distr.Hooks().BeforeDelegationCreated(ctx, delAddr, valAddr)
-		app.Keepers.Cosmos.Distr.Hooks().AfterDelegationModified(ctx, delAddr, valAddr)
+		_ = app.Keepers.Cosmos.Distr.Hooks().BeforeDelegationCreated(ctx, delAddr, valAddr)
+		_ = app.Keepers.Cosmos.Distr.Hooks().AfterDelegationModified(ctx, delAddr, valAddr)
 	}
 
 	// reset context height
@@ -165,7 +170,7 @@ func (app *AkashApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllowedAddrs 
 
 	// Iterate through validators by power descending, reset bond heights, and
 	// update bond intra-tx counters.
-	store := ctx.KVStore(app.keys[stakingtypes.StoreKey])
+	store := ctx.KVStore(app.GetKey(stakingtypes.StoreKey))
 	iter := sdk.KVStoreReversePrefixIterator(store, stakingtypes.ValidatorsKey)
 	counter := int16(0)
 
@@ -203,15 +208,51 @@ func (app *AkashApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllowedAddrs 
 }
 
 // Setup initializes a new AkashApp. A Nop logger is set in AkashApp.
-func Setup(isCheckTx bool) *AkashApp {
+func Setup(opts ...SetupAppOption) *AkashApp {
+	cfg := &setupAppOptions{
+		encCfg:  MakeEncodingConfig(),
+		home:    DefaultHome,
+		checkTx: false,
+		chainID: "akash-1",
+	}
+
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
 	db := dbm.NewMemDB()
 
-	// TODO: make this configurable via config or flag.
-	app := NewApp(logger.NewNopLogger(), db, nil, true, 5, map[int64]bool{}, DefaultHome, OptsWithGenesisTime(0))
-	if !isCheckTx {
-		// init chain must be called to stop deliverState from being nil
-		genesisState := NewDefaultGenesisState()
-		stateBytes, err := json.MarshalIndent(genesisState, "", "  ")
+	appOpts := viper.New()
+
+	appOpts.Set("home", cfg.home)
+
+	r := rand.New(rand.NewSource(0)) // nolint: gosec
+	genTime := simulation.RandTimestamp(r)
+
+	appOpts.Set("GenesisTime", genTime)
+
+	app := NewApp(
+		logger.NewNopLogger(),
+		db,
+		nil,
+		true,
+		5,
+		map[int64]bool{},
+		cfg.encCfg,
+		appOpts,
+		baseapp.SetChainID(cfg.chainID),
+	)
+
+	if !cfg.checkTx {
+		var state GenesisState
+		if cfg.genesisFn == nil {
+			// init chain must be called to stop deliverState from being nil
+			state = NewDefaultGenesisState(app.AppCodec())
+		} else {
+			state = cfg.genesisFn(app.cdc)
+		}
+
+		stateBytes, err := json.MarshalIndent(state, "", "  ")
 		if err != nil {
 			panic(err)
 		}
@@ -221,6 +262,7 @@ func Setup(isCheckTx bool) *AkashApp {
 			abci.RequestInitChain{
 				Validators:    []abci.ValidatorUpdate{},
 				AppStateBytes: stateBytes,
+				ChainId:       cfg.chainID,
 			},
 		)
 	}
@@ -228,13 +270,14 @@ func Setup(isCheckTx bool) *AkashApp {
 	return app
 }
 
-func OptsWithGenesisTime(seed int64) servertypes.AppOptions {
-	r := rand.New(rand.NewSource(seed)) // nolint: gosec
-	genTime := simulation.RandTimestamp(r)
-
-	appOpts := viper.New()
-	appOpts.Set("GenesisTime", genTime)
-	simapp.FlagGenesisTimeValue = genTime.Unix()
-
-	return appOpts
-}
+//
+// func OptsWithGenesisTime(seed int64) servertypes.AppOptions {
+// 	r := rand.New(rand.NewSource(seed)) // nolint: gosec
+// 	genTime := simulation.RandTimestamp(r)
+//
+// 	appOpts := viper.New()
+// 	appOpts.Set("GenesisTime", genTime)
+// 	simapp.FlagGenesisTimeValue = genTime.Unix()
+//
+// 	return appOpts
+// }

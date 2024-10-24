@@ -10,10 +10,11 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 
-	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
-	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
+	dtypes "pkg.akt.dev/go/node/deployment/v1beta4"
+	"pkg.akt.dev/go/node/market/v1"
+	types "pkg.akt.dev/go/node/market/v1beta5"
 
-	keys "github.com/akash-network/node/x/market/keeper/keys/v1beta4"
+	"pkg.akt.dev/node/x/market/keeper/keys"
 )
 
 // Querier is used as Keeper will have duplicate methods if used directly, and gRPC names take precedence over keeper
@@ -46,7 +47,7 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 
 	orderStore := prefix.NewStore(store, searchPrefix)
 
-	pageRes, err := sdkquery.FilteredPaginate(orderStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
+	pageRes, err := sdkquery.FilteredPaginate(orderStore, req.Pagination, func(_ []byte, value []byte, accumulate bool) (bool, error) {
 		var order types.Order
 
 		err := k.cdc.Unmarshal(value, &order)
@@ -118,7 +119,7 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 
 	bidStore := prefix.NewStore(store, searchPrefix)
 
-	pageRes, err := sdkquery.FilteredPaginate(bidStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
+	pageRes, err := sdkquery.FilteredPaginate(bidStore, req.Pagination, func(_ []byte, value []byte, accumulate bool) (bool, error) {
 		var bid types.Bid
 
 		err := k.cdc.Unmarshal(value, &bid)
@@ -129,7 +130,7 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 		// filter bids with provided filters
 		if req.Filters.Accept(bid, stateVal) {
 			if accumulate {
-				acct, err := k.ekeeper.GetAccount(ctx, types.EscrowAccountForBid(bid.BidID))
+				acct, err := k.ekeeper.GetAccount(ctx, types.EscrowAccountForBid(bid.ID))
 				if err != nil {
 					return true, err
 				}
@@ -176,7 +177,7 @@ func (k Querier) Bid(c context.Context, req *types.QueryBidRequest) (*types.Quer
 		return nil, types.ErrBidNotFound
 	}
 
-	acct, err := k.ekeeper.GetAccount(ctx, types.EscrowAccountForBid(bid.ID()))
+	acct, err := k.ekeeper.GetAccount(ctx, types.EscrowAccountForBid(bid.ID))
 	if err != nil {
 		return nil, err
 	}
@@ -193,9 +194,9 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
-	stateVal := types.Lease_State(types.Lease_State_value[req.Filters.State])
+	stateVal := v1.Lease_State(v1.Lease_State_value[req.Filters.State])
 
-	if req.Filters.State != "" && stateVal == types.LeaseStateInvalid {
+	if req.Filters.State != "" && stateVal == v1.LeaseStateInvalid {
 		return nil, status.Error(codes.InvalidArgument, "invalid state value")
 	}
 
@@ -209,8 +210,8 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 	}
 	searchedStore := prefix.NewStore(store, searchPrefix)
 
-	pageRes, err := sdkquery.FilteredPaginate(searchedStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
-		var lease types.Lease
+	pageRes, err := sdkquery.FilteredPaginate(searchedStore, req.Pagination, func(_ []byte, value []byte, accumulate bool) (bool, error) {
+		var lease v1.Lease
 
 		if isSecondaryPrefix {
 			secondaryKey := value
@@ -227,8 +228,8 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 		if req.Filters.Accept(lease, stateVal) {
 			if accumulate {
 				payment, err := k.ekeeper.GetPayment(ctx,
-					dtypes.EscrowAccountForDeployment(lease.ID().DeploymentID()),
-					types.EscrowPaymentForLease(lease.ID()))
+					dtypes.EscrowAccountForDeployment(lease.ID.DeploymentID()),
+					types.EscrowPaymentForLease(lease.ID))
 				if err != nil {
 					return true, err
 				}
@@ -276,8 +277,8 @@ func (k Querier) Lease(c context.Context, req *types.QueryLeaseRequest) (*types.
 	}
 
 	payment, err := k.ekeeper.GetPayment(ctx,
-		dtypes.EscrowAccountForDeployment(lease.ID().DeploymentID()),
-		types.EscrowPaymentForLease(lease.ID()))
+		dtypes.EscrowAccountForDeployment(lease.ID.DeploymentID()),
+		types.EscrowPaymentForLease(lease.ID))
 	if err != nil {
 		return nil, err
 	}
@@ -286,4 +287,15 @@ func (k Querier) Lease(c context.Context, req *types.QueryLeaseRequest) (*types.
 		Lease:         lease,
 		EscrowPayment: payment,
 	}, nil
+}
+
+func (k Querier) Params(ctx context.Context, req *types.QueryParamsRequest) (*types.QueryParamsResponse, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "empty request")
+	}
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	params := k.GetParams(sdkCtx)
+
+	return &types.QueryParamsResponse{Params: params}, nil
 }

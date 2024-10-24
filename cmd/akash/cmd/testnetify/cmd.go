@@ -10,14 +10,14 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/theckman/yacspin"
 
-	cmtjson "github.com/tendermint/tendermint/libs/json"
-	tmtypes "github.com/tendermint/tendermint/types"
+	cmtjson "github.com/cometbft/cometbft/libs/json"
+	tmtypes "github.com/cometbft/cometbft/types"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
-	ibccltypes "github.com/cosmos/ibc-go/v4/modules/core/02-client/types"
-	ibcchtypes "github.com/cosmos/ibc-go/v4/modules/core/04-channel/types"
+	ibccltypes "github.com/cosmos/ibc-go/v7/modules/core/02-client/types"
+	ibcchtypes "github.com/cosmos/ibc-go/v7/modules/core/04-channel/types"
 )
 
 const (
@@ -300,7 +300,7 @@ func (ga *GenesisState) modifyGov(cdc codec.Codec, cfg *GovConfig) error {
 
 	if params := cfg.VotingParams; params != nil {
 		if params.VotingPeriod.Duration > 0 {
-			ga.app.GovState.state.VotingParams.VotingPeriod = params.VotingPeriod.Duration
+			ga.app.GovState.state.Params.VotingPeriod = &params.VotingPeriod.Duration
 		}
 	}
 

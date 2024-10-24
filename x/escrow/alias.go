@@ -1,7 +1,7 @@
 package escrow
 
 import (
-	types "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
+	types "pkg.akt.dev/go/node/escrow/v1"
 )
 
 const (

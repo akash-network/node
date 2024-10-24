@@ -2,34 +2,35 @@ package keeper
 
 import (
 	"github.com/cosmos/cosmos-sdk/codec"
+	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+	types "pkg.akt.dev/go/node/cert/v1"
 )
 
 // Keeper of the provider store
 type Keeper interface {
 	Querier() types.QueryServer
 	Codec() codec.BinaryCodec
-	StoreKey() sdk.StoreKey
+	StoreKey() storetypes.StoreKey
 	CreateCertificate(sdk.Context, sdk.Address, []byte, []byte) error
 	RevokeCertificate(sdk.Context, types.CertID) error
 	GetCertificateByID(ctx sdk.Context, id types.CertID) (types.CertificateResponse, bool)
-	WithCertificates(ctx sdk.Context, fn func(certificate types.CertificateResponse) bool)
-	WithCertificatesState(ctx sdk.Context, state types.Certificate_State, fn func(certificate types.CertificateResponse) bool)
+	WithCertificates(ctx sdk.Context, fn func(id types.CertID, certificate types.CertificateResponse) bool)
+	WithCertificatesState(ctx sdk.Context, state types.State, fn func(certificate types.CertificateResponse) bool)
 	WithOwner(ctx sdk.Context, id sdk.Address, fn func(types.CertificateResponse) bool)
-	WithOwnerState(ctx sdk.Context, id sdk.Address, state types.Certificate_State, fn func(types.CertificateResponse) bool)
+	WithOwnerState(ctx sdk.Context, id sdk.Address, state types.State, fn func(types.CertificateResponse) bool)
 }
 
 type keeper struct {
-	skey sdk.StoreKey
+	skey storetypes.StoreKey
 	cdc  codec.BinaryCodec
 }
 
 var _ Keeper = (*keeper)(nil)
 
 // NewKeeper creates and returns an instance for Market keeper
-func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey) Keeper {
+func NewKeeper(cdc codec.BinaryCodec, skey storetypes.StoreKey) Keeper {
 	return &keeper{cdc: cdc, skey: skey}
 }
 
@@ -44,7 +45,7 @@ func (k keeper) Codec() codec.BinaryCodec {
 }
 
 // StoreKey returns store key
-func (k keeper) StoreKey() sdk.StoreKey {
+func (k keeper) StoreKey() storetypes.StoreKey {
 	return k.skey
 }
 
@@ -56,7 +57,7 @@ func (k keeper) CreateCertificate(ctx sdk.Context, owner sdk.Address, crt []byte
 		return err
 	}
 
-	key := certificateKey(types.CertID{
+	key := CertificateKey(types.CertID{
 		Owner:  owner,
 		Serial: *cert.SerialNumber,
 	})
@@ -78,7 +79,7 @@ func (k keeper) CreateCertificate(ctx sdk.Context, owner sdk.Address, crt []byte
 
 func (k keeper) RevokeCertificate(ctx sdk.Context, id types.CertID) error {
 	store := ctx.KVStore(k.skey)
-	key := certificateKey(id)
+	key := CertificateKey(id)
 
 	buf := store.Get(key)
 	if buf == nil {
@@ -103,7 +104,7 @@ func (k keeper) RevokeCertificate(ctx sdk.Context, id types.CertID) error {
 func (k keeper) GetCertificateByID(ctx sdk.Context, id types.CertID) (types.CertificateResponse, bool) {
 	store := ctx.KVStore(k.skey)
 
-	buf := store.Get(certificateKey(id))
+	buf := store.Get(CertificateKey(id))
 	if buf == nil {
 		return types.CertificateResponse{}, false
 	}
@@ -118,7 +119,7 @@ func (k keeper) GetCertificateByID(ctx sdk.Context, id types.CertID) (types.Cert
 }
 
 // WithCertificates iterates all certificates
-func (k keeper) WithCertificates(ctx sdk.Context, fn func(certificate types.CertificateResponse) bool) {
+func (k keeper) WithCertificates(ctx sdk.Context, fn func(id types.CertID, certificate types.CertificateResponse) bool) {
 	store := ctx.KVStore(k.skey)
 	iter := store.Iterator(nil, nil)
 
@@ -127,15 +128,20 @@ func (k keeper) WithCertificates(ctx sdk.Context, fn func(certificate types.Cert
 	}()
 
 	for ; iter.Valid(); iter.Next() {
+		id, err := ParseCertID(types.PrefixCertificateID(), iter.Key())
+		if err != nil {
+			panic(err.Error())
+		}
+
 		item := k.mustUnmarshal(iter.Key(), iter.Value())
-		if stop := fn(item); stop {
+		if stop := fn(id, item); stop {
 			break
 		}
 	}
 }
 
 // WithCertificatesState iterates all certificates in certain state
-func (k keeper) WithCertificatesState(ctx sdk.Context, state types.Certificate_State, fn func(certificate types.CertificateResponse) bool) {
+func (k keeper) WithCertificatesState(ctx sdk.Context, state types.State, fn func(certificate types.CertificateResponse) bool) {
 	store := ctx.KVStore(k.skey)
 	iter := store.Iterator(nil, nil)
 
@@ -156,7 +162,7 @@ func (k keeper) WithCertificatesState(ctx sdk.Context, state types.Certificate_S
 // WithOwner iterates all certificates by owner
 func (k keeper) WithOwner(ctx sdk.Context, id sdk.Address, fn func(types.CertificateResponse) bool) {
 	store := ctx.KVStore(k.skey)
-	iter := sdk.KVStorePrefixIterator(store, certificatePrefix(id))
+	iter := sdk.KVStorePrefixIterator(store, CertificatePrefix(id))
 	defer func() {
 		_ = iter.Close()
 	}()
@@ -170,9 +176,9 @@ func (k keeper) WithOwner(ctx sdk.Context, id sdk.Address, fn func(types.Certifi
 }
 
 // WithOwnerState iterates all certificates by owner in certain state
-func (k keeper) WithOwnerState(ctx sdk.Context, id sdk.Address, state types.Certificate_State, fn func(types.CertificateResponse) bool) {
+func (k keeper) WithOwnerState(ctx sdk.Context, id sdk.Address, state types.State, fn func(types.CertificateResponse) bool) {
 	store := ctx.KVStore(k.skey)
-	iter := sdk.KVStorePrefixIterator(store, certificatePrefix(id))
+	iter := sdk.KVStorePrefixIterator(store, CertificatePrefix(id))
 	defer func() {
 		_ = iter.Close()
 	}()

@@ -3,10 +3,12 @@ package keeper
 import (
 	"testing"
 
+	sdkmath "cosmossdk.io/math"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/assert"
 
-	types "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
+	"pkg.akt.dev/go/node/escrow/v1"
 )
 
 const denom = "uakt"
@@ -246,20 +248,20 @@ type distTestConfig struct {
 	overdrawn    bool
 }
 
-func setupDistTest(cfg distTestConfig) (types.Account, []types.FractionalPayment, sdk.Int, sdk.DecCoin) {
-	account := types.Account{
+func setupDistTest(cfg distTestConfig) (v1.Account, []v1.FractionalPayment, sdkmath.Int, sdk.DecCoin) {
+	account := v1.Account{
 		Balance:     sdk.NewInt64DecCoin(denom, cfg.balanceStart),
 		Transferred: sdk.NewInt64DecCoin(denom, 0),
 		Funds:       sdk.NewInt64DecCoin(denom, cfg.fundsStart),
 	}
 
-	payments := make([]types.FractionalPayment, 0, len(cfg.rates))
+	payments := make([]v1.FractionalPayment, 0, len(cfg.rates))
 
 	blockRate := int64(0)
 
 	for _, rate := range cfg.rates {
 		blockRate += rate
-		payments = append(payments, types.FractionalPayment{
+		payments = append(payments, v1.FractionalPayment{
 			Rate:    sdk.NewInt64DecCoin(denom, rate),
 			Balance: sdk.NewInt64DecCoin(denom, 0),
 		})

@@ -10,11 +10,11 @@ import (
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/stretchr/testify/require"
 
-	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+	types "pkg.akt.dev/go/node/cert/v1"
 
-	"github.com/akash-network/node/app"
-	"github.com/akash-network/node/testutil"
-	"github.com/akash-network/node/x/cert/keeper"
+	"pkg.akt.dev/node/app"
+	"pkg.akt.dev/node/testutil"
+	"pkg.akt.dev/node/x/cert/keeper"
 )
 
 type grpcTestSuite struct {
@@ -30,7 +30,8 @@ func setupTest(t *testing.T) *grpcTestSuite {
 		t: t,
 	}
 
-	suite.app = app.Setup(false)
+	suite.app = app.Setup(app.WithGenesis(app.GenesisStateWithValSet))
+
 	suite.ctx, suite.keeper = setupKeeper(t)
 	querier := suite.keeper.Querier()
 
@@ -172,7 +173,7 @@ func TestCertGRPCQueryCertificates(t *testing.T) {
 			func() {
 				req = &types.QueryCertificatesRequest{
 					Filter: types.CertificateFilter{
-						State: types.Certificate_State_name[int32(types.CertificateValid)],
+						State: types.CertificateValid.String(),
 					},
 					Pagination: &sdkquery.PageRequest{
 						Limit: 10,
@@ -227,7 +228,6 @@ func TestCertGRPCQueryCertificates(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
 			ctx := sdk.WrapSDKContext(suite.ctx)

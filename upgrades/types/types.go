@@ -3,15 +3,15 @@ package types
 import (
 	"fmt"
 
-	"github.com/cosmos/cosmos-sdk/codec"
-	sdkmodule "github.com/cosmos/cosmos-sdk/types/module"
-	"github.com/tendermint/tendermint/libs/log"
+	"github.com/cometbft/cometbft/libs/log"
 
+	"github.com/cosmos/cosmos-sdk/codec"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkmodule "github.com/cosmos/cosmos-sdk/types/module"
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 
-	apptypes "github.com/akash-network/node/app/types"
+	apptypes "pkg.akt.dev/node/app/types"
 )
 
 var (
@@ -58,7 +58,7 @@ type IHeightPatch interface {
 }
 
 type Migrator interface {
-	StoreKey() sdk.StoreKey
+	StoreKey() storetypes.StoreKey
 	Codec() codec.BinaryCodec
 }
 
@@ -90,6 +90,10 @@ func GetHeightPatchesList() map[int64]IHeightPatch {
 	return heightPatches
 }
 
+// RegisterMigration registers module migration within particular network upgrade
+//   - module: module name
+//   - version: current module version
+//   - initFn: migrator fn
 func RegisterMigration(module string, version uint64, initFn NewMigrationFn) {
 	if _, exists := migrations[module]; !exists {
 		migrations[module] = make(moduleMigrations)

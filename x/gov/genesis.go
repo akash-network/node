@@ -3,25 +3,26 @@ package provider
 import (
 	"encoding/json"
 
+	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	abci "github.com/tendermint/tendermint/abci/types"
 
-	types "github.com/akash-network/akash-api/go/node/gov/v1beta3"
+	types "pkg.akt.dev/go/node/gov/v1beta3"
 
-	"github.com/akash-network/node/x/gov/keeper"
+	"pkg.akt.dev/node/x/gov/keeper"
 )
 
 // ValidateGenesis does validation check of the Genesis and returns error in case of failure
-func ValidateGenesis(data *types.GenesisState) error {
-	return data.DepositParams.Validate()
+func ValidateGenesis(_ *types.GenesisState) error {
+	// return data.DepositParams.Validate()
+	return nil
 }
 
 // DefaultGenesisState returns default genesis state as raw bytes for the provider
 // module.
 func DefaultGenesisState() *types.GenesisState {
 	return &types.GenesisState{
-		DepositParams: types.DefaultDepositParams(),
+		// DepositParams: types.DefaultDepositParams(),
 	}
 }
 

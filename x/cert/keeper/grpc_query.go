@@ -4,13 +4,14 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/cosmos/cosmos-sdk/store/prefix"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+	"github.com/cosmos/cosmos-sdk/store/prefix"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
+
+	types "pkg.akt.dev/go/node/cert/v1"
 )
 
 // Querier is used as Keeper will have duplicate methods if used directly, and gRPC names take precedence over keeper
@@ -33,14 +34,15 @@ func (q querier) Certificates(c context.Context, req *types.QueryCertificatesReq
 	store := ctx.KVStore(q.skey)
 
 	state := types.CertificateStateInvalid
+
 	if req.Filter.State != "" {
-		vl, exists := types.Certificate_State_value[req.Filter.State]
+		vl, exists := types.State_value[req.Filter.State]
 
 		if !exists {
 			return nil, status.Error(codes.InvalidArgument, "invalid state value")
 		}
 
-		state = types.Certificate_State(vl)
+		state = types.State(vl)
 	}
 
 	if req.Filter.Owner != "" {
@@ -64,10 +66,10 @@ func (q querier) Certificates(c context.Context, req *types.QueryCertificatesReq
 				certificates = append(certificates, item)
 			}
 		} else {
-			ownerStore := prefix.NewStore(store, certificatePrefix(owner))
+			ownerStore := prefix.NewStore(store, CertificatePrefix(owner))
 			pageRes, err = sdkquery.FilteredPaginate(ownerStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
 				// prefixed store returns key without prefix
-				key = append(certificatePrefix(owner), key...)
+				key = append(CertificatePrefix(owner), key...)
 				item, err := q.unmarshalIterator(key, value)
 				if err != nil {
 					return true, err
@@ -111,6 +113,6 @@ func (q querier) Certificates(c context.Context, req *types.QueryCertificatesReq
 	}, nil
 }
 
-func filterCertByState(state types.Certificate_State, cert types.Certificate_State) bool {
+func filterCertByState(state types.State, cert types.State) bool {
 	return (state == types.CertificateStateInvalid) || (cert == state)
 }

@@ -1,39 +1,47 @@
 package take
 
 import (
+	"context"
 	"encoding/json"
-	"math/rand"
+	"fmt"
 
-	"github.com/cosmos/cosmos-sdk/client"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	sim "github.com/cosmos/cosmos-sdk/types/simulation"
+	"cosmossdk.io/core/appmodule"
+	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
+	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
 
-	"github.com/gorilla/mux"
-	"github.com/grpc-ecosystem/grpc-gateway/runtime"
-	abci "github.com/tendermint/tendermint/abci/types"
+	abci "github.com/cometbft/cometbft/abci/types"
 
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	"github.com/gogo/protobuf/grpc"
-	"github.com/pkg/errors"
+	types "pkg.akt.dev/go/node/take/v1"
 
-	"github.com/akash-network/node/x/take/keeper"
-	"github.com/akash-network/node/x/take/simulation"
-
-	types "github.com/akash-network/akash-api/go/node/take/v1beta3"
+	utypes "pkg.akt.dev/node/upgrades/types"
+	"pkg.akt.dev/node/x/take/handler"
+	"pkg.akt.dev/node/x/take/keeper"
+	"pkg.akt.dev/node/x/take/simulation"
 )
 
 var (
-	_ module.AppModule           = AppModule{}
-	_ module.AppModuleBasic      = AppModuleBasic{}
-	_ module.AppModuleSimulation = AppModuleSimulation{}
+	_ module.AppModuleBasic = AppModuleBasic{}
+
+	_ module.BeginBlockAppModule = AppModule{}
+	_ appmodule.AppModule        = AppModule{}
+	_ module.AppModuleSimulation = AppModule{}
 )
 
 // AppModuleBasic defines the basic application module used by the provider module.
 type AppModuleBasic struct {
 	cdc codec.Codec
+}
+
+// AppModule implements an application module for the take module.
+type AppModule struct {
+	AppModuleBasic
+	keeper keeper.IKeeper
 }
 
 // Name returns provider module's name
@@ -43,7 +51,7 @@ func (AppModuleBasic) Name() string {
 
 // RegisterLegacyAminoCodec registers the provider module's types for the given codec.
 func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
-	types.RegisterLegacyAminoCodec(cdc)
+	types.RegisterLegacyAminoCodec(cdc) // nolint staticcheck
 }
 
 // RegisterInterfaces registers the module's interface types
@@ -67,22 +75,17 @@ func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, _ client.TxEncodingCo
 
 	err := cdc.UnmarshalJSON(bz, &data)
 	if err != nil {
-		return errors.Errorf("failed to unmarshal %s genesis state: %v", types.ModuleName, err)
+		return fmt.Errorf("failed to unmarshal %s genesis state: %v", types.ModuleName, err)
 	}
 
 	return ValidateGenesis(&data)
 }
 
-// RegisterRESTRoutes registers rest routes for this module
-func (AppModuleBasic) RegisterRESTRoutes(clientCtx client.Context, rtr *mux.Router) {
-}
-
 // RegisterGRPCGatewayRoutes registers the gRPC Gateway routes for the provider module.
-func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *runtime.ServeMux) {
-}
-
-// RegisterGRPCRoutes registers the gRPC Gateway routes for the provider module.
-func (AppModuleBasic) RegisterGRPCRoutes(clientCtx client.Context, mux *runtime.ServeMux) {
+func (AppModuleBasic) RegisterGRPCGatewayRoutes(cctx client.Context, mux *runtime.ServeMux) {
+	if err := types.RegisterQueryHandlerClient(context.Background(), mux, types.NewQueryClient(cctx)); err != nil {
+		panic(err)
+	}
 }
 
 // GetQueryCmd returns the root query command of this module
@@ -93,17 +96,6 @@ func (AppModuleBasic) GetQueryCmd() *cobra.Command {
 // GetTxCmd returns the transaction commands for this module
 func (AppModuleBasic) GetTxCmd() *cobra.Command {
 	return nil
-}
-
-// GetQueryClient returns a new query client for this module
-func (AppModuleBasic) GetQueryClient(clientCtx client.Context) types.QueryClient {
-	return nil
-}
-
-// AppModule implements an application module for the take module.
-type AppModule struct {
-	AppModuleBasic
-	keeper keeper.IKeeper
 }
 
 // NewAppModule creates a new AppModule object
@@ -119,31 +111,26 @@ func (AppModule) Name() string {
 	return types.ModuleName
 }
 
+// IsOnePerModuleType implements the depinject.OnePerModuleType interface.
+func (am AppModule) IsOnePerModuleType() {}
+
+// IsAppModule implements the appmodule.AppModule interface.
+func (am AppModule) IsAppModule() {}
+
 // RegisterInvariants registers module invariants
-func (am AppModule) RegisterInvariants(ir sdk.InvariantRegistry) {}
+func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
 
-// Route returns the message routing key for the take module.
-func (am AppModule) Route() sdk.Route {
-	return sdk.NewRoute(types.RouterKey, nil)
-}
-
-// QuerierRoute returns the take module's querier route name.
-func (am AppModule) QuerierRoute() string {
-	return types.ModuleName
-}
-
-// LegacyQuerierHandler returns the sdk.Querier for take module
-func (am AppModule) LegacyQuerierHandler(legacyQuerierCdc *codec.LegacyAmino) sdk.Querier {
-	return nil
-}
-
-// RegisterServices registers the module's servicess
+// RegisterServices registers the module's services
 func (am AppModule) RegisterServices(cfg module.Configurator) {
-}
+	types.RegisterMsgServer(cfg.MsgServer(), handler.NewMsgServerImpl(am.keeper))
+	querier := am.keeper.NewQuerier()
+	types.RegisterQueryServer(cfg.QueryServer(), querier)
 
-// RegisterQueryService registers a GRPC query service to respond to the
-// module-specific GRPC queries.
-func (am AppModule) RegisterQueryService(server grpc.Server) {
+	utypes.ModuleMigrations(ModuleName, am.keeper, func(name string, forVersion uint64, handler module.MigrationHandler) {
+		if err := cfg.RegisterMigration(name, forVersion, handler); err != nil {
+			panic(err)
+		}
+	})
 }
 
 // BeginBlock performs no-op
@@ -151,7 +138,7 @@ func (am AppModule) BeginBlock(_ sdk.Context, _ abci.RequestBeginBlock) {}
 
 // EndBlock returns the end blocker for the take module. It returns no takeor
 // updates.
-func (am AppModule) EndBlock(ctx sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
+func (am AppModule) EndBlock(_ sdk.Context, _ abci.RequestEndBlock) []abci.ValidatorUpdate {
 	return []abci.ValidatorUpdate{}
 }
 
@@ -172,46 +159,27 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 
 // ConsensusVersion implements module.AppModule#ConsensusVersion
 func (am AppModule) ConsensusVersion() uint64 {
-	return 2
-}
-
-// ____________________________________________________________________________
-
-// AppModuleSimulation implements an application simulation module for the take module.
-type AppModuleSimulation struct {
-	keeper keeper.IKeeper
-}
-
-// NewAppModuleSimulation creates a new AppModuleSimulation instance
-func NewAppModuleSimulation(k keeper.IKeeper) AppModuleSimulation {
-	return AppModuleSimulation{
-		keeper: k,
-	}
+	return 3
 }
 
 // AppModuleSimulation functions
 
 // GenerateGenesisState creates a randomized GenState of the staking module.
-func (AppModuleSimulation) GenerateGenesisState(simState *module.SimulationState) {
+func (AppModule) GenerateGenesisState(simState *module.SimulationState) {
 	simulation.RandomizedGenState(simState)
 }
 
-// ProposalContents doesn't return any content functions for governance proposals.
-func (AppModuleSimulation) ProposalContents(_ module.SimulationState) []sim.WeightedProposalContent {
-	return nil
+// ProposalMsgs returns msgs used for governance proposals for simulations.
+func (AppModule) ProposalMsgs(_ module.SimulationState) []simtypes.WeightedProposalMsg {
+	return simulation.ProposalMsgs()
 }
 
-// RandomizedParams creates randomized staking param changes for the simulator.
-func (AppModuleSimulation) RandomizedParams(r *rand.Rand) []sim.ParamChange {
-	return nil
+// RegisterStoreDecoder registers a decoder for take module's types.
+func (am AppModule) RegisterStoreDecoder(_ sdk.StoreDecoderRegistry) {
+	// sdr[types.StoreKey] = simulation.NewDecodeStore(am.cdc)
 }
 
-// RegisterStoreDecoder registers a decoder for staking module's types
-func (AppModuleSimulation) RegisterStoreDecoder(sdr sdk.StoreDecoderRegistry) {
-
-}
-
-// WeightedOperations returns the all the staking module operations with their respective weights.
-func (am AppModuleSimulation) WeightedOperations(simState module.SimulationState) []sim.WeightedOperation {
+// WeightedOperations doesn't return any take module operation.
+func (am AppModule) WeightedOperations(_ module.SimulationState) []simtypes.WeightedOperation {
 	return nil
 }

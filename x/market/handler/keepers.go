@@ -3,13 +3,15 @@ package handler
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 
-	atypes "github.com/akash-network/akash-api/go/node/audit/v1beta3"
-	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
-	etypes "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
-	ptypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
+	atypes "pkg.akt.dev/go/node/audit/v1"
+	dtypes "pkg.akt.dev/go/node/deployment/v1"
+	dbeta "pkg.akt.dev/go/node/deployment/v1beta4"
+	etypes "pkg.akt.dev/go/node/escrow/v1"
+	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 
-	"github.com/akash-network/node/x/market/keeper"
+	"pkg.akt.dev/node/x/market/keeper"
 )
 
 type EscrowKeeper interface {
@@ -28,14 +30,14 @@ type ProviderKeeper interface {
 }
 
 type AuditKeeper interface {
-	GetProviderAttributes(ctx sdk.Context, id sdk.Address) (atypes.Providers, bool)
+	GetProviderAttributes(ctx sdk.Context, id sdk.Address) (atypes.AuditedProviders, bool)
 }
 
 // DeploymentKeeper Interface includes deployment methods
 type DeploymentKeeper interface {
-	GetGroup(ctx sdk.Context, id dtypes.GroupID) (dtypes.Group, bool)
+	GetGroup(ctx sdk.Context, id dtypes.GroupID) (dbeta.Group, bool)
 	OnBidClosed(ctx sdk.Context, id dtypes.GroupID) error
-	OnLeaseClosed(ctx sdk.Context, id dtypes.GroupID) (dtypes.Group, error)
+	OnLeaseClosed(ctx sdk.Context, id dtypes.GroupID) (dbeta.Group, error)
 }
 
 // Keepers include all modules keepers
@@ -45,5 +47,6 @@ type Keepers struct {
 	Deployment DeploymentKeeper
 	Provider   ProviderKeeper
 	Audit      AuditKeeper
+	Account    govtypes.AccountKeeper
 	Bank       bankkeeper.Keeper
 }
