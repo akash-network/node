@@ -38,7 +38,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
-	genutilcli "github.com/cosmos/cosmos-sdk/x/genutil/client/cli"
 
 	cflags "pkg.akt.dev/go/cli/flags"
 
@@ -151,7 +150,6 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
 		cli.TxCmd(),
 		keys.Commands(home),
 		genesisCommand(encodingConfig),
-		genutilcli.InitCmd(app.ModuleBasics(), home),
 		cmtcli.NewCompletionCmd(rootCmd, true),
 		debugCmd,
 		rosettaCmd.RosettaCommand(encodingConfig.InterfaceRegistry, encodingConfig.Marshaler),
@@ -173,7 +171,7 @@ func addModuleInitFlags(startCmd *cobra.Command) {
 func genesisCommand(encodingConfig params.EncodingConfig, cmds ...*cobra.Command) *cobra.Command {
 	home := app.DefaultHome
 
-	cmd := genutilcli.GenesisCoreCommand(encodingConfig.TxConfig, app.ModuleBasics(), app.DefaultHome)
+	cmd := cli.GetGenesisCmd(app.ModuleBasics(), encodingConfig.TxConfig, app.DefaultHome)
 
 	for _, subCmd := range cmds {
 		cmd.AddCommand(subCmd)
