@@ -13,6 +13,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/evidence"
 	feegrantmodule "github.com/cosmos/cosmos-sdk/x/feegrant/module"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
+	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	govclient "github.com/cosmos/cosmos-sdk/x/gov/client"
 	"github.com/cosmos/cosmos-sdk/x/mint"
@@ -37,7 +38,7 @@ var mbasics = module.NewBasicManager(
 		// authorizations
 		authzmodule.AppModuleBasic{},
 		// genesis utilities
-		genutil.AppModuleBasic{},
+		genutil.NewAppModuleBasic(genutiltypes.DefaultMessageValidator),
 		// tokens, token balance.
 		bank.AppModuleBasic{},
 		capability.AppModuleBasic{},
