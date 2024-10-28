@@ -46,7 +46,7 @@ var mbasics = module.NewBasicManager(
 		staking.AppModuleBasic{},
 		// inflation
 		mint.AppModuleBasic{},
-		// distribution of fess and inflation
+		// distribution of fees and inflation
 		distr.AppModuleBasic{},
 		// governance functionality (voting)
 		gov.NewAppModuleBasic(
