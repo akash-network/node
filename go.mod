@@ -34,7 +34,7 @@ require (
 	golang.org/x/sync v0.7.0
 	google.golang.org/grpc v1.64.0
 	gopkg.in/yaml.v3 v3.0.1
-	pkg.akt.dev/go v0.0.2-rc0
+	pkg.akt.dev/go v0.0.2-rc2
 	pkg.akt.dev/go/cli v0.0.2-rc1
 	pkg.akt.dev/go/node/migrate v0.0.2
 	pkg.akt.dev/go/sdl v0.0.1-rc7
