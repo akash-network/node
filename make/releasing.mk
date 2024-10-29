@@ -33,6 +33,7 @@ bins: $(BINS)
 build:
 	$(GO_BUILD) -a  ./...
 
+.PHONY: $(AKASH)
 $(AKASH):
 	$(GO_BUILD) -o $@ $(BUILD_FLAGS) ./cmd/akash
 
