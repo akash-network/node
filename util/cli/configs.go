@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	// "cosmossdk.io/log"
-
 	"cosmossdk.io/log"
 	perrors "github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -23,7 +21,6 @@ import (
 	tmcfg "github.com/cometbft/cometbft/config"
 	tmlog "github.com/cometbft/cometbft/libs/log"
 
-	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/server/config"
 	serverlog "github.com/cosmos/cosmos-sdk/server/log"
@@ -189,23 +186,9 @@ func InterceptConfigsPreRunHandler(
 	// return value is a tendermint configuration object
 	serverCtx.Config = cfg
 
-	// logTimeFmt, err := parseTimestampFormat(serverCtx.Viper.GetString(FlagLogTimestamp))
-	// if err != nil {
-	// 	return err
-	// }
-	//
-	// logLvlStr := serverCtx.Viper.GetString(flags.FlagLogLevel)
-	// logLvl, err := zerolog.ParseLevel(logLvlStr)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to parse log level (%s): %w", logLvlStr, err)
-	// }
-	//
-	//
-	// logWriter := io.Writer(os.Stdout)
-	//
 	var opts []log.Option
 
-	logFmt := serverCtx.Viper.GetString(flags.FlagLogFormat)
+	logFmt := serverCtx.Viper.GetString(cflags.FlagLogFormat)
 	switch logFmt {
 	case tmcfg.LogFormatJSON:
 		opts = append(opts, log.OutputJSONOption())
@@ -240,7 +223,7 @@ func InterceptConfigsPreRunHandler(
 	)
 
 	// check and set filter level or keys for the logger if any
-	logLvlStr := serverCtx.Viper.GetString(flags.FlagLogLevel)
+	logLvlStr := serverCtx.Viper.GetString(cflags.FlagLogLevel)
 	if logLvlStr != "" {
 		logLvl, err := zerolog.ParseLevel(logLvlStr)
 		switch {
@@ -259,66 +242,8 @@ func InterceptConfigsPreRunHandler(
 
 	logger := NewLogger(tmlog.NewSyncWriter(os.Stdout), opts...).With(log.ModuleKey, "server")
 
-	// if strings.ToLower(serverCtx.Viper.GetString(flags.FlagLogFormat)) == tmcfg.LogFormatPlain {
-	// 	cl := zerolog.ConsoleWriter{
-	// 		Out:        os.Stdout,
-	// 		NoColor:    !serverCtx.Viper.GetBool(FlagLogColor),
-	// 		TimeFormat: logTimeFmt,
-	// 	}
-	//
-	// 	if logTimeFmt == "" {
-	// 		cl.PartsExclude = []string{
-	// 			zerolog.TimestampFieldName,
-	// 		}
-	// 	}
-	// 	logWriter = cl
-	// }
-
 	serverCtx.Logger = serverlog.CometLoggerWrapper{Logger: logger}
 
-	// serverCtx.Config = cfg
-	//
-	// logTimeFmt, err := parseTimestampFormat(serverCtx.Viper.GetString(FlagLogTimestamp))
-	// if err != nil {
-	// 	return err
-	// }
-	//
-	// logLvlStr := serverCtx.Viper.GetString(flags.FlagLogLevel)
-	// logLvl, err := zerolog.ParseLevel(logLvlStr)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to parse log level (%s): %w", logLvlStr, err)
-	// }
-	//
-	// logWriter := io.Writer(os.Stdout)
-	//
-	// if strings.ToLower(serverCtx.Viper.GetString(flags.FlagLogFormat)) == tmcfg.LogFormatPlain {
-	// 	cl := zerolog.ConsoleWriter{
-	// 		Out:        os.Stdout,
-	// 		NoColor:    !serverCtx.Viper.GetBool(FlagLogColor),
-	// 		TimeFormat: logTimeFmt,
-	// 	}
-	//
-	// 	if logTimeFmt == "" {
-	// 		cl.PartsExclude = []string{
-	// 			zerolog.TimestampFieldName,
-	// 		}
-	// 	}
-	// 	logWriter = cl
-	// }
-	//
-	// logger := zerolog.New(logWriter).Level(logLvl)
-	//
-	// if logTimeFmt != "" {
-	// 	logger = logger.With().Timestamp().Logger()
-	// }
-
-	// serverCtx.Logger = server.ZeroLogWrapper{Logger: logger}
-
-	//
-	// if err = bindFlags(cmd, serverCtx.Viper, envPrefixes); err != nil {
-	// 	return err
-	// }
-	//
 	return server.SetCmdServerContext(cmd, serverCtx)
 }
 
@@ -380,7 +305,7 @@ func bindFlags(cmd *cobra.Command, v *viper.Viper, envPrefixes []string) error {
 // Viper object, whereas the application is parsed with the private package-aware
 // viperCfg object.
 func interceptConfigs(rootViper *viper.Viper, customAppTemplate string, customConfig interface{}) (*tmcfg.Config, error) {
-	rootDir := rootViper.GetString(flags.FlagHome)
+	rootDir := rootViper.GetString(cflags.FlagHome)
 	configPath := filepath.Join(rootDir, "config")
 	tmCfgFile := filepath.Join(configPath, "config.toml")
 
@@ -434,6 +359,7 @@ func interceptConfigs(rootViper *viper.Viper, customAppTemplate string, customCo
 			config.WriteConfigFile(appCfgFilePath, customConfig)
 		} else {
 			appConf, err := config.ParseConfig(rootViper)
+			appConf.BaseConfig.MinGasPrices = "0.025uakt"
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse %s: %w", appCfgFilePath, err) // nolint: goerr113
 			}

@@ -27,7 +27,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/debug"
-	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/client/pruning"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
@@ -190,12 +189,12 @@ func (a appCreator) newApp(
 ) servertypes.Application {
 	var cache sdk.MultiStorePersistentCache
 
-	if cast.ToBool(appOpts.Get(sdkserver.FlagInterBlockCache)) {
+	if cast.ToBool(appOpts.Get(cflags.FlagInterBlockCache)) {
 		cache = store.NewCommitKVStoreCacheManager()
 	}
 
 	skipUpgradeHeights := make(map[int64]bool)
-	for _, h := range cast.ToIntSlice(appOpts.Get(sdkserver.FlagUnsafeSkipUpgrades)) {
+	for _, h := range cast.ToIntSlice(appOpts.Get(cflags.FlagUnsafeSkipUpgrades)) {
 		skipUpgradeHeights[int64(h)] = true
 	}
 
@@ -204,8 +203,8 @@ func (a appCreator) newApp(
 		panic(err)
 	}
 
-	homeDir := cast.ToString(appOpts.Get(flags.FlagHome))
-	chainID := cast.ToString(appOpts.Get(flags.FlagChainID))
+	homeDir := cast.ToString(appOpts.Get(cflags.FlagHome))
+	chainID := cast.ToString(appOpts.Get(cflags.FlagChainID))
 	if chainID == "" {
 		// fallback to genesis chain-id
 		genDocFile := filepath.Join(homeDir, cast.ToString(appOpts.Get("genesis_file")))
@@ -229,25 +228,25 @@ func (a appCreator) newApp(
 
 	// BaseApp Opts
 	snapshotOptions := snapshottypes.NewSnapshotOptions(
-		cast.ToUint64(appOpts.Get(sdkserver.FlagStateSyncSnapshotInterval)),
-		cast.ToUint32(appOpts.Get(sdkserver.FlagStateSyncSnapshotKeepRecent)),
+		cast.ToUint64(appOpts.Get(cflags.FlagStateSyncSnapshotInterval)),
+		cast.ToUint32(appOpts.Get(cflags.FlagStateSyncSnapshotKeepRecent)),
 	)
 
 	return app.NewApp(
-		logger, db, traceStore, true, cast.ToUint(appOpts.Get(sdkserver.FlagInvCheckPeriod)), skipUpgradeHeights,
+		logger, db, traceStore, true, cast.ToUint(appOpts.Get(cflags.FlagInvCheckPeriod)), skipUpgradeHeights,
 		a.encCfg,
 		appOpts,
 		baseapp.SetChainID(chainID),
 		baseapp.SetPruning(pruningOpts),
-		baseapp.SetMinGasPrices(cast.ToString(appOpts.Get(sdkserver.FlagMinGasPrices))),
-		baseapp.SetHaltHeight(cast.ToUint64(appOpts.Get(sdkserver.FlagHaltHeight))),
-		baseapp.SetHaltTime(cast.ToUint64(appOpts.Get(sdkserver.FlagHaltTime))),
-		baseapp.SetMinRetainBlocks(cast.ToUint64(appOpts.Get(sdkserver.FlagMinRetainBlocks))),
+		baseapp.SetMinGasPrices(cast.ToString(appOpts.Get(cflags.FlagMinGasPrices))),
+		baseapp.SetHaltHeight(cast.ToUint64(appOpts.Get(cflags.FlagHaltHeight))),
+		baseapp.SetHaltTime(cast.ToUint64(appOpts.Get(cflags.FlagHaltTime))),
+		baseapp.SetMinRetainBlocks(cast.ToUint64(appOpts.Get(cflags.FlagMinRetainBlocks))),
 		baseapp.SetInterBlockCache(cache),
-		baseapp.SetTrace(cast.ToBool(appOpts.Get(sdkserver.FlagTrace))),
-		baseapp.SetIndexEvents(cast.ToStringSlice(appOpts.Get(sdkserver.FlagIndexEvents))),
+		baseapp.SetTrace(cast.ToBool(appOpts.Get(cflags.FlagTrace))),
+		baseapp.SetIndexEvents(cast.ToStringSlice(appOpts.Get(cflags.FlagIndexEvents))),
 		baseapp.SetSnapshot(snapshotStore, snapshotOptions),
-		baseapp.SetIAVLCacheSize(cast.ToInt(appOpts.Get(sdkserver.FlagIAVLCacheSize))),
+		baseapp.SetIAVLCacheSize(cast.ToInt(appOpts.Get(cflags.FlagIAVLCacheSize))),
 	)
 }
 
@@ -263,7 +262,7 @@ func (a appCreator) appExport(
 ) (servertypes.ExportedApp, error) {
 	var akashApp *app.AkashApp
 
-	homePath, ok := appOpts.Get(flags.FlagHome).(string)
+	homePath, ok := appOpts.Get(cflags.FlagHome).(string)
 	if !ok || homePath == "" {
 		return servertypes.ExportedApp{}, errors.New("application home is not set")
 	}
@@ -272,7 +271,7 @@ func (a appCreator) appExport(
 		return servertypes.ExportedApp{}, errors.New("appOpts is not viper.Viper")
 	}
 	// overwrite the FlagInvCheckPeriod
-	viperAppOpts.Set(sdkserver.FlagInvCheckPeriod, 1)
+	viperAppOpts.Set(cflags.FlagInvCheckPeriod, 1)
 	appOpts = viperAppOpts
 
 	if height != -1 {

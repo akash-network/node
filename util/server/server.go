@@ -11,8 +11,8 @@ import (
 	tmjson "github.com/cometbft/cometbft/libs/json"
 	tmtypes "github.com/cometbft/cometbft/types"
 	"github.com/spf13/cast"
+	cflags "pkg.akt.dev/go/cli/flags"
 
-	"github.com/cosmos/cosmos-sdk/client/flags"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -24,10 +24,7 @@ import (
 
 const (
 	// Tendermint full-node start flags
-	flagTraceStore      = "trace-store"
-	flagToFile          = "to-file"
-	FlagModulesToExport = "modules-to-export"
-	FlagOutputDocument  = "output-document"
+	flagTraceStore = "trace-store"
 )
 
 // Commands server commands
@@ -69,7 +66,7 @@ func ExportCmd(appExporter servertypes.AppExporter, defaultNodeHome string) *cob
 			sctx := sdkserver.GetServerContextFromCmd(cmd)
 			config := sctx.Config
 
-			homeDir, _ := cmd.Flags().GetString(flags.FlagHome)
+			homeDir, _ := cmd.Flags().GetString(cflags.FlagHome)
 			config.SetRoot(homeDir)
 
 			if _, err := os.Stat(config.GenesisFile()); os.IsNotExist(err) {
@@ -84,7 +81,7 @@ func ExportCmd(appExporter servertypes.AppExporter, defaultNodeHome string) *cob
 			outFile := os.Stdout
 			var outputDocument string
 
-			if outputDocument, _ = cmd.Flags().GetString(FlagOutputDocument); outputDocument != "-" {
+			if outputDocument, _ = cmd.Flags().GetString(cflags.FlagOutputDocument); outputDocument != "-" {
 				outFile, err = os.Create(outputDocument)
 				if err != nil {
 					return err
@@ -121,10 +118,10 @@ func ExportCmd(appExporter servertypes.AppExporter, defaultNodeHome string) *cob
 				return err
 			}
 
-			height, _ := cmd.Flags().GetInt64(sdkserver.FlagHeight)
-			forZeroHeight, _ := cmd.Flags().GetBool(sdkserver.FlagForZeroHeight)
-			jailAllowedAddrs, _ := cmd.Flags().GetStringSlice(sdkserver.FlagJailAllowedAddrs)
-			modulesToExport, _ := cmd.Flags().GetStringSlice(FlagModulesToExport)
+			height, _ := cmd.Flags().GetInt64(cflags.FlagHeight)
+			forZeroHeight, _ := cmd.Flags().GetBool(cflags.FlagForZeroHeight)
+			jailAllowedAddrs, _ := cmd.Flags().GetStringSlice(cflags.FlagJailAllowedAddrs)
+			modulesToExport, _ := cmd.Flags().GetStringSlice(cflags.FlagModulesToExport)
 
 			exported, err := appExporter(
 				sctx.Logger,
@@ -194,12 +191,12 @@ func ExportCmd(appExporter servertypes.AppExporter, defaultNodeHome string) *cob
 		},
 	}
 
-	cmd.Flags().String(flags.FlagHome, defaultNodeHome, "The application home directory")
-	cmd.Flags().Int64(sdkserver.FlagHeight, -1, "Export state from a particular height (-1 means latest height)")
-	cmd.Flags().Bool(sdkserver.FlagForZeroHeight, false, "Export state to start at height zero (perform preprocessing)")
-	cmd.Flags().StringSlice(sdkserver.FlagJailAllowedAddrs, []string{}, "Comma-separated list of operator addresses of jailed validators to unjail")
-	cmd.Flags().StringSlice(FlagModulesToExport, []string{}, "Comma-separated list of modules to export. If empty, will export all modules")
-	cmd.Flags().String(FlagOutputDocument, "-", "Exported state is written to the given file instead of STDOUT")
+	cmd.Flags().String(cflags.FlagHome, defaultNodeHome, "The application home directory")
+	cmd.Flags().Int64(cflags.FlagHeight, -1, "Export state from a particular height (-1 means latest height)")
+	cmd.Flags().Bool(cflags.FlagForZeroHeight, false, "Export state to start at height zero (perform preprocessing)")
+	cmd.Flags().StringSlice(cflags.FlagJailAllowedAddrs, []string{}, "Comma-separated list of operator addresses of jailed validators to unjail")
+	cmd.Flags().StringSlice(cflags.FlagModulesToExport, []string{}, "Comma-separated list of modules to export. If empty, will export all modules")
+	cmd.Flags().String(cflags.FlagOutputDocument, "-", "Exported state is written to the given file instead of STDOUT")
 
 	return cmd
 }
