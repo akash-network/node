@@ -71,7 +71,7 @@ $ curl -sSfL https://raw.githubusercontent.com/akash-network/node/main/install.s
 Or install a specific version with [GoDownloader](https://github.com/goreleaser/godownloader)
 
 ```sh
-$ curl -sSfL https://raw.githubusercontent.com/akash-network/node/main/install | sh -s -- v0.22.0
+$ curl -sSfL https://raw.githubusercontent.com/akash-network/node/main/install.sh | sh -s -- v0.22.0
 ```
 
 # Roadmap and contributing
