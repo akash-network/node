@@ -4,7 +4,7 @@
 ### macOS
 
 > **WARNING**: macOS uses ancient version of the `make`. Akash's environment uses some tricks available in `make 4`.
-We recommend use homebrew to installs most up-to-date version of the `make`. Keep in mind `make` is keg-only, and you'll need manually add its location to the `PATH`.
+We recommend use homebrew to install most up-to-date version of the `make`. Keep in mind `make` is keg-only, and you'll need manually add its location to the `PATH`.
 Make sure homebrew's make path takes precedence of `/usr/bin`
 
 
