@@ -16,7 +16,7 @@ function get_gotoolchain() {
     if [[ ${gotoolchain} == "" ]]; then
         # determine go toolchain from go version in go.mod
         if which go > /dev/null 2>&1 ; then
-            local_goversion=$(GOTOOLCHAIN=local go version | cut -d ' ' -f 3 | sed 's/go*//' | tr -d '\n')
+            local_goversion=$(GOTOOLCHAIN=local go version | cut -d ' ' -f 3 | sed 's/^go//' | tr -d '\n')
             if [[ $($SEMVER compare "v$local_goversion" v"$goversion") -ge 0 ]]; then
                 goversion=$local_goversion
             else
