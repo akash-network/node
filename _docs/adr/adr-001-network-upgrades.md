@@ -180,7 +180,7 @@ func migrateDeploymentGroup(fromBz []byte, cdc codec.BinaryCodec) codec.ProtoMar
    )
    ```
 2. Once imported, the upgrade will register itself, and `App` will initialize it during startup
-3. To deregister obsolete upgrade simply remove respective import from [upgrades/upgrades.go](../upgrades/upgrades.go)
+3. To deregister obsolete upgrade simply remove respective import from [upgrades/upgrades.go](../../upgrades/upgrades.go)
 
 ##### Testing software upgrade
 1. cd `tests/upgrade`
