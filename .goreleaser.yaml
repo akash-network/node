@@ -115,7 +115,8 @@ archives:
       - akash-windows-amd64
     name_template: "akash_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: false
-    format: zip
+    formats:
+      - zip
     files:
       - none*
   - id: wo/version
@@ -126,7 +127,8 @@ archives:
       - akash-windows-amd64
     name_template: "akash_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: false
-    format: zip
+    formats:
+      - zip
     files:
       - none*
 

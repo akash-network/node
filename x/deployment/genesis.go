@@ -38,7 +38,7 @@ func InitGenesis(ctx sdk.Context, kpr keeper.IKeeper, data *types.GenesisState) 
 	store := ctx.KVStore(kpr.StoreKey())
 
 	for _, record := range data.Deployments {
-		key := keeper.DeploymentKey(record.Deployment.DeploymentID)
+		key := keeper.MustDeploymentKey(keeper.DeploymentStateToPrefix(record.Deployment.State), record.Deployment.DeploymentID)
 
 		store.Set(key, cdc.MustMarshal(&record.Deployment))
 
@@ -48,7 +48,8 @@ func InitGenesis(ctx sdk.Context, kpr keeper.IKeeper, data *types.GenesisState) 
 			if !group.ID().DeploymentID().Equals(record.Deployment.ID()) {
 				panic(types.ErrInvalidGroupID)
 			}
-			gkey := keeper.GroupKey(group.ID())
+
+			gkey := keeper.MustGroupKey(keeper.GroupStateToPrefix(group.State), group.ID())
 			store.Set(gkey, cdc.MustMarshal(&group))
 		}
 	}
@@ -63,6 +64,7 @@ func ExportGenesis(ctx sdk.Context, k keeper.IKeeper) *types.GenesisState {
 	var records []types.GenesisDeployment
 	k.WithDeployments(ctx, func(deployment types.Deployment) bool {
 		groups := k.GetGroups(ctx, deployment.ID())
+
 		records = append(records, types.GenesisDeployment{
 			Deployment: deployment,
 			Groups:     groups,

@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"testing"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 type TestParams struct {
@@ -12,6 +14,7 @@ type TestParams struct {
 	ChainID        string
 	KeyringBackend string
 	From           string
+	FromAddress    sdk.AccAddress
 }
 
 type TestWorker interface {

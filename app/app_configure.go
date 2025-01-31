@@ -67,21 +67,6 @@ func akashModuleBasics() []module.AppModuleBasic {
 	}
 }
 
-func akashKVStoreKeys() []string {
-	return []string{
-		take.StoreKey,
-		escrow.StoreKey,
-		deployment.StoreKey,
-		market.StoreKey,
-		provider.StoreKey,
-		audit.StoreKey,
-		cert.StoreKey,
-		inflation.StoreKey,
-		astaking.StoreKey,
-		agov.StoreKey,
-	}
-}
-
 func akashSubspaces(k paramskeeper.Keeper) paramskeeper.Keeper {
 	k.Subspace(deployment.ModuleName)
 	k.Subspace(market.ModuleName)
@@ -89,19 +74,20 @@ func akashSubspaces(k paramskeeper.Keeper) paramskeeper.Keeper {
 	k.Subspace(astaking.ModuleName)
 	k.Subspace(agov.ModuleName)
 	k.Subspace(take.ModuleName)
+
 	return k
 }
 
 func (app *AkashApp) setAkashKeepers() {
 	app.Keepers.Akash.Take = tkeeper.NewKeeper(
 		app.appCodec,
-		app.keys[take.StoreKey],
+		app.skeys[take.ModuleName],
 		app.GetSubspace(take.ModuleName),
 	)
 
 	app.Keepers.Akash.Escrow = ekeeper.NewKeeper(
 		app.appCodec,
-		app.keys[escrow.StoreKey],
+		app.skeys[escrow.ModuleName],
 		app.Keepers.Cosmos.Bank,
 		app.Keepers.Akash.Take,
 		app.Keepers.Cosmos.Distr,
@@ -110,14 +96,14 @@ func (app *AkashApp) setAkashKeepers() {
 
 	app.Keepers.Akash.Deployment = deployment.NewKeeper(
 		app.appCodec,
-		app.keys[deployment.StoreKey],
+		app.skeys[deployment.ModuleName],
 		app.GetSubspace(deployment.ModuleName),
 		app.Keepers.Akash.Escrow,
 	)
 
 	app.Keepers.Akash.Market = market.NewKeeper(
 		app.appCodec,
-		app.keys[market.StoreKey],
+		app.skeys[market.ModuleName],
 		app.GetSubspace(market.ModuleName),
 		app.Keepers.Akash.Escrow,
 	)
@@ -132,34 +118,34 @@ func (app *AkashApp) setAkashKeepers() {
 
 	app.Keepers.Akash.Provider = provider.NewKeeper(
 		app.appCodec,
-		app.keys[provider.StoreKey],
+		app.skeys[provider.ModuleName],
 	)
 
 	app.Keepers.Akash.Audit = akeeper.NewKeeper(
 		app.appCodec,
-		app.keys[audit.StoreKey],
+		app.skeys[audit.ModuleName],
 	)
 
 	app.Keepers.Akash.Cert = ckeeper.NewKeeper(
 		app.appCodec,
-		app.keys[cert.StoreKey],
+		app.skeys[cert.ModuleName],
 	)
 
 	app.Keepers.Akash.Inflation = ikeeper.NewKeeper(
 		app.appCodec,
-		app.keys[inflation.StoreKey],
+		app.skeys[inflation.ModuleName],
 		app.GetSubspace(inflation.ModuleName),
 	)
 
 	app.Keepers.Akash.Staking = astakingkeeper.NewKeeper(
 		app.appCodec,
-		app.keys[astaking.StoreKey],
+		app.skeys[astaking.ModuleName],
 		app.GetSubspace(astaking.ModuleName),
 	)
 
 	app.Keepers.Akash.Gov = agovkeeper.NewKeeper(
 		app.appCodec,
-		app.keys[agov.StoreKey],
+		app.skeys[agov.ModuleName],
 		app.GetSubspace(agov.ModuleName),
 	)
 }

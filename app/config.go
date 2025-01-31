@@ -3,11 +3,13 @@ package app
 import (
 	simparams "github.com/cosmos/cosmos-sdk/simapp/params"
 	"github.com/cosmos/cosmos-sdk/std"
+	"github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/auth"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/vesting"
+	"github.com/cosmos/cosmos-sdk/x/authz"
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	authzmodule "github.com/cosmos/cosmos-sdk/x/authz/module"
 	"github.com/cosmos/cosmos-sdk/x/bank"
@@ -44,6 +46,16 @@ import (
 	ibchost "github.com/cosmos/ibc-go/v4/modules/core/24-host"
 
 	appparams "github.com/akash-network/node/app/params"
+	"github.com/akash-network/node/x/audit"
+	"github.com/akash-network/node/x/cert"
+	"github.com/akash-network/node/x/deployment"
+	"github.com/akash-network/node/x/escrow"
+	agov "github.com/akash-network/node/x/gov"
+	"github.com/akash-network/node/x/inflation"
+	"github.com/akash-network/node/x/market"
+	"github.com/akash-network/node/x/provider"
+	astaking "github.com/akash-network/node/x/staking"
+	"github.com/akash-network/node/x/take"
 )
 
 var mbasics = module.NewBasicManager(
@@ -102,34 +114,55 @@ func MakeEncodingConfig() simparams.EncodingConfig {
 	return encodingConfig
 }
 
-func kvStoreKeys() map[string]*sdk.KVStoreKey {
-	return sdk.NewKVStoreKeys(
-		append([]string{
-			authtypes.StoreKey,
-			feegrant.StoreKey,
-			authzkeeper.StoreKey,
-			banktypes.StoreKey,
-			stakingtypes.StoreKey,
-			minttypes.StoreKey,
-			distrtypes.StoreKey,
-			slashingtypes.StoreKey,
-			govtypes.StoreKey,
-			paramstypes.StoreKey,
-			ibchost.StoreKey,
-			upgradetypes.StoreKey,
-			evidencetypes.StoreKey,
-			ibctransfertypes.StoreKey,
-			capabilitytypes.StoreKey,
-		},
-			akashKVStoreKeys()...,
-		)...,
-	)
+func (m ModulesStoreKeys) Keys() map[string]*sdk.KVStoreKey {
+	res := make(map[string]*sdk.KVStoreKey)
+
+	for _, key := range m {
+		res[key.Name()] = key
+	}
+
+	return res
 }
 
-func transientStoreKeys() map[string]*sdk.TransientStoreKey {
-	return sdk.NewTransientStoreKeys(paramstypes.TStoreKey)
+func modulesStoreKeys() ModulesStoreKeys {
+	return ModulesStoreKeys{
+		authtypes.ModuleName:        types.NewKVStoreKey(authtypes.StoreKey),
+		feegrant.ModuleName:         types.NewKVStoreKey(feegrant.StoreKey),
+		authz.ModuleName:            types.NewKVStoreKey(authzkeeper.StoreKey),
+		banktypes.ModuleName:        types.NewKVStoreKey(banktypes.StoreKey),
+		stakingtypes.ModuleName:     types.NewKVStoreKey(stakingtypes.StoreKey),
+		minttypes.ModuleName:        types.NewKVStoreKey(minttypes.StoreKey),
+		distrtypes.ModuleName:       types.NewKVStoreKey(distrtypes.StoreKey),
+		slashingtypes.ModuleName:    types.NewKVStoreKey(slashingtypes.StoreKey),
+		govtypes.ModuleName:         types.NewKVStoreKey(govtypes.StoreKey),
+		paramstypes.ModuleName:      types.NewKVStoreKey(paramstypes.StoreKey),
+		ibchost.ModuleName:          types.NewKVStoreKey(ibchost.StoreKey),
+		upgradetypes.ModuleName:     types.NewKVStoreKey(upgradetypes.StoreKey),
+		evidencetypes.ModuleName:    types.NewKVStoreKey(evidencetypes.StoreKey),
+		ibctransfertypes.ModuleName: types.NewKVStoreKey(ibctransfertypes.StoreKey),
+		capabilitytypes.ModuleName:  types.NewKVStoreKey(capabilitytypes.StoreKey),
+		// akash modules
+		take.ModuleName:       types.NewKVStoreKey(take.StoreKey),
+		escrow.ModuleName:     types.NewKVStoreKey(escrow.StoreKey),
+		deployment.ModuleName: types.NewKVStoreKey(deployment.StoreKey),
+		market.ModuleName:     types.NewKVStoreKey(market.StoreKey),
+		provider.ModuleName:   types.NewKVStoreKey(provider.StoreKey),
+		audit.ModuleName:      types.NewKVStoreKey(audit.StoreKey),
+		cert.ModuleName:       types.NewKVStoreKey(cert.StoreKey),
+		inflation.ModuleName:  types.NewKVStoreKey(inflation.StoreKey),
+		astaking.ModuleName:   types.NewKVStoreKey(astaking.StoreKey),
+		agov.ModuleName:       types.NewKVStoreKey(agov.StoreKey),
+	}
 }
 
-func memStoreKeys() map[string]*sdk.MemoryStoreKey {
-	return sdk.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
+func modulesTransientKeys() ModulesTransientKeys {
+	return ModulesTransientKeys{
+		paramstypes.ModuleName: sdk.NewTransientStoreKey(paramstypes.TStoreKey),
+	}
+}
+
+func modulesMemoryKeys() ModulesMemoryKeys {
+	return ModulesMemoryKeys{
+		capabilitytypes.ModuleName: types.NewMemoryStoreKey(capabilitytypes.MemStoreKey),
+	}
 }

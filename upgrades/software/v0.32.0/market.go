@@ -32,7 +32,7 @@ func (m marketMigrations) handler(ctx sdk.Context) error {
 		var val types.Lease
 		m.Codec().MustUnmarshal(iter.Value(), &val)
 
-		store.Delete(v1beta4.SecondaryLeaseKeyByProvider(val.LeaseID))
+		store.Delete(v1beta4.SecondaryLeaseKeyByProviderLegacy(val.LeaseID))
 	}
 
 	return nil

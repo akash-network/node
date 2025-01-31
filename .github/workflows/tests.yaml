@@ -182,15 +182,31 @@ jobs:
   network-upgrade-names:
     runs-on: upgrade-tester
     steps:
+      - name: Cleanup build folder
+        run: |
+          sudo rm -rf ./* || true
+          sudo rm -rf ./.??* || true
       - uses: actions/checkout@v4
       - run: git fetch --prune --unshallow
       - name: Detect required Go version
         run: |
           toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
           echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
+      - name: 'Setup jq'
+        uses: dcarbone/install-jq-action@v3
+      - name: Setup npm
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
       - uses: actions/setup-go@v5
         with:
           go-version: "${{ env.GOVERSION }}"
+      - name: Setup docker user
+        run: |
+          DOCKER_USER=$(id -u)
+          DOCKER_GROUP=$(id -g)
+            echo "DOCKER_USER=$DOCKER_USER" >> $GITHUB_ENV
+            echo "DOCKER_GROUP=$DOCKER_GROUP" >> $GITHUB_ENV
       - name: set environment
         uses: HatsuneMiku3939/direnv-action@v1
       - name: Ensure only directories exists in upgrades dir
@@ -209,15 +225,31 @@ jobs:
   network-upgrade:
     runs-on: upgrade-tester
     steps:
+      - name: Cleanup build folder
+        run: |
+          sudo rm -rf ./* || true
+          sudo rm -rf ./.??* || true
       - uses: actions/checkout@v4
       - run: git fetch --prune --unshallow
       - name: Detect required Go version
         run: |
           toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
           echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
+      - name: 'Setup jq'
+        uses: dcarbone/install-jq-action@v3
+      - name: Setup npm
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
       - uses: actions/setup-go@v5
         with:
           go-version: "${{ env.GOVERSION }}"
+      - name: Setup docker user
+        run: |
+          DOCKER_USER=$(id -u)
+          DOCKER_GROUP=$(id -g)
+            echo "DOCKER_USER=$DOCKER_USER" >> $GITHUB_ENV
+            echo "DOCKER_GROUP=$DOCKER_GROUP" >> $GITHUB_ENV
       - name: set environment
         uses: HatsuneMiku3939/direnv-action@v1
       - name: configure variables
@@ -237,6 +269,7 @@ jobs:
           name: validators-logs
           path: |
             .cache/run/upgrade/validators/logs/*.log
+          include-hidden-files: true
 
   dispatch-release:
     runs-on: ubuntu-latest
