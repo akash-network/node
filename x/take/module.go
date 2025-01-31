@@ -138,7 +138,7 @@ func (am AppModule) LegacyQuerierHandler(legacyQuerierCdc *codec.LegacyAmino) sd
 }
 
 // RegisterServices registers the module's servicess
-func (am AppModule) RegisterServices(cfg module.Configurator) {
+func (am AppModule) RegisterServices(_ module.Configurator) {
 }
 
 // RegisterQueryService registers a GRPC query service to respond to the

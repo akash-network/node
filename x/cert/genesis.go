@@ -42,7 +42,7 @@ func InitGenesis(ctx sdk.Context, kpr keeper.Keeper, data *types.GenesisState) [
 			panic(err.Error())
 		}
 
-		key := keeper.CertificateKey(types.CertID{
+		key := keeper.MustCertificateKey(record.Certificate.State, types.CertID{
 			Owner:  owner,
 			Serial: *cert.SerialNumber,
 		})
