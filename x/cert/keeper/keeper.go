@@ -120,7 +120,7 @@ func (k keeper) GetCertificateByID(ctx sdk.Context, id types.CertID) (types.Cert
 // WithCertificates iterates all certificates
 func (k keeper) WithCertificates(ctx sdk.Context, fn func(id types.CertID, certificate types.CertificateResponse) bool) {
 	store := ctx.KVStore(k.skey)
-	iter := store.Iterator(nil, nil)
+	iter := sdk.KVStorePrefixIterator(store, types.PrefixCertificateID())
 
 	defer func() {
 		_ = iter.Close()
@@ -210,7 +210,7 @@ func (k keeper) mustUnmarshal(key, val []byte) types.CertificateResponse {
 func (k keeper) unmarshalIterator(key, val []byte) (types.CertificateResponse, error) {
 	id, err := ParseCertID(types.PrefixCertificateID(), key)
 	if err != nil {
-		panic(err)
+		return types.CertificateResponse{}, err
 	}
 
 	item := types.CertificateResponse{

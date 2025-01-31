@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -35,7 +36,7 @@ import (
 )
 
 const (
-	blockTimeWindow = 7 * time.Second
+	blockTimeWindow = 20 * time.Minute
 )
 
 type nodeEvent int
@@ -65,7 +66,8 @@ const (
 const (
 	nodeTestStagePreUpgrade nodeTestStage = iota
 	nodeTestStageUpgrade
-	nodeTestStagePostUpgrade
+	nodeTestStagePostUpgrade1
+	nodeTestStagePostUpgrade2
 )
 
 const (
@@ -86,9 +88,10 @@ type publisher interface {
 
 var (
 	nodeTestStageMapStr = map[nodeTestStage]string{
-		nodeTestStagePreUpgrade:  "preupgrade",
-		nodeTestStageUpgrade:     "upgrade",
-		nodeTestStagePostUpgrade: "postupgrade",
+		nodeTestStagePreUpgrade:   "preupgrade",
+		nodeTestStageUpgrade:      "upgrade",
+		nodeTestStagePostUpgrade1: "postupgrade1",
+		nodeTestStagePostUpgrade2: "postupgrade2",
 	}
 
 	testModuleStatusMapStr = map[testModuleStatus]string{
@@ -161,6 +164,13 @@ type nodeStatus struct {
 	} `json:"SyncInfo"`
 }
 
+type testMigration struct {
+	From string `json:"from"`
+	To   string `json:"to"`
+}
+
+type moduleMigrationVersions []testMigration
+
 type testCase struct {
 	Modules struct {
 		Added   []string `json:"added"`
@@ -170,10 +180,7 @@ type testCase struct {
 			To   string `json:"to"`
 		} `json:"renamed"`
 	} `json:"modules"`
-	Migrations map[string]struct {
-		From string `json:"from"`
-		To   string `json:"to"`
-	} `json:"migrations"`
+	Migrations map[string]moduleMigrationVersions `json:"migrations"`
 }
 
 type testCases map[string]testCase
@@ -189,7 +196,7 @@ type validatorParams struct {
 	rpcPort     uint16
 	upgradeName string
 	env         []string
-	pub         pubsub.Publisher
+	bus         pubsub.Publisher
 }
 
 type validator struct {
@@ -234,12 +241,18 @@ type upgradeTest struct {
 	validators        map[string]*validator
 }
 
+type nodePortsRPC struct {
+	port uint16
+	grpc uint16
+}
 type nodeInitParams struct {
-	nodeID    string
-	homedir   string
-	p2pPort   uint16
-	rpcPort   uint16
-	pprofPort uint16
+	nodeID      string
+	homedir     string
+	rpc         nodePortsRPC
+	p2pPort     uint16
+	grpcPort    uint16
+	grpcWebPort uint16
+	pprofPort   uint16
 }
 
 var (
@@ -372,23 +385,30 @@ func TestUpgrade(t *testing.T) {
 				fmt.Sprintf("AKASH_FROM=%s", cfg.Work.Key),
 				fmt.Sprintf("AKASH_GAS_PRICES=0.0025uakt"),
 				fmt.Sprintf("AKASH_GAS_ADJUSTMENT=2"),
-				// auto is failing with rpc error: code = Unknown desc = unknown query path: unknown request
-				fmt.Sprintf("AKASH_GAS=500000"),
+				fmt.Sprintf("AKASH_P2P_PEX=false"),
+				fmt.Sprintf("AKASH_MINIMUM_GAS_PRICES=0.0025uakt"),
+				fmt.Sprintf("AKASH_GAS=auto"),
 				fmt.Sprintf("AKASH_YES=true"),
 			},
 		}
 
 		if cfg.Work.Home == name {
+			cmdr = valCmd
+
+			output, err := cmdr.execute(ctx, fmt.Sprintf("keys show %s -a", cfg.Work.Key))
+			require.NoError(t, err)
+
+			addr, err := sdk.AccAddressFromBech32(strings.Trim(string(output), "\n"))
+			require.NoError(t, err)
+
+			t.Logf("validator address: \"%s\"", addr.String())
+
 			postUpgradeParams.Home = homedir
 			postUpgradeParams.ChainID = cfg.ChainID
 			postUpgradeParams.Node = "tcp://127.0.0.1:26657"
 			postUpgradeParams.KeyringBackend = "test"
 			postUpgradeParams.From = cfg.Work.Key
-
-			cmdr = valCmd
-
-			_, err = cmdr.execute(ctx, fmt.Sprintf("keys show %s -a", cfg.Work.Key))
-			require.NoError(t, err)
+			postUpgradeParams.FromAddress = addr
 		}
 
 		cmdr.env = append(cmdr.env, fmt.Sprintf("AKASH_OUTPUT=json"))
@@ -408,13 +428,20 @@ func TestUpgrade(t *testing.T) {
 		p2pPort := 26656 + uint16(idx*2)
 
 		initParams[name] = nodeInitParams{
-			nodeID:    strings.TrimSpace(string(res)),
-			homedir:   homedir,
-			p2pPort:   p2pPort,
-			rpcPort:   p2pPort + 1,
-			pprofPort: 6060 + uint16(idx),
+			nodeID:  strings.TrimSpace(string(res)),
+			homedir: homedir,
+			p2pPort: p2pPort,
+			rpc: nodePortsRPC{
+				port: p2pPort + 1,
+				grpc: 9092 + uint16(idx*3),
+			},
+			grpcPort:    9090 + uint16(idx*3),
+			grpcWebPort: 9091 + uint16(idx*3),
+			pprofPort:   6060 + uint16(idx),
 		}
 	}
+
+	listenAddr := "127.0.0.1"
 
 	for name, params := range initParams {
 		var unconditionalPeerIDs string
@@ -426,7 +453,7 @@ func TestUpgrade(t *testing.T) {
 			}
 
 			unconditionalPeerIDs += params1.nodeID + ","
-			persistentPeers += fmt.Sprintf("%s@127.0.0.1:%d,", params1.nodeID, params1.p2pPort)
+			persistentPeers += fmt.Sprintf("%s@%s:%d,", params1.nodeID, listenAddr, params1.p2pPort)
 		}
 
 		validatorsParams[name] = validatorParams{
@@ -437,30 +464,33 @@ func TestUpgrade(t *testing.T) {
 			cosmovisor:  *cosmovisor,
 			isRPC:       cfg.Work.Home == name,
 			p2pPort:     params.p2pPort,
-			rpcPort:     params.rpcPort,
+			rpcPort:     params.rpc.port,
 			upgradeName: *upgradeName,
-			pub:         bus,
+			bus:         bus,
 			env: []string{
-				fmt.Sprintf("DAEMON_NAME=akash"),
 				fmt.Sprintf("DAEMON_HOME=%s", params.homedir),
-				fmt.Sprintf("DAEMON_RESTART_AFTER_UPGRADE=true"),
-				fmt.Sprintf("DAEMON_ALLOW_DOWNLOAD_BINARIES=true"),
-				fmt.Sprintf("DAEMON_RESTART_DELAY=3s"),
-				fmt.Sprintf("COSMOVISOR_COLOR_LOGS=false"),
-				fmt.Sprintf("UNSAFE_SKIP_BACKUP=true"),
 				fmt.Sprintf("HOME=%s", *workdir),
 				fmt.Sprintf("AKASH_HOME=%s", params.homedir),
 				fmt.Sprintf("AKASH_CHAIN_ID=%s", cfg.ChainID),
-				fmt.Sprintf("AKASH_KEYRING_BACKEND=test"),
-				fmt.Sprintf("AKASH_P2P_SEEDS=%s", strings.TrimSuffix(persistentPeers, ",")),
 				fmt.Sprintf("AKASH_P2P_PERSISTENT_PEERS=%s", strings.TrimSuffix(persistentPeers, ",")),
 				fmt.Sprintf("AKASH_P2P_UNCONDITIONAL_PEER_IDS=%s", strings.TrimSuffix(unconditionalPeerIDs, ",")),
-				fmt.Sprintf("AKASH_P2P_LADDR=tcp://127.0.0.1:%d", params.p2pPort),
-				fmt.Sprintf("AKASH_RPC_LADDR=tcp://127.0.0.1:%d", params.rpcPort),
-				fmt.Sprintf("AKASH_RPC_PPROF_LADDR=localhost:%d", params.pprofPort),
+				fmt.Sprintf("AKASH_P2P_LADDR=tcp://%s:%d", listenAddr, params.p2pPort),
+				fmt.Sprintf("AKASH_RPC_LADDR=tcp://%s:%d", listenAddr, params.rpc.port),
+				// fmt.Sprintf("AKASH_RPC_GRPC_LADDR=tcp://%s:%d", listenAddr, params.rpc.grpc),
+				fmt.Sprintf("AKASH_RPC_PPROF_LADDR=%s:%d", listenAddr, params.pprofPort),
+				fmt.Sprintf("AKASH_GRPC_ADDRESS=%s:%d", listenAddr, params.grpcPort),
+				fmt.Sprintf("AKASH_GRPC_WEB_ADDRESS=%s:%d", listenAddr, params.grpcWebPort),
+				"DAEMON_NAME=akash",
+				"DAEMON_RESTART_AFTER_UPGRADE=true",
+				"DAEMON_ALLOW_DOWNLOAD_BINARIES=true",
+				"DAEMON_RESTART_DELAY=3s",
+				"COSMOVISOR_COLOR_LOGS=false",
+				"UNSAFE_SKIP_BACKUP=true",
+				"AKASH_KEYRING_BACKEND=test",
 				"AKASH_P2P_PEX=true",
 				"AKASH_P2P_ADDR_BOOK_STRICT=false",
 				"AKASH_P2P_ALLOW_DUPLICATE_IP=true",
+				"AKASH_P2P_SEEDS=",
 				"AKASH_MINIMUM_GAS_PRICES=0.0025uakt",
 				"AKASH_FAST_SYNC=false",
 				"AKASH_LOG_COLOR=false",
@@ -468,8 +498,8 @@ func TestUpgrade(t *testing.T) {
 				"AKASH_LOG_FORMAT=plain",
 				"AKASH_STATESYNC_ENABLE=false",
 				"AKASH_TX_INDEX_INDEXER=null",
-				"AKASH_GRPC_ENABLE=false",
-				"AKASH_GRPC_WEB_ENABLE=false",
+				"AKASH_GRPC_ENABLE=true",
+				"AKASH_GRPC_WEB_ENABLE=true",
 			},
 		}
 	}
@@ -505,14 +535,15 @@ func TestUpgrade(t *testing.T) {
 		}(name)
 	}
 
+	t.Logf("waiting for validator(s) to complete tasks")
 	err = group.Wait()
+	t.Logf("all validators finished")
 	assert.NoError(t, err)
 
 	fail := false
 
 	for val, vl := range validators {
-		select {
-		case errs := <-vl.testErrsCh:
+		for errs := range vl.testErrsCh {
 			if len(errs) > 0 {
 				for _, msg := range errs {
 					t.Logf("[%s] %s", val, msg)
@@ -520,10 +551,10 @@ func TestUpgrade(t *testing.T) {
 
 				fail = true
 			}
-
-		case <-vl.ctx.Done():
 		}
 	}
+
+	bus.Close()
 
 	if fail {
 		t.Fail()
@@ -588,8 +619,10 @@ loop:
 						})
 
 						if !result {
-							l.t.Error("post upgrade test handler failed")
+							l.t.Error("post upgrade test FAIL")
 							return fmt.Errorf("post-upgrade check failed")
+						} else {
+							l.t.Log("post upgrade test PASS")
 						}
 
 						return nil
@@ -709,7 +742,18 @@ func (l *upgradeTest) submitUpgradeProposal() error {
 		return err
 	}
 
-	cmdRes, err = l.cmdr.execute(l.ctx, "query gov proposals")
+	// give it two blocks to make sure proposal has been commited
+	tmctx, cancel := context.WithTimeout(l.ctx, 12*time.Second)
+	defer cancel()
+
+	<-tmctx.Done()
+
+	if !errors.Is(tmctx.Err(), context.DeadlineExceeded) {
+		l.t.Logf("error waiting for deadline\n")
+		return tmctx.Err()
+	}
+
+	cmdRes, err = l.cmdr.execute(l.ctx, "query gov proposals --status=voting_period")
 	if err != nil {
 		l.t.Logf("executing cmd failed: %s\n", string(cmdRes))
 		return err
@@ -798,7 +842,7 @@ func (l *validator) run() error {
 
 	cmd := exec.CommandContext(l.ctx, l.params.cosmovisor, "run", "start", fmt.Sprintf("--home=%s", l.params.homedir))
 
-	cmd.Stdout = io.MultiWriter(lStdout, wStdout)
+	cmd.Stdout = io.MultiWriter(wStdout, lStdout)
 	cmd.Stderr = io.MultiWriter(lStderr)
 
 	cmd.Env = l.params.env
@@ -809,6 +853,9 @@ func (l *validator) run() error {
 	}
 
 	l.group.Go(func() error {
+		defer l.t.Logf("[%s] log scanner finished", l.params.name)
+		l.t.Logf("[%s] log scanner started", l.params.name)
+
 		defer func() {
 			if r := recover(); r != nil {
 				l.t.Fatal(r)
@@ -819,6 +866,9 @@ func (l *validator) run() error {
 	})
 
 	l.group.Go(func() error {
+		defer l.t.Logf("[%s] test case watcher finished", l.params.name)
+		l.t.Logf("[%s] test case watcher started", l.params.name)
+
 		defer func() {
 			if r := recover(); r != nil {
 				l.t.Fatal(r)
@@ -834,6 +884,9 @@ func (l *validator) run() error {
 	})
 
 	l.group.Go(func() error {
+		defer l.t.Logf("[%s] stdout reader finished", l.params.name)
+		l.t.Logf("[%s] stdout reader started", l.params.name)
+
 		defer func() {
 			if r := recover(); r != nil {
 				l.t.Fatal(r)
@@ -848,6 +901,9 @@ func (l *validator) run() error {
 	})
 
 	l.group.Go(func() error {
+		defer l.t.Logf("[%s] blocks watchdog finished", l.params.name)
+		l.t.Logf("[%s] blocks watchdog started", l.params.name)
+
 		defer func() {
 			if r := recover(); r != nil {
 				l.t.Fatal(r)
@@ -859,18 +915,23 @@ func (l *validator) run() error {
 			return err
 		}
 
+		defer sub.Close()
+
 		return l.blocksWatchdog(l.ctx, sub)
 	})
 
 	// state machine
 	l.group.Go(func() error {
+		defer l.t.Logf("[%s] state machine finished", l.params.name)
+		l.t.Logf("[%s] state machine started", l.params.name)
+
 		defer func() {
 			if r := recover(); r != nil {
 				l.t.Fatal(r)
 			}
 		}()
 
-		return l.stateMachine(l.pubsub)
+		return l.stateMachine()
 	})
 
 	err = cmd.Wait()
@@ -883,21 +944,22 @@ func (l *validator) run() error {
 	select {
 	case <-l.upgradeSuccessful:
 		err = nil
+		l.t.Logf("[%s] all workers finished", l.params.name)
 	default:
-		l.t.Logf("[%s] cosmovisor finished with error. check %[1]s-stderr.log", l.params.name)
+		l.t.Logf("[%s] cosmovisor finished with error. check %s", l.params.name, lStderr.Name())
 	}
 
 	return err
 }
 
-func (l *validator) stateMachine(bus pubsub.Bus) error {
+func (l *validator) stateMachine() error {
 	defer l.cancel()
 
 	var err error
 
 	var sub pubsub.Subscriber
 
-	sub, err = bus.Subscribe()
+	sub, err = l.pubsub.Subscribe()
 	if err != nil {
 		return err
 	}
@@ -908,7 +970,7 @@ func (l *validator) stateMachine(bus pubsub.Bus) error {
 
 	wdCtrl := func(ctx context.Context, ctrl watchdogCtrl) {
 		resp := make(chan struct{}, 1)
-		_ = bus.Publish(wdReq{
+		_ = l.pubsub.Publish(wdReq{
 			event: ctrl,
 			resp:  resp,
 		})
@@ -932,7 +994,7 @@ loop:
 				case nodeEventStart:
 					l.t.Logf("[%s][%s]: node started", l.params.name, nodeTestStageMapStr[stage])
 					if stage == nodeTestStageUpgrade {
-						stage = nodeTestStagePostUpgrade
+						stage = nodeTestStagePostUpgrade1
 						blocksCount = 0
 						replayDone = false
 					}
@@ -956,14 +1018,15 @@ loop:
 					}
 
 					if stage == nodeTestStagePreUpgrade && blocksCount == 1 {
-						_ = l.params.pub.Publish(nodePreUpgradeReady{
+						_ = l.params.bus.Publish(nodePreUpgradeReady{
 							name: l.params.name,
 						})
-					} else if stage == nodeTestStagePostUpgrade && blocksCount == 10 {
+					} else if stage == nodeTestStagePostUpgrade1 && blocksCount >= 10 {
+						stage = nodeTestStagePostUpgrade2
 						l.t.Logf("[%s][%s]: counted 10 blocks. signaling has performed upgrade", l.params.name, nodeTestStageMapStr[stage])
 						l.upgradeSuccessful <- struct{}{}
 
-						_ = l.params.pub.Publish(nodePostUpgradeReady{
+						_ = l.params.bus.Publish(nodePostUpgradeReady{
 							name: l.params.name,
 						})
 					}
@@ -971,11 +1034,13 @@ loop:
 					l.t.Logf("[%s][%s]: node detected upgrade", l.params.name, nodeTestStageMapStr[stage])
 					stage = nodeTestStageUpgrade
 					wdCtrl(l.ctx, watchdogCtrlPause)
+				default:
 				}
 			case eventShutdown:
 				l.t.Logf("[%s][%s]: received shutdown signal", l.params.name, nodeTestStageMapStr[stage])
 				wdCtrl(l.ctx, watchdogCtrlStop)
 				break loop
+			default:
 			}
 		}
 	}
@@ -988,6 +1053,10 @@ loop:
 }
 
 func (l *validator) watchTestCases(subs pubsub.Subscriber) error {
+	defer func() {
+		close(l.testErrsCh)
+	}()
+
 	added := make(map[string]testModuleStatus)
 	removed := make(map[string]testModuleStatus)
 	migrations := make(map[string]*moduleMigrationStatus)
@@ -1002,11 +1071,8 @@ func (l *validator) watchTestCases(subs pubsub.Subscriber) error {
 
 	for name, vals := range l.tConfig.Migrations {
 		migrations[name] = &moduleMigrationStatus{
-			status: testModuleStatusNotChecked,
-			expected: moduleMigrationVersions{
-				from: vals.From,
-				to:   vals.To,
-			},
+			status:   testModuleStatusNotChecked,
+			expected: vals,
 		}
 	}
 
@@ -1041,9 +1107,12 @@ loop:
 						m := migrations[ctx.name]
 
 						m.status = testModuleStatusChecked
-						m.actual.to = ctx.to
-						m.actual.from = ctx.from
+						m.actual = append(m.actual, testMigration{
+							From: ctx.from,
+							To:   ctx.to,
+						})
 					}
+				default:
 				}
 			}
 		}
@@ -1069,16 +1138,22 @@ loop:
 		switch module.status {
 		case testModuleStatusChecked:
 			if !module.expected.compare(module.actual) {
-				merr := fmt.Sprintf("migration for module (%s) finished with mismatched versions:\n"+
-					"\texpected:\n"+
-					"\t\tfrom: %s\n"+
-					"\t\tto:   %s\n"+
-					"\tactual:\n"+
-					"\t\tfrom: %s\n"+
-					"\t\tto:   %s",
-					name,
-					module.expected.from, module.expected.to,
-					module.actual.from, module.actual.to)
+				merr := "migration for module (%s) finished with mismatched versions:\n"
+				merr += "\texpected:\n"
+
+				for _, m := range module.expected {
+					merr += fmt.Sprintf(
+						"\t\t- from: %s\n"+
+							"\t\t  to:   %s\n", m.From, m.To)
+				}
+
+				merr += "\tactual:\n"
+
+				for _, m := range module.actual {
+					merr += fmt.Sprintf(
+						"\t\t- from: %s\n"+
+							"\t\t  to:   %s\n", m.From, m.To)
+				}
 
 				errs = append(errs, merr)
 			}
@@ -1101,15 +1176,24 @@ func (l *validator) blocksWatchdog(ctx context.Context, sub pubsub.Subscriber) e
 
 	defer func() {
 		if err != nil {
-			l.t.Logf("blocksWatchdog finished with error: %s", err.Error())
+			l.t.Logf("[%s] %s", l.params.name, err.Error())
+		} else {
+			l.t.Logf("[%s] blocksWatchdog finished", l.params.name)
 		}
 	}()
 
+	// first few blocks may take a while to produce.
+	// give a dog generous timeout on them
+
+	blockWindow := 60 * time.Minute
+
+	blocksTm := time.NewTicker(blockWindow)
+	blocksTm.Stop()
+
+	blocks := 0
+
 loop:
 	for {
-		blocksTm := time.NewTicker(blockTimeWindow)
-		blocksTm.Stop()
-
 		select {
 		case <-ctx.Done():
 			break loop
@@ -1125,11 +1209,21 @@ loop:
 				case watchdogCtrlStart:
 					fallthrough
 				case watchdogCtrlBlock:
-					blocksTm.Reset(blockTimeWindow)
+					blocks++
+
+					// if blocks > 3 {
+					// 	blockWindow = blockTimeWindow
+					// }
+
+					blocksTm.Reset(blockWindow)
 				case watchdogCtrlPause:
 					blocksTm.Stop()
+					blocks = 0
+					blockWindow = 20 * time.Minute
 				case watchdogCtrlStop:
+					blocks = 0
 					blocksTm.Stop()
+					blockWindow = 20 * time.Minute
 					break loop
 				}
 			}
@@ -1155,7 +1249,7 @@ func (l *validator) scanner(stdout io.Reader, p publisher) error {
 		return err
 	}
 
-	rModuleMigration, err := regexp.Compile(`^` + migratingModule + `(\w+) from version (\d+) to version (\d+)$`)
+	rModuleMigration, err := regexp.Compile(`^` + migratingModule + `(\w+) from version (\d+) to version (\d+).*`)
 	if err != nil {
 		return err
 	}
@@ -1202,11 +1296,6 @@ scan:
 	return nil
 }
 
-type moduleMigrationVersions struct {
-	from string
-	to   string
-}
-
 type moduleMigrationStatus struct {
 	status   testModuleStatus
 	expected moduleMigrationVersions
@@ -1214,5 +1303,15 @@ type moduleMigrationStatus struct {
 }
 
 func (v moduleMigrationVersions) compare(to moduleMigrationVersions) bool {
-	return (v.from == to.from) && (v.to == v.to)
+	if len(v) != len(to) {
+		return false
+	}
+
+	for i := range v {
+		if (v[i].From != to[i].From) || (v[i].To != to[i].To) {
+			return false
+		}
+	}
+
+	return true
 }
