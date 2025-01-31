@@ -4,6 +4,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/errors"
 
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
 
@@ -27,8 +28,6 @@ type IKeeper interface {
 	OnLeaseClosed(ctx sdk.Context, id types.GroupID) (types.Group, error)
 	GetParams(ctx sdk.Context) (params types.Params)
 	SetParams(ctx sdk.Context, params types.Params)
-	updateDeployment(ctx sdk.Context, obj types.Deployment)
-
 	NewQuerier() Querier
 }
 
@@ -71,9 +70,9 @@ func (k Keeper) StoreKey() sdk.StoreKey {
 func (k Keeper) GetDeployment(ctx sdk.Context, id types.DeploymentID) (types.Deployment, bool) {
 	store := ctx.KVStore(k.skey)
 
-	key := DeploymentKey(id)
+	key := k.findDeployment(ctx, id)
 
-	if !store.Has(key) {
+	if len(key) == 0 {
 		return types.Deployment{}, false
 	}
 
@@ -90,9 +89,9 @@ func (k Keeper) GetDeployment(ctx sdk.Context, id types.DeploymentID) (types.Dep
 func (k Keeper) GetGroup(ctx sdk.Context, id types.GroupID) (types.Group, bool) {
 	store := ctx.KVStore(k.skey)
 
-	key := GroupKey(id)
+	key := k.findGroup(ctx, id)
 
-	if !store.Has(key) {
+	if len(key) == 0 {
 		return types.Group{}, false
 	}
 
@@ -108,19 +107,34 @@ func (k Keeper) GetGroup(ctx sdk.Context, id types.GroupID) (types.Group, bool) 
 // GetGroups returns all groups of a deployment with given DeploymentID from deployment store
 func (k Keeper) GetGroups(ctx sdk.Context, id types.DeploymentID) []types.Group {
 	store := ctx.KVStore(k.skey)
-	key := groupsKey(id)
+	keys := [][]byte{
+		MustGroupsKey(GroupStateOpenPrefix, id),
+		MustGroupsKey(GroupStatePausedPrefix, id),
+		MustGroupsKey(GroupStateInsufficientFundsPrefix, id),
+		MustGroupsKey(GroupStateClosedPrefix, id),
+	}
 
 	var vals []types.Group
 
-	iter := sdk.KVStorePrefixIterator(store, key)
+	iters := make([]sdk.Iterator, 0, len(keys))
 
-	for ; iter.Valid(); iter.Next() {
-		var val types.Group
-		k.cdc.MustUnmarshal(iter.Value(), &val)
-		vals = append(vals, val)
+	defer func() {
+		for _, iter := range iters {
+			_ = iter.Close()
+		}
+	}()
+
+	for _, key := range keys {
+		iter := sdk.KVStorePrefixIterator(store, key)
+		iters = append(iters, iter)
+
+		for ; iter.Valid(); iter.Next() {
+			var val types.Group
+			k.cdc.MustUnmarshal(iter.Value(), &val)
+			vals = append(vals, val)
+		}
 	}
 
-	iter.Close()
 	return vals
 }
 
@@ -128,11 +142,13 @@ func (k Keeper) GetGroups(ctx sdk.Context, id types.DeploymentID) []types.Group 
 func (k Keeper) Create(ctx sdk.Context, deployment types.Deployment, groups []types.Group) error {
 	store := ctx.KVStore(k.skey)
 
-	key := DeploymentKey(deployment.ID())
+	key := k.findDeployment(ctx, deployment.ID())
 
-	if store.Has(key) {
+	if len(key) != 0 {
 		return types.ErrDeploymentExists
 	}
+
+	key = MustDeploymentKey(DeploymentStateToPrefix(deployment.State), deployment.ID())
 
 	store.Set(key, k.cdc.MustMarshal(&deployment))
 
@@ -142,7 +158,12 @@ func (k Keeper) Create(ctx sdk.Context, deployment types.Deployment, groups []ty
 		if !group.ID().DeploymentID().Equals(deployment.ID()) {
 			return types.ErrInvalidGroupID
 		}
-		gkey := GroupKey(group.ID())
+
+		gkey, err := GroupKey(GroupStateToPrefix(group.State), group.ID())
+		if err != nil {
+			return errors.Wrap(err, "failed to create group key")
+		}
+
 		store.Set(gkey, k.cdc.MustMarshal(&group))
 	}
 
@@ -159,71 +180,93 @@ func (k Keeper) Create(ctx sdk.Context, deployment types.Deployment, groups []ty
 // UpdateDeployment updates deployment details
 func (k Keeper) UpdateDeployment(ctx sdk.Context, deployment types.Deployment) error {
 	store := ctx.KVStore(k.skey)
-	key := DeploymentKey(deployment.ID())
 
-	if !store.Has(key) {
+	key := k.findDeployment(ctx, deployment.ID())
+
+	if len(key) == 0 {
 		return types.ErrDeploymentNotFound
 	}
+
+	key = MustDeploymentKey(DeploymentStateToPrefix(deployment.State), deployment.ID())
+	store.Set(key, k.cdc.MustMarshal(&deployment))
 
 	ctx.EventManager().EmitEvent(
 		types.NewEventDeploymentUpdated(deployment.ID(), deployment.Version).
 			ToSDKEvent(),
 	)
 
-	store.Set(key, k.cdc.MustMarshal(&deployment))
 	return nil
 }
 
-// UpdateDeployment updates deployment details
+// CloseDeployment updates deployment details
 func (k Keeper) CloseDeployment(ctx sdk.Context, deployment types.Deployment) {
 	if deployment.State == types.DeploymentClosed {
 		return
 	}
 
 	store := ctx.KVStore(k.skey)
-	key := DeploymentKey(deployment.ID())
+	key := k.findDeployment(ctx, deployment.ID())
 
-	if !store.Has(key) {
+	if len(key) == 0 {
 		return
 	}
 
+	store.Delete(key)
+
 	deployment.State = types.DeploymentClosed
+
+	key = MustDeploymentKey(DeploymentStateToPrefix(deployment.State), deployment.DeploymentID)
+
+	store.Set(key, k.cdc.MustMarshal(&deployment))
+
 	ctx.EventManager().EmitEvent(
 		types.NewEventDeploymentClosed(deployment.ID()).
 			ToSDKEvent(),
 	)
 
-	store.Set(key, k.cdc.MustMarshal(&deployment))
 }
 
 // OnCloseGroup provides shutdown API for a Group
 func (k Keeper) OnCloseGroup(ctx sdk.Context, group types.Group, state types.Group_State) error {
 	store := ctx.KVStore(k.skey)
-	key := GroupKey(group.ID())
 
-	if !store.Has(key) {
+	key := k.findGroup(ctx, group.ID())
+	if len(key) == 0 {
 		return types.ErrGroupNotFound
 	}
+
+	store.Delete(key)
+
 	group.State = state
+
+	key, err := GroupKey(GroupStateToPrefix(group.State), group.ID())
+	if err != nil {
+		return errors.Wrap(err, "failed to encode group key")
+	}
+
+	store.Set(key, k.cdc.MustMarshal(&group))
 
 	ctx.EventManager().EmitEvent(
 		types.NewEventGroupClosed(group.ID()).
 			ToSDKEvent(),
 	)
 
-	store.Set(key, k.cdc.MustMarshal(&group))
 	return nil
 }
 
 // OnPauseGroup provides shutdown API for a Group
 func (k Keeper) OnPauseGroup(ctx sdk.Context, group types.Group) error {
 	store := ctx.KVStore(k.skey)
-	key := GroupKey(group.ID())
 
-	if !store.Has(key) {
+	key := k.findGroup(ctx, group.ID())
+	if len(key) == 0 {
 		return types.ErrGroupNotFound
 	}
+
+	store.Delete(key)
+
 	group.State = types.GroupPaused
+	store.Set(key, k.cdc.MustMarshal(&group))
 
 	ctx.EventManager().EmitEvent(
 		types.NewEventGroupPaused(group.ID()).
@@ -237,27 +280,39 @@ func (k Keeper) OnPauseGroup(ctx sdk.Context, group types.Group) error {
 // OnStartGroup provides shutdown API for a Group
 func (k Keeper) OnStartGroup(ctx sdk.Context, group types.Group) error {
 	store := ctx.KVStore(k.skey)
-	key := GroupKey(group.ID())
 
-	if !store.Has(key) {
+	key := k.findGroup(ctx, group.ID())
+	if len(key) == 0 {
 		return types.ErrGroupNotFound
 	}
+
+	store.Delete(key)
+
 	group.State = types.GroupOpen
+	key, err := GroupKey(GroupStateToPrefix(group.State), group.ID())
+	if err != nil {
+		return errors.Wrap(err, "failed to encode group key")
+	}
+
+	store.Set(key, k.cdc.MustMarshal(&group))
 
 	ctx.EventManager().EmitEvent(
 		types.NewEventGroupStarted(group.ID()).
 			ToSDKEvent(),
 	)
 
-	store.Set(key, k.cdc.MustMarshal(&group))
 	return nil
 }
 
 // WithDeployments iterates all deployments in deployment store
 func (k Keeper) WithDeployments(ctx sdk.Context, fn func(types.Deployment) bool) {
 	store := ctx.KVStore(k.skey)
-	iter := sdk.KVStorePrefixIterator(store, types.DeploymentPrefix())
-	defer iter.Close()
+	iter := sdk.KVStorePrefixIterator(store, DeploymentPrefix)
+
+	defer func() {
+		_ = iter.Close()
+	}()
+
 	for ; iter.Valid(); iter.Next() {
 		var val types.Deployment
 		k.cdc.MustUnmarshal(iter.Value(), &val)
@@ -296,16 +351,43 @@ func (k Keeper) SetParams(ctx sdk.Context, params types.Params) {
 	k.pspace.SetParamSet(ctx, &params)
 }
 
-func (k Keeper) updateDeployment(ctx sdk.Context, obj types.Deployment) {
+func (k Keeper) findDeployment(ctx sdk.Context, id types.DeploymentID) []byte {
 	store := ctx.KVStore(k.skey)
-	key := DeploymentKey(obj.ID())
-	store.Set(key, k.cdc.MustMarshal(&obj))
+
+	aKey := MustDeploymentKey(DeploymentStateActivePrefix, id)
+	cKey := MustDeploymentKey(DeploymentStateClosedPrefix, id)
+
+	var key []byte
+
+	if store.Has(aKey) {
+		key = aKey
+	} else if store.Has(cKey) {
+		key = cKey
+	}
+
+	return key
 }
 
-// nolint: unused
-func (k Keeper) updateGroup(ctx sdk.Context, group types.Group) {
+func (k Keeper) findGroup(ctx sdk.Context, id types.GroupID) []byte {
 	store := ctx.KVStore(k.skey)
-	key := GroupKey(group.ID())
 
-	store.Set(key, k.cdc.MustMarshal(&group))
+	oKey := MustGroupKey(GroupStateOpenPrefix, id)
+	pKey := MustGroupKey(GroupStatePausedPrefix, id)
+	iKey := MustGroupKey(GroupStateInsufficientFundsPrefix, id)
+	cKey := MustGroupKey(GroupStateClosedPrefix, id)
+
+	var key []byte
+
+	// nolint: gocritic
+	if store.Has(oKey) {
+		key = oKey
+	} else if store.Has(pKey) {
+		key = pKey
+	} else if store.Has(iKey) {
+		key = iKey
+	} else if store.Has(cKey) {
+		key = cKey
+	}
+
+	return key
 }

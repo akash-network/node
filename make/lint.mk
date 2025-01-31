@@ -6,7 +6,7 @@ SUBLINTERS = unused \
 			ineffassign \
 			unparam \
 			staticcheck \
-			exportloopref \
+			copyloopvar \
 			prealloc
 # TODO: ^ gochecknoglobals
 
