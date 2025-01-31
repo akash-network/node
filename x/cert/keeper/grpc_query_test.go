@@ -227,7 +227,6 @@ func TestCertGRPCQueryCertificates(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
 			ctx := sdk.WrapSDKContext(suite.ctx)
