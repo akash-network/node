@@ -22,7 +22,6 @@ import (
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 
-	utypes "github.com/akash-network/node/upgrades/types"
 	"github.com/akash-network/node/x/cert/client/cli"
 	"github.com/akash-network/node/x/cert/handler"
 	"github.com/akash-network/node/x/cert/keeper"
@@ -148,12 +147,6 @@ func (am AppModule) LegacyQuerierHandler(_ *codec.LegacyAmino) sdk.Querier {
 func (am AppModule) RegisterServices(cfg module.Configurator) {
 	types.RegisterMsgServer(cfg.MsgServer(), handler.NewMsgServerImpl(am.keeper))
 	types.RegisterQueryServer(cfg.QueryServer(), am.keeper.Querier())
-
-	utypes.ModuleMigrations(ModuleName, am.keeper, func(name string, forVersion uint64, handler module.MigrationHandler) {
-		if err := cfg.RegisterMigration(name, forVersion, handler); err != nil {
-			panic(err)
-		}
-	})
 }
 
 // BeginBlock performs no-op
@@ -182,7 +175,7 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 
 // ConsensusVersion implements module.AppModule#ConsensusVersion
 func (am AppModule) ConsensusVersion() uint64 {
-	return utypes.ModuleVersion(ModuleName)
+	return 3
 }
 
 // ____________________________________________________________________________

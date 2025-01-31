@@ -20,7 +20,6 @@ import (
 
 	types "github.com/akash-network/akash-api/go/node/inflation/v1beta3"
 
-	utypes "github.com/akash-network/node/upgrades/types"
 	"github.com/akash-network/node/x/inflation/keeper"
 	"github.com/akash-network/node/x/inflation/simulation"
 )
@@ -120,12 +119,7 @@ func (am AppModule) LegacyQuerierHandler(_ *codec.LegacyAmino) sdk.Querier {
 }
 
 // RegisterServices registers the module's services
-func (am AppModule) RegisterServices(cfg module.Configurator) {
-	utypes.ModuleMigrations(ModuleName, am.keeper, func(name string, forVersion uint64, handler module.MigrationHandler) {
-		if err := cfg.RegisterMigration(name, forVersion, handler); err != nil {
-			panic(err)
-		}
-	})
+func (am AppModule) RegisterServices(_ module.Configurator) {
 }
 
 // BeginBlock performs no-op
@@ -154,7 +148,7 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 
 // ConsensusVersion implements module.AppModule#ConsensusVersion
 func (am AppModule) ConsensusVersion() uint64 {
-	return utypes.ModuleVersion(ModuleName)
+	return 1
 }
 
 // AppModuleSimulation implements an application simulation module for the deployment module.

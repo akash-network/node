@@ -23,6 +23,13 @@ var _ types.QueryServer = Querier{}
 
 // Deployments returns deployments based on filters
 func (k Querier) Deployments(c context.Context, req *types.QueryDeploymentsRequest) (*types.QueryDeploymentsResponse, error) {
+	ctx := sdk.UnwrapSDKContext(c)
+
+	defer func() {
+		if r := recover(); r != nil {
+			ctx.Logger().Error(fmt.Sprintf("%v", r))
+		}
+	}()
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
@@ -33,53 +40,113 @@ func (k Querier) Deployments(c context.Context, req *types.QueryDeploymentsReque
 		return nil, status.Error(codes.InvalidArgument, "invalid state value")
 	}
 
-	var deployments types.DeploymentResponses
-	ctx := sdk.UnwrapSDKContext(c)
+	var store prefix.Store
 
-	searchPrefix, err := deploymentPrefixFromFilter(req.Filters)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+	if req.Pagination == nil {
+		req.Pagination = &sdkquery.PageRequest{}
+	} else if req.Pagination != nil && req.Pagination.Offset > 0 && req.Filters.State == "" {
+		return nil, status.Error(codes.InvalidArgument, "invalid request parameters. if offset is set, filter.state must be provided")
 	}
 
-	depStore := prefix.NewStore(ctx.KVStore(k.skey), searchPrefix)
+	if req.Pagination.Limit == 0 {
+		req.Pagination.Limit = sdkquery.DefaultLimit
+	}
 
-	pageRes, err := sdkquery.FilteredPaginate(depStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
-		var deployment types.Deployment
+	states := make([]types.Deployment_State, 0, 2)
 
-		err := k.cdc.Unmarshal(value, &deployment)
-		if err != nil {
-			return false, err
-		}
-
-		// filter deployments with provided filters
-		if req.Filters.Accept(deployment, stateVal) {
-			if accumulate {
-
-				account, err := k.ekeeper.GetAccount(
-					ctx,
-					types.EscrowAccountForDeployment(deployment.ID()),
-				)
-				if err != nil {
-					return true, fmt.Errorf("%w: fetching escrow account for DeploymentID=%s", err, deployment.DeploymentID)
-				}
-
-				value := types.QueryDeploymentResponse{
-					Deployment:    deployment,
-					Groups:        k.GetGroups(ctx, deployment.ID()),
-					EscrowAccount: account,
-				}
-
-				deployments = append(deployments, value)
+	// setup for case 3 - cross-index search
+	if req.Filters.State == "" {
+		// request has pagination key set, determine store prefix
+		if len(req.Pagination.Key) > 0 {
+			if len(req.Pagination.Key) < 3 {
+				return nil, status.Error(codes.InvalidArgument, "invalid pagination key")
 			}
 
-			return true, nil
+			switch req.Pagination.Key[2] {
+			case DeploymentStateActivePrefixID:
+				states = append(states, types.DeploymentActive)
+				fallthrough
+			case DeploymentStateClosedPrefixID:
+				states = append(states, types.DeploymentClosed)
+			default:
+				return nil, status.Error(codes.InvalidArgument, "invalid pagination key")
+			}
+		} else {
+			// request does not have pagination set. Start from active store
+			states = append(states, types.DeploymentActive)
+			states = append(states, types.DeploymentClosed)
+		}
+	} else {
+		states = append(states, stateVal)
+	}
+
+	var deployments types.DeploymentResponses
+	var pageRes *sdkquery.PageResponse
+
+	total := uint64(0)
+
+	for _, state := range states {
+		var searchPrefix []byte
+		var err error
+
+		req.Filters.State = state.String()
+
+		searchPrefix, err = deploymentPrefixFromFilter(req.Filters)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		return false, nil
-	})
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		store = prefix.NewStore(ctx.KVStore(k.skey), searchPrefix)
+
+		count := uint64(0)
+
+		pageRes, err = sdkquery.FilteredPaginate(store, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
+			var deployment types.Deployment
+
+			err := k.cdc.Unmarshal(value, &deployment)
+			if err != nil {
+				return false, err
+			}
+
+			// filter deployments with provided filters
+			if req.Filters.Accept(deployment, stateVal) {
+				if accumulate {
+					account, err := k.ekeeper.GetAccount(
+						ctx,
+						types.EscrowAccountForDeployment(deployment.ID()),
+					)
+					if err != nil {
+						return true, fmt.Errorf("%w: fetching escrow account for DeploymentID=%s", err, deployment.DeploymentID)
+					}
+
+					value := types.QueryDeploymentResponse{
+						Deployment:    deployment,
+						Groups:        k.GetGroups(ctx, deployment.ID()),
+						EscrowAccount: account,
+					}
+
+					deployments = append(deployments, value)
+					count++
+				}
+
+				return true, nil
+			}
+
+			return false, nil
+		})
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		req.Pagination.Limit -= count
+		total += count
+
+		if req.Pagination.Limit == 0 {
+			break
+		}
 	}
+
+	pageRes.Total = total
 
 	return &types.QueryDeploymentsResponse{
 		Deployments: deployments,

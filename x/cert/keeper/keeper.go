@@ -56,19 +56,24 @@ func (k keeper) CreateCertificate(ctx sdk.Context, owner sdk.Address, crt []byte
 		return err
 	}
 
-	key := CertificateKey(types.CertID{
-		Owner:  owner,
-		Serial: *cert.SerialNumber,
-	})
-
-	if store.Has(key) {
-		return types.ErrCertificateExists
-	}
-
 	val := types.Certificate{
 		State:  types.CertificateValid,
 		Cert:   crt,
 		Pubkey: pubkey,
+	}
+
+	id := types.CertID{
+		Owner:  owner,
+		Serial: *cert.SerialNumber,
+	}
+	key := k.findCertificate(ctx, id)
+	if len(key) != 0 {
+		return types.ErrCertificateExists
+	}
+
+	key, err = CertificateKey(val.State, id)
+	if err != nil {
+		return err
 	}
 
 	store.Set(key, k.cdc.MustMarshal(&val))
@@ -78,14 +83,14 @@ func (k keeper) CreateCertificate(ctx sdk.Context, owner sdk.Address, crt []byte
 
 func (k keeper) RevokeCertificate(ctx sdk.Context, id types.CertID) error {
 	store := ctx.KVStore(k.skey)
-	key := CertificateKey(id)
-
-	buf := store.Get(key)
-	if buf == nil {
+	key := k.findCertificate(ctx, id)
+	if len(key) == 0 {
 		return types.ErrCertificateNotFound
 	}
 
 	var cert types.Certificate
+
+	buf := store.Get(key)
 	k.cdc.MustUnmarshal(buf, &cert)
 
 	if cert.State == types.CertificateRevoked {
@@ -94,7 +99,13 @@ func (k keeper) RevokeCertificate(ctx sdk.Context, id types.CertID) error {
 
 	cert.State = types.CertificateRevoked
 
-	store.Set(key, k.cdc.MustMarshal(&cert))
+	nkey, err := CertificateKey(cert.State, id)
+	if err != nil {
+		return err
+	}
+
+	store.Delete(key)
+	store.Set(nkey, k.cdc.MustMarshal(&cert))
 
 	return nil
 }
@@ -103,10 +114,12 @@ func (k keeper) RevokeCertificate(ctx sdk.Context, id types.CertID) error {
 func (k keeper) GetCertificateByID(ctx sdk.Context, id types.CertID) (types.CertificateResponse, bool) {
 	store := ctx.KVStore(k.skey)
 
-	buf := store.Get(CertificateKey(id))
-	if buf == nil {
+	key := k.findCertificate(ctx, id)
+	if len(key) == 0 {
 		return types.CertificateResponse{}, false
 	}
+
+	buf := store.Get(key)
 
 	var val types.Certificate
 	k.cdc.MustUnmarshal(buf, &val)
@@ -120,19 +133,14 @@ func (k keeper) GetCertificateByID(ctx sdk.Context, id types.CertID) (types.Cert
 // WithCertificates iterates all certificates
 func (k keeper) WithCertificates(ctx sdk.Context, fn func(id types.CertID, certificate types.CertificateResponse) bool) {
 	store := ctx.KVStore(k.skey)
-	iter := store.Iterator(nil, nil)
+	iter := sdk.KVStorePrefixIterator(store, CertPrefix)
 
 	defer func() {
 		_ = iter.Close()
 	}()
 
 	for ; iter.Valid(); iter.Next() {
-		id, err := ParseCertID(types.PrefixCertificateID(), iter.Key())
-		if err != nil {
-			panic(err.Error())
-		}
-
-		item := k.mustUnmarshal(iter.Key(), iter.Value())
+		id, item := k.mustUnmarshal(iter.Key(), iter.Value())
 		if stop := fn(id, item); stop {
 			break
 		}
@@ -142,18 +150,24 @@ func (k keeper) WithCertificates(ctx sdk.Context, fn func(id types.CertID, certi
 // WithCertificatesState iterates all certificates in certain state
 func (k keeper) WithCertificatesState(ctx sdk.Context, state types.Certificate_State, fn func(certificate types.CertificateResponse) bool) {
 	store := ctx.KVStore(k.skey)
-	iter := store.Iterator(nil, nil)
+
+	searchPrefix, err := filterToPrefix(types.CertificateFilter{
+		State: state.String(),
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	iter := sdk.KVStorePrefixIterator(store, searchPrefix)
 
 	defer func() {
 		_ = iter.Close()
 	}()
 
 	for ; iter.Valid(); iter.Next() {
-		item := k.mustUnmarshal(iter.Key(), iter.Value())
-		if item.Certificate.State == state {
-			if stop := fn(item); stop {
-				break
-			}
+		_, item := k.mustUnmarshal(iter.Key(), iter.Value())
+		if stop := fn(item); stop {
+			break
 		}
 	}
 }
@@ -161,30 +175,33 @@ func (k keeper) WithCertificatesState(ctx sdk.Context, state types.Certificate_S
 // WithOwner iterates all certificates by owner
 func (k keeper) WithOwner(ctx sdk.Context, id sdk.Address, fn func(types.CertificateResponse) bool) {
 	store := ctx.KVStore(k.skey)
-	iter := sdk.KVStorePrefixIterator(store, CertificatePrefix(id))
-	defer func() {
-		_ = iter.Close()
-	}()
 
-	for ; iter.Valid(); iter.Next() {
-		item := k.mustUnmarshal(iter.Key(), iter.Value())
-		if stop := fn(item); stop {
-			break
-		}
+	states := []types.Certificate_State{
+		types.CertificateValid,
+		types.CertificateRevoked,
 	}
-}
 
-// WithOwnerState iterates all certificates by owner in certain state
-func (k keeper) WithOwnerState(ctx sdk.Context, id sdk.Address, state types.Certificate_State, fn func(types.CertificateResponse) bool) {
-	store := ctx.KVStore(k.skey)
-	iter := sdk.KVStorePrefixIterator(store, CertificatePrefix(id))
+	iters := make([]sdk.Iterator, 0, len(states))
 	defer func() {
-		_ = iter.Close()
+		for _, iter := range iters {
+			_ = iter.Close()
+		}
 	}()
 
-	for ; iter.Valid(); iter.Next() {
-		item := k.mustUnmarshal(iter.Key(), iter.Value())
-		if item.Certificate.State == state {
+	for _, state := range states {
+		searchPrefix, err := filterToPrefix(types.CertificateFilter{
+			Owner: id.String(),
+			State: state.String(),
+		})
+		if err != nil {
+			panic(err)
+		}
+
+		iter := sdk.KVStorePrefixIterator(store, searchPrefix)
+		iters = append(iters, iter)
+
+		for ; iter.Valid(); iter.Next() {
+			_, item := k.mustUnmarshal(iter.Key(), iter.Value())
 			if stop := fn(item); stop {
 				break
 			}
@@ -192,25 +209,35 @@ func (k keeper) WithOwnerState(ctx sdk.Context, id sdk.Address, state types.Cert
 	}
 }
 
-func (k keeper) mustUnmarshal(key, val []byte) types.CertificateResponse {
-	id, err := ParseCertID(types.PrefixCertificateID(), key)
+// WithOwnerState iterates all certificates by owner in certain state
+func (k keeper) WithOwnerState(ctx sdk.Context, id sdk.Address, state types.Certificate_State, fn func(types.CertificateResponse) bool) {
+	store := ctx.KVStore(k.skey)
+
+	searchPrefix, err := filterToPrefix(types.CertificateFilter{
+		Owner: id.String(),
+		State: state.String(),
+	})
 	if err != nil {
 		panic(err)
 	}
 
-	item := types.CertificateResponse{
-		Serial: id.Serial.String(),
+	iter := sdk.KVStorePrefixIterator(store, searchPrefix)
+	defer func() {
+		_ = iter.Close()
+	}()
+
+	for ; iter.Valid(); iter.Next() {
+		_, item := k.mustUnmarshal(iter.Key(), iter.Value())
+		if stop := fn(item); stop {
+			break
+		}
 	}
-
-	k.cdc.MustUnmarshal(val, &item.Certificate)
-
-	return item
 }
 
-func (k keeper) unmarshalIterator(key, val []byte) (types.CertificateResponse, error) {
-	id, err := ParseCertID(types.PrefixCertificateID(), key)
+func (k keeper) unmarshal(key, val []byte) (types.CertID, types.CertificateResponse, error) {
+	_, id, err := ParseCertKey(key)
 	if err != nil {
-		panic(err)
+		return types.CertID{}, types.CertificateResponse{}, err
 	}
 
 	item := types.CertificateResponse{
@@ -218,8 +245,34 @@ func (k keeper) unmarshalIterator(key, val []byte) (types.CertificateResponse, e
 	}
 
 	if err := k.cdc.Unmarshal(val, &item.Certificate); err != nil {
-		return types.CertificateResponse{}, err
+		return types.CertID{}, types.CertificateResponse{}, err
 	}
 
-	return item, nil
+	return id, item, nil
+}
+
+func (k keeper) mustUnmarshal(key, val []byte) (types.CertID, types.CertificateResponse) {
+	id, cert, err := k.unmarshal(key, val)
+	if err != nil {
+		panic(err)
+	}
+
+	return id, cert
+}
+
+func (k keeper) findCertificate(ctx sdk.Context, id types.CertID) []byte {
+	store := ctx.KVStore(k.skey)
+
+	vKey := MustCertificateKey(types.CertificateValid, id)
+	rKey := MustCertificateKey(types.CertificateRevoked, id)
+
+	var key []byte
+
+	if store.Has(vKey) {
+		key = vKey
+	} else if store.Has(rKey) {
+		key = rKey
+	}
+
+	return key
 }

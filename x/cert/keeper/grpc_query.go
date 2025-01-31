@@ -2,7 +2,6 @@ package keeper
 
 import (
 	"context"
-	"math/big"
 
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -21,96 +20,115 @@ type querier struct {
 var _ types.QueryServer = &querier{}
 
 func (q querier) Certificates(c context.Context, req *types.QueryCertificatesRequest) (*types.QueryCertificatesResponse, error) {
+	ctx := sdk.UnwrapSDKContext(c)
+
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
-	var certificates types.CertificatesResponse
-	var pageRes *sdkquery.PageResponse
-	var err error
+	stateVal := types.Certificate_State(types.Certificate_State_value[req.Filter.State])
 
-	ctx := sdk.UnwrapSDKContext(c)
-	store := ctx.KVStore(q.skey)
-
-	state := types.CertificateStateInvalid
-	if req.Filter.State != "" {
-		vl, exists := types.Certificate_State_value[req.Filter.State]
-
-		if !exists {
-			return nil, status.Error(codes.InvalidArgument, "invalid state value")
-		}
-
-		state = types.Certificate_State(vl)
+	if req.Filter.State != "" && stateVal == types.CertificateStateInvalid {
+		return nil, status.Error(codes.InvalidArgument, "invalid state value")
 	}
 
-	if req.Filter.Owner != "" {
-		var owner sdk.Address
-		if owner, err = sdk.AccAddressFromBech32(req.Filter.Owner); err != nil {
-			return nil, status.Error(codes.InvalidArgument, err.Error())
-		}
+	if req.Pagination == nil {
+		req.Pagination = &sdkquery.PageRequest{}
+	} else if req.Pagination != nil && req.Pagination.Offset > 0 && req.Filter.State == "" {
+		return nil, status.Error(codes.InvalidArgument, "invalid request parameters. if offset is set, filter.state must be provided")
+	}
 
-		if req.Filter.Serial != "" {
-			serial, valid := new(big.Int).SetString(req.Filter.Serial, 10)
-			if !valid {
-				return nil, status.Error(codes.InvalidArgument, "invalid serial number")
+	if req.Pagination.Limit == 0 {
+		req.Pagination.Limit = sdkquery.DefaultLimit
+	}
+
+	states := make([]types.Certificate_State, 0, 2)
+
+	// setup for case 3 - cross-index search
+	if req.Filter.State == "" {
+		// request has pagination key set, determine store prefix
+		if len(req.Pagination.Key) > 0 {
+			if len(req.Pagination.Key) < 3 {
+				return nil, status.Error(codes.InvalidArgument, "invalid pagination key")
 			}
 
-			item, exists := q.GetCertificateByID(ctx, types.CertID{
-				Owner:  owner,
-				Serial: *serial,
-			})
-
-			if exists && filterCertByState(state, item.Certificate.State) {
-				certificates = append(certificates, item)
+			switch req.Pagination.Key[2] {
+			case CertStateValidPrefixID:
+				states = append(states, types.CertificateValid)
+				fallthrough
+			case CertStateRevokedPrefixID:
+				states = append(states, types.CertificateRevoked)
+			default:
+				return nil, status.Error(codes.InvalidArgument, "invalid pagination key")
 			}
 		} else {
-			ownerStore := prefix.NewStore(store, CertificatePrefix(owner))
-			pageRes, err = sdkquery.FilteredPaginate(ownerStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
-				// prefixed store returns key without prefix
-				key = append(CertificatePrefix(owner), key...)
-				item, err := q.unmarshalIterator(key, value)
-				if err != nil {
-					return true, err
-				}
-
-				if filterCertByState(state, item.Certificate.State) {
-					if accumulate {
-						certificates = append(certificates, item)
-					}
-					return true, nil
-				}
-
-				return false, nil
-			})
+			// request does not have pagination set. Start from valid store
+			states = append(states, types.CertificateValid)
+			states = append(states, types.CertificateRevoked)
 		}
 	} else {
-		pageRes, err = sdkquery.FilteredPaginate(store, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
-			item, err := q.unmarshalIterator(key, value)
-			if err != nil {
-				return true, err
-			}
+		states = append(states, stateVal)
+	}
 
-			if filterCertByState(state, item.Certificate.State) {
-				if accumulate {
-					certificates = append(certificates, item)
+	var certificates types.CertificatesResponse
+	var pageRes *sdkquery.PageResponse
+
+	total := uint64(0)
+
+	for _, state := range states {
+		var searchPrefix []byte
+		var err error
+
+		req.Filter.State = state.String()
+
+		searchPrefix, err = filterToPrefix(req.Filter)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		searchStore := prefix.NewStore(ctx.KVStore(q.skey), searchPrefix)
+
+		count := uint64(0)
+
+		pageRes, err = sdkquery.FilteredPaginate(searchStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
+			if accumulate {
+				// we need serial number for cert id which can be obtained from either key or by parsing actual cert
+				// latter is way slower so we extract it from the key.
+				// As key provided in the FilteredPaginate callback does not include the prefix, we complete it
+				// by prepending the search prefix so ParseCertKey can work properly
+				fKey := make([]byte, len(searchPrefix)+len(key))
+				copy(fKey, searchPrefix)
+				copy(fKey[len(searchPrefix):], key)
+
+				_, item, err := q.unmarshal(fKey, value)
+				if err != nil {
+					return false, err
 				}
-				return true, nil
+
+				certificates = append(certificates, item)
+				count++
+
+				// return true, nil
 			}
 
-			return false, nil
+			return true, nil
 		})
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		req.Pagination.Limit -= count
+		total += count
+
+		if req.Pagination.Limit == 0 {
+			break
+		}
 	}
 
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
+	pageRes.Total = total
 
 	return &types.QueryCertificatesResponse{
 		Certificates: certificates,
 		Pagination:   pageRes,
 	}, nil
-}
-
-func filterCertByState(state types.Certificate_State, cert types.Certificate_State) bool {
-	return (state == types.CertificateStateInvalid) || (cert == state)
 }

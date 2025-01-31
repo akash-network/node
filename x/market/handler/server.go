@@ -145,7 +145,7 @@ func (ms msgServer) CloseBid(goCtx context.Context, msg *types.MsgCloseBid) (*ty
 	ms.keepers.Market.OnBidClosed(ctx, bid)
 	ms.keepers.Market.OnOrderClosed(ctx, order)
 
-	ms.keepers.Escrow.PaymentClose(ctx,
+	_ = ms.keepers.Escrow.PaymentClose(ctx,
 		dtypes.EscrowAccountForDeployment(lease.ID().DeploymentID()),
 		types.EscrowPaymentForLease(lease.ID()))
 
@@ -220,25 +220,19 @@ func (ms msgServer) CreateLease(goCtx context.Context, msg *types.MsgCreateLease
 	ms.keepers.Market.OnBidMatched(ctx, bid)
 
 	// close losing bids
-	var lostbids []types.Bid
-	ms.keepers.Market.WithBidsForOrder(ctx, msg.BidID.OrderID(), func(bid types.Bid) bool {
-		if bid.ID().Equals(msg.BidID) {
-			return false
-		}
-		if bid.State != types.BidOpen {
-			return false
+	ms.keepers.Market.WithBidsForOrder(ctx, msg.BidID.OrderID(), types.BidOpen, func(bid types.Bid) bool {
+		ms.keepers.Market.OnBidLost(ctx, bid)
+
+		if err = ms.keepers.Escrow.AccountClose(ctx,
+			types.EscrowAccountForBid(bid.ID())); err != nil {
+			return true
 		}
 
-		lostbids = append(lostbids, bid)
 		return false
 	})
 
-	for _, bid := range lostbids {
-		ms.keepers.Market.OnBidLost(ctx, bid)
-		if err := ms.keepers.Escrow.AccountClose(ctx,
-			types.EscrowAccountForBid(bid.ID())); err != nil {
-			return &types.MsgCreateLeaseResponse{}, err
-		}
+	if err != nil {
+		return &types.MsgCreateLeaseResponse{}, err
 	}
 
 	return &types.MsgCreateLeaseResponse{}, nil
