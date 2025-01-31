@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/cosmos/cosmos-sdk/x/authz"
 	"github.com/cosmos/cosmos-sdk/x/feegrant"
 	feegrantkeeper "github.com/cosmos/cosmos-sdk/x/feegrant/keeper"
 	feegrantmodule "github.com/cosmos/cosmos-sdk/x/feegrant/module"
@@ -113,6 +114,10 @@ var (
 	allowedReceivingModAcc = map[string]bool{}
 )
 
+type ModulesStoreKeys map[string]*sdk.KVStoreKey
+type ModulesTransientKeys map[string]*sdk.TransientStoreKey
+type ModulesMemoryKeys map[string]*sdk.MemoryStoreKey
+
 // AkashApp extends ABCI application
 type AkashApp struct {
 	*bam.BaseApp
@@ -123,9 +128,9 @@ type AkashApp struct {
 
 	invCheckPeriod uint
 
-	keys    map[string]*sdk.KVStoreKey
-	tkeys   map[string]*sdk.TransientStoreKey
-	memkeys map[string]*sdk.MemoryStoreKey
+	skeys   ModulesStoreKeys
+	tkeys   ModulesTransientKeys
+	memkeys ModulesMemoryKeys
 
 	// simulation manager
 	sm *module.SimulationManager
@@ -145,9 +150,6 @@ func NewApp(
 	appOpts servertypes.AppOptions,
 	options ...func(*bam.BaseApp),
 ) *AkashApp {
-	// find out the genesis time, to be used later in inflation calculation
-	// genesisTime := getGenesisTime(appOpts, homePath)
-
 	// TODO: Remove cdc in favor of appCodec once all modules are migrated.
 	encodingConfig := MakeEncodingConfig()
 	appCodec := encodingConfig.Marshaler
@@ -159,9 +161,9 @@ func NewApp(
 	bapp.SetVersion(version.Version)
 	bapp.SetInterfaceRegistry(interfaceRegistry)
 
-	keys := kvStoreKeys()
-	tkeys := transientStoreKeys()
-	memkeys := memStoreKeys()
+	skeys := modulesStoreKeys()
+	tkeys := modulesTransientKeys()
+	memkeys := modulesMemoryKeys()
 
 	app := &AkashApp{
 		BaseApp:           bapp,
@@ -169,13 +171,13 @@ func NewApp(
 		appCodec:          appCodec,
 		interfaceRegistry: interfaceRegistry,
 		invCheckPeriod:    invCheckPeriod,
-		keys:              keys,
+		skeys:             skeys,
 		tkeys:             tkeys,
 		memkeys:           memkeys,
 	}
 	app.Configurator = module.NewConfigurator(app.appCodec, app.MsgServiceRouter(), app.GRPCQueryRouter())
 
-	app.Keepers.Cosmos.Params = initParamsKeeper(appCodec, cdc, app.keys[paramstypes.StoreKey], tkeys[paramstypes.TStoreKey])
+	app.Keepers.Cosmos.Params = initParamsKeeper(appCodec, cdc, app.skeys[paramstypes.ModuleName], tkeys[paramstypes.ModuleName])
 
 	// set the BaseApp's parameter store
 	bapp.SetParamStore(app.Keepers.Cosmos.Params.Subspace(bam.Paramspace).WithKeyTable(paramskeeper.ConsensusParamsKeyTable()))
@@ -183,8 +185,8 @@ func NewApp(
 	// add capability keeper and ScopeToModule for ibc module
 	app.Keepers.Cosmos.Cap = capabilitykeeper.NewKeeper(
 		appCodec,
-		app.keys[capabilitytypes.StoreKey],
-		app.memkeys[capabilitytypes.MemStoreKey],
+		app.skeys[capabilitytypes.ModuleName],
+		app.memkeys[capabilitytypes.ModuleName],
 	)
 
 	scopedIBCKeeper := app.Keepers.Cosmos.Cap.ScopeToModule(ibchost.ModuleName)
@@ -196,24 +198,24 @@ func NewApp(
 
 	app.Keepers.Cosmos.Acct = authkeeper.NewAccountKeeper(
 		appCodec,
-		app.keys[authtypes.StoreKey],
+		app.skeys[authtypes.ModuleName],
 		app.GetSubspace(authtypes.ModuleName),
 		authtypes.ProtoBaseAccount,
 		MacPerms(),
 	)
 
 	// add authz keeper
-	app.Keepers.Cosmos.Authz = authzkeeper.NewKeeper(app.keys[authzkeeper.StoreKey], appCodec, app.MsgServiceRouter())
+	app.Keepers.Cosmos.Authz = authzkeeper.NewKeeper(app.skeys[authz.ModuleName], appCodec, app.MsgServiceRouter())
 
 	app.Keepers.Cosmos.FeeGrant = feegrantkeeper.NewKeeper(
 		appCodec,
-		keys[feegrant.StoreKey],
+		skeys[feegrant.ModuleName],
 		app.Keepers.Cosmos.Acct,
 	)
 
 	app.Keepers.Cosmos.Bank = bankkeeper.NewBaseKeeper(
 		appCodec,
-		app.keys[banktypes.StoreKey],
+		app.skeys[banktypes.ModuleName],
 		app.Keepers.Cosmos.Acct,
 		app.GetSubspace(banktypes.ModuleName),
 		app.BlockedAddrs(),
@@ -224,7 +226,7 @@ func NewApp(
 	{
 		skeeper := stakingkeeper.NewKeeper(
 			appCodec,
-			app.keys[stakingtypes.StoreKey],
+			app.skeys[stakingtypes.ModuleName],
 			app.Keepers.Cosmos.Acct,
 			app.Keepers.Cosmos.Bank,
 			app.GetSubspace(stakingtypes.ModuleName),
@@ -234,7 +236,7 @@ func NewApp(
 
 	app.Keepers.Cosmos.Mint = mintkeeper.NewKeeper(
 		appCodec,
-		app.keys[minttypes.StoreKey],
+		app.skeys[minttypes.ModuleName],
 		app.GetSubspace(minttypes.ModuleName),
 		app.Keepers.Cosmos.Staking,
 		app.Keepers.Cosmos.Acct,
@@ -244,7 +246,7 @@ func NewApp(
 
 	app.Keepers.Cosmos.Distr = distrkeeper.NewKeeper(
 		appCodec,
-		app.keys[distrtypes.StoreKey],
+		app.skeys[distrtypes.ModuleName],
 		app.GetSubspace(distrtypes.ModuleName),
 		app.Keepers.Cosmos.Acct,
 		app.Keepers.Cosmos.Bank,
@@ -255,7 +257,7 @@ func NewApp(
 
 	app.Keepers.Cosmos.Slashing = slashingkeeper.NewKeeper(
 		appCodec,
-		app.keys[slashingtypes.StoreKey],
+		app.skeys[slashingtypes.ModuleName],
 		app.Keepers.Cosmos.Staking,
 		app.GetSubspace(slashingtypes.ModuleName),
 	)
@@ -278,7 +280,7 @@ func NewApp(
 
 	app.Keepers.Cosmos.Upgrade = upgradekeeper.NewKeeper(
 		skipUpgradeHeights,
-		app.keys[upgradetypes.StoreKey],
+		app.skeys[upgradetypes.ModuleName],
 		appCodec,
 		homePath,
 		app.BaseApp,
@@ -287,7 +289,7 @@ func NewApp(
 	// register IBC Keeper
 	app.Keepers.Cosmos.IBC = ibckeeper.NewKeeper(
 		appCodec,
-		app.keys[ibchost.StoreKey],
+		app.skeys[ibchost.ModuleName],
 		app.GetSubspace(ibchost.ModuleName),
 		app.Keepers.Cosmos.Staking,
 		app.Keepers.Cosmos.Upgrade,
@@ -316,7 +318,7 @@ func NewApp(
 
 	app.Keepers.Cosmos.Gov = govkeeper.NewKeeper(
 		appCodec,
-		app.keys[govtypes.StoreKey],
+		app.skeys[govtypes.ModuleName],
 		app.GetSubspace(govtypes.ModuleName),
 		app.Keepers.Cosmos.Acct,
 		app.Keepers.Cosmos.Bank,
@@ -327,7 +329,7 @@ func NewApp(
 	// register Transfer Keepers
 	app.Keepers.Cosmos.Transfer = ibctransferkeeper.NewKeeper(
 		appCodec,
-		app.keys[ibctransfertypes.StoreKey],
+		app.skeys[ibctransfertypes.ModuleName],
 		app.GetSubspace(ibctransfertypes.ModuleName),
 		app.Keepers.Cosmos.IBC.ChannelKeeper,
 		app.Keepers.Cosmos.IBC.ChannelKeeper,
@@ -349,7 +351,7 @@ func NewApp(
 	// create evidence keeper with evidence router
 	evidenceKeeper := evidencekeeper.NewKeeper(
 		appCodec,
-		app.keys[evidencetypes.StoreKey],
+		app.skeys[evidencetypes.ModuleName],
 		app.Keepers.Cosmos.Staking,
 		app.Keepers.Cosmos.Slashing,
 	)
@@ -411,6 +413,13 @@ func NewApp(
 	app.MM.RegisterRoutes(app.Router(), app.QueryRouter(), encodingConfig.Amino)
 	app.MM.RegisterServices(app.Configurator)
 
+	utypes.IterateMigrations(func(module string, version uint64, initfn utypes.NewMigrationFn) {
+		migrator := initfn(utypes.NewMigrator(app.appCodec, app.skeys[module]))
+		if err := app.Configurator.RegisterMigration(module, version, migrator.GetHandler()); err != nil {
+			panic(err)
+		}
+	})
+
 	// add test gRPC service for testing gRPC queries in isolation
 	testdata.RegisterQueryServer(app.GRPCQueryRouter(), testdata.QueryImpl{})
 
@@ -440,7 +449,7 @@ func NewApp(
 	app.sm.RegisterStoreDecoders()
 
 	// initialize stores
-	app.MountKVStores(keys)
+	app.MountKVStores(app.skeys.Keys())
 	app.MountTransientStores(tkeys)
 	app.MountMemoryStores(memkeys)
 
@@ -577,13 +586,13 @@ func (app *AkashApp) InterfaceRegistry() codectypes.InterfaceRegistry {
 }
 
 // GetKey returns the KVStoreKey for the provided store key.
-func (app *AkashApp) GetKey(storeKey string) *sdk.KVStoreKey {
-	return app.keys[storeKey]
+func (app *AkashApp) GetKey(module string) *sdk.KVStoreKey {
+	return app.skeys[module]
 }
 
 // GetTKey returns the TransientStoreKey for the provided store key.
-func (app *AkashApp) GetTKey(storeKey string) *sdk.TransientStoreKey {
-	return app.tkeys[storeKey]
+func (app *AkashApp) GetTKey(module string) *sdk.TransientStoreKey {
+	return app.tkeys[module]
 }
 
 // GetSubspace returns a param subspace for a given module name.

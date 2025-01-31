@@ -35,42 +35,367 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 		return nil, status.Error(codes.InvalidArgument, "invalid state value")
 	}
 
-	var orders types.Orders
-	ctx := sdk.UnwrapSDKContext(c)
+	// case 1: no filters set, iterating over entire store
+	// case 2: state only or state plus underlying filters like owner, iterating over state store
+	// case 3: state not set, underlying filters like owner are set, most complex case
 
-	store := ctx.KVStore(k.skey)
-	searchPrefix, err := keys.OrderPrefixFromFilter(req.Filters)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+	var store prefix.Store
+
+	if req.Pagination == nil {
+		req.Pagination = &sdkquery.PageRequest{}
+	} else if req.Pagination != nil && req.Pagination.Offset > 0 && req.Filters.State == "" {
+		return nil, status.Error(codes.InvalidArgument, "invalid request parameters. if offset is set, filter.state must be provided")
 	}
 
-	orderStore := prefix.NewStore(store, searchPrefix)
+	if req.Pagination.Limit == 0 {
+		req.Pagination.Limit = sdkquery.DefaultLimit
+	}
 
-	pageRes, err := sdkquery.FilteredPaginate(orderStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
-		var order types.Order
+	states := make([]types.Order_State, 0, 3)
 
-		err := k.cdc.Unmarshal(value, &order)
-		if err != nil {
-			return false, err
-		}
-
-		// filter orders with provided filters
-		if req.Filters.Accept(order, stateVal) {
-			if accumulate {
-				orders = append(orders, order)
+	// setup for case 3 - cross-index search
+	if req.Filters.State == "" {
+		// request has pagination key set, determine store prefix
+		if len(req.Pagination.Key) > 0 {
+			if len(req.Pagination.Key) < 3 {
+				return nil, status.Error(codes.InvalidArgument, "invalid pagination key")
 			}
 
-			return true, nil
+			switch req.Pagination.Key[2] {
+			case keys.OrderStateOpenPrefixID:
+				states = append(states, types.OrderOpen)
+				fallthrough
+			case keys.OrderStateActivePrefixID:
+				states = append(states, types.OrderActive)
+				fallthrough
+			case keys.OrderStateClosedPrefixID:
+				states = append(states, types.OrderClosed)
+			default:
+				return nil, status.Error(codes.InvalidArgument, "invalid pagination key")
+			}
+		} else {
+			// request does not have pagination set. Start from open store
+			states = append(states, types.OrderOpen)
+			states = append(states, types.OrderActive)
+			states = append(states, types.OrderClosed)
+		}
+	} else {
+		states = append(states, stateVal)
+	}
+
+	var orders types.Orders
+	var pageRes *sdkquery.PageResponse
+
+	ctx := sdk.UnwrapSDKContext(c)
+
+	for _, state := range states {
+		var searchPrefix []byte
+		var err error
+
+		req.Filters.State = state.String()
+
+		searchPrefix, err = keys.OrderPrefixFromFilter(req.Filters)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		return false, nil
-	})
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		count := uint64(0)
+
+		store = prefix.NewStore(ctx.KVStore(k.skey), searchPrefix)
+
+		pageRes, err = sdkquery.FilteredPaginate(store, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
+			var order types.Order
+
+			err := k.cdc.Unmarshal(value, &order)
+			if err != nil {
+				return false, err
+			}
+
+			// filter orders with provided filters
+			if req.Filters.Accept(order, stateVal) {
+				if accumulate {
+					orders = append(orders, order)
+					count++
+				}
+
+				return true, nil
+			}
+
+			return false, nil
+		})
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		req.Pagination.Limit -= count
+
+		if req.Pagination.Limit == 0 {
+			break
+		}
 	}
 
 	return &types.QueryOrdersResponse{
 		Orders:     orders,
+		Pagination: pageRes,
+	}, nil
+}
+
+// Bids returns bids based on filters
+func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.QueryBidsResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "empty request")
+	}
+
+	stateVal := types.Bid_State(types.Bid_State_value[req.Filters.State])
+
+	if req.Filters.State != "" && stateVal == types.BidStateInvalid {
+		return nil, status.Error(codes.InvalidArgument, "invalid state value")
+	}
+
+	if req.Pagination == nil {
+		req.Pagination = &sdkquery.PageRequest{}
+	} else if req.Pagination != nil && req.Pagination.Offset > 0 && req.Filters.State == "" {
+		return nil, status.Error(codes.InvalidArgument, "invalid request parameters. if offset is set, filter.state must be provided")
+	}
+
+	if req.Pagination.Limit == 0 {
+		req.Pagination.Limit = sdkquery.DefaultLimit
+	}
+
+	reverseSearch := (req.Filters.Owner == "") && (req.Filters.Provider != "")
+	states := make([]types.Bid_State, 0, 4)
+
+	// setup for case 3 - cross-index search
+	if req.Filters.State == "" {
+		// request has pagination key set, determine store prefix
+		if len(req.Pagination.Key) > 0 {
+			if len(req.Pagination.Key) < 3 {
+				return nil, status.Error(codes.InvalidArgument, "invalid pagination key")
+			}
+
+			if reverseSearch && req.Pagination.Key[2] > keys.BidStateActivePrefixID {
+				return nil, status.Error(codes.InvalidArgument, "invalid pagination key")
+			}
+
+			switch req.Pagination.Key[2] {
+			case keys.BidStateOpenPrefixID:
+				states = append(states, types.BidOpen)
+				fallthrough
+			case keys.BidStateActivePrefixID:
+				states = append(states, types.BidActive)
+				fallthrough
+			case keys.BidStateLostPrefixID:
+				states = append(states, types.BidLost)
+				fallthrough
+			case keys.BidStateClosedPrefixID:
+				states = append(states, types.BidClosed)
+			default:
+				return nil, status.Error(codes.InvalidArgument, "invalid pagination key")
+			}
+		} else {
+			// request does not have pagination set. Start from open store
+			states = append(states, types.BidOpen, types.BidActive, types.BidLost, types.BidClosed)
+		}
+	} else {
+		states = append(states, stateVal)
+	}
+
+	var bids []types.QueryBidResponse
+	var pageRes *sdkquery.PageResponse
+	ctx := sdk.UnwrapSDKContext(c)
+
+	for _, state := range states {
+		var searchPrefix []byte
+		var err error
+
+		req.Filters.State = state.String()
+
+		if reverseSearch {
+			searchPrefix, err = keys.BidReversePrefixFromFilter(req.Filters)
+		} else {
+			searchPrefix, err = keys.BidPrefixFromFilter(req.Filters)
+		}
+
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		count := uint64(0)
+
+		bidStore := prefix.NewStore(ctx.KVStore(k.skey), searchPrefix)
+		pageRes, err = sdkquery.FilteredPaginate(bidStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
+			var bid types.Bid
+
+			err := k.cdc.Unmarshal(value, &bid)
+			if err != nil {
+				return false, err
+			}
+
+			// filter bids with provided filters
+			if req.Filters.Accept(bid, stateVal) {
+				if accumulate {
+					acct, err := k.ekeeper.GetAccount(ctx, types.EscrowAccountForBid(bid.BidID))
+					if err != nil {
+						return true, err
+					}
+
+					bids = append(bids, types.QueryBidResponse{
+						Bid:           bid,
+						EscrowAccount: acct,
+					})
+
+					count++
+				}
+
+				return true, nil
+			}
+
+			return false, nil
+		})
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		req.Pagination.Limit -= count
+
+		if req.Pagination.Limit == 0 {
+			break
+		}
+	}
+
+	return &types.QueryBidsResponse{
+		Bids:       bids,
+		Pagination: pageRes,
+	}, nil
+}
+
+// Leases returns leases based on filters
+func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*types.QueryLeasesResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "empty request")
+	}
+
+	stateVal := types.Lease_State(types.Lease_State_value[req.Filters.State])
+
+	if req.Filters.State != "" && stateVal == types.LeaseStateInvalid {
+		return nil, status.Error(codes.InvalidArgument, "invalid state value")
+	}
+
+	if req.Pagination == nil {
+		req.Pagination = &sdkquery.PageRequest{}
+	} else if req.Pagination != nil && req.Pagination.Offset > 0 && req.Filters.State == "" {
+		return nil, status.Error(codes.InvalidArgument, "invalid request parameters. if offset is set, filter.state must be provided")
+	}
+
+	if req.Pagination.Limit == 0 {
+		req.Pagination.Limit = sdkquery.DefaultLimit
+	}
+
+	reverseSearch := (req.Filters.Owner == "") && (req.Filters.Provider != "")
+
+	states := make([]types.Lease_State, 0, 3)
+
+	// setup for case 3 - cross-index search
+	if req.Filters.State == "" {
+		// request has pagination key set, determine store prefix
+		if len(req.Pagination.Key) > 0 {
+			if len(req.Pagination.Key) < 3 {
+				return nil, status.Error(codes.InvalidArgument, "invalid pagination key")
+			}
+
+			if reverseSearch && req.Pagination.Key[2] > keys.LeaseStateActivePrefixID {
+				return nil, status.Error(codes.InvalidArgument, "invalid pagination key")
+			}
+
+			switch req.Pagination.Key[2] {
+			case keys.LeaseStateActivePrefixID:
+				states = append(states, types.LeaseActive)
+				fallthrough
+			case keys.LeaseStateInsufficientFundsPrefixID:
+				states = append(states, types.LeaseInsufficientFunds)
+				fallthrough
+			case keys.LeaseStateClosedPrefixID:
+				states = append(states, types.LeaseClosed)
+			default:
+				return nil, status.Error(codes.InvalidArgument, "invalid pagination key")
+			}
+		} else {
+			// request does not have pagination set. Start from open store
+			req.Filters.State = types.LeaseActive.String()
+			states = append(states, types.LeaseActive, types.LeaseInsufficientFunds, types.LeaseClosed)
+		}
+	} else {
+		states = append(states, stateVal)
+	}
+
+	var leases []types.QueryLeaseResponse
+	var pageRes *sdkquery.PageResponse
+	ctx := sdk.UnwrapSDKContext(c)
+
+	for _, state := range states {
+		var searchPrefix []byte
+		var err error
+
+		req.Filters.State = state.String()
+
+		if reverseSearch {
+			searchPrefix, err = keys.LeaseReversePrefixFromFilter(req.Filters)
+		} else {
+			searchPrefix, err = keys.LeasePrefixFromFilter(req.Filters)
+		}
+
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		count := uint64(0)
+
+		searchedStore := prefix.NewStore(ctx.KVStore(k.skey), searchPrefix)
+
+		pageRes, err = sdkquery.FilteredPaginate(searchedStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
+			var lease types.Lease
+
+			err := k.cdc.Unmarshal(value, &lease)
+			if err != nil {
+				return false, err
+			}
+
+			// filter leases with provided filters
+			if req.Filters.Accept(lease, stateVal) {
+				if accumulate {
+					payment, err := k.ekeeper.GetPayment(ctx,
+						dtypes.EscrowAccountForDeployment(lease.ID().DeploymentID()),
+						types.EscrowPaymentForLease(lease.ID()))
+					if err != nil {
+						return true, err
+					}
+
+					leases = append(leases, types.QueryLeaseResponse{
+						Lease:         lease,
+						EscrowPayment: payment,
+					})
+
+					count++
+				}
+
+				return true, nil
+			}
+
+			return false, nil
+		})
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		req.Pagination.Limit -= count
+
+		if req.Pagination.Limit == 0 {
+			break
+		}
+	}
+
+	return &types.QueryLeasesResponse{
+		Leases:     leases,
 		Pagination: pageRes,
 	}, nil
 }
@@ -93,66 +418,6 @@ func (k Querier) Order(c context.Context, req *types.QueryOrderRequest) (*types.
 	}
 
 	return &types.QueryOrderResponse{Order: order}, nil
-}
-
-// Bids returns bids based on filters
-func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.QueryBidsResponse, error) {
-	if req == nil {
-		return nil, status.Error(codes.InvalidArgument, "empty request")
-	}
-
-	stateVal := types.Bid_State(types.Bid_State_value[req.Filters.State])
-
-	if req.Filters.State != "" && stateVal == types.BidStateInvalid {
-		return nil, status.Error(codes.InvalidArgument, "invalid state value")
-	}
-
-	var bids []types.QueryBidResponse
-	ctx := sdk.UnwrapSDKContext(c)
-
-	store := ctx.KVStore(k.skey)
-	searchPrefix, err := keys.BidPrefixFromFilter(req.Filters)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	bidStore := prefix.NewStore(store, searchPrefix)
-
-	pageRes, err := sdkquery.FilteredPaginate(bidStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
-		var bid types.Bid
-
-		err := k.cdc.Unmarshal(value, &bid)
-		if err != nil {
-			return false, err
-		}
-
-		// filter bids with provided filters
-		if req.Filters.Accept(bid, stateVal) {
-			if accumulate {
-				acct, err := k.ekeeper.GetAccount(ctx, types.EscrowAccountForBid(bid.BidID))
-				if err != nil {
-					return true, err
-				}
-
-				bids = append(bids, types.QueryBidResponse{
-					Bid:           bid,
-					EscrowAccount: acct,
-				})
-			}
-
-			return true, nil
-		}
-
-		return false, nil
-	})
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	return &types.QueryBidsResponse{
-		Bids:       bids,
-		Pagination: pageRes,
-	}, nil
 }
 
 // Bid returns bid details based on BidID
@@ -184,73 +449,6 @@ func (k Querier) Bid(c context.Context, req *types.QueryBidRequest) (*types.Quer
 	return &types.QueryBidResponse{
 		Bid:           bid,
 		EscrowAccount: acct,
-	}, nil
-}
-
-// Leases returns leases based on filters
-func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*types.QueryLeasesResponse, error) {
-	if req == nil {
-		return nil, status.Error(codes.InvalidArgument, "empty request")
-	}
-
-	stateVal := types.Lease_State(types.Lease_State_value[req.Filters.State])
-
-	if req.Filters.State != "" && stateVal == types.LeaseStateInvalid {
-		return nil, status.Error(codes.InvalidArgument, "invalid state value")
-	}
-
-	var leases []types.QueryLeaseResponse
-	ctx := sdk.UnwrapSDKContext(c)
-
-	store := ctx.KVStore(k.skey)
-	searchPrefix, isSecondaryPrefix, err := keys.LeasePrefixFromFilter(req.Filters)
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	searchedStore := prefix.NewStore(store, searchPrefix)
-
-	pageRes, err := sdkquery.FilteredPaginate(searchedStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
-		var lease types.Lease
-
-		if isSecondaryPrefix {
-			secondaryKey := value
-			// Load the actual key, from the secondary key
-			value = store.Get(secondaryKey)
-		}
-
-		err := k.cdc.Unmarshal(value, &lease)
-		if err != nil {
-			return false, err
-		}
-
-		// filter leases with provided filters
-		if req.Filters.Accept(lease, stateVal) {
-			if accumulate {
-				payment, err := k.ekeeper.GetPayment(ctx,
-					dtypes.EscrowAccountForDeployment(lease.ID().DeploymentID()),
-					types.EscrowPaymentForLease(lease.ID()))
-				if err != nil {
-					return true, err
-				}
-
-				leases = append(leases, types.QueryLeaseResponse{
-					Lease:         lease,
-					EscrowPayment: payment,
-				})
-			}
-
-			return true, nil
-		}
-
-		return false, nil
-	})
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	return &types.QueryLeasesResponse{
-		Leases:     leases,
-		Pagination: pageRes,
 	}, nil
 }
 

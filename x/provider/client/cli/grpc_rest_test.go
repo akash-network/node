@@ -96,7 +96,6 @@ func (s *GRPCRestTestSuite) TestGetProviders() {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		s.Run(tc.name, func() {
 			resp, err := sdkrest.GetRequest(tc.url)
 			s.Require().NoError(err)
@@ -144,7 +143,6 @@ func (s *GRPCRestTestSuite) TestGetProvider() {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		s.Run(tc.name, func() {
 			resp, err := sdkrest.GetRequest(tc.url)
 			s.Require().NoError(err)

@@ -6,25 +6,25 @@ import (
 	"fmt"
 	"math/rand"
 
-	"github.com/cosmos/cosmos-sdk/client"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	sim "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/spf13/cobra"
 
+	"github.com/gogo/protobuf/grpc"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+
 	abci "github.com/tendermint/tendermint/abci/types"
 
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	"github.com/gogo/protobuf/grpc"
+	sim "github.com/cosmos/cosmos-sdk/types/simulation"
 
 	v1beta1types "github.com/akash-network/akash-api/go/node/audit/v1beta1"
 	v1beta2types "github.com/akash-network/akash-api/go/node/audit/v1beta2"
 	types "github.com/akash-network/akash-api/go/node/audit/v1beta3"
 
-	utypes "github.com/akash-network/node/upgrades/types"
 	"github.com/akash-network/node/x/audit/client/cli"
 	"github.com/akash-network/node/x/audit/client/rest"
 	"github.com/akash-network/node/x/audit/handler"
@@ -162,12 +162,6 @@ func (am AppModule) RegisterServices(cfg module.Configurator) {
 	types.RegisterMsgServer(cfg.MsgServer(), handler.NewMsgServerImpl(am.keeper))
 	querier := keeper.Querier{Keeper: am.keeper}
 	types.RegisterQueryServer(cfg.QueryServer(), querier)
-
-	utypes.ModuleMigrations(ModuleName, am.keeper, func(name string, forVersion uint64, handler module.MigrationHandler) {
-		if err := cfg.RegisterMigration(name, forVersion, handler); err != nil {
-			panic(err)
-		}
-	})
 }
 
 // RegisterQueryService registers a GRPC query service to respond to the
@@ -203,7 +197,7 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 
 // ConsensusVersion implements module.AppModule#ConsensusVersion
 func (am AppModule) ConsensusVersion() uint64 {
-	return utypes.ModuleVersion(ModuleName)
+	return 2
 }
 
 // ____________________________________________________________________________
