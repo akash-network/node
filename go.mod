@@ -49,6 +49,7 @@ retract (
 replace (
 	// use cosmos fork of keyring
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
+	github.com/cosmos/cosmos-sdk => github.com/akash-network/cosmos-sdk v0.45.16-akash.1
 
 	// use akash version of cosmos ledger api
 	github.com/cosmos/ledger-cosmos-go => github.com/akash-network/ledger-go/cosmos v0.14.4
@@ -63,7 +64,8 @@ replace (
 	// To be replaced by cosmos/gogoproto in future versions
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	// use cometBFT system fork of tendermint with akash patches
-	github.com/tendermint/tendermint => github.com/akash-network/cometbft v0.34.27-akash
+	github.com/tendermint/tendermint => github.com/akash-network/cometbft v0.34.27-akash.1
+
 	github.com/zondax/hid => github.com/troian/hid v0.13.2
 	github.com/zondax/ledger-go => github.com/akash-network/ledger-go v0.14.3
 	// latest grpc doesn't work with with cosmos-sdk modified proto compiler, so we need to enforce

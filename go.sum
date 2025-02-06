@@ -78,8 +78,10 @@ github.com/ajg/form v1.5.1/go.mod h1:uL1WgH+h2mgNtvBq0339dVnzXdBETtL2LeUXaIv25UY
 github.com/ajstarks/svgo v0.0.0-20180226025133-644b8db467af/go.mod h1:K08gAheRH3/J6wwsYMMT4xOr94bZjxIelGM0+d/wbFw=
 github.com/akash-network/akash-api v0.0.67 h1:lwtSvYoxXe/XJKB0UabA2np3l0ujLMsKxmA4e6IWzsM=
 github.com/akash-network/akash-api v0.0.67/go.mod h1:PdOQGTCX3kLBoKHdbPF9pe5+vSLANaMJbgA04UE+OqY=
-github.com/akash-network/cometbft v0.34.27-akash h1:V1dApDOr8Ee7BJzYyQ7Z9VBtrAul4+baMeA6C49dje0=
-github.com/akash-network/cometbft v0.34.27-akash/go.mod h1:BcCbhKv7ieM0KEddnYXvQZR+pZykTKReJJYf7YC7qhw=
+github.com/akash-network/cometbft v0.34.27-akash.1 h1:+Yp41KLHGk5bJrV32+9AyfJsxeZgLmv94dr789u/q04=
+github.com/akash-network/cometbft v0.34.27-akash.1/go.mod h1:BcCbhKv7ieM0KEddnYXvQZR+pZykTKReJJYf7YC7qhw=
+github.com/akash-network/cosmos-sdk v0.45.16-akash.1 h1:mAvN01zEMK8MMhtbk39/DsjGwczc2zI5kQvuubY5cxU=
+github.com/akash-network/cosmos-sdk v0.45.16-akash.1/go.mod h1:NTnk/GuQdFyfk/iGFxDAgQH9fwcbRW/hREap6qaPg48=
 github.com/akash-network/ledger-go v0.14.3 h1:LCEFkTfgGA2xFMN2CtiKvXKE7dh0QSM77PJHCpSkaAo=
 github.com/akash-network/ledger-go v0.14.3/go.mod h1:NfsjfFvno9Kaq6mfpsKz4sqjnAVVEsVsnBJfKB4ueAs=
 github.com/akash-network/ledger-go/cosmos v0.14.4 h1:h3WiXmoKKs9wkj1LHcJ12cLjXXg6nG1fp+UQ5+wu/+o=
@@ -221,8 +223,6 @@ github.com/cosmos/cosmos-db v0.0.0-20221226095112-f3c38ecb5e32 h1:zlCp9n3uwQieEL
 github.com/cosmos/cosmos-db v0.0.0-20221226095112-f3c38ecb5e32/go.mod h1:kwMlEC4wWvB48zAShGKVqboJL6w4zCLesaNQ3YLU2BQ=
 github.com/cosmos/cosmos-proto v1.0.0-beta.1 h1:iDL5qh++NoXxG8hSy93FdYJut4XfgbShIocllGaXx/0=
 github.com/cosmos/cosmos-proto v1.0.0-beta.1/go.mod h1:8k2GNZghi5sDRFw/scPL8gMSowT1vDA+5ouxL8GjaUE=
-github.com/cosmos/cosmos-sdk v0.45.16 h1:5ba/Bh5/LE55IwHQuCU4fiG4eXeDKtSWzehXRpaKDcw=
-github.com/cosmos/cosmos-sdk v0.45.16/go.mod h1:bScuNwWAP0TZJpUf+SHXRU3xGoUPp+X9nAzfeIXts40=
 github.com/cosmos/go-bip39 v0.0.0-20180819234021-555e2067c45d/go.mod h1:tSxLoYXyBmiFeKpvmq4dzayMdCjCnu8uqmCysIGBT2Y=
 github.com/cosmos/go-bip39 v1.0.0 h1:pcomnQdrdH22njcAatO0yWojsUnCO3y2tNoV1cb6hHY=
 github.com/cosmos/go-bip39 v1.0.0/go.mod h1:RNJv0H/pOIVgxw6KS7QeX2a0Uo0aKUlfhZ4xuwvCdJw=
