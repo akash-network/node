@@ -1,6 +1,6 @@
 GON_CONFIGFILE           ?= gon.json
 
-GORELEASER_DEBUG         ?= false
+GORELEASER_VERBOSE       ?= false
 GORELEASER_IMAGE         := ghcr.io/goreleaser/goreleaser-cross:$(GOTOOLCHAIN_SEMVER)
 GORELEASER_RELEASE       ?= false
 GORELEASER_MOUNT_CONFIG  ?= false
@@ -69,7 +69,7 @@ docker-image:
 		-w /go/src/$(GO_MOD_NAME) \
 		$(GORELEASER_IMAGE) \
 		-f .goreleaser-docker.yaml \
-		--debug=$(GORELEASER_DEBUG) \
+		--verbose=$(GORELEASER_VERBOSE) \
 		--clean \
 		--skip=publish,validate \
 		--snapshot
@@ -102,6 +102,6 @@ release: gen-changelog
 		-f "$(GORELEASER_CONFIG)" \
 		release \
 		$(GORELEASER_SKIP) \
-		--debug=$(GORELEASER_DEBUG) \
+		--verbose=$(GORELEASER_VERBOSE) \
 		--clean \
 		--release-notes=/go/src/$(GO_MOD_NAME)/.cache/changelog.md
