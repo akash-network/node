@@ -171,7 +171,7 @@ func Test_V2_1_Cross_Validates(t *testing.T) {
 
 	// This is a single document producing both the manifest & deployment groups
 	// These should always agree with each other. If this test fails at least one of the
-	// following is ture
+	// following is true, pure
 	// 1. Cross validation logic is wrong
 	// 2. The DeploymentGroups() & Manifest() code do not agree with one another
 	err = m.CheckAgainstGSpecs(dgroups)
