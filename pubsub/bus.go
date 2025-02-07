@@ -109,7 +109,7 @@ func (b *bus) run() {
 	defer b.lc.ShutdownCompleted()
 
 	var outch chan<- Event
-	var curev Event
+	var curve Event
 
 loop:
 	for {
@@ -119,7 +119,7 @@ loop:
 			// are events to emit, set up the output channel and output
 			// event accordingly.
 			outch = b.eventch
-			curev = b.evbuf[0]
+			curve = b.evbuf[0]
 		} else {
 			// otherwise block the output (sending to a nil channel always blocks)
 			outch = nil
@@ -130,7 +130,7 @@ loop:
 			b.lc.ShutdownInitiated(err)
 			break loop
 
-		case outch <- curev:
+		case outch <- curve:
 			// Event was emitted. Shrink current event buffer.
 			b.evbuf = b.evbuf[1:]
 
@@ -178,7 +178,7 @@ loop:
 }
 
 func newSubscriber(parent *bus) *bus {
-	// Re-use bus struct, but populate output channel (eventch)
+	// Reuse bus struct, but populate output channel (eventch)
 	// to enable subscriber mode.
 
 	evbuf := make([]Event, len(parent.evbuf))
