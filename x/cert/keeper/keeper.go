@@ -15,7 +15,7 @@ type Keeper interface {
 	CreateCertificate(sdk.Context, sdk.Address, []byte, []byte) error
 	RevokeCertificate(sdk.Context, types.CertID) error
 	GetCertificateByID(ctx sdk.Context, id types.CertID) (types.CertificateResponse, bool)
-	WithCertificates(ctx sdk.Context, fn func(certificate types.CertificateResponse) bool)
+	WithCertificates(ctx sdk.Context, fn func(id types.CertID, certificate types.CertificateResponse) bool)
 	WithCertificatesState(ctx sdk.Context, state types.Certificate_State, fn func(certificate types.CertificateResponse) bool)
 	WithOwner(ctx sdk.Context, id sdk.Address, fn func(types.CertificateResponse) bool)
 	WithOwnerState(ctx sdk.Context, id sdk.Address, state types.Certificate_State, fn func(types.CertificateResponse) bool)
@@ -56,7 +56,7 @@ func (k keeper) CreateCertificate(ctx sdk.Context, owner sdk.Address, crt []byte
 		return err
 	}
 
-	key := certificateKey(types.CertID{
+	key := CertificateKey(types.CertID{
 		Owner:  owner,
 		Serial: *cert.SerialNumber,
 	})
@@ -78,7 +78,7 @@ func (k keeper) CreateCertificate(ctx sdk.Context, owner sdk.Address, crt []byte
 
 func (k keeper) RevokeCertificate(ctx sdk.Context, id types.CertID) error {
 	store := ctx.KVStore(k.skey)
-	key := certificateKey(id)
+	key := CertificateKey(id)
 
 	buf := store.Get(key)
 	if buf == nil {
@@ -103,7 +103,7 @@ func (k keeper) RevokeCertificate(ctx sdk.Context, id types.CertID) error {
 func (k keeper) GetCertificateByID(ctx sdk.Context, id types.CertID) (types.CertificateResponse, bool) {
 	store := ctx.KVStore(k.skey)
 
-	buf := store.Get(certificateKey(id))
+	buf := store.Get(CertificateKey(id))
 	if buf == nil {
 		return types.CertificateResponse{}, false
 	}
@@ -118,7 +118,7 @@ func (k keeper) GetCertificateByID(ctx sdk.Context, id types.CertID) (types.Cert
 }
 
 // WithCertificates iterates all certificates
-func (k keeper) WithCertificates(ctx sdk.Context, fn func(certificate types.CertificateResponse) bool) {
+func (k keeper) WithCertificates(ctx sdk.Context, fn func(id types.CertID, certificate types.CertificateResponse) bool) {
 	store := ctx.KVStore(k.skey)
 	iter := store.Iterator(nil, nil)
 
@@ -127,8 +127,18 @@ func (k keeper) WithCertificates(ctx sdk.Context, fn func(certificate types.Cert
 	}()
 
 	for ; iter.Valid(); iter.Next() {
-		item := k.mustUnmarshal(iter.Key(), iter.Value())
-		if stop := fn(item); stop {
+		id, err := ParseCertID(types.PrefixCertificateID(), iter.Key())
+		if err != nil {
+			panic(err.Error())
+		}
+
+		item := types.CertificateResponse{
+			Serial: id.Serial.String(),
+		}
+		k.cdc.MustUnmarshal(iter.Value(), &item.Certificate)
+
+		// item := k.mustUnmarshal(iter.Key(), iter.Value())
+		if stop := fn(id, item); stop {
 			break
 		}
 	}
@@ -156,7 +166,7 @@ func (k keeper) WithCertificatesState(ctx sdk.Context, state types.Certificate_S
 // WithOwner iterates all certificates by owner
 func (k keeper) WithOwner(ctx sdk.Context, id sdk.Address, fn func(types.CertificateResponse) bool) {
 	store := ctx.KVStore(k.skey)
-	iter := sdk.KVStorePrefixIterator(store, certificatePrefix(id))
+	iter := sdk.KVStorePrefixIterator(store, CertificatePrefix(id))
 	defer func() {
 		_ = iter.Close()
 	}()
@@ -172,7 +182,7 @@ func (k keeper) WithOwner(ctx sdk.Context, id sdk.Address, fn func(types.Certifi
 // WithOwnerState iterates all certificates by owner in certain state
 func (k keeper) WithOwnerState(ctx sdk.Context, id sdk.Address, state types.Certificate_State, fn func(types.CertificateResponse) bool) {
 	store := ctx.KVStore(k.skey)
-	iter := sdk.KVStorePrefixIterator(store, certificatePrefix(id))
+	iter := sdk.KVStorePrefixIterator(store, CertificatePrefix(id))
 	defer func() {
 		_ = iter.Close()
 	}()
@@ -188,7 +198,7 @@ func (k keeper) WithOwnerState(ctx sdk.Context, id sdk.Address, state types.Cert
 }
 
 func (k keeper) mustUnmarshal(key, val []byte) types.CertificateResponse {
-	serial := certificateSerialFromKey(key)
+	serial := CertificateSerialFromKey(key)
 	item := types.CertificateResponse{
 		Serial: serial.String(),
 	}
@@ -198,7 +208,7 @@ func (k keeper) mustUnmarshal(key, val []byte) types.CertificateResponse {
 }
 
 func (k keeper) unmarshalIterator(key, val []byte) (types.CertificateResponse, error) {
-	serial := certificateSerialFromKey(key)
+	serial := CertificateSerialFromKey(key)
 	item := types.CertificateResponse{
 		Serial: serial.String(),
 	}
