@@ -2,6 +2,7 @@ package market
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -10,6 +11,7 @@ import (
 	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
 
 	"github.com/akash-network/node/x/market/keeper"
+	keys "github.com/akash-network/node/x/market/keeper/keys/v1beta4"
 )
 
 // ValidateGenesis does validation check of the Genesis
@@ -30,8 +32,42 @@ func DefaultGenesisState() *types.GenesisState {
 }
 
 // InitGenesis initiate genesis state and return updated validator details
-func InitGenesis(ctx sdk.Context, keeper keeper.IKeeper, data *types.GenesisState) []abci.ValidatorUpdate {
-	keeper.SetParams(ctx, data.Params)
+func InitGenesis(ctx sdk.Context, kpr keeper.IKeeper, data *types.GenesisState) []abci.ValidatorUpdate {
+	store := ctx.KVStore(kpr.StoreKey())
+	cdc := kpr.Codec()
+
+	for _, record := range data.Orders {
+		key := keys.OrderKey(record.ID())
+
+		if store.Has(key) {
+			panic(fmt.Errorf("market genesis orders init. order id %s: %w", record.ID(), types.ErrOrderExists))
+		}
+
+		store.Set(key, cdc.MustMarshal(&record))
+	}
+
+	for _, record := range data.Bids {
+		key := keys.BidKey(record.ID())
+
+		if store.Has(key) {
+			panic(fmt.Errorf("market genesis bids init. bid id %s: %w", record.ID(), types.ErrBidExists))
+		}
+
+		store.Set(key, cdc.MustMarshal(&record))
+	}
+
+	for _, record := range data.Leases {
+		key := keys.LeaseKey(record.ID())
+
+		if store.Has(key) {
+			panic(fmt.Errorf("market genesis leases init. order id %s: lease exists", record.ID()))
+		}
+
+		store.Set(key, cdc.MustMarshal(&record))
+	}
+
+	kpr.SetParams(ctx, data.Params)
+
 	return []abci.ValidatorUpdate{}
 }
 

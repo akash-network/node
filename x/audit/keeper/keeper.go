@@ -48,7 +48,7 @@ func (k Keeper) StoreKey() sdk.StoreKey {
 func (k Keeper) GetProviderByAuditor(ctx sdk.Context, id types.ProviderID) (types.Provider, bool) {
 	store := ctx.KVStore(k.skey)
 
-	buf := store.Get(providerKey(id))
+	buf := store.Get(ProviderKey(id))
 	if buf == nil {
 		return types.Provider{}, false
 	}
@@ -65,7 +65,7 @@ func (k Keeper) GetProviderAttributes(ctx sdk.Context, id sdk.Address) (types.Pr
 
 	var attr types.Providers
 
-	iter := sdk.KVStorePrefixIterator(store, providerPrefix(id))
+	iter := sdk.KVStorePrefixIterator(store, ProviderPrefix(id))
 	defer func() {
 		_ = iter.Close()
 	}()
@@ -88,7 +88,7 @@ func (k Keeper) GetProviderAttributes(ctx sdk.Context, id sdk.Address) (types.Pr
 // if key exists, existing values for matching pairs will be replaced
 func (k Keeper) CreateOrUpdateProviderAttributes(ctx sdk.Context, id types.ProviderID, attr akashtypes.Attributes) error {
 	store := ctx.KVStore(k.skey)
-	key := providerKey(id)
+	key := ProviderKey(id)
 
 	prov := types.Provider{
 		Owner:      id.Owner.String(),
@@ -138,7 +138,7 @@ func (k Keeper) CreateOrUpdateProviderAttributes(ctx sdk.Context, id types.Provi
 
 func (k Keeper) DeleteProviderAttributes(ctx sdk.Context, id types.ProviderID, keys []string) error {
 	store := ctx.KVStore(k.skey)
-	key := providerKey(id)
+	key := ProviderKey(id)
 
 	buf := store.Get(key)
 	if buf == nil {
@@ -220,10 +220,10 @@ func (k Keeper) WithProviders(ctx sdk.Context, fn func(types.Provider) bool) {
 	}
 }
 
-// WithProviders iterates all signed provider's attributes
+// WithProvider iterates all signed provider's attributes
 func (k Keeper) WithProvider(ctx sdk.Context, id sdk.Address, fn func(types.Provider) bool) {
 	store := ctx.KVStore(k.skey)
-	iter := sdk.KVStorePrefixIterator(store, providerPrefix(id))
+	iter := sdk.KVStorePrefixIterator(store, ProviderPrefix(id))
 	defer func() {
 		_ = iter.Close()
 	}()
