@@ -71,7 +71,7 @@ func (k Keeper) StoreKey() sdk.StoreKey {
 func (k Keeper) GetDeployment(ctx sdk.Context, id types.DeploymentID) (types.Deployment, bool) {
 	store := ctx.KVStore(k.skey)
 
-	key := deploymentKey(id)
+	key := DeploymentKey(id)
 
 	if !store.Has(key) {
 		return types.Deployment{}, false
@@ -90,7 +90,7 @@ func (k Keeper) GetDeployment(ctx sdk.Context, id types.DeploymentID) (types.Dep
 func (k Keeper) GetGroup(ctx sdk.Context, id types.GroupID) (types.Group, bool) {
 	store := ctx.KVStore(k.skey)
 
-	key := groupKey(id)
+	key := GroupKey(id)
 
 	if !store.Has(key) {
 		return types.Group{}, false
@@ -128,7 +128,7 @@ func (k Keeper) GetGroups(ctx sdk.Context, id types.DeploymentID) []types.Group 
 func (k Keeper) Create(ctx sdk.Context, deployment types.Deployment, groups []types.Group) error {
 	store := ctx.KVStore(k.skey)
 
-	key := deploymentKey(deployment.ID())
+	key := DeploymentKey(deployment.ID())
 
 	if store.Has(key) {
 		return types.ErrDeploymentExists
@@ -142,7 +142,7 @@ func (k Keeper) Create(ctx sdk.Context, deployment types.Deployment, groups []ty
 		if !group.ID().DeploymentID().Equals(deployment.ID()) {
 			return types.ErrInvalidGroupID
 		}
-		gkey := groupKey(group.ID())
+		gkey := GroupKey(group.ID())
 		store.Set(gkey, k.cdc.MustMarshal(&group))
 	}
 
@@ -159,7 +159,7 @@ func (k Keeper) Create(ctx sdk.Context, deployment types.Deployment, groups []ty
 // UpdateDeployment updates deployment details
 func (k Keeper) UpdateDeployment(ctx sdk.Context, deployment types.Deployment) error {
 	store := ctx.KVStore(k.skey)
-	key := deploymentKey(deployment.ID())
+	key := DeploymentKey(deployment.ID())
 
 	if !store.Has(key) {
 		return types.ErrDeploymentNotFound
@@ -181,7 +181,7 @@ func (k Keeper) CloseDeployment(ctx sdk.Context, deployment types.Deployment) {
 	}
 
 	store := ctx.KVStore(k.skey)
-	key := deploymentKey(deployment.ID())
+	key := DeploymentKey(deployment.ID())
 
 	if !store.Has(key) {
 		return
@@ -199,7 +199,7 @@ func (k Keeper) CloseDeployment(ctx sdk.Context, deployment types.Deployment) {
 // OnCloseGroup provides shutdown API for a Group
 func (k Keeper) OnCloseGroup(ctx sdk.Context, group types.Group, state types.Group_State) error {
 	store := ctx.KVStore(k.skey)
-	key := groupKey(group.ID())
+	key := GroupKey(group.ID())
 
 	if !store.Has(key) {
 		return types.ErrGroupNotFound
@@ -218,7 +218,7 @@ func (k Keeper) OnCloseGroup(ctx sdk.Context, group types.Group, state types.Gro
 // OnPauseGroup provides shutdown API for a Group
 func (k Keeper) OnPauseGroup(ctx sdk.Context, group types.Group) error {
 	store := ctx.KVStore(k.skey)
-	key := groupKey(group.ID())
+	key := GroupKey(group.ID())
 
 	if !store.Has(key) {
 		return types.ErrGroupNotFound
@@ -237,7 +237,7 @@ func (k Keeper) OnPauseGroup(ctx sdk.Context, group types.Group) error {
 // OnStartGroup provides shutdown API for a Group
 func (k Keeper) OnStartGroup(ctx sdk.Context, group types.Group) error {
 	store := ctx.KVStore(k.skey)
-	key := groupKey(group.ID())
+	key := GroupKey(group.ID())
 
 	if !store.Has(key) {
 		return types.ErrGroupNotFound
@@ -298,14 +298,14 @@ func (k Keeper) SetParams(ctx sdk.Context, params types.Params) {
 
 func (k Keeper) updateDeployment(ctx sdk.Context, obj types.Deployment) {
 	store := ctx.KVStore(k.skey)
-	key := deploymentKey(obj.ID())
+	key := DeploymentKey(obj.ID())
 	store.Set(key, k.cdc.MustMarshal(&obj))
 }
 
 // nolint: unused
 func (k Keeper) updateGroup(ctx sdk.Context, group types.Group) {
 	store := ctx.KVStore(k.skey)
-	key := groupKey(group.ID())
+	key := GroupKey(group.ID())
 
 	store.Set(key, k.cdc.MustMarshal(&group))
 }
