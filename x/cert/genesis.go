@@ -1,7 +1,9 @@
 package cert
 
 import (
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -20,21 +22,36 @@ func ValidateGenesis(data *types.GenesisState) error {
 			return err
 		}
 	}
+
 	return nil
 }
 
 // InitGenesis initiate genesis state and return updated validator details
-func InitGenesis(ctx sdk.Context, keeper keeper.Keeper, data *types.GenesisState) []abci.ValidatorUpdate {
+func InitGenesis(ctx sdk.Context, kpr keeper.Keeper, data *types.GenesisState) []abci.ValidatorUpdate {
+	store := ctx.KVStore(kpr.StoreKey())
+	cdc := kpr.Codec()
+
 	for _, record := range data.Certificates {
 		owner, err := sdk.AccAddressFromBech32(record.Owner)
 		if err != nil {
 			panic(fmt.Sprintf("error init certificate from genesis: %s", err))
 		}
 
-		err = keeper.CreateCertificate(ctx, owner, record.Certificate.Cert, record.Certificate.Pubkey)
+		cert, err := types.ParseAndValidateCertificate(owner, record.Certificate.Cert, record.Certificate.Pubkey)
 		if err != nil {
-			panic(fmt.Sprintf("error init certificate from genesis: %s", err))
+			panic(err.Error())
 		}
+
+		key := keeper.CertificateKey(types.CertID{
+			Owner:  owner,
+			Serial: *cert.SerialNumber,
+		})
+
+		if store.Has(key) {
+			panic(types.ErrCertificateExists.Error())
+		}
+
+		store.Set(key, cdc.MustMarshal(&record.Certificate))
 	}
 
 	return []abci.ValidatorUpdate{}
@@ -42,7 +59,35 @@ func InitGenesis(ctx sdk.Context, keeper keeper.Keeper, data *types.GenesisState
 
 // ExportGenesis returns genesis state as raw bytes for the provider module
 func ExportGenesis(ctx sdk.Context, k keeper.Keeper) *types.GenesisState {
-	return &types.GenesisState{}
+	var res types.GenesisCertificates
+
+	k.WithCertificates(ctx, func(id types.CertID, certificate types.CertificateResponse) bool {
+		block, rest := pem.Decode(certificate.Certificate.Cert)
+		if len(rest) > 0 {
+			panic("unable to decode certificate")
+
+		}
+
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			panic(err.Error())
+		}
+
+		if cert.SerialNumber.String() != id.Serial.String() {
+			panic("certificate id does not match")
+		}
+
+		res = append(res, types.GenesisCertificate{
+			Owner:       id.Owner.String(),
+			Certificate: certificate.Certificate,
+		})
+
+		return false
+	})
+
+	return &types.GenesisState{
+		Certificates: res,
+	}
 }
 
 // DefaultGenesisState returns default genesis state as raw bytes for the provider

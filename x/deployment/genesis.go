@@ -33,13 +33,28 @@ func DefaultGenesisState() *types.GenesisState {
 }
 
 // InitGenesis initiate genesis state and return updated validator details
-func InitGenesis(ctx sdk.Context, keeper keeper.IKeeper, data *types.GenesisState) []abci.ValidatorUpdate {
+func InitGenesis(ctx sdk.Context, kpr keeper.IKeeper, data *types.GenesisState) []abci.ValidatorUpdate {
+	cdc := kpr.Codec()
+	store := ctx.KVStore(kpr.StoreKey())
+
 	for _, record := range data.Deployments {
-		if err := keeper.Create(ctx, record.Deployment, record.Groups); err != nil {
-			return nil
+		key := keeper.DeploymentKey(record.Deployment.DeploymentID)
+
+		store.Set(key, cdc.MustMarshal(&record))
+
+		for idx := range record.Groups {
+			group := record.Groups[idx]
+
+			if !group.ID().DeploymentID().Equals(record.Deployment.ID()) {
+				panic(types.ErrInvalidGroupID)
+			}
+			gkey := keeper.GroupKey(group.ID())
+			store.Set(gkey, cdc.MustMarshal(&group))
 		}
 	}
-	keeper.SetParams(ctx, data.Params)
+
+	kpr.SetParams(ctx, data.Params)
+
 	return []abci.ValidatorUpdate{}
 }
 
