@@ -72,20 +72,24 @@ func InitGenesis(ctx sdk.Context, keeper keeper.Keeper, data *types.GenesisState
 	for idx := range data.Payments {
 		keeper.SavePayment(ctx, data.Payments[idx])
 	}
+
 	return []abci.ValidatorUpdate{}
 }
 
 // ExportGenesis returns genesis state as raw bytes for the provider module
 func ExportGenesis(ctx sdk.Context, k keeper.Keeper) *types.GenesisState {
 	state := &types.GenesisState{}
+
 	k.WithAccounts(ctx, func(obj types.Account) bool {
 		state.Accounts = append(state.Accounts, obj)
 		return false
 	})
+
 	k.WithPayments(ctx, func(obj types.FractionalPayment) bool {
 		state.Payments = append(state.Payments, obj)
 		return false
 	})
+
 	return state
 }
 

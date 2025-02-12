@@ -10,7 +10,7 @@ import (
 	"github.com/akash-network/akash-api/go/sdkutil"
 )
 
-func deploymentKey(id types.DeploymentID) []byte {
+func DeploymentKey(id types.DeploymentID) []byte {
 	buf := bytes.NewBuffer(types.DeploymentPrefix())
 	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
@@ -19,8 +19,8 @@ func deploymentKey(id types.DeploymentID) []byte {
 	return buf.Bytes()
 }
 
-// groupKey provides prefixed key for a Group's marshalled data.
-func groupKey(id types.GroupID) []byte {
+// GroupKey provides prefixed key for a Group's marshalled data.
+func GroupKey(id types.GroupID) []byte {
 	buf := bytes.NewBuffer(types.GroupPrefix())
 	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {

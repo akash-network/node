@@ -2,12 +2,19 @@ issues:
   exclude:
     - comment on exported (method|function|type|const|var)
   exclude-use-default: true
-
-# Skip generated k8s code
-run:
-  skip-dirs:
-    - pkg/client
+  exclude-dirs:
     - ".*/mocks"
-
   # Skip vendor/ etc
   skip-dirs-use-default: true
+linters:
+  disable-all: true
+  enable:
+    - misspell
+    - unused
+    - gofmt
+    - gocritic
+    - goconst
+    - ineffassign
+    - unparam
+    - staticcheck
+    - prealloc

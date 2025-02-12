@@ -5,6 +5,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/address"
 )
 
-func providerKey(id sdk.Address) []byte {
+func ProviderKey(id sdk.Address) []byte {
 	return address.MustLengthPrefix(id.Bytes())
 }
