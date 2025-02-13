@@ -32,10 +32,10 @@ func (ms msgServer) CreateBid(goCtx context.Context, msg *types.MsgCreateBid) (*
 
 	minDeposit := params.BidMinDeposit
 	if msg.Deposit.Denom != minDeposit.Denom {
-		return nil, fmt.Errorf("%w: mininum:%v received:%v", types.ErrInvalidDeposit, minDeposit, msg.Deposit)
+		return nil, fmt.Errorf("%w: minimum:%v received:%v", types.ErrInvalidDeposit, minDeposit, msg.Deposit)
 	}
 	if minDeposit.Amount.GT(msg.Deposit.Amount) {
-		return nil, fmt.Errorf("%w: mininum:%v received:%v", types.ErrInvalidDeposit, minDeposit, msg.Deposit)
+		return nil, fmt.Errorf("%w: minimum:%v received:%v", types.ErrInvalidDeposit, minDeposit, msg.Deposit)
 	}
 
 	if ms.keepers.Market.BidCountForOrder(ctx, msg.Order) > params.OrderMaxBids {

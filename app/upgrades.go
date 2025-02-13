@@ -20,7 +20,7 @@ func (app *AkashApp) registerUpgradeHandlers() error {
 		app.Logger().Info(fmt.Sprintf("initializing upgrade `%s`", name))
 		upgrade, err := fn(app.Logger(), &app.App)
 		if err != nil {
-			return fmt.Errorf("unable to unitialize upgrade `%s`: %w", name, err)
+			return fmt.Errorf("unable to uninitialize upgrade `%s`: %w", name, err)
 		}
 
 		app.Keepers.Cosmos.Upgrade.SetUpgradeHandler(name, upgrade.UpgradeHandler())
