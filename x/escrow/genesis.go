@@ -54,7 +54,7 @@ func ValidateGenesis(data *types.GenesisState) error {
 		for _, p2 := range pmap[payment.AccountID] {
 			if p2.PaymentID == payment.PaymentID {
 				return fmt.Errorf(
-					"%w, dupliate payment for %s %s (idx %v)", types.ErrPaymentExists, payment.AccountID, payment.PaymentID, idx)
+					"%w, duplicate payment for %s %s (idx %v)", types.ErrPaymentExists, payment.AccountID, payment.PaymentID, idx)
 			}
 		}
 
