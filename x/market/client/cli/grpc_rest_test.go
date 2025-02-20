@@ -247,7 +247,6 @@ func (s *GRPCRestTestSuite) TestGetOrders() {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		s.Run(tc.name, func() {
 			resp, err := sdkrest.GetRequest(tc.url)
 			s.Require().NoError(err)
@@ -315,7 +314,6 @@ func (s *GRPCRestTestSuite) TestGetOrder() {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		s.Run(tc.name, func() {
 			resp, err := sdkrest.GetRequest(tc.url)
 			s.Require().NoError(err)
@@ -386,7 +384,6 @@ func (s *GRPCRestTestSuite) TestGetBids() {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		s.Run(tc.name, func() {
 			resp, err := sdkrest.GetRequest(tc.url)
 			s.Require().NoError(err)
@@ -460,7 +457,6 @@ func (s *GRPCRestTestSuite) TestGetBid() {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		s.Run(tc.name, func() {
 			resp, err := sdkrest.GetRequest(tc.url)
 			s.Require().NoError(err)
@@ -531,7 +527,6 @@ func (s *GRPCRestTestSuite) TestGetLeases() {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		s.Run(tc.name, func() {
 			resp, err := sdkrest.GetRequest(tc.url)
 			s.Require().NoError(err)
@@ -605,7 +600,6 @@ func (s *GRPCRestTestSuite) TestGetLease() {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		s.Run(tc.name, func() {
 			resp, err := sdkrest.GetRequest(tc.url)
 			s.Require().NoError(err)

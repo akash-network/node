@@ -1,4 +1,7 @@
+---
+version: 2
 project_name: node
+dist: ./.cache/goreleaser/docker
 env:
   - GO111MODULE=on
   - CGO_ENABLED=1
@@ -75,4 +78,3 @@ dockers:
 
 archives:
   - format: binary
-    rlcp: true

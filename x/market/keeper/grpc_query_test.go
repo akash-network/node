@@ -100,7 +100,6 @@ func TestGRPCQueryOrder(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
 			ctx := sdk.WrapSDKContext(suite.ctx)
@@ -170,7 +169,6 @@ func TestGRPCQueryOrders(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
 			ctx := sdk.WrapSDKContext(suite.ctx)
@@ -914,7 +912,6 @@ func TestGRPCQueryBid(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
 			ctx := sdk.WrapSDKContext(suite.ctx)
@@ -985,7 +982,6 @@ func TestGRPCQueryBids(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
 			ctx := sdk.WrapSDKContext(suite.ctx)
@@ -1055,7 +1051,6 @@ func TestGRPCQueryLease(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
 			ctx := sdk.WrapSDKContext(suite.ctx)
@@ -1131,7 +1126,6 @@ func TestGRPCQueryLeases(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
 			ctx := sdk.WrapSDKContext(suite.ctx)

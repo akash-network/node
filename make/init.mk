@@ -50,7 +50,7 @@ endif
 
 # ==== Build tools versions ====
 # Format <TOOL>_VERSION
-GOLANGCI_LINT_VERSION        ?= v1.51.2
+GOLANGCI_LINT_VERSION        ?= v1.62.2
 STATIK_VERSION               ?= v0.1.7
 GIT_CHGLOG_VERSION           ?= v0.15.1
 MOCKERY_VERSION              ?= 2.42.0
