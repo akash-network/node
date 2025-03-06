@@ -49,7 +49,7 @@ func (k Keeper) StoreKey() sdk.StoreKey {
 // Get returns a provider with given provider id
 func (k Keeper) Get(ctx sdk.Context, id sdk.Address) (types.Provider, bool) {
 	store := ctx.KVStore(k.skey)
-	key := providerKey(id)
+	key := ProviderKey(id)
 
 	if !store.Has(key) {
 		return types.Provider{}, false
@@ -69,7 +69,7 @@ func (k Keeper) Create(ctx sdk.Context, provider types.Provider) error {
 		return err
 	}
 
-	key := providerKey(owner)
+	key := ProviderKey(owner)
 
 	if store.Has(key) {
 		return types.ErrProviderExists
@@ -106,7 +106,7 @@ func (k Keeper) Update(ctx sdk.Context, provider types.Provider) error {
 		return err
 	}
 
-	key := providerKey(owner)
+	key := ProviderKey(owner)
 
 	if !store.Has(key) {
 		return types.ErrProviderNotFound

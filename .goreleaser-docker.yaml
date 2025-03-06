@@ -1,3 +1,5 @@
+---
+version: 2
 project_name: node
 env:
   - GO111MODULE=on
@@ -75,4 +77,3 @@ dockers:
 
 archives:
   - format: binary
-    rlcp: true
