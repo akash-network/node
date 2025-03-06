@@ -10,7 +10,7 @@ import (
 	types "github.com/akash-network/akash-api/go/node/audit/v1beta3"
 )
 
-func providerKey(id types.ProviderID) []byte {
+func ProviderKey(id types.ProviderID) []byte {
 	buf := bytes.NewBuffer(types.PrefixProviderID())
 	if _, err := buf.Write(address.MustLengthPrefix(id.Owner.Bytes())); err != nil {
 		panic(err)
@@ -23,7 +23,7 @@ func providerKey(id types.ProviderID) []byte {
 	return buf.Bytes()
 }
 
-func providerPrefix(id sdk.Address) []byte {
+func ProviderPrefix(id sdk.Address) []byte {
 	buf := bytes.NewBuffer(types.PrefixProviderID())
 	if _, err := buf.Write(address.MustLengthPrefix(id.Bytes())); err != nil {
 		panic(err)
