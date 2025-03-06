@@ -6,6 +6,9 @@ GORELEASER_RELEASE       ?= false
 GORELEASER_MOUNT_CONFIG  ?= false
 GORELEASER_SKIP          := $(subst $(COMMA),$(SPACE),$(GORELEASER_SKIP))
 
+#GORELEASER_MOD_MOUNT     ?= $(shell git config --get remote.origin.url | sed -r 's/.*(\@|\/\/)(.*)(\:|\/)([^:\/]*)\/([^\/\.]*)\.git/\2\/\4\/\5/' | tr -d '\n')
+GORELEASER_MOD_MOUNT     ?= $(shell cat $(ROOT_DIR)/.github/repo | tr -d '\n')
+
 RELEASE_DOCKER_IMAGE     ?= ghcr.io/akash-network/node
 
 ifneq ($(GORELEASER_RELEASE),true)
@@ -49,6 +52,30 @@ install:
 .PHONY: image-minikube
 image-minikube:
 	eval $$(minikube docker-env) && docker-image
+
+.PHONY: test-bins
+test-bins:
+	docker run \
+		--rm \
+		-e STABLE=$(IS_STABLE) \
+		-e MOD="$(GOMOD)" \
+		-e BUILD_TAGS="$(BUILD_TAGS)" \
+		-e BUILD_VARS="$(GORELEASER_BUILD_VARS)" \
+		-e STRIP_FLAGS="$(GORELEASER_STRIP_FLAGS)" \
+		-e LINKMODE="$(GO_LINKMODE)" \
+		-e DOCKER_IMAGE=$(RELEASE_DOCKER_IMAGE) \
+		-e GOPATH=/go \
+		-e GOTOOLCHAIN="$(GOTOOLCHAIN)" \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v $(GOPATH):/go \
+		-v $(AKASH_ROOT):/go/src/$(GORELEASER_MOD_MOUNT) \
+		-w /go/src/$(GORELEASER_MOD_MOUNT) \
+		$(GORELEASER_IMAGE) \
+		-f .goreleaser-test-bins.yaml \
+		--verbose=$(GORELEASER_VERBOSE) \
+		--clean \
+		--skip=publish,validate \
+		--snapshot
 
 .PHONY: docker-image
 docker-image:

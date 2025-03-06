@@ -7,6 +7,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/cosmos/cosmos-sdk/x/authz"
+	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	"github.com/stretchr/testify/require"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
@@ -158,24 +160,27 @@ func TestAppImportExport(t *testing.T) {
 	fmt.Printf("comparing stores...\n")
 
 	storeKeysPrefixes := []StoreKeysPrefixes{
-		{app.keys[authtypes.StoreKey], newApp.keys[authtypes.StoreKey], [][]byte{}},
+		{app.skeys[authtypes.ModuleName], newApp.skeys[authtypes.ModuleName], [][]byte{}},
 		{
-			app.keys[stakingtypes.StoreKey], newApp.keys[stakingtypes.StoreKey],
+			app.skeys[stakingtypes.ModuleName], newApp.skeys[stakingtypes.ModuleName],
 			[][]byte{
 				stakingtypes.UnbondingQueueKey, stakingtypes.RedelegationQueueKey, stakingtypes.ValidatorQueueKey,
 				stakingtypes.HistoricalInfoKey,
 			},
 		}, // ordering may change but it doesn't matter
-		{app.keys[slashingtypes.StoreKey], newApp.keys[slashingtypes.StoreKey], [][]byte{}},
-		{app.keys[minttypes.StoreKey], newApp.keys[minttypes.StoreKey], [][]byte{}},
-		{app.keys[distrtypes.StoreKey], newApp.keys[distrtypes.StoreKey], [][]byte{}},
-		{app.keys[banktypes.StoreKey], newApp.keys[banktypes.StoreKey], [][]byte{banktypes.BalancesPrefix}},
-		{app.keys[paramtypes.StoreKey], newApp.keys[paramtypes.StoreKey], [][]byte{}},
-		{app.keys[govtypes.StoreKey], newApp.keys[govtypes.StoreKey], [][]byte{}},
-		{app.keys[evidencetypes.StoreKey], newApp.keys[evidencetypes.StoreKey], [][]byte{}},
-		{app.keys[capabilitytypes.StoreKey], newApp.keys[capabilitytypes.StoreKey], [][]byte{}},
-		{app.keys[ibchost.StoreKey], newApp.keys[ibchost.StoreKey], [][]byte{}},
-		{app.keys[ibctransfertypes.StoreKey], newApp.keys[ibctransfertypes.StoreKey], [][]byte{}},
+		{app.skeys[slashingtypes.ModuleName], newApp.skeys[slashingtypes.StoreKey], [][]byte{}},
+		{app.skeys[minttypes.ModuleName], newApp.skeys[minttypes.ModuleName], [][]byte{}},
+		{app.skeys[distrtypes.ModuleName], newApp.skeys[distrtypes.ModuleName], [][]byte{}},
+		{app.skeys[banktypes.ModuleName], newApp.skeys[banktypes.ModuleName], [][]byte{banktypes.BalancesPrefix}},
+		{app.skeys[paramtypes.ModuleName], newApp.skeys[paramtypes.ModuleName], [][]byte{}},
+		{app.skeys[govtypes.ModuleName], newApp.skeys[govtypes.ModuleName], [][]byte{}},
+		{app.skeys[evidencetypes.ModuleName], newApp.skeys[evidencetypes.ModuleName], [][]byte{}},
+		{app.skeys[capabilitytypes.ModuleName], newApp.skeys[capabilitytypes.ModuleName], [][]byte{}},
+		{app.skeys[ibchost.ModuleName], newApp.skeys[ibchost.ModuleName], [][]byte{}},
+		{app.skeys[ibctransfertypes.ModuleName], newApp.skeys[ibctransfertypes.ModuleName], [][]byte{}},
+		{app.skeys[authz.ModuleName], newApp.skeys[authz.ModuleName], [][]byte{
+			authzkeeper.GranteeKey,
+		}},
 	}
 
 	for _, skp := range storeKeysPrefixes {

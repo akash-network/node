@@ -21,18 +21,7 @@ var (
 
 	// actual consensus versions is set when migrations are
 	// registered.
-	currentConsensusVersions = map[string]uint64{
-		"audit":      1,
-		"cert":       1,
-		"deployment": 1,
-		"escrow":     1,
-		"market":     1,
-		"provider":   1,
-		"inflation":  1,
-		"agov":       1,
-		"astaking":   1,
-		"take":       1,
-	}
+	// currentConsensusVersions = map[string]uint64{}
 )
 
 type UpgradeInitFn func(log.Logger, *apptypes.App) (IUpgrade, error)
@@ -60,6 +49,28 @@ type IHeightPatch interface {
 type Migrator interface {
 	StoreKey() sdk.StoreKey
 	Codec() codec.BinaryCodec
+}
+
+type migrator struct {
+	cdc  codec.BinaryCodec
+	skey sdk.StoreKey
+}
+
+var _ Migrator = (*migrator)(nil)
+
+func NewMigrator(cdc codec.BinaryCodec, skey sdk.StoreKey) Migrator {
+	return &migrator{
+		cdc:  cdc,
+		skey: skey,
+	}
+}
+
+func (m *migrator) Codec() codec.BinaryCodec {
+	return m.cdc
+}
+
+func (m *migrator) StoreKey() sdk.StoreKey {
+	return m.skey
 }
 
 type Migration interface {
@@ -100,28 +111,12 @@ func RegisterMigration(module string, version uint64, initFn NewMigrationFn) {
 	}
 
 	migrations[module][version] = initFn
-	if val := currentConsensusVersions[module]; val <= version+1 {
-		currentConsensusVersions[module] = version + 1
-	}
 }
 
-func ModuleVersion(module string) uint64 {
-	ver, exists := currentConsensusVersions[module]
-	if !exists {
-		panic(fmt.Sprintf("requested consensus version for non existing module (%s)", module))
-	}
-
-	return ver
-}
-
-func ModuleMigrations(module string, migrator Migrator, fn func(string, uint64, sdkmodule.MigrationHandler)) {
-	moduleMigrations, exists := migrations[module]
-	if !exists {
-		return
-	}
-
-	for version, initFn := range moduleMigrations {
-		migration := initFn(migrator)
-		fn(module, version, migration.GetHandler())
+func IterateMigrations(fn func(module string, version uint64, initfn NewMigrationFn)) {
+	for module, migrations := range migrations {
+		for version, handler := range migrations {
+			fn(module, version, handler)
+		}
 	}
 }

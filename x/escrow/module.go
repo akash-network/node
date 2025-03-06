@@ -24,7 +24,6 @@ import (
 	v1beta2types "github.com/akash-network/akash-api/go/node/escrow/v1beta2"
 	types "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
 
-	utypes "github.com/akash-network/node/upgrades/types"
 	"github.com/akash-network/node/x/escrow/client/cli"
 	"github.com/akash-network/node/x/escrow/client/rest"
 	"github.com/akash-network/node/x/escrow/keeper"
@@ -158,12 +157,6 @@ func (am AppModule) LegacyQuerierHandler(legacyQuerierCdc *codec.LegacyAmino) sd
 func (am AppModule) RegisterServices(cfg module.Configurator) {
 	querier := keeper.NewQuerier(am.keeper)
 	types.RegisterQueryServer(cfg.QueryServer(), querier)
-
-	utypes.ModuleMigrations(ModuleName, am.keeper, func(name string, forVersion uint64, handler module.MigrationHandler) {
-		if err := cfg.RegisterMigration(name, forVersion, handler); err != nil {
-			panic(err)
-		}
-	})
 }
 
 // RegisterQueryService registers a GRPC query service to respond to the
@@ -199,7 +192,7 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 
 // ConsensusVersion implements module.AppModule#ConsensusVersion
 func (am AppModule) ConsensusVersion() uint64 {
-	return utypes.ModuleVersion(ModuleName)
+	return 2
 }
 
 // ____________________________________________________________________________

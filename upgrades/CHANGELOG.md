@@ -8,14 +8,15 @@
 |:----------:|--------:|
 |   audit    |       2 |
 |    cert    |       2 |
-| deployment |       3 |
+| deployment |       4 |
 |   escrow   |       2 |
 |    agov    |       1 |
 | inflation  |       1 |
-|   market   |       5 |
+|   market   |       6 |
 |  provider  |       2 |
 |  astaking  |       1 |
-|    take    |       1 |
+|    take    |       2 |
+|   authz    |       2 |
 
 #### Upgrades
 
@@ -42,6 +43,16 @@ Goal of the upgrade here
 
 Add new upgrades after this line based on the template above
 -----
+
+##### v0.38.0
+
+Upgrade x/stores keys to improve read performance of certain modules as described in [AEP-61](https://github.com/akash-network/AEP/blob/main/AEPS/AEP-61.md)
+
+- Migrations
+    - cert `2 -> 3`
+    - deployment `3 -> 4` 
+    - market `5 -> 6`
+    - authz `1 -> 2`
 
 ##### v0.36.0
 

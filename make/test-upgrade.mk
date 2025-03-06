@@ -12,12 +12,16 @@ export AKASH_GAS                = auto
 export AKASH_STATESYNC_ENABLE   = false
 export AKASH_LOG_COLOR          = true
 
+TEST_CONFIG             ?= test-config.json
 KEY_OPTS                := --keyring-backend=$(AKASH_KEYRING_BACKEND)
 KEY_NAME                ?= validator
 UPGRADE_TO              ?= $(shell $(ROOT_DIR)/script/upgrades.sh upgrade-from-release $(RELEASE_TAG))
 UPGRADE_FROM            := $(shell cat $(ROOT_DIR)/meta.json | jq -r --arg name $(UPGRADE_TO) '.upgrades[$$name].from_version' | tr -d '\n')
 GENESIS_BINARY_VERSION  := $(shell cat $(ROOT_DIR)/meta.json | jq -r --arg name $(UPGRADE_TO) '.upgrades[$$name].from_binary' | tr -d '\n')
 UPGRADE_BINARY_VERSION  ?= local
+
+REMOTE_TEST_WORKDIR     ?= ~/go/src/github.com/akash-network/node
+REMOTE_TEST_HOST        ?=
 
 $(AKASH_INIT):
 	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --gbv=$(GENESIS_BINARY_VERSION) --ufrom=$(UPGRADE_FROM) --uto=$(UPGRADE_TO) --config="$(PWD)/config.json" init
@@ -31,17 +35,27 @@ genesis: $(GENESIS_DEST)
 
 .PHONY: test
 test: $(COSMOVISOR) init
-	$(GO_TEST) -run "^\QTestUpgrade\E$$" -tags e2e.upgrade -timeout 60m -v -args \
+	$(GO_TEST) -run "^\QTestUpgrade\E$$" -tags e2e.upgrade -timeout 180m -v -args \
 		-cosmovisor=$(COSMOVISOR) \
 		-workdir=$(AP_RUN_DIR)/validators \
-		-config=test-config.json \
+		-config=$(TEST_CONFIG) \
 		-upgrade-name=$(UPGRADE_TO) \
 		-upgrade-version="$(UPGRADE_BINARY_VERSION)" \
 		-test-cases=test-cases.json
 
 .PHONY: test-reset
 test-reset:
-	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" clean
+	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) clean
+	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) --gbv=$(GENESIS_BINARY_VERSION) bins
+	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) keys
+
+
+.PHONY: bins
+bins:
+ifneq ($(findstring build,$(SKIP)),build)
+bins:
+	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) bins
+endif
 
 .PHONY: clean
 clean:

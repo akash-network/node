@@ -26,7 +26,6 @@ import (
 	v1beta3types "github.com/akash-network/akash-api/go/node/market/v1beta3"
 	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
 
-	utypes "github.com/akash-network/node/upgrades/types"
 	akeeper "github.com/akash-network/node/x/audit/keeper"
 	ekeeper "github.com/akash-network/node/x/escrow/keeper"
 	"github.com/akash-network/node/x/market/client/cli"
@@ -166,12 +165,6 @@ func (am AppModule) RegisterServices(cfg module.Configurator) {
 	types.RegisterMsgServer(cfg.MsgServer(), handler.NewServer(am.keepers))
 	querier := am.keepers.Market.NewQuerier()
 	types.RegisterQueryServer(cfg.QueryServer(), querier)
-
-	utypes.ModuleMigrations(ModuleName, am.keepers.Market, func(name string, forVersion uint64, handler module.MigrationHandler) {
-		if err := cfg.RegisterMigration(name, forVersion, handler); err != nil {
-			panic(err)
-		}
-	})
 }
 
 // BeginBlock performs no-op
@@ -200,7 +193,7 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 
 // ConsensusVersion implements module.AppModule#ConsensusVersion
 func (am AppModule) ConsensusVersion() uint64 {
-	return utypes.ModuleVersion(ModuleName)
+	return 6
 }
 
 // AppModuleSimulation implements an application simulation module for the market module.

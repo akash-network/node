@@ -37,7 +37,7 @@ func InitGenesis(ctx sdk.Context, kpr keeper.IKeeper, data *types.GenesisState) 
 	cdc := kpr.Codec()
 
 	for _, record := range data.Orders {
-		key := keys.OrderKey(record.ID())
+		key := keys.MustOrderKey(keys.OrderStateToPrefix(record.State), record.ID())
 
 		if store.Has(key) {
 			panic(fmt.Errorf("market genesis orders init. order id %s: %w", record.ID(), types.ErrOrderExists))
@@ -47,7 +47,7 @@ func InitGenesis(ctx sdk.Context, kpr keeper.IKeeper, data *types.GenesisState) 
 	}
 
 	for _, record := range data.Bids {
-		key := keys.BidKey(record.ID())
+		key := keys.MustBidKey(keys.BidStateToPrefix(record.State), record.ID())
 
 		if store.Has(key) {
 			panic(fmt.Errorf("market genesis bids init. bid id %s: %w", record.ID(), types.ErrBidExists))
@@ -57,7 +57,7 @@ func InitGenesis(ctx sdk.Context, kpr keeper.IKeeper, data *types.GenesisState) 
 	}
 
 	for _, record := range data.Leases {
-		key := keys.LeaseKey(record.ID())
+		key := keys.MustLeaseKey(keys.LeaseStateToPrefix(record.State), record.ID())
 
 		if store.Has(key) {
 			panic(fmt.Errorf("market genesis leases init. order id %s: lease exists", record.ID()))
