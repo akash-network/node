@@ -20,8 +20,7 @@ import (
 // TestContextFlags tests that all the flags which are set in client.Context are parsed correctly.
 // This test has been added because recently the --home flag broke with cosmos-sdk@v0.43.0 upgrade.
 func TestContextFlags(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "test-akash-home")
-	require.NoError(t, err)
+	tmpDir := t.TempDir()
 
 	// expected flag values
 	expectedFlagValues := map[string]interface{}{
@@ -197,6 +196,4 @@ func TestContextFlags(t *testing.T) {
 		})
 	}
 
-	// cleanup
-	require.NoError(t, os.RemoveAll(tmpDir))
 }
