@@ -41,6 +41,7 @@ func CertificateKey(id types.CertID) []byte {
 	return buf.Bytes()
 }
 
+<<<<<<< Updated upstream
 func CertificatePrefix(id sdk.Address) []byte {
 	addr, err := address.LengthPrefix(id.Bytes())
 	if err != nil {
@@ -59,6 +60,15 @@ func CertificatePrefix(id sdk.Address) []byte {
 // format <0x01><add len><add bytes><serial length><serial bytes>
 
 func ParseCertID(prefix []byte, from []byte) (types.CertID, error) {
+||||||| Stash base
+// ParseCertKey parse certificate key into id
+// format <0x01><state><add len><add bytes><serial length><serial bytes>
+func ParseCertKey(from []byte) (types.Certificate_State, types.CertID, error) {
+=======
+// ParseCertKey parse certificate key into id
+// format <0x11><state><add len><add bytes><serial length><serial bytes>
+func ParseCertKey(from []byte) (types.Certificate_State, types.CertID, error) {
+>>>>>>> Stashed changes
 	res := types.CertID{
 		Serial: *big.NewInt(0),
 	}
