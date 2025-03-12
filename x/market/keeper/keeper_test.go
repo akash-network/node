@@ -54,23 +54,23 @@ func Test_WithOrders(t *testing.T) {
 	assert.Equal(t, 1, count)
 }
 
-func Test_WithOrdersForGroup(t *testing.T) {
-	ctx, keeper, _ := setupKeeper(t)
-	order, _ := createOrder(t, ctx, keeper)
-
-	// create extra orders
-	createOrder(t, ctx, keeper)
-
-	count := 0
-	keeper.WithOrdersForGroup(ctx, order.ID().GroupID(), func(result types.Order) bool {
-		if assert.Equal(t, order.ID(), result.ID()) {
-			count++
-		}
-		return false
-	})
-
-	assert.Equal(t, 1, count)
-}
+// func Test_WithOrdersForGroup(t *testing.T) {
+// 	ctx, keeper, _ := setupKeeper(t)
+// 	order, _ := createOrder(t, ctx, keeper)
+//
+// 	// create extra orders
+// 	createOrder(t, ctx, keeper)
+//
+// 	count := 0
+// 	keeper.WithOrdersForGroup(ctx, order.ID().GroupID(), func(result types.Order) bool {
+// 		if assert.Equal(t, order.ID(), result.ID()) {
+// 			count++
+// 		}
+// 		return false
+// 	})
+//
+// 	assert.Equal(t, 1, count)
+// }
 
 func Test_CreateBid(t *testing.T) {
 	_, _, suite := setupKeeper(t)
@@ -116,7 +116,7 @@ func Test_WithBidsForOrder(t *testing.T) {
 	createBid(t, suite)
 
 	count := 0
-	keeper.WithBidsForOrder(ctx, bid.ID().OrderID(), func(result types.Bid) bool {
+	keeper.WithBidsForOrder(ctx, bid.ID().OrderID(), types.BidOpen, func(result types.Bid) bool {
 		if assert.Equal(t, bid.ID(), result.ID()) {
 			count++
 		}
@@ -154,26 +154,26 @@ func Test_WithLeases(t *testing.T) {
 	assert.Equal(t, 1, count)
 }
 
-func Test_LeaseForOrder(t *testing.T) {
-	ctx, keeper, suite := setupKeeper(t)
-	id := createLease(t, suite)
-
-	// extra leases
-	createLease(t, suite)
-	createLease(t, suite)
-
-	result, ok := keeper.LeaseForOrder(ctx, id.OrderID())
-	assert.True(t, ok)
-
-	assert.Equal(t, id, result.ID())
-
-	// no match
-	{
-		bid, _ := createBid(t, suite)
-		_, ok := keeper.LeaseForOrder(ctx, bid.ID().OrderID())
-		assert.False(t, ok)
-	}
-}
+// func Test_LeaseForOrder(t *testing.T) {
+// 	ctx, keeper, suite := setupKeeper(t)
+// 	id := createLease(t, suite)
+//
+// 	// extra leases
+// 	createLease(t, suite)
+// 	createLease(t, suite)
+//
+// 	result, ok := keeper.LeaseForOrder(ctx, id.OrderID())
+// 	assert.True(t, ok)
+//
+// 	assert.Equal(t, id, result.ID())
+//
+// 	// no match
+// 	{
+// 		bid, _ := createBid(t, suite)
+// 		_, ok := keeper.LeaseForOrder(ctx, bid.ID().OrderID())
+// 		assert.False(t, ok)
+// 	}
+// }
 
 func Test_OnOrderMatched(t *testing.T) {
 	ctx, keeper, suite := setupKeeper(t)

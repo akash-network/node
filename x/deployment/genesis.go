@@ -33,13 +33,29 @@ func DefaultGenesisState() *types.GenesisState {
 }
 
 // InitGenesis initiate genesis state and return updated validator details
-func InitGenesis(ctx sdk.Context, keeper keeper.IKeeper, data *types.GenesisState) []abci.ValidatorUpdate {
+func InitGenesis(ctx sdk.Context, kpr keeper.IKeeper, data *types.GenesisState) []abci.ValidatorUpdate {
+	cdc := kpr.Codec()
+	store := ctx.KVStore(kpr.StoreKey())
+
 	for _, record := range data.Deployments {
-		if err := keeper.Create(ctx, record.Deployment, record.Groups); err != nil {
-			return nil
+		key := keeper.MustDeploymentKey(keeper.DeploymentStateToPrefix(record.Deployment.State), record.Deployment.DeploymentID)
+
+		store.Set(key, cdc.MustMarshal(&record.Deployment))
+
+		for idx := range record.Groups {
+			group := record.Groups[idx]
+
+			if !group.ID().DeploymentID().Equals(record.Deployment.ID()) {
+				panic(types.ErrInvalidGroupID)
+			}
+
+			gkey := keeper.MustGroupKey(keeper.GroupStateToPrefix(group.State), group.ID())
+			store.Set(gkey, cdc.MustMarshal(&group))
 		}
 	}
-	keeper.SetParams(ctx, data.Params)
+
+	kpr.SetParams(ctx, data.Params)
+
 	return []abci.ValidatorUpdate{}
 }
 
@@ -48,6 +64,7 @@ func ExportGenesis(ctx sdk.Context, k keeper.IKeeper) *types.GenesisState {
 	var records []types.GenesisDeployment
 	k.WithDeployments(ctx, func(deployment types.Deployment) bool {
 		groups := k.GetGroups(ctx, deployment.ID())
+
 		records = append(records, types.GenesisDeployment{
 			Deployment: deployment,
 			Groups:     groups,

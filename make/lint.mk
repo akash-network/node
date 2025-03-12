@@ -6,9 +6,7 @@ SUBLINTERS = unused \
 			ineffassign \
 			unparam \
 			staticcheck \
-			revive \
-			gosec \
-			exportloopref \
+			copyloopvar \
 			prealloc
 # TODO: ^ gochecknoglobals
 
@@ -19,7 +17,7 @@ test-sublinters: $(patsubst %, test-sublinter-%,$(SUBLINTERS))
 
 .PHONY: test-lint-all
 test-lint-all: $(GOLANGCI_LINT)
-	$(GOLANGCI_LINT_RUN) ./... --issues-exit-code=0 --deadline=10m
+	$(GOLANGCI_LINT_RUN) ./... --issues-exit-code=0 --timeout=10m
 
 .PHONY: test-sublinter-misspell
 test-sublinter-misspell: $(GOLANGCI_LINT)

@@ -2,6 +2,7 @@ package provider
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -14,11 +15,42 @@ import (
 
 // ValidateGenesis does validation check of the Genesis and returns error in case of failure
 func ValidateGenesis(data *types.GenesisState) error {
+	for _, record := range data.Providers {
+		msg := types.MsgCreateProvider{
+			Owner:      record.Owner,
+			HostURI:    record.HostURI,
+			Attributes: record.Attributes,
+			Info:       record.Info,
+		}
+
+		if err := msg.ValidateBasic(); err != nil {
+			return err
+		}
+
+	}
 	return nil
 }
 
 // InitGenesis initiate genesis state and return updated validator details
-func InitGenesis(ctx sdk.Context, keeper keeper.IKeeper, data *types.GenesisState) []abci.ValidatorUpdate {
+func InitGenesis(ctx sdk.Context, kpr keeper.IKeeper, data *types.GenesisState) []abci.ValidatorUpdate {
+	store := ctx.KVStore(kpr.StoreKey())
+	cdc := kpr.Codec()
+
+	for _, record := range data.Providers {
+		owner, err := sdk.AccAddressFromBech32(record.Owner)
+		if err != nil {
+			panic(fmt.Sprintf("provider genesis init: %s", err.Error()))
+		}
+
+		key := keeper.ProviderKey(owner)
+
+		if store.Has(key) {
+			panic(fmt.Sprintf("provider genesis init: %s", types.ErrProviderExists.Error()))
+		}
+
+		store.Set(key, cdc.MustMarshal(&record))
+	}
+
 	return []abci.ValidatorUpdate{}
 }
 
@@ -28,7 +60,7 @@ func ExportGenesis(ctx sdk.Context, k keeper.IKeeper) *types.GenesisState {
 
 	k.WithProviders(ctx, func(provider types.Provider) bool {
 		providers = append(providers, provider)
-		return true
+		return false
 	})
 
 	return &types.GenesisState{

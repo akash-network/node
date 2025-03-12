@@ -90,24 +90,24 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 	app := app.Setup(false)
 
 	if keepers.Audit == nil {
-		keepers.Audit = akeeper.NewKeeper(atypes.ModuleCdc, app.GetKey(atypes.StoreKey))
+		keepers.Audit = akeeper.NewKeeper(atypes.ModuleCdc, app.GetKey(atypes.ModuleName))
 	}
 
 	if keepers.Take == nil {
-		keepers.Take = tkeeper.NewKeeper(ttypes.ModuleCdc, app.GetKey(ttypes.StoreKey), app.GetSubspace(ttypes.ModuleName))
+		keepers.Take = tkeeper.NewKeeper(ttypes.ModuleCdc, app.GetKey(ttypes.ModuleName), app.GetSubspace(ttypes.ModuleName))
 	}
 
 	if keepers.Escrow == nil {
-		keepers.Escrow = ekeeper.NewKeeper(etypes.ModuleCdc, app.GetKey(etypes.StoreKey), keepers.Bank, keepers.Take, keepers.Distr, keepers.Authz)
+		keepers.Escrow = ekeeper.NewKeeper(etypes.ModuleCdc, app.GetKey(etypes.ModuleName), keepers.Bank, keepers.Take, keepers.Distr, keepers.Authz)
 	}
 	if keepers.Market == nil {
-		keepers.Market = mkeeper.NewKeeper(mtypes.ModuleCdc, app.GetKey(mtypes.StoreKey), app.GetSubspace(mtypes.ModuleName), keepers.Escrow)
+		keepers.Market = mkeeper.NewKeeper(mtypes.ModuleCdc, app.GetKey(mtypes.ModuleName), app.GetSubspace(mtypes.ModuleName), keepers.Escrow)
 	}
 	if keepers.Deployment == nil {
-		keepers.Deployment = dkeeper.NewKeeper(dtypes.ModuleCdc, app.GetKey(dtypes.StoreKey), app.GetSubspace(dtypes.ModuleName), keepers.Escrow)
+		keepers.Deployment = dkeeper.NewKeeper(dtypes.ModuleCdc, app.GetKey(dtypes.ModuleName), app.GetSubspace(dtypes.ModuleName), keepers.Escrow)
 	}
 	if keepers.Provider == nil {
-		keepers.Provider = pkeeper.NewKeeper(ptypes.ModuleCdc, app.GetKey(ptypes.StoreKey))
+		keepers.Provider = pkeeper.NewKeeper(ptypes.ModuleCdc, app.GetKey(ptypes.ModuleName))
 	}
 
 	hook := mhooks.New(keepers.Deployment, keepers.Market)
