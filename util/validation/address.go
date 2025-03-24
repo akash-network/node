@@ -35,3 +35,20 @@ func AssertKeyLength(bz []byte, length int) {
 		panic(err)
 	}
 }
+
+func EncodeWithLengthPrefix(bz []byte) ([]byte, error) {
+	if len(bz) > 255 {
+		return nil, fmt.Errorf("length-prefixed address too long")
+	}
+
+	return append([]byte{byte(len(bz))}, bz...), nil
+}
+
+func MustEncodeWithLengthPrefix(bz []byte) []byte {
+	res, err := EncodeWithLengthPrefix(bz)
+	if err != nil {
+		panic(err)
+	}
+
+	return res
+}

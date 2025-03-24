@@ -43,7 +43,11 @@ func setupTest(t *testing.T) *grpcTestSuite {
 
 func sortCerts(certs types.Certificates) {
 	sort.SliceStable(certs, func(i, j int) bool {
-		return certs[i].State < certs[j].State
+		if certs[i].State < certs[j].State {
+			return true
+		}
+
+		return string(certs[i].Cert) < string(certs[j].Cert)
 	})
 }
 
@@ -54,12 +58,17 @@ func TestCertGRPCQueryCertificates(t *testing.T) {
 	cert := testutil.Certificate(t, owner)
 
 	owner2 := testutil.AccAddress(t)
+	owner3 := testutil.AccAddress(t)
 	cert2 := testutil.Certificate(t, owner2)
+	cert3 := testutil.Certificate(t, owner3)
 
 	err := suite.keeper.CreateCertificate(suite.ctx, owner, cert.PEM.Cert, cert.PEM.Pub)
 	require.NoError(t, err)
 
 	err = suite.keeper.CreateCertificate(suite.ctx, owner2, cert2.PEM.Cert, cert2.PEM.Pub)
+	require.NoError(t, err)
+
+	err = suite.keeper.CreateCertificate(suite.ctx, owner3, cert3.PEM.Cert, cert3.PEM.Pub)
 	require.NoError(t, err)
 
 	err = suite.keeper.RevokeCertificate(suite.ctx, types.CertID{
@@ -75,6 +84,7 @@ func TestCertGRPCQueryCertificates(t *testing.T) {
 		msg      string
 		malleate func()
 		expPass  bool
+		nextKey  bool
 	}{
 		{
 			"all certificates",
@@ -87,6 +97,11 @@ func TestCertGRPCQueryCertificates(t *testing.T) {
 						Pubkey: cert.PEM.Pub,
 					},
 					types.Certificate{
+						State:  types.CertificateValid,
+						Cert:   cert3.PEM.Cert,
+						Pubkey: cert3.PEM.Pub,
+					},
+					types.Certificate{
 						State:  types.CertificateRevoked,
 						Cert:   cert2.PEM.Cert,
 						Pubkey: cert2.PEM.Pub,
@@ -94,6 +109,7 @@ func TestCertGRPCQueryCertificates(t *testing.T) {
 				}
 			},
 			true,
+			false,
 		},
 		{
 			"certificate not found",
@@ -106,6 +122,7 @@ func TestCertGRPCQueryCertificates(t *testing.T) {
 
 				expCertificates = nil
 			},
+			false,
 			false,
 		},
 		{
@@ -125,9 +142,10 @@ func TestCertGRPCQueryCertificates(t *testing.T) {
 				}
 			},
 			true,
+			false,
 		},
 		{
-			"success revoked",
+			"success revoked by owner",
 			func() {
 				req = &types.QueryCertificatesRequest{
 					Filter: types.CertificateFilter{
@@ -143,7 +161,28 @@ func TestCertGRPCQueryCertificates(t *testing.T) {
 				}
 			},
 			true,
+			false,
 		},
+		{
+			"success revoked by state",
+			func() {
+				req = &types.QueryCertificatesRequest{
+					Filter: types.CertificateFilter{
+						State: types.CertificateRevoked.String(),
+					},
+				}
+				expCertificates = types.Certificates{
+					types.Certificate{
+						State:  types.CertificateRevoked,
+						Cert:   cert2.PEM.Cert,
+						Pubkey: cert2.PEM.Pub,
+					},
+				}
+			},
+			true,
+			false,
+		},
+
 		{
 			"success pagination with limit",
 			func() {
@@ -159,6 +198,11 @@ func TestCertGRPCQueryCertificates(t *testing.T) {
 						Pubkey: cert.PEM.Pub,
 					},
 					types.Certificate{
+						State:  types.CertificateValid,
+						Cert:   cert3.PEM.Cert,
+						Pubkey: cert3.PEM.Pub,
+					},
+					types.Certificate{
 						State:  types.CertificateRevoked,
 						Cert:   cert2.PEM.Cert,
 						Pubkey: cert2.PEM.Pub,
@@ -166,6 +210,49 @@ func TestCertGRPCQueryCertificates(t *testing.T) {
 				}
 			},
 			true,
+			false,
+		},
+
+		// {
+		// 	"success pagination with next key",
+		// 	func() {
+		// 		req = &types.QueryCertificatesRequest{
+		// 			Filter: types.CertificateFilter{State: types.CertificateValid.String()},
+		// 			Pagination: &sdkquery.PageRequest{
+		// 				Limit: 1,
+		// 			},
+		// 		}
+		// 		expCertificates = types.Certificates{
+		// 			types.Certificate{
+		// 				State:  types.CertificateValid,
+		// 				Cert:   cert.PEM.Cert,
+		// 				Pubkey: cert.PEM.Pub,
+		// 			},
+		// 		}
+		// 	},
+		// 	true,
+		// 	true,
+		// },
+
+		{
+			"success pagination with nil key",
+			func() {
+				req = &types.QueryCertificatesRequest{
+					Filter: types.CertificateFilter{State: types.CertificateRevoked.String()},
+					Pagination: &sdkquery.PageRequest{
+						Limit: 1,
+					},
+				}
+				expCertificates = types.Certificates{
+					types.Certificate{
+						State:  types.CertificateRevoked,
+						Cert:   cert2.PEM.Cert,
+						Pubkey: cert2.PEM.Pub,
+					},
+				}
+			},
+			true,
+			false,
 		},
 		{
 			"success pagination with limit with state",
@@ -184,9 +271,15 @@ func TestCertGRPCQueryCertificates(t *testing.T) {
 						Cert:   cert.PEM.Cert,
 						Pubkey: cert.PEM.Pub,
 					},
+					types.Certificate{
+						State:  types.CertificateValid,
+						Cert:   cert3.PEM.Cert,
+						Pubkey: cert3.PEM.Pub,
+					},
 				}
 			},
 			true,
+			false,
 		},
 		{
 			"success pagination with limit with owner",
@@ -208,6 +301,7 @@ func TestCertGRPCQueryCertificates(t *testing.T) {
 				}
 			},
 			true,
+			false,
 		},
 		{
 			"failing pagination with limit with non-existing owner",
@@ -222,6 +316,7 @@ func TestCertGRPCQueryCertificates(t *testing.T) {
 				}
 				expCertificates = nil
 			},
+			false,
 			false,
 		},
 	}
@@ -239,13 +334,36 @@ func TestCertGRPCQueryCertificates(t *testing.T) {
 				if expCertificates != nil {
 					sortCerts(expCertificates)
 
-					respCerts := make(types.Certificates, len(res.Certificates))
-					for i, cert := range res.Certificates {
-						respCerts[i] = cert.Certificate
+					respCerts := make(types.Certificates, 0, len(res.Certificates))
+					for _, cert := range res.Certificates {
+						respCerts = append(respCerts, cert.Certificate)
 					}
 
 					sortCerts(respCerts)
-					require.Equal(t, expCertificates, respCerts)
+
+					if req.Pagination != nil && req.Pagination.Limit > 0 {
+						require.LessOrEqual(t, len(respCerts), int(req.Pagination.Limit))
+					}
+
+					require.Len(t, respCerts, len(expCertificates))
+
+					for i, cert := range expCertificates {
+						require.Equal(t, cert, respCerts[i])
+					}
+				}
+
+				if tc.nextKey {
+					require.NotNil(t, res.Pagination.NextKey)
+
+					req.Pagination.Key = res.Pagination.NextKey
+					res, err = suite.qclient.Certificates(ctx, req)
+					require.NoError(t, err)
+					require.NotNil(t, res)
+					if req.Pagination != nil && req.Pagination.Limit > 0 {
+						require.LessOrEqual(t, len(res.Certificates), int(req.Pagination.Limit))
+					}
+
+					require.Nil(t, res.Pagination.NextKey)
 				}
 			} else {
 				require.NotNil(t, res)

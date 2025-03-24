@@ -254,6 +254,7 @@ type nodeInitParams struct {
 	grpcPort    uint16
 	grpcWebPort uint16
 	pprofPort   uint16
+	apiPort     uint16
 }
 
 var (
@@ -446,6 +447,7 @@ func TestUpgrade(t *testing.T) {
 			grpcPort:    9090 + uint16(idx*3),
 			grpcWebPort: 9091 + uint16(idx*3),
 			pprofPort:   6060 + uint16(idx),
+			apiPort:     1317 + uint16(idx),
 		}
 	}
 
@@ -488,6 +490,7 @@ func TestUpgrade(t *testing.T) {
 				fmt.Sprintf("AKASH_RPC_PPROF_LADDR=%s:%d", listenAddr, params.pprofPort),
 				fmt.Sprintf("AKASH_GRPC_ADDRESS=%s:%d", listenAddr, params.grpcPort),
 				fmt.Sprintf("AKASH_GRPC_WEB_ADDRESS=%s:%d", listenAddr, params.grpcWebPort),
+				fmt.Sprintf("AKASH_API_ADDRESS=tcp://%s:%d", listenAddr, params.apiPort),
 				"DAEMON_NAME=akash",
 				"DAEMON_RESTART_AFTER_UPGRADE=true",
 				"DAEMON_ALLOW_DOWNLOAD_BINARIES=true",
@@ -508,6 +511,7 @@ func TestUpgrade(t *testing.T) {
 				"AKASH_TX_INDEX_INDEXER=null",
 				"AKASH_GRPC_ENABLE=true",
 				"AKASH_GRPC_WEB_ENABLE=true",
+				"AKASH_API_ENABLE=true",
 			},
 		}
 	}
