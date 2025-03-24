@@ -68,7 +68,7 @@ replace (
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	// use cometBFT system fork of tendermint with akash patches
 
-	github.com/tendermint/tendermint => github.com/akash-network/cometbft v0.34.27-akash.2
+	github.com/tendermint/tendermint => github.com/akash-network/cometbft v0.34.27-akash.3
 
 	github.com/zondax/hid => github.com/troian/hid v0.13.2
 	github.com/zondax/ledger-go => github.com/akash-network/ledger-go v0.14.3
