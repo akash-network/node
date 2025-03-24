@@ -10,6 +10,8 @@ import (
 	"google.golang.org/grpc/status"
 
 	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+
+	"github.com/akash-network/node/util/query"
 )
 
 // Querier is used as Keeper will have duplicate methods if used directly, and gRPC names take precedence over keeper
@@ -26,12 +28,6 @@ func (q querier) Certificates(c context.Context, req *types.QueryCertificatesReq
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
-	stateVal := types.Certificate_State(types.Certificate_State_value[req.Filter.State])
-
-	if req.Filter.State != "" && stateVal == types.CertificateStateInvalid {
-		return nil, status.Error(codes.InvalidArgument, "invalid state value")
-	}
-
 	if req.Pagination == nil {
 		req.Pagination = &sdkquery.PageRequest{}
 	} else if req.Pagination != nil && req.Pagination.Offset > 0 && req.Filter.State == "" {
@@ -42,32 +38,33 @@ func (q querier) Certificates(c context.Context, req *types.QueryCertificatesReq
 		req.Pagination.Limit = sdkquery.DefaultLimit
 	}
 
-	states := make([]types.Certificate_State, 0, 2)
+	states := make([]byte, 0, 2)
+
+	var searchPrefix []byte
 
 	// setup for case 3 - cross-index search
-	if req.Filter.State == "" {
-		// request has pagination key set, determine store prefix
-		if len(req.Pagination.Key) > 0 {
-			if len(req.Pagination.Key) < 3 {
-				return nil, status.Error(codes.InvalidArgument, "invalid pagination key")
-			}
-
-			switch req.Pagination.Key[2] {
-			case CertStateValidPrefixID:
-				states = append(states, types.CertificateValid)
-				fallthrough
-			case CertStateRevokedPrefixID:
-				states = append(states, types.CertificateRevoked)
-			default:
-				return nil, status.Error(codes.InvalidArgument, "invalid pagination key")
-			}
-		} else {
-			// request does not have pagination set. Start from valid store
-			states = append(states, types.CertificateValid)
-			states = append(states, types.CertificateRevoked)
+	// nolint: gocritic
+	if len(req.Pagination.Key) > 0 {
+		var key []byte
+		var err error
+		states, searchPrefix, key, _, err = query.DecodePaginationKey(req.Pagination.Key)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
 		}
+
+		req.Pagination.Key = key
+	} else if req.Filter.State != "" {
+		stateVal := types.Certificate_State(types.Certificate_State_value[req.Filter.State])
+
+		if req.Filter.State != "" && stateVal == types.CertificateStateInvalid {
+			return nil, status.Error(codes.InvalidArgument, "invalid state value")
+		}
+
+		states = append(states, byte(stateVal))
 	} else {
-		states = append(states, stateVal)
+		// request does not have pagination set. Start from valid store
+		states = append(states, byte(types.CertificateValid))
+		states = append(states, byte(types.CertificateRevoked))
 	}
 
 	var certificates types.CertificatesResponse
@@ -75,15 +72,21 @@ func (q querier) Certificates(c context.Context, req *types.QueryCertificatesReq
 
 	total := uint64(0)
 
-	for _, state := range states {
-		var searchPrefix []byte
+	for idx := range states {
+		state := types.Certificate_State(states[idx])
 		var err error
 
-		req.Filter.State = state.String()
+		if idx > 0 {
+			req.Pagination.Key = nil
+		}
 
-		searchPrefix, err = filterToPrefix(req.Filter)
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
+		if len(req.Pagination.Key) == 0 {
+			req.Filter.State = state.String()
+
+			searchPrefix, err = filterToPrefix(req.Filter)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
 		}
 
 		searchStore := prefix.NewStore(ctx.KVStore(q.skey), searchPrefix)
@@ -107,8 +110,6 @@ func (q querier) Certificates(c context.Context, req *types.QueryCertificatesReq
 
 				certificates = append(certificates, item)
 				count++
-
-				// return true, nil
 			}
 
 			return true, nil
@@ -121,6 +122,18 @@ func (q querier) Certificates(c context.Context, req *types.QueryCertificatesReq
 		total += count
 
 		if req.Pagination.Limit == 0 {
+			if len(pageRes.NextKey) > 0 {
+				pageRes.NextKey, err = query.EncodePaginationKey(states[idx:], searchPrefix, pageRes.NextKey, nil)
+				if err != nil {
+					pageRes.Total = total
+
+					return &types.QueryCertificatesResponse{
+						Certificates: certificates,
+						Pagination:   pageRes,
+					}, status.Error(codes.Internal, err.Error())
+				}
+			}
+
 			break
 		}
 	}

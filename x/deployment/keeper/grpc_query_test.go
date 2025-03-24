@@ -142,10 +142,16 @@ func TestGRPCQueryDeployments(t *testing.T) {
 	suite.createEscrowAccount(deployment.ID())
 
 	deployment2, groups2 := suite.createDeployment()
-	deployment2.State = types.DeploymentClosed
+	deployment2.State = types.DeploymentActive
 	err = suite.keeper.Create(suite.ctx, deployment2, groups2)
 	require.NoError(t, err)
 	suite.createEscrowAccount(deployment2.ID())
+
+	deployment3, groups3 := suite.createDeployment()
+	deployment3.State = types.DeploymentClosed
+	err = suite.keeper.Create(suite.ctx, deployment3, groups3)
+	require.NoError(t, err)
+	suite.createEscrowAccount(deployment3.ID())
 
 	var req *types.QueryDeploymentsRequest
 
@@ -153,13 +159,27 @@ func TestGRPCQueryDeployments(t *testing.T) {
 		msg      string
 		malleate func()
 		expLen   int
+		nextKey  bool
 	}{
 		{
 			"query deployments without any filters and pagination",
 			func() {
 				req = &types.QueryDeploymentsRequest{}
 			},
+			3,
+			false,
+		},
+		{
+			"query deployments with state filter",
+			func() {
+				req = &types.QueryDeploymentsRequest{
+					Filters: types.DeploymentFilters{
+						State: types.DeploymentActive.String(),
+					},
+				}
+			},
 			2,
+			false,
 		},
 		{
 			"query deployments with filters having non existent data",
@@ -171,13 +191,16 @@ func TestGRPCQueryDeployments(t *testing.T) {
 					}}
 			},
 			0,
+			false,
 		},
 		{
 			"query deployments with state filter",
 			func() {
-				req = &types.QueryDeploymentsRequest{Filters: types.DeploymentFilters{State: types.DeploymentClosed.String()}}
+				req = &types.QueryDeploymentsRequest{
+					Filters: types.DeploymentFilters{State: types.DeploymentClosed.String()}}
 			},
 			1,
+			false,
 		},
 		{
 			"query deployments with pagination",
@@ -185,6 +208,18 @@ func TestGRPCQueryDeployments(t *testing.T) {
 				req = &types.QueryDeploymentsRequest{Pagination: &sdkquery.PageRequest{Limit: 1}}
 			},
 			1,
+			false,
+		},
+		{
+			"query deployments with pagination next key",
+			func() {
+				req = &types.QueryDeploymentsRequest{
+					Filters:    types.DeploymentFilters{State: types.DeploymentActive.String()},
+					Pagination: &sdkquery.PageRequest{Limit: 1},
+				}
+			},
+			1,
+			true,
 		},
 	}
 
@@ -197,7 +232,17 @@ func TestGRPCQueryDeployments(t *testing.T) {
 
 			require.NoError(t, err)
 			require.NotNil(t, res)
-			require.Equal(t, tc.expLen, len(res.Deployments))
+			assert.Equal(t, tc.expLen, len(res.Deployments))
+
+			if tc.nextKey {
+				require.NotNil(t, res.Pagination.NextKey)
+				req.Pagination.Key = res.Pagination.NextKey
+				res, err = suite.queryClient.Deployments(ctx, req)
+				require.NoError(t, err)
+				require.NotNil(t, res)
+				assert.Nil(t, res.Pagination.NextKey)
+				assert.Equal(t, tc.expLen, len(res.Deployments))
+			}
 		})
 	}
 }
