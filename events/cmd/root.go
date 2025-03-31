@@ -50,13 +50,20 @@ func getEvents(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	group, ctx := errgroup.WithContext(ctx)
 
 	subscriber, err := bus.Subscribe()
+	if err != nil {
+		return err
+	}
 
+	evtSvc, err := events.NewEvents(ctx, cctx.Client, "akash-cli", bus)
 	if err != nil {
 		return err
 	}
 
 	group.Go(func() error {
-		return events.Publish(ctx, cctx.Client, "akash-cli", bus)
+		<-ctx.Done()
+		evtSvc.Shutdown()
+
+		return nil
 	})
 
 	group.Go(func() error {
