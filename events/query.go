@@ -19,6 +19,5 @@ import (
 // }
 
 func blkHeaderQuery() pubsub.Query {
-	return tmquery.MustParse(
-		fmt.Sprintf("%s='%s'", tmtypes.EventTypeKey, tmtypes.EventNewBlockHeader))
+	return tmquery.MustParse(fmt.Sprintf("%s='%s'", tmtypes.EventTypeKey, tmtypes.EventNewBlockHeader))
 }
