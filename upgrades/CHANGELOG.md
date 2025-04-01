@@ -46,7 +46,7 @@ Add new upgrades after this line based on the template above
 
 ##### v0.38.0
 
-Upgrade x/stores keys to improve read performance of certain modules as described in [AEP-61](https://github.com/akash-network/AEP/blob/main/AEPS/AEP-61.md)
+Upgrade x/stores keys to improve read performance of certain modules as described in [AEP-61](https://github.com/akash-network/AEP/blob/main/spec/aep-61/README.md)
 
 - Migrations
     - cert `2 -> 3`
