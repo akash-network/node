@@ -1,11 +1,11 @@
 module github.com/akash-network/node
 
-go 1.22.0
+go 1.23.0
 
 toolchain go1.23.6
 
 require (
-	github.com/akash-network/akash-api v0.0.75
+	github.com/akash-network/akash-api v0.0.78
 	github.com/blang/semver/v4 v4.0.0
 	github.com/boz/go-lifecycle v0.1.1
 	github.com/cosmos/cosmos-sdk v0.45.16
@@ -28,14 +28,14 @@ require (
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.18.2
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	github.com/tendermint/tendermint v0.34.27
 	github.com/tendermint/tm-db v0.6.7
 	github.com/theckman/yacspin v0.13.12
 	go.step.sm/crypto v0.44.6
 	golang.org/x/mod v0.17.0
 	golang.org/x/oauth2 v0.19.0
-	golang.org/x/sync v0.7.0
+	golang.org/x/sync v0.12.0
 	google.golang.org/grpc v1.63.2
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -111,7 +111,7 @@ require (
 	github.com/creachadair/taskgroup v0.3.2 // indirect
 	github.com/danieljoos/wincred v1.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.1 // indirect
+	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0 // indirect
 	github.com/desertbit/timer v0.0.0-20180107155436-c41aec40b27f // indirect
 	github.com/dgraph-io/badger/v2 v2.2007.4 // indirect
 	github.com/dgraph-io/ristretto v0.0.3 // indirect
@@ -194,12 +194,12 @@ require (
 	go.etcd.io/bbolt v1.3.6 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
-	golang.org/x/crypto v0.24.0 // indirect
+	golang.org/x/crypto v0.36.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
 	golang.org/x/net v0.26.0 // indirect
-	golang.org/x/sys v0.21.0 // indirect
-	golang.org/x/term v0.21.0 // indirect
-	golang.org/x/text v0.16.0 // indirect
+	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/term v0.30.0 // indirect
+	golang.org/x/text v0.23.0 // indirect
 	google.golang.org/genproto v0.0.0-20240227224415-6ceb2ff114de // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240311132316-a219d84964c2 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240318140521-94a12d6c2237 // indirect
