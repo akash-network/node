@@ -13,6 +13,10 @@
 For a high-level overview of the Akash protocol and network economics, check out the [whitepaper](https://ipfs.io/ipfs/QmVwsi5kTrg7UcUEGi5UfdheVLBWoHjze2pHy4tLqYvLYv); a detailed protocol definition can be 
 found in the [design documentation](https://docs.akash.network); and the target workload definition spec is [here](https://docs.akash.network/sdl).
 
+For an indept understanding of the code [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/akash-network/node)
+
+
+
 # Branching and Versioning
 
 The `main` branch contains new features and is under active development; the `mainnet/main` branch contains the current, stable release.
