@@ -145,6 +145,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
 		ecmd.EventCmd(),
 		QueryCmd(),
 		TxCmd(),
+		AuthCmd(),
 		keys.Commands(app.DefaultHome),
 		genutilcli.InitCmd(app.ModuleBasics(), app.DefaultHome),
 		genutilcli.CollectGenTxsCmd(banktypes.GenesisBalancesIterator{}, app.DefaultHome),
