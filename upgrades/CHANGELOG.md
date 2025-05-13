@@ -60,7 +60,7 @@ Upgrade x/stores keys to improve read performance of certain modules as describe
 
 ##### v0.34.0
 
-1. Extend authz implementation for DeploymentDeposit to allow grantee re-use of unspent funds.
+1. Extend authz implementation for DeploymentDeposit to allow grantee reuse of unspent funds.
     - Example of previous behavior:
       Deployment authz granted from account B (grantor) to account A (grantee) in amount of 5AKT.
       Deployment is created with authorized spend and deposit amount of 3AKT.
