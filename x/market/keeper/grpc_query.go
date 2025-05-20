@@ -356,7 +356,7 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 		}
 		req.Pagination.Key = key
 
-		if unsolicited[1] == 1 {
+		if unsolicited[0] == 1 {
 			reverseSearch = true
 		}
 	} else if req.Filters.State != "" {
