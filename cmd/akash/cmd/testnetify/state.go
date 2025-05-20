@@ -996,10 +996,7 @@ func (ga *GenesisState) ensureActiveSet(cdc codec.Codec) error {
 
 	sVals := ga.app.StakingState.state.Validators
 
-	vCount := ga.app.StakingState.state.Params.MaxValidators
-	if vCount > uint32(len(sVals)) {
-		vCount = uint32(len(sVals))
-	}
+	vCount := min(ga.app.StakingState.state.Params.MaxValidators, uint32(len(sVals)))
 
 	vals := make([]tmtypes.GenesisValidator, 0, vCount)
 	sPowers := make([]stakingtypes.LastValidatorPower, 0, vCount)
