@@ -30,7 +30,7 @@ const (
 	defaultMaxBodySize    = uint32(1048576)
 	upperLimitBodySize    = uint32(104857600)
 	defaultReadTimeout    = uint32(60000)
-	upperLimitReadTimeout = defaultReadTimeout
+	upperLimitReadTimeout = defaultReadTimeout * 30
 	defaultSendTimeout    = uint32(60000)
 	upperLimitSendTimeout = defaultSendTimeout
 	defaultNextTries      = uint32(3)
