@@ -112,7 +112,7 @@ func TestProviderDeleteNonExistingAttributes(t *testing.T) {
 	require.NoError(t, err)
 
 	attr := testutil.Attributes(t)
-	keys := make([]string, len(attr))
+	keys := make([]string, 0, len(attr))
 
 	for _, entry := range attr {
 		keys = append(keys, entry.Key)
