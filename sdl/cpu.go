@@ -22,7 +22,6 @@ func (sdl *v2CPUAttributes) UnmarshalYAML(node *yaml.Node) error {
 	for i := 0; i+1 < len(node.Content); i += 2 {
 		switch node.Content[i].Value {
 		case "arch":
-			fmt.Println("unmarshalling arch")
 			// Support both string and slice of strings
 			var archs []string
 			if node.Content[i+1].Kind == yaml.SequenceNode {

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/cosmos/cosmos-sdk/server"
@@ -14,8 +13,6 @@ import (
 // In main we call the rootCmd
 func main() {
 	rootCmd, _ := cmd.NewRootCmd()
-
-	fmt.Println("STARTING HELLO SCOTT!")
 
 	if err := cmd.Execute(rootCmd, "AKASH"); err != nil {
 		switch e := err.(type) {
