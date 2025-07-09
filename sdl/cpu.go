@@ -20,23 +20,33 @@ func (sdl *v2CPUAttributes) UnmarshalYAML(node *yaml.Node) error {
 	var attr v2CPUAttributes
 
 	for i := 0; i+1 < len(node.Content); i += 2 {
-		var value string
 		switch node.Content[i].Value {
 		case "arch":
-			if err := node.Content[i+1].Decode(&value); err != nil {
-				return err
+			fmt.Println("unmarshalling arch")
+			// Support both string and slice of strings
+			var archs []string
+			if node.Content[i+1].Kind == yaml.SequenceNode {
+				if err := node.Content[i+1].Decode(&archs); err != nil {
+					return err
+				}
+			} else {
+				var single string
+				if err := node.Content[i+1].Decode(&single); err != nil {
+					return err
+				}
+				archs = append(archs, single)
+			}
+			for _, value := range archs {
+				attr = append(attr, types.Attribute{
+					Key:   fmt.Sprintf("capabilities/cpu/arch/%s", value),
+					Value: "true",
+				})
 			}
 		default:
 			return fmt.Errorf("unsupported cpu attribute \"%s\"", node.Content[i].Value)
 		}
-
-		attr = append(attr, types.Attribute{
-			Key:   node.Content[i].Value,
-			Value: value,
-		})
 	}
 
-	// keys are unique in attributes parsed from sdl so don't need to use sort.SliceStable
 	sort.Slice(attr, func(i, j int) bool {
 		return attr[i].Key < attr[j].Key
 	})

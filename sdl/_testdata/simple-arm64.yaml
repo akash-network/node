@@ -1,0 +1,40 @@
+---
+version: "2.0"
+services:
+  web:
+    image: nginx
+    expose:
+      - port: 80
+        accept:
+          - ahostname.com
+        to:
+          - global: true
+      - port: 12345
+        to:
+          - global: true
+        proto: udp
+profiles:
+  compute:
+    web:
+      resources:
+        cpu:
+          units: "100m"
+          attributes:
+            arch: arm64
+        memory:
+          size: "128Mi"
+        storage:
+        - size: "1Gi"
+  placement:
+    westcoast:
+      attributes:
+        region: us-west
+      pricing:
+        web:
+          denom: uakt
+          amount: 50
+deployment:
+  web:
+    westcoast:
+      profile: web
+      count: 1 

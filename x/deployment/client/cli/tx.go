@@ -39,6 +39,7 @@ func GetTxCmd(key string) *cobra.Command {
 		SuggestionsMinimumDistance: 2,
 		RunE:                       sdkclient.ValidateCmd,
 	}
+
 	cmd.AddCommand(
 		cmdCreate(key),
 		cmdUpdate(key),
