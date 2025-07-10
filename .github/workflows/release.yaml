@@ -10,19 +10,16 @@ on:
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    runs-on: core-e2e
     steps:
-      - uses: actions/checkout@v4
-      - run: git fetch --prune --unshallow
-      - name: Detect required Go version
+      - name: Cleanup build folder
         run: |
-          toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
-          echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "${{ env.GOVERSION }}"
-      - name: set environment
-        uses: HatsuneMiku3939/direnv-action@v1
+          sudo rm -rf ./* || true
+          sudo rm -rf ./.??* || true
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup environment
+        uses: ./.github/actions/setup-ubuntu
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
@@ -37,7 +34,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Make and publish
         run: |
-          sudo rm -rf dist
+          sudo rm -rf .cache/goreleaser
           make release
         env:
           GORELEASER_RELEASE: true
@@ -45,21 +42,18 @@ jobs:
           # using PAT as homebrew is located in different repo
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   test-network-upgrade-on-release:
-    runs-on: upgrade-tester
+    runs-on: gh-runner-test
     needs:
       - publish
     steps:
-      - uses: actions/checkout@v4
-      - run: git fetch --prune --unshallow
-      - name: Detect required Go version
+      - name: Cleanup build folder
         run: |
-          toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
-          echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "${{ env.GOVERSION }}"
-      - name: set environment
-        uses: HatsuneMiku3939/direnv-action@v1
+          sudo rm -rf ./* || true
+          sudo rm -rf ./.??* || true
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup environment
+        uses: ./.github/actions/setup-ubuntu
       - name: detect release tag
         run: echo "RELEASE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
       - name: configure variables
@@ -67,10 +61,12 @@ jobs:
           test_required=$(./script/upgrades.sh test-required ${{ env.RELEASE_TAG }})
           echo "TEST_REQUIRED=$test_required" >> $GITHUB_ENV
       - name: run test
+        id: test
         if: env.TEST_REQUIRED != ''
         env:
           UPGRADE_BINARY_VERSION: ${{ env.RELEASE_TAG }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TEST_CONFIG: test-config-gha.json
         run: |
           cd tests/upgrade
           make test
@@ -80,7 +76,7 @@ jobs:
         with:
           name: logs
           path: |
-            .cache/run/upgrade/validators/logs/*.log
+            .cache/run/upgrade/validators/logs/.akash*.log
 
   notify-homebrew:
     runs-on: ubuntu-latest

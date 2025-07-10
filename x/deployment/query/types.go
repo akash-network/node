@@ -6,7 +6,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+	"pkg.akt.dev/go/node/deployment/v1"
+	"pkg.akt.dev/go/node/deployment/v1beta4"
 )
 
 // DeploymentFilters defines flags for deployment list filter
@@ -15,15 +16,15 @@ type DeploymentFilters struct {
 	// State flag value given
 	StateFlagVal string
 	// Actual state value decoded from DeploymentStateMap
-	State types.Deployment_State
+	State v1.Deployment_State
 }
 
 // Accept returns whether deployment filters valid or not
-func (filters DeploymentFilters) Accept(obj types.Deployment, isValidState bool) bool {
+func (filters DeploymentFilters) Accept(obj v1.Deployment, isValidState bool) bool {
 	if (filters.Owner.Empty() && !isValidState) ||
 		(filters.Owner.Empty() && (obj.State == filters.State)) ||
-		(!isValidState && (obj.DeploymentID.Owner == filters.Owner.String())) ||
-		(obj.DeploymentID.Owner == filters.Owner.String() && obj.State == filters.State) {
+		(!isValidState && (obj.ID.Owner == filters.Owner.String())) ||
+		(obj.ID.Owner == filters.Owner.String() && obj.State == filters.State) {
 		return true
 	}
 
@@ -32,8 +33,8 @@ func (filters DeploymentFilters) Accept(obj types.Deployment, isValidState bool)
 
 // Deployment stores deployment and groups details
 type Deployment struct {
-	types.Deployment `json:"deployment"`
-	Groups           []types.Group `json:"groups"`
+	v1.Deployment `json:"deployment"`
+	Groups        v1beta4.Groups `json:"groups"`
 }
 
 func (d Deployment) String() string {
@@ -43,8 +44,7 @@ func (d Deployment) String() string {
 	State:   %v
 	Version: %s
 	Num Groups: %d
-	`, d.Deployment.DeploymentID.Owner, d.Deployment.DeploymentID.DSeq,
-		d.Deployment.State, d.Deployment.Version, len(d.Groups))
+	`, d.ID.Owner, d.ID.DSeq, d.State, d.Hash, len(d.Groups))
 }
 
 // Deployments represents slice of deployment struct
@@ -68,7 +68,7 @@ func (ds Deployments) String() string {
 }
 
 // Group stores group ID, state and other specifications
-type Group types.Group
+type Group v1beta4.Group
 
 // GroupFilters defines flags for group list filter
 type GroupFilters struct {
@@ -76,5 +76,5 @@ type GroupFilters struct {
 	// State flag value given
 	StateFlagVal string
 	// Actual state value decoded from GroupStateMap
-	State types.Group_State
+	State v1beta4.Group_State
 }
