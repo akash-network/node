@@ -38,11 +38,30 @@ Goal of the upgrade here
         - `store`
 
 - Migrations (omit if all times below are not present in the upgrade)
-    - deployment 2 -> 3
-    - market 2 -> 3
+    - deployment `2 -> 3`
+    - market     `2 -> 3`
 
 Add new upgrades after this line based on the template above
 -----
+
+##### v1.0.0
+
+1. Migrate to cosmos-sdk v0.47.x
+
+- Stores
+    - deleted
+        - `astaking`: cosmos-sdk staking module is now offering `MinCommissionRate`.
+        - `agov`: cosmos-sdk staking module is now offering `MinDepositRatio`.
+
+- Migrations
+    - audit      `2 -> 3`
+    - cert       `2 -> 3`
+    - deployment `3 -> 4`
+    - escrow     `2 -> 3`
+    - market     `5 -> 6`
+    - provider   `2 -> 3`
+    - take       `2 -> 3`
+    - astaking   `1 -> 2`
 
 ##### v0.38.0
 
@@ -50,7 +69,7 @@ Upgrade x/stores keys to improve read performance of certain modules as describe
 
 - Migrations
     - cert `2 -> 3`
-    - deployment `3 -> 4` 
+    - deployment `3 -> 4`
     - market `5 -> 6`
     - authz `1 -> 2`
 
@@ -124,7 +143,7 @@ Upgrade x/stores keys to improve read performance of certain modules as describe
 
 - Migrations
     - deployment `2 -> 3`
-    - market `2 -> 3`
+    - market     `2 -> 3`
 
 ##### v0.20.0
 

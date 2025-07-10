@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	root "github.com/akash-network/node/cmd/akash/cmd"
 	"github.com/spf13/cobra/doc"
+	root "pkg.akt.dev/node/cmd/akash/cmd"
 )
 
 func main() {
