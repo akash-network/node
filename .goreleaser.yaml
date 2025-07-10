@@ -1,7 +1,7 @@
 ---
 version: 2
 project_name: node
-dist: ./.cache/goreleaser
+dist: ./.cache/goreleaser/main
 env:
   - GO111MODULE=on
   - CGO_ENABLED=1
@@ -89,7 +89,7 @@ universal_binaries:
     name_template: "akash"
 archives:
   - id: w/version
-    builds:
+    ids:
       - akash-darwin-universal
       - akash-linux-amd64
       - akash-linux-arm64
@@ -100,7 +100,7 @@ archives:
     files:
       - none*
   - id: wo/version
-    builds:
+    ids:
       - akash-darwin-universal
       - akash-linux-amd64
       - akash-linux-arm64
@@ -154,12 +154,12 @@ dockers:
 docker_manifests:
   - name_template: "{{ .Env.DOCKER_IMAGE }}:{{ .ShortCommit }}"
     image_templates:
-      - "{{ .Env.DOCKER_IMAGE }}:{{ .ShortCommit }}-amd64"
-      - "{{ .Env.DOCKER_IMAGE }}:{{ .ShortCommit }}-arm64"
-  - name_template: "{{ .Env.DOCKER_IMAGE }}:{{ .Version }}"
+      - '{{ .Env.DOCKER_IMAGE }}:{{ .ShortCommit }}-amd64'
+      - '{{ .Env.DOCKER_IMAGE }}:{{ .ShortCommit }}-arm64'
+  - name_template: '{{ .Env.DOCKER_IMAGE }}:{{ .Version }}'
     image_templates:
-      - "{{ .Env.DOCKER_IMAGE }}:{{ .Version }}-amd64"
-      - "{{ .Env.DOCKER_IMAGE }}:{{ .Version }}-arm64"
+      - '{{ .Env.DOCKER_IMAGE }}:{{ .Version  }}-amd64'
+      - '{{ .Env.DOCKER_IMAGE }}:{{ .Version  }}-arm64'
   - name_template: "{{ .Env.DOCKER_IMAGE }}:latest"
     image_templates:
       - "{{ .Env.DOCKER_IMAGE }}:latest-amd64"

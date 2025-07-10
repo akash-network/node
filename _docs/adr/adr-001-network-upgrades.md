@@ -40,12 +40,12 @@ Each file has steps in form of comment with `StepX` prefix. Each step must be im
 package v0_24_0
 
 import (
-	"github.com/tendermint/tendermint/libs/log"
+	"github.com/cometbft/cometbft/libs/log"
 
-	storetypes "github.com/cosmos/cosmos-sdk/store/types"
+	storetypes "cosmossdk.io/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
+	upgradetypes "cosmossdk.io/x/upgrade/types"
 
 	apptypes "github.com/akash-network/node/app/types"
 	utypes "github.com/akash-network/node/upgrades/types"

@@ -1,35 +1,35 @@
 package keeper
 
 import (
+	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+	types "pkg.akt.dev/go/node/cert/v1"
 )
 
 // Keeper of the provider store
 type Keeper interface {
 	Querier() types.QueryServer
 	Codec() codec.BinaryCodec
-	StoreKey() sdk.StoreKey
+	StoreKey() storetypes.StoreKey
 	CreateCertificate(sdk.Context, sdk.Address, []byte, []byte) error
 	RevokeCertificate(sdk.Context, types.CertID) error
 	GetCertificateByID(ctx sdk.Context, id types.CertID) (types.CertificateResponse, bool)
 	WithCertificates(ctx sdk.Context, fn func(id types.CertID, certificate types.CertificateResponse) bool)
-	WithCertificatesState(ctx sdk.Context, state types.Certificate_State, fn func(certificate types.CertificateResponse) bool)
 	WithOwner(ctx sdk.Context, id sdk.Address, fn func(types.CertificateResponse) bool)
-	WithOwnerState(ctx sdk.Context, id sdk.Address, state types.Certificate_State, fn func(types.CertificateResponse) bool)
+	WithOwnerState(ctx sdk.Context, id sdk.Address, state types.State, fn func(types.CertificateResponse) bool)
 }
 
 type keeper struct {
-	skey sdk.StoreKey
+	skey storetypes.StoreKey
 	cdc  codec.BinaryCodec
 }
 
 var _ Keeper = (*keeper)(nil)
 
 // NewKeeper creates and returns an instance for Market keeper
-func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey) Keeper {
+func NewKeeper(cdc codec.BinaryCodec, skey storetypes.StoreKey) Keeper {
 	return &keeper{cdc: cdc, skey: skey}
 }
 
@@ -44,7 +44,7 @@ func (k keeper) Codec() codec.BinaryCodec {
 }
 
 // StoreKey returns store key
-func (k keeper) StoreKey() sdk.StoreKey {
+func (k keeper) StoreKey() storetypes.StoreKey {
 	return k.skey
 }
 
@@ -83,6 +83,7 @@ func (k keeper) CreateCertificate(ctx sdk.Context, owner sdk.Address, crt []byte
 
 func (k keeper) RevokeCertificate(ctx sdk.Context, id types.CertID) error {
 	store := ctx.KVStore(k.skey)
+
 	key := k.findCertificate(ctx, id)
 	if len(key) == 0 {
 		return types.ErrCertificateNotFound
@@ -133,7 +134,7 @@ func (k keeper) GetCertificateByID(ctx sdk.Context, id types.CertID) (types.Cert
 // WithCertificates iterates all certificates
 func (k keeper) WithCertificates(ctx sdk.Context, fn func(id types.CertID, certificate types.CertificateResponse) bool) {
 	store := ctx.KVStore(k.skey)
-	iter := sdk.KVStorePrefixIterator(store, CertPrefix)
+	iter := storetypes.KVStorePrefixIterator(store, CertPrefix)
 
 	defer func() {
 		_ = iter.Close()
@@ -148,7 +149,7 @@ func (k keeper) WithCertificates(ctx sdk.Context, fn func(id types.CertID, certi
 }
 
 // WithCertificatesState iterates all certificates in certain state
-func (k keeper) WithCertificatesState(ctx sdk.Context, state types.Certificate_State, fn func(certificate types.CertificateResponse) bool) {
+func (k keeper) WithCertificatesState(ctx sdk.Context, state types.State, fn func(certificate types.CertificateResponse) bool) {
 	store := ctx.KVStore(k.skey)
 
 	searchPrefix, err := filterToPrefix(types.CertificateFilter{
@@ -158,7 +159,7 @@ func (k keeper) WithCertificatesState(ctx sdk.Context, state types.Certificate_S
 		panic(err)
 	}
 
-	iter := sdk.KVStorePrefixIterator(store, searchPrefix)
+	iter := storetypes.KVStorePrefixIterator(store, searchPrefix)
 
 	defer func() {
 		_ = iter.Close()
@@ -176,12 +177,12 @@ func (k keeper) WithCertificatesState(ctx sdk.Context, state types.Certificate_S
 func (k keeper) WithOwner(ctx sdk.Context, id sdk.Address, fn func(types.CertificateResponse) bool) {
 	store := ctx.KVStore(k.skey)
 
-	states := []types.Certificate_State{
+	states := []types.State{
 		types.CertificateValid,
 		types.CertificateRevoked,
 	}
 
-	iters := make([]sdk.Iterator, 0, len(states))
+	iters := make([]storetypes.Iterator, 0, len(states))
 	defer func() {
 		for _, iter := range iters {
 			_ = iter.Close()
@@ -197,7 +198,7 @@ func (k keeper) WithOwner(ctx sdk.Context, id sdk.Address, fn func(types.Certifi
 			panic(err)
 		}
 
-		iter := sdk.KVStorePrefixIterator(store, searchPrefix)
+		iter := storetypes.KVStorePrefixIterator(store, searchPrefix)
 		iters = append(iters, iter)
 
 		for ; iter.Valid(); iter.Next() {
@@ -210,7 +211,7 @@ func (k keeper) WithOwner(ctx sdk.Context, id sdk.Address, fn func(types.Certifi
 }
 
 // WithOwnerState iterates all certificates by owner in certain state
-func (k keeper) WithOwnerState(ctx sdk.Context, id sdk.Address, state types.Certificate_State, fn func(types.CertificateResponse) bool) {
+func (k keeper) WithOwnerState(ctx sdk.Context, id sdk.Address, state types.State, fn func(types.CertificateResponse) bool) {
 	store := ctx.KVStore(k.skey)
 
 	searchPrefix, err := filterToPrefix(types.CertificateFilter{
@@ -221,7 +222,7 @@ func (k keeper) WithOwnerState(ctx sdk.Context, id sdk.Address, state types.Cert
 		panic(err)
 	}
 
-	iter := sdk.KVStorePrefixIterator(store, searchPrefix)
+	iter := storetypes.KVStorePrefixIterator(store, searchPrefix)
 	defer func() {
 		_ = iter.Close()
 	}()
