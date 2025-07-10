@@ -9,7 +9,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 
-	types "github.com/akash-network/akash-api/go/node/provider/v1beta3"
+	types "pkg.akt.dev/go/node/provider/v1beta4"
 )
 
 // Querier is used as Keeper will have duplicate methods if used directly, and gRPC names take precedence over keeper
@@ -30,7 +30,7 @@ func (k Querier) Providers(c context.Context, req *types.QueryProvidersRequest) 
 
 	store := ctx.KVStore(k.skey)
 
-	pageRes, err := sdkquery.Paginate(store, req.Pagination, func(key []byte, value []byte) error {
+	pageRes, err := sdkquery.Paginate(store, req.Pagination, func(_ []byte, value []byte) error {
 		var provider types.Provider
 
 		err := k.cdc.Unmarshal(value, &provider)

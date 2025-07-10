@@ -2,21 +2,20 @@ package audit
 
 import (
 	"encoding/json"
-	"sort"
+
+	errorsmod "cosmossdk.io/errors"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	abci "github.com/tendermint/tendermint/abci/types"
+	types "pkg.akt.dev/go/node/audit/v1"
 
-	"github.com/akash-network/node/x/audit/keeper"
-
-	types "github.com/akash-network/akash-api/go/node/audit/v1beta3"
+	"pkg.akt.dev/node/x/audit/keeper"
 )
 
-// ValidateGenesis does validation check of the Genesis and returns error incase of failure
+// ValidateGenesis does validation check of the Genesis and returns error in-case of failure
 func ValidateGenesis(data *types.GenesisState) error {
-	for _, record := range data.Attributes {
+	for _, record := range data.Providers {
 		if _, err := sdk.AccAddressFromBech32(record.Owner); err != nil {
 			return sdkerrors.ErrInvalidAddress.Wrap("audited attributes: invalid owner address")
 		}
@@ -26,7 +25,7 @@ func ValidateGenesis(data *types.GenesisState) error {
 		}
 
 		if err := record.Attributes.Validate(); err != nil {
-			return sdkerrors.Wrap(err, "audited attributes: invalid attributes")
+			return errorsmod.Wrap(err, "audited attributes: invalid attributes")
 		}
 	}
 
@@ -34,12 +33,10 @@ func ValidateGenesis(data *types.GenesisState) error {
 }
 
 // InitGenesis initiate genesis state and return updated validator details
-func InitGenesis(ctx sdk.Context, kpr keeper.Keeper, data *types.GenesisState) []abci.ValidatorUpdate {
-	store := ctx.KVStore(kpr.StoreKey())
-	cdc := kpr.Codec()
-
-	for _, record := range data.Attributes {
+func InitGenesis(ctx sdk.Context, keeper keeper.Keeper, data *types.GenesisState) {
+	for _, record := range data.Providers {
 		owner, err := sdk.AccAddressFromBech32(record.Owner)
+
 		if err != nil {
 			panic(sdkerrors.ErrInvalidAddress.Wrap("audited attributes: invalid owner address").Error())
 		}
@@ -49,33 +46,22 @@ func InitGenesis(ctx sdk.Context, kpr keeper.Keeper, data *types.GenesisState) [
 			panic(sdkerrors.ErrInvalidAddress.Wrap("audited attributes: invalid auditor address"))
 		}
 
-		key := keeper.ProviderKey(types.ProviderID{
+		err = keeper.CreateOrUpdateProviderAttributes(ctx, types.ProviderID{
 			Owner:   owner,
 			Auditor: auditor,
-		})
-
-		prov := types.Provider{
-			Owner:      record.Owner,
-			Auditor:    record.Auditor,
-			Attributes: record.Attributes,
+		}, record.Attributes)
+		if err != nil {
+			panic(errorsmod.Wrap(err, "unable to init genesis with provider"))
 		}
-
-		sort.SliceStable(prov.Attributes, func(i, j int) bool {
-			return prov.Attributes[i].Key < prov.Attributes[j].Key
-		})
-
-		store.Set(key, cdc.MustMarshal(&prov))
 	}
-
-	return []abci.ValidatorUpdate{}
 }
 
 // ExportGenesis returns genesis state as raw bytes for the provider module
 func ExportGenesis(ctx sdk.Context, k keeper.Keeper) *types.GenesisState {
-	var records []types.AuditedAttributes
+	var records []types.AuditedProvider
 
-	k.WithProviders(ctx, func(provider types.Provider) bool {
-		records = append(records, types.AuditedAttributes{
+	k.WithProviders(ctx, func(provider types.AuditedProvider) bool {
+		records = append(records, types.AuditedProvider{
 			Owner:      provider.Owner,
 			Auditor:    provider.Auditor,
 			Attributes: provider.Attributes.Dup(),
@@ -84,7 +70,7 @@ func ExportGenesis(ctx sdk.Context, k keeper.Keeper) *types.GenesisState {
 	})
 
 	return &types.GenesisState{
-		Attributes: records,
+		Providers: records,
 	}
 }
 

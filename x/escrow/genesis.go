@@ -6,86 +6,87 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	abci "github.com/tendermint/tendermint/abci/types"
 
-	"github.com/akash-network/node/x/escrow/keeper"
+	eid "pkg.akt.dev/go/node/escrow/id/v1"
+	emodule "pkg.akt.dev/go/node/escrow/module"
+	etypes "pkg.akt.dev/go/node/escrow/types/v1"
 
-	types "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
+	"pkg.akt.dev/node/x/escrow/keeper"
+
+	types "pkg.akt.dev/go/node/escrow/v1"
 )
 
-// ValidateGenesis does validation check of the Genesis and returns error in case of failure
+// ValidateGenesis does validation check of the Genesis and returns an error in case of failure
 func ValidateGenesis(data *types.GenesisState) error {
-	amap := make(map[types.AccountID]types.Account, len(data.Accounts))
-	pmap := make(map[types.AccountID][]types.FractionalPayment, len(data.Payments))
+	amap := make(map[eid.Account]etypes.Account, len(data.Accounts))
+	pmap := make(map[eid.Payment]etypes.Payment, len(data.Payments))
 
 	for idx, account := range data.Accounts {
 		if err := account.ValidateBasic(); err != nil {
 			return fmt.Errorf("%w: error with account %s (idx %v)", err, account.ID, idx)
 		}
 		if _, found := amap[account.ID]; found {
-			return fmt.Errorf("%w: duplicate account %s (idx %v)", types.ErrAccountExists, account.ID, idx)
+			return fmt.Errorf("%w: duplicate account %s (idx %v)", emodule.ErrAccountExists, account.ID, idx)
 		}
 		amap[account.ID] = account
 	}
 
 	for idx, payment := range data.Payments {
 		if err := payment.ValidateBasic(); err != nil {
-			return fmt.Errorf("%w: error with payment %s %s (idx %v)", err, payment.AccountID, payment.PaymentID, idx)
+			return fmt.Errorf("%w: error with payment %s (idx %v)", err, payment.ID, idx)
 		}
 
 		// make sure there's an account
-		account, found := amap[payment.AccountID]
+		account, found := amap[payment.ID.Account()]
 		if !found {
 			return fmt.Errorf(
-				"%w: no account for payment %s %s (idx %v)", types.ErrAccountNotFound, payment.AccountID, payment.PaymentID, idx)
+				"%w: no account %s for payment %s (idx %v)", emodule.ErrAccountNotFound, payment.ID.Account(), payment.ID, idx)
 		}
 
-		// ensure state is in sync with payment
+		// ensure the state is in sync with payment
 		switch {
-		case payment.State == types.PaymentOpen && account.State != types.AccountOpen:
-			return fmt.Errorf("%w: invalid payment statefor payment %s %s (idx %v)",
-				types.ErrInvalidPayment, payment.AccountID, payment.PaymentID, idx)
-		case payment.State == types.PaymentOverdrawn && account.State != types.AccountOverdrawn:
-			return fmt.Errorf("%w: invalid payment statefor payment %s %s (idx %v)",
-				types.ErrInvalidPayment, payment.AccountID, payment.PaymentID, idx)
+		case payment.State.State == etypes.StateOpen && account.State.State != etypes.StateOpen:
+			return fmt.Errorf("%w: invalid payment state for payment %s (idx %v)",
+				emodule.ErrInvalidPayment, payment.ID, idx)
+		case payment.State.State == etypes.StateOverdrawn && account.State.State != etypes.StateOverdrawn:
+			return fmt.Errorf("%w: invalid payment statefor payment %s (idx %v)",
+				emodule.ErrInvalidPayment, payment.ID, idx)
 		}
 
 		// check for duplicates
-		for _, p2 := range pmap[payment.AccountID] {
-			if p2.PaymentID == payment.PaymentID {
-				return fmt.Errorf(
-					"%w, dupliate payment for %s %s (idx %v)", types.ErrPaymentExists, payment.AccountID, payment.PaymentID, idx)
-			}
+		if _, exists := pmap[payment.ID]; exists {
+			return fmt.Errorf("%w, dupliate payment for %s (idx %v)", emodule.ErrPaymentExists, payment.ID, idx)
 		}
 
-		pmap[payment.AccountID] = append(pmap[payment.AccountID], payment)
+		pmap[payment.ID] = payment
 	}
 
 	return nil
 }
 
 // InitGenesis initiate genesis state and return updated validator details
-func InitGenesis(ctx sdk.Context, keeper keeper.Keeper, data *types.GenesisState) []abci.ValidatorUpdate {
+func InitGenesis(ctx sdk.Context, keeper keeper.Keeper, data *types.GenesisState) {
 	for idx := range data.Accounts {
-		keeper.SaveAccount(ctx, data.Accounts[idx])
+		err := keeper.SaveAccount(ctx, data.Accounts[idx])
+		if err != nil {
+			panic(fmt.Sprintf("error saving account: %s", err.Error()))
+		}
 	}
 	for idx := range data.Payments {
 		keeper.SavePayment(ctx, data.Payments[idx])
 	}
-
-	return []abci.ValidatorUpdate{}
 }
 
 // ExportGenesis returns genesis state as raw bytes for the provider module
 func ExportGenesis(ctx sdk.Context, k keeper.Keeper) *types.GenesisState {
 	state := &types.GenesisState{}
 
-	k.WithAccounts(ctx, func(obj types.Account) bool {
+	k.WithAccounts(ctx, func(obj etypes.Account) bool {
 		state.Accounts = append(state.Accounts, obj)
 		return false
 	})
 
-	k.WithPayments(ctx, func(obj types.FractionalPayment) bool {
+	k.WithPayments(ctx, func(obj etypes.Payment) bool {
 		state.Payments = append(state.Payments, obj)
 		return false
 	})
