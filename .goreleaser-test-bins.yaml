@@ -90,7 +90,7 @@ universal_binaries:
 
 archives:
   - id: wo/version
-    builds:
+    ids:
       - akash-darwin-universal
       - akash-linux-amd64
       - akash-linux-arm64

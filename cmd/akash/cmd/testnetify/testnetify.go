@@ -11,44 +11,43 @@ import (
 	"strings"
 	"time"
 
+	cmtcfg "github.com/cometbft/cometbft/config"
+	"github.com/cometbft/cometbft/crypto/tmhash"
+	"github.com/cometbft/cometbft/node"
+	pvm "github.com/cometbft/cometbft/privval"
+	cmtstate "github.com/cometbft/cometbft/proto/tendermint/state"
+	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
+	"github.com/cometbft/cometbft/proxy"
+	sm "github.com/cometbft/cometbft/state"
+	"github.com/cometbft/cometbft/store"
+	cmttypes "github.com/cometbft/cometbft/types"
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/flags"
-	"github.com/spf13/cobra"
-	"github.com/tendermint/tendermint/crypto/tmhash"
-
-	"github.com/tendermint/tendermint/node"
-	pvm "github.com/tendermint/tendermint/privval"
-	cmtstate "github.com/tendermint/tendermint/proto/tendermint/state"
-	cmtproto "github.com/tendermint/tendermint/proto/tendermint/types"
-	"github.com/tendermint/tendermint/proxy"
-	"github.com/tendermint/tendermint/store"
-	cmttypes "github.com/tendermint/tendermint/types"
-	dbm "github.com/tendermint/tm-db"
-
-	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
+	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
+	"github.com/cosmos/cosmos-sdk/telemetry"
+	"github.com/spf13/cobra"
+
+	dbm "github.com/cosmos/cosmos-db"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	"github.com/cosmos/cosmos-sdk/server"
 	sdksrv "github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/server/types"
+	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 
-	akash "github.com/akash-network/node/app"
-)
+	cflags "pkg.akt.dev/go/cli/flags"
 
-const (
-	// testnet keys
-
-	FlagTraceStore     = "trace-store"
-	FlagTestnetRootDir = "testnet-rootdir"
-	KeyTestnetRootDir  = FlagTestnetRootDir
-
-	KeyIsTestnet             = "is-testnet"
-	KeyTestnetConfig         = "testnet-config"
-	KeyTestnetTriggerUpgrade = "testnet-trigger-upgrade"
+	akash "pkg.akt.dev/node/app"
 )
 
 // GetCmd uses the provided chainID and operatorAddress as well as the local private validator key to
 // control the network represented in the data folder. This is useful to create testnets nearly identical to your
 // mainnet environment.
 func GetCmd(testnetAppCreator types.AppCreator) *cobra.Command {
+	opts := server.StartCmdOptions{}
+	if opts.DBOpener == nil {
+		opts.DBOpener = openDB
+	}
+
 	cmd := &cobra.Command{
 		Use:   "testnetify",
 		Short: "Create a testnet from current local state",
@@ -71,20 +70,15 @@ those stores will be registered in order to prevent panics. Therefore, you only 
 you want to test the upgrade handler itself.
 `,
 		Example: "testnetify",
-		Args:    cobra.NoArgs,
+		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			sctx := sdksrv.GetServerContextFromCmd(cmd)
+			sctx := server.GetServerContextFromCmd(cmd)
 			cctx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
 
-			_, err = sdksrv.GetPruningOptionsFromFlags(sctx.Viper)
-			if err != nil {
-				return err
-			}
-
-			rootDir, err := cmd.Flags().GetString(KeyTestnetRootDir)
+			_, err = server.GetPruningOptionsFromFlags(sctx.Viper)
 			if err != nil {
 				return err
 			}
@@ -92,7 +86,7 @@ you want to test the upgrade handler itself.
 			sctx.Logger.Info("testnetifying blockchain state")
 			cfg := TestnetConfig{}
 
-			cfgFilePath, err := cmd.Flags().GetString(KeyTestnetConfig)
+			cfgFilePath, err := cmd.Flags().GetString(cflags.KeyTestnetConfig)
 			if err != nil {
 				return err
 			}
@@ -116,11 +110,11 @@ you want to test the upgrade handler itself.
 
 			sctx.Logger.Info(fmt.Sprintf("loaded config from %s", cfgFilePath))
 
-			if name, _ := cmd.Flags().GetString(KeyTestnetTriggerUpgrade); name != "" {
+			if name, _ := cmd.Flags().GetString(cflags.KeyTestnetTriggerUpgrade); name != "" {
 				cfg.upgrade.Name = name
 			}
 
-			if skip, _ := cmd.Flags().GetBool(flags.FlagSkipConfirmation); !skip {
+			if skip, _ := cmd.Flags().GetBool(cflags.FlagSkipConfirmation); !skip {
 				// Confirmation prompt to prevent accidental modification of state.
 				reader := bufio.NewReader(os.Stdin)
 				fmt.Println("This operation will modify state in your data folder and cannot be undone. Do you want to continue? (y/n)")
@@ -132,12 +126,17 @@ you want to test the upgrade handler itself.
 				}
 			}
 
+			rootDir, err := cmd.Flags().GetString(cflags.FlagTestnetRootDir)
+			if err != nil {
+				return err
+			}
+
 			for i := range cfg.Validators {
 				cfg.Validators[i].Home = filepath.Join(rootDir, cfg.Validators[i].Home)
 			}
 
 			home := sctx.Config.RootDir
-			db, err := openDB(home)
+			db, err := opts.DBOpener(home, server.GetAppDBBackend(sctx.Viper))
 			if err != nil {
 				return err
 			}
@@ -152,10 +151,23 @@ you want to test the upgrade handler itself.
 				return err
 			}
 
+			srvCfg, err := serverconfig.GetConfig(sctx.Viper)
+			if err != nil {
+				return err
+			}
+
+			if err := srvCfg.ValidateBasic(); err != nil {
+				return err
+			}
+
+			metrics, err := telemetry.New(srvCfg.Telemetry)
+			if err != nil {
+				return err
+			}
+
 			defer func() {
 				traceCleanupFn()
-
-				if localErr := db.Close(); localErr != nil {
+				if localErr := app.Close(); localErr != nil {
 					sctx.Logger.Error(localErr.Error())
 				}
 			}()
@@ -170,6 +182,7 @@ you want to test the upgrade handler itself.
 
 				cctx, err := client.GetClientQueryContext(cmd)
 				if err != nil {
+					sctx.Logger.Error("failed to get client context in monitor", "err", err)
 					return
 				}
 
@@ -212,7 +225,7 @@ you want to test the upgrade handler itself.
 				}
 			}()
 
-			err = sdksrv.StartInProcess(sctx, cctx, app)
+			err = sdksrv.StartInProcess(sctx, srvCfg, cctx, app, metrics, sdksrv.StartCmdOptions{})
 			if err != nil && !strings.Contains(err.Error(), "130") {
 				sctx.Logger.Error("testnetify finished with error", "err", err.Error())
 				return err
@@ -220,19 +233,20 @@ you want to test the upgrade handler itself.
 
 			sctx.Logger.Info("testnetify completed")
 
-			return nil
+			return err
 		},
 	}
 
-	cmd.Flags().Bool(flags.FlagSkipConfirmation, false, "Skip the confirmation prompt")
-	cmd.Flags().String(KeyTestnetTriggerUpgrade, "", "If set (example: \"v1.0.0\"), triggers the v1.0.0 upgrade handler to run on the first block of the testnet")
-	cmd.Flags().StringP(KeyTestnetConfig, "c", "", "testnet config file config file")
-	cmd.Flags().String(KeyTestnetRootDir, "", "path to where testnet validators are located")
-	cmd.Flags().String(flags.FlagNode, "tcp://localhost:26657", "")
-	_ = cmd.MarkFlagRequired(KeyTestnetConfig)
-	_ = cmd.MarkFlagRequired(KeyTestnetRootDir)
+	cmd.Flags().Bool(cflags.FlagSkipConfirmation, false, "Skip the confirmation prompt")
+	cmd.Flags().String(cflags.KeyTestnetTriggerUpgrade, "", "If set (example: \"v1.0.0\"), triggers the v1.0.0 upgrade handler to run on the first block of the testnet")
+	cmd.Flags().StringP(cflags.KeyTestnetConfig, "c", "", "testnet config file config file")
+	cmd.Flags().String(cflags.KeyTestnetRootDir, "", "path to where testnet validators are located")
+	cmd.Flags().String(cflags.FlagNode, "tcp://localhost:26657", "")
 
-	cmd.MarkFlagsRequiredTogether(KeyTestnetConfig, KeyTestnetRootDir)
+	_ = cmd.MarkFlagRequired(cflags.KeyTestnetConfig)
+	_ = cmd.MarkFlagRequired(cflags.KeyTestnetRootDir)
+
+	cmd.MarkFlagsRequiredTogether(cflags.KeyTestnetConfig, cflags.KeyTestnetRootDir)
 
 	return cmd
 }
@@ -240,51 +254,54 @@ you want to test the upgrade handler itself.
 // testnetify modifies both state and blockStore, allowing the provided operator address and local validator key to control the network
 // that the state in the data folder represents. The chainID of the local genesis file is modified to match the provided chainID.
 func testnetify(sctx *sdksrv.Context, tcfg TestnetConfig, testnetAppCreator types.AppCreator, db dbm.DB, traceWriter io.WriteCloser) (types.Application, error) {
-	cfg := sctx.Config
+	config := sctx.Config
 
-	thisVal := cfg.PrivValidatorKeyFile()
+	thisVal := config.PrivValidatorKeyFile()
 	sort.Slice(tcfg.Validators, func(i, j int) bool {
 		return thisVal == tcfg.Validators[i].Home
 	})
 
+	// Modify app genesis chain ID and save to a genesis file.
+	genFilePath := config.GenesisFile()
+	appGen, err := genutiltypes.AppGenesisFromFile(genFilePath)
+	if err != nil {
+		return nil, err
+	}
+
 	newChainID := tcfg.ChainID
 
-	// Modify app genesis chain ID and save to the genesis file.
-	genDocProvider := node.DefaultGenesisDocProviderFunc(cfg)
-	cGen, err := genDocProvider()
-	if err != nil {
+	appGen.ChainID = newChainID
+	if err := appGen.ValidateAndComplete(); err != nil {
+		return nil, err
+	}
+	if err := appGen.SaveAs(genFilePath); err != nil {
 		return nil, err
 	}
 
-	cGen.GenesisDoc.ChainID = newChainID
-	err = cGen.GenesisDoc.ValidateAndComplete()
-	if err != nil {
-		return nil, err
-	}
+	// Load the comet genesis doc provider.
+	genDocProvider := node.DefaultGenesisDocProviderFunc(config)
 
-	err = cGen.GenesisDoc.SaveAs(cfg.GenesisFile())
-	if err != nil {
-		return nil, err
-	}
-
-	blockStoreDB, err := node.DefaultDBProvider(&node.DBContext{ID: "blockstore", Config: cfg})
+	// Initialize blockStore and stateDB.
+	blockStoreDB, err := cmtcfg.DefaultDBProvider(&cmtcfg.DBContext{ID: "blockstore", Config: config})
 	if err != nil {
 		return nil, err
 	}
 	blockStore := store.NewBlockStore(blockStoreDB)
+
 	defer func() {
 		_ = blockStore.Close()
 	}()
 
-	stateDB, err := node.DefaultDBProvider(&node.DBContext{ID: "state", Config: cfg})
+	stateDB, err := cmtcfg.DefaultDBProvider(&cmtcfg.DBContext{ID: "state", Config: config})
 	if err != nil {
 		return nil, err
 	}
+
 	defer func() {
 		_ = stateDB.Close()
 	}()
 
-	jsonBlob, err := os.ReadFile(cfg.GenesisFile())
+	jsonBlob, err := os.ReadFile(config.GenesisFile())
 	if err != nil {
 		return nil, fmt.Errorf("couldn't read GenesisDoc file: %w", err)
 	}
@@ -296,7 +313,11 @@ func testnetify(sctx *sdksrv.Context, tcfg TestnetConfig, testnetAppCreator type
 		return nil, node.ErrSaveGenesisDocHash{Err: err}
 	}
 
-	state, stateStore, _, err := node.LoadStateFromDBOrGenesisDocProvider(stateDB, genDocProvider, "")
+	stateStore := sm.NewStore(stateDB, sm.StoreOptions{
+		DiscardABCIResponses: config.Storage.DiscardABCIResponses,
+	})
+
+	state, genDoc, err := node.LoadStateFromDBOrGenesisDocProvider(stateDB, genDocProvider, "")
 	if err != nil {
 		return nil, err
 	}
@@ -340,7 +361,7 @@ func testnetify(sctx *sdksrv.Context, tcfg TestnetConfig, testnetAppCreator type
 		}
 
 		appConfig.Validators = append(appConfig.Validators, akash.TestnetValidator{
-			OperatorAddress:   val.Operator.Bytes(),
+			OperatorAddress:   val.Operator,
 			ConsensusAddress:  pubKey.Address().Bytes(),
 			ConsensusPubKey:   consensusPubkey,
 			Moniker:           val.Moniker,
@@ -354,22 +375,23 @@ func testnetify(sctx *sdksrv.Context, tcfg TestnetConfig, testnetAppCreator type
 		tcfg.Validators[i].consAddress = pubKey.Address().Bytes()
 	}
 
-	sctx.Viper.Set(KeyTestnetConfig, appConfig)
+	sctx.Viper.Set(cflags.KeyTestnetConfig, appConfig)
 
 	testnetApp := testnetAppCreator(sctx.Logger, db, traceWriter, sctx.Viper)
 
 	// We need to create a temporary proxyApp to get the initial state of the application.
 	// Depending on how the node was stopped, the application height can differ from the blockStore height.
 	// This height difference changes how we go about modifying the state.
-	cmtApp := testnetApp
-
+	cmtApp := NewCometABCIWrapper(testnetApp)
+	_, ctx := getCtx(sctx, true)
 	clientCreator := proxy.NewLocalClientCreator(cmtApp)
-
-	proxyApp := proxy.NewAppConns(clientCreator)
+	metricsProvider := node.DefaultMetricsProvider(cmtcfg.DefaultConfig().Instrumentation)
+	_, _, _, _, proxyMetrics, _, _ := metricsProvider(genDoc.ChainID)
+	proxyApp := proxy.NewAppConns(clientCreator, proxyMetrics)
 	if err := proxyApp.Start(); err != nil {
 		return nil, fmt.Errorf("error starting proxy app connections: %w", err)
 	}
-	res, err := proxyApp.Query().InfoSync(proxy.RequestInfo)
+	res, err := proxyApp.Query().Info(ctx, proxy.RequestInfo)
 	if err != nil {
 		return nil, fmt.Errorf("error calling Info: %w", err)
 	}
@@ -469,6 +491,7 @@ func testnetify(sctx *sdksrv.Context, tcfg TestnetConfig, testnetAppCreator type
 
 	seenCommit.BlockID = state.LastBlockID
 	seenCommit.Round = 0
+
 	seenCommit.Signatures = signatures
 
 	err = blockStore.SaveSeenCommit(state.LastBlockHeight, seenCommit)

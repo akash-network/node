@@ -3,12 +3,12 @@ package keeper
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	etypes "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
+	v1 "pkg.akt.dev/go/node/escrow/v1"
 )
 
 type EscrowKeeper interface {
-	GetAccount(ctx sdk.Context, id etypes.AccountID) (etypes.Account, error)
-	GetPayment(ctx sdk.Context, id etypes.AccountID, pid string) (etypes.FractionalPayment, error)
-	AccountClose(ctx sdk.Context, id etypes.AccountID) error
-	PaymentClose(ctx sdk.Context, id etypes.AccountID, pid string) error
+	GetAccount(ctx sdk.Context, id v1.AccountID) (v1.Account, error)
+	GetPayment(ctx sdk.Context, id v1.AccountID, pid string) (v1.FractionalPayment, error)
+	AccountClose(ctx sdk.Context, id v1.AccountID) error
+	PaymentClose(ctx sdk.Context, id v1.AccountID, pid string) error
 }

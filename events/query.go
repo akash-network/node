@@ -3,9 +3,9 @@ package events
 import (
 	"fmt"
 
-	"github.com/tendermint/tendermint/libs/pubsub"
-	tmquery "github.com/tendermint/tendermint/libs/pubsub/query"
-	tmtypes "github.com/tendermint/tendermint/types"
+	"github.com/cometbft/cometbft/libs/pubsub"
+	tmquery "github.com/cometbft/cometbft/libs/pubsub/query"
+	tmtypes "github.com/cometbft/cometbft/types"
 )
 
 // func txQuery() pubsub.Query {
@@ -19,5 +19,5 @@ import (
 // }
 
 func blkHeaderQuery() pubsub.Query {
-	return tmquery.MustParse(fmt.Sprintf("%s='%s'", tmtypes.EventTypeKey, tmtypes.EventNewBlockHeader))
+	return tmquery.MustCompile(fmt.Sprintf("%s='%s'", tmtypes.EventTypeKey, tmtypes.EventNewBlockHeader))
 }

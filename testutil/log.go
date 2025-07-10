@@ -4,11 +4,11 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/tendermint/tendermint/libs/log"
+	"cosmossdk.io/log"
 )
 
 func Logger(t testing.TB) log.Logger {
-	return log.NewTMLogger(&testWriter{TB: t})
+	return log.NewLogger(&testWriter{TB: t})
 }
 
 // Source: https://git.sr.ht/~samwhited/testlog/tree/b1b3e8e82fd6990e91ce9d0fbcbe69ac2d9b1f98/testlog.go

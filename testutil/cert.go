@@ -17,11 +17,10 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 
-	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+	clientmocks "pkg.akt.dev/go/mocks/node/client"
+	types "pkg.akt.dev/go/node/cert/v1"
 
-	clientmocks "github.com/akash-network/akash-api/go/node/client/v1beta2/mocks"
-
-	certutils "github.com/akash-network/node/x/cert/utils"
+	certutils "pkg.akt.dev/node/x/cert/utils"
 )
 
 type TestCertificate struct {
@@ -185,7 +184,7 @@ func Certificate(t testing.TB, addr sdk.Address, opts ...CertificateOption) Test
 				Filter: types.CertificateFilter{
 					Owner:  addr.String(),
 					Serial: res.Serial.String(),
-					State:  "valid",
+					State:  types.CertificateValid.String(),
 				},
 			}).
 			Return(&types.QueryCertificatesResponse{
@@ -204,7 +203,7 @@ func Certificate(t testing.TB, addr sdk.Address, opts ...CertificateOption) Test
 	return res
 }
 
-func CertificateRequireEqualResponse(t *testing.T, cert TestCertificate, resp types.CertificateResponse, state types.Certificate_State) {
+func CertificateRequireEqualResponse(t *testing.T, cert TestCertificate, resp types.CertificateResponse, state types.State) {
 	t.Helper()
 
 	require.Equal(t, state, resp.Certificate.State)

@@ -12,6 +12,7 @@ export AKASH_GAS                = auto
 export AKASH_STATESYNC_ENABLE   = false
 export AKASH_LOG_COLOR          = true
 
+STATE_CONFIG            ?= $(ROOT_DIR)/tests/upgrade/testnet.json
 TEST_CONFIG             ?= test-config.json
 KEY_OPTS                := --keyring-backend=$(AKASH_KEYRING_BACKEND)
 KEY_NAME                ?= validator
@@ -49,6 +50,9 @@ test-reset:
 	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) --gbv=$(GENESIS_BINARY_VERSION) bins
 	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) keys
 
+.PHONY: prepare-state
+prepare-state:
+	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --state-config=$(STATE_CONFIG) prepare-state
 
 .PHONY: bins
 bins:

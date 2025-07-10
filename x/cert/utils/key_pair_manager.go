@@ -17,13 +17,15 @@ import (
 	"os"
 	"time"
 
+	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"go.step.sm/crypto/pemutil"
 
-	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	certerrors "github.com/akash-network/node/x/cert/errors"
+	types "pkg.akt.dev/go/node/cert/v1"
+
+	certerrors "pkg.akt.dev/node/x/cert/errors"
 )
 
 var (
@@ -51,7 +53,7 @@ type keyPairManager struct {
 }
 
 func NewKeyPairManager(cctx sdkclient.Context, fromAddress sdk.AccAddress) (KeyPairManager, error) {
-	sig, _, err := cctx.Keyring.SignByAddress(fromAddress, []byte(fromAddress.String()))
+	sig, _, err := cctx.Keyring.SignByAddress(fromAddress, []byte(fromAddress.String()), signing.SignMode_SIGN_MODE_DIRECT)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +61,7 @@ func NewKeyPairManager(cctx sdkclient.Context, fromAddress sdk.AccAddress) (KeyP
 	// ignore error if ledger device is being used
 	// due to its jsonparser not liking bech address sent as data in binary format
 	// if test or file keyring used it will allow to decode old private keys for the mTLS cert
-	sigLegacy, _, _ := cctx.Keyring.SignByAddress(fromAddress, fromAddress.Bytes())
+	sigLegacy, _, _ := cctx.Keyring.SignByAddress(fromAddress, fromAddress.Bytes(), signing.SignMode_SIGN_MODE_DIRECT)
 
 	return &keyPairManager{
 		addr:           fromAddress,

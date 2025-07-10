@@ -7,8 +7,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/address"
 
-	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
-	"github.com/akash-network/akash-api/go/sdkutil"
+	"pkg.akt.dev/go/node/deployment/v1"
+	"pkg.akt.dev/go/node/deployment/v1beta4"
+	"pkg.akt.dev/go/sdkutil"
 )
 
 const (
@@ -31,7 +32,7 @@ var (
 	GroupStateClosedPrefix            = []byte{GroupStateClosedPrefixID}
 )
 
-func DeploymentKey(statePrefix []byte, id types.DeploymentID) ([]byte, error) {
+func DeploymentKey(statePrefix []byte, id v1.DeploymentID) ([]byte, error) {
 	owner, err := sdk.AccAddressFromBech32(id.Owner)
 	if err != nil {
 		return nil, err
@@ -53,7 +54,7 @@ func DeploymentKey(statePrefix []byte, id types.DeploymentID) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func MustDeploymentKey(statePrefix []byte, id types.DeploymentID) []byte {
+func MustDeploymentKey(statePrefix []byte, id v1.DeploymentID) []byte {
 	key, err := DeploymentKey(statePrefix, id)
 	if err != nil {
 		panic(err)
@@ -62,7 +63,7 @@ func MustDeploymentKey(statePrefix []byte, id types.DeploymentID) []byte {
 }
 
 // GroupKey provides prefixed key for a Group's marshalled data.
-func GroupKey(statePrefix []byte, id types.GroupID) ([]byte, error) {
+func GroupKey(statePrefix []byte, id v1.GroupID) ([]byte, error) {
 	owner, err := sdk.AccAddressFromBech32(id.Owner)
 	if err != nil {
 		return nil, err
@@ -87,16 +88,17 @@ func GroupKey(statePrefix []byte, id types.GroupID) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func MustGroupKey(statePrefix []byte, id types.GroupID) []byte {
+func MustGroupKey(statePrefix []byte, id v1.GroupID) []byte {
 	key, err := GroupKey(statePrefix, id)
 	if err != nil {
 		panic(err)
 	}
+
 	return key
 }
 
 // GroupsKey provides default store Key for Group data.
-func GroupsKey(statePrefix []byte, id types.DeploymentID) ([]byte, error) {
+func GroupsKey(statePrefix []byte, id v1.DeploymentID) ([]byte, error) {
 	owner, err := sdk.AccAddressFromBech32(id.Owner)
 	if err != nil {
 		return nil, err
@@ -118,7 +120,7 @@ func GroupsKey(statePrefix []byte, id types.DeploymentID) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func MustGroupsKey(statePrefix []byte, id types.DeploymentID) []byte {
+func MustGroupsKey(statePrefix []byte, id v1.DeploymentID) []byte {
 	key, err := GroupsKey(statePrefix, id)
 	if err != nil {
 		panic(err)
@@ -126,36 +128,36 @@ func MustGroupsKey(statePrefix []byte, id types.DeploymentID) []byte {
 	return key
 }
 
-func DeploymentStateToPrefix(state types.Deployment_State) []byte {
+func DeploymentStateToPrefix(state v1.Deployment_State) []byte {
 	var idx []byte
 
 	switch state {
-	case types.DeploymentActive:
+	case v1.DeploymentActive:
 		idx = DeploymentStateActivePrefix
-	case types.DeploymentClosed:
+	case v1.DeploymentClosed:
 		idx = DeploymentStateClosedPrefix
 	}
 
 	return idx
 }
 
-func GroupStateToPrefix(state types.Group_State) []byte {
+func GroupStateToPrefix(state v1beta4.Group_State) []byte {
 	var idx []byte
 	switch state {
-	case types.GroupOpen:
+	case v1beta4.GroupOpen:
 		idx = GroupStateOpenPrefix
-	case types.GroupPaused:
+	case v1beta4.GroupPaused:
 		idx = GroupStatePausedPrefix
-	case types.GroupInsufficientFunds:
+	case v1beta4.GroupInsufficientFunds:
 		idx = GroupStateInsufficientFundsPrefix
-	case types.GroupClosed:
+	case v1beta4.GroupClosed:
 		idx = GroupStateClosedPrefix
 	}
 
 	return idx
 }
 
-func buildDeploymentPrefix(state types.Deployment_State) []byte {
+func buildDeploymentPrefix(state v1.Deployment_State) []byte {
 	idx := DeploymentStateToPrefix(state)
 
 	res := make([]byte, 0, len(DeploymentPrefix)+len(idx))
@@ -166,7 +168,7 @@ func buildDeploymentPrefix(state types.Deployment_State) []byte {
 }
 
 // nolint: unused
-func buildGroupPrefix(state types.Group_State) []byte {
+func buildGroupPrefix(state v1beta4.Group_State) []byte {
 	idx := GroupStateToPrefix(state)
 
 	res := make([]byte, 0, len(GroupPrefix)+len(idx))
@@ -216,12 +218,12 @@ func filterToPrefix(prefix []byte, owner string, dseq uint64, gseq uint32) ([]by
 	return buf.Bytes(), nil
 }
 
-func deploymentPrefixFromFilter(f types.DeploymentFilters) ([]byte, error) {
-	return filterToPrefix(buildDeploymentPrefix(types.Deployment_State(types.Deployment_State_value[f.State])), f.Owner, f.DSeq, 0)
+func deploymentPrefixFromFilter(f v1beta4.DeploymentFilters) ([]byte, error) {
+	return filterToPrefix(buildDeploymentPrefix(v1.Deployment_State(v1.Deployment_State_value[f.State])), f.Owner, f.DSeq, 0)
 }
 
-func DeploymentKeyLegacy(id types.DeploymentID) []byte {
-	buf := bytes.NewBuffer(types.DeploymentPrefix())
+func DeploymentKeyLegacy(id v1.DeploymentID) []byte {
+	buf := bytes.NewBuffer(v1.DeploymentPrefix())
 	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
 
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
@@ -232,8 +234,8 @@ func DeploymentKeyLegacy(id types.DeploymentID) []byte {
 }
 
 // GroupKeyLegacy provides prefixed key for a Group's marshalled data.
-func GroupKeyLegacy(id types.GroupID) []byte {
-	buf := bytes.NewBuffer(types.GroupPrefix())
+func GroupKeyLegacy(id v1.GroupID) []byte {
+	buf := bytes.NewBuffer(v1.GroupPrefix())
 	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
@@ -245,8 +247,8 @@ func GroupKeyLegacy(id types.GroupID) []byte {
 }
 
 // GroupsKeyLegacy provides default store Key for Group data.
-func GroupsKeyLegacy(id types.DeploymentID) []byte {
-	buf := bytes.NewBuffer(types.GroupPrefix())
+func GroupsKeyLegacy(id v1.DeploymentID) []byte {
+	buf := bytes.NewBuffer(v1.GroupPrefix())
 	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
@@ -255,6 +257,6 @@ func GroupsKeyLegacy(id types.DeploymentID) []byte {
 }
 
 // nolint: unused
-func deploymentPrefixFromFilterLegacy(f types.DeploymentFilters) ([]byte, error) {
-	return filterToPrefix(types.DeploymentPrefix(), f.Owner, f.DSeq, 0)
+func deploymentPrefixFromFilterLegacy(f v1beta4.DeploymentFilters) ([]byte, error) {
+	return filterToPrefix(v1.DeploymentPrefix(), f.Owner, f.DSeq, 0)
 }

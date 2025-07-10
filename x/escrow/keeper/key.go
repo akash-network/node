@@ -3,41 +3,45 @@ package keeper
 import (
 	"bytes"
 
-	types "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
+	"pkg.akt.dev/go/node/escrow/v1"
 )
 
-func accountKey(id types.AccountID) []byte {
+func AccountKey(id v1.AccountID) []byte {
 	// TODO: validate scope, xid
-	buf := bytes.Buffer{}
-	buf.Write(types.AccountKeyPrefix())
+	buf := &bytes.Buffer{}
+
+	buf.Write(v1.AccountKeyPrefix())
 	buf.WriteRune('/')
 	buf.WriteString(id.Scope)
 	buf.WriteRune('/')
 	buf.WriteString(id.XID)
+
 	return buf.Bytes()
 }
 
-func accountPaymentsKey(id types.AccountID) []byte {
-	// TODO: validate scope, xid, pid
-	buf := bytes.Buffer{}
-	buf.Write(types.PaymentKeyPrefix())
+func keyWritePaymentPrefix(buf *bytes.Buffer, id v1.AccountID) {
+	buf.Write(v1.PaymentKeyPrefix())
 	buf.WriteRune('/')
 	buf.WriteString(id.Scope)
 	buf.WriteRune('/')
 	buf.WriteString(id.XID)
 	buf.WriteRune('/')
+}
+
+func AccountPaymentsKey(id v1.AccountID) []byte {
+	// TODO: validate scope, xid, pid
+	buf := &bytes.Buffer{}
+	keyWritePaymentPrefix(buf, id)
+
 	return buf.Bytes()
 }
 
-func paymentKey(id types.AccountID, pid string) []byte {
+func PaymentKey(id v1.AccountID, pid string) []byte {
 	// TODO: validate scope, xid, pid
-	buf := bytes.Buffer{}
-	buf.Write(types.PaymentKeyPrefix())
-	buf.WriteRune('/')
-	buf.WriteString(id.Scope)
-	buf.WriteRune('/')
-	buf.WriteString(id.XID)
-	buf.WriteRune('/')
+	buf := &bytes.Buffer{}
+
+	keyWritePaymentPrefix(buf, id)
 	buf.WriteString(pid)
+
 	return buf.Bytes()
 }

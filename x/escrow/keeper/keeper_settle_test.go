@@ -3,10 +3,12 @@ package keeper
 import (
 	"testing"
 
+	sdkmath "cosmossdk.io/math"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/assert"
 
-	types "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
+	"pkg.akt.dev/go/node/escrow/v1"
 )
 
 const denom = "uakt"
@@ -23,7 +25,7 @@ func TestSettleFullBlocks(t *testing.T) {
 				balanceStart: 100,
 				rates:        []int64{1, 2},
 				balanceEnd:   85,
-				transferred:  []sdk.Dec{sdk.NewDec(5), sdk.NewDec(10)},
+				transferred:  []sdkmath.LegacyDec{sdkmath.LegacyNewDec(5), sdkmath.LegacyNewDec(10)},
 				remaining:    0,
 				overdrawn:    false,
 			},
@@ -35,7 +37,7 @@ func TestSettleFullBlocks(t *testing.T) {
 				balanceStart: 100,
 				rates:        []int64{10, 10},
 				balanceEnd:   0,
-				transferred:  []sdk.Dec{sdk.NewDec(50), sdk.NewDec(50)},
+				transferred:  []sdkmath.LegacyDec{sdkmath.LegacyNewDec(50), sdkmath.LegacyNewDec(50)},
 				remaining:    0,
 				overdrawn:    false,
 			},
@@ -47,7 +49,7 @@ func TestSettleFullBlocks(t *testing.T) {
 				balanceStart: 100,
 				rates:        []int64{10, 10},
 				balanceEnd:   0,
-				transferred:  []sdk.Dec{sdk.NewDec(50), sdk.NewDec(50)},
+				transferred:  []sdkmath.LegacyDec{sdkmath.LegacyNewDec(50), sdkmath.LegacyNewDec(50)},
 				remaining:    0,
 				overdrawn:    true,
 			},
@@ -59,7 +61,7 @@ func TestSettleFullBlocks(t *testing.T) {
 				balanceStart: 90,
 				rates:        []int64{10, 10},
 				balanceEnd:   10,
-				transferred:  []sdk.Dec{sdk.NewDec(40), sdk.NewDec(40)},
+				transferred:  []sdkmath.LegacyDec{sdkmath.LegacyNewDec(40), sdkmath.LegacyNewDec(40)},
 				remaining:    10,
 				overdrawn:    true,
 			},
@@ -73,7 +75,7 @@ func TestSettleFullBlocks(t *testing.T) {
 				balanceEnd:   0,
 				fundsStart:   100,
 				fundsEnd:     85,
-				transferred:  []sdk.Dec{sdk.NewDec(5), sdk.NewDec(10)},
+				transferred:  []sdkmath.LegacyDec{sdkmath.LegacyNewDec(5), sdkmath.LegacyNewDec(10)},
 				remaining:    0,
 				overdrawn:    false,
 			},
@@ -87,7 +89,7 @@ func TestSettleFullBlocks(t *testing.T) {
 				balanceEnd:   100,
 				fundsStart:   100,
 				fundsEnd:     0,
-				transferred:  []sdk.Dec{sdk.NewDec(50), sdk.NewDec(50)},
+				transferred:  []sdkmath.LegacyDec{sdkmath.LegacyNewDec(50), sdkmath.LegacyNewDec(50)},
 				remaining:    0,
 				overdrawn:    false,
 			},
@@ -101,7 +103,7 @@ func TestSettleFullBlocks(t *testing.T) {
 				balanceEnd:   80,
 				fundsStart:   100,
 				fundsEnd:     0,
-				transferred:  []sdk.Dec{sdk.NewDec(60), sdk.NewDec(60)},
+				transferred:  []sdkmath.LegacyDec{sdkmath.LegacyNewDec(60), sdkmath.LegacyNewDec(60)},
 				remaining:    0,
 				overdrawn:    false,
 			},
@@ -115,7 +117,7 @@ func TestSettleFullBlocks(t *testing.T) {
 				balanceEnd:   0,
 				fundsStart:   100,
 				fundsEnd:     0,
-				transferred:  []sdk.Dec{sdk.NewDec(100), sdk.NewDec(100)},
+				transferred:  []sdkmath.LegacyDec{sdkmath.LegacyNewDec(100), sdkmath.LegacyNewDec(100)},
 				remaining:    0,
 				overdrawn:    false,
 			},
@@ -129,7 +131,7 @@ func TestSettleFullBlocks(t *testing.T) {
 				balanceEnd:   0,
 				fundsStart:   100,
 				fundsEnd:     0,
-				transferred:  []sdk.Dec{sdk.NewDec(100), sdk.NewDec(100)},
+				transferred:  []sdkmath.LegacyDec{sdkmath.LegacyNewDec(100), sdkmath.LegacyNewDec(100)},
 				remaining:    0,
 				overdrawn:    true,
 			},
@@ -143,7 +145,7 @@ func TestSettleFullBlocks(t *testing.T) {
 				balanceEnd:   10,
 				fundsStart:   90,
 				fundsEnd:     0,
-				transferred:  []sdk.Dec{sdk.NewDec(90), sdk.NewDec(90)},
+				transferred:  []sdkmath.LegacyDec{sdkmath.LegacyNewDec(90), sdkmath.LegacyNewDec(90)},
 				remaining:    10,
 				overdrawn:    true,
 			},
@@ -157,7 +159,7 @@ func TestSettleFullBlocks(t *testing.T) {
 				balanceEnd:   10,
 				fundsStart:   90,
 				fundsEnd:     0,
-				transferred:  []sdk.Dec{sdk.NewDec(40), sdk.NewDec(40)},
+				transferred:  []sdkmath.LegacyDec{sdkmath.LegacyNewDec(40), sdkmath.LegacyNewDec(40)},
 				remaining:    10,
 				overdrawn:    true,
 			},
@@ -191,7 +193,7 @@ func TestSettleDistributeWeighted(t *testing.T) {
 				balanceStart: 10,
 				rates:        []int64{20, 30},
 				balanceEnd:   0,
-				transferred:  []sdk.Dec{sdk.NewDec(4), sdk.NewDec(6)},
+				transferred:  []sdkmath.LegacyDec{sdkmath.LegacyNewDec(4), sdkmath.LegacyNewDec(6)},
 				remaining:    0,
 				overdrawn:    false,
 			},
@@ -202,7 +204,7 @@ func TestSettleDistributeWeighted(t *testing.T) {
 				balanceStart: 10,
 				rates:        []int64{30, 30},
 				balanceEnd:   0,
-				transferred:  []sdk.Dec{sdk.NewDec(5), sdk.NewDec(5)},
+				transferred:  []sdkmath.LegacyDec{sdkmath.LegacyNewDec(5), sdkmath.LegacyNewDec(5)},
 				remaining:    0,
 				overdrawn:    false,
 			},
@@ -213,7 +215,7 @@ func TestSettleDistributeWeighted(t *testing.T) {
 				balanceStart: 10,
 				rates:        []int64{45, 55},
 				balanceEnd:   0,
-				transferred:  []sdk.Dec{sdk.MustNewDecFromStr("4.5"), sdk.MustNewDecFromStr("5.5")},
+				transferred:  []sdkmath.LegacyDec{sdkmath.LegacyMustNewDecFromStr("4.5"), sdkmath.LegacyMustNewDecFromStr("5.5")},
 				remaining:    0,
 				overdrawn:    false,
 			},
@@ -241,31 +243,31 @@ type distTestConfig struct {
 	balanceEnd   int64
 	fundsStart   int64
 	fundsEnd     int64
-	transferred  []sdk.Dec
+	transferred  []sdkmath.LegacyDec
 	remaining    int64
 	overdrawn    bool
 }
 
-func setupDistTest(cfg distTestConfig) (types.Account, []types.FractionalPayment, sdk.Int, sdk.DecCoin) {
-	account := types.Account{
+func setupDistTest(cfg distTestConfig) (v1.Account, []v1.FractionalPayment, sdkmath.Int, sdk.DecCoin) {
+	account := v1.Account{
 		Balance:     sdk.NewInt64DecCoin(denom, cfg.balanceStart),
 		Transferred: sdk.NewInt64DecCoin(denom, 0),
 		Funds:       sdk.NewInt64DecCoin(denom, cfg.fundsStart),
 	}
 
-	payments := make([]types.FractionalPayment, 0, len(cfg.rates))
+	payments := make([]v1.FractionalPayment, 0, len(cfg.rates))
 
 	blockRate := int64(0)
 
 	for _, rate := range cfg.rates {
 		blockRate += rate
-		payments = append(payments, types.FractionalPayment{
+		payments = append(payments, v1.FractionalPayment{
 			Rate:    sdk.NewInt64DecCoin(denom, rate),
 			Balance: sdk.NewInt64DecCoin(denom, 0),
 		})
 	}
 
-	return account, payments, sdk.NewInt(cfg.blocks), sdk.NewInt64DecCoin(denom, blockRate)
+	return account, payments, sdkmath.NewInt(cfg.blocks), sdk.NewInt64DecCoin(denom, blockRate)
 }
 
 func assertCoinsEqual(t testing.TB, c1 sdk.DecCoin, c2 sdk.DecCoin, msg string) {
