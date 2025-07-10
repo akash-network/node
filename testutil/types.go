@@ -1,50 +1,29 @@
 package testutil
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"math/rand"
-	"strings"
+	"os"
 	"testing"
-	"time"
 
-	"github.com/cosmos/cosmos-sdk/baseapp"
-	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/cosmos/cosmos-sdk/crypto/hd"
-	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	"cosmossdk.io/log"
+	pruningtypes "cosmossdk.io/store/pruning/types"
+	dbm "github.com/cosmos/cosmos-db"
+	bam "github.com/cosmos/cosmos-sdk/baseapp"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
-	"github.com/cosmos/cosmos-sdk/simapp"
-	storetypes "github.com/cosmos/cosmos-sdk/store/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
+	"github.com/cosmos/cosmos-sdk/types/module/testutil"
 
-	tmrand "github.com/tendermint/tendermint/libs/rand"
-	dbm "github.com/tendermint/tm-db"
+	cflags "pkg.akt.dev/go/cli/flags"
+	rtypes "pkg.akt.dev/go/node/types/resources/v1beta4"
+	"pkg.akt.dev/go/sdkutil"
 
-	types "github.com/akash-network/akash-api/go/node/types/v1beta3"
-
-	"github.com/akash-network/node/app"
-	"github.com/akash-network/node/testutil/network"
+	"pkg.akt.dev/node/app"
+	"pkg.akt.dev/node/testutil/network"
 )
 
-type InterceptState func(codec.Codec, string, json.RawMessage) json.RawMessage
-
-type networkConfigOptions struct {
-	interceptState InterceptState
-}
-
-type ConfigOption func(*networkConfigOptions)
-
-// WithInterceptState set custom name of the log object
-func WithInterceptState(val InterceptState) ConfigOption {
-	return func(t *networkConfigOptions) {
-		t.interceptState = val
-	}
-}
-
-func RandRangeInt(min, max int) int {
-	return rand.Intn(max-min) + min // nolint: gosec
+func RandRangeInt(minV, maxV int) int {
+	return rand.Intn(maxV-minV) + minV // nolint: gosec
 }
 
 func RandRangeUint(min, max uint) uint {
@@ -54,114 +33,80 @@ func RandRangeUint(min, max uint) uint {
 	return uint(val)
 }
 
-func RandRangeUint64(min, max uint64) uint64 {
+func RandRangeUint64(minV, maxV uint64) uint64 {
 	val := rand.Uint64() // nolint: gosec
-	val %= max - min
-	val += min
+	val %= maxV - minV
+	val += minV
 	return val
 }
 
-func ResourceUnits(_ testing.TB) types.Resources {
-	return types.Resources{
+func ResourceUnits(_ testing.TB) rtypes.Resources {
+	return rtypes.Resources{
 		ID: 1,
-		CPU: &types.CPU{
-			Units: types.NewResourceValue(uint64(RandCPUUnits())),
+		CPU: &rtypes.CPU{
+			Units: rtypes.NewResourceValue(uint64(RandCPUUnits())),
 		},
-		Memory: &types.Memory{
-			Quantity: types.NewResourceValue(RandMemoryQuantity()),
+		Memory: &rtypes.Memory{
+			Quantity: rtypes.NewResourceValue(RandMemoryQuantity()),
 		},
-		GPU: &types.GPU{
-			Units: types.NewResourceValue(uint64(RandGPUUnits())),
+		GPU: &rtypes.GPU{
+			Units: rtypes.NewResourceValue(uint64(RandGPUUnits())),
 		},
-		Storage: types.Volumes{
-			types.Storage{
-				Quantity: types.NewResourceValue(RandStorageQuantity()),
+		Storage: rtypes.Volumes{
+			rtypes.Storage{
+				Quantity: rtypes.NewResourceValue(RandStorageQuantity()),
 			},
 		},
 	}
 }
 
-func NewApp(val network.Validator) servertypes.Application {
-	return app.NewApp(
-		val.Ctx.Logger, dbm.NewMemDB(), nil, true, 0, make(map[int64]bool), val.Ctx.Config.RootDir,
-		simapp.EmptyAppOptions{},
-		baseapp.SetPruning(storetypes.NewPruningOptionsFromString(val.AppConfig.Pruning)),
-		baseapp.SetMinGasPrices(val.AppConfig.MinGasPrices),
+// NewTestNetworkFixture returns a new simapp AppConstructor for network simulation tests
+func NewTestNetworkFixture() network.TestFixture {
+	dir, err := os.MkdirTemp("", "simapp")
+	if err != nil {
+		panic(fmt.Sprintf("failed creating temporary directory: %v", err))
+	}
+	defer func() {
+		_ = os.RemoveAll(dir)
+	}()
+
+	encodingConfig := sdkutil.MakeEncodingConfig()
+
+	tapp := app.NewApp(
+		log.NewNopLogger(),
+		dbm.NewMemDB(),
+		nil,
+		true,
+		0,
+		make(map[int64]bool),
+		encodingConfig,
+		simtestutil.NewAppOptionsWithFlagHome(dir),
 	)
-}
 
-// DefaultConfig returns a default configuration suitable for nearly all
-// testing requirements.
-func DefaultConfig(opts ...ConfigOption) network.Config {
-	cfg := &networkConfigOptions{}
-	for _, opt := range opts {
-		opt(cfg)
+	appCtr := func(val network.ValidatorI) servertypes.Application {
+		return app.NewApp(
+			val.GetCtx().Logger,
+			dbm.NewMemDB(),
+			nil,
+			true,
+			0,
+			make(map[int64]bool),
+			encodingConfig,
+			simtestutil.NewAppOptionsWithFlagHome(val.GetCtx().Config.RootDir),
+			bam.SetPruning(pruningtypes.NewPruningOptionsFromString(val.GetAppConfig().Pruning)),
+			bam.SetMinGasPrices(val.GetAppConfig().MinGasPrices),
+			bam.SetChainID(val.GetCtx().Viper.GetString(cflags.FlagChainID)),
+		)
 	}
 
-	encCfg := app.MakeEncodingConfig()
-	origGenesisState := app.ModuleBasics().DefaultGenesis(encCfg.Marshaler)
-
-	genesisState := make(map[string]json.RawMessage)
-	for k, v := range origGenesisState {
-		data, err := v.MarshalJSON()
-		if err != nil {
-			panic(err)
-		}
-
-		buf := &bytes.Buffer{}
-		_, err = buf.Write(data)
-		if err != nil {
-			panic(err)
-		}
-
-		stringData := buf.String()
-		stringDataAfter := strings.ReplaceAll(stringData, `"stake"`, `"uakt"`)
-		if stringData == stringDataAfter {
-			genesisState[k] = v
-			continue
-		}
-
-		var val map[string]interface{}
-		err = json.Unmarshal(buf.Bytes(), &val)
-		if err != nil {
-			panic(err)
-		}
-
-		replacementV := json.RawMessage(stringDataAfter)
-		genesisState[k] = replacementV
-	}
-
-	if cfg.interceptState != nil {
-		for k, v := range genesisState {
-			res := cfg.interceptState(encCfg.Marshaler, k, v)
-			if res != nil {
-				genesisState[k] = res
-			}
-		}
-	}
-
-	return network.Config{
-		Codec:             encCfg.Marshaler,
-		TxConfig:          encCfg.TxConfig,
-		LegacyAmino:       encCfg.Amino,
-		InterfaceRegistry: encCfg.InterfaceRegistry,
-		AccountRetriever:  authtypes.AccountRetriever{},
-		AppConstructor:    NewApp,
-		GenesisState:      genesisState,
-		TimeoutCommit:     2 * time.Second,
-		ChainID:           "chain-" + tmrand.NewRand().Str(6),
-		NumValidators:     4,
-		BondDenom:         CoinDenom,
-		Denoms: []string{
-			"ibc/12C6A0C374171B595A0A9E18B83FA09D295FB1F2D8C6DAA3AC28683471752D84",
+	return network.TestFixture{
+		AppConstructor: appCtr,
+		GenesisState:   app.NewDefaultGenesisState(tapp.AppCodec()),
+		EncodingConfig: testutil.TestEncodingConfig{
+			InterfaceRegistry: tapp.InterfaceRegistry(),
+			Codec:             tapp.AppCodec(),
+			TxConfig:          tapp.TxConfig(),
+			Amino:             tapp.LegacyAmino(),
 		},
-		MinGasPrices:    fmt.Sprintf("0.000006%s", CoinDenom),
-		AccountTokens:   sdk.TokensFromConsensusPower(1000000000000, sdk.DefaultPowerReduction),
-		StakingTokens:   sdk.TokensFromConsensusPower(100000, sdk.DefaultPowerReduction),
-		BondedTokens:    sdk.TokensFromConsensusPower(100, sdk.DefaultPowerReduction),
-		PruningStrategy: storetypes.PruningOptionNothing,
-		CleanupDir:      true,
-		SigningAlgo:     string(hd.Secp256k1Type),
-		KeyringOptions:  []keyring.Option{},
 	}
 }

@@ -6,6 +6,42 @@
                 {
                     "name": "validator0",
                     "index": 0
+                },
+                {
+                    "name": "validator1",
+                    "index": 1
+                },
+                {
+                    "name": "validator2",
+                    "index": 2
+                },
+                {
+                    "name": "test0",
+                    "index": 3
+                },
+                {
+                    "name": "test1",
+                    "index": 4
+                },
+                {
+                    "name": "test2",
+                    "index": 5
+                },
+                {
+                    "name": "test3",
+                    "index": 6
+                },
+                {
+                    "name": "test4",
+                    "index": 7
+                },
+                {
+                    "name": "test5",
+                    "index": 8
+                },
+                {
+                    "name": "test6",
+                    "index": 9
                 }
             ]
         }

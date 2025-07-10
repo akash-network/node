@@ -33,9 +33,12 @@ WORKDIR=${UTEST_WORKDIR:=}
 UPGRADE_FROM=${UTEST_UPGRADE_FROM:=}
 UPGRADE_TO=${UTEST_UPGRADE_TO:=}
 CONFIG_FILE=${UTEST_CONFIG_FILE:=}
+CHAIN_METADATA_URL=https://raw.githubusercontent.com/akash-network/net/master/mainnet/meta.json
+SNAPSHOT_URL=https://snapshots.akash.network/akashnet-2/akashnet-2_22503451.tar.lz4
+STATE_CONFIG=
 
 short_opts=h
-long_opts=help/workdir:/ufrom:/uto:/gbv:/config: # those who take an arg END with :
+long_opts=help/workdir:/ufrom:/uto:/gbv:/config:/chain-meta:/snapshot-url:/state-config: # those who take an arg END with :
 
 while getopts ":$short_opts-:" o; do
 	case $o in
@@ -107,11 +110,21 @@ while getopts ":$short_opts-:" o; do
 		config)
 			CONFIG_FILE=$OPTARG
 			;;
+		chain-meta)
+			CHAIN_METADATA_URL=$OPTARG
+			;;
+		snapshot-url)
+			SNAPSHOT_URL=$OPTARG
+			;;
+		state-config)
+			STATE_CONFIG=$OPTARG
+			;;
 	esac
 done
 shift "$((OPTIND - 1))"
 
-GENESIS_ORIG=${UTEST_GENESIS_ORIGIN:=https://github.com/akash-network/testnetify/releases/download/${UPGRADE_FROM}/genesis.json.tar.lz4}
+CHAIN_METADATA=$(curl -s "${CHAIN_METADATA_URL}")
+GENESIS_URL="$(echo "$CHAIN_METADATA" | jq -r '.codebase.genesis.genesis_url? // .genesis?')"
 
 pushd() {
 	command pushd "$@" >/dev/null
@@ -121,7 +134,7 @@ popd() {
 	command popd >/dev/null
 }
 
-function content_type() {
+function tar_by_content_type() {
 	case "$1" in
 		*.tar.cz*)
 			tar_cmd="tar -xJ -"
@@ -137,6 +150,25 @@ function content_type() {
 			;;
 		*)
 			tar_cmd="tar xf -"
+			;;
+	esac
+
+	echo "$tar_cmd"
+}
+
+function content_type() {
+	case "$1" in
+		*.tar.cz*)
+			tar_cmd="tar.cz"
+			;;
+		*.tar.gz*)
+			tar_cmd="tar.gz"
+			;;
+		*.tar.lz4*)
+			tar_cmd="tar.lz4"
+			;;
+		*.tar.zst*)
+			tar_cmd="tar.zst"
 			;;
 	esac
 
@@ -159,7 +191,17 @@ function content_size() {
 }
 
 function content_name() {
-	name=$(wget "$1" --spider --server-response -O - 2>&1 | grep "Content-Disposition:" | tail -1 | awk -F"filename=" '{print $2}')
+	name=$(wget "$1" --spider --server-response -O - 2>&1 | grep -i "content-disposition" | awk -F"filename=" '{print $2}')
+	# shellcheck disable=SC2181
+	if [[ "$name" == "" ]]; then
+		echo "$1"
+	else
+		echo "$name"
+	fi
+}
+
+function content_location() {
+	name=$(wget "$1" --spider --server-response -O - 2>&1 | grep "location:" | awk '{print $2}' | tr -d '\n')
 	# shellcheck disable=SC2181
 	if [[ "$name" == "" ]]; then
 		echo "$1"
@@ -213,7 +255,7 @@ function build_bins() {
 	if [[ $GOOS == "darwin" ]]; then
 		archive="${archive}_darwin_all"
 	else
-		archive="${archive}_linux_$(uname_arch)"
+		archive="${archive}_linux_$GOARCH"
 	fi
 
 	unzip -o "${AKASH_DEVCACHE}/goreleaser/test-bins/${archive}.zip" -d "$upgrade_bin"
@@ -235,6 +277,8 @@ function init() {
 	local validators_dir=${WORKDIR}/validators
 
 	mkdir -p "${WORKDIR}/validators/logs"
+
+	snapshot_file=${validators_dir}/snapshot
 
 	for val in $(jq -c '.validators[]' <<<"$config"); do
 		local valdir
@@ -263,42 +307,6 @@ function init() {
 		$AKASH init --home "$valdir" "$(jq -rc '.moniker' <<<"$val")" >/dev/null 2>&1
 
 		if [[ $cnt -eq 0 ]]; then
-			pushd "$(pwd)"
-			cd "$valdir/config"
-
-			if [[ "${GENESIS_ORIG}" =~ ^https?:\/\/.* ]]; then
-				echo "Downloading genesis from $GENESIS_ORIG"
-
-				pv_args="-petrafb -i 5"
-				sz=$(content_size "$GENESIS_ORIG")
-				# shellcheck disable=SC2181
-				if [ $? -eq 0 ]; then
-					if [[ -n $sz ]]; then
-						pv_args+=" -s $sz"
-					fi
-
-					tar_cmd=$(content_type "$(content_name "$GENESIS_ORIG")")
-
-					# shellcheck disable=SC2086
-					wget -nv -O - "$GENESIS_ORIG" | pv $pv_args | eval "$tar_cmd"
-				else
-					echo "unable to download genesis"
-				fi
-			else
-				echo "Unpacking genesis from $GENESIS_ORIG"
-				tar_cmd=$(content_type "$GENESIS_ORIG")
-				# shellcheck disable=SC2086
-				(pv -petrafb -i 5 "$GENESIS_ORIG" | eval "$tar_cmd") 2>&1 | stdbuf -o0 tr '\r' '\n'
-			fi
-
-			popd
-
-			jq -c '.mnemonics[]' <<<"$config" | while read -r mnemonic; do
-				jq -c '.keys[]' <<<"$mnemonic" | while read -r key; do
-					jq -rc '.phrase' <<<"$mnemonic" | $AKASH --home="$valdir" --keyring-backend=test keys add "$(jq -rc '.name' <<<"$key")" --recover --index "$(jq -rc '.index' <<<"$key")"
-				done
-			done
-
 			cat >"$valdir/.envrc" <<EOL
 PATH_add "\$(pwd)/cosmovisor/current/bin"
 AKASH_HOME="\$(pwd)"
@@ -319,19 +327,125 @@ export AKASH_CHAIN_ID
 export AKASH_KEYRING_BACKEND
 export AKASH_SIGN_MODE
 EOL
-
-		else
-			pushd "$(pwd)"
-
-			cd "$valdir/config"
-
-			ln -snf "../../.akash0/config/genesis.json" "genesis.json"
-
-			popd
 		fi
 
 		jq -r '.keys.priv' <<<"$val" >"$valdir/config/priv_validator_key.json"
 		jq -r '.keys.node' <<<"$val" >"$valdir/config/node_key.json"
+
+		((cnt++)) || true
+	done
+
+	import_keys
+	prepare_state
+}
+
+function prepare_state() {
+	if [[ -z "${WORKDIR}" ]]; then
+		echo "workdir is not set"
+		echo -e "$USAGE"
+		exit 1
+	fi
+
+	local config
+	config=$(cat "$CONFIG_FILE")
+
+	local cnt=0
+	local validators_dir=${WORKDIR}/validators
+
+	mkdir -p "${WORKDIR}/validators/logs"
+
+	snapshot_file=${validators_dir}/snapshot
+
+	for val in $(jq -c '.validators[]' <<<"$config"); do
+		local valdir
+		local cosmovisor_dir
+		local genesis_bin
+		local upgrade_bin
+		local AKASH
+
+		valdir=$validators_dir/.akash${cnt}
+		cosmovisor_dir=$valdir/cosmovisor
+		genesis_bin=$cosmovisor_dir/genesis/bin
+		AKASH=$genesis_bin/akash
+
+		genesis_file=${valdir}/config/genesis.json
+		rm -f "$genesis_file"
+
+		if [[ $cnt -eq 0 ]]; then
+			if [[ "${GENESIS_URL}" =~ ^https?:\/\/.* ]]; then
+				echo "Downloading genesis from ${GENESIS_URL}"
+
+				pv_args="-petrafb -i 5"
+				sz=$(content_size "${GENESIS_URL}")
+				# shellcheck disable=SC2181
+				if [ $? -eq 0 ]; then
+					if [[ -n $sz ]]; then
+						pv_args+=" -s $sz"
+					fi
+
+					tar_cmd=$(content_type "$(content_name "${GENESIS_URL}")")
+
+					if [ "$tar_cmd" != "" ]; then
+						# shellcheck disable=SC2086
+						wget -nq -O - "${GENESIS_URL}" | pv $pv_args | eval "$tar_cmd"
+					else
+						wget -q --show-progress -O "$genesis_file" "${GENESIS_URL}"
+					fi
+				else
+					echo "unable to download genesis"
+				fi
+			else
+				echo "Unpacking genesis from ${GENESIS_URL}"
+				tar_cmd=$(content_type "${GENESIS_URL}")
+				# shellcheck disable=SC2086
+				(pv -petrafb -i 5 "${GENESIS_URL}" | eval "$tar_cmd") 2>&1 | stdbuf -o0 tr '\r' '\n'
+			fi
+
+			if ! ls "${snapshot_file}"* 1> /dev/null 2>&1; then
+				echo "Downloading snapshot to [$(pwd)] from $SNAPSHOT_URL..."
+				file_url=$(content_location "$SNAPSHOT_URL")
+				content_ext=$(content_type "$file_url")
+
+				wget --show-progress -q -O "${snapshot_file}.${content_ext}" "$file_url"
+			fi
+
+			snap_file=${validators_dir}/$(find "$validators_dir" -name "snapshot.*" -type f -exec basename {} \;)
+
+			tar_cmd=$(tar_by_content_type "$snap_file")
+
+			pushd "$(pwd)"
+			mkdir -p "${valdir}/data"
+			cd "${valdir}/data"
+
+			echo "Unpacking snapshot from $snap_file..."
+
+			# shellcheck disable=SC2086
+			(pv -petrafb -i 5 "$snap_file" | eval "$tar_cmd") 2>&1 | stdbuf -o0 tr '\r' '\n'
+
+			# if snapshot provides data dir then move all things up
+			if [[ -d data ]]; then
+				echo "snapshot has data dir. moving content..."
+				mv data/* ./
+				rm -rf data
+			fi
+
+			popd
+
+			$AKASH testnetify --home="$valdir" --testnet-rootdir="$validators_dir" --testnet-config="${STATE_CONFIG}" --yes
+		else
+			pushd "$(pwd)"
+			cd "${valdir}"
+			cp -r "${validators_dir}/.akash0/data" ./
+
+			pushd "$(pwd)"
+
+			cd "config"
+
+			ln -snf "../../.akash0/config/genesis.json" "genesis.json"
+
+			popd
+			popd
+		fi
 
 		((cnt++)) || true
 	done
@@ -455,6 +569,10 @@ case "$1" in
 	clean)
 		shift
 		clean
+		;;
+	prepare-state)
+		shift
+		prepare_state
 		;;
 	upgrade-from-release)
 		shift

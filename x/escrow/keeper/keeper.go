@@ -3,56 +3,66 @@ package keeper
 import (
 	"fmt"
 
-	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
-	types "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
+	"cosmossdk.io/collections"
+	sdkmath "cosmossdk.io/math"
+	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
+
+	dv1 "pkg.akt.dev/go/node/deployment/v1"
+	"pkg.akt.dev/go/node/escrow/v1"
 )
 
-type AccountHook func(sdk.Context, types.Account)
-type PaymentHook func(sdk.Context, types.FractionalPayment)
+type AccountHook func(sdk.Context, v1.Account)
+type PaymentHook func(sdk.Context, v1.FractionalPayment)
 
 type Keeper interface {
 	Codec() codec.BinaryCodec
-	StoreKey() sdk.StoreKey
-	AccountCreate(ctx sdk.Context, id types.AccountID, owner, depositor sdk.AccAddress, deposit sdk.Coin) error
-	AccountDeposit(ctx sdk.Context, id types.AccountID, depositor sdk.AccAddress, amount sdk.Coin) error
-	AccountSettle(ctx sdk.Context, id types.AccountID) (bool, error)
-	AccountClose(ctx sdk.Context, id types.AccountID) error
-	PaymentCreate(ctx sdk.Context, id types.AccountID, pid string, owner sdk.AccAddress, rate sdk.DecCoin) error
-	PaymentWithdraw(ctx sdk.Context, id types.AccountID, pid string) error
-	PaymentClose(ctx sdk.Context, id types.AccountID, pid string) error
-	GetAccount(ctx sdk.Context, id types.AccountID) (types.Account, error)
-	GetPayment(ctx sdk.Context, id types.AccountID, pid string) (types.FractionalPayment, error)
+	StoreKey() storetypes.StoreKey
+	AccountCreate(ctx sdk.Context, id v1.AccountID, owner, depositor sdk.AccAddress, deposit sdk.Coin) error
+	AccountDeposit(ctx sdk.Context, id v1.AccountID, depositor sdk.AccAddress, amount sdk.Coin) error
+	AccountSettle(ctx sdk.Context, id v1.AccountID) (bool, error)
+	AccountClose(ctx sdk.Context, id v1.AccountID) error
+	PaymentCreate(ctx sdk.Context, id v1.AccountID, pid string, owner sdk.AccAddress, rate sdk.DecCoin) error
+	PaymentWithdraw(ctx sdk.Context, id v1.AccountID, pid string) error
+	PaymentClose(ctx sdk.Context, id v1.AccountID, pid string) error
+	GetAccount(ctx sdk.Context, id v1.AccountID) (v1.Account, error)
+	GetPayment(ctx sdk.Context, id v1.AccountID, pid string) (v1.FractionalPayment, error)
 	AddOnAccountClosedHook(AccountHook) Keeper
 	AddOnPaymentClosedHook(PaymentHook) Keeper
-	WithAccounts(sdk.Context, func(types.Account) bool)
-	WithPayments(sdk.Context, func(types.FractionalPayment) bool)
-	SaveAccount(sdk.Context, types.Account)
-	SavePayment(sdk.Context, types.FractionalPayment)
+	WithAccounts(sdk.Context, func(v1.Account) bool)
+	WithPayments(sdk.Context, func(v1.FractionalPayment) bool)
+	SaveAccount(sdk.Context, v1.Account)
+	SavePayment(sdk.Context, v1.FractionalPayment)
 }
 
-func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey, bkeeper BankKeeper, tkeeper TakeKeeper, dkeeper DistrKeeper, akeeper AuthzKeeper) Keeper {
+func NewKeeper(
+	cdc codec.BinaryCodec,
+	skey storetypes.StoreKey,
+	bkeeper BankKeeper,
+	tkeeper TakeKeeper,
+	akeeper AuthzKeeper,
+	feepool collections.Item[distrtypes.FeePool],
+) Keeper {
 	return &keeper{
 		cdc:         cdc,
 		skey:        skey,
 		bkeeper:     bkeeper,
 		tkeeper:     tkeeper,
-		dkeeper:     dkeeper,
 		authzKeeper: akeeper,
+		feepool:     feepool,
 	}
 }
 
 type keeper struct {
 	cdc         codec.BinaryCodec
-	skey        sdk.StoreKey
+	skey        storetypes.StoreKey
 	bkeeper     BankKeeper
 	tkeeper     TakeKeeper
-	dkeeper     DistrKeeper
 	authzKeeper AuthzKeeper
-
-	hooks struct {
+	feepool     collections.Item[distrtypes.FeePool]
+	hooks       struct {
 		onAccountClosed []AccountHook
 		onPaymentClosed []PaymentHook
 	}
@@ -63,27 +73,27 @@ func (k *keeper) Codec() codec.BinaryCodec {
 }
 
 // StoreKey returns store key
-func (k *keeper) StoreKey() sdk.StoreKey {
+func (k *keeper) StoreKey() storetypes.StoreKey {
 	return k.skey
 }
 
-func (k *keeper) AccountCreate(ctx sdk.Context, id types.AccountID, owner, depositor sdk.AccAddress, deposit sdk.Coin) error {
+func (k *keeper) AccountCreate(ctx sdk.Context, id v1.AccountID, owner, depositor sdk.AccAddress, deposit sdk.Coin) error {
 	store := ctx.KVStore(k.skey)
-	key := accountKey(id)
+	key := AccountKey(id)
 
 	if store.Has(key) {
-		return types.ErrAccountExists
+		return v1.ErrAccountExists
 	}
 
-	obj := &types.Account{
+	obj := &v1.Account{
 		ID:          id,
 		Owner:       owner.String(),
-		State:       types.AccountOpen,
-		Balance:     sdk.NewDecCoin(deposit.Denom, sdk.ZeroInt()),
-		Transferred: sdk.NewDecCoin(deposit.Denom, sdk.ZeroInt()),
+		State:       v1.AccountOpen,
+		Balance:     sdk.NewDecCoin(deposit.Denom, sdkmath.ZeroInt()),
+		Transferred: sdk.NewDecCoin(deposit.Denom, sdkmath.ZeroInt()),
 		SettledAt:   ctx.BlockHeight(),
 		Depositor:   depositor.String(),
-		Funds:       sdk.NewDecCoin(deposit.Denom, sdk.ZeroInt()),
+		Funds:       sdk.NewDecCoin(deposit.Denom, sdkmath.ZeroInt()),
 	}
 
 	if err := obj.ValidateBasic(); err != nil {
@@ -101,8 +111,14 @@ func (k *keeper) AccountCreate(ctx sdk.Context, id types.AccountID, owner, depos
 
 // fetchDepositToAccount fetches deposit amount from the depositor's account to the escrow
 // account and accordingly updates the balance or funds.
-func (k *keeper) fetchDepositToAccount(ctx sdk.Context, acc *types.Account, owner, depositor sdk.AccAddress, deposit sdk.Coin) error {
-	if err := k.bkeeper.SendCoinsFromAccountToModule(ctx, depositor, types.ModuleName, sdk.NewCoins(deposit)); err != nil {
+func (k *keeper) fetchDepositToAccount(
+	ctx sdk.Context,
+	acc *v1.Account,
+	owner sdk.AccAddress,
+	depositor sdk.AccAddress,
+	deposit sdk.Coin,
+) error {
+	if err := k.bkeeper.SendCoinsFromAccountToModule(ctx, depositor, v1.ModuleName, sdk.NewCoins(deposit)); err != nil {
 		return err
 	}
 
@@ -115,7 +131,7 @@ func (k *keeper) fetchDepositToAccount(ctx sdk.Context, acc *types.Account, owne
 	return nil
 }
 
-func (k *keeper) GetAccountDepositor(ctx sdk.Context, id types.AccountID) (sdk.AccAddress, error) {
+func (k *keeper) GetAccountDepositor(ctx sdk.Context, id v1.AccountID) (sdk.AccAddress, error) {
 	obj, err := k.GetAccount(ctx, id)
 	if err != nil {
 		return sdk.AccAddress{}, err
@@ -129,17 +145,17 @@ func (k *keeper) GetAccountDepositor(ctx sdk.Context, id types.AccountID) (sdk.A
 	return depositor, nil
 }
 
-func (k *keeper) AccountDeposit(ctx sdk.Context, id types.AccountID, depositor sdk.AccAddress, amount sdk.Coin) error {
+func (k *keeper) AccountDeposit(ctx sdk.Context, id v1.AccountID, depositor sdk.AccAddress, amount sdk.Coin) error {
 	store := ctx.KVStore(k.skey)
-	key := accountKey(id)
+	key := AccountKey(id)
 
 	obj, err := k.GetAccount(ctx, id)
 	if err != nil {
 		return err
 	}
 
-	if obj.State != types.AccountOpen {
-		return types.ErrAccountClosed
+	if obj.State != v1.AccountOpen {
+		return v1.ErrAccountClosed
 	}
 
 	owner, err := sdk.AccAddressFromBech32(obj.Owner)
@@ -156,7 +172,7 @@ func (k *keeper) AccountDeposit(ctx sdk.Context, id types.AccountID, depositor s
 		if currDepositor.Equals(owner) {
 			obj.Depositor = depositor.String()
 		} else if !currDepositor.Equals(depositor) {
-			return types.ErrInvalidAccountDepositor
+			return v1.ErrInvalidAccountDepositor
 		}
 	}
 
@@ -169,13 +185,13 @@ func (k *keeper) AccountDeposit(ctx sdk.Context, id types.AccountID, depositor s
 	return nil
 }
 
-func (k *keeper) AccountSettle(ctx sdk.Context, id types.AccountID) (bool, error) {
+func (k *keeper) AccountSettle(ctx sdk.Context, id v1.AccountID) (bool, error) {
 	_, _, od, err := k.doAccountSettle(ctx, id)
 
 	return od, err
 }
 
-func (k *keeper) AccountClose(ctx sdk.Context, id types.AccountID) error {
+func (k *keeper) AccountClose(ctx sdk.Context, id v1.AccountID) error {
 	// doAccountSettle checks if account is open
 	account, payments, od, err := k.doAccountSettle(ctx, id)
 	if err != nil {
@@ -186,13 +202,13 @@ func (k *keeper) AccountClose(ctx sdk.Context, id types.AccountID) error {
 		return nil
 	}
 
-	account.State = types.AccountClosed
+	account.State = v1.AccountClosed
 	if err := k.accountWithdraw(ctx, &account); err != nil {
 		return err
 	}
 
 	for idx := range payments {
-		payments[idx].State = types.PaymentClosed
+		payments[idx].State = v1.PaymentClosed
 		if err := k.paymentWithdraw(ctx, &payments[idx]); err != nil {
 			return err
 		}
@@ -211,39 +227,39 @@ func (k *keeper) AccountClose(ctx sdk.Context, id types.AccountID) error {
 	return nil
 }
 
-func (k *keeper) PaymentCreate(ctx sdk.Context, id types.AccountID, pid string, owner sdk.AccAddress, rate sdk.DecCoin) error {
+func (k *keeper) PaymentCreate(ctx sdk.Context, id v1.AccountID, pid string, owner sdk.AccAddress, rate sdk.DecCoin) error {
 	account, _, od, err := k.doAccountSettle(ctx, id)
 	if err != nil {
 		return err
 	}
 
 	if od {
-		return types.ErrAccountOverdrawn
+		return v1.ErrAccountOverdrawn
 	}
 
 	if rate.Denom != account.Balance.Denom {
-		return types.ErrInvalidDenomination
+		return v1.ErrInvalidDenomination
 	}
 
 	if rate.IsZero() {
-		return types.ErrPaymentRateZero
+		return v1.ErrPaymentRateZero
 	}
 
 	store := ctx.KVStore(k.skey)
-	key := paymentKey(id, pid)
+	key := PaymentKey(id, pid)
 
 	if store.Has(key) {
-		return types.ErrPaymentExists
+		return v1.ErrPaymentExists
 	}
 
-	obj := &types.FractionalPayment{
+	obj := &v1.FractionalPayment{
 		AccountID: id,
 		PaymentID: pid,
 		Owner:     owner.String(),
-		State:     types.PaymentOpen,
+		State:     v1.PaymentOpen,
 		Rate:      rate,
-		Balance:   sdk.NewDecCoin(rate.Denom, sdk.ZeroInt()),
-		Withdrawn: sdk.NewCoin(rate.Denom, sdk.ZeroInt()),
+		Balance:   sdk.NewDecCoin(rate.Denom, sdkmath.ZeroInt()),
+		Withdrawn: sdk.NewCoin(rate.Denom, sdkmath.ZeroInt()),
 	}
 
 	store.Set(key, k.cdc.MustMarshal(obj))
@@ -251,14 +267,14 @@ func (k *keeper) PaymentCreate(ctx sdk.Context, id types.AccountID, pid string, 
 	return nil
 }
 
-func (k *keeper) PaymentWithdraw(ctx sdk.Context, id types.AccountID, pid string) error {
+func (k *keeper) PaymentWithdraw(ctx sdk.Context, id v1.AccountID, pid string) error {
 	payment, err := k.GetPayment(ctx, id, pid)
 	if err != nil {
 		return err
 	}
 
-	if payment.State != types.PaymentOpen {
-		return types.ErrPaymentClosed
+	if payment.State != v1.PaymentOpen {
+		return v1.ErrPaymentClosed
 	}
 
 	od, err := k.AccountSettle(ctx, id)
@@ -278,14 +294,14 @@ func (k *keeper) PaymentWithdraw(ctx sdk.Context, id types.AccountID, pid string
 	return k.paymentWithdraw(ctx, &payment)
 }
 
-func (k *keeper) PaymentClose(ctx sdk.Context, id types.AccountID, pid string) error {
+func (k *keeper) PaymentClose(ctx sdk.Context, id v1.AccountID, pid string) error {
 	payment, err := k.GetPayment(ctx, id, pid)
 	if err != nil {
 		return err
 	}
 
-	if payment.State != types.PaymentOpen {
-		return types.ErrPaymentClosed
+	if payment.State != v1.PaymentOpen {
+		return v1.ErrPaymentClosed
 	}
 
 	od, err := k.AccountSettle(ctx, id)
@@ -302,7 +318,7 @@ func (k *keeper) PaymentClose(ctx sdk.Context, id types.AccountID, pid string) e
 		return err
 	}
 
-	payment.State = types.PaymentClosed
+	payment.State = v1.PaymentClosed
 
 	if err := k.paymentWithdraw(ctx, &payment); err != nil {
 		return err
@@ -325,58 +341,58 @@ func (k *keeper) AddOnPaymentClosedHook(hook PaymentHook) Keeper {
 	return k
 }
 
-func (k *keeper) GetAccount(ctx sdk.Context, id types.AccountID) (types.Account, error) {
+func (k *keeper) GetAccount(ctx sdk.Context, id v1.AccountID) (v1.Account, error) {
 	store := ctx.KVStore(k.skey)
-	key := accountKey(id)
+	key := AccountKey(id)
 
 	if !store.Has(key) {
-		return types.Account{}, types.ErrAccountNotFound
+		return v1.Account{}, v1.ErrAccountNotFound
 	}
 
 	buf := store.Get(key)
 
-	var obj types.Account
+	var obj v1.Account
 
 	k.cdc.MustUnmarshal(buf, &obj)
 
 	return obj, nil
 }
 
-func (k *keeper) GetPayment(ctx sdk.Context, id types.AccountID, pid string) (types.FractionalPayment, error) {
+func (k *keeper) GetPayment(ctx sdk.Context, id v1.AccountID, pid string) (v1.FractionalPayment, error) {
 	store := ctx.KVStore(k.skey)
-	key := paymentKey(id, pid)
+	key := PaymentKey(id, pid)
 
 	if !store.Has(key) {
-		return types.FractionalPayment{}, types.ErrPaymentNotFound
+		return v1.FractionalPayment{}, v1.ErrPaymentNotFound
 	}
 
 	buf := store.Get(key)
 
-	var obj types.FractionalPayment
+	var obj v1.FractionalPayment
 
 	k.cdc.MustUnmarshal(buf, &obj)
 
 	return obj, nil
 }
 
-func (k *keeper) SaveAccount(ctx sdk.Context, obj types.Account) {
+func (k *keeper) SaveAccount(ctx sdk.Context, obj v1.Account) {
 	k.saveAccount(ctx, &obj)
 }
 
-func (k *keeper) SavePayment(ctx sdk.Context, obj types.FractionalPayment) {
+func (k *keeper) SavePayment(ctx sdk.Context, obj v1.FractionalPayment) {
 	k.savePayment(ctx, &obj)
 }
 
-func (k *keeper) WithAccounts(ctx sdk.Context, fn func(types.Account) bool) {
+func (k *keeper) WithAccounts(ctx sdk.Context, fn func(v1.Account) bool) {
 	store := ctx.KVStore(k.skey)
-	iter := sdk.KVStorePrefixIterator(store, types.AccountKeyPrefix())
+	iter := storetypes.KVStorePrefixIterator(store, v1.AccountKeyPrefix())
 
 	defer func() {
 		_ = iter.Close()
 	}()
 
 	for ; iter.Valid(); iter.Next() {
-		var val types.Account
+		var val v1.Account
 		k.cdc.MustUnmarshal(iter.Value(), &val)
 		if stop := fn(val); stop {
 			break
@@ -384,16 +400,16 @@ func (k *keeper) WithAccounts(ctx sdk.Context, fn func(types.Account) bool) {
 	}
 }
 
-func (k *keeper) WithPayments(ctx sdk.Context, fn func(types.FractionalPayment) bool) {
+func (k *keeper) WithPayments(ctx sdk.Context, fn func(v1.FractionalPayment) bool) {
 	store := ctx.KVStore(k.skey)
-	iter := sdk.KVStorePrefixIterator(store, types.PaymentKeyPrefix())
+	iter := storetypes.KVStorePrefixIterator(store, v1.PaymentKeyPrefix())
 
 	defer func() {
 		_ = iter.Close()
 	}()
 
 	for ; iter.Valid(); iter.Next() {
-		var val types.FractionalPayment
+		var val v1.FractionalPayment
 		k.cdc.MustUnmarshal(iter.Value(), &val)
 		if stop := fn(val); stop {
 			break
@@ -401,17 +417,17 @@ func (k *keeper) WithPayments(ctx sdk.Context, fn func(types.FractionalPayment) 
 	}
 }
 
-func (k *keeper) doAccountSettle(ctx sdk.Context, id types.AccountID) (types.Account, []types.FractionalPayment, bool, error) {
+func (k *keeper) doAccountSettle(ctx sdk.Context, id v1.AccountID) (v1.Account, []v1.FractionalPayment, bool, error) {
 	account, err := k.GetAccount(ctx, id)
 	if err != nil {
 		return account, nil, false, err
 	}
 
-	if account.State != types.AccountOpen {
-		return account, nil, false, types.ErrAccountClosed
+	if account.State != v1.AccountOpen {
+		return account, nil, false, v1.ErrAccountClosed
 	}
 
-	heightDelta := sdk.NewInt(ctx.BlockHeight() - account.SettledAt)
+	heightDelta := sdkmath.NewInt(ctx.BlockHeight() - account.SettledAt)
 
 	if heightDelta.IsZero() {
 		return account, nil, false, nil
@@ -426,7 +442,7 @@ func (k *keeper) doAccountSettle(ctx sdk.Context, id types.AccountID) (types.Acc
 		return account, nil, false, nil
 	}
 
-	blockRate := sdk.NewDecCoin(account.Balance.Denom, sdk.ZeroInt())
+	blockRate := sdk.NewDecCoin(account.Balance.Denom, sdkmath.ZeroInt())
 
 	for _, payment := range payments {
 		blockRate = blockRate.Add(payment.Rate)
@@ -438,20 +454,20 @@ func (k *keeper) doAccountSettle(ctx sdk.Context, id types.AccountID) (types.Acc
 		owner := sdk.MustAccAddressFromBech32(account.Owner)
 		depositor := sdk.MustAccAddressFromBech32(account.Depositor)
 
-		msg := &dtypes.MsgDepositDeployment{Amount: sdk.NewCoin(account.Balance.Denom, sdk.NewInt(0))}
+		msg := &dv1.MsgDepositDeployment{Amount: sdk.NewCoin(account.Balance.Denom, sdkmath.NewInt(0))}
 
-		authz, _ := k.authzKeeper.GetCleanAuthorization(ctx, owner, depositor, sdk.MsgTypeURL(msg))
+		authz, _ := k.authzKeeper.GetAuthorization(ctx, owner, depositor, sdk.MsgTypeURL(msg))
 
 		// if authorization has been revoked or expired it cannot be used anymore
 		// send coins back to the owner
 		if authz == nil {
 			withdrawal := sdk.NewCoin(account.Balance.Denom, account.Funds.Amount.TruncateInt())
-			if err := k.bkeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, depositor, sdk.NewCoins(withdrawal)); err != nil {
+			if err := k.bkeeper.SendCoinsFromModuleToAccount(ctx, v1.ModuleName, depositor, sdk.NewCoins(withdrawal)); err != nil {
 				ctx.Logger().Error("account withdraw", "err", err, "id", account.ID)
 				return account, payments, overdrawn, err
 			}
 
-			account.Funds.Amount = sdk.ZeroDec()
+			account.Funds.Amount = sdkmath.LegacyZeroDec()
 		}
 	}
 
@@ -474,15 +490,15 @@ func (k *keeper) doAccountSettle(ctx sdk.Context, id types.AccountID) (types.Acc
 	// distribute weighted by payment block rate
 	account, payments, amountRemaining = accountSettleDistributeWeighted(account, payments, blockRate, amountRemaining)
 
-	if amountRemaining.Amount.GT(sdk.NewDec(1)) {
-		return account, payments, false, fmt.Errorf("%w: Invalid settlement: %v remains", types.ErrInvalidSettlement, amountRemaining)
+	if amountRemaining.Amount.GT(sdkmath.LegacyNewDec(1)) {
+		return account, payments, false, fmt.Errorf("%w: Invalid settlement: %v remains", v1.ErrInvalidSettlement, amountRemaining)
 	}
 
 	// save objects
-	account.State = types.AccountOverdrawn
+	account.State = v1.AccountOverdrawn
 	k.saveAccount(ctx, &account)
 	for idx := range payments {
-		payments[idx].State = types.PaymentOverdrawn
+		payments[idx].State = v1.PaymentOverdrawn
 		k.savePayment(ctx, &payments[idx])
 		if err := k.paymentWithdraw(ctx, &payments[idx]); err != nil {
 			return account, payments, false, err
@@ -503,30 +519,30 @@ func (k *keeper) doAccountSettle(ctx sdk.Context, id types.AccountID) (types.Acc
 	return account, payments, true, nil
 }
 
-func (k *keeper) saveAccount(ctx sdk.Context, obj *types.Account) {
+func (k *keeper) saveAccount(ctx sdk.Context, obj *v1.Account) {
 	store := ctx.KVStore(k.skey)
-	key := accountKey(obj.ID)
+	key := AccountKey(obj.ID)
 	store.Set(key, k.cdc.MustMarshal(obj))
 }
 
-func (k *keeper) savePayment(ctx sdk.Context, obj *types.FractionalPayment) {
+func (k *keeper) savePayment(ctx sdk.Context, obj *v1.FractionalPayment) {
 	store := ctx.KVStore(k.skey)
-	key := paymentKey(obj.AccountID, obj.PaymentID)
+	key := PaymentKey(obj.AccountID, obj.PaymentID)
 	store.Set(key, k.cdc.MustMarshal(obj))
 }
 
-func (k *keeper) accountPayments(ctx sdk.Context, id types.AccountID) []types.FractionalPayment {
+func (k *keeper) accountPayments(ctx sdk.Context, id v1.AccountID) []v1.FractionalPayment {
 	store := ctx.KVStore(k.skey)
-	iter := sdk.KVStorePrefixIterator(store, accountPaymentsKey(id))
+	iter := storetypes.KVStorePrefixIterator(store, AccountPaymentsKey(id))
 
-	var payments []types.FractionalPayment
+	var payments []v1.FractionalPayment
 
 	defer func() {
 		_ = iter.Close()
 	}()
 
 	for ; iter.Valid(); iter.Next() {
-		var val types.FractionalPayment
+		var val v1.FractionalPayment
 		k.cdc.MustUnmarshal(iter.Value(), &val)
 		payments = append(payments, val)
 	}
@@ -534,12 +550,12 @@ func (k *keeper) accountPayments(ctx sdk.Context, id types.AccountID) []types.Fr
 	return payments
 }
 
-func (k *keeper) accountOpenPayments(ctx sdk.Context, id types.AccountID) []types.FractionalPayment {
+func (k *keeper) accountOpenPayments(ctx sdk.Context, id v1.AccountID) []v1.FractionalPayment {
 	allPayments := k.accountPayments(ctx, id)
-	payments := make([]types.FractionalPayment, 0, len(allPayments))
+	payments := make([]v1.FractionalPayment, 0, len(allPayments))
 
 	for _, payment := range allPayments {
-		if payment.State != types.PaymentOpen {
+		if payment.State != v1.PaymentOpen {
 			continue
 		}
 		payments = append(payments, payment)
@@ -548,8 +564,8 @@ func (k *keeper) accountOpenPayments(ctx sdk.Context, id types.AccountID) []type
 	return payments
 }
 
-func (k *keeper) accountWithdraw(ctx sdk.Context, obj *types.Account) error {
-	if obj.Balance.Amount.LT(sdk.NewDec(1)) && obj.Funds.Amount.LT(sdk.NewDec(1)) {
+func (k *keeper) accountWithdraw(ctx sdk.Context, obj *v1.Account) error {
+	if obj.Balance.Amount.LT(sdkmath.LegacyNewDec(1)) && obj.Funds.Amount.LT(sdkmath.LegacyNewDec(1)) {
 		return nil
 	}
 
@@ -558,9 +574,9 @@ func (k *keeper) accountWithdraw(ctx sdk.Context, obj *types.Account) error {
 		return err
 	}
 
-	if !obj.Balance.Amount.LT(sdk.NewDec(1)) {
+	if !obj.Balance.Amount.LT(sdkmath.LegacyNewDec(1)) {
 		withdrawal := sdk.NewCoin(obj.Balance.Denom, obj.Balance.Amount.TruncateInt())
-		if err = k.bkeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, owner, sdk.NewCoins(withdrawal)); err != nil {
+		if err = k.bkeeper.SendCoinsFromModuleToAccount(ctx, v1.ModuleName, owner, sdk.NewCoins(withdrawal)); err != nil {
 			ctx.Logger().Error("account withdraw", "err", err, "id", obj.ID)
 			return err
 		}
@@ -574,21 +590,21 @@ func (k *keeper) accountWithdraw(ctx sdk.Context, obj *types.Account) error {
 		}
 
 		withdrawal := sdk.NewCoin(obj.Balance.Denom, obj.Funds.Amount.TruncateInt())
-		if err = k.bkeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, depositor, sdk.NewCoins(withdrawal)); err != nil {
+		if err = k.bkeeper.SendCoinsFromModuleToAccount(ctx, v1.ModuleName, depositor, sdk.NewCoins(withdrawal)); err != nil {
 			ctx.Logger().Error("account withdraw", "err", err, "id", obj.ID)
 			return err
 		}
 
 		obj.Funds = obj.Funds.Sub(sdk.NewDecCoinFromCoin(withdrawal))
 
-		msg := &dtypes.MsgDepositDeployment{Amount: sdk.NewCoin(obj.Balance.Denom, sdk.NewInt(0))}
+		msg := &dv1.MsgDepositDeployment{Amount: sdk.NewCoin(obj.Balance.Denom, sdkmath.NewInt(0))}
 
 		// Funds field is solely to track deposits via authz.
 		// check if there is active deployment authorization from given depositor
 		// if exists, increase allowed authz deposit by remainder in the Funds, it will allow owner to reuse active authz
 		// without asking for renew.
-		authorization, expiration := k.authzKeeper.GetCleanAuthorization(ctx, owner, depositor, sdk.MsgTypeURL(msg))
-		dauthz, valid := authorization.(*dtypes.DepositDeploymentAuthorization)
+		authorization, expiration := k.authzKeeper.GetAuthorization(ctx, owner, depositor, sdk.MsgTypeURL(msg))
+		dauthz, valid := authorization.(*dv1.DepositAuthorization)
 		if valid && authorization != nil {
 			dauthz.SpendLimit = dauthz.SpendLimit.Add(withdrawal)
 			err = k.authzKeeper.SaveGrant(ctx, owner, depositor, dauthz, expiration)
@@ -603,7 +619,7 @@ func (k *keeper) accountWithdraw(ctx sdk.Context, obj *types.Account) error {
 	return nil
 }
 
-func (k *keeper) paymentWithdraw(ctx sdk.Context, obj *types.FractionalPayment) error {
+func (k *keeper) paymentWithdraw(ctx sdk.Context, obj *v1.FractionalPayment) error {
 	owner, err := sdk.AccAddressFromBech32(obj.Owner)
 	if err != nil {
 		return err
@@ -626,7 +642,7 @@ func (k *keeper) paymentWithdraw(ctx sdk.Context, obj *types.FractionalPayment) 
 	}
 
 	if !earnings.IsZero() {
-		if err := k.bkeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, owner, sdk.NewCoins(earnings)); err != nil {
+		if err := k.bkeeper.SendCoinsFromModuleToAccount(ctx, v1.ModuleName, owner, sdk.NewCoins(earnings)); err != nil {
 			ctx.Logger().Error("payment withdraw - earnings", "err", err, "account", obj.AccountID, "payment", obj.PaymentID)
 			return err
 		}
@@ -648,26 +664,33 @@ func (k *keeper) sendFeeToCommunityPool(ctx sdk.Context, fee sdk.Coin) error {
 	}
 
 	// see https://github.com/cosmos/cosmos-sdk/blob/c2a07cea272a7878b5bc2ec160eb58ca83794214/x/distribution/keeper/keeper.go#L251-L263
-	if err := k.bkeeper.SendCoinsFromModuleToModule(ctx, types.ModuleName, distrtypes.ModuleName, sdk.NewCoins(fee)); err != nil {
+	if err := k.bkeeper.SendCoinsFromModuleToModule(ctx, v1.ModuleName, distrtypes.ModuleName, sdk.NewCoins(fee)); err != nil {
 		return err
 	}
 
-	pool := k.dkeeper.GetFeePool(ctx)
+	pool, err := k.feepool.Get(ctx)
+	if err != nil {
+		return err
+	}
 
 	pool.CommunityPool = pool.CommunityPool.Add(sdk.NewDecCoinFromCoin(fee))
-	k.dkeeper.SetFeePool(ctx, pool)
+
+	err = k.feepool.Set(ctx, pool)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
 func accountSettleFullBlocks(
-	account types.Account,
-	payments []types.FractionalPayment,
-	heightDelta sdk.Int,
+	account v1.Account,
+	payments []v1.FractionalPayment,
+	heightDelta sdkmath.Int,
 	blockRate sdk.DecCoin,
 ) (
-	types.Account,
-	[]types.FractionalPayment,
+	v1.Account,
+	[]v1.FractionalPayment,
 	bool,
 	sdk.DecCoin,
 ) {
@@ -680,24 +703,24 @@ func accountSettleFullBlocks(
 	for idx := range payments {
 		p := payments[idx]
 		payments[idx].Balance = p.Balance.Add(
-			sdk.NewDecCoinFromDec(p.Rate.Denom, p.Rate.Amount.Mul(sdk.NewDecFromInt(numFullBlocks))),
+			sdk.NewDecCoinFromDec(p.Rate.Denom, p.Rate.Amount.Mul(sdkmath.LegacyNewDecFromInt(numFullBlocks))),
 		)
 	}
 
-	transferred := sdk.NewDecCoinFromDec(blockRate.Denom, blockRate.Amount.Mul(sdk.NewDecFromInt(numFullBlocks)))
+	transferred := sdk.NewDecCoinFromDec(blockRate.Denom, blockRate.Amount.Mul(sdkmath.LegacyNewDecFromInt(numFullBlocks)))
 
 	account.Transferred = account.Transferred.Add(transferred)
 	// use funds before using balance
 	account.Funds.Amount = account.Funds.Amount.Sub(transferred.Amount)
 	if account.Funds.Amount.IsNegative() {
 		account.Balance.Amount = account.Balance.Amount.Sub(account.Funds.Amount.Abs())
-		account.Funds.Amount = sdk.ZeroDec()
+		account.Funds.Amount = sdkmath.LegacyZeroDec()
 	}
 
 	remaining := account.TotalBalance()
 	overdrawn := true
 	if numFullBlocks.Equal(heightDelta) {
-		remaining.Amount = sdk.ZeroDec()
+		remaining.Amount = sdkmath.LegacyZeroDec()
 		overdrawn = false
 	}
 
@@ -705,23 +728,23 @@ func accountSettleFullBlocks(
 	// finally, balance will always reach zero, so we are not doing any mis-management here.
 	if overdrawn {
 		account.Balance = remaining
-		account.Funds.Amount = sdk.ZeroDec()
+		account.Funds.Amount = sdkmath.LegacyZeroDec()
 	}
 
 	return account, payments, overdrawn, remaining
 }
 
 func accountSettleDistributeWeighted(
-	account types.Account,
-	payments []types.FractionalPayment,
+	account v1.Account,
+	payments []v1.FractionalPayment,
 	blockRate sdk.DecCoin,
 	amountRemaining sdk.DecCoin,
 ) (
-	types.Account,
-	[]types.FractionalPayment,
+	v1.Account,
+	[]v1.FractionalPayment,
 	sdk.DecCoin,
 ) {
-	actualTransferred := sdk.ZeroDec()
+	actualTransferred := sdkmath.LegacyZeroDec()
 
 	// distribute remaining balance weighted by rate
 

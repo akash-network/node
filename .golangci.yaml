@@ -1,20 +1,47 @@
-issues:
-  exclude:
-    - comment on exported (method|function|type|const|var)
-  exclude-use-default: true
-  exclude-dirs:
-    - ".*/mocks"
-  # Skip vendor/ etc
-  skip-dirs-use-default: true
+---
+version: "2"
 linters:
-  disable-all: true
+  default: none
   enable:
-    - misspell
-    - unused
-    - gofmt
-    - gocritic
+    - copyloopvar
+    - errcheck
+    - errchkjson
     - goconst
+    - gocritic
+    - gosec
+    - govet
     - ineffassign
-    - unparam
-    - staticcheck
+    - misspell
     - prealloc
+    - revive
+    - staticcheck
+    - unparam
+    - unused
+  settings:
+    gocritic:
+      disabled-checks:
+        - ifElseChain
+        - singleCaseSwitch
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - path: (.+)\.go$
+        text: comment on exported (method|function|type|const|var)
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

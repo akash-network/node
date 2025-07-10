@@ -4,26 +4,26 @@ import (
 	"context"
 
 	"github.com/boz/go-lifecycle"
+	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	abci "github.com/tendermint/tendermint/abci/types"
-	tmclient "github.com/tendermint/tendermint/rpc/client"
-	ctypes "github.com/tendermint/tendermint/rpc/core/types"
-	tmtmtypes "github.com/tendermint/tendermint/types"
 	"golang.org/x/sync/errgroup"
+	atypes "pkg.akt.dev/go/node/audit/v1"
+	dtypes "pkg.akt.dev/go/node/deployment/v1"
+	mtypes "pkg.akt.dev/go/node/market/v1"
 
-	atypes "github.com/akash-network/akash-api/go/node/audit/v1beta3"
-	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
-	mtypes "github.com/akash-network/akash-api/go/node/market/v1beta4"
-	ptypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
-	"github.com/akash-network/akash-api/go/sdkutil"
+	abci "github.com/cometbft/cometbft/abci/types"
+	cmclient "github.com/cometbft/cometbft/rpc/client"
+	ctypes "github.com/cometbft/cometbft/rpc/core/types"
+	cmtypes "github.com/cometbft/cometbft/types"
 
-	"github.com/akash-network/node/pubsub"
+	"pkg.akt.dev/node/pubsub"
 )
 
 type events struct {
 	ctx    context.Context
 	group  *errgroup.Group
-	client tmclient.Client
+	ebus   cmclient.EventsClient
+	client sdkclient.CometRPC
 	bus    pubsub.Bus
 	lc     lifecycle.Lifecycle
 }
@@ -47,18 +47,14 @@ type Service interface {
 // Returns:
 //   - Service: A running event monitoring service interface
 //   - error: Any error encountered during service initialization
-//
-// The service subscribes to block header events and processes them to extract and publish
-// various transaction events (deployment, market, provider, audit) to the provided message bus.
-// The service starts monitoring events immediately and will continue until either the context
-// is canceled or Shutdown() is called.
-func NewEvents(pctx context.Context, client tmclient.Client, name string, bus pubsub.Bus) (Service, error) {
+func NewEvents(pctx context.Context, node sdkclient.CometRPC, name string, bus pubsub.Bus) (Service, error) {
 	group, ctx := errgroup.WithContext(pctx)
 
 	ev := &events{
 		ctx:    ctx,
 		group:  group,
-		client: client,
+		ebus:   node.(cmclient.EventsClient),
+		client: node,
 		lc:     lifecycle.New(),
 		bus:    bus,
 	}
@@ -69,12 +65,13 @@ func NewEvents(pctx context.Context, client tmclient.Client, name string, bus pu
 
 	var blkHeaderName = name + "-blk-hdr"
 
-	tmbus := client.(tmclient.EventsClient)
-
-	blkch, err := tmbus.Subscribe(ctx, blkHeaderName, blkHeaderQuery().String(), queuesz)
+	blkch, err := ev.ebus.Subscribe(ctx, blkHeaderName, blkHeaderQuery().String(), queuesz)
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		err = ev.ebus.UnsubscribeAll(ctx, blkHeaderName)
+	}()
 
 	startch := make(chan struct{}, 1)
 
@@ -108,10 +105,8 @@ func (e *events) Shutdown() {
 }
 
 func (e *events) run(subs string, ch <-chan ctypes.ResultEvent, startch chan<- struct{}) error {
-	tmbus := e.client.(tmclient.EventsClient)
-
 	defer func() {
-		_ = tmbus.UnsubscribeAll(e.ctx, subs)
+		_ = e.ebus.UnsubscribeAll(e.ctx, subs)
 
 		e.lc.ShutdownCompleted()
 	}()
@@ -127,7 +122,7 @@ loop:
 		case ev := <-ch:
 			// nolint: gocritic
 			switch evt := ev.Data.(type) {
-			case tmtmtypes.EventDataNewBlockHeader:
+			case cmtypes.EventDataNewBlockHeader:
 				e.processBlock(evt.Header.Height)
 			}
 		}
@@ -158,26 +153,29 @@ func (e *events) processBlock(height int64) {
 }
 
 func processEvent(bev abci.Event) (interface{}, bool) {
-	ev, err := sdkutil.ParseEvent(sdk.StringifyEvent(bev))
+	pev, err := sdk.ParseTypedEvent(bev)
 	if err != nil {
 		return nil, false
 	}
 
-	if mev, err := dtypes.ParseEvent(ev); err == nil {
-		return mev, true
+	switch pev.(type) {
+	case *atypes.EventTrustedAuditorCreated:
+	case *atypes.EventTrustedAuditorDeleted:
+	case *dtypes.EventDeploymentCreated:
+	case *dtypes.EventDeploymentUpdated:
+	case *dtypes.EventDeploymentClosed:
+	case *dtypes.EventGroupStarted:
+	case *dtypes.EventGroupPaused:
+	case *dtypes.EventGroupClosed:
+	case *mtypes.EventOrderCreated:
+	case *mtypes.EventOrderClosed:
+	case *mtypes.EventBidCreated:
+	case *mtypes.EventBidClosed:
+	case *mtypes.EventLeaseCreated:
+	case *mtypes.EventLeaseClosed:
+	default:
+		return nil, false
 	}
 
-	if mev, err := mtypes.ParseEvent(ev); err == nil {
-		return mev, true
-	}
-
-	if mev, err := ptypes.ParseEvent(ev); err == nil {
-		return mev, true
-	}
-
-	if mev, err := atypes.ParseEvent(ev); err == nil {
-		return mev, true
-	}
-
-	return nil, false
+	return bev, true
 }

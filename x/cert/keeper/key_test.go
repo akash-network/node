@@ -4,18 +4,18 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/cometbft/cometbft/crypto/ed25519"
 	"github.com/cosmos/cosmos-sdk/types/address"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tendermint/crypto/ed25519"
 
-	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	types "pkg.akt.dev/go/node/cert/v1"
 )
 
 func TestCertStateToPrefix(t *testing.T) {
 	tests := []struct {
 		name     string
-		state    types.Certificate_State
+		state    types.State
 		expected []byte
 	}{
 		{
@@ -47,7 +47,7 @@ func TestCertStateToPrefixPanics(t *testing.T) {
 func TestBuildCertPrefix(t *testing.T) {
 	tests := []struct {
 		name     string
-		state    types.Certificate_State
+		state    types.State
 		expected []byte
 	}{
 		{
@@ -82,7 +82,7 @@ func TestCertificateKey(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		state    types.Certificate_State
+		state    types.State
 		certID   types.CertID
 		expected []byte
 		wantErr  bool
@@ -143,7 +143,7 @@ func TestCertificateKeyRaw(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		state    types.Certificate_State
+		state    types.State
 		certID   types.CertID
 		expected []byte
 		wantErr  bool
@@ -218,7 +218,7 @@ func TestParseCertKey(t *testing.T) {
 	tests := []struct {
 		name    string
 		key     []byte
-		state   types.Certificate_State
+		state   types.State
 		certID  types.CertID
 		wantErr bool
 	}{

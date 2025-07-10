@@ -36,9 +36,7 @@ func DecodePaginationKey(key []byte) ([]byte, []byte, []byte, []byte, error) {
 	}
 
 	states := make([]byte, 0, statesC)
-	for _, state := range key[:statesC] {
-		states = append(states, state)
-	}
+	states = append(states, key[:statesC]...)
 
 	key = key[len(states):]
 

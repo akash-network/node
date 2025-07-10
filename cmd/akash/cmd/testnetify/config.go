@@ -3,15 +3,18 @@ package testnetify
 import (
 	"strings"
 
-	"github.com/tendermint/tendermint/crypto"
-	cmtjson "github.com/tendermint/tendermint/libs/json"
-	pvm "github.com/tendermint/tendermint/privval"
-	"github.com/tendermint/tendermint/types"
+	sdkmath "cosmossdk.io/math"
+	"github.com/cometbft/cometbft/crypto"
+	cmtjson "github.com/cometbft/cometbft/libs/json"
+	pvm "github.com/cometbft/cometbft/privval"
+	"github.com/cometbft/cometbft/types"
+
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	akash "github.com/akash-network/node/app"
+
+	akash "pkg.akt.dev/node/app"
 )
 
 type PrivValidatorKey struct {
@@ -45,7 +48,7 @@ type TestnetValidator struct {
 	Operator          AccAddress              `json:"operator"`
 	Bonded            bool                    `json:"bonded"`
 	Commission        stakingtypes.Commission `json:"commission"`
-	MinSelfDelegation sdk.Int                 `json:"min_self_delegation"`
+	MinSelfDelegation sdkmath.Int             `json:"min_self_delegation"`
 	Home              string                  `json:"home"`
 
 	privValidator    *pvm.FilePV
@@ -57,10 +60,10 @@ type TestnetValidator struct {
 type TestnetValidators []TestnetValidator
 
 type TestnetConfig struct {
-	ChainID    string                 `json:"chain_id"`
-	Validators TestnetValidators      `json:"validators"`
-	Accounts   []sdk.AccAddress       `json:"accounts"`
-	Gov        akash.TestnetGovConfig `json:"gov"`
+	ChainID    string            `json:"chain_id"`
+	Validators TestnetValidators `json:"validators"`
+	Accounts   []sdk.AccAddress  `json:"accounts"`
+	Gov        akash.TestnetGov  `json:"gov"`
 	upgrade    akash.TestnetUpgrade
 }
 
