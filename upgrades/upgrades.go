@@ -2,5 +2,5 @@ package upgrades
 
 import (
 	// nolint: revive
-	_ "github.com/akash-network/node/upgrades/software/v0.38.0"
+	_ "pkg.akt.dev/node/upgrades/software/v1.0.0"
 )

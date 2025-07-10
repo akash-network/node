@@ -6,49 +6,53 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
-	"github.com/stretchr/testify/require"
-
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	deposit "pkg.akt.dev/go/node/types/deposit/v1"
 
-	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
-	etypes "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
+	"pkg.akt.dev/go/node/deployment/v1"
+	"pkg.akt.dev/go/node/deployment/v1beta4"
+	eid "pkg.akt.dev/go/node/escrow/id/v1"
+	"pkg.akt.dev/go/testutil"
 
-	"github.com/akash-network/node/app"
-	"github.com/akash-network/node/testutil"
-	"github.com/akash-network/node/testutil/state"
-	"github.com/akash-network/node/x/deployment/keeper"
-	ekeeper "github.com/akash-network/node/x/escrow/keeper"
+	"pkg.akt.dev/node/app"
+	"pkg.akt.dev/node/testutil/state"
+	"pkg.akt.dev/node/x/deployment/keeper"
+	ekeeper "pkg.akt.dev/node/x/escrow/keeper"
 )
 
 type grpcTestSuite struct {
-	t       *testing.T
-	app     *app.AkashApp
-	ctx     sdk.Context
-	keeper  keeper.IKeeper
-	ekeeper ekeeper.Keeper
+	t           *testing.T
+	app         *app.AkashApp
+	ctx         sdk.Context
+	keeper      keeper.IKeeper
+	ekeeper     ekeeper.Keeper
+	authzKeeper ekeeper.AuthzKeeper
+	bankKeeper  ekeeper.BankKeeper
 
-	queryClient types.QueryClient
+	queryClient v1beta4.QueryClient
 }
 
 func setupTest(t *testing.T) *grpcTestSuite {
 	ssuite := state.SetupTestSuite(t)
 	suite := &grpcTestSuite{
-		t:       t,
-		app:     ssuite.App(),
-		ctx:     ssuite.Context(),
-		keeper:  ssuite.DeploymentKeeper(),
-		ekeeper: ssuite.EscrowKeeper(),
+		t:           t,
+		app:         ssuite.App(),
+		ctx:         ssuite.Context(),
+		keeper:      ssuite.DeploymentKeeper(),
+		ekeeper:     ssuite.EscrowKeeper(),
+		authzKeeper: ssuite.AuthzKeeper(),
+		bankKeeper:  ssuite.BankKeeper(),
 	}
 
 	querier := suite.keeper.NewQuerier()
 
 	queryHelper := baseapp.NewQueryServerTestHelper(suite.ctx, suite.app.InterfaceRegistry())
-	types.RegisterQueryServer(queryHelper, querier)
-	suite.queryClient = types.NewQueryClient(queryHelper)
+	v1beta4.RegisterQueryServer(queryHelper, querier)
+	suite.queryClient = v1beta4.NewQueryClient(queryHelper)
 
 	return suite
 }
@@ -61,11 +65,11 @@ func TestGRPCQueryDeployment(t *testing.T) {
 	err := suite.keeper.Create(suite.ctx, deployment, groups)
 	require.NoError(t, err)
 
-	eid := suite.createEscrowAccount(deployment.ID())
+	eid := suite.createEscrowAccount(deployment.ID)
 
 	var (
-		req           *types.QueryDeploymentRequest
-		expDeployment types.QueryDeploymentResponse
+		req           *v1beta4.QueryDeploymentRequest
+		expDeployment v1beta4.QueryDeploymentResponse
 	)
 
 	testCases := []struct {
@@ -76,21 +80,21 @@ func TestGRPCQueryDeployment(t *testing.T) {
 		{
 			"empty request",
 			func() {
-				req = &types.QueryDeploymentRequest{}
+				req = &v1beta4.QueryDeploymentRequest{}
 			},
 			false,
 		},
 		{
 			"invalid request",
 			func() {
-				req = &types.QueryDeploymentRequest{ID: types.DeploymentID{}}
+				req = &v1beta4.QueryDeploymentRequest{ID: v1.DeploymentID{}}
 			},
 			false,
 		},
 		{
 			"deployment not found",
 			func() {
-				req = &types.QueryDeploymentRequest{ID: types.DeploymentID{
+				req = &v1beta4.QueryDeploymentRequest{ID: v1.DeploymentID{
 					Owner: testutil.AccAddress(t).String(),
 					DSeq:  32,
 				}}
@@ -100,8 +104,8 @@ func TestGRPCQueryDeployment(t *testing.T) {
 		{
 			"success",
 			func() {
-				req = &types.QueryDeploymentRequest{ID: deployment.DeploymentID}
-				expDeployment = types.QueryDeploymentResponse{
+				req = &v1beta4.QueryDeploymentRequest{ID: deployment.ID}
+				expDeployment = v1beta4.QueryDeploymentResponse{
 					Deployment: deployment,
 					Groups:     groups,
 				}
@@ -113,7 +117,7 @@ func TestGRPCQueryDeployment(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
-			ctx := sdk.WrapSDKContext(suite.ctx)
+			ctx := suite.ctx
 
 			res, err := suite.queryClient.Deployment(ctx, req)
 
@@ -139,21 +143,21 @@ func TestGRPCQueryDeployments(t *testing.T) {
 	deployment, groups := suite.createDeployment()
 	err := suite.keeper.Create(suite.ctx, deployment, groups)
 	require.NoError(t, err)
-	suite.createEscrowAccount(deployment.ID())
+	suite.createEscrowAccount(deployment.ID)
 
 	deployment2, groups2 := suite.createDeployment()
-	deployment2.State = types.DeploymentActive
+	deployment2.State = v1.DeploymentActive
 	err = suite.keeper.Create(suite.ctx, deployment2, groups2)
 	require.NoError(t, err)
-	suite.createEscrowAccount(deployment2.ID())
+	suite.createEscrowAccount(deployment2.ID)
 
 	deployment3, groups3 := suite.createDeployment()
-	deployment3.State = types.DeploymentClosed
+	deployment3.State = v1.DeploymentClosed
 	err = suite.keeper.Create(suite.ctx, deployment3, groups3)
 	require.NoError(t, err)
-	suite.createEscrowAccount(deployment3.ID())
+	suite.createEscrowAccount(deployment3.ID)
 
-	var req *types.QueryDeploymentsRequest
+	var req *v1beta4.QueryDeploymentsRequest
 
 	testCases := []struct {
 		msg      string
@@ -164,7 +168,7 @@ func TestGRPCQueryDeployments(t *testing.T) {
 		{
 			"query deployments without any filters and pagination",
 			func() {
-				req = &types.QueryDeploymentsRequest{}
+				req = &v1beta4.QueryDeploymentsRequest{}
 			},
 			3,
 			false,
@@ -172,9 +176,9 @@ func TestGRPCQueryDeployments(t *testing.T) {
 		{
 			"query deployments with state filter",
 			func() {
-				req = &types.QueryDeploymentsRequest{
-					Filters: types.DeploymentFilters{
-						State: types.DeploymentActive.String(),
+				req = &v1beta4.QueryDeploymentsRequest{
+					Filters: v1beta4.DeploymentFilters{
+						State: v1.DeploymentActive.String(),
 					},
 				}
 			},
@@ -184,10 +188,10 @@ func TestGRPCQueryDeployments(t *testing.T) {
 		{
 			"query deployments with filters having non existent data",
 			func() {
-				req = &types.QueryDeploymentsRequest{
-					Filters: types.DeploymentFilters{
+				req = &v1beta4.QueryDeploymentsRequest{
+					Filters: v1beta4.DeploymentFilters{
 						DSeq:  37,
-						State: types.DeploymentClosed.String(),
+						State: v1.DeploymentClosed.String(),
 					}}
 			},
 			0,
@@ -196,8 +200,7 @@ func TestGRPCQueryDeployments(t *testing.T) {
 		{
 			"query deployments with state filter",
 			func() {
-				req = &types.QueryDeploymentsRequest{
-					Filters: types.DeploymentFilters{State: types.DeploymentClosed.String()}}
+				req = &v1beta4.QueryDeploymentsRequest{Filters: v1beta4.DeploymentFilters{State: v1.DeploymentClosed.String()}}
 			},
 			1,
 			false,
@@ -205,7 +208,7 @@ func TestGRPCQueryDeployments(t *testing.T) {
 		{
 			"query deployments with pagination",
 			func() {
-				req = &types.QueryDeploymentsRequest{Pagination: &sdkquery.PageRequest{Limit: 1}}
+				req = &v1beta4.QueryDeploymentsRequest{Pagination: &sdkquery.PageRequest{Limit: 1}}
 			},
 			1,
 			false,
@@ -213,8 +216,8 @@ func TestGRPCQueryDeployments(t *testing.T) {
 		{
 			"query deployments with pagination next key",
 			func() {
-				req = &types.QueryDeploymentsRequest{
-					Filters:    types.DeploymentFilters{State: types.DeploymentActive.String()},
+				req = &v1beta4.QueryDeploymentsRequest{
+					Filters:    v1beta4.DeploymentFilters{State: v1.DeploymentActive.String()},
 					Pagination: &sdkquery.PageRequest{Limit: 1},
 				}
 			},
@@ -226,7 +229,7 @@ func TestGRPCQueryDeployments(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
-			ctx := sdk.WrapSDKContext(suite.ctx)
+			ctx := suite.ctx
 
 			res, err := suite.queryClient.Deployments(ctx, req)
 
@@ -249,8 +252,8 @@ func TestGRPCQueryDeployments(t *testing.T) {
 
 type deploymentFilterModifier struct {
 	fieldName string
-	f         func(leaseID types.DeploymentID, filter types.DeploymentFilters) types.DeploymentFilters
-	getField  func(leaseID types.DeploymentID) interface{}
+	f         func(leaseID v1.DeploymentID, filter v1beta4.DeploymentFilters) v1beta4.DeploymentFilters
+	getField  func(leaseID v1.DeploymentID) interface{}
 }
 
 func TestGRPCQueryDeploymentsWithFilter(t *testing.T) {
@@ -265,7 +268,7 @@ func TestGRPCQueryDeploymentsWithFilter(t *testing.T) {
 	suite.createEscrowAccount(depB)
 	suite.createEscrowAccount(depC)
 
-	deps := []types.DeploymentID{
+	deps := []v1.DeploymentID{
 		depA,
 		depB,
 		depC,
@@ -274,32 +277,32 @@ func TestGRPCQueryDeploymentsWithFilter(t *testing.T) {
 	modifiers := []deploymentFilterModifier{
 		{
 			"owner",
-			func(depID types.DeploymentID, filter types.DeploymentFilters) types.DeploymentFilters {
+			func(depID v1.DeploymentID, filter v1beta4.DeploymentFilters) v1beta4.DeploymentFilters {
 				filter.Owner = depID.GetOwner()
 				return filter
 			},
-			func(depID types.DeploymentID) interface{} {
+			func(depID v1.DeploymentID) interface{} {
 				return depID.Owner
 			},
 		},
 		{
 			"dseq",
-			func(depID types.DeploymentID, filter types.DeploymentFilters) types.DeploymentFilters {
+			func(depID v1.DeploymentID, filter v1beta4.DeploymentFilters) v1beta4.DeploymentFilters {
 				filter.DSeq = depID.DSeq
 				return filter
 			},
-			func(depID types.DeploymentID) interface{} {
+			func(depID v1.DeploymentID) interface{} {
 				return depID.DSeq
 			},
 		},
 	}
 
-	ctx := sdk.WrapSDKContext(suite.ctx)
+	ctx := suite.ctx
 
 	for _, depID := range deps {
 		for _, m := range modifiers {
-			req := &types.QueryDeploymentsRequest{
-				Filters: m.f(depID, types.DeploymentFilters{}),
+			req := &v1beta4.QueryDeploymentsRequest{
+				Filters: m.f(depID, v1beta4.DeploymentFilters{}),
 			}
 
 			res, err := suite.queryClient.Deployments(ctx, req)
@@ -310,7 +313,7 @@ func TestGRPCQueryDeploymentsWithFilter(t *testing.T) {
 			assert.GreaterOrEqual(t, len(res.Deployments), 1, "testing %v", m.fieldName)
 
 			for _, dep := range res.Deployments {
-				assert.Equal(t, m.getField(depID), m.getField(dep.Deployment.DeploymentID), "testing %v", m.fieldName)
+				assert.Equal(t, m.getField(depID), m.getField(dep.Deployment.ID), "testing %v", m.fieldName)
 			}
 		}
 	}
@@ -318,7 +321,7 @@ func TestGRPCQueryDeploymentsWithFilter(t *testing.T) {
 	limit := int(math.Pow(2, float64(len(modifiers))))
 
 	// Use an order ID that matches absolutely nothing in any field
-	bogusOrderID := types.DeploymentID{
+	bogusOrderID := v1.DeploymentID{
 		Owner: testutil.AccAddress(t).String(),
 		DSeq:  9999999,
 	}
@@ -332,7 +335,7 @@ func TestGRPCQueryDeploymentsWithFilter(t *testing.T) {
 		}
 
 		for _, orderID := range deps {
-			filter := types.DeploymentFilters{}
+			filter := v1beta4.DeploymentFilters{}
 			msg := strings.Builder{}
 			msg.WriteString("testing filtering on: ")
 			for k, useModifier := range modifiersToUse {
@@ -345,7 +348,7 @@ func TestGRPCQueryDeploymentsWithFilter(t *testing.T) {
 				msg.WriteString(", ")
 			}
 
-			req := &types.QueryDeploymentsRequest{
+			req := &v1beta4.QueryDeploymentsRequest{
 				Filters: filter,
 			}
 
@@ -362,12 +365,12 @@ func TestGRPCQueryDeploymentsWithFilter(t *testing.T) {
 						continue
 					}
 					m := modifiers[k]
-					require.Equal(t, m.getField(orderID), m.getField(dep.Deployment.DeploymentID), "testing %v", m.fieldName)
+					require.Equal(t, m.getField(orderID), m.getField(dep.Deployment.ID), "testing %v", m.fieldName)
 				}
 			}
 		}
 
-		filter := types.DeploymentFilters{}
+		filter := v1beta4.DeploymentFilters{}
 		msg := strings.Builder{}
 		msg.WriteString("testing filtering on (using non matching ID): ")
 		for k, useModifier := range modifiersToUse {
@@ -380,7 +383,7 @@ func TestGRPCQueryDeploymentsWithFilter(t *testing.T) {
 			msg.WriteString(", ")
 		}
 
-		req := &types.QueryDeploymentsRequest{
+		req := &v1beta4.QueryDeploymentsRequest{
 			Filters: filter,
 		}
 
@@ -397,8 +400,8 @@ func TestGRPCQueryDeploymentsWithFilter(t *testing.T) {
 
 	for _, depID := range deps {
 		// Query by owner
-		req := &types.QueryDeploymentsRequest{
-			Filters: types.DeploymentFilters{
+		req := &v1beta4.QueryDeploymentsRequest{
+			Filters: v1beta4.DeploymentFilters{
 				Owner: depID.Owner,
 			},
 		}
@@ -410,11 +413,11 @@ func TestGRPCQueryDeploymentsWithFilter(t *testing.T) {
 		// Just 1 result
 		require.Len(t, res.Deployments, 1)
 		depResult := res.Deployments[0]
-		require.Equal(t, depID, depResult.GetDeployment().DeploymentID)
+		require.Equal(t, depID, depResult.GetDeployment().ID)
 
 		// Query with valid DSeq
-		req = &types.QueryDeploymentsRequest{
-			Filters: types.DeploymentFilters{
+		req = &v1beta4.QueryDeploymentsRequest{
+			Filters: v1beta4.DeploymentFilters{
 				Owner: depID.Owner,
 				DSeq:  depID.DSeq,
 			},
@@ -427,11 +430,11 @@ func TestGRPCQueryDeploymentsWithFilter(t *testing.T) {
 		require.NotNil(t, res)
 		require.Len(t, res.Deployments, 1)
 		depResult = res.Deployments[0]
-		require.Equal(t, depID, depResult.Deployment.DeploymentID)
+		require.Equal(t, depID, depResult.Deployment.ID)
 
 		// Query with a bogus DSeq
-		req = &types.QueryDeploymentsRequest{
-			Filters: types.DeploymentFilters{
+		req = &v1beta4.QueryDeploymentsRequest{
+			Filters: v1beta4.DeploymentFilters{
 				Owner: depID.Owner,
 				DSeq:  depID.DSeq + 1,
 			},
@@ -455,8 +458,8 @@ func TestGRPCQueryGroup(t *testing.T) {
 	require.NoError(t, err)
 
 	var (
-		req           *types.QueryGroupRequest
-		expDeployment types.Group
+		req           *v1beta4.QueryGroupRequest
+		expDeployment v1beta4.Group
 	)
 
 	testCases := []struct {
@@ -467,21 +470,21 @@ func TestGRPCQueryGroup(t *testing.T) {
 		{
 			"empty request",
 			func() {
-				req = &types.QueryGroupRequest{}
+				req = &v1beta4.QueryGroupRequest{}
 			},
 			false,
 		},
 		{
 			"invalid request",
 			func() {
-				req = &types.QueryGroupRequest{ID: types.GroupID{}}
+				req = &v1beta4.QueryGroupRequest{ID: v1.GroupID{}}
 			},
 			false,
 		},
 		{
 			"group not found",
 			func() {
-				req = &types.QueryGroupRequest{ID: types.GroupID{
+				req = &v1beta4.QueryGroupRequest{ID: v1.GroupID{
 					Owner: testutil.AccAddress(t).String(),
 					DSeq:  32,
 					GSeq:  45,
@@ -492,7 +495,7 @@ func TestGRPCQueryGroup(t *testing.T) {
 		{
 			"success",
 			func() {
-				req = &types.QueryGroupRequest{ID: groups[0].GroupID}
+				req = &v1beta4.QueryGroupRequest{ID: groups[0].GetID()}
 				expDeployment = groups[0]
 			},
 			true,
@@ -502,7 +505,7 @@ func TestGRPCQueryGroup(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
-			ctx := sdk.WrapSDKContext(suite.ctx)
+			ctx := suite.ctx
 
 			res, err := suite.queryClient.Group(ctx, req)
 
@@ -519,43 +522,48 @@ func TestGRPCQueryGroup(t *testing.T) {
 	}
 }
 
-func (suite *grpcTestSuite) createDeployment() (types.Deployment, []types.Group) {
+func (suite *grpcTestSuite) createDeployment() (v1.Deployment, v1beta4.Groups) {
 	suite.t.Helper()
 
 	deployment := testutil.Deployment(suite.t)
-	group := testutil.DeploymentGroup(suite.t, deployment.ID(), 0)
-	group.GroupSpec.Resources = types.ResourceUnits{
+	group := testutil.DeploymentGroup(suite.t, deployment.ID, 0)
+	group.GroupSpec.Resources = v1beta4.ResourceUnits{
 		{
 			Resources: testutil.ResourceUnits(suite.t),
 			Count:     1,
 			Price:     testutil.DecCoin(suite.t),
 		},
 	}
-	groups := []types.Group{
+	groups := []v1beta4.Group{
 		group,
 	}
 
 	for i := range groups {
-		groups[i].State = types.GroupOpen
+		groups[i].State = v1beta4.GroupOpen
 	}
 
 	return deployment, groups
 }
 
-func (suite *grpcTestSuite) createEscrowAccount(id types.DeploymentID) etypes.AccountID {
+func (suite *grpcTestSuite) createEscrowAccount(id v1.DeploymentID) eid.Account {
 	owner, err := sdk.AccAddressFromBech32(id.Owner)
 	require.NoError(suite.t, err)
 
-	eid := types.EscrowAccountForDeployment(id)
-	defaultDeposit, err := types.DefaultParams().MinDepositFor("uakt")
+	eid := id.ToEscrowAccountID()
+	defaultDeposit, err := v1beta4.DefaultParams().MinDepositFor("uakt")
 	require.NoError(suite.t, err)
 
-	err = suite.ekeeper.AccountCreate(suite.ctx,
-		eid,
-		owner,
-		owner,
-		defaultDeposit,
-	)
+	msg := &v1beta4.MsgCreateDeployment{
+		ID: id,
+		Deposit: deposit.Deposit{
+			Amount:  defaultDeposit,
+			Sources: deposit.Sources{deposit.SourceBalance},
+		}}
+
+	deposits, err := suite.ekeeper.AuthorizeDeposits(suite.ctx, msg)
+	require.NoError(suite.t, err)
+
+	err = suite.ekeeper.AccountCreate(suite.ctx, eid, owner, deposits)
 	require.NoError(suite.t, err)
 	return eid
 }

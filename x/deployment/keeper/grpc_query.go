@@ -7,13 +7,14 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/cosmos/cosmos-sdk/store/prefix"
+	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 
-	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+	"pkg.akt.dev/go/node/deployment/v1"
+	types "pkg.akt.dev/go/node/deployment/v1beta4"
 
-	"github.com/akash-network/node/util/query"
+	"pkg.akt.dev/node/util/query"
 )
 
 // Querier is used as Keeper will have duplicate methods if used directly, and gRPC names take precedence over keeper
@@ -27,11 +28,6 @@ var _ types.QueryServer = Querier{}
 func (k Querier) Deployments(c context.Context, req *types.QueryDeploymentsRequest) (*types.QueryDeploymentsResponse, error) {
 	ctx := sdk.UnwrapSDKContext(c)
 
-	defer func() {
-		if r := recover(); r != nil {
-			ctx.Logger().Error(fmt.Sprintf("%v", r))
-		}
-	}()
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
@@ -62,17 +58,17 @@ func (k Querier) Deployments(c context.Context, req *types.QueryDeploymentsReque
 
 		req.Pagination.Key = key
 	} else if req.Filters.State != "" {
-		stateVal := types.Deployment_State(types.Deployment_State_value[req.Filters.State])
+		stateVal := v1.Deployment_State(v1.Deployment_State_value[req.Filters.State])
 
-		if req.Filters.State != "" && stateVal == types.DeploymentStateInvalid {
+		if req.Filters.State != "" && stateVal == v1.DeploymentStateInvalid {
 			return nil, status.Error(codes.InvalidArgument, "invalid state value")
 		}
 
 		states = append(states, byte(stateVal))
 	} else {
-		// request does not have pagination set. Start from active store
-		states = append(states, byte(types.DeploymentActive))
-		states = append(states, byte(types.DeploymentClosed))
+		// request does not have a pagination set. Start from active store
+		states = append(states, byte(v1.DeploymentActive))
+		states = append(states, byte(v1.DeploymentClosed))
 	}
 
 	var deployments types.DeploymentResponses
@@ -81,10 +77,9 @@ func (k Querier) Deployments(c context.Context, req *types.QueryDeploymentsReque
 	total := uint64(0)
 
 	for idx := range states {
-		state := types.Deployment_State(states[idx])
+		state := v1.Deployment_State(states[idx])
 
 		var err error
-
 		if idx > 0 {
 			req.Pagination.Key = nil
 		}
@@ -102,8 +97,8 @@ func (k Querier) Deployments(c context.Context, req *types.QueryDeploymentsReque
 
 		count := uint64(0)
 
-		pageRes, err = sdkquery.FilteredPaginate(searchStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
-			var deployment types.Deployment
+		pageRes, err = sdkquery.FilteredPaginate(searchStore, req.Pagination, func(_ []byte, value []byte, accumulate bool) (bool, error) {
+			var deployment v1.Deployment
 
 			err := k.cdc.Unmarshal(value, &deployment)
 			if err != nil {
@@ -113,17 +108,14 @@ func (k Querier) Deployments(c context.Context, req *types.QueryDeploymentsReque
 			// filter deployments with provided filters
 			if req.Filters.Accept(deployment, state) {
 				if accumulate {
-					account, err := k.ekeeper.GetAccount(
-						ctx,
-						types.EscrowAccountForDeployment(deployment.ID()),
-					)
+					account, err := k.ekeeper.GetAccount(ctx, deployment.ID.ToEscrowAccountID())
 					if err != nil {
-						return true, fmt.Errorf("%w: fetching escrow account for DeploymentID=%s", err, deployment.DeploymentID)
+						return true, fmt.Errorf("%w: fetching escrow account for DeploymentID=%s", err, deployment.ID)
 					}
 
 					value := types.QueryDeploymentResponse{
 						Deployment:    deployment,
-						Groups:        k.GetGroups(ctx, deployment.ID()),
+						Groups:        k.GetGroups(ctx, deployment.ID),
 						EscrowAccount: account,
 					}
 
@@ -181,13 +173,10 @@ func (k Querier) Deployment(c context.Context, req *types.QueryDeploymentRequest
 
 	deployment, found := k.GetDeployment(ctx, req.ID)
 	if !found {
-		return nil, types.ErrDeploymentNotFound
+		return nil, v1.ErrDeploymentNotFound
 	}
 
-	account, err := k.ekeeper.GetAccount(
-		ctx,
-		types.EscrowAccountForDeployment(req.ID),
-	)
+	account, err := k.ekeeper.GetAccount(ctx, req.ID.ToEscrowAccountID())
 	if err != nil {
 		return &types.QueryDeploymentResponse{}, err
 	}
@@ -215,8 +204,19 @@ func (k Querier) Group(c context.Context, req *types.QueryGroupRequest) (*types.
 
 	group, found := k.GetGroup(ctx, req.ID)
 	if !found {
-		return nil, types.ErrGroupNotFound
+		return nil, v1.ErrGroupNotFound
 	}
 
 	return &types.QueryGroupResponse{Group: group}, nil
+}
+
+func (k Querier) Params(ctx context.Context, req *types.QueryParamsRequest) (*types.QueryParamsResponse, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "empty request")
+	}
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	params := k.GetParams(sdkCtx)
+
+	return &types.QueryParamsResponse{Params: params}, nil
 }

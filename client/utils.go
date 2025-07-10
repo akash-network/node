@@ -3,10 +3,13 @@ package client
 import (
 	b64 "encoding/base64"
 
+	"github.com/spf13/pflag"
+
+	errorsmod "cosmossdk.io/errors"
+
 	"github.com/cosmos/cosmos-sdk/client/flags"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/types/query"
-	"github.com/spf13/pflag"
 )
 
 // ReadPageRequest reads and builds the necessary page request flags for pagination.
@@ -19,7 +22,7 @@ func ReadPageRequest(flagSet *pflag.FlagSet) (*query.PageRequest, error) {
 	reverse, _ := flagSet.GetBool(flags.FlagReverse)
 
 	if page > 1 && offset > 0 {
-		return nil, sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "page and offset cannot be used together")
+		return nil, errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "page and offset cannot be used together")
 	}
 
 	// Clear page key if using page numbers (page and key are mutually exclusive)
@@ -32,7 +35,7 @@ func ReadPageRequest(flagSet *pflag.FlagSet) (*query.PageRequest, error) {
 		var err error
 		pageKey, err = b64.StdEncoding.DecodeString(pageKeyStr)
 		if err != nil {
-			return nil, sdkerrors.Wrapf(sdkerrors.ErrInvalidRequest, "invalid pagination key")
+			return nil, errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "invalid pagination key")
 		}
 	}
 
