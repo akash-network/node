@@ -5,11 +5,17 @@ GORELEASER_IMAGE         := ghcr.io/goreleaser/goreleaser-cross:$(GOTOOLCHAIN_SE
 GORELEASER_RELEASE       ?= false
 GORELEASER_MOUNT_CONFIG  ?= false
 GORELEASER_SKIP          := $(subst $(COMMA),$(SPACE),$(GORELEASER_SKIP))
-
+RELEASE_DOCKER_IMAGE     ?= ghcr.io/akash-network/node
 #GORELEASER_MOD_MOUNT     ?= $(shell git config --get remote.origin.url | sed -r 's/.*(\@|\/\/)(.*)(\:|\/)([^:\/]*)\/([^\/\.]*)\.git/\2\/\4\/\5/' | tr -d '\n')
 GORELEASER_MOD_MOUNT     ?= $(shell cat $(ROOT_DIR)/.github/repo | tr -d '\n')
 
 RELEASE_DOCKER_IMAGE     ?= ghcr.io/akash-network/node
+
+GORELEASER_GOWORK        := $(GOWORK)
+
+ifneq ($(GOWORK), off)
+	GORELEASER_GOWORK    := /go/src/$(GORELEASER_MOD_MOUNT)/go.work
+endif
 
 ifneq ($(GORELEASER_RELEASE),true)
 	ifeq (,$(findstring publish,$(GORELEASER_SKIP)))
@@ -34,6 +40,7 @@ bins: $(BINS)
 build:
 	$(GO_BUILD) -a  ./...
 
+.PHONY: $(AKASH)
 $(AKASH):
 	$(GO_BUILD) -o $@ $(BUILD_FLAGS) ./cmd/akash
 
@@ -66,6 +73,7 @@ test-bins:
 		-e DOCKER_IMAGE=$(RELEASE_DOCKER_IMAGE) \
 		-e GOPATH=/go \
 		-e GOTOOLCHAIN="$(GOTOOLCHAIN)" \
+		-e GOWORK="$(GORELEASER_GOWORK)" \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v $(GOPATH):/go \
 		-v $(AKASH_ROOT):/go/src/$(GORELEASER_MOD_MOUNT) \
@@ -82,7 +90,7 @@ docker-image:
 	docker run \
 		--rm \
 		-e STABLE=$(IS_STABLE) \
-		-e MOD="$(GO_MOD)" \
+		-e MOD="$(GOMOD)" \
 		-e BUILD_TAGS="$(BUILD_TAGS)" \
 		-e BUILD_VARS="$(GORELEASER_BUILD_VARS)" \
 		-e STRIP_FLAGS="$(GORELEASER_STRIP_FLAGS)" \
@@ -90,10 +98,11 @@ docker-image:
 		-e DOCKER_IMAGE=$(RELEASE_DOCKER_IMAGE) \
 		-e GOPATH=/go \
 		-e GOTOOLCHAIN="$(GOTOOLCHAIN)" \
+		-e GOWORK="$(GORELEASER_GOWORK)" \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v $(GOPATH):/go \
-		-v $(AKASH_ROOT):/go/src/$(GO_MOD_NAME) \
-		-w /go/src/$(GO_MOD_NAME) \
+		-v $(AKASH_ROOT):/go/src/$(GORELEASER_MOD_MOUNT) \
+		-w /go/src/$(GORELEASER_MOD_MOUNT) \
 		$(GORELEASER_IMAGE) \
 		-f .goreleaser-docker.yaml \
 		--verbose=$(GORELEASER_VERBOSE) \
@@ -111,7 +120,7 @@ release: gen-changelog
 	docker run \
 		--rm \
 		-e STABLE=$(IS_STABLE) \
-		-e MOD="$(GO_MOD)" \
+		-e MOD="$(GOMOD)" \
 		-e BUILD_TAGS="$(BUILD_TAGS)" \
 		-e BUILD_VARS="$(GORELEASER_BUILD_VARS)" \
 		-e STRIP_FLAGS="$(GORELEASER_STRIP_FLAGS)" \
@@ -120,15 +129,16 @@ release: gen-changelog
 		-e GORELEASER_CURRENT_TAG="$(RELEASE_TAG)" \
 		-e DOCKER_IMAGE=$(RELEASE_DOCKER_IMAGE) \
 		-e GOTOOLCHAIN="$(GOTOOLCHAIN)" \
+		-e GOWORK="$(GORELEASER_GOWORK)" \
 		-e GOPATH=/go \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v $(GOPATH):/go \
-		-v $(AKASH_ROOT):/go/src/$(GO_MOD_NAME) \
-		-w /go/src/$(GO_MOD_NAME) \
+		-v $(AKASH_ROOT):/go/src/$(GORELEASER_MOD_MOUNT) \
+		-w /go/src/$(GORELEASER_MOD_MOUNT) \
 		$(GORELEASER_IMAGE) \
 		-f "$(GORELEASER_CONFIG)" \
 		release \
 		$(GORELEASER_SKIP) \
 		--verbose=$(GORELEASER_VERBOSE) \
 		--clean \
-		--release-notes=/go/src/$(GO_MOD_NAME)/.cache/changelog.md
+		--release-notes=/go/src/$(GORELEASER_MOD_MOUNT)/.cache/changelog.md

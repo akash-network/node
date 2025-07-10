@@ -5,5 +5,5 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func RegisterRoutes(ctx client.Context, r *mux.Router, ns string) {
+func RegisterRoutes(_ client.Context, _ *mux.Router, _ string) {
 }

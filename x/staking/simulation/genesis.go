@@ -3,7 +3,7 @@ package simulation
 import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 
-	types "github.com/akash-network/akash-api/go/node/staking/v1beta3"
+	types "pkg.akt.dev/go/node/staking/v1beta3"
 )
 
 // RandomizedGenState generates a random GenesisState for supply

@@ -3,7 +3,7 @@ package keeper
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	etypes "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
+	etypes "pkg.akt.dev/go/node/escrow/v1"
 )
 
 type EscrowKeeper interface {

@@ -213,7 +213,7 @@ function build_bins() {
 	if [[ $GOOS == "darwin" ]]; then
 		archive="${archive}_darwin_all"
 	else
-		archive="${archive}_linux_$(uname_arch)"
+		archive="${archive}_linux_$GOARCH"
 	fi
 
 	unzip -o "${AKASH_DEVCACHE}/goreleaser/test-bins/${archive}.zip" -d "$upgrade_bin"

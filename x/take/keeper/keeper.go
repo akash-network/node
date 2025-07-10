@@ -1,39 +1,40 @@
 package keeper
 
 import (
+	sdkmath "cosmossdk.io/math"
+	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
-
-	types "github.com/akash-network/akash-api/go/node/take/v1beta3"
+	types "pkg.akt.dev/go/node/take/v1"
 )
 
 type IKeeper interface {
-	StoreKey() sdk.StoreKey
+	StoreKey() storetypes.StoreKey
 	Codec() codec.BinaryCodec
 	GetParams(ctx sdk.Context) (params types.Params)
-	SetParams(ctx sdk.Context, params types.Params)
+	SetParams(ctx sdk.Context, params types.Params) error
 	SubtractFees(ctx sdk.Context, amt sdk.Coin) (sdk.Coin, sdk.Coin, error)
+
+	NewQuerier() Querier
+	GetAuthority() string
 }
 
 // Keeper of the deployment store
 type Keeper struct {
-	skey   sdk.StoreKey
-	cdc    codec.BinaryCodec
-	pspace paramtypes.Subspace
+	skey storetypes.StoreKey
+	cdc  codec.BinaryCodec
+	// The address capable of executing a MsgUpdateParams message.
+	// This should be the x/gov module account.
+	authority string
 }
 
-// NewKeeper creates and returns an instance for deployment keeper
-func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey, pspace paramtypes.Subspace) IKeeper {
-	if !pspace.HasKeyTable() {
-		pspace = pspace.WithKeyTable(types.ParamKeyTable())
-	}
-
+// NewKeeper creates and returns an instance of take keeper
+func NewKeeper(cdc codec.BinaryCodec, skey storetypes.StoreKey, authority string) IKeeper {
 	return Keeper{
-		skey:   skey,
-		cdc:    cdc,
-		pspace: pspace,
+		skey:      skey,
+		cdc:       cdc,
+		authority: authority,
 	}
 }
 
@@ -42,20 +43,42 @@ func (k Keeper) Codec() codec.BinaryCodec {
 	return k.cdc
 }
 
-func (k Keeper) StoreKey() sdk.StoreKey {
+func (k Keeper) StoreKey() storetypes.StoreKey {
 	return k.skey
 }
 
-// GetParams returns the total set of deployment parameters.
-func (k Keeper) GetParams(ctx sdk.Context) types.Params {
-	var params types.Params
-	k.pspace.GetParamSet(ctx, &params)
-	return params
+func (k Keeper) NewQuerier() Querier {
+	return Querier{k}
 }
 
-// SetParams sets the deployment parameters to the paramspace.
-func (k Keeper) SetParams(ctx sdk.Context, params types.Params) {
-	k.pspace.SetParamSet(ctx, &params)
+// GetAuthority returns the x/mint module's authority.
+func (k Keeper) GetAuthority() string {
+	return k.authority
+}
+
+// SetParams sets the x/take module parameters.
+func (k Keeper) SetParams(ctx sdk.Context, p types.Params) error {
+	if err := p.Validate(); err != nil {
+		return err
+	}
+
+	store := ctx.KVStore(k.skey)
+	bz := k.cdc.MustMarshal(&p)
+	store.Set(types.ParamsPrefix(), bz)
+
+	return nil
+}
+
+// GetParams returns the current x/take module parameters.
+func (k Keeper) GetParams(ctx sdk.Context) (p types.Params) {
+	store := ctx.KVStore(k.skey)
+	bz := store.Get(types.ParamsPrefix())
+	if bz == nil {
+		return p
+	}
+
+	k.cdc.MustUnmarshal(bz, &p)
+	return p
 }
 
 func (k Keeper) SubtractFees(ctx sdk.Context, amt sdk.Coin) (sdk.Coin, sdk.Coin, error) {
@@ -70,7 +93,7 @@ func (k Keeper) SubtractFees(ctx sdk.Context, amt sdk.Coin) (sdk.Coin, sdk.Coin,
 	return earnings, sdk.NewCoin(amt.GetDenom(), fees), nil
 }
 
-func (k Keeper) findRate(ctx sdk.Context, denom string) sdk.Dec {
+func (k Keeper) findRate(ctx sdk.Context, denom string) sdkmath.LegacyDec {
 	params := k.GetParams(ctx)
 
 	rate := params.DefaultTakeRate
@@ -83,5 +106,5 @@ func (k Keeper) findRate(ctx sdk.Context, denom string) sdk.Dec {
 	}
 
 	// return percentage.
-	return sdk.NewDecFromInt(sdk.NewIntFromUint64(uint64(rate))).Quo(sdk.NewDec(100))
+	return sdkmath.LegacyNewDecFromInt(sdkmath.NewIntFromUint64(uint64(rate))).Quo(sdkmath.LegacyNewDec(100))
 }

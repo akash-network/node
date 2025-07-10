@@ -7,9 +7,10 @@ import (
 	"sync"
 	"time"
 
+	sdkmath "cosmossdk.io/math"
 	"github.com/theckman/yacspin"
 
-	tmtypes "github.com/tendermint/tendermint/types"
+	tmtypes "github.com/cometbft/cometbft/types"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -19,25 +20,27 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	gov "github.com/cosmos/cosmos-sdk/x/gov/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	ibchost "github.com/cosmos/ibc-go/v4/modules/core/24-host"
-	ibccoretypes "github.com/cosmos/ibc-go/v4/modules/core/types"
+	ibchost "github.com/cosmos/ibc-go/v8/modules/core/exported"
+	ibccoretypes "github.com/cosmos/ibc-go/v8/modules/core/types"
 
-	atypes "github.com/akash-network/akash-api/go/node/audit/v1beta3"
-	ctypes "github.com/akash-network/akash-api/go/node/cert/v1beta3"
-	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
-	etypes "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
-	mtypes "github.com/akash-network/akash-api/go/node/market/v1beta4"
-	ptypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
+	atypes "pkg.akt.dev/go/node/audit/v1"
+	ctypes "pkg.akt.dev/go/node/cert/v1"
+	dv1 "pkg.akt.dev/go/node/deployment/v1"
+	dtypes "pkg.akt.dev/go/node/deployment/v1beta4"
+	etypes "pkg.akt.dev/go/node/escrow/v1"
+	mtypes "pkg.akt.dev/go/node/market/v1beta5"
+	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 
-	"github.com/akash-network/node/x/audit"
-	"github.com/akash-network/node/x/cert"
-	"github.com/akash-network/node/x/deployment"
-	"github.com/akash-network/node/x/escrow"
-	"github.com/akash-network/node/x/market"
-	"github.com/akash-network/node/x/provider"
+	"pkg.akt.dev/node/x/audit"
+	"pkg.akt.dev/node/x/cert"
+	"pkg.akt.dev/node/x/deployment"
+	"pkg.akt.dev/node/x/escrow"
+	"pkg.akt.dev/node/x/market"
+	"pkg.akt.dev/node/x/provider"
 )
 
 type (
@@ -255,8 +258,8 @@ func NewGenesisState(sp *yacspin.Spinner, state map[string]json.RawMessage, doc 
 }
 
 func (ga *GenesisState) validateBalances() error {
-	bondedTokens := sdk.ZeroInt()
-	notBondedTokens := sdk.ZeroInt()
+	bondedTokens := sdkmath.ZeroInt()
+	notBondedTokens := sdkmath.ZeroInt()
 
 	for _, val := range ga.app.StakingState.state.Validators {
 		switch val.GetStatus() {
@@ -296,7 +299,7 @@ func (ga *GenesisState) validateBalances() error {
 	bondedBalance.Sort()
 	notBondedBalance.Sort()
 
-	if !bondedBalance.IsEqual(bondedCoins) {
+	if !bondedBalance.Equal(bondedCoins) {
 		return fmt.Errorf("bonded pool balance is different from bonded coins: %s <-> %s", notBondedBalance, notBondedCoins) // nolint: goerr113
 	}
 
@@ -486,7 +489,7 @@ func (ga *GovState) pack(cdc codec.Codec) error {
 			return fmt.Errorf("failed to marshal gov genesis state: %s", err.Error()) // nolint: goerr113
 		}
 
-		ga.gstate[govtypes.ModuleName] = stateBz
+		ga.gstate[gov.ModuleName] = stateBz
 
 		ga.once = sync.Once{}
 	}
@@ -650,7 +653,7 @@ func (ga *DeploymentState) pack(cdc codec.Codec) error {
 			return fmt.Errorf("failed to marshal deployment genesis state: %s", err.Error()) // nolint: goerr113
 		}
 
-		ga.gstate[dtypes.ModuleName] = stateBz
+		ga.gstate[dv1.ModuleName] = stateBz
 
 		ga.once = sync.Once{}
 	}
@@ -826,7 +829,7 @@ func (ga *GenesisState) IncreaseBalances(cdc codec.Codec, addr sdk.AccAddress, c
 	var balance *banktypes.Balance
 
 	for idx := range ga.app.BankState.state.Balances {
-		if ga.app.BankState.state.Balances[idx].GetAddress().Equals(addr) {
+		if ga.app.BankState.state.Balances[idx].GetAddress() == addr.String() {
 			balance = &ga.app.BankState.state.Balances[idx]
 			break
 		}
@@ -864,7 +867,7 @@ func (ga *GenesisState) DecreaseBalances(cdc codec.Codec, addr sdk.AccAddress, c
 	var balance *banktypes.Balance
 
 	for idx := range ga.app.BankState.state.Balances {
-		if ga.app.BankState.state.Balances[idx].GetAddress().Equals(addr) {
+		if ga.app.BankState.state.Balances[idx].GetAddress() == addr.String() {
 			balance = &ga.app.BankState.state.Balances[idx]
 			break
 		}
@@ -943,18 +946,18 @@ func (ga *GenesisState) IncreaseDelegatorStake(
 				DelegatorAddress: addr.String(),
 				ValidatorAddress: val.String(),
 				StartingInfo: distributiontypes.DelegatorStartingInfo{
-					PreviousPeriod: uint64(ga.doc.InitialHeight - 2),
-					Height:         uint64(ga.doc.InitialHeight),
+					PreviousPeriod: uint64(ga.doc.InitialHeight - 2), // nolint gosec
+					Height:         uint64(ga.doc.InitialHeight),     // nolint gosec
 				},
 			})
 
 		info = &ga.app.DistributionState.state.DelegatorStartingInfos[len(ga.app.DistributionState.state.DelegatorStartingInfos)-1]
 	}
 
-	stake := sdk.NewDec(0)
+	stake := sdkmath.LegacyNewDec(0)
 
 	for _, coin := range coins {
-		stake = stake.Add(coin.Amount.ToDec())
+		stake = stake.Add(coin.Amount.ToLegacyDec())
 		*sVal, _ = sVal.AddTokensFromDel(coin.Amount)
 	}
 
@@ -997,8 +1000,8 @@ func (ga *GenesisState) ensureActiveSet(cdc codec.Codec) error {
 	sVals := ga.app.StakingState.state.Validators
 
 	vCount := ga.app.StakingState.state.Params.MaxValidators
-	if vCount > uint32(len(sVals)) {
-		vCount = uint32(len(sVals))
+	if vCount > uint32(len(sVals)) { // nolint gosec
+		vCount = uint32(len(sVals)) // nolint gosec
 	}
 
 	vals := make([]tmtypes.GenesisValidator, 0, vCount)
@@ -1009,7 +1012,7 @@ func (ga *GenesisState) ensureActiveSet(cdc codec.Codec) error {
 	for i, val := range sVals {
 		coins := sdk.NewCoins(sdk.NewCoin(ga.app.StakingState.state.Params.BondDenom, val.Tokens))
 
-		if uint32(len(vals)) < vCount {
+		if uint32(len(vals)) < vCount { // nolint gosec
 			if val.IsJailed() {
 				continue
 			}
@@ -1028,7 +1031,7 @@ func (ga *GenesisState) ensureActiveSet(cdc codec.Codec) error {
 				return err
 			}
 
-			tmPk, err := cryptocodec.ToTmPubKeyInterface(pubkey)
+			tmPk, err := cryptocodec.ToCmtPubKeyInterface(pubkey)
 			if err != nil {
 				return err
 			}
@@ -1057,7 +1060,7 @@ func (ga *GenesisState) ensureActiveSet(cdc codec.Codec) error {
 		}
 	}
 
-	ga.app.StakingState.state.LastTotalPower = sdk.NewInt(totalPower)
+	ga.app.StakingState.state.LastTotalPower = sdkmath.NewInt(totalPower)
 	ga.app.StakingState.state.LastValidatorPowers = sPowers
 	sort.Sort(sort.Reverse(GenesisValidators(vals)))
 
@@ -1072,8 +1075,8 @@ func (ga *GenesisState) findModuleAccount(cdc codec.Codec, name string) (sdk.Acc
 	}
 
 	var addr sdk.AccAddress
-	for _, acc := range ga.app.AuthState.accs {
-		macc, valid := acc.(authtypes.ModuleAccountI)
+	for _, acc := range ga.app.accs {
+		macc, valid := acc.(sdk.ModuleAccountI)
 		if !valid {
 			continue
 		}
@@ -1096,11 +1099,11 @@ func (ga *GenesisState) AddNewAccount(cdc codec.Codec, addr sdk.AccAddress, pubk
 		return err
 	}
 
-	if ga.app.AuthState.accs.Contains(addr) {
+	if ga.app.accs.Contains(addr) {
 		return fmt.Errorf("account (%s) already exists", addr.String()) // nolint: goerr113
 	}
 
-	genAccount := authtypes.NewBaseAccount(addr, pubkey, ga.app.AuthState.nextAccountNumber(), 0)
+	genAccount := authtypes.NewBaseAccount(addr, pubkey, ga.app.nextAccountNumber(), 0)
 
 	if err := genAccount.Validate(); err != nil {
 		return fmt.Errorf("failed to validate new genesis account: %s", err.Error()) // nolint: goerr113
@@ -1150,8 +1153,8 @@ func (ga *GenesisState) AddNewValidator(
 		ConsensusPubkey: pkAny,
 		Jailed:          false,
 		Status:          stakingtypes.Unbonded,
-		Tokens:          sdk.NewInt(0),
-		DelegatorShares: sdk.NewDec(0),
+		Tokens:          sdkmath.NewInt(0),
+		DelegatorShares: sdkmath.LegacyNewDec(0),
 		Description: stakingtypes.Description{
 			Moniker: name,
 		},
@@ -1159,13 +1162,13 @@ func (ga *GenesisState) AddNewValidator(
 			CommissionRates: rates,
 			UpdateTime:      time.Now().UTC(),
 		},
-		MinSelfDelegation: sdk.NewInt(1),
+		MinSelfDelegation: sdkmath.NewInt(1),
 	})
 
 	ga.app.DistributionState.state.ValidatorHistoricalRewards = append(ga.app.DistributionState.state.ValidatorHistoricalRewards,
 		distributiontypes.ValidatorHistoricalRewardsRecord{
 			ValidatorAddress: addr.String(),
-			Period:           uint64(ga.doc.InitialHeight - 2),
+			Period:           uint64(ga.doc.InitialHeight - 2), // nolint gosec
 			Rewards: distributiontypes.ValidatorHistoricalRewards{
 				CumulativeRewardRatio: sdk.DecCoins{},
 				ReferenceCount:        2,
@@ -1177,7 +1180,7 @@ func (ga *GenesisState) AddNewValidator(
 			ValidatorAddress: addr.String(),
 			Rewards: distributiontypes.ValidatorCurrentRewards{
 				Rewards: sdk.DecCoins{},
-				Period:  uint64(ga.doc.InitialHeight - 1),
+				Period:  uint64(ga.doc.InitialHeight - 1), // nolint gosec
 			},
 		})
 

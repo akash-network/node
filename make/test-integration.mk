@@ -6,17 +6,9 @@ TEST_MODULES ?= $(shell $(GO) list ./... | grep -v '/mocks')
 ###                           Misc tests                                    ###
 ###############################################################################
 
-.PHONY: shellcheck
-shellcheck:
-	docker run --rm \
-	--volume ${PWD}:/shellcheck \
-	--entrypoint sh \
-	koalaman/shellcheck-alpine:stable \
-	-x /shellcheck/script/shellcheck.sh
-
 .PHONY: test
 test:
-	$(GO_TEST) -v -timeout 300s $(TEST_MODULES)
+	$(GO_TEST) -v -timeout 600s $(TEST_MODULES)
 
 .PHONY: test-nocache
 test-nocache:
@@ -25,6 +17,10 @@ test-nocache:
 .PHONY: test-full
 test-full:
 	$(GO_TEST) -v -tags=$(BUILD_TAGS) $(TEST_MODULES)
+
+.PHONY: test-integration
+test-integration:
+	$(GO_TEST) -v -tags="e2e.integration" $(TEST_MODULES)
 
 .PHONY: test-coverage
 test-coverage:

@@ -5,7 +5,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/codec"
 
-	etypes "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
+	etypes "pkg.akt.dev/go/node/escrow/v1"
 )
 
 func (ga *GenesisState) modifyEscrowState(cdc codec.Codec, cfg *EscrowConfig) error {

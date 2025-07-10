@@ -1,0 +1,33 @@
+---
+name: setup-ubuntu
+runs:
+  using: 'composite'
+  steps:
+    - name: Fetch all tags
+      shell: bash
+      run: git fetch --prune --unshallow
+    - name: Install dependencies
+      # Shell must explicitly specify the shell for each step. https://github.com/orgs/community/discussions/18597
+      shell: bash
+      run: sudo apt install -y make direnv unzip lz4 wget curl npm jq pv coreutils
+    - name: Setup npm
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18
+    - name: Install git-cliff
+      uses: baptiste0928/cargo-install@v3
+      with:
+        crate: git-cliff
+    - name: Detect required Go version
+      shell: bash
+      run: |
+        toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
+        echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
+    - uses: actions/setup-go@v5
+      with:
+        go-version: "${{ env.GOVERSION }}"
+        check-latest: true
+    - name: set environment
+      uses: HatsuneMiku3939/direnv-action@v1
+      with:
+        masks: ''
