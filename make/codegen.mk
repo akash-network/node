@@ -4,3 +4,6 @@ generate: $(MOCKERY)
 
 .PHONY: codegen
 codegen: generate
+
+mocks: $(MOCKERY)
+	$(MOCKERY)
