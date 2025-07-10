@@ -3,15 +3,16 @@ package keeper
 import (
 	"context"
 
-	"github.com/cosmos/cosmos-sdk/store/prefix"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+	"cosmossdk.io/store/prefix"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 
-	"github.com/akash-network/node/util/query"
+	types "pkg.akt.dev/go/node/cert/v1"
+
+	"pkg.akt.dev/node/util/query"
 )
 
 // Querier is used as Keeper will have duplicate methods if used directly, and gRPC names take precedence over keeper
@@ -39,7 +40,6 @@ func (q querier) Certificates(c context.Context, req *types.QueryCertificatesReq
 	}
 
 	states := make([]byte, 0, 2)
-
 	var searchPrefix []byte
 
 	// setup for case 3 - cross-index search
@@ -54,7 +54,7 @@ func (q querier) Certificates(c context.Context, req *types.QueryCertificatesReq
 
 		req.Pagination.Key = key
 	} else if req.Filter.State != "" {
-		stateVal := types.Certificate_State(types.Certificate_State_value[req.Filter.State])
+		stateVal := types.State(types.State_value[req.Filter.State])
 
 		if req.Filter.State != "" && stateVal == types.CertificateStateInvalid {
 			return nil, status.Error(codes.InvalidArgument, "invalid state value")
@@ -73,7 +73,7 @@ func (q querier) Certificates(c context.Context, req *types.QueryCertificatesReq
 	total := uint64(0)
 
 	for idx := range states {
-		state := types.Certificate_State(states[idx])
+		state := types.State(states[idx])
 		var err error
 
 		if idx > 0 {

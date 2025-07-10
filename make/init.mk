@@ -28,18 +28,35 @@ NULL  :=
 SPACE := $(NULL) #
 COMMA := ,
 
-BINS                         := $(AKASH)
+BINS := $(AKASH)
 
-GO                           := GO111MODULE=$(GO111MODULE) go
-GOWORK                       ?= on
-GO_MOD                       ?= vendor
-ifeq ($(GOWORK), on)
-GO_MOD                       := readonly
+ifeq ($(GO111MODULE),off)
+else
+	GOMOD=readonly
 endif
 
-GO_BUILD                     := $(GO) build -mod=$(GO_MOD)
-GO_TEST                      := $(GO) test -mod=$(GO_MOD)
-GO_VET                       := $(GO) vet -mod=$(GO_MOD)
+ifneq ($(GOWORK),off)
+#	ifeq ($(shell test -e $(AKASH_ROOT)/go.work && echo -n yes),yes)
+#		GOWORK=${AKASH_ROOT}/go.work
+#	else
+#		GOWORK=off
+#	endif
+
+	ifeq ($(GOMOD),$(filter $(GOMOD),mod ""))
+$(error '-mod may only be set to readonly or vendor when in workspace mode, but it is set to ""')
+	endif
+endif
+
+ifeq ($(GOMOD),vendor)
+	ifneq ($(wildcard ./vendor/.),)
+$(error "go -mod is in vendor mode but vendor dir has not been found. consider to run go mod vendor")
+	endif
+endif
+
+GO                           := GO111MODULE=$(GO111MODULE) go
+GO_BUILD                     := $(GO) build -mod=$(GOMOD)
+GO_TEST                      := $(GO) test -mod=$(GOMOD)
+GO_VET                       := $(GO) vet -mod=$(GOMOD)
 GO_MOD_NAME                  := $(shell go list -m 2>/dev/null)
 
 ifeq ($(OS),Windows_NT)
@@ -50,10 +67,10 @@ endif
 
 # ==== Build tools versions ====
 # Format <TOOL>_VERSION
-GOLANGCI_LINT_VERSION        ?= v1.62.2
+GOLANGCI_LINT_VERSION        ?= v2.2.2
 STATIK_VERSION               ?= v0.1.7
 GIT_CHGLOG_VERSION           ?= v0.15.1
-MOCKERY_VERSION              ?= 2.42.0
+MOCKERY_VERSION              ?= 3.5.0
 COSMOVISOR_VERSION           ?= v1.5.0
 
 # ==== Build tools version tracking ====
@@ -64,6 +81,7 @@ MOCKERY_VERSION_FILE             := $(AKASH_DEVCACHE_VERSIONS)/mockery/v$(MOCKER
 GOLANGCI_LINT_VERSION_FILE       := $(AKASH_DEVCACHE_VERSIONS)/golangci-lint/$(GOLANGCI_LINT_VERSION)
 STATIK_VERSION_FILE              := $(AKASH_DEVCACHE_VERSIONS)/statik/$(STATIK_VERSION)
 COSMOVISOR_VERSION_FILE          := $(AKASH_DEVCACHE_VERSIONS)/cosmovisor/$(COSMOVISOR_VERSION)
+COSMOVISOR_DEBUG_VERSION_FILE    := $(AKASH_DEVCACHE_VERSIONS)/cosmovisor/debug/$(COSMOVISOR_VERSION)
 
 # ==== Build tools executables ====
 GIT_CHGLOG                       := $(AKASH_DEVCACHE_BIN)/git-chglog
@@ -72,6 +90,8 @@ NPM                              := npm
 GOLANGCI_LINT                    := $(AKASH_DEVCACHE_BIN)/golangci-lint
 STATIK                           := $(AKASH_DEVCACHE_BIN)/statik
 COSMOVISOR                       := $(AKASH_DEVCACHE_BIN)/cosmovisor
+COSMOVISOR_DEBUG                 := $(AKASH_RUN_BIN)/cosmovisor
+
 
 RELEASE_TAG           ?= $(shell git describe --tags --abbrev=0)
 

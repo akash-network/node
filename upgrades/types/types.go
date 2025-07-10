@@ -3,15 +3,14 @@ package types
 import (
 	"fmt"
 
+	"cosmossdk.io/log"
+	storetypes "cosmossdk.io/store/types"
+	upgradetypes "cosmossdk.io/x/upgrade/types"
 	"github.com/cosmos/cosmos-sdk/codec"
-	sdkmodule "github.com/cosmos/cosmos-sdk/types/module"
-	"github.com/tendermint/tendermint/libs/log"
-
-	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
+	sdkmodule "github.com/cosmos/cosmos-sdk/types/module"
 
-	apptypes "github.com/akash-network/node/app/types"
+	apptypes "pkg.akt.dev/node/app/types"
 )
 
 var (
@@ -47,18 +46,18 @@ type IHeightPatch interface {
 }
 
 type Migrator interface {
-	StoreKey() sdk.StoreKey
+	StoreKey() storetypes.StoreKey
 	Codec() codec.BinaryCodec
 }
 
 type migrator struct {
 	cdc  codec.BinaryCodec
-	skey sdk.StoreKey
+	skey storetypes.StoreKey
 }
 
 var _ Migrator = (*migrator)(nil)
 
-func NewMigrator(cdc codec.BinaryCodec, skey sdk.StoreKey) Migrator {
+func NewMigrator(cdc codec.BinaryCodec, skey storetypes.StoreKey) Migrator {
 	return &migrator{
 		cdc:  cdc,
 		skey: skey,
@@ -69,7 +68,7 @@ func (m *migrator) Codec() codec.BinaryCodec {
 	return m.cdc
 }
 
-func (m *migrator) StoreKey() sdk.StoreKey {
+func (m *migrator) StoreKey() storetypes.StoreKey {
 	return m.skey
 }
 
@@ -101,6 +100,10 @@ func GetHeightPatchesList() map[int64]IHeightPatch {
 	return heightPatches
 }
 
+// RegisterMigration registers module migration within particular network upgrade
+//   - module: module name
+//   - version: current module version
+//   - initFn: migrator fn
 func RegisterMigration(module string, version uint64, initFn NewMigrationFn) {
 	if _, exists := migrations[module]; !exists {
 		migrations[module] = make(moduleMigrations)
@@ -118,5 +121,17 @@ func IterateMigrations(fn func(module string, version uint64, initfn NewMigratio
 		for version, handler := range migrations {
 			fn(module, version, handler)
 		}
+	}
+}
+
+func ModuleMigrations(module string, migrator Migrator, fn func(string, uint64, sdkmodule.MigrationHandler)) {
+	moduleMigrations, exists := migrations[module]
+	if !exists {
+		return
+	}
+
+	for version, initFn := range moduleMigrations {
+		migration := initFn(migrator)
+		fn(module, version, migration.GetHandler())
 	}
 }
