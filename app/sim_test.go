@@ -7,6 +7,12 @@ import (
 	"os"
 	"testing"
 
+	atypes "github.com/akash-network/akash-api/go/node/audit/v1beta3"
+	ctypes "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+	mtypes "github.com/akash-network/akash-api/go/node/market/v1beta4"
+	ptypes "github.com/akash-network/akash-api/go/node/provider/v1beta3"
+	taketypes "github.com/akash-network/akash-api/go/node/take/v1beta3"
 	"github.com/cosmos/cosmos-sdk/x/authz"
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	"github.com/stretchr/testify/require"
@@ -181,6 +187,36 @@ func TestAppImportExport(t *testing.T) {
 		{app.skeys[authz.ModuleName], newApp.skeys[authz.ModuleName], [][]byte{
 			authzkeeper.GranteeKey,
 		}},
+		{
+			app.GetKey(atypes.StoreKey),
+			newApp.GetKey(atypes.StoreKey),
+			[][]byte{},
+		},
+		{
+			app.GetKey(ctypes.StoreKey),
+			newApp.GetKey(ctypes.StoreKey),
+			[][]byte{},
+		},
+		{
+			app.GetKey(dtypes.StoreKey),
+			newApp.GetKey(dtypes.StoreKey),
+			[][]byte{},
+		},
+		{
+			app.GetKey(mtypes.StoreKey),
+			newApp.GetKey(mtypes.StoreKey),
+			[][]byte{},
+		},
+		{
+			app.GetKey(ptypes.StoreKey),
+			newApp.GetKey(ptypes.StoreKey),
+			[][]byte{},
+		},
+		{
+			app.GetKey(taketypes.StoreKey),
+			newApp.GetKey(taketypes.StoreKey),
+			[][]byte{},
+		},
 	}
 
 	for _, skp := range storeKeysPrefixes {
