@@ -5,25 +5,28 @@ import (
 	"errors"
 	"time"
 
-	sdkclient "github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/spf13/cobra"
+
 	"gopkg.in/yaml.v3"
 
-	deploymentTypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
-	types "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
+	sdkclient "github.com/cosmos/cosmos-sdk/client"
 
-	marketTypes "github.com/akash-network/akash-api/go/node/market/v1beta4"
+	"pkg.akt.dev/go/cli"
+	cflags "pkg.akt.dev/go/cli/flags"
 
-	aclient "github.com/akash-network/node/client"
-	netutil "github.com/akash-network/node/util/network"
-	"github.com/akash-network/node/x/deployment/client/cli"
-	"github.com/akash-network/node/x/escrow/client/util"
+	dv1 "pkg.akt.dev/go/node/deployment/v1"
+	dv1beta4 "pkg.akt.dev/go/node/deployment/v1beta4"
+	etypes "pkg.akt.dev/go/node/escrow/v1"
+	mv1 "pkg.akt.dev/go/node/market/v1"
+	mv1beta5 "pkg.akt.dev/go/node/market/v1beta5"
+
+	netutil "pkg.akt.dev/node/util/network"
+	"pkg.akt.dev/node/x/escrow/client/util"
 )
 
 func GetQueryCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:                        types.ModuleName,
+		Use:                        etypes.ModuleName,
 		Short:                      "Escrow query commands",
 		SuggestionsMinimumDistance: 2,
 		RunE:                       sdkclient.ValidateCmd,
@@ -43,7 +46,7 @@ func cmdBlocksRemaining() *cobra.Command {
 		Use:   "blocks-remaining",
 		Short: "Compute the number of blocks remaining for an ecrow account",
 		Args:  cobra.ExactArgs(0),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := cmd.Context()
 
 			cctx, err := sdkclient.GetClientQueryContext(cmd)
@@ -51,30 +54,30 @@ func cmdBlocksRemaining() *cobra.Command {
 				return err
 			}
 
-			qq, err := aclient.DiscoverQueryClient(ctx, cctx)
+			qq, err := cli.DiscoverQueryClient(ctx, cctx)
 			if err != nil {
 				return err
 			}
 
-			id, err := cli.DeploymentIDFromFlags(cmd.Flags())
+			id, err := cflags.DeploymentIDFromFlags(cmd.Flags())
 			if err != nil {
 				return err
 			}
 
 			// Fetch leases matching owner & dseq
-			leaseRequest := marketTypes.QueryLeasesRequest{
-				Filters: marketTypes.LeaseFilters{
+			leaseRequest := mv1beta5.QueryLeasesRequest{
+				Filters: mv1.LeaseFilters{
 					Owner:    id.Owner,
 					DSeq:     id.DSeq,
 					GSeq:     0,
 					OSeq:     0,
 					Provider: "",
-					State:    "active",
+					State:    mv1.LeaseActive.String(),
 				},
 				Pagination: nil,
 			}
 
-			leasesResponse, err := qq.Leases(cmd.Context(), &leaseRequest)
+			leasesResponse, err := qq.Query().Market().Leases(ctx, &leaseRequest)
 			if err != nil {
 				return err
 			}
@@ -85,13 +88,13 @@ func cmdBlocksRemaining() *cobra.Command {
 
 			// Fetch the balance of the escrow account
 			totalLeaseAmount := leasesResponse.TotalPriceAmount()
-			blockchainHeight, err := cli.CurrentBlockHeight(qq.ClientContext())
+			blockchainHeight, err := qq.Node().CurrentBlockHeight(ctx)
 			if err != nil {
 				return err
 			}
 
-			res, err := qq.Deployment(cmd.Context(), &deploymentTypes.QueryDeploymentRequest{
-				ID: deploymentTypes.DeploymentID{Owner: id.Owner, DSeq: id.DSeq},
+			res, err := qq.Query().Deployment().Deployment(cmd.Context(), &dv1beta4.QueryDeploymentRequest{
+				ID: dv1.DeploymentID{Owner: id.Owner, DSeq: id.DSeq},
 			})
 			if err != nil {
 				return err
@@ -135,8 +138,9 @@ func cmdBlocksRemaining() *cobra.Command {
 		},
 	}
 
-	flags.AddQueryFlagsToCmd(cmd)
-	cli.AddDeploymentIDFlags(cmd.Flags())
-	cli.MarkReqDeploymentIDFlags(cmd)
+	cflags.AddQueryFlagsToCmd(cmd)
+	cflags.AddDeploymentIDFlags(cmd.Flags())
+	cflags.MarkReqDeploymentIDFlags(cmd)
+
 	return cmd
 }

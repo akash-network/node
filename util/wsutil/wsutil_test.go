@@ -1,11 +1,12 @@
 package wsutil
 
 import (
-	"github.com/gorilla/websocket"
-	"github.com/stretchr/testify/require"
 	"io"
 	"sync"
 	"testing"
+
+	"github.com/gorilla/websocket"
+	"github.com/stretchr/testify/require"
 )
 
 type dummyConnection struct {

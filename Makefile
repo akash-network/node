@@ -12,7 +12,7 @@ include make/init.mk
 
 DOCKER_RUN            := docker run --rm -v $(shell pwd):/workspace -w /workspace
 GOLANGCI_LINT_RUN     := $(GOLANGCI_LINT) run
-LINT                   = $(GOLANGCI_LINT_RUN) ./... --disable-all --timeout=5m --enable
+LINT                   = $(GOLANGCI_LINT_RUN) ./... --disable-all --deadline=5m --enable
 
 GORELEASER_CONFIG     ?= .goreleaser.yaml
 
@@ -25,7 +25,7 @@ IS_MAINNET            := $(shell $(ROOT_DIR)/script/mainnet-from-tag.sh "$(RELEA
 IS_STABLE             ?= false
 
 GO_LINKMODE            ?= external
-GO_MOD                 ?= readonly
+GOMOD                  ?= readonly
 BUILD_TAGS             ?= osusergo,netgo,ledger
 GORELEASER_STRIP_FLAGS ?=
 
@@ -61,7 +61,7 @@ endif
 ldflags += $(LDFLAGS)
 ldflags := $(strip $(ldflags))
 
-BUILD_FLAGS := -mod=$(GO_MOD) -tags='$(BUILD_TAGS)' -ldflags '$(ldflags)'
+BUILD_FLAGS := -mod=$(GOMOD) -tags='$(BUILD_TAGS)' -ldflags '$(ldflags)'
 
 .PHONY: all
 all: build bins

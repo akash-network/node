@@ -5,16 +5,16 @@ import (
 	"errors"
 
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/flags"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/akash-network/node/cmd/common"
-	cmdcommon "github.com/akash-network/node/cmd/common"
-	"github.com/akash-network/node/events"
-	"github.com/akash-network/node/pubsub"
+	cflags "pkg.akt.dev/go/cli/flags"
+
+	cmdcommon "pkg.akt.dev/node/cmd/common"
+	"pkg.akt.dev/node/events"
+	"pkg.akt.dev/node/pubsub"
 )
 
 // EventCmd prints out events in real time
@@ -23,14 +23,14 @@ func EventCmd() *cobra.Command {
 		Use:   "events",
 		Short: "Prints out akash events in real time",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return common.RunForeverWithContext(cmd.Context(), func(ctx context.Context) error {
+			return cmdcommon.RunForeverWithContext(cmd.Context(), func(ctx context.Context) error {
 				return getEvents(ctx, cmd, args)
 			})
 		},
 	}
 
-	cmd.Flags().String(flags.FlagNode, "tcp://localhost:26657", "The node address")
-	if err := viper.BindPFlag(flags.FlagNode, cmd.Flags().Lookup(flags.FlagNode)); err != nil {
+	cmd.Flags().String(cflags.FlagNode, "tcp://localhost:26657", "The node address")
+	if err := viper.BindPFlag(cflags.FlagNode, cmd.Flags().Lookup(cflags.FlagNode)); err != nil {
 		return nil
 	}
 
@@ -40,7 +40,8 @@ func EventCmd() *cobra.Command {
 func getEvents(ctx context.Context, cmd *cobra.Command, _ []string) error {
 	cctx := client.GetClientContextFromCmd(cmd)
 
-	if err := cctx.Client.Start(); err != nil {
+	node, err := cctx.GetNode()
+	if err != nil {
 		return err
 	}
 
@@ -54,7 +55,7 @@ func getEvents(ctx context.Context, cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	evtSvc, err := events.NewEvents(ctx, cctx.Client, "akash-cli", bus)
+	evtSvc, err := events.NewEvents(ctx, node, "akash-cli", bus)
 	if err != nil {
 		return err
 	}
