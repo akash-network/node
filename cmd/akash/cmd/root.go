@@ -138,7 +138,6 @@ func ExecuteWithCtx(ctx context.Context, rootCmd *cobra.Command, envPrefix strin
 func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
 	debugCmd := debug.Cmd()
 	debugCmd.AddCommand(ConvertBech32Cmd())
-	debugCmd.AddCommand(testnetify.Cmd())
 
 	rootCmd.AddCommand(
 		rpc.StatusCommand(),
@@ -158,6 +157,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig params.EncodingConfig) {
 		sdkserver.RosettaCommand(encodingConfig.InterfaceRegistry, encodingConfig.Marshaler),
 	)
 
+	rootCmd.AddCommand(testnetify.GetCmd(newTestnetApp))
 	rootCmd.AddCommand(server.Commands(app.DefaultHome, newApp, createAppAndExport, addModuleInitFlags)...)
 
 	rootCmd.SetOut(rootCmd.OutOrStdout())

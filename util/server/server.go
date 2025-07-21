@@ -190,3 +190,10 @@ func openTraceWriter(traceWriterFile string) (w io.Writer, err error) {
 		0o666,
 	)
 }
+
+// AddTestnetCreatorCommand allows chains to create a testnet from the state existing in their node's data directory.
+func AddTestnetCreatorCommand(rootCmd *cobra.Command, appCreator types.AppCreator, addStartFlags types.ModuleInitFlags) {
+	testnetCreateCmd := sdkserver.InPlaceTestnetCreator(appCreator)
+	addStartFlags(testnetCreateCmd)
+	rootCmd.AddCommand(testnetCreateCmd)
+}
