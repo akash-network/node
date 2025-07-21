@@ -12,6 +12,7 @@ require (
 	github.com/cosmos/go-bip39 v1.0.0
 	github.com/cosmos/ibc-go/v4 v4.6.0
 	github.com/gogo/protobuf v1.3.3
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/go-github/v56 v56.0.0
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.1
@@ -31,7 +32,6 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/tendermint/tendermint v0.34.27
 	github.com/tendermint/tm-db v0.6.7
-	github.com/theckman/yacspin v0.13.12
 	go.step.sm/crypto v0.44.6
 	golang.org/x/mod v0.17.0
 	golang.org/x/oauth2 v0.23.0
@@ -52,7 +52,7 @@ retract (
 replace (
 	// use cosmos fork of keyring
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
-	github.com/cosmos/cosmos-sdk => github.com/akash-network/cosmos-sdk v0.45.16-akash.3
+	github.com/cosmos/cosmos-sdk => github.com/akash-network/cosmos-sdk v0.45.16-akash.5
 
 	// use akash version of cosmos ledger api
 	github.com/cosmos/ledger-cosmos-go => github.com/akash-network/ledger-go/cosmos v0.14.4
@@ -68,7 +68,7 @@ replace (
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	// use cometBFT system fork of tendermint with akash patches
 
-	github.com/tendermint/tendermint => github.com/akash-network/cometbft v0.34.27-akash.3
+	github.com/tendermint/tendermint => github.com/akash-network/cometbft v0.34.27-akash.5
 
 	github.com/zondax/hid => github.com/troian/hid v0.13.2
 	github.com/zondax/ledger-go => github.com/akash-network/ledger-go v0.14.3
@@ -76,8 +76,6 @@ replace (
 	// the following version across all dependencies.
 	google.golang.org/grpc => google.golang.org/grpc v1.33.2
 )
-
-require github.com/golang-jwt/jwt/v5 v5.2.2
 
 require (
 	cosmossdk.io/api v0.2.6 // indirect
@@ -121,7 +119,6 @@ require (
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/dvsekhvalnov/jose2go v1.5.0 // indirect
 	github.com/edwingeng/deque/v2 v2.1.1 // indirect
-	github.com/fatih/color v1.14.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
@@ -160,7 +157,6 @@ require (
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/matttproud/golang_protobuf_extensions/v2 v2.0.0 // indirect
 	github.com/mimoo/StrobeGo v0.0.0-20210601165009-122bf33a46e0 // indirect
 	github.com/minio/highwayhash v1.0.2 // indirect
@@ -175,7 +171,6 @@ require (
 	github.com/prometheus/common v0.45.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
-	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/rs/cors v1.8.2 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
