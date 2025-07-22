@@ -49,10 +49,10 @@ require (
 	google.golang.org/grpc v1.72.2
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.2
-	pkg.akt.dev/go v0.0.2-rc12
-	pkg.akt.dev/go/cli v0.0.2-rc7
+	pkg.akt.dev/go v0.0.2-rc13
+	pkg.akt.dev/go/cli v0.0.2-rc8
 	pkg.akt.dev/go/node/migrate v0.0.6
-	pkg.akt.dev/go/sdl v0.0.1-rc11
+	pkg.akt.dev/go/sdl v0.0.1-rc12
 )
 
 replace (
@@ -67,9 +67,8 @@ replace (
 
 	//github.com/coinbase/rosetta-sdk-go/types => github.com/coinbase/rosetta-sdk-go/types v1.0.0
 
-	github.com/cosmos/cosmos-sdk => ../../cosmos/akash-sdk47
 	// use akash fork of cosmos sdk
-	//github.com/cosmos/cosmos-sdk => github.com/akash-network/cosmos-sdk v0.53.3-akash.1
+	github.com/cosmos/cosmos-sdk => github.com/akash-network/cosmos-sdk v0.53.3-akash.3
 	//github.com/cosmos/rosetta-sdk-go => github.com/cosmos/rosetta-sdk-go v0.10.0
 
 	// Fix upstream GHSA-h395-qcrw-5vmq vulnerability.
