@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -163,9 +162,9 @@ you want to test the upgrade handler itself.
 
 			go func() {
 				defer func() {
-					sigChan := make(chan os.Signal, 1)
-					signal.Notify(sigChan, os.Interrupt)
-					sigChan <- os.Interrupt
+					if proc, err := os.FindProcess(os.Getpid()); err == nil {
+						_ = proc.Signal(os.Interrupt)
+					}
 				}()
 				ctx := cmd.Context()
 
