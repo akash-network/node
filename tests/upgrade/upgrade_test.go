@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	sdkmath "cosmossdk.io/math"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/mod/semver"
@@ -29,11 +30,11 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	// init sdk config
-	_ "github.com/akash-network/akash-api/go/sdkutil"
+	_ "pkg.akt.dev/go/sdkutil"
 
-	"github.com/akash-network/node/pubsub"
-	uttypes "github.com/akash-network/node/tests/upgrade/types"
-	"github.com/akash-network/node/util/cli"
+	"pkg.akt.dev/node/pubsub"
+	uttypes "pkg.akt.dev/node/tests/upgrade/types"
+	"pkg.akt.dev/node/util/cli"
 )
 
 const (
@@ -396,7 +397,9 @@ func TestUpgrade(t *testing.T) {
 				fmt.Sprintf("AKASH_GAS_ADJUSTMENT=2"),
 				fmt.Sprintf("AKASH_P2P_PEX=false"),
 				fmt.Sprintf("AKASH_MINIMUM_GAS_PRICES=0.0025uakt"),
-				fmt.Sprintf("AKASH_GAS=auto"),
+				//fmt.Sprintf("AKASH_GAS=auto"),
+				// auto is failing with rpc error: code = Unknown desc = unknown query path: unknown request
+				fmt.Sprintf("AKASH_GAS=500000"),
 				fmt.Sprintf("AKASH_YES=true"),
 			},
 		}
@@ -486,7 +489,7 @@ func TestUpgrade(t *testing.T) {
 				fmt.Sprintf("AKASH_P2P_UNCONDITIONAL_PEER_IDS=%s", strings.TrimSuffix(unconditionalPeerIDs, ",")),
 				fmt.Sprintf("AKASH_P2P_LADDR=tcp://%s:%d", listenAddr, params.p2pPort),
 				fmt.Sprintf("AKASH_RPC_LADDR=tcp://%s:%d", listenAddr, params.rpc.port),
-				// fmt.Sprintf("AKASH_RPC_GRPC_LADDR=tcp://%s:%d", listenAddr, params.rpc.grpc),
+				fmt.Sprintf("AKASH_RPC_GRPC_LADDR=tcp://%s:%d", listenAddr, params.rpc.grpc),
 				fmt.Sprintf("AKASH_RPC_PPROF_LADDR=%s:%d", listenAddr, params.pprofPort),
 				fmt.Sprintf("AKASH_GRPC_ADDRESS=%s:%d", listenAddr, params.grpcPort),
 				fmt.Sprintf("AKASH_GRPC_WEB_ADDRESS=%s:%d", listenAddr, params.grpcWebPort),
@@ -498,7 +501,7 @@ func TestUpgrade(t *testing.T) {
 				"COSMOVISOR_COLOR_LOGS=false",
 				"UNSAFE_SKIP_BACKUP=true",
 				"AKASH_KEYRING_BACKEND=test",
-				"AKASH_P2P_PEX=true",
+				"AKASH_P2P_PEX=false",
 				"AKASH_P2P_ADDR_BOOK_STRICT=false",
 				"AKASH_P2P_ALLOW_DUPLICATE_IP=true",
 				"AKASH_P2P_SEEDS=",
@@ -708,7 +711,7 @@ func (l *upgradeTest) submitUpgradeProposal() error {
 		return err
 	}
 
-	votePeriod, valid := sdk.NewIntFromString(params.VotingParams.VotingPeriod)
+	votePeriod, valid := sdkmath.NewIntFromString(params.VotingParams.VotingPeriod)
 	if !valid {
 		return fmt.Errorf("invalid vote period value (%s)", params.VotingParams.VotingPeriod)
 	}
@@ -1195,9 +1198,9 @@ func (l *validator) blocksWatchdog(ctx context.Context, sub pubsub.Subscriber) e
 	}()
 
 	// first few blocks may take a while to produce.
-	// give a dog generous timeout on them
+	// give a watchdog a generous timeout on them
 
-	blockWindow := 60 * time.Minute
+	blockWindow := 180 * time.Minute
 
 	blocksTm := time.NewTicker(blockWindow)
 	blocksTm.Stop()
@@ -1223,9 +1226,9 @@ loop:
 				case watchdogCtrlBlock:
 					blocks++
 
-					// if blocks > 3 {
-					// 	blockWindow = blockTimeWindow
-					// }
+					if blocks > 3 {
+						blockWindow = blockTimeWindow
+					}
 
 					blocksTm.Reset(blockWindow)
 				case watchdogCtrlPause:

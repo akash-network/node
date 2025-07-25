@@ -7,10 +7,12 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 
-	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+	v1 "pkg.akt.dev/go/node/deployment/v1"
+	types "pkg.akt.dev/go/node/deployment/v1beta4"
 
-	"github.com/akash-network/node/x/deployment/keeper"
+	"pkg.akt.dev/node/x/deployment/keeper"
 )
 
 var _ types.MsgServer = msgServer{}
@@ -25,14 +27,19 @@ type msgServer struct {
 // NewServer returns an implementation of the deployment MsgServer interface
 // for the provided Keeper.
 func NewServer(k keeper.IKeeper, mkeeper MarketKeeper, ekeeper EscrowKeeper, authzKeeper AuthzKeeper) types.MsgServer {
-	return &msgServer{deployment: k, market: mkeeper, escrow: ekeeper, authzKeeper: authzKeeper}
+	return &msgServer{
+		deployment:  k,
+		market:      mkeeper,
+		escrow:      ekeeper,
+		authzKeeper: authzKeeper,
+	}
 }
 
 func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreateDeployment) (*types.MsgCreateDeploymentResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	if _, found := ms.deployment.GetDeployment(ctx, msg.ID); found {
-		return nil, types.ErrDeploymentExists
+		return nil, v1.ErrDeploymentExists
 	}
 
 	params := ms.deployment.GetParams(ctx)
@@ -40,15 +47,15 @@ func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreate
 		return nil, err
 	}
 
-	deployment := types.Deployment{
-		DeploymentID: msg.ID,
-		State:        types.DeploymentActive,
-		Version:      msg.Version,
-		CreatedAt:    ctx.BlockHeight(),
+	deployment := v1.Deployment{
+		ID:        msg.ID,
+		State:     v1.DeploymentActive,
+		Hash:      msg.Hash,
+		CreatedAt: ctx.BlockHeight(),
 	}
 
 	if err := types.ValidateDeploymentGroups(msg.Groups); err != nil {
-		return nil, fmt.Errorf("%w: %s", types.ErrInvalidGroups, err.Error())
+		return nil, fmt.Errorf("%w: %s", v1.ErrInvalidGroups, err.Error())
 	}
 
 	owner, err := sdk.AccAddressFromBech32(msg.ID.Owner)
@@ -69,7 +76,7 @@ func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreate
 
 	for idx, spec := range msg.Groups {
 		groups = append(groups, types.Group{
-			GroupID:   types.MakeGroupID(deployment.ID(), uint32(idx+1)),
+			ID:        v1.MakeGroupID(deployment.ID, uint32(idx+1)), // nolint gosec
 			State:     types.GroupOpen,
 			GroupSpec: spec,
 			CreatedAt: ctx.BlockHeight(),
@@ -77,18 +84,18 @@ func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreate
 	}
 
 	if err := ms.deployment.Create(ctx, deployment, groups); err != nil {
-		return nil, fmt.Errorf("%w: %s", types.ErrInternal, err.Error())
+		return nil, fmt.Errorf("%w: %s", v1.ErrInternal, err.Error())
 	}
 
 	// create orders
 	for _, group := range groups {
-		if _, err := ms.market.CreateOrder(ctx, group.ID(), group.GroupSpec); err != nil {
+		if _, err := ms.market.CreateOrder(ctx, group.ID, group.GroupSpec); err != nil {
 			return &types.MsgCreateDeploymentResponse{}, err
 		}
 	}
 
 	if err := ms.escrow.AccountCreate(ctx,
-		types.EscrowAccountForDeployment(deployment.ID()),
+		types.EscrowAccountForDeployment(deployment.ID),
 		owner,
 		depositor,
 		msg.Deposit,
@@ -107,8 +114,8 @@ func (ms msgServer) authorizeDeposit(ctx sdk.Context, owner, depositor sdk.AccAd
 
 	// find the DepositDeploymentAuthorization given to the owner by the depositor and check
 	// acceptance
-	msg := &types.MsgDepositDeployment{Amount: deposit}
-	authorization, expiration := ms.authzKeeper.GetCleanAuthorization(ctx, owner, depositor, sdk.MsgTypeURL(msg))
+	msg := &v1.MsgDepositDeployment{Amount: deposit}
+	authorization, expiration := ms.authzKeeper.GetAuthorization(ctx, owner, depositor, sdk.MsgTypeURL(msg))
 	if authorization == nil {
 		return sdkerrors.ErrUnauthorized.Wrap("authorization not found")
 	}
@@ -134,38 +141,38 @@ func (ms msgServer) authorizeDeposit(ctx sdk.Context, owner, depositor sdk.AccAd
 	return nil
 }
 
-func (ms msgServer) DepositDeployment(goCtx context.Context, msg *types.MsgDepositDeployment) (*types.MsgDepositDeploymentResponse, error) {
+func (ms msgServer) DepositDeployment(goCtx context.Context, msg *v1.MsgDepositDeployment) (*v1.MsgDepositDeploymentResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	deployment, found := ms.deployment.GetDeployment(ctx, msg.ID)
 	if !found {
-		return &types.MsgDepositDeploymentResponse{}, types.ErrDeploymentNotFound
+		return &v1.MsgDepositDeploymentResponse{}, v1.ErrDeploymentNotFound
 	}
 
-	if deployment.State != types.DeploymentActive {
-		return &types.MsgDepositDeploymentResponse{}, types.ErrDeploymentClosed
+	if deployment.State != v1.DeploymentActive {
+		return &v1.MsgDepositDeploymentResponse{}, v1.ErrDeploymentClosed
 	}
 
-	owner, err := sdk.AccAddressFromBech32(deployment.ID().Owner)
+	owner, err := sdk.AccAddressFromBech32(deployment.ID.Owner)
 	if err != nil {
-		return &types.MsgDepositDeploymentResponse{}, err
+		return &v1.MsgDepositDeploymentResponse{}, err
 	}
 
 	depositor, err := sdk.AccAddressFromBech32(msg.Depositor)
 	if err != nil {
-		return &types.MsgDepositDeploymentResponse{}, err
+		return &v1.MsgDepositDeploymentResponse{}, err
 	}
 
 	eID := types.EscrowAccountForDeployment(msg.ID)
 
 	eAccount, err := ms.escrow.GetAccount(ctx, eID)
 	if err != nil {
-		return &types.MsgDepositDeploymentResponse{}, err
+		return &v1.MsgDepositDeploymentResponse{}, err
 	}
 
 	// error if depositor is not an owner and there is already exists authorization from another account
 	if (msg.Depositor != msg.ID.Owner) && eAccount.HasDepositor() && (eAccount.Depositor != msg.Depositor) {
-		return &types.MsgDepositDeploymentResponse{}, types.ErrInvalidDeploymentDepositor
+		return &v1.MsgDepositDeploymentResponse{}, v1.ErrInvalidDeploymentDepositor
 	}
 
 	if err = ms.authorizeDeposit(ctx, owner, depositor, msg.Amount); err != nil {
@@ -176,10 +183,10 @@ func (ms msgServer) DepositDeployment(goCtx context.Context, msg *types.MsgDepos
 		eID,
 		depositor,
 		msg.Amount); err != nil {
-		return &types.MsgDepositDeploymentResponse{}, err
+		return &v1.MsgDepositDeploymentResponse{}, err
 	}
 
-	return &types.MsgDepositDeploymentResponse{}, nil
+	return &v1.MsgDepositDeploymentResponse{}, nil
 }
 
 func (ms msgServer) UpdateDeployment(goCtx context.Context, msg *types.MsgUpdateDeployment) (*types.MsgUpdateDeploymentResponse, error) {
@@ -187,23 +194,23 @@ func (ms msgServer) UpdateDeployment(goCtx context.Context, msg *types.MsgUpdate
 
 	deployment, found := ms.deployment.GetDeployment(ctx, msg.ID)
 	if !found {
-		return nil, types.ErrDeploymentNotFound
+		return nil, v1.ErrDeploymentNotFound
 	}
 
 	// If the deployment is not active, do not allow it to be updated
-	if deployment.State != types.DeploymentActive {
-		return &types.MsgUpdateDeploymentResponse{}, types.ErrDeploymentClosed
+	if deployment.State != v1.DeploymentActive {
+		return &types.MsgUpdateDeploymentResponse{}, v1.ErrDeploymentClosed
 	}
 
 	// If the version is not identical do not allow the update, there is nothing to change in this transaction
-	if bytes.Equal(msg.Version, deployment.Version) {
-		return &types.MsgUpdateDeploymentResponse{}, types.ErrInvalidVersion
+	if bytes.Equal(msg.Hash, deployment.Hash) {
+		return &types.MsgUpdateDeploymentResponse{}, v1.ErrInvalidHash
 	}
 
-	deployment.Version = msg.Version
+	deployment.Hash = msg.Hash
 
 	if err := ms.deployment.UpdateDeployment(ctx, deployment); err != nil {
-		return &types.MsgUpdateDeploymentResponse{}, fmt.Errorf("%w: %s", types.ErrInternal, err.Error())
+		return &types.MsgUpdateDeploymentResponse{}, fmt.Errorf("%w: %s", v1.ErrInternal, err.Error())
 	}
 
 	return &types.MsgUpdateDeploymentResponse{}, nil
@@ -214,15 +221,15 @@ func (ms msgServer) CloseDeployment(goCtx context.Context, msg *types.MsgCloseDe
 
 	deployment, found := ms.deployment.GetDeployment(ctx, msg.ID)
 	if !found {
-		return &types.MsgCloseDeploymentResponse{}, types.ErrDeploymentNotFound
+		return &types.MsgCloseDeploymentResponse{}, v1.ErrDeploymentNotFound
 	}
 
-	if deployment.State != types.DeploymentActive {
-		return &types.MsgCloseDeploymentResponse{}, types.ErrDeploymentClosed
+	if deployment.State != v1.DeploymentActive {
+		return &types.MsgCloseDeploymentResponse{}, v1.ErrDeploymentClosed
 	}
 
 	if err := ms.escrow.AccountClose(ctx,
-		types.EscrowAccountForDeployment(deployment.ID()),
+		types.EscrowAccountForDeployment(deployment.ID),
 	); err != nil {
 		return &types.MsgCloseDeploymentResponse{}, err
 	}
@@ -237,7 +244,7 @@ func (ms msgServer) CloseGroup(goCtx context.Context, msg *types.MsgCloseGroup) 
 
 	group, found := ms.deployment.GetGroup(ctx, msg.ID)
 	if !found {
-		return nil, types.ErrGroupNotFound
+		return nil, v1.ErrGroupNotFound
 	}
 
 	// if Group already closed; return the validation error
@@ -251,7 +258,7 @@ func (ms msgServer) CloseGroup(goCtx context.Context, msg *types.MsgCloseGroup) 
 	if err != nil {
 		return nil, err
 	}
-	ms.market.OnGroupClosed(ctx, group.ID())
+	_ = ms.market.OnGroupClosed(ctx, group.ID)
 
 	return &types.MsgCloseGroupResponse{}, nil
 }
@@ -261,7 +268,7 @@ func (ms msgServer) PauseGroup(goCtx context.Context, msg *types.MsgPauseGroup) 
 
 	group, found := ms.deployment.GetGroup(ctx, msg.ID)
 	if !found {
-		return nil, types.ErrGroupNotFound
+		return nil, v1.ErrGroupNotFound
 	}
 
 	// if Group already closed; return the validation error
@@ -275,7 +282,7 @@ func (ms msgServer) PauseGroup(goCtx context.Context, msg *types.MsgPauseGroup) 
 	if err != nil {
 		return nil, err
 	}
-	ms.market.OnGroupClosed(ctx, group.ID())
+	_ = ms.market.OnGroupClosed(ctx, group.ID)
 
 	return &types.MsgPauseGroupResponse{}, nil
 }
@@ -285,7 +292,7 @@ func (ms msgServer) StartGroup(goCtx context.Context, msg *types.MsgStartGroup) 
 
 	group, found := ms.deployment.GetGroup(ctx, msg.ID)
 	if !found {
-		return &types.MsgStartGroupResponse{}, types.ErrGroupNotFound
+		return &types.MsgStartGroupResponse{}, v1.ErrGroupNotFound
 	}
 
 	err := group.ValidateStartable()
@@ -297,9 +304,22 @@ func (ms msgServer) StartGroup(goCtx context.Context, msg *types.MsgStartGroup) 
 	if err != nil {
 		return &types.MsgStartGroupResponse{}, err
 	}
-	if _, err := ms.market.CreateOrder(ctx, group.ID(), group.GroupSpec); err != nil {
+	if _, err := ms.market.CreateOrder(ctx, group.ID, group.GroupSpec); err != nil {
 		return &types.MsgStartGroupResponse{}, err
 	}
 
 	return &types.MsgStartGroupResponse{}, nil
+}
+
+func (ms msgServer) UpdateParams(goCtx context.Context, req *types.MsgUpdateParams) (*types.MsgUpdateParamsResponse, error) {
+	if ms.deployment.GetAuthority() != req.Authority {
+		return nil, govtypes.ErrInvalidSigner.Wrapf("invalid authority; expected %s, got %s", ms.deployment.GetAuthority(), req.Authority)
+	}
+
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	if err := ms.deployment.SetParams(ctx, req.Params); err != nil {
+		return nil, err
+	}
+
+	return &types.MsgUpdateParamsResponse{}, nil
 }

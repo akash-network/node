@@ -1,13 +1,13 @@
 package util
 
 import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkmath "cosmossdk.io/math"
 )
 
-func LeaseCalcBalanceRemain(balance sdk.Dec, currBlock, settledAt int64, leasePrice sdk.Dec) float64 {
+func LeaseCalcBalanceRemain(balance sdkmath.LegacyDec, currBlock, settledAt int64, leasePrice sdkmath.LegacyDec) float64 {
 	return balance.MustFloat64() - (float64(currBlock-settledAt))*leasePrice.MustFloat64()
 }
 
-func LeaseCalcBlocksRemain(balance float64, leasePrice sdk.Dec) int64 {
+func LeaseCalcBlocksRemain(balance float64, leasePrice sdkmath.LegacyDec) int64 {
 	return int64(balance / leasePrice.MustFloat64())
 }

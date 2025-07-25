@@ -1,15 +1,14 @@
 package decorators
 
 import (
-	"fmt"
-
+	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/x/authz"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	astakingkeeper "github.com/akash-network/node/x/staking/keeper"
+	astakingkeeper "pkg.akt.dev/node/x/staking/keeper"
 )
 
 type MinCommissionDecorator struct {
@@ -18,12 +17,10 @@ type MinCommissionDecorator struct {
 }
 
 func NewMinCommissionDecorator(cdc codec.BinaryCodec, k astakingkeeper.IKeeper) *MinCommissionDecorator {
-	min := &MinCommissionDecorator{
+	return &MinCommissionDecorator{
 		cdc:    cdc,
 		keeper: k,
 	}
-
-	return min
 }
 
 func (min *MinCommissionDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (newCtx sdk.Context, err error) {
@@ -35,8 +32,8 @@ func (min *MinCommissionDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simula
 }
 
 func (min *MinCommissionDecorator) isValidMsg(ctx sdk.Context, m sdk.Msg) error {
-	var rate sdk.Dec
-	var maxRate *sdk.Dec
+	var rate sdkmath.LegacyDec
+	var maxRate *sdkmath.LegacyDec
 
 	switch msg := m.(type) {
 	case *stakingtypes.MsgCreateValidator:
@@ -60,11 +57,11 @@ func (min *MinCommissionDecorator) isValidMsg(ctx sdk.Context, m sdk.Msg) error 
 	// prevent new validators joining the set with
 	// commission set below 5%
 	if rate.LT(minRate) {
-		return sdkerrors.Wrap(sdkerrors.ErrUnauthorized, fmt.Sprintf("commission can't be lower than %s%%", minRate))
+		return sdkerrors.ErrUnauthorized.Wrapf("commission can't be lower than %s%%", minRate)
 	}
 
 	if maxRate != nil && maxRate.LT(minRate) {
-		return sdkerrors.Wrap(sdkerrors.ErrUnauthorized, fmt.Sprintf("commission max rate can't be lower than %s%%", minRate))
+		return sdkerrors.ErrUnauthorized.Wrapf("commission max rate can't be lower than %s%%", minRate)
 	}
 
 	return nil
@@ -75,7 +72,7 @@ func (min *MinCommissionDecorator) isValidAuthz(ctx sdk.Context, execMsg *authz.
 		var innerMsg sdk.Msg
 		err := min.cdc.UnpackAny(v, &innerMsg)
 		if err != nil {
-			return sdkerrors.Wrapf(sdkerrors.ErrUnauthorized, "cannot unmarshal authz exec msgs")
+			return sdkerrors.ErrUnauthorized.Wrap("cannot unmarshal authz exec msgs")
 		}
 
 		err = min.isValidMsg(ctx, innerMsg)

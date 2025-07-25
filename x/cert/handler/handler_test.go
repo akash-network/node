@@ -4,27 +4,35 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/cosmos/cosmos-sdk/store"
+	"github.com/stretchr/testify/require"
+
+	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
+
+	"cosmossdk.io/log"
+	"cosmossdk.io/store"
+	storemetrics "cosmossdk.io/store/metrics"
+	storetypes "cosmossdk.io/store/types"
+	dbm "github.com/cosmos/cosmos-db"
+
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdktestdata "github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/stretchr/testify/require"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
-	dbm "github.com/tendermint/tm-db"
+	testutilmod "github.com/cosmos/cosmos-sdk/types/module/testutil"
 
-	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+	types "pkg.akt.dev/go/node/cert/v1"
 
-	"github.com/akash-network/node/testutil"
-	"github.com/akash-network/node/x/cert/handler"
-	"github.com/akash-network/node/x/cert/keeper"
+	"pkg.akt.dev/node/testutil"
+	"pkg.akt.dev/node/x/cert/handler"
+	"pkg.akt.dev/node/x/cert/keeper"
 )
 
 type testSuite struct {
 	t       testing.TB
-	ms      sdk.CommitMultiStore
+	ms      storetypes.CommitMultiStore
 	ctx     sdk.Context
 	keeper  keeper.Keeper
-	handler sdk.Handler
+	handler baseapp.MsgServiceHandler
 }
 
 func setupTestSuite(t *testing.T) *testSuite {
@@ -32,18 +40,21 @@ func setupTestSuite(t *testing.T) *testSuite {
 		t: t,
 	}
 
-	aKey := sdk.NewTransientStoreKey(types.StoreKey)
+	cfg := testutilmod.MakeTestEncodingConfig()
+	cdc := cfg.Codec
+
+	aKey := storetypes.NewTransientStoreKey(types.StoreKey)
 
 	db := dbm.NewMemDB()
-	suite.ms = store.NewCommitMultiStore(db)
-	suite.ms.MountStoreWithDB(aKey, sdk.StoreTypeIAVL, db)
+	suite.ms = store.NewCommitMultiStore(db, log.NewNopLogger(), storemetrics.NewNoOpMetrics())
+	suite.ms.MountStoreWithDB(aKey, storetypes.StoreTypeIAVL, db)
 
 	err := suite.ms.LoadLatestVersion()
 	require.NoError(t, err)
 
 	suite.ctx = sdk.NewContext(suite.ms, tmproto.Header{}, true, testutil.Logger(t))
 
-	suite.keeper = keeper.NewKeeper(types.ModuleCdc, aKey)
+	suite.keeper = keeper.NewKeeper(cdc, aKey)
 
 	suite.handler = handler.NewHandler(suite.keeper)
 
@@ -191,7 +202,7 @@ func TestCertHandlerRevoke(t *testing.T) {
 	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateValid)
 
 	msgRevoke := &types.MsgRevokeCertificate{
-		ID: types.CertificateID{
+		ID: types.ID{
 			Owner:  owner.String(),
 			Serial: cert.Serial.String(),
 		},
@@ -238,7 +249,7 @@ func TestCertHandlerRevokeCreateRevoked(t *testing.T) {
 	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateValid)
 
 	msgRevoke := &types.MsgRevokeCertificate{
-		ID: types.CertificateID{
+		ID: types.ID{
 			Owner:  owner.String(),
 			Serial: cert.Serial.String(),
 		},
@@ -283,7 +294,7 @@ func TestCertHandlerRevokeCreate(t *testing.T) {
 	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateValid)
 
 	msgRevoke := &types.MsgRevokeCertificate{
-		ID: types.CertificateID{
+		ID: types.ID{
 			Owner:  owner.String(),
 			Serial: cert.Serial.String(),
 		},

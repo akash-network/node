@@ -1,9 +1,9 @@
 package keeper
 
 import (
-	types "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
+	types "pkg.akt.dev/go/node/escrow/v1"
 )
 
-func NewQuerier(k Keeper) types.QueryServer {
+func NewQuerier(_ Keeper) types.QueryServer {
 	return nil
 }
