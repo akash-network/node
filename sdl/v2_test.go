@@ -938,3 +938,130 @@ func TestV2ParseStorageName(t *testing.T) {
 		},
 	}, mani.GetGroups()[0])
 }
+
+func TestV2ParseSimpleARM64(t *testing.T) {
+	sdl, err := ReadFile("./_testdata/simple-arm64.yaml")
+	require.NoError(t, err)
+
+	groups, err := sdl.DeploymentGroups()
+	require.NoError(t, err)
+	assert.Len(t, groups, 1)
+
+	group := groups[0]
+	assert.Len(t, group.GetResourceUnits(), 1)
+	assert.Len(t, group.Requirements.Attributes, 1)
+
+	assert.Equal(t, atypes.Attribute{
+		Key:   "region",
+		Value: "us-west",
+	}, group.Requirements.Attributes[0])
+
+	assert.Len(t, group.GetResourceUnits(), 1)
+
+	assert.Equal(t, dtypes.ResourceUnit{
+		Count: 1,
+		Resources: atypes.Resources{
+			ID: 1,
+			CPU: &atypes.CPU{
+				Units: atypes.NewResourceValue(randCPU),
+				Attributes: atypes.Attributes{
+					{
+						Key:   "capabilities/cpu/arch/arm64",
+						Value: "true",
+					},
+				},
+			},
+			GPU: &atypes.GPU{
+				Units: atypes.NewResourceValue(0),
+			},
+			Memory: &atypes.Memory{
+				Quantity: atypes.NewResourceValue(randMemory),
+			},
+			Storage: atypes.Volumes{
+				{
+					Name:     "default",
+					Quantity: atypes.NewResourceValue(randStorage),
+				},
+			},
+			Endpoints: []atypes.Endpoint{
+				{
+					Kind: atypes.Endpoint_SHARED_HTTP,
+				},
+				{
+					Kind: atypes.Endpoint_RANDOM_PORT,
+				},
+			},
+		},
+		Price: AkashDecCoin(t, 50),
+	}, group.GetResourceUnits()[0])
+
+	mani, err := sdl.Manifest()
+	require.NoError(t, err)
+
+	assert.Len(t, mani.GetGroups(), 1)
+
+	expectedHosts := make([]string, 1)
+	expectedHosts[0] = "ahostname.com"
+	assert.Equal(t, manifest.Group{
+		Name: "westcoast",
+		Services: []manifest.Service{
+			{
+				Name:  "web",
+				Image: "nginx",
+				Resources: atypes.Resources{
+					ID: 1,
+					CPU: &atypes.CPU{
+						Units: atypes.NewResourceValue(100),
+						Attributes: atypes.Attributes{
+							{
+								Key:   "capabilities/cpu/arch/arm64",
+								Value: "true",
+							},
+						},
+					},
+					GPU: &atypes.GPU{
+						Units: atypes.NewResourceValue(0),
+					},
+					Memory: &atypes.Memory{
+						Quantity: atypes.NewResourceValue(128 * unit.Mi),
+					},
+					Storage: atypes.Volumes{
+						{
+							Name:     "default",
+							Quantity: atypes.NewResourceValue(1 * unit.Gi),
+						},
+					},
+					Endpoints: []atypes.Endpoint{
+						{
+							Kind: atypes.Endpoint_SHARED_HTTP,
+						},
+						{
+							Kind: atypes.Endpoint_RANDOM_PORT,
+						},
+					},
+				},
+				Count: 1,
+				Expose: []manifest.ServiceExpose{
+					{Port: 80, Global: true, Proto: manifest.TCP, Hosts: expectedHosts,
+						HTTPOptions: manifest.ServiceExposeHTTPOptions{
+							MaxBodySize: 1048576,
+							ReadTimeout: 60000,
+							SendTimeout: 60000,
+							NextTries:   3,
+							NextTimeout: 0,
+							NextCases:   []string{"error", "timeout"},
+						}},
+					{Port: 12345, Global: true, Proto: manifest.UDP,
+						HTTPOptions: manifest.ServiceExposeHTTPOptions{
+							MaxBodySize: 1048576,
+							ReadTimeout: 60000,
+							SendTimeout: 60000,
+							NextTries:   3,
+							NextTimeout: 0,
+							NextCases:   []string{"error", "timeout"},
+						}},
+				},
+			},
+		},
+	}, mani.GetGroups()[0])
+}
