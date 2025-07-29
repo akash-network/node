@@ -99,6 +99,7 @@ while getopts ":$short_opts-:" o; do
 			WORKDIR=$OPTARG
 			;;
 		ufrom)
+			# shellcheck disable=SC2034
 			UPGRADE_FROM=$OPTARG
 			;;
 		uto)
