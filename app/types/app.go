@@ -58,13 +58,14 @@ import (
 	porttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
 	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
 	ibckeeper "github.com/cosmos/ibc-go/v8/modules/core/keeper"
-	etypes "pkg.akt.dev/go/node/escrow/v1"
 
 	atypes "pkg.akt.dev/go/node/audit/v1"
 	ctypes "pkg.akt.dev/go/node/cert/v1"
 	dtypes "pkg.akt.dev/go/node/deployment/v1"
+	dv1beta "pkg.akt.dev/go/node/deployment/v1beta3"
+	etypes "pkg.akt.dev/go/node/escrow/v1"
 	agovtypes "pkg.akt.dev/go/node/gov/v1beta3"
-	mtypes "pkg.akt.dev/go/node/market/v1beta5"
+	mtypes "pkg.akt.dev/go/node/market/v1beta4"
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 	astakingtypes "pkg.akt.dev/go/node/staking/v1beta3"
 	ttypes "pkg.akt.dev/go/node/take/v1"
@@ -426,21 +427,6 @@ func (app *App) InitNormalKeepers(
 
 	app.Keepers.Cosmos.IBC.SetRouter(ibcRouter)
 
-	// initialize the auction keeper
-	//{
-	//
-	//	auctionKeeper := auctionkeeper.NewKeeper(
-	//		cdc,
-	//		app.keys[auctiontypes.StoreKey],
-	//		app.Keepers.Cosmos.Acct,
-	//		app.Keepers.Cosmos.Bank,
-	//		app.Keepers.Cosmos.Distr,
-	//		app.Keepers.Cosmos.Staking,
-	//		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
-	//	)
-	//	app.Keepers.External.Auction = &auctionKeeper
-	//}
-
 	app.Keepers.Akash.Take = tkeeper.NewKeeper(
 		cdc,
 		app.keys[ttypes.StoreKey],
@@ -531,8 +517,8 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(icahosttypes.SubModuleName)
 
 	// akash params subspaces
-	paramsKeeper.Subspace(dtypes.ModuleName)
-	paramsKeeper.Subspace(mtypes.ModuleName)
+	paramsKeeper.Subspace(dtypes.ModuleName).WithKeyTable(dv1beta.ParamKeyTable())
+	paramsKeeper.Subspace(mtypes.ModuleName).WithKeyTable(mtypes.ParamKeyTable())
 	paramsKeeper.Subspace(astakingtypes.ModuleName).WithKeyTable(astakingtypes.ParamKeyTable()) // nolint: staticcheck // SA1019
 	paramsKeeper.Subspace(agovtypes.ModuleName).WithKeyTable(agovtypes.ParamKeyTable())         // nolint: staticcheck // SA1019
 	paramsKeeper.Subspace(ttypes.ModuleName).WithKeyTable(ttypes.ParamKeyTable())               // nolint: staticcheck // SA1019

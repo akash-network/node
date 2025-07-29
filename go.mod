@@ -17,27 +17,29 @@ require (
 	cosmossdk.io/x/feegrant v0.2.0
 	cosmossdk.io/x/upgrade v0.2.0
 	github.com/boz/go-lifecycle v0.1.1
+	github.com/coinbase/rosetta-sdk-go/types v1.0.0
 	github.com/cometbft/cometbft v0.38.17
 	github.com/cosmos/cosmos-db v1.1.1
 	github.com/cosmos/cosmos-sdk v0.53.3
 	github.com/cosmos/gogoproto v1.7.0
 	github.com/cosmos/ibc-go/modules/capability v1.0.1
 	github.com/cosmos/ibc-go/v8 v8.7.0
-	github.com/golang-jwt/jwt/v5 v5.2.2
+	github.com/cosmos/rosetta v0.50.12
+	github.com/golang-jwt/jwt/v5 v5.2.3
 	github.com/google/go-github/v62 v62.0.0
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.3
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
-	github.com/ianlancetaylor/cgosymbolizer v0.0.0-20240326020559-581a3f7c677f
+	github.com/ianlancetaylor/cgosymbolizer v0.0.0-20250410214317-b8ecc8b6bbe6
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.22.0
 	github.com/rakyll/statik v0.1.7
 	github.com/regen-network/cosmos-proto v0.3.1
 	github.com/rs/zerolog v1.34.0
-	github.com/spf13/cast v1.8.0
+	github.com/spf13/cast v1.9.2
 	github.com/spf13/cobra v1.9.1
-	github.com/spf13/pflag v1.0.6
+	github.com/spf13/pflag v1.0.7
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
 	go.step.sm/crypto v0.45.1
@@ -47,48 +49,31 @@ require (
 	google.golang.org/grpc v1.72.2
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.2
-	pkg.akt.dev/go v0.0.2-rc13
-	pkg.akt.dev/go/cli v0.0.2-rc8
-	pkg.akt.dev/go/node/migrate v0.0.6
-	pkg.akt.dev/go/sdl v0.0.1-rc12
+	pkg.akt.dev/go v0.0.3-rc0
+	pkg.akt.dev/go/cli v0.0.3-rc0
+	pkg.akt.dev/go/sdl v0.0.2-rc0
 )
 
 replace (
 	// use cosmos fork of keyring
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
 
-	// todo remove this import post upgrade
-	github.com/akash-network/akash-api => github.com/akash-network/akash-api v0.0.82-eol.5
-
 	// use akash fork of cometbft
 	github.com/cometbft/cometbft => github.com/akash-network/cometbft v0.38.17-akash.2
-
-	//github.com/coinbase/rosetta-sdk-go/types => github.com/coinbase/rosetta-sdk-go/types v1.0.0
-
 	// use akash fork of cosmos sdk
-	github.com/cosmos/cosmos-sdk => github.com/akash-network/cosmos-sdk v0.53.3-akash.3
-	//github.com/cosmos/rosetta-sdk-go => github.com/cosmos/rosetta-sdk-go v0.10.0
+	github.com/cosmos/cosmos-sdk => github.com/akash-network/cosmos-sdk v0.53.3-akash.4
 
-	// Fix upstream GHSA-h395-qcrw-5vmq vulnerability.
-	// TODO Remove it: https://github.com/cosmos/cosmos-sdk/issues/10409
-	github.com/gin-gonic/gin => github.com/gin-gonic/gin v1.8.1
 	// Use regen gogoproto fork
 	// To be replaced by cosmos/gogoproto in future versions
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 
 	// as per v0.47.x migration guide goleveldb version must be pinned for the app to work correctly
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
-	// use cometBFT system fork of tendermint with akash patches
-	// todo remove this import post upgrade
-	github.com/tendermint/tendermint => github.com/akash-network/cometbft v0.34.27-akash
 
 	// stick with compatible version or x/exp in v0.47.x line
 	golang.org/x/exp => golang.org/x/exp v0.0.0-20230711153332-06a737ee72cb
 	// stick with compatible version of rapid in v0.47.x line
 	pgregory.net/rapid => pgregory.net/rapid v0.5.5
-
-	pkg.akt.dev/go => ../chain-sdk/go
-	pkg.akt.dev/go/cli => ../chain-sdk/go/cli
 )
 
 require (
@@ -112,6 +97,8 @@ require (
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.26.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.48.1 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.48.1 // indirect
+	github.com/PuerkitoBio/purell v1.1.1 // indirect
+	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/aws/aws-sdk-go v1.44.224 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
@@ -140,6 +127,7 @@ require (
 	github.com/cosmos/iavl v1.2.2 // indirect
 	github.com/cosmos/ics23/go v0.11.0 // indirect
 	github.com/cosmos/ledger-cosmos-go v0.14.0 // indirect
+	github.com/cosmos/rosetta-sdk-go v0.10.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.6 // indirect
 	github.com/danieljoos/wincred v1.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
@@ -183,6 +171,7 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.4 // indirect
 	github.com/googleapis/gax-go/v2 v2.14.1 // indirect
 	github.com/gorilla/handlers v1.5.2 // indirect
+	github.com/goware/urlx v0.3.2 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0 // indirect
 	github.com/gsterjov/go-libsecret v0.0.0-20161001094733-a6f4afe4910c // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
@@ -217,6 +206,7 @@ require (
 	github.com/minio/highwayhash v1.0.3 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
+	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/mtibben/percent v0.2.1 // indirect

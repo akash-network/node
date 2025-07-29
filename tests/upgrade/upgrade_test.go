@@ -15,6 +15,7 @@ import (
 	"os/signal"
 	"regexp"
 	"runtime"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"syscall"
@@ -871,13 +872,20 @@ func (l *validator) run() error {
 		defer l.t.Logf("[%s] log scanner finished", l.params.name)
 		l.t.Logf("[%s] log scanner started", l.params.name)
 
+		var err error
 		defer func() {
 			if r := recover(); r != nil {
+				l.t.Logf("%s", string(debug.Stack()))
 				l.t.Fatal(r)
+			}
+
+			if err != nil {
+				l.t.Logf("%s", err.Error())
 			}
 		}()
 
-		return l.scanner(rStdout, l.pubsub)
+		err = l.scanner(rStdout, l.pubsub)
+		return err
 	})
 
 	l.group.Go(func() error {
@@ -1153,7 +1161,7 @@ loop:
 		switch module.status {
 		case testModuleStatusChecked:
 			if !module.expected.compare(module.actual) {
-				merr := "migration for module (%s) finished with mismatched versions:\n"
+				merr := fmt.Sprintf("migration for module (%s) finished with mismatched versions:\n", name)
 				merr += "\texpected:\n"
 
 				for _, m := range module.expected {
@@ -1259,7 +1267,7 @@ func (l *validator) scanner(stdout io.Reader, p publisher) error {
 	addingNewModule := "INF adding a new module: "
 	migratingModule := "INF migrating module "
 
-	rNewModule, err := regexp.Compile(`^` + addingNewModule + `(\w+)$`)
+	rNewModule, err := regexp.Compile(`^` + addingNewModule + `(.+) (.+)$`)
 	if err != nil {
 		return err
 	}
@@ -1288,12 +1296,19 @@ scan:
 		} else if strings.Contains(line, addingNewModule) {
 			evt.id = nodeEventAddedModule
 			res := rNewModule.FindAllStringSubmatch(line, -1)
+			if len(res) != 1 && len(res) != 3 {
+				return fmt.Errorf("line \"%s\" does not match regex \"%s\"", line, rNewModule.String())
+			}
 			evt.ctx = eventCtxModule{
 				name: res[0][1],
 			}
 		} else if strings.Contains(line, migratingModule) {
 			evt.id = nodeEventModuleMigration
 			res := rModuleMigration.FindAllStringSubmatch(line, -1)
+			if len(res) != 1 && len(res) != 4 {
+				return fmt.Errorf("line \"%s\" does not match regex \"%s\"", line, rModuleMigration.String())
+			}
+
 			evt.ctx = eventCtxModuleMigration{
 				name: res[0][1],
 				from: res[0][2],

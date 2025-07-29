@@ -19,7 +19,7 @@ func init() {
 
 	utypes.RegisterMigration(av1.ModuleName, 2, newAuditMigration)
 	utypes.RegisterMigration(cv1.ModuleName, 3, newCertsMigration)
-	utypes.RegisterMigration(dv1.ModuleName, 5, newDeploymentsMigration)
+	utypes.RegisterMigration(dv1.ModuleName, 4, newDeploymentsMigration)
 	utypes.RegisterMigration(ev1.ModuleName, 2, newEscrowMigration)
 	utypes.RegisterMigration(mv1.ModuleName, 6, newMarketMigration)
 	utypes.RegisterMigration(pv1.ModuleName, 2, newProviderMigration)

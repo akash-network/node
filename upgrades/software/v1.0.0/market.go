@@ -44,6 +44,7 @@ func (m marketMigrations) handler(ctx sdk.Context) error {
 	var ordersOpen uint64
 	var ordersActive uint64
 	var ordersClosed uint64
+
 	for ; oiter.Valid(); oiter.Next() {
 		nVal := migrate.OrderFromV1beta4(cdc, oiter.Value())
 

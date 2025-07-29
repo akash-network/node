@@ -10,6 +10,7 @@ import (
 	authzmodule "github.com/cosmos/cosmos-sdk/x/authz/module"
 	"github.com/cosmos/cosmos-sdk/x/bank"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	"github.com/cosmos/cosmos-sdk/x/consensus"
 	"github.com/cosmos/ibc-go/modules/capability"
 	"pkg.akt.dev/go/sdkutil"
 
@@ -144,11 +145,10 @@ func appModules(
 		params.NewAppModule(
 			app.Keepers.Cosmos.Params,
 		),
-		//crisis.NewAppModule(
-		//	app.Keepers.Cosmos.Crisis,
-		//	skipGenesisInvariants,
-		//	app.GetSubspace(crisistypes.ModuleName),
-		//),
+		consensus.NewAppModule(
+			cdc,
+			*app.Keepers.Cosmos.ConsensusParams,
+		),
 		// akash modules
 		take.NewAppModule(
 			app.cdc,
@@ -192,10 +192,6 @@ func appModules(
 			app.cdc,
 			app.Keepers.Akash.Cert,
 		),
-		//auction.NewAppModule(
-		//	app.cdc,
-		//	*app.Keepers.External.Auction,
-		//),
 	}
 }
 
@@ -283,6 +279,10 @@ func appSimModules(
 		params.NewAppModule(
 			app.Keepers.Cosmos.Params,
 		),
+		//consensus.NewAppModule(
+		//	app.cdc,
+		//	*app.Keepers.Cosmos.ConsensusParams,
+		//),
 		evidence.NewAppModule(
 			*app.Keepers.Cosmos.Evidence,
 		),
@@ -292,11 +292,6 @@ func appSimModules(
 		transfer.NewAppModule(
 			app.Keepers.Cosmos.Transfer,
 		),
-		// auction.NewAppModule(
-		// 	app.cdc,
-		// 	*app.Keepers.External.Auction,
-		// ),
-
 		// akash sim modules
 		take.NewAppModule(
 			app.cdc,

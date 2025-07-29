@@ -15,7 +15,6 @@ import (
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	consensustypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
-	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
@@ -327,12 +326,6 @@ func TestAppImportExport(t *testing.T) {
 			[][]byte{},
 		},
 		{
-			crisistypes.StoreKey,
-			appA,
-			appB,
-			[][]byte{},
-		},
-		{
 			atypes.StoreKey,
 			appA,
 			appB,
@@ -469,8 +462,7 @@ func TestAppStateDeterminism(t *testing.T) {
 	}
 
 	encodingConfig := sdkutil.MakeEncodingConfig()
-
-	`akash.ModuleBasics().RegisterInterfaces(encodingConfig.InterfaceRegistry)`
+	akash.ModuleBasics().RegisterInterfaces(encodingConfig.InterfaceRegistry)
 
 	config := sim.NewConfigFromFlags()
 	config.InitialBlockHeight = 1

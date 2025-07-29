@@ -304,6 +304,9 @@ function init() {
 
 		AKASH=$genesis_bin/akash
 
+		genesis_file=${valdir}/config/genesis.json
+		rm -f "$genesis_file"
+
 		$AKASH init --home "$valdir" "$(jq -rc '.moniker' <<<"$val")" >/dev/null 2>&1
 
 		if [[ $cnt -eq 0 ]]; then
@@ -431,7 +434,8 @@ function prepare_state() {
 
 			popd
 
-			$AKASH testnetify --home="$valdir" --testnet-rootdir="$validators_dir" --testnet-config="${STATE_CONFIG}" --yes
+			$AKASH testnetify --home="$valdir" --testnet-rootdir="$validators_dir" --testnet-config="${STATE_CONFIG}" --yes || true
+
 		else
 			pushd "$(pwd)"
 			cd "${valdir}"

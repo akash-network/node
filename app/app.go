@@ -49,7 +49,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/authz"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
-	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
@@ -298,7 +297,7 @@ func orderBeginBlockers(_ []string) []string {
 		audittypes.ModuleName,
 		genutiltypes.ModuleName,
 		vestingtypes.ModuleName,
-		crisistypes.ModuleName,
+		//crisistypes.ModuleName,
 		authtypes.ModuleName,
 		authz.ModuleName,
 		taketypes.ModuleName,
@@ -308,7 +307,7 @@ func orderBeginBlockers(_ []string) []string {
 		slashingtypes.ModuleName,
 		evidencetypes.ModuleName,
 		stakingtypes.ModuleName,
-		astaking.ModuleName,
+		//astaking.ModuleName,
 		transfertypes.ModuleName,
 		ibchost.ModuleName,
 		feegrant.ModuleName,
@@ -318,7 +317,7 @@ func orderBeginBlockers(_ []string) []string {
 // OrderEndBlockers returns EndBlockers (crisis, govtypes, staking) with no relative order.
 func OrderEndBlockers(_ []string) []string {
 	return []string{
-		crisistypes.ModuleName,
+		//crisistypes.ModuleName,
 		govtypes.ModuleName,
 		stakingtypes.ModuleName,
 		astaking.ModuleName,

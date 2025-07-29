@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"pkg.akt.dev/go/cli"
@@ -12,15 +11,17 @@ import (
 	cmtcfg "github.com/cometbft/cometbft/config"
 	cmtcli "github.com/cometbft/cometbft/libs/cli"
 
-	"github.com/cosmos/cosmos-sdk/client/pruning"
-	"github.com/cosmos/cosmos-sdk/client/snapshot"
-
+	_ "github.com/coinbase/rosetta-sdk-go/types"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/debug"
 	"github.com/cosmos/cosmos-sdk/client/keys"
+	"github.com/cosmos/cosmos-sdk/client/pruning"
+	"github.com/cosmos/cosmos-sdk/client/snapshot"
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
+	rosettaCmd "github.com/cosmos/rosetta/cmd"
 
 	cflags "pkg.akt.dev/go/cli/flags"
 	"pkg.akt.dev/go/sdkutil"
@@ -131,7 +132,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig sdkutil.EncodingConfig) 
 		genesisCommand(encodingConfig),
 		cmtcli.NewCompletionCmd(rootCmd, true),
 		debugCmd,
-		//rosettaCmd.RosettaCommand(encodingConfig.InterfaceRegistry, encodingConfig.Codec),
+		rosettaCmd.RosettaCommand(encodingConfig.InterfaceRegistry, encodingConfig.Codec),
 		pruning.Cmd(ac.newApp, home),
 		snapshot.Cmd(ac.newApp),
 		testnetCmd(app.ModuleBasics(), banktypes.GenesisBalancesIterator{}),
