@@ -2,6 +2,7 @@ package testnetify
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -26,6 +27,7 @@ import (
 	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 
 	dbm "github.com/cosmos/cosmos-db"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -165,6 +167,15 @@ you want to test the upgrade handler itself.
 				return err
 			}
 
+			ctx, cancelFn := context.WithCancel(cmd.Context())
+
+			getCtx := func(svrCtx *server.Context, block bool) (*errgroup.Group, context.Context) {
+				g, ctx := errgroup.WithContext(ctx)
+				// listen for quit signals so the calling parent process can gracefully exit
+				server.ListenForQuitSignals(g, block, cancelFn, svrCtx.Logger)
+				return g, ctx
+			}
+
 			defer func() {
 				traceCleanupFn()
 				if localErr := app.Close(); localErr != nil {
@@ -174,11 +185,8 @@ you want to test the upgrade handler itself.
 
 			go func() {
 				defer func() {
-					if proc, err := os.FindProcess(os.Getpid()); err == nil {
-						_ = proc.Signal(os.Interrupt)
-					}
+					cancelFn()
 				}()
-				ctx := cmd.Context()
 
 				cctx, err := client.GetClientQueryContext(cmd)
 				if err != nil {
@@ -225,7 +233,9 @@ you want to test the upgrade handler itself.
 				}
 			}()
 
-			err = sdksrv.StartInProcess(sctx, srvCfg, cctx, app, metrics, sdksrv.StartCmdOptions{})
+			err = sdksrv.StartInProcess(sctx, srvCfg, cctx, app, metrics, sdksrv.StartCmdOptions{
+				GetCtx: getCtx,
+			})
 			if err != nil && !strings.Contains(err.Error(), "130") {
 				sctx.Logger.Error("testnetify finished with error", "err", err.Error())
 				return err

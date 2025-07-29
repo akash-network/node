@@ -25,7 +25,7 @@ REMOTE_TEST_WORKDIR     ?= ~/go/src/github.com/akash-network/node
 REMOTE_TEST_HOST        ?=
 
 $(AKASH_INIT):
-	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --gbv=$(GENESIS_BINARY_VERSION) --ufrom=$(UPGRADE_FROM) --uto=$(UPGRADE_TO) --config="$(PWD)/config.json" init
+	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --gbv=$(GENESIS_BINARY_VERSION) --ufrom=$(UPGRADE_FROM) --uto=$(UPGRADE_TO) --config="$(PWD)/config.json" --state-config=$(STATE_CONFIG) init
 	touch $@
 
 .PHONY: init
@@ -49,6 +49,7 @@ test-reset:
 	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) clean
 	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) --gbv=$(GENESIS_BINARY_VERSION) bins
 	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) keys
+	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --state-config=$(STATE_CONFIG) prepare-state
 
 .PHONY: prepare-state
 prepare-state:

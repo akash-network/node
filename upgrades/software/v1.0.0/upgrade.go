@@ -4,7 +4,6 @@ package v1_0_0
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
 	"time"
@@ -14,18 +13,25 @@ import (
 	storetypes "cosmossdk.io/store/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	"github.com/cosmos/cosmos-sdk/baseapp"
+	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	vestingtypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
+	"github.com/cosmos/cosmos-sdk/x/authz/keeper"
+	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	consensustypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	dv1beta "pkg.akt.dev/go/node/deployment/v1beta4"
+	mv1 "pkg.akt.dev/go/node/market/v1beta5"
 
-	dv1beta3 "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
+	dv1 "pkg.akt.dev/go/node/deployment/v1"
+	dv1beta3 "pkg.akt.dev/go/node/deployment/v1beta3"
 	agovtypes "pkg.akt.dev/go/node/gov/v1beta3"
+	mv1beta4 "pkg.akt.dev/go/node/market/v1beta4"
 	astakingtypes "pkg.akt.dev/go/node/staking/v1beta3"
 	taketypes "pkg.akt.dev/go/node/take/v1"
 
@@ -57,9 +63,7 @@ func (up *upgrade) StoreLoader() *storetypes.StoreUpgrades {
 	return &storetypes.StoreUpgrades{
 		Added: []string{
 			// With the migrations of all modules away from x/params, the crisis module now has a store.
-			// The store must be created during a chain upgrade to v0.47.x.
-
-			// Because the x/consensus module is a new module, its store must be added while upgrading to v0.47.x:
+			// The store must be created during a chain upgrade to v0.53.x.
 			consensustypes.ModuleName,
 		},
 		Deleted: []string{
@@ -122,8 +126,8 @@ func CanCreateModuleAccountAtAddr(ctx sdk.Context, ak AccountKeeper, addr sdk.Ac
 		return nil
 	}
 
-	return errors.New("cannot create module account %s, " +
-		"due to an account at that address already existing & not being an overridable type")
+	return fmt.Errorf("cannot create module account %s, "+
+		"due to an account at that address already existing & not being an overridable type", existingAcct)
 }
 
 // CreateModuleAccountByName creates a module account at the provided name
@@ -162,7 +166,7 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 			return nil, fmt.Errorf("params subspace \"%s\" not found", stakingtypes.ModuleName)
 		}
 
-		up.log.Info("migrating take params to store")
+		up.log.Info("migrating x/take to self-managed params")
 		sspace, exists = up.Keepers.Cosmos.Params.GetSubspace(taketypes.ModuleName)
 		if !exists {
 			return nil, fmt.Errorf("params subspace \"%s\" not found", taketypes.ModuleName)
@@ -177,7 +181,47 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 			return nil, err
 		}
 
-		up.log.Info(fmt.Sprintf("migrating param agov.MinInitialDepositRate to gov.MinInitialDepositRatio"))
+		up.log.Info("migrating x/deployment to self-managed params")
+		sspace, exists = up.Keepers.Cosmos.Params.GetSubspace(dv1.ModuleName)
+		if !exists {
+			return nil, fmt.Errorf("params subspace \"%s\" not found", dv1.ModuleName)
+		}
+
+		deplParams := &dv1beta3.Params{}
+		sspace.GetParamSet(sctx, deplParams)
+
+		nDeplParams := dv1beta.Params{
+			MinDeposits: make(sdk.Coins, 0, len(deplParams.MinDeposits)),
+		}
+
+		for _, coin := range deplParams.MinDeposits {
+			nDeplParams.MinDeposits = append(nDeplParams.MinDeposits, sdk.Coin{
+				Denom:  coin.Denom,
+				Amount: sdkmath.NewIntFromBigInt(coin.Amount.BigInt()),
+			})
+		}
+		err = up.Keepers.Akash.Deployment.SetParams(sctx, nDeplParams)
+		if err != nil {
+			return nil, err
+		}
+
+		up.log.Info("migrating x/market to self-managed params")
+		sspace, exists = up.Keepers.Cosmos.Params.GetSubspace(mv1.ModuleName)
+		if !exists {
+			return nil, fmt.Errorf("params subspace \"%s\" not found", mv1.ModuleName)
+		}
+
+		mParams := &mv1beta4.Params{}
+		sspace.GetParamSet(sctx, mParams)
+
+		err = up.Keepers.Akash.Market.SetParams(sctx, mv1.Params{
+			BidMinDeposit: mParams.BidMinDeposit,
+			OrderMaxBids:  mParams.OrderMaxBids,
+		})
+		if err != nil {
+			return nil, err
+		}
+
 		sspace, exists = up.Keepers.Cosmos.Params.GetSubspace("agov")
 		if !exists {
 			return nil, fmt.Errorf("params subspace \"%s\" not found", "agov")
@@ -185,6 +229,14 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 
 		dparams := agovtypes.DepositParams{}
 		sspace.Get(sctx, agovtypes.KeyDepositParams, &dparams)
+
+		sspace, exists = up.Keepers.Cosmos.Params.GetSubspace(astakingtypes.ModuleName)
+		if !exists {
+			return nil, fmt.Errorf("params subspace \"%s\" not found", astakingtypes.ModuleName)
+		}
+
+		sparam := sdkmath.LegacyDec{}
+		sspace.Get(sctx, astakingtypes.KeyMinCommissionRate, &sparam)
 
 		toVM, err := up.MM.RunMigrations(ctx, up.Configurator, fromVM)
 		if err != nil {
@@ -196,6 +248,15 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 		if err != nil {
 			return nil, err
 		}
+
+		err = up.updateSecondaryIndexForAuthz(sctx)
+		if err != nil {
+			return nil, err
+		}
+
+		up.log.Info(fmt.Sprintf("migrating param agov.MinInitialDepositRate to gov.MinInitialDepositRatio"))
+		up.log.Info(fmt.Sprintf("setting gov.ExpeditedMinDeposit to 2000akt"))
+		up.log.Info(fmt.Sprintf("setting gov.ExpeditedThreshold to 67%%"))
 
 		// Migrate governance min deposit parameter to builtin gov params
 		gparams, err := up.Keepers.Cosmos.Gov.Params.Get(ctx)
@@ -218,14 +279,6 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 		}
 
 		up.log.Info(fmt.Sprintf("migrating param astaking.MinCommissionRate to staking.MinCommissionRate"))
-		sspace, exists = up.Keepers.Cosmos.Params.GetSubspace(astakingtypes.ModuleName)
-		if !exists {
-			return nil, fmt.Errorf("params subspace \"%s\" not found", astakingtypes.ModuleName)
-		}
-
-		sparam := sdkmath.LegacyDec{}
-		sspace.Get(sctx, astakingtypes.KeyMinCommissionRate, &sparam)
-
 		sparams, err := up.Keepers.Cosmos.Staking.GetParams(sctx)
 		if err != nil {
 			return nil, err
@@ -236,6 +289,8 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 		if err != nil {
 			return nil, err
 		}
+
+		up.log.Info(fmt.Sprintf("all migrations have been completed"))
 
 		return toVM, err
 	}
@@ -250,59 +305,72 @@ type grantBackup struct {
 }
 
 func (up *upgrade) patchDepositAuthorizations(ctx sdk.Context) error {
-	//msgUrlOld := "/akash.deployment.v1beta3.MsgDepositDeployment"
-	//
-	//grants := make([]grantBackup, 0, 10000)
+	msgUrlOld := "/akash.deployment.v1beta3.MsgDepositDeployment"
 
-	expiredGrants := 0
-
+	var err error
+	up.log.Info(fmt.Sprintf("migrating \"/akash.deployment.v1beta3.MsgDepositDeployment\" to \"%s\"", (&dv1.DepositAuthorization{}).MsgTypeURL()))
 	up.Keepers.Cosmos.Authz.IterateGrants(ctx, func(granterAddr sdk.AccAddress, granteeAddr sdk.AccAddress, grant authz.Grant) bool {
-		//authorization, err := grant.GetAuthorization()
-		//if err != nil {
-		//	up.log.Error(fmt.Sprintf("unable to get autorization. err=%s", err.Error()))
-		//	return false
-		//}
-		//
-		//if grant.Expiration.Before(ctx.BlockHeader().Time) {
-		//	expiredGrants++
-		//	return false
-		//}
-		//
-		//authzOld, valid := authorization.(*dv1beta3.DepositDeploymentAuthorization)
-		//if !valid {
-		//	return false
-		//}
-		//
-		//grants = append(grants, grantBackup{
-		//	murl:       msgUrlOld,
-		//	granter:    granterAddr,
-		//	grantee:    granteeAddr,
-		//	expiration: grant.Expiration,
-		//	auth:       authzOld,
-		//})
+		var authorization authz.Authorization
+		authorization, err = grant.GetAuthorization()
+		if err != nil {
+			up.log.Error(fmt.Sprintf("unable to get authorization. err=%s", err.Error()))
+			return false
+		}
+
+		authzOld, valid := authorization.(*dv1beta3.DepositDeploymentAuthorization)
+		if !valid {
+			return false
+		}
+
+		err = up.Keepers.Cosmos.Authz.DeleteGrant(ctx, granteeAddr, granterAddr, msgUrlOld)
+		if err != nil {
+			up.log.Error(fmt.Sprintf("unable to delete autorization. err=%s", err.Error()))
+			return true
+		}
+
+		authzNew := dv1.NewDepositAuthorization(authzOld.SpendLimit)
+		err = up.Keepers.Cosmos.Authz.SaveGrant(ctx, granteeAddr, granterAddr, authzNew, grant.Expiration)
+		if err != nil {
+			up.log.Error(fmt.Sprintf("unable to save autorization. err=%s", err.Error()))
+			return true
+		}
 
 		return false
 	})
+	if err != nil {
+		return err
+	}
 
-	//err := up.Keepers.Cosmos.Authz.DequeueAndDeleteExpiredGrants(ctx, expiredGrants)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//for _, grant := range grants {
-	//	err := up.Keepers.Cosmos.Authz.DeleteGrant(ctx, grant.grantee, grant.granter, grant.murl)
-	//	if err != nil {
-	//		up.log.Error(fmt.Sprintf("unable to delete autorization. err=%s", err.Error()))
-	//	}
-	//
-	//	authzNew := dv1.NewDepositAuthorization(grant.auth.SpendLimit)
-	//	err = up.Keepers.Cosmos.Authz.SaveGrant(ctx, grant.grantee, grant.granter, authzNew, grant.expiration)
-	//	if err != nil {
-	//		return err
-	//	}
-	//}
+	up.log.Info("cleaning expired grants")
+	err = up.Keepers.Cosmos.Authz.DequeueAndDeleteExpiredGrants(ctx)
+	if err != nil {
+		return err
+	}
+	up.log.Info("cleaning expired grants - DONE")
 
-	up.log.Info(fmt.Sprintf("cleaned %d expired grants", expiredGrants))
+	return nil
+}
+
+func (up *upgrade) updateSecondaryIndexForAuthz(ctx sdk.Context) error {
+	storeSvc := runtime.NewKVStoreService(up.GetKey(authzkeeper.StoreKey))
+	store1 := runtime.KVStoreAdapter(storeSvc.OpenKVStore(ctx))
+	store := storeSvc.OpenKVStore(ctx)
+
+	store1.Delete(authzkeeper.GranteeKey)
+
+	iter := storetypes.KVStorePrefixIterator(store1, keeper.GrantKey)
+
+	defer func() {
+		_ = iter.Close()
+	}()
+
+	for ; iter.Valid(); iter.Next() {
+		granter, grantee, _ := keeper.ParseGrantStoreKey(iter.Key())
+		err := keeper.IncGranteeGrants(store, grantee, granter)
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }

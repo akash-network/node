@@ -19,7 +19,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
@@ -156,15 +155,15 @@ func PrepareGenesis(clientCtx client.Context, appState map[string]json.RawMessag
 	appState[govtypes.ModuleName] = govGenStateBz
 
 	// crisis module genesis
-	crisisGenState := crisistypes.DefaultGenesisState()
-	crisisGenState.ConstantFee = genesisParams.CrisisConstantFee
-	// TODO Set initial community pool
-	// distributionGenState.FeePool.CommunityPool = sdk.NewDecCoins()
-	crisisGenStateBz, err := cdc.MarshalJSON(crisisGenState)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to marshal crisis genesis state: %w", err)
-	}
-	appState[crisistypes.ModuleName] = crisisGenStateBz
+	//crisisGenState := crisistypes.DefaultGenesisState()
+	//crisisGenState.ConstantFee = genesisParams.CrisisConstantFee
+	//// TODO Set initial community pool
+	//// distributionGenState.FeePool.CommunityPool = sdk.NewDecCoins()
+	//crisisGenStateBz, err := cdc.MarshalJSON(crisisGenState)
+	//if err != nil {
+	//	return nil, nil, fmt.Errorf("failed to marshal crisis genesis state: %w", err)
+	//}
+	//appState[crisistypes.ModuleName] = crisisGenStateBz
 
 	// slashing module genesis
 	slashingGenState := slashingtypes.DefaultGenesisState()

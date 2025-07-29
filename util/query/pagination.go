@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"hash/crc32"
 
-	"github.com/akash-network/node/util/validation"
+	"pkg.akt.dev/node/util/validation"
 )
 
 var (

@@ -3,11 +3,12 @@
 package v1_0_0
 
 import (
+	"fmt"
+
 	"cosmossdk.io/store/prefix"
-	storetypes "cosmossdk.io/store/types"
-	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkmodule "github.com/cosmos/cosmos-sdk/types/module"
+	etypes "pkg.akt.dev/go/node/escrow/v1"
 	"pkg.akt.dev/go/node/migrate"
 
 	utypes "pkg.akt.dev/node/upgrades/types"
@@ -30,28 +31,34 @@ func (m escrowMigrations) GetHandler() sdkmodule.MigrationHandler {
 func (m escrowMigrations) handler(ctx sdk.Context) error {
 	store := ctx.KVStore(m.StoreKey())
 
-	if err := migrateAccounts(store, m.Codec()); err != nil {
-		return err
-	}
-
-	if err := migratePayments(store, m.Codec()); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func migrateAccounts(store storetypes.KVStore, cdc codec.BinaryCodec) (err error) {
 	oStore := prefix.NewStore(store, migrate.AccountV1beta3Prefix())
 
 	iter := oStore.Iterator(nil, nil)
 	defer func() {
-		err = iter.Close()
+		_ = iter.Close()
 	}()
+
+	cdc := m.Codec()
+
+	var accountsTotal uint64
+	var accountsActive uint64
+	var accountsClosed uint64
+	var accountsOverdrawn uint64
 
 	for ; iter.Valid(); iter.Next() {
 		nVal := migrate.AccountFromV1beta3(cdc, iter.Value())
 		bz := cdc.MustMarshal(&nVal)
+
+		switch nVal.State {
+		case etypes.AccountOpen:
+			accountsActive++
+		case etypes.AccountClosed:
+			accountsClosed++
+		case etypes.AccountOverdrawn:
+			accountsOverdrawn++
+		}
+
+		accountsTotal++
 
 		key := ekeeper.AccountKey(nVal.ID)
 
@@ -59,26 +66,51 @@ func migrateAccounts(store storetypes.KVStore, cdc codec.BinaryCodec) (err error
 		store.Set(key, bz)
 	}
 
-	return nil
-}
+	oStore = prefix.NewStore(store, migrate.PaymentV1beta3Prefix())
 
-func migratePayments(store storetypes.KVStore, cdc codec.BinaryCodec) (err error) {
-	oStore := prefix.NewStore(store, migrate.PaymentV1beta3Prefix())
-
-	iter := oStore.Iterator(nil, nil)
+	iter = oStore.Iterator(nil, nil)
 	defer func() {
-		err = iter.Close()
+		_ = iter.Close()
 	}()
+
+	var paymentsTotal uint64
+	var paymentsActive uint64
+	var paymentsClosed uint64
+	var paymentsOverdrawn uint64
 
 	for ; iter.Valid(); iter.Next() {
 		nVal := migrate.FractionalPaymentFromV1beta3(cdc, iter.Value())
 		bz := cdc.MustMarshal(&nVal)
+
+		switch nVal.State {
+		case etypes.PaymentOpen:
+			paymentsActive++
+		case etypes.PaymentClosed:
+			paymentsClosed++
+		case etypes.PaymentOverdrawn:
+			paymentsOverdrawn++
+		}
+
+		paymentsTotal++
 
 		key := ekeeper.PaymentKey(nVal.AccountID, nVal.PaymentID)
 
 		oStore.Delete(iter.Key())
 		store.Set(key, bz)
 	}
+
+	ctx.Logger().Info(fmt.Sprintf("[upgrade %s]: updated x/escrow store keys:"+
+		"\n\taccounts total:              %d"+
+		"\n\taccounts open:               %d"+
+		"\n\taccounts closed:             %d"+
+		"\n\taccounts overdrawn:          %d"+
+		"\n\tpayments total:              %d"+
+		"\n\tpayments open:               %d"+
+		"\n\tpayments closed:             %d"+
+		"\n\tpayments overdrawn:          %d",
+		UpgradeName,
+		accountsTotal, accountsActive, accountsClosed, accountsOverdrawn,
+		paymentsTotal, paymentsActive, paymentsClosed, paymentsOverdrawn))
 
 	return nil
 }

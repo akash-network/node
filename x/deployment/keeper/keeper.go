@@ -93,6 +93,7 @@ func (k Keeper) GetParams(ctx sdk.Context) (p types.Params) {
 	}
 
 	k.cdc.MustUnmarshal(bz, &p)
+
 	return p
 }
 
