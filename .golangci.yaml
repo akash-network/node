@@ -17,25 +17,25 @@ linters:
     - staticcheck
     - unparam
     - unused
-  settings:
-    gocritic:
-      disabled-checks:
-        - ifElseChain
-        - singleCaseSwitch
-  exclusions:
-    generated: lax
-    presets:
-      - comments
-      - common-false-positives
-      - legacy
-      - std-error-handling
-    rules:
-      - path: (.+)\.go$
-        text: comment on exported (method|function|type|const|var)
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
+settings:
+  gocritic:
+    disabled-checks:
+      - ifElseChain
+      - singleCaseSwitch
+exclusions:
+  generated: lax
+  presets:
+    - comments
+    - common-false-positives
+    - legacy
+    - std-error-handling
+  rules:
+    - path: (.+)\.go$
+      text: comment on exported (method|function|type|const|var)
+  paths:
+    - third_party$
+    - builtin$
+    - examples$
 formatters:
   enable:
     - gofmt
