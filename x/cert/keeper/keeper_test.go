@@ -17,8 +17,8 @@ import (
 	testutilmod "github.com/cosmos/cosmos-sdk/types/module/testutil"
 
 	types "pkg.akt.dev/go/node/cert/v1"
+	"pkg.akt.dev/go/testutil"
 
-	"pkg.akt.dev/node/testutil"
 	"pkg.akt.dev/node/x/cert/keeper"
 )
 
@@ -26,6 +26,7 @@ func TestCertKeeperCreate(t *testing.T) {
 	ctx, keeper := setupKeeper(t)
 
 	owner := testutil.AccAddress(t)
+
 	cert := testutil.Certificate(t, owner)
 
 	err := keeper.CreateCertificate(ctx, owner, cert.PEM.Cert, cert.PEM.Pub)
@@ -41,7 +42,9 @@ func TestCertKeeperCreate(t *testing.T) {
 
 func TestCertKeeperCreateOwnerMismatch(t *testing.T) {
 	ctx, keeper := setupKeeper(t)
+
 	owner := testutil.AccAddress(t)
+
 	cert := testutil.Certificate(t, owner)
 
 	err := keeper.CreateCertificate(ctx, testutil.AccAddress(t), cert.PEM.Cert, cert.PEM.Pub)
@@ -61,6 +64,7 @@ func TestCertKeeperCreateOwnerMismatch(t *testing.T) {
 
 func TestCertKeeperMultipleActive(t *testing.T) {
 	ctx, keeper := setupKeeper(t)
+
 	owner := testutil.AccAddress(t)
 	cert := testutil.Certificate(t, owner)
 
@@ -98,7 +102,9 @@ func TestCertKeeperMultipleActive(t *testing.T) {
 
 func TestCertKeeperRevoke(t *testing.T) {
 	ctx, keeper := setupKeeper(t)
+
 	owner := testutil.AccAddress(t)
+
 	cert := testutil.Certificate(t, owner)
 
 	err := keeper.CreateCertificate(ctx, owner, cert.PEM.Cert, cert.PEM.Pub)
@@ -133,7 +139,9 @@ func TestCertKeeperRevoke(t *testing.T) {
 
 func TestCertKeeperRevokeCreateRevoked(t *testing.T) {
 	ctx, keeper := setupKeeper(t)
+
 	owner := testutil.AccAddress(t)
+
 	cert := testutil.Certificate(t, owner)
 
 	err := keeper.CreateCertificate(ctx, owner, cert.PEM.Cert, cert.PEM.Pub)
@@ -164,7 +172,9 @@ func TestCertKeeperRevokeCreateRevoked(t *testing.T) {
 
 func TestCertKeeperRevokeCreate(t *testing.T) {
 	ctx, keeper := setupKeeper(t)
+
 	owner := testutil.AccAddress(t)
+
 	cert := testutil.Certificate(t, owner)
 
 	err := keeper.CreateCertificate(ctx, owner, cert.PEM.Cert, cert.PEM.Pub)
@@ -190,6 +200,7 @@ func TestCertKeeperRevokeCreate(t *testing.T) {
 	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateRevoked)
 
 	cert1 := testutil.Certificate(t, owner)
+
 	err = keeper.CreateCertificate(ctx, owner, cert1.PEM.Cert, cert1.PEM.Pub)
 	require.NoError(t, err)
 }

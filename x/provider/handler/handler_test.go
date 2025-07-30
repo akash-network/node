@@ -4,18 +4,17 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/stretchr/testify/require"
 
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdktestdata "github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	types "pkg.akt.dev/go/node/provider/v1beta4"
-
 	akashtypes "pkg.akt.dev/go/node/types/attributes/v1"
+	"pkg.akt.dev/go/testutil"
 
-	"pkg.akt.dev/node/testutil"
 	"pkg.akt.dev/node/testutil/state"
 	mkeeper "pkg.akt.dev/node/x/market/keeper"
 	"pkg.akt.dev/node/x/provider/handler"

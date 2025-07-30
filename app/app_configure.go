@@ -9,9 +9,6 @@ import (
 	vestingtypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
-
-	//capabilitytypes "github.com/cosmos/cosmos-sdk/x/capability/types"
 	consensustypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
@@ -21,7 +18,7 @@ import (
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-
+	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
 	ibchost "github.com/cosmos/ibc-go/v8/modules/core/exported"
 
@@ -32,11 +29,8 @@ import (
 	"pkg.akt.dev/node/x/cert"
 	"pkg.akt.dev/node/x/deployment"
 	"pkg.akt.dev/node/x/escrow"
-	//agov "pkg.akt.dev/node/x/gov"
-	//"pkg.akt.dev/node/x/inflation"
 	"pkg.akt.dev/node/x/market"
 	"pkg.akt.dev/node/x/provider"
-	astaking "pkg.akt.dev/node/x/staking"
 	"pkg.akt.dev/node/x/take"
 )
 
@@ -49,8 +43,6 @@ func akashModuleBasics() []module.AppModuleBasic {
 		provider.AppModuleBasic{},
 		audit.AppModuleBasic{},
 		cert.AppModuleBasic{},
-		//astaking.AppModuleBasic{},
-		//agov.AppModuleBasic{},
 	}
 }
 
@@ -87,9 +79,6 @@ func OrderInitGenesis(_ []string) []string {
 		deployment.ModuleName,
 		provider.ModuleName,
 		market.ModuleName,
-		//inflation.ModuleName,
-		astaking.ModuleName,
-		//agov.ModuleName,
 		genutiltypes.ModuleName,
 	}
 }

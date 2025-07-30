@@ -8,7 +8,6 @@ import (
 
 	dbm "github.com/cosmos/cosmos-db"
 	sdksrv "github.com/cosmos/cosmos-sdk/server"
-	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
 	"golang.org/x/sync/errgroup"
 	cflags "pkg.akt.dev/go/cli/flags"
 
@@ -18,18 +17,6 @@ import (
 func openDB(rootDir string, backendType dbm.BackendType) (dbm.DB, error) {
 	dataDir := filepath.Join(rootDir, "data")
 	return dbm.NewDB("application", backendType, dataDir)
-}
-
-func getAndValidateConfig(sctx *sdksrv.Context) (serverconfig.Config, error) {
-	config, err := serverconfig.GetConfig(sctx.Viper)
-	if err != nil {
-		return config, err
-	}
-
-	if err := config.ValidateBasic(); err != nil {
-		return config, err
-	}
-	return config, nil
 }
 
 func setupTraceWriter(svrCtx *sdksrv.Context) (traceWriter io.WriteCloser, cleanup func(), err error) {

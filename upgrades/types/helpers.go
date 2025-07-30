@@ -1,3 +1,5 @@
+//nolint: revive
+
 package types
 
 import (

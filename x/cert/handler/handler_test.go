@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"pkg.akt.dev/go/sdkutil"
 
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 
@@ -13,22 +14,22 @@ import (
 	storemetrics "cosmossdk.io/store/metrics"
 	storetypes "cosmossdk.io/store/types"
 	dbm "github.com/cosmos/cosmos-db"
-
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdktestdata "github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	testutilmod "github.com/cosmos/cosmos-sdk/types/module/testutil"
 
 	types "pkg.akt.dev/go/node/cert/v1"
+	"pkg.akt.dev/go/testutil"
 
-	"pkg.akt.dev/node/testutil"
 	"pkg.akt.dev/node/x/cert/handler"
 	"pkg.akt.dev/node/x/cert/keeper"
 )
 
 type testSuite struct {
 	t       testing.TB
+	encCfg  sdkutil.EncodingConfig
+	kr      testutil.Keyring
 	ms      storetypes.CommitMultiStore
 	ctx     sdk.Context
 	keeper  keeper.Keeper
@@ -36,11 +37,13 @@ type testSuite struct {
 }
 
 func setupTestSuite(t *testing.T) *testSuite {
+	cfg := sdkutil.MakeEncodingConfig()
 	suite := &testSuite{
-		t: t,
+		t:      t,
+		encCfg: cfg,
+		kr:     testutil.NewTestKeyring(cfg.Codec),
 	}
 
-	cfg := testutilmod.MakeTestEncodingConfig()
 	cdc := cfg.Codec
 
 	aKey := storetypes.NewTransientStoreKey(types.StoreKey)
@@ -83,8 +86,8 @@ func TestCertHandlerCreate(t *testing.T) {
 	}
 
 	res, err := suite.handler(suite.ctx, msg)
-	require.NotNil(t, res)
 	require.NoError(t, err)
+	require.NotNil(t, res)
 
 	resp, exists := suite.keeper.GetCertificateByID(suite.ctx, types.CertID{
 		Owner:  owner,
@@ -98,7 +101,6 @@ func TestCertHandlerCreateOwnerMismatch(t *testing.T) {
 	suite := setupTestSuite(t)
 
 	owner := testutil.AccAddress(t)
-
 	cert := testutil.Certificate(t, owner)
 
 	msg := &types.MsgCreateCertificate{
@@ -108,8 +110,8 @@ func TestCertHandlerCreateOwnerMismatch(t *testing.T) {
 	}
 
 	res, err := suite.handler(suite.ctx, msg)
-	require.Nil(t, res)
 	require.Error(t, err, types.ErrInvalidCertificateValue.Error())
+	require.Nil(t, res)
 
 	_, exists := suite.keeper.GetCertificateByID(suite.ctx, types.CertID{
 		Owner:  owner,
@@ -127,7 +129,6 @@ func TestCertHandlerDuplicate(t *testing.T) {
 	suite := setupTestSuite(t)
 
 	owner := testutil.AccAddress(t)
-
 	cert := testutil.Certificate(t, owner)
 
 	msg := &types.MsgCreateCertificate{
@@ -137,8 +138,8 @@ func TestCertHandlerDuplicate(t *testing.T) {
 	}
 
 	res, err := suite.handler(suite.ctx, msg)
-	require.NotNil(t, res)
 	require.NoError(t, err)
+	require.NotNil(t, res)
 
 	resp, exists := suite.keeper.GetCertificateByID(suite.ctx, types.CertID{
 		Owner:  owner,
@@ -159,8 +160,8 @@ func TestCertHandlerDuplicate(t *testing.T) {
 	}
 
 	res, err = suite.handler(suite.ctx, msg)
-	require.NotNil(t, res)
 	require.NoError(t, err)
+	require.NotNil(t, res)
 
 	resp, exists = suite.keeper.GetCertificateByID(suite.ctx, types.CertID{
 		Owner:  owner,
@@ -181,7 +182,6 @@ func TestCertHandlerRevoke(t *testing.T) {
 	suite := setupTestSuite(t)
 
 	owner := testutil.AccAddress(t)
-
 	cert := testutil.Certificate(t, owner)
 
 	msgCreate := &types.MsgCreateCertificate{
@@ -191,8 +191,8 @@ func TestCertHandlerRevoke(t *testing.T) {
 	}
 
 	res, err := suite.handler(suite.ctx, msgCreate)
-	require.NotNil(t, res)
 	require.NoError(t, err)
+	require.NotNil(t, res)
 
 	resp, exists := suite.keeper.GetCertificateByID(suite.ctx, types.CertID{
 		Owner:  owner,
@@ -209,8 +209,8 @@ func TestCertHandlerRevoke(t *testing.T) {
 	}
 
 	res, err = suite.handler(suite.ctx, msgRevoke)
-	require.NotNil(t, res)
 	require.NoError(t, err)
+	require.NotNil(t, res)
 
 	resp, exists = suite.keeper.GetCertificateByID(suite.ctx, types.CertID{
 		Owner:  owner,
@@ -220,15 +220,14 @@ func TestCertHandlerRevoke(t *testing.T) {
 	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateRevoked)
 
 	res, err = suite.handler(suite.ctx, msgRevoke)
-	require.Nil(t, res)
 	require.Error(t, err, types.ErrCertificateAlreadyRevoked.Error())
+	require.Nil(t, res)
 }
 
 func TestCertHandlerRevokeCreateRevoked(t *testing.T) {
 	suite := setupTestSuite(t)
 
 	owner := testutil.AccAddress(t)
-
 	cert := testutil.Certificate(t, owner)
 
 	msgCreate := &types.MsgCreateCertificate{
@@ -238,8 +237,8 @@ func TestCertHandlerRevokeCreateRevoked(t *testing.T) {
 	}
 
 	res, err := suite.handler(suite.ctx, msgCreate)
-	require.NotNil(t, res)
 	require.NoError(t, err)
+	require.NotNil(t, res)
 
 	resp, exists := suite.keeper.GetCertificateByID(suite.ctx, types.CertID{
 		Owner:  owner,
@@ -256,8 +255,8 @@ func TestCertHandlerRevokeCreateRevoked(t *testing.T) {
 	}
 
 	res, err = suite.handler(suite.ctx, msgRevoke)
-	require.NotNil(t, res)
 	require.NoError(t, err)
+	require.NotNil(t, res)
 
 	resp, exists = suite.keeper.GetCertificateByID(suite.ctx, types.CertID{
 		Owner:  owner,
@@ -267,12 +266,13 @@ func TestCertHandlerRevokeCreateRevoked(t *testing.T) {
 	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateRevoked)
 
 	res, err = suite.handler(suite.ctx, msgCreate)
-	require.Nil(t, res)
 	require.Error(t, err, types.ErrCertificateExists.Error())
+	require.Nil(t, res)
 }
 
 func TestCertHandlerRevokeCreate(t *testing.T) {
 	suite := setupTestSuite(t)
+
 	owner := testutil.AccAddress(t)
 	cert := testutil.Certificate(t, owner)
 
@@ -283,8 +283,8 @@ func TestCertHandlerRevokeCreate(t *testing.T) {
 	}
 
 	res, err := suite.handler(suite.ctx, msgCreate)
-	require.NotNil(t, res)
 	require.NoError(t, err)
+	require.NotNil(t, res)
 
 	resp, exists := suite.keeper.GetCertificateByID(suite.ctx, types.CertID{
 		Owner:  owner,
@@ -301,8 +301,8 @@ func TestCertHandlerRevokeCreate(t *testing.T) {
 	}
 
 	res, err = suite.handler(suite.ctx, msgRevoke)
-	require.NotNil(t, res)
 	require.NoError(t, err)
+	require.NotNil(t, res)
 
 	resp, exists = suite.keeper.GetCertificateByID(suite.ctx, types.CertID{
 		Owner:  owner,
@@ -320,6 +320,6 @@ func TestCertHandlerRevokeCreate(t *testing.T) {
 	}
 
 	res, err = suite.handler(suite.ctx, msgCreate)
-	require.NotNil(t, res)
 	require.NoError(t, err)
+	require.NotNil(t, res)
 }

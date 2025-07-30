@@ -9,8 +9,8 @@ import (
 	"pkg.akt.dev/go/node/deployment/v1beta4"
 
 	types "pkg.akt.dev/go/node/deployment/v1"
+	"pkg.akt.dev/go/testutil"
 
-	"pkg.akt.dev/node/testutil"
 	"pkg.akt.dev/node/testutil/state"
 	"pkg.akt.dev/node/x/deployment/keeper"
 )

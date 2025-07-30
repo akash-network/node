@@ -1,8 +1,11 @@
+//nolint: revive
+
 package common
 
 import (
-	"github.com/cosmos/cosmos-sdk/client"
 	"testing"
+
+	"github.com/cosmos/cosmos-sdk/client"
 )
 
 func TestPrintJSONStdoutStruct(t *testing.T) {

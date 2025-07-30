@@ -8,22 +8,23 @@ import (
 	"strings"
 	"time"
 
-	sdkmath "cosmossdk.io/math"
-	"github.com/cosmos/gogoproto/jsonpb"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
+	sdkmath "cosmossdk.io/math"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	cosmosauthtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	"github.com/cosmos/gogoproto/jsonpb"
 
 	"pkg.akt.dev/go/cli"
 	cflags "pkg.akt.dev/go/cli/flags"
 	cltypes "pkg.akt.dev/go/node/client/types"
 	cclient "pkg.akt.dev/go/node/client/v1beta3"
+	sdktestutil "pkg.akt.dev/go/testutil"
 
 	"pkg.akt.dev/node/testutil/network"
 )
@@ -87,7 +88,7 @@ func (nts *NetworkTestSuite) TearDownSuite() {
 }
 
 func (nts *NetworkTestSuite) SetupSuite() {
-	nts.kr = Keyring(nts.T(), nts.cfg.Codec)
+	nts.kr = sdktestutil.NewTestKeyring(nts.cfg.Codec)
 	nts.network = network.New(nts.T(), nts.cfg)
 
 	_, err := nts.network.WaitForHeightWithTimeout(1, time.Second*30)

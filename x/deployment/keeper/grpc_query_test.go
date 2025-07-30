@@ -16,9 +16,9 @@ import (
 	"pkg.akt.dev/go/node/deployment/v1"
 	"pkg.akt.dev/go/node/deployment/v1beta4"
 	etypes "pkg.akt.dev/go/node/escrow/v1"
+	"pkg.akt.dev/go/testutil"
 
 	"pkg.akt.dev/node/app"
-	"pkg.akt.dev/node/testutil"
 	"pkg.akt.dev/node/testutil/state"
 	"pkg.akt.dev/node/x/deployment/keeper"
 	ekeeper "pkg.akt.dev/node/x/escrow/keeper"
@@ -113,7 +113,7 @@ func TestGRPCQueryDeployment(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
-			ctx := sdk.WrapSDKContext(suite.ctx)
+			ctx := suite.ctx
 
 			res, err := suite.queryClient.Deployment(ctx, req)
 
@@ -225,7 +225,7 @@ func TestGRPCQueryDeployments(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
-			ctx := sdk.WrapSDKContext(suite.ctx)
+			ctx := suite.ctx
 
 			res, err := suite.queryClient.Deployments(ctx, req)
 
@@ -293,7 +293,7 @@ func TestGRPCQueryDeploymentsWithFilter(t *testing.T) {
 		},
 	}
 
-	ctx := sdk.WrapSDKContext(suite.ctx)
+	ctx := suite.ctx
 
 	for _, depID := range deps {
 		for _, m := range modifiers {
@@ -501,7 +501,7 @@ func TestGRPCQueryGroup(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
-			ctx := sdk.WrapSDKContext(suite.ctx)
+			ctx := suite.ctx
 
 			res, err := suite.queryClient.Group(ctx, req)
 

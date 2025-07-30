@@ -70,7 +70,7 @@ func InitAkashAppForTestnet(
 		}
 	}()
 
-	ctx := app.BaseApp.NewUncachedContext(true, tmproto.Header{})
+	ctx := app.NewUncachedContext(true, tmproto.Header{})
 
 	// STAKING
 	//

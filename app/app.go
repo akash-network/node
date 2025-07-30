@@ -48,7 +48,6 @@ import (
 	vestingtypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	"github.com/cosmos/cosmos-sdk/x/crisis"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
@@ -72,8 +71,6 @@ import (
 
 	apptypes "pkg.akt.dev/node/app/types"
 	utypes "pkg.akt.dev/node/upgrades/types"
-	astaking "pkg.akt.dev/node/x/staking"
-
 	// unnamed import of statik for swagger UI support
 	_ "pkg.akt.dev/node/client/docs/statik"
 )
@@ -170,10 +167,6 @@ func NewApp(
 	// because I believe the concept of Routes is going away.
 	app.SetupHooks()
 
-	// NOTE: we may consider parsing `appOpts` inside module constructors. For the moment,
-	// we prefer to be more strict in what arguments the modules expect.
-	skipGenesisInvariants := cast.ToBool(appOpts.Get(crisis.FlagSkipGenesisInvariants))
-
 	// NOTE: All module / keeper changes should happen prior to this module.NewManager line being called.
 	// However, in the event any changes do need to happen after this call, ensure that that keeper
 	// is only passed in its keeper form (not de-ref'd anywhere)
@@ -183,7 +176,7 @@ func NewApp(
 	//
 	// Any time a module requires a keeper de-ref'd that's not its native one,
 	// its code-smell and should probably change. We should get the staking keeper dependencies fixed.
-	modules := appModules(app, encodingConfig, skipGenesisInvariants)
+	modules := appModules(app, encodingConfig)
 
 	app.MM = module.NewManager(modules...)
 
@@ -194,17 +187,15 @@ func NewApp(
 	// NOTE: capability module's begin-blocker must come before any modules using capabilities (e.g. IBC)
 
 	// Upgrades from v0.50.x onwards happen in pre block
-	//app.MM.SetOrderPreBlockers(
-	//	upgradetypes.ModuleName,
-	//	authtypes.ModuleName,
-	//)
+	app.MM.SetOrderPreBlockers(
+		upgradetypes.ModuleName,
+		authtypes.ModuleName,
+	)
 
 	// Tell the app's module manager how to set the order of BeginBlockers, which are run at the beginning of every block.
 	app.MM.SetOrderBeginBlockers(orderBeginBlockers(app.MM.ModuleNames())...)
 
 	app.MM.SetOrderInitGenesis(OrderInitGenesis(app.MM.ModuleNames())...)
-
-	app.MM.RegisterInvariants(app.Keepers.Cosmos.Crisis)
 
 	app.Configurator = module.NewConfigurator(app.AppCodec(), app.MsgServiceRouter(), app.GRPCQueryRouter())
 	err := app.MM.RegisterServices(app.Configurator)
@@ -216,16 +207,6 @@ func NewApp(
 	if err := app.registerUpgradeHandlers(); err != nil {
 		panic(err)
 	}
-
-	// Override the gov ModuleBasic with all the custom proposal handers, otherwise we lose them in the CLI.
-	//app.ModuleBasics = module.NewBasicManagerFromManager(
-	//	app.MM,
-	//	map[string]module.AppModuleBasic{
-	//		"gov": gov.NewAppModuleBasic(
-	//			[]govclient.ProposalHandler{},
-	//		),
-	//	},
-	//)
 
 	app.sm = module.NewSimulationManager(appSimModules(app, encodingConfig)...)
 	app.sm.RegisterStoreDecoders()
@@ -297,7 +278,6 @@ func orderBeginBlockers(_ []string) []string {
 		audittypes.ModuleName,
 		genutiltypes.ModuleName,
 		vestingtypes.ModuleName,
-		//crisistypes.ModuleName,
 		authtypes.ModuleName,
 		authz.ModuleName,
 		taketypes.ModuleName,
@@ -307,7 +287,6 @@ func orderBeginBlockers(_ []string) []string {
 		slashingtypes.ModuleName,
 		evidencetypes.ModuleName,
 		stakingtypes.ModuleName,
-		//astaking.ModuleName,
 		transfertypes.ModuleName,
 		ibchost.ModuleName,
 		feegrant.ModuleName,
@@ -317,10 +296,8 @@ func orderBeginBlockers(_ []string) []string {
 // OrderEndBlockers returns EndBlockers (crisis, govtypes, staking) with no relative order.
 func OrderEndBlockers(_ []string) []string {
 	return []string{
-		//crisistypes.ModuleName,
 		govtypes.ModuleName,
 		stakingtypes.ModuleName,
-		astaking.ModuleName,
 		upgradetypes.ModuleName,
 		capabilitytypes.ModuleName,
 		banktypes.ModuleName,

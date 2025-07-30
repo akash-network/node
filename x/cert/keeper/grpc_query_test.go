@@ -5,15 +5,16 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
-	"github.com/stretchr/testify/require"
 
 	types "pkg.akt.dev/go/node/cert/v1"
+	"pkg.akt.dev/go/testutil"
 
 	"pkg.akt.dev/node/app"
-	"pkg.akt.dev/node/testutil"
 	"pkg.akt.dev/node/x/cert/keeper"
 )
 
@@ -56,10 +57,10 @@ func TestCertGRPCQueryCertificates(t *testing.T) {
 	suite := setupTest(t)
 
 	owner := testutil.AccAddress(t)
-	cert := testutil.Certificate(t, owner)
-
 	owner2 := testutil.AccAddress(t)
 	owner3 := testutil.AccAddress(t)
+
+	cert := testutil.Certificate(t, owner)
 	cert2 := testutil.Certificate(t, owner2)
 	cert3 := testutil.Certificate(t, owner3)
 
@@ -325,7 +326,7 @@ func TestCertGRPCQueryCertificates(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
-			ctx := sdk.WrapSDKContext(suite.ctx)
+			ctx := suite.ctx
 
 			res, err := suite.qclient.Certificates(ctx, req)
 

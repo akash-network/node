@@ -479,7 +479,7 @@ func TestAppStateDeterminism(t *testing.T) {
 		for j := 0; j < numTimesToRunPerSeed; j++ {
 			var logger log.Logger
 			if sim.FlagVerboseValue {
-				//logger = log.TestingLogger()
+				logger = log.NewTestLogger(&testing.T{})
 			} else {
 				logger = log.NewNopLogger()
 			}

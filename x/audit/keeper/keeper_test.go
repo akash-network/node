@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"cosmossdk.io/log"
-	storemetrics "cosmossdk.io/store/metrics"
 	"github.com/stretchr/testify/require"
 
+	"cosmossdk.io/log"
 	"cosmossdk.io/store"
+	storemetrics "cosmossdk.io/store/metrics"
 	storetypes "cosmossdk.io/store/types"
 	"github.com/cometbft/cometbft/libs/rand"
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
@@ -19,8 +19,8 @@ import (
 	testutilmod "github.com/cosmos/cosmos-sdk/types/module/testutil"
 
 	types "pkg.akt.dev/go/node/audit/v1"
+	"pkg.akt.dev/go/testutil"
 
-	"pkg.akt.dev/node/testutil"
 	"pkg.akt.dev/node/x/audit/keeper"
 )
 

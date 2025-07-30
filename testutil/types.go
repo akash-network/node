@@ -2,9 +2,7 @@ package testutil
 
 import (
 	"fmt"
-	"math/rand"
 	"os"
-	"testing"
 
 	"cosmossdk.io/log"
 	pruningtypes "cosmossdk.io/store/pruning/types"
@@ -15,50 +13,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module/testutil"
 
 	cflags "pkg.akt.dev/go/cli/flags"
-	rtypes "pkg.akt.dev/go/node/types/resources/v1beta4"
 	"pkg.akt.dev/go/sdkutil"
 
 	"pkg.akt.dev/node/app"
 	"pkg.akt.dev/node/testutil/network"
 )
-
-func RandRangeInt(minV, maxV int) int {
-	return rand.Intn(maxV-minV) + minV // nolint: gosec
-}
-
-func RandRangeUint(min, max uint) uint {
-	val := rand.Uint64() // nolint: gosec
-	val %= uint64(max - min)
-	val += uint64(min)
-	return uint(val)
-}
-
-func RandRangeUint64(minV, maxV uint64) uint64 {
-	val := rand.Uint64() // nolint: gosec
-	val %= maxV - minV
-	val += minV
-	return val
-}
-
-func ResourceUnits(_ testing.TB) rtypes.Resources {
-	return rtypes.Resources{
-		ID: 1,
-		CPU: &rtypes.CPU{
-			Units: rtypes.NewResourceValue(uint64(RandCPUUnits())),
-		},
-		Memory: &rtypes.Memory{
-			Quantity: rtypes.NewResourceValue(RandMemoryQuantity()),
-		},
-		GPU: &rtypes.GPU{
-			Units: rtypes.NewResourceValue(uint64(RandGPUUnits())),
-		},
-		Storage: rtypes.Volumes{
-			rtypes.Storage{
-				Quantity: rtypes.NewResourceValue(RandStorageQuantity()),
-			},
-		},
-	}
-}
 
 // NewTestNetworkFixture returns a new simapp AppConstructor for network simulation tests
 func NewTestNetworkFixture() network.TestFixture {

@@ -16,16 +16,7 @@ type Keeper interface {
 	CreateCertificate(sdk.Context, sdk.Address, []byte, []byte) error
 	RevokeCertificate(sdk.Context, types.CertID) error
 	GetCertificateByID(ctx sdk.Context, id types.CertID) (types.CertificateResponse, bool)
-	//<<<<<<< HEAD
-	//	WithCertificates(ctx sdk.Context, fn func(id types.CertID, certificate types.CertificateResponse) bool)
-	//	WithCertificatesState(ctx sdk.Context, state types.Certificate_State, fn func(certificate types.CertificateResponse) bool)
-	//||||||| parent of c489be40 (feat: sdk-50)
-	//	WithCertificates(ctx sdk.Context, fn func(certificate types.CertificateResponse) bool)
-	//	WithCertificatesState(ctx sdk.Context, state types.Certificate_State, fn func(certificate types.CertificateResponse) bool)
-	//=======
 	WithCertificates(ctx sdk.Context, fn func(id types.CertID, certificate types.CertificateResponse) bool)
-	//	WithCertificatesState(ctx sdk.Context, state types.State, fn func(certificate types.CertificateResponse) bool)
-	//>>>>>>> c489be40 (feat: sdk-50)
 	WithOwner(ctx sdk.Context, id sdk.Address, fn func(types.CertificateResponse) bool)
 	WithOwnerState(ctx sdk.Context, id sdk.Address, state types.State, fn func(types.CertificateResponse) bool)
 }

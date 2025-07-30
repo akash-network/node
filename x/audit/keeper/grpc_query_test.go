@@ -4,16 +4,16 @@ import (
 	"fmt"
 	"testing"
 
-	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/stretchr/testify/require"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 
 	types "pkg.akt.dev/go/node/audit/v1"
+	"pkg.akt.dev/go/testutil"
 
 	"pkg.akt.dev/node/app"
-	"pkg.akt.dev/node/testutil"
 	"pkg.akt.dev/node/x/audit/keeper"
 )
 
@@ -92,7 +92,7 @@ func TestGRPCQueryProvider(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
-			ctx := sdk.WrapSDKContext(suite.ctx)
+			ctx := suite.ctx
 
 			res, err := suite.queryClient.ProviderAuditorAttributes(ctx, req)
 
@@ -152,7 +152,7 @@ func TestGRPCQueryProviders(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
-			ctx := sdk.WrapSDKContext(suite.ctx)
+			ctx := suite.ctx
 
 			res, err := suite.queryClient.AllProvidersAttributes(ctx, req)
 
