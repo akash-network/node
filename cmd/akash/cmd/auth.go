@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -145,7 +146,7 @@ func authJWTCmd() *cobra.Command {
 	cmd.Flags().String(FlagJWTExp, "15m", "Set token's `exp` field. Format is either 15m|h or unix timestamp")
 	cmd.Flags().String(FlagJWTNbf, "", "Set token's `nbf` field. Format is either 15m|h or unix timestamp. Empty equals to current timestamp")
 	cmd.Flags().String(FlagJWTAccess, "full", "Set token's `leases.access` field. Permitted values are full|scoped|granular. Default is full")
-	cmd.Flags().StringSlice(FlagJWTScope, nil, "Set token's `leases.scope` field. Comma separated list of scopes. Can only be set if `leases.access=scoped`. Allowed scopes are")
+	cmd.Flags().StringSlice(FlagJWTScope, nil, fmt.Sprintf("Set token's `leases.scope` field. Comma separated list of scopes. Can only be set if `leases.access=scoped`. Allowed scopes are (%s)", strings.Join(permissionScopesToStrings(ajwt.GetSupportedScopes()), "|")))
 
 	return cmd
 }
@@ -162,4 +163,12 @@ func parseAccess(val string) (ajwt.AccessType, bool) {
 	}
 
 	return res, true
+}
+
+func permissionScopesToStrings(scopes ajwt.PermissionScopes) []string {
+	result := make([]string, len(scopes))
+	for i, scope := range scopes {
+		result[i] = string(scope)
+	}
+	return result
 }
