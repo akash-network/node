@@ -131,9 +131,6 @@ func (am AppModule) IsOnePerModuleType() {}
 // IsAppModule implements the appmodule.AppModule interface.
 func (am AppModule) IsAppModule() {}
 
-// RegisterInvariants registers module invariants
-func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
-
 // RegisterServices registers the module's services
 func (am AppModule) RegisterServices(cfg module.Configurator) {
 	types.RegisterMsgServer(cfg.MsgServer(), handler.NewMsgServerImpl(am.keeper, am.mkeeper))

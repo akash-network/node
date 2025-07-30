@@ -12,6 +12,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
+
 	cmtcfg "github.com/cometbft/cometbft/config"
 	"github.com/cometbft/cometbft/crypto/tmhash"
 	"github.com/cometbft/cometbft/node"
@@ -22,30 +25,28 @@ import (
 	sm "github.com/cometbft/cometbft/state"
 	"github.com/cometbft/cometbft/store"
 	cmttypes "github.com/cometbft/cometbft/types"
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
-	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
-	"github.com/cosmos/cosmos-sdk/telemetry"
-	"github.com/spf13/cobra"
-	"golang.org/x/sync/errgroup"
 
 	dbm "github.com/cosmos/cosmos-db"
+	"github.com/cosmos/cosmos-sdk/client"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
-	"github.com/cosmos/cosmos-sdk/server"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	sdksrv "github.com/cosmos/cosmos-sdk/server"
+	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
 	"github.com/cosmos/cosmos-sdk/server/types"
+	"github.com/cosmos/cosmos-sdk/telemetry"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 
 	cflags "pkg.akt.dev/go/cli/flags"
 
 	akash "pkg.akt.dev/node/app"
+	"pkg.akt.dev/node/util/server"
 )
 
 // GetCmd uses the provided chainID and operatorAddress as well as the local private validator key to
 // control the network represented in the data folder. This is useful to create testnets nearly identical to your
 // mainnet environment.
 func GetCmd(testnetAppCreator types.AppCreator) *cobra.Command {
-	opts := server.StartCmdOptions{}
+	opts := sdksrv.StartCmdOptions{}
 	if opts.DBOpener == nil {
 		opts.DBOpener = openDB
 	}
@@ -73,14 +74,14 @@ you want to test the upgrade handler itself.
 `,
 		Example: "testnetify",
 		Args:    cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			sctx := server.GetServerContextFromCmd(cmd)
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			sctx := sdksrv.GetServerContextFromCmd(cmd)
 			cctx, err := client.GetClientQueryContext(cmd)
 			if err != nil {
 				return err
 			}
 
-			_, err = server.GetPruningOptionsFromFlags(sctx.Viper)
+			_, err = sdksrv.GetPruningOptionsFromFlags(sctx.Viper)
 			if err != nil {
 				return err
 			}
@@ -169,7 +170,7 @@ you want to test the upgrade handler itself.
 
 			ctx, cancelFn := context.WithCancel(cmd.Context())
 
-			getCtx := func(svrCtx *server.Context, block bool) (*errgroup.Group, context.Context) {
+			getCtx := func(svrCtx *sdksrv.Context, block bool) (*errgroup.Group, context.Context) {
 				g, ctx := errgroup.WithContext(ctx)
 				// listen for quit signals so the calling parent process can gracefully exit
 				server.ListenForQuitSignals(g, block, cancelFn, svrCtx.Logger)
@@ -267,7 +268,7 @@ func testnetify(sctx *sdksrv.Context, tcfg TestnetConfig, testnetAppCreator type
 	config := sctx.Config
 
 	thisVal := config.PrivValidatorKeyFile()
-	sort.Slice(tcfg.Validators, func(i, j int) bool {
+	sort.Slice(tcfg.Validators, func(i, _ int) bool {
 		return thisVal == tcfg.Validators[i].Home
 	})
 

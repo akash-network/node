@@ -14,8 +14,8 @@ import (
 
 	types "pkg.akt.dev/go/node/market/v1"
 	"pkg.akt.dev/go/node/market/v1beta5"
+	"pkg.akt.dev/go/testutil"
 
-	"pkg.akt.dev/node/testutil"
 	"pkg.akt.dev/node/testutil/state"
 	"pkg.akt.dev/node/x/market/keeper"
 )
@@ -103,7 +103,7 @@ func TestGRPCQueryOrder(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
-			ctx := sdk.WrapSDKContext(suite.ctx)
+			ctx := suite.ctx
 
 			res, err := suite.queryClient.Order(ctx, req)
 
@@ -172,7 +172,7 @@ func TestGRPCQueryOrders(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
-			ctx := sdk.WrapSDKContext(suite.ctx)
+			ctx := suite.ctx
 
 			res, err := suite.queryClient.Orders(ctx, req)
 
@@ -258,7 +258,7 @@ func TestGRPCQueryOrdersWithFilter(t *testing.T) {
 		},
 	}
 
-	ctx := sdk.WrapSDKContext(suite.ctx)
+	ctx := suite.ctx
 
 	for _, orderID := range orders {
 		for _, m := range modifiers {
@@ -480,7 +480,7 @@ func TestGRPCQueryBidsWithFilter(t *testing.T) {
 		},
 	}
 
-	ctx := sdk.WrapSDKContext(suite.ctx)
+	ctx := suite.ctx
 
 	for _, bidID := range bids {
 		for _, m := range modifiers {
@@ -703,7 +703,7 @@ func TestGRPCQueryLeasesWithFilter(t *testing.T) {
 		},
 	}
 
-	ctx := sdk.WrapSDKContext(suite.ctx)
+	ctx := suite.ctx
 
 	for _, leaseID := range leases {
 		for _, m := range modifiers {
@@ -915,7 +915,7 @@ func TestGRPCQueryBid(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
-			ctx := sdk.WrapSDKContext(suite.ctx)
+			ctx := suite.ctx
 
 			res, err := suite.queryClient.Bid(ctx, req)
 
@@ -985,7 +985,7 @@ func TestGRPCQueryBids(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
-			ctx := sdk.WrapSDKContext(suite.ctx)
+			ctx := suite.ctx
 
 			res, err := suite.queryClient.Bids(ctx, req)
 
@@ -1054,7 +1054,7 @@ func TestGRPCQueryLease(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
-			ctx := sdk.WrapSDKContext(suite.ctx)
+			ctx := suite.ctx
 
 			res, err := suite.queryClient.Lease(ctx, req)
 
@@ -1130,7 +1130,7 @@ func TestGRPCQueryLeases(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
-			ctx := sdk.WrapSDKContext(suite.ctx)
+			ctx := suite.ctx
 
 			res, err := suite.queryClient.Leases(ctx, req)
 

@@ -16,7 +16,7 @@ import (
 
 func ValidateGenesis(data *types.GenesisState) error {
 	for _, record := range data.Providers {
-		msg := types.MsgCreateProvider{
+		msg := &types.MsgCreateProvider{
 			Owner:      record.Owner,
 			HostURI:    record.HostURI,
 			Attributes: record.Attributes,

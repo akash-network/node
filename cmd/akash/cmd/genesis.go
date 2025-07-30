@@ -63,11 +63,12 @@ Example:
 			// get genesis params
 			var genesisParams GenesisParams
 			network := args[0]
-			if network == "testnet" {
+			switch network {
+			case "testnet":
 				genesisParams = TestnetGenesisParams()
-			} else if network == "mainnet" {
+			case "mainnet":
 				genesisParams = MainnetGenesisParams()
-			} else {
+			default:
 				return fmt.Errorf("please choose 'mainnet' or 'testnet'")
 			}
 
@@ -212,7 +213,7 @@ func MainnetGenesisParams() GenesisParams {
 				},
 				{
 					Denom:    appparams.HumanCoinUnit,
-					Exponent: appparams.OsmoExponent,
+					Exponent: appparams.AktExponent,
 					Aliases:  nil,
 				},
 			},

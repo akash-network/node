@@ -27,7 +27,6 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	consensusparamkeeper "github.com/cosmos/cosmos-sdk/x/consensus/keeper"
 	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
-	crisiskeeper "github.com/cosmos/cosmos-sdk/x/crisis/keeper"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
@@ -52,7 +51,6 @@ import (
 	"github.com/cosmos/ibc-go/v8/modules/apps/transfer"
 	ibctransferkeeper "github.com/cosmos/ibc-go/v8/modules/apps/transfer/keeper"
 	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
-	ibcclient "github.com/cosmos/ibc-go/v8/modules/core/02-client"
 	ibcclienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
 	ibcconnectiontypes "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
 	porttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
@@ -99,9 +97,8 @@ type AppKeepers struct {
 		Mint                 mintkeeper.Keeper
 		Distr                distrkeeper.Keeper
 		Gov                  *govkeeper.Keeper
-		Crisis               *crisiskeeper.Keeper
 		Upgrade              *upgradekeeper.Keeper
-		Params               paramskeeper.Keeper
+		Params               paramskeeper.Keeper //nolint: staticcheck
 		ConsensusParams      *consensusparamkeeper.Keeper
 		IBC                  *ibckeeper.Keeper
 		Evidence             *evidencekeeper.Keeper
@@ -198,7 +195,7 @@ func (app *App) InitSpecialKeepers(
 	cdc codec.Codec,
 	legacyAmino *codec.LegacyAmino,
 	bApp *baseapp.BaseApp,
-	invCheckPeriod uint,
+	_ uint,
 	skipUpgradeHeights map[int64]bool,
 	homePath string) {
 
@@ -239,14 +236,14 @@ func (app *App) InitSpecialKeepers(
 	// any further modules from creating scoped sub-keepers.
 	app.Keepers.Cosmos.Cap.Seal()
 
-	app.Keepers.Cosmos.Crisis = crisiskeeper.NewKeeper(
-		cdc, runtime.NewKVStoreService(app.keys[crisistypes.StoreKey]),
-		invCheckPeriod,
-		app.Keepers.Cosmos.Bank,
-		authtypes.FeeCollectorName,
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
-		addresscodec.NewBech32Codec(sdk.GetConfig().GetBech32AccountAddrPrefix()),
-	)
+	//app.Keepers.Cosmos.Crisis = crisiskeeper.NewKeeper(
+	//	cdc, runtime.NewKVStoreService(app.keys[crisistypes.StoreKey]),
+	//	invCheckPeriod,
+	//	app.Keepers.Cosmos.Bank,
+	//	authtypes.FeeCollectorName,
+	//	authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+	//	addresscodec.NewBech32Codec(sdk.GetConfig().GetBech32AccountAddrPrefix()),
+	//)
 
 	app.Keepers.Cosmos.Upgrade = upgradekeeper.NewKeeper(
 		skipUpgradeHeights,
@@ -363,23 +360,7 @@ func (app *App) InitNormalKeepers(
 		AddRoute(
 			paramproposal.RouterKey,
 			params.NewParamChangeProposalHandler(app.Keepers.Cosmos.Params),
-		).
-		//AddRoute(
-		//	upgradetypes.RouterKey,
-		//	upgrade.NewSoftwareUpgradeProposalHandler(app.Keepers.Cosmos.Upgrade),
-		//).
-		AddRoute(
-			ibcclienttypes.RouterKey,
-			ibcclient.NewClientProposalHandler(app.Keepers.Cosmos.IBC.ClientKeeper),
-		).
-		AddRoute(
-			ibcexported.RouterKey,
-			ibcclient.NewClientProposalHandler(app.Keepers.Cosmos.IBC.ClientKeeper),
 		)
-	// AddRoute(
-	// 	astakingtypes.RouterKey,
-	// 	ibcclient.NewClientProposalHandler(app.Keepers.Cosmos.IBC.ClientKeeper),
-	// )
 
 	govConfig := govtypes.DefaultConfig()
 	// Set the maximum metadata length for government-related configurations to 10,200, deviating from the default value of 256.
@@ -497,8 +478,8 @@ func (app *App) SetupHooks() {
 }
 
 // initParamsKeeper init params keeper and its subspaces
-func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino, key, tkey storetypes.StoreKey) paramskeeper.Keeper {
-	paramsKeeper := paramskeeper.NewKeeper(appCodec, legacyAmino, key, tkey)
+func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino, key, tkey storetypes.StoreKey) paramskeeper.Keeper { // nolint: staticcheck
+	paramsKeeper := paramskeeper.NewKeeper(appCodec, legacyAmino, key, tkey) // nolint: staticcheck
 
 	ibctable := ibcclienttypes.ParamKeyTable()
 	ibctable.RegisterParamSet(&ibcconnectiontypes.Params{})

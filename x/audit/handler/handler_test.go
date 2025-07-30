@@ -5,15 +5,15 @@ import (
 	"sort"
 	"testing"
 
-	"cosmossdk.io/log"
-	storemetrics "cosmossdk.io/store/metrics"
-	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/stretchr/testify/require"
 
+	"cosmossdk.io/log"
 	"cosmossdk.io/store"
+	storemetrics "cosmossdk.io/store/metrics"
 	storetypes "cosmossdk.io/store/types"
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	dbm "github.com/cosmos/cosmos-db"
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdktestdata "github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -21,7 +21,8 @@ import (
 
 	types "pkg.akt.dev/go/node/audit/v1"
 
-	"pkg.akt.dev/node/testutil"
+	"pkg.akt.dev/go/testutil"
+
 	"pkg.akt.dev/node/x/audit/handler"
 	"pkg.akt.dev/node/x/audit/keeper"
 )

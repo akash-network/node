@@ -1,8 +1,11 @@
+//nolint: revive
+
 package common
 
 import (
 	"bytes"
 	"encoding/json"
+
 	"github.com/cosmos/cosmos-sdk/client"
 )
 

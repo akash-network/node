@@ -5,23 +5,24 @@ import (
 	"math"
 	"testing"
 
-	sdkmath "cosmossdk.io/math"
-	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	v1 "pkg.akt.dev/go/node/market/v1"
 
 	"github.com/cometbft/cometbft/libs/rand"
+
+	sdkmath "cosmossdk.io/math"
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdktestdata "github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	dtypes "pkg.akt.dev/go/node/deployment/v1beta4"
+	v1 "pkg.akt.dev/go/node/market/v1"
 	types "pkg.akt.dev/go/node/market/v1beta5"
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 	attr "pkg.akt.dev/go/node/types/attributes/v1"
+	"pkg.akt.dev/go/testutil"
 
-	"pkg.akt.dev/node/testutil"
 	"pkg.akt.dev/node/testutil/state"
 	"pkg.akt.dev/node/x/market/handler"
 )

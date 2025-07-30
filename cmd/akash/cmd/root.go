@@ -11,7 +11,6 @@ import (
 	cmtcfg "github.com/cometbft/cometbft/config"
 	cmtcli "github.com/cometbft/cometbft/libs/cli"
 
-	_ "github.com/coinbase/rosetta-sdk-go/types"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/debug"
 	"github.com/cosmos/cosmos-sdk/client/keys"
@@ -20,7 +19,6 @@ import (
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	"github.com/cosmos/cosmos-sdk/x/crisis"
 	rosettaCmd "github.com/cosmos/rosetta/cmd"
 
 	cflags "pkg.akt.dev/go/cli/flags"
@@ -146,8 +144,8 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig sdkutil.EncodingConfig) 
 	rootCmd.SetErr(rootCmd.ErrOrStderr())
 }
 
-func addModuleInitFlags(startCmd *cobra.Command) {
-	crisis.AddModuleInitFlags(startCmd)
+func addModuleInitFlags(_ *cobra.Command) {
+	//crisis.AddModuleInitFlags(startCmd)
 }
 
 // genesisCommand builds genesis-related `simd genesis` command. Users may provide application specific commands as a parameter

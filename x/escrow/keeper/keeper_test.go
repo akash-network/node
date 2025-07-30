@@ -3,13 +3,14 @@ package keeper_test
 import (
 	"testing"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"pkg.akt.dev/go/node/escrow/v1"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"pkg.akt.dev/node/testutil"
+	"pkg.akt.dev/go/node/escrow/v1"
+	"pkg.akt.dev/go/testutil"
+
 	cmocks "pkg.akt.dev/node/testutil/cosmos/mocks"
 	"pkg.akt.dev/node/testutil/state"
 	"pkg.akt.dev/node/x/escrow/keeper"

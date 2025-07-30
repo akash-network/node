@@ -713,15 +713,4 @@ func (k Keeper) updateBid(ctx sdk.Context, bid types.Bid, currState types.Bid_St
 	if len(revKey) > 0 {
 		store.Set(revKey, data)
 	}
-	//||||||| parent of c489be40 (feat: sdk-50)
-	//func (k Keeper) updateLease(ctx sdk.Context, lease types.Lease) {
-	//	store := ctx.KVStore(k.skey)
-	//	key := keys.LeaseKey(lease.ID())
-	//	store.Set(key, k.cdc.MustMarshal(&lease))
-	//=======
-	//func (k Keeper) updateLease(ctx sdk.Context, lease mv1.Lease) {
-	//	store := ctx.KVStore(k.skey)
-	//	key := keys.LeaseKey(lease.ID)
-	//	store.Set(key, k.cdc.MustMarshal(&lease))
-	//>>>>>>> c489be40 (feat: sdk-50)
 }

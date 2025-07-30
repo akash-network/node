@@ -140,9 +140,6 @@ func (am AppModule) IsOnePerModuleType() {}
 // IsAppModule implements the appmodule.AppModule interface.
 func (am AppModule) IsAppModule() {}
 
-// RegisterInvariants registers module invariants
-func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
-
 // QuerierRoute returns the audit module's querier route name.
 func (am AppModule) QuerierRoute() string {
 	return types.QuerierRoute

@@ -3,16 +3,14 @@ package testnetify
 import (
 	"strings"
 
-	sdkmath "cosmossdk.io/math"
 	"github.com/cometbft/cometbft/crypto"
 	cmtjson "github.com/cometbft/cometbft/libs/json"
 	pvm "github.com/cometbft/cometbft/privval"
 	"github.com/cometbft/cometbft/types"
 
-
+	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-
 
 	akash "pkg.akt.dev/node/app"
 )

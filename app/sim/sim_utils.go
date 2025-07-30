@@ -4,17 +4,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"testing"
 
 	"cosmossdk.io/log"
 	dbm "github.com/cosmos/cosmos-db"
+	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/types/module"
 
 	"github.com/cosmos/cosmos-sdk/runtime"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
+
+	akash "pkg.akt.dev/node/app"
 )
 
 // SetupSimulation creates the config, db (levelDB), temporary directory and logger for
-// the simulation tests. If `FlagEnabledValue` is false it skips the current test.
-// Returns error on an invalid db intantiation or temp dir creation.
+// the simulation tests. If `FlagEnabledValue` is false, it skips the current test.
+// Returns error on an invalid db instance or temp dir creation.
 func SetupSimulation(dirPrefix, dbName string) (simtypes.Config, dbm.DB, string, log.Logger, bool, error) {
 	if !FlagEnabledValue {
 		return simtypes.Config{}, nil, "", nil, true, nil
@@ -25,7 +30,7 @@ func SetupSimulation(dirPrefix, dbName string) (simtypes.Config, dbm.DB, string,
 
 	var logger log.Logger
 	if FlagVerboseValue {
-		//logger = log.TestingLogger()
+		logger = log.NewTestLogger(&testing.T{})
 	} else {
 		logger = log.NewNopLogger()
 	}
@@ -43,30 +48,30 @@ func SetupSimulation(dirPrefix, dbName string) (simtypes.Config, dbm.DB, string,
 	return config, db, dir, logger, false, nil
 }
 
-//// SimulationOperations retrieves the simulation params from the provided file path
-//// and returns all the modules weighted operations
-//func SimulationOperations(app *akash.AkashApp, cdc codec.JSONCodec, config simtypes.Config) []simtypes.WeightedOperation {
-//	simState := module.SimulationState{
-//		AppParams: make(simtypes.AppParams),
-//		Cdc:       cdc,
-//	}
-//
-//	if config.ParamsFile != "" {
-//		bz, err := os.ReadFile(config.ParamsFile)
-//		if err != nil {
-//			panic(err)
-//		}
-//
-//		err = json.Unmarshal(bz, &simState.AppParams)
-//		if err != nil {
-//			panic(err)
-//		}
-//	}
-//
-//	simState.LegacyProposalContents = app.SimulationManager().GetProposalContents(simState) //nolint:staticcheck
-//	simState.ProposalMsgs = app.SimulationManager().GetProposalMsgs(simState)
-//	return app.SimulationManager().WeightedOperations(simState)
-//}
+// SimulationOperations retrieves the simulation params from the provided file path
+// and returns all the modules weighted operations
+func SimulationOperations(app *akash.AkashApp, cdc codec.JSONCodec, config simtypes.Config) []simtypes.WeightedOperation {
+	simState := module.SimulationState{
+		AppParams: make(simtypes.AppParams),
+		Cdc:       cdc,
+	}
+
+	if config.ParamsFile != "" {
+		bz, err := os.ReadFile(config.ParamsFile)
+		if err != nil {
+			panic(err)
+		}
+
+		err = json.Unmarshal(bz, &simState.AppParams)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	simState.LegacyProposalContents = app.SimulationManager().GetProposalContents(simState) //nolint:staticcheck
+	simState.ProposalMsgs = app.SimulationManager().GetProposalMsgs(simState)
+	return app.SimulationManager().WeightedOperations(simState)
+}
 
 // CheckExportSimulation exports the app state and simulation parameters to JSON
 // if the export paths are defined.

@@ -2477,8 +2477,8 @@ nhooyr.io/websocket v1.8.6/go.mod h1:B70DZP8IakI65RVQ51MsWP/8jndNma26DVA/nFSCgW0
 nullprogram.com/x/optparse v1.0.0/go.mod h1:KdyPE+Igbe0jQUrVfMqDMeJQIJZEuyV7pjYmp6pbG50=
 pgregory.net/rapid v0.5.5 h1:jkgx1TjbQPD/feRoK+S/mXw9e1uj6WilpHrXJowi6oA=
 pgregory.net/rapid v0.5.5/go.mod h1:PY5XlDGj0+V1FCq0o192FdRhpKHGTRIWBgqjDBTrq04=
-pkg.akt.dev/go v0.0.3-rc0 h1:xLV5SJ++upxZe4lnb7QQrbdqwbz/5srdxpeQJng07+I=
-pkg.akt.dev/go v0.0.3-rc0/go.mod h1:mxDXzQ+IpBWrBgPmidUFy098BK4YNIZeK8z2mZLDJm8=
+pkg.akt.dev/go v0.0.3-rc1 h1:k00xZKP02nmbFwM5un7TQEBJwuPmPDhKbulXAPVnQZY=
+pkg.akt.dev/go v0.0.3-rc1/go.mod h1:REfqaKxT2NGUQG80mF1x/irdrwF6Ff4aTqJuaDPpktY=
 pkg.akt.dev/go/cli v0.0.3-rc0 h1:R1Wb0CV5trS83Y0v88N8r/rDvwmDAc+zuvT1dgdyN50=
 pkg.akt.dev/go/cli v0.0.3-rc0/go.mod h1:nY7Rt0Ld4p6GskAzIW4YuDkrEpFHoIDteE4CzMA19RU=
 pkg.akt.dev/go/sdl v0.0.2-rc0 h1:Y3eotYpvsFLn4WpdWERxDs3R4mm2+Cx3D32eq3U84Pk=

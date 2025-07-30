@@ -14,9 +14,10 @@ import (
 
 	cflags "pkg.akt.dev/go/cli/flags"
 
+	testutilcli "pkg.akt.dev/go/cli/testutil"
+	"pkg.akt.dev/go/testutil"
+
 	"pkg.akt.dev/node/app"
-	"pkg.akt.dev/node/testutil"
-	testutilcli "pkg.akt.dev/node/testutil/cli"
 )
 
 // TestContextFlags tests that all the flags which are set in client.Context are parsed correctly.

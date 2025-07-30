@@ -50,13 +50,7 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	"pkg.akt.dev/node/app"
-	//"pkg.akt.dev/node/client"
 )
-
-func init() {
-	// register akash api routes
-	//cmtrpc.RoutesMap["akash"] = cmtrpcsrv.NewRPCFunc(client.RPCAkash, "")
-}
 
 const (
 	portsPerValidator = 2
@@ -299,7 +293,6 @@ func New(t *testing.T, cfg Config) *Network {
 			appCfg.GRPC.Address = fmt.Sprintf("127.0.0.1:%d", ports.mustGetPort())
 			appCfg.GRPC.Enable = true
 
-			//appCfg.GRPCWeb.Address = fmt.Sprintf("127.0.0.1:%d", ports.mustGetPort())
 			appCfg.GRPCWeb.Enable = true
 		}
 

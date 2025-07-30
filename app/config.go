@@ -48,11 +48,6 @@ var mbasics = module.NewBasicManager(
 		gov.NewAppModuleBasic(
 			[]govclient.ProposalHandler{
 				paramsclient.ProposalHandler,
-				// distrclient.ProposalHandler,
-				//upgradeclient.LegacyProposalHandler,
-				//upgradeclient.LegacyCancelProposalHandler,
-				//ibcclient.UpdateClientProposalHandler,
-				//ibcclient.UpgradeProposalHandler,
 			},
 		),
 		// chain parameters
