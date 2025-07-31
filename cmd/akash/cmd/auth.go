@@ -11,7 +11,7 @@ import (
 
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 
-	ajwt "github.com/akash-network/akash-api/go/util/jwt"
+	ajwt "pkg.akt.dev/go/util/jwt"
 )
 
 const (
@@ -35,7 +35,7 @@ func authJWTCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:  "jwt",
 		Args: cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			cctx, err := sdkclient.GetClientTxContext(cmd)
 			if err != nil {
 				return err

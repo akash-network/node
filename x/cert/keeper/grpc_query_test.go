@@ -5,16 +5,17 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
-	"github.com/stretchr/testify/require"
 
-	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+	types "pkg.akt.dev/go/node/cert/v1"
+	"pkg.akt.dev/go/testutil"
 
-	"github.com/akash-network/node/app"
-	"github.com/akash-network/node/testutil"
-	"github.com/akash-network/node/x/cert/keeper"
+	"pkg.akt.dev/node/app"
+	"pkg.akt.dev/node/x/cert/keeper"
 )
 
 type grpcTestSuite struct {
@@ -30,7 +31,8 @@ func setupTest(t *testing.T) *grpcTestSuite {
 		t: t,
 	}
 
-	suite.app = app.Setup(false)
+	suite.app = app.Setup(app.WithGenesis(app.GenesisStateWithValSet))
+
 	suite.ctx, suite.keeper = setupKeeper(t)
 	querier := suite.keeper.Querier()
 
@@ -55,10 +57,10 @@ func TestCertGRPCQueryCertificates(t *testing.T) {
 	suite := setupTest(t)
 
 	owner := testutil.AccAddress(t)
-	cert := testutil.Certificate(t, owner)
-
 	owner2 := testutil.AccAddress(t)
 	owner3 := testutil.AccAddress(t)
+
+	cert := testutil.Certificate(t, owner)
 	cert2 := testutil.Certificate(t, owner2)
 	cert3 := testutil.Certificate(t, owner3)
 
@@ -259,7 +261,7 @@ func TestCertGRPCQueryCertificates(t *testing.T) {
 			func() {
 				req = &types.QueryCertificatesRequest{
 					Filter: types.CertificateFilter{
-						State: types.Certificate_State_name[int32(types.CertificateValid)],
+						State: types.CertificateValid.String(),
 					},
 					Pagination: &sdkquery.PageRequest{
 						Limit: 10,
@@ -324,7 +326,7 @@ func TestCertGRPCQueryCertificates(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
-			ctx := sdk.WrapSDKContext(suite.ctx)
+			ctx := suite.ctx
 
 			res, err := suite.qclient.Certificates(ctx, req)
 
@@ -342,7 +344,7 @@ func TestCertGRPCQueryCertificates(t *testing.T) {
 					sortCerts(respCerts)
 
 					if req.Pagination != nil && req.Pagination.Limit > 0 {
-						require.LessOrEqual(t, len(respCerts), int(req.Pagination.Limit))
+						require.LessOrEqual(t, len(respCerts), int(req.Pagination.Limit)) //nolint:gosec
 					}
 
 					require.Len(t, respCerts, len(expCertificates))
@@ -360,7 +362,7 @@ func TestCertGRPCQueryCertificates(t *testing.T) {
 					require.NoError(t, err)
 					require.NotNil(t, res)
 					if req.Pagination != nil && req.Pagination.Limit > 0 {
-						require.LessOrEqual(t, len(res.Certificates), int(req.Pagination.Limit))
+						require.LessOrEqual(t, len(res.Certificates), int(req.Pagination.Limit)) //nolint:gosec
 					}
 
 					require.Nil(t, res.Pagination.NextKey)

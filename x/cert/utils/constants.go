@@ -1,3 +1,5 @@
+//nolint: revive
+
 package utils
 
 import "encoding/asn1"

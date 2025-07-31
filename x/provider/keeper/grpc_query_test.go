@@ -10,12 +10,12 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 
-	types "github.com/akash-network/akash-api/go/node/provider/v1beta3"
+	types "pkg.akt.dev/go/node/provider/v1beta4"
+	"pkg.akt.dev/go/testutil"
 
-	"github.com/akash-network/node/app"
-	"github.com/akash-network/node/testutil"
-	"github.com/akash-network/node/testutil/state"
-	"github.com/akash-network/node/x/provider/keeper"
+	"pkg.akt.dev/node/app"
+	"pkg.akt.dev/node/testutil/state"
+	"pkg.akt.dev/node/x/provider/keeper"
 )
 
 type grpcTestSuite struct {
@@ -89,7 +89,7 @@ func TestGRPCQueryProvider(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
-			ctx := sdk.WrapSDKContext(suite.ctx)
+			ctx := suite.ctx
 
 			res, err := suite.queryClient.Provider(ctx, req)
 
@@ -144,7 +144,7 @@ func TestGRPCQueryProviders(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
-			ctx := sdk.WrapSDKContext(suite.ctx)
+			ctx := suite.ctx
 
 			res, err := suite.queryClient.Providers(ctx, req)
 

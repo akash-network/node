@@ -6,29 +6,29 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/cosmos/cosmos-sdk/client/flags"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/spf13/cobra"
-	tmjson "github.com/tendermint/tendermint/libs/json"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
-	tmtypes "github.com/tendermint/tendermint/types"
-	dbm "github.com/tendermint/tm-db"
+	tmcmd "github.com/cometbft/cometbft/cmd/cometbft/commands"
+	tmjson "github.com/cometbft/cometbft/libs/json"
+	tmtypes "github.com/cometbft/cometbft/types"
+	dbm "github.com/cosmos/cosmos-db"
+	"github.com/spf13/cast"
+	cflags "pkg.akt.dev/go/cli/flags"
 
-	tmcmd "github.com/tendermint/tendermint/cmd/cometbft/commands"
+	servertypes "github.com/cosmos/cosmos-sdk/server/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/spf13/cobra"
 
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
-	"github.com/cosmos/cosmos-sdk/server/types"
 	"github.com/cosmos/cosmos-sdk/version"
 )
 
 const (
 	// Tendermint full-node start flags
 	flagTraceStore = "trace-store"
-	flagToFile     = "to-file"
 )
 
 // Commands server commands
-func Commands(defaultNodeHome string, appCreator types.AppCreator, appExport types.AppExporter, addStartFlags types.ModuleInitFlags) []*cobra.Command {
+func Commands(defaultNodeHome string, appCreator servertypes.AppCreator, appExport servertypes.AppExporter, addStartFlags servertypes.ModuleInitFlags) []*cobra.Command {
 	tendermintCmd := &cobra.Command{
 		Use:   "tendermint",
 		Short: "Tendermint subcommands",
@@ -58,34 +58,36 @@ func Commands(defaultNodeHome string, appCreator types.AppCreator, appExport typ
 }
 
 // ExportCmd dumps app state to JSON.
-func ExportCmd(appExporter types.AppExporter, defaultNodeHome string) *cobra.Command {
+func ExportCmd(appExporter servertypes.AppExporter, defaultNodeHome string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "export",
 		Short: "Export state to JSON",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			serverCtx := sdkserver.GetServerContextFromCmd(cmd)
-			config := serverCtx.Config
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			sctx := sdkserver.GetServerContextFromCmd(cmd)
+			config := sctx.Config
 
-			homeDir, _ := cmd.Flags().GetString(flags.FlagHome)
+			homeDir, _ := cmd.Flags().GetString(cflags.FlagHome)
 			config.SetRoot(homeDir)
 
 			if _, err := os.Stat(config.GenesisFile()); os.IsNotExist(err) {
 				return err
 			}
 
-			db, err := openDB(config.RootDir)
+			db, err := openDB(config.RootDir, sdkserver.GetAppDBBackend(sctx.Viper))
 			if err != nil {
 				return err
 			}
 
 			outFile := os.Stdout
-			if toFile, _ := cmd.Flags().GetString(flagToFile); toFile != "" {
-				outFile, err = os.Create(toFile)
+			var outputDocument string
+
+			if outputDocument, _ = cmd.Flags().GetString(cflags.FlagOutputDocument); outputDocument != "-" {
+				outFile, err = os.Create(outputDocument) //nolint: gosec
 				if err != nil {
 					return err
 				}
 			}
-
+			//
 			defer func() {
 				if outFile != os.Stdout {
 					_ = outFile.Close()
@@ -116,16 +118,27 @@ func ExportCmd(appExporter types.AppExporter, defaultNodeHome string) *cobra.Com
 				return err
 			}
 
-			height, _ := cmd.Flags().GetInt64(sdkserver.FlagHeight)
-			forZeroHeight, _ := cmd.Flags().GetBool(sdkserver.FlagForZeroHeight)
-			jailAllowedAddrs, _ := cmd.Flags().GetStringSlice(sdkserver.FlagJailAllowedAddrs)
+			height, _ := cmd.Flags().GetInt64(cflags.FlagHeight)
+			forZeroHeight, _ := cmd.Flags().GetBool(cflags.FlagForZeroHeight)
+			jailAllowedAddrs, _ := cmd.Flags().GetStringSlice(cflags.FlagJailAllowedAddrs)
+			modulesToExport, _ := cmd.Flags().GetStringSlice(cflags.FlagModulesToExport)
 
-			exported, err := appExporter(serverCtx.Logger, db, traceWriter, height, forZeroHeight, jailAllowedAddrs, serverCtx.Viper)
+			exported, err := appExporter(
+				sctx.Logger,
+				db,
+				traceWriter,
+				height,
+				forZeroHeight,
+				jailAllowedAddrs,
+				sctx.Viper,
+				modulesToExport,
+			)
+
 			if err != nil {
 				return fmt.Errorf("error exporting state: %v", err)
 			}
 
-			doc, err := tmtypes.GenesisDocFromFile(serverCtx.Config.GenesisFile())
+			doc, err := tmtypes.GenesisDocFromFile(sctx.Config.GenesisFile())
 			if err != nil {
 				return err
 			}
@@ -133,18 +146,17 @@ func ExportCmd(appExporter types.AppExporter, defaultNodeHome string) *cobra.Com
 			doc.AppState = exported.AppState
 			doc.Validators = exported.Validators
 			doc.InitialHeight = exported.Height
-			doc.ConsensusParams = &tmproto.ConsensusParams{
-				Block: tmproto.BlockParams{
-					MaxBytes:   exported.ConsensusParams.Block.MaxBytes,
-					MaxGas:     exported.ConsensusParams.Block.MaxGas,
-					TimeIotaMs: doc.ConsensusParams.Block.TimeIotaMs,
+			doc.ConsensusParams = &tmtypes.ConsensusParams{
+				Block: tmtypes.BlockParams{
+					MaxBytes: exported.ConsensusParams.Block.MaxBytes,
+					MaxGas:   exported.ConsensusParams.Block.MaxGas,
 				},
-				Evidence: tmproto.EvidenceParams{
+				Evidence: tmtypes.EvidenceParams{
 					MaxAgeNumBlocks: exported.ConsensusParams.Evidence.MaxAgeNumBlocks,
 					MaxAgeDuration:  exported.ConsensusParams.Evidence.MaxAgeDuration,
 					MaxBytes:        exported.ConsensusParams.Evidence.MaxBytes,
 				},
-				Validator: tmproto.ValidatorParams{
+				Validator: tmtypes.ValidatorParams{
 					PubKeyTypes: exported.ConsensusParams.Validator.PubKeyTypes,
 				},
 			}
@@ -157,8 +169,21 @@ func ExportCmd(appExporter types.AppExporter, defaultNodeHome string) *cobra.Com
 				return err
 			}
 
-			_, err = fmt.Fprintln(outFile, string(sdk.MustSortJSON(encoded)))
-			if err != nil {
+			out := sdk.MustSortJSON(encoded)
+			if outputDocument == "-" {
+				cmd.Println(string(out))
+				_, err = fmt.Fprintln(outFile, string(out))
+				if err != nil {
+					return err
+				}
+				return nil
+			}
+
+			var exportedGenDoc tmtypes.GenesisDoc
+			if err = tmjson.Unmarshal(out, &exportedGenDoc); err != nil {
+				return err
+			}
+			if err = exportedGenDoc.SaveAs(outputDocument); err != nil {
 				return err
 			}
 
@@ -166,34 +191,41 @@ func ExportCmd(appExporter types.AppExporter, defaultNodeHome string) *cobra.Com
 		},
 	}
 
-	cmd.Flags().String(flags.FlagHome, defaultNodeHome, "The application home directory")
-	cmd.Flags().Int64(sdkserver.FlagHeight, -1, "Export state from a particular height (-1 means latest height)")
-	cmd.Flags().Bool(sdkserver.FlagForZeroHeight, false, "Export state to start at height zero (perform preprocessing)")
-	cmd.Flags().StringSlice(sdkserver.FlagJailAllowedAddrs, []string{}, "Comma-separated list of operator addresses of jailed validators to unjail")
-	cmd.Flags().String(flagToFile, "", "Export Genesis to specified file")
+	cmd.Flags().String(cflags.FlagHome, defaultNodeHome, "The application home directory")
+	cmd.Flags().Int64(cflags.FlagHeight, -1, "Export state from a particular height (-1 means latest height)")
+	cmd.Flags().Bool(cflags.FlagForZeroHeight, false, "Export state to start at height zero (perform preprocessing)")
+	cmd.Flags().StringSlice(cflags.FlagJailAllowedAddrs, []string{}, "Comma-separated list of operator addresses of jailed validators to unjail")
+	cmd.Flags().StringSlice(cflags.FlagModulesToExport, []string{}, "Comma-separated list of modules to export. If empty, will export all modules")
+	cmd.Flags().String(cflags.FlagOutputDocument, "-", "Exported state is written to the given file instead of STDOUT")
 
 	return cmd
 }
 
-func openDB(rootDir string) (dbm.DB, error) {
+func openDB(rootDir string, backendType dbm.BackendType) (dbm.DB, error) {
 	dataDir := filepath.Join(rootDir, "data")
-	return sdk.NewLevelDB("application", dataDir)
+	return dbm.NewDB("application", backendType, dataDir)
 }
 
 func openTraceWriter(traceWriterFile string) (w io.Writer, err error) {
 	if traceWriterFile == "" {
 		return
 	}
-	return os.OpenFile(
+	return os.OpenFile( //nolint: gosec
 		traceWriterFile,
 		os.O_WRONLY|os.O_APPEND|os.O_CREATE,
-		0o666,
+		0o600,
 	)
 }
 
-// AddTestnetCreatorCommand allows chains to create a testnet from the state existing in their node's data directory.
-func AddTestnetCreatorCommand(rootCmd *cobra.Command, appCreator types.AppCreator, addStartFlags types.ModuleInitFlags) {
-	testnetCreateCmd := sdkserver.InPlaceTestnetCreator(appCreator)
-	addStartFlags(testnetCreateCmd)
-	rootCmd.AddCommand(testnetCreateCmd)
+// GetAppDBBackend gets the backend type to use for the application DBs.
+func GetAppDBBackend(opts servertypes.AppOptions) dbm.BackendType {
+	rv := cast.ToString(opts.Get("app-db-backend"))
+	if len(rv) == 0 {
+		rv = cast.ToString(opts.Get("db_backend"))
+	}
+	if len(rv) != 0 {
+		return dbm.BackendType(rv)
+	}
+
+	return dbm.GoLevelDBBackend
 }
