@@ -27,6 +27,7 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	consensusparamkeeper "github.com/cosmos/cosmos-sdk/x/consensus/keeper"
 	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
+	crisiskeeper "github.com/cosmos/cosmos-sdk/x/crisis/keeper"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	distrkeeper "github.com/cosmos/cosmos-sdk/x/distribution/keeper"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
@@ -98,7 +99,8 @@ type AppKeepers struct {
 		Distr                distrkeeper.Keeper
 		Gov                  *govkeeper.Keeper
 		Upgrade              *upgradekeeper.Keeper
-		Params               paramskeeper.Keeper //nolint: staticcheck
+		Crisis               *crisiskeeper.Keeper //nolint: staticcheck
+		Params               paramskeeper.Keeper  //nolint: staticcheck
 		ConsensusParams      *consensusparamkeeper.Keeper
 		IBC                  *ibckeeper.Keeper
 		Evidence             *evidencekeeper.Keeper
@@ -195,7 +197,7 @@ func (app *App) InitSpecialKeepers(
 	cdc codec.Codec,
 	legacyAmino *codec.LegacyAmino,
 	bApp *baseapp.BaseApp,
-	_ uint,
+	invCheckPeriod uint,
 	skipUpgradeHeights map[int64]bool,
 	homePath string) {
 
@@ -236,14 +238,14 @@ func (app *App) InitSpecialKeepers(
 	// any further modules from creating scoped sub-keepers.
 	app.Keepers.Cosmos.Cap.Seal()
 
-	//app.Keepers.Cosmos.Crisis = crisiskeeper.NewKeeper(
-	//	cdc, runtime.NewKVStoreService(app.keys[crisistypes.StoreKey]),
-	//	invCheckPeriod,
-	//	app.Keepers.Cosmos.Bank,
-	//	authtypes.FeeCollectorName,
-	//	authtypes.NewModuleAddress(govtypes.ModuleName).String(),
-	//	addresscodec.NewBech32Codec(sdk.GetConfig().GetBech32AccountAddrPrefix()),
-	//)
+	app.Keepers.Cosmos.Crisis = crisiskeeper.NewKeeper( //nolint: staticcheck
+		cdc, runtime.NewKVStoreService(app.keys[crisistypes.StoreKey]),
+		invCheckPeriod,
+		app.Keepers.Cosmos.Bank,
+		authtypes.FeeCollectorName,
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		addresscodec.NewBech32Codec(sdk.GetConfig().GetBech32AccountAddrPrefix()),
+	)
 
 	app.Keepers.Cosmos.Upgrade = upgradekeeper.NewKeeper(
 		skipUpgradeHeights,
@@ -574,14 +576,14 @@ func FindStructField[C any](obj interface{}, fieldName string) (C, error) {
 
 	field := rValue.Elem().FieldByName(fieldName)
 	if !field.IsValid() {
-		return *new(C), fmt.Errorf("interface `%s` does not have the field `%s`", // nolint: goerr113
+		return *new(C), fmt.Errorf("interface `%s` does not have the field `%s`",
 			rValue.Type(),
 			fieldName)
 	}
 
 	res, valid := field.Interface().(C)
 	if !valid {
-		return *new(C), fmt.Errorf( // nolint: goerr113
+		return *new(C), fmt.Errorf(
 			"object's `%s` expected type `%s` does not match actual `%s`",
 			fieldName,
 			reflect.TypeOf(*new(C)), field.Type().String())

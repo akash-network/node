@@ -323,7 +323,7 @@ func OrderEndBlockers(_ []string) []string {
 	}
 }
 
-func getGenesisTime(appOpts servertypes.AppOptions, homePath string) time.Time { // nolint: unused,deadcode
+func getGenesisTime(appOpts servertypes.AppOptions, homePath string) time.Time { // nolint: unused
 	if v := appOpts.Get("GenesisTime"); v != nil {
 		// in tests, GenesisTime is supplied using appOpts
 		genTime, ok := v.(time.Time)

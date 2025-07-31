@@ -308,8 +308,8 @@ func New(t *testing.T, cfg Config) *Network {
 		clientDir := filepath.Join(network.BaseDir, nodeDirName, "simcli")
 		gentxsDir := filepath.Join(network.BaseDir, "gentxs")
 
-		require.NoError(t, os.MkdirAll(filepath.Join(nodeDir, "config"), 0o755))
-		require.NoError(t, os.MkdirAll(clientDir, 0o755))
+		require.NoError(t, os.MkdirAll(filepath.Join(nodeDir, "config"), 0o755)) //nolint: gosec
+		require.NoError(t, os.MkdirAll(clientDir, 0o755))                        //nolint: gosec
 
 		tmCfg.SetRoot(nodeDir)
 		tmCfg.Moniker = nodeDirName

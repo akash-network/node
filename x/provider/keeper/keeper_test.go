@@ -7,8 +7,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 
-	"pkg.akt.dev/go/node/client/v1beta3/testutil"
 	types "pkg.akt.dev/go/node/provider/v1beta4"
+	"pkg.akt.dev/go/testutil"
 
 	"pkg.akt.dev/node/testutil/state"
 	"pkg.akt.dev/node/x/provider/keeper"

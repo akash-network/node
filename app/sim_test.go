@@ -291,12 +291,12 @@ func TestAppImportExport(t *testing.T) {
 			appB,
 			[][]byte{},
 		},
-		//{
+		// {
 		//	ibchost.StoreKey,
 		//	appA,
 		//	appB,
 		//	[][]byte{},
-		//},
+		// },
 		{
 			ibctransfertypes.StoreKey,
 			appA,

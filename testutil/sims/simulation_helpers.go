@@ -144,10 +144,14 @@ func GetSimulationLog(storeName string, sdr simtypes.StoreDecoderRegistry, kvAs,
 // that differ from one another. It also skips value comparison for a set of provided prefixes.
 func DiffKVStores(a, b storetypes.KVStore, prefixesToSkip [][]byte) (diffA, diffB []kv.Pair) {
 	iterA := a.Iterator(nil, nil)
-	defer iterA.Close()
+	defer func() {
+		_ = iterA.Close()
+	}()
 
 	iterB := b.Iterator(nil, nil)
-	defer iterB.Close()
+	defer func() {
+		_ = iterB.Close()
+	}()
 
 	var wg sync.WaitGroup
 

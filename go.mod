@@ -48,9 +48,9 @@ require (
 	google.golang.org/grpc v1.72.2
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.2
-	pkg.akt.dev/go v0.0.3-rc1
-	pkg.akt.dev/go/cli v0.0.3-rc0
-	pkg.akt.dev/go/sdl v0.0.2-rc0
+	pkg.akt.dev/go v0.0.3-rc2
+	pkg.akt.dev/go/cli v0.0.3-rc1
+	pkg.akt.dev/go/sdl v0.0.2-rc1
 )
 
 replace (
@@ -73,6 +73,8 @@ replace (
 	golang.org/x/exp => golang.org/x/exp v0.0.0-20230711153332-06a737ee72cb
 	// stick with compatible version of rapid in v0.47.x line
 	pgregory.net/rapid => pgregory.net/rapid v0.5.5
+
+	pkg.akt.dev/go => ../chain-sdk/go
 )
 
 require (

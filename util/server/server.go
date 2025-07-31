@@ -82,7 +82,7 @@ func ExportCmd(appExporter servertypes.AppExporter, defaultNodeHome string) *cob
 			var outputDocument string
 
 			if outputDocument, _ = cmd.Flags().GetString(cflags.FlagOutputDocument); outputDocument != "-" {
-				outFile, err = os.Create(outputDocument)
+				outFile, err = os.Create(outputDocument) //nolint: gosec
 				if err != nil {
 					return err
 				}
@@ -210,10 +210,10 @@ func openTraceWriter(traceWriterFile string) (w io.Writer, err error) {
 	if traceWriterFile == "" {
 		return
 	}
-	return os.OpenFile(
+	return os.OpenFile( //nolint: gosec
 		traceWriterFile,
 		os.O_WRONLY|os.O_APPEND|os.O_CREATE,
-		0o666,
+		0o600,
 	)
 }
 

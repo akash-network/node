@@ -93,7 +93,7 @@ you want to test the upgrade handler itself.
 			if err != nil {
 				return err
 			}
-			cfgFile, err := os.Open(cfgFilePath)
+			cfgFile, err := os.Open(cfgFilePath) //nolint: gosec
 			if err != nil {
 				return err
 			}

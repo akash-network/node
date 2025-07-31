@@ -29,7 +29,7 @@ func (c Config) GetAttributes() tattr.Attributes {
 
 // ReadConfigPath reads and parses file
 func ReadConfigPath(path string) (Config, error) {
-	buf, err := os.ReadFile(path)
+	buf, err := os.ReadFile(path) //nolint: gosec
 	if err != nil {
 		return Config{}, err
 	}

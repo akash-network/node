@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 
+	"github.com/cosmos/cosmos-sdk/x/crisis"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"pkg.akt.dev/go/cli"
@@ -43,9 +44,6 @@ func NewRootCmd() (*cobra.Command, sdkutil.EncodingConfig) {
 		SilenceUsage:      true,
 		PersistentPreRunE: GetPersistentPreRunE(encodingConfig, []string{"AKASH"}),
 	}
-
-	// register akash api routes
-	//cmtrpc.Routes["akash"] = cmtrpcsrv.NewRPCFunc(client.RPCAkash, "")
 
 	initRootCmd(rootCmd, encodingConfig)
 
@@ -144,8 +142,8 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig sdkutil.EncodingConfig) 
 	rootCmd.SetErr(rootCmd.ErrOrStderr())
 }
 
-func addModuleInitFlags(_ *cobra.Command) {
-	//crisis.AddModuleInitFlags(startCmd)
+func addModuleInitFlags(startCmd *cobra.Command) {
+	crisis.AddModuleInitFlags(startCmd) //nolint: staticcheck
 }
 
 // genesisCommand builds genesis-related `simd genesis` command. Users may provide application specific commands as a parameter

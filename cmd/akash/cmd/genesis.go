@@ -6,6 +6,7 @@ import (
 	"time"
 
 	sdkmath "cosmossdk.io/math"
+	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	"github.com/spf13/cobra"
 
@@ -137,7 +138,7 @@ func PrepareGenesis(clientCtx client.Context, appState map[string]json.RawMessag
 	distributionGenState := distributiontypes.DefaultGenesisState()
 	distributionGenState.Params = genesisParams.DistributionParams
 	// TODO Set initial community pool
-	// distributionGenState.FeePool.CommunityPool = sdk.NewDecCoins()
+	distributionGenState.FeePool.CommunityPool = sdk.NewDecCoins()
 	distributionGenStateBz, err := cdc.MarshalJSON(distributionGenState)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to marshal distribution genesis state: %w", err)
@@ -156,15 +157,15 @@ func PrepareGenesis(clientCtx client.Context, appState map[string]json.RawMessag
 	appState[govtypes.ModuleName] = govGenStateBz
 
 	// crisis module genesis
-	//crisisGenState := crisistypes.DefaultGenesisState()
-	//crisisGenState.ConstantFee = genesisParams.CrisisConstantFee
-	//// TODO Set initial community pool
-	//// distributionGenState.FeePool.CommunityPool = sdk.NewDecCoins()
-	//crisisGenStateBz, err := cdc.MarshalJSON(crisisGenState)
-	//if err != nil {
-	//	return nil, nil, fmt.Errorf("failed to marshal crisis genesis state: %w", err)
-	//}
-	//appState[crisistypes.ModuleName] = crisisGenStateBz
+	crisisGenState := crisistypes.DefaultGenesisState()
+	crisisGenState.ConstantFee = genesisParams.CrisisConstantFee
+	// TODO Set initial community pool
+	// distributionGenState.FeePool.CommunityPool = sdk.NewDecCoins()
+	crisisGenStateBz, err := cdc.MarshalJSON(crisisGenState)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to marshal crisis genesis state: %w", err)
+	}
+	appState[crisistypes.ModuleName] = crisisGenStateBz
 
 	// slashing module genesis
 	slashingGenState := slashingtypes.DefaultGenesisState()

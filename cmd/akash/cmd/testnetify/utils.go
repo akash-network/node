@@ -45,7 +45,7 @@ func openTraceWriter(traceWriterFile string) (w io.WriteCloser, err error) {
 	if traceWriterFile == "" {
 		return
 	}
-	return os.OpenFile(
+	return os.OpenFile( //nolint: gosec
 		traceWriterFile,
 		os.O_WRONLY|os.O_APPEND|os.O_CREATE,
 		0o666,
