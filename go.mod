@@ -74,7 +74,6 @@ replace (
 	// stick with compatible version of rapid in v0.47.x line
 	pgregory.net/rapid => pgregory.net/rapid v0.5.5
 
-	pkg.akt.dev/go => ../chain-sdk/go
 )
 
 require (
