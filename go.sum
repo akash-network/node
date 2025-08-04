@@ -2477,10 +2477,10 @@ nhooyr.io/websocket v1.8.6/go.mod h1:B70DZP8IakI65RVQ51MsWP/8jndNma26DVA/nFSCgW0
 nullprogram.com/x/optparse v1.0.0/go.mod h1:KdyPE+Igbe0jQUrVfMqDMeJQIJZEuyV7pjYmp6pbG50=
 pgregory.net/rapid v0.5.5 h1:jkgx1TjbQPD/feRoK+S/mXw9e1uj6WilpHrXJowi6oA=
 pgregory.net/rapid v0.5.5/go.mod h1:PY5XlDGj0+V1FCq0o192FdRhpKHGTRIWBgqjDBTrq04=
-pkg.akt.dev/go v0.0.3-rc2 h1:/sDT3cYm6cpja7fVIpr0oC0GpqBJWVP0PG0gdJL7ySc=
-pkg.akt.dev/go v0.0.3-rc2/go.mod h1:REfqaKxT2NGUQG80mF1x/irdrwF6Ff4aTqJuaDPpktY=
-pkg.akt.dev/go/cli v0.0.3-rc1 h1:Wf2DIIIpUB5ctnzZirvCfnrKsxr7c063BRRzw+UO9mk=
-pkg.akt.dev/go/cli v0.0.3-rc1/go.mod h1:45U+D8jVOWnWfb0C7q3O/YDE3idhe1hQaFLxleiUWfs=
+pkg.akt.dev/go v0.0.3-rc6 h1:JZ8LT3rUy3jV9Jx2YpYG6omONWyvixQ/QVPsD14Q6os=
+pkg.akt.dev/go v0.0.3-rc6/go.mod h1://FPz5fG2eSg1kPCcdXfLm+bf5U9HToh2w6lWv9H0LM=
+pkg.akt.dev/go/cli v0.0.3-rc2 h1:uW78EWS/8iAhJauMrNwjip1Kf4s8K7MzlYBpaOxlk1Q=
+pkg.akt.dev/go/cli v0.0.3-rc2/go.mod h1:bAyq/D9Ws7HQEpO9m/cAX4LcMGGHKw74OPUgR4FYUOI=
 pkg.akt.dev/go/sdl v0.0.2-rc1 h1:Wx6MQwyY4WKqKKtoc72bJYO9dQrwPrlfSpUTAJO958k=
 pkg.akt.dev/go/sdl v0.0.2-rc1/go.mod h1:+k5w1I0+zCg8HHRczCsVcjemgsykGeq0TAd9y/4XSiQ=
 pkg.akt.dev/specs v0.0.1 h1:OP0zil3Fr4kcCuybFqQ8LWgSlSP2Yn7306meWpu6/S4=

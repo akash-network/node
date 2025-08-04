@@ -27,7 +27,6 @@ import (
 
 	"pkg.akt.dev/node/app"
 	"pkg.akt.dev/node/cmd/akash/cmd/testnetify"
-	ecmd "pkg.akt.dev/node/events/cmd"
 	utilcli "pkg.akt.dev/node/util/cli"
 )
 
@@ -119,9 +118,9 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig sdkutil.EncodingConfig) 
 
 	rootCmd.AddCommand(
 		sdkserver.StatusCommand(),
-		ecmd.EventCmd(),
 		AuthCmd(),
 		AddGenesisAccountCmd(app.DefaultHome),
+		cli.EventsCmd(),
 		cli.QueryCmd(),
 		cli.TxCmd(encodingConfig.SigningOptions.ValidatorAddressCodec, encodingConfig.SigningOptions.AddressCodec),
 		keys.Commands(),
