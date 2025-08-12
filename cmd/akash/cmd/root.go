@@ -119,7 +119,6 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig sdkutil.EncodingConfig) 
 	rootCmd.AddCommand(
 		sdkserver.StatusCommand(),
 		AuthCmd(),
-		AddGenesisAccountCmd(app.DefaultHome),
 		cli.EventsCmd(),
 		cli.QueryCmd(),
 		cli.TxCmd(),

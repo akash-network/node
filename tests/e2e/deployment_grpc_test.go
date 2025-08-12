@@ -87,7 +87,7 @@ func (s *deploymentGRPCRestTestSuite) SetupSuite() {
 	out := &v1beta4.QueryDeploymentsResponse{}
 	err = val.ClientCtx.Codec.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
-	s.Require().Len(out.Deployments, 1, "Cert Create Failed")
+	s.Require().Len(out.Deployments, 1, "Deployment Create Failed")
 	deployments := out.Deployments
 	s.Require().Equal(val.Address.String(), deployments[0].Deployment.ID.Owner)
 

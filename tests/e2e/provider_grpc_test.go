@@ -124,7 +124,7 @@ func (s *providerGRPCRestTestSuite) TestGetProvider() {
 		expResp types.Provider
 	}{
 		{
-			"get group with empty input",
+			"get provider with empty input",
 			fmt.Sprintf("%s/akash/provider/v1beta4/providers/%s", val.APIAddress, ""),
 			true,
 			types.Provider{},

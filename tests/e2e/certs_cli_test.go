@@ -150,7 +150,7 @@ func (s *certificateIntegrationTestSuite) TestGenerateAndRevokeFailsServer() {
 		s.ContextForTest(),
 		s.ClientContextForTest(),
 		cli.TestFlags().
-			WithFrom(certTestHost).
+			With(certTestHost).
 			WithFrom(s.WalletForTest().String()).
 			WithGasAutoFlags().
 			WithSkipConfirm().
@@ -207,7 +207,7 @@ func (s *certificateIntegrationTestSuite) TestGenerateServerNoOverwrite() {
 		s.ContextForTest(),
 		s.ClientContextForTest(),
 		cli.TestFlags().
-			WithFrom(certTestHost).
+			With(certTestHost).
 			WithFrom(s.WalletForTest().String()).
 			WithGasAutoFlags().
 			WithSkipConfirm().
@@ -220,7 +220,7 @@ func (s *certificateIntegrationTestSuite) TestGenerateServerNoOverwrite() {
 		s.ContextForTest(),
 		s.ClientContextForTest(),
 		cli.TestFlags().
-			WithFrom(certTestHost).
+			With(certTestHost).
 			WithFrom(s.WalletForTest().String()).
 			WithGasAutoFlags().
 			WithSkipConfirm().

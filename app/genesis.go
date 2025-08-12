@@ -50,12 +50,6 @@ func genesisFilterTokens(from GenesisState) GenesisState {
 			continue
 		}
 
-		var val map[string]interface{}
-		err = json.Unmarshal(buf.Bytes(), &val)
-		if err != nil {
-			panic(err)
-		}
-
 		replacementV := json.RawMessage(stringDataAfter)
 		genesisState[k] = replacementV
 	}
