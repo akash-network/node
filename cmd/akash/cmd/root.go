@@ -122,7 +122,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig sdkutil.EncodingConfig) 
 		AddGenesisAccountCmd(app.DefaultHome),
 		cli.EventsCmd(),
 		cli.QueryCmd(),
-		cli.TxCmd(encodingConfig.SigningOptions.ValidatorAddressCodec, encodingConfig.SigningOptions.AddressCodec),
+		cli.TxCmd(),
 		keys.Commands(),
 		genesisCommand(encodingConfig),
 		cmtcli.NewCompletionCmd(rootCmd, true),
