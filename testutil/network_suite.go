@@ -20,8 +20,8 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/gogoproto/jsonpb"
 
-	"pkg.akt.dev/go/cli"
 	cflags "pkg.akt.dev/go/cli/flags"
+	aclient "pkg.akt.dev/go/node/client/discovery"
 	cltypes "pkg.akt.dev/go/node/client/types"
 	cclient "pkg.akt.dev/go/node/client/v1beta3"
 	sdktestutil "pkg.akt.dev/go/testutil"
@@ -115,7 +115,7 @@ func (nts *NetworkTestSuite) SetupSuite() {
 	ctx := context.Background()
 	cctx := nts.ClientContext().WithFrom(nts.network.Validators[0].Address.String())
 
-	cl, err := cli.DiscoverClient(
+	cl, err := aclient.DiscoverClient(
 		ctx,
 		cctx,
 		cltypes.WithGas(cltypes.GasSetting{Simulate: true}),

@@ -10,8 +10,6 @@ import (
 	bam "github.com/cosmos/cosmos-sdk/baseapp"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
-	"github.com/cosmos/cosmos-sdk/types/module/testutil"
-
 	cflags "pkg.akt.dev/go/cli/flags"
 	"pkg.akt.dev/go/sdkutil"
 
@@ -20,7 +18,7 @@ import (
 )
 
 // NewTestNetworkFixture returns a new simapp AppConstructor for network simulation tests
-func NewTestNetworkFixture() network.TestFixture {
+func NewTestNetworkFixture(opts ...network.TestnetFixtureOption) network.TestFixture {
 	dir, err := os.MkdirTemp("", "simapp")
 	if err != nil {
 		panic(fmt.Sprintf("failed creating temporary directory: %v", err))
@@ -29,7 +27,16 @@ func NewTestNetworkFixture() network.TestFixture {
 		_ = os.RemoveAll(dir)
 	}()
 
-	encodingConfig := sdkutil.MakeEncodingConfig()
+	cfgOpts := &network.TestnetFixtureOptions{}
+
+	for _, opt := range opts {
+		opt(cfgOpts)
+	}
+
+	if cfgOpts.EncCfg.InterfaceRegistry == nil {
+		cfgOpts.EncCfg = sdkutil.MakeEncodingConfig()
+		app.ModuleBasics().RegisterInterfaces(cfgOpts.EncCfg.InterfaceRegistry)
+	}
 
 	tapp := app.NewApp(
 		log.NewNopLogger(),
@@ -38,7 +45,7 @@ func NewTestNetworkFixture() network.TestFixture {
 		true,
 		0,
 		make(map[int64]bool),
-		encodingConfig,
+		cfgOpts.EncCfg,
 		simtestutil.NewAppOptionsWithFlagHome(dir),
 	)
 
@@ -50,7 +57,7 @@ func NewTestNetworkFixture() network.TestFixture {
 			true,
 			0,
 			make(map[int64]bool),
-			encodingConfig,
+			cfgOpts.EncCfg,
 			simtestutil.NewAppOptionsWithFlagHome(val.GetCtx().Config.RootDir),
 			bam.SetPruning(pruningtypes.NewPruningOptionsFromString(val.GetAppConfig().Pruning)),
 			bam.SetMinGasPrices(val.GetAppConfig().MinGasPrices),
@@ -61,11 +68,6 @@ func NewTestNetworkFixture() network.TestFixture {
 	return network.TestFixture{
 		AppConstructor: appCtr,
 		GenesisState:   app.NewDefaultGenesisState(tapp.AppCodec()),
-		EncodingConfig: testutil.TestEncodingConfig{
-			InterfaceRegistry: tapp.InterfaceRegistry(),
-			Codec:             tapp.AppCodec(),
-			TxConfig:          tapp.TxConfig(),
-			Amino:             tapp.LegacyAmino(),
-		},
+		EncodingConfig: cfgOpts.EncCfg,
 	}
 }

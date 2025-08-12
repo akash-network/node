@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"golang.org/x/sync/errgroup"
+
 	"cosmossdk.io/log"
 	cmtcfg "github.com/cometbft/cometbft/config"
 	"github.com/cometbft/cometbft/node"
@@ -16,9 +18,8 @@ import (
 	"github.com/cometbft/cometbft/rpc/client/local"
 	"github.com/cometbft/cometbft/types"
 	tmtime "github.com/cometbft/cometbft/types/time"
-	"github.com/cosmos/cosmos-sdk/server"
-	"golang.org/x/sync/errgroup"
 
+	"github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/server/api"
 	servergrpc "github.com/cosmos/cosmos-sdk/server/grpc"
 	servercmtlog "github.com/cosmos/cosmos-sdk/server/log"
@@ -45,8 +46,6 @@ func startInProcess(cfg Config, val *Validator) error {
 	app := cfg.AppConstructor(*val)
 	val.app = app
 
-	cmtApp := server.NewCometABCIWrapper(app)
-
 	appGenesisProvider := func() (node.ChecksummedGenesisDoc, error) {
 		appGenesis, err := genutiltypes.AppGenesisFromFile(cmtCfg.GenesisFile())
 		if err != nil {
@@ -63,6 +62,7 @@ func startInProcess(cfg Config, val *Validator) error {
 		}, nil
 	}
 
+	cmtApp := server.NewCometABCIWrapper(app)
 	tmNode, err := node.NewNode( //resleak:notresource
 		context.Background(),
 		cmtCfg,
@@ -87,34 +87,22 @@ func startInProcess(cfg Config, val *Validator) error {
 		val.RPCClient = local.New(tmNode)
 	}
 
-	ctx := context.Background()
-	ctx, val.cancelFn = context.WithCancel(ctx)
-	val.errGroup, ctx = errgroup.WithContext(ctx)
-
 	// We'll need a RPC client if the validator exposes a gRPC or REST endpoint.
 	if val.APIAddress != "" || val.AppConfig.GRPC.Enable {
-		val.ClientCtx = val.ClientCtx.
-			WithClient(val.RPCClient)
+		val.ClientCtx = val.ClientCtx.WithClient(val.RPCClient)
 
 		app.RegisterTxService(val.ClientCtx)
 		app.RegisterTendermintService(val.ClientCtx)
 		app.RegisterNodeService(val.ClientCtx, *val.AppConfig)
 	}
 
-	if val.APIAddress != "" {
-		apiSrv := api.New(val.ClientCtx, logger.With(log.ModuleKey, "api-server"), val.grpc)
-		app.RegisterAPIRoutes(apiSrv, val.AppConfig.API)
-
-		val.errGroup.Go(func() error {
-			return apiSrv.Start(ctx, *val.AppConfig)
-		})
-
-		val.api = apiSrv
-	}
+	ctx := context.Background()
+	ctx, val.cancelFn = context.WithCancel(ctx)
+	val.errGroup, ctx = errgroup.WithContext(ctx)
 
 	grpcCfg := val.AppConfig.GRPC
 
-	if val.AppConfig.GRPC.Enable {
+	if grpcCfg.Enable {
 		grpcSrv, err := servergrpc.NewGRPCServer(val.ClientCtx, app, grpcCfg)
 		if err != nil {
 			return err
@@ -127,6 +115,17 @@ func startInProcess(cfg Config, val *Validator) error {
 		})
 
 		val.grpc = grpcSrv
+	}
+
+	if val.APIAddress != "" {
+		apiSrv := api.New(val.ClientCtx, logger.With(log.ModuleKey, "api-server"), val.grpc)
+		app.RegisterAPIRoutes(apiSrv, val.AppConfig.API)
+
+		val.errGroup.Go(func() error {
+			return apiSrv.Start(ctx, *val.AppConfig)
+		})
+
+		val.api = apiSrv
 	}
 
 	return nil

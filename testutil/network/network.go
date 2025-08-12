@@ -17,25 +17,22 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
+
+	tmrand "github.com/cometbft/cometbft/libs/rand"
+	"github.com/cometbft/cometbft/node"
+	tmclient "github.com/cometbft/cometbft/rpc/client"
 
 	"cosmossdk.io/log"
 	"cosmossdk.io/math"
 	pruningtypes "cosmossdk.io/store/pruning/types"
-	tmrand "github.com/cometbft/cometbft/libs/rand"
-	"github.com/cosmos/cosmos-sdk/crypto/hd"
-	moduletestutil "github.com/cosmos/cosmos-sdk/types/module/testutil"
-	"github.com/stretchr/testify/require"
-	cflags "pkg.akt.dev/go/cli/flags"
-
-	"github.com/cometbft/cometbft/node"
-	tmclient "github.com/cometbft/cometbft/rpc/client"
-	"google.golang.org/grpc"
-
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/tx"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	"github.com/cosmos/cosmos-sdk/server"
@@ -49,6 +46,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
+	cflags "pkg.akt.dev/go/cli/flags"
+	"pkg.akt.dev/go/sdkutil"
+
 	"pkg.akt.dev/node/app"
 )
 
@@ -61,17 +61,29 @@ var (
 	lock = new(sync.Mutex)
 )
 
+type TestnetFixtureOptions struct {
+	EncCfg sdkutil.EncodingConfig
+}
+
+type TestnetFixtureOption func(*TestnetFixtureOptions)
+
+func WithEncodingConfig(val sdkutil.EncodingConfig) TestnetFixtureOption {
+	return func(opts *TestnetFixtureOptions) {
+		opts.EncCfg = val
+	}
+}
+
 // AppConstructor defines a function which accepts a network configuration and
 // creates an ABCI Application to provide to Tendermint.
 type (
 	AppConstructor     = func(val ValidatorI) servertypes.Application
-	TestFixtureFactory = func() TestFixture
+	TestFixtureFactory = func(opts ...TestnetFixtureOption) TestFixture
 )
 
 type TestFixture struct {
 	AppConstructor AppConstructor
 	GenesisState   map[string]json.RawMessage
-	EncodingConfig moduletestutil.TestEncodingConfig
+	EncodingConfig sdkutil.EncodingConfig
 }
 
 // Config defines the necessary configuration used to bootstrap and start an
@@ -608,6 +620,8 @@ func DefaultConfig(factory TestFixtureFactory, opts ...ConfigOption) Config {
 		}
 	}
 
+	fixture.GenesisState = genesisState
+
 	const coinDenom = "uakt"
 	return Config{
 		Codec:             fixture.EncodingConfig.Codec,
@@ -622,6 +636,7 @@ func DefaultConfig(factory TestFixtureFactory, opts ...ConfigOption) Config {
 		NumValidators:     4,
 		BondDenom:         coinDenom,
 		Denoms: []string{
+			coinDenom,
 			"ibc/12C6A0C374171B595A0A9E18B83FA09D295FB1F2D8C6DAA3AC28683471752D84",
 		},
 		MinGasPrices:    fmt.Sprintf("0.000006%s", coinDenom),
