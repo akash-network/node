@@ -55,10 +55,9 @@ import (
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
-	transfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
-	ibchost "github.com/cosmos/ibc-go/v8/modules/core/exported"
-	"github.com/cosmos/ibc-go/v8/testing/simapp"
+	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
+	ibchost "github.com/cosmos/ibc-go/v10/modules/core/exported"
+	"github.com/cosmos/ibc-go/v10/testing/simapp"
 
 	cflags "pkg.akt.dev/go/cli/flags"
 	audittypes "pkg.akt.dev/go/node/audit/v1"
@@ -219,7 +218,6 @@ func NewApp(
 	// initialize stores
 	app.MountKVStores(app.GetKVStoreKey())
 	app.MountTransientStores(app.GetTransientStoreKey())
-	app.MountMemoryStores(app.GetMemoryStoreKey())
 
 	anteOpts := HandlerOptions{
 		HandlerOptions: ante.HandlerOptions{
@@ -267,7 +265,6 @@ func NewApp(
 func orderBeginBlockers(_ []string) []string {
 	return []string{
 		upgradetypes.ModuleName,
-		capabilitytypes.ModuleName,
 		banktypes.ModuleName,
 		paramstypes.ModuleName,
 		deploymenttypes.ModuleName,
@@ -299,7 +296,6 @@ func OrderEndBlockers(_ []string) []string {
 		govtypes.ModuleName,
 		stakingtypes.ModuleName,
 		upgradetypes.ModuleName,
-		capabilitytypes.ModuleName,
 		banktypes.ModuleName,
 		paramstypes.ModuleName,
 		deploymenttypes.ModuleName,

@@ -26,10 +26,9 @@ import (
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	"github.com/cosmos/cosmos-sdk/x/staking"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/cosmos/ibc-go/modules/capability"
-	"github.com/cosmos/ibc-go/v8/modules/apps/transfer"
-	ibc "github.com/cosmos/ibc-go/v8/modules/core"
-	ibctm "github.com/cosmos/ibc-go/v8/modules/light-clients/07-tendermint"
+	"github.com/cosmos/ibc-go/v10/modules/apps/transfer"
+	ibc "github.com/cosmos/ibc-go/v10/modules/core"
+	ibctm "github.com/cosmos/ibc-go/v10/modules/light-clients/07-tendermint"
 
 	"pkg.akt.dev/go/sdkutil"
 
@@ -70,11 +69,6 @@ func appModules(
 			app.Keepers.Cosmos.Bank,
 			app.Keepers.Cosmos.Acct,
 			app.GetSubspace(banktypes.ModuleName),
-		),
-		capability.NewAppModule(
-			cdc,
-			*app.Keepers.Cosmos.Cap,
-			false,
 		),
 		gov.NewAppModule(
 			cdc,
@@ -140,7 +134,9 @@ func appModules(
 		transfer.NewAppModule(
 			app.Keepers.Cosmos.Transfer,
 		),
-		ibctm.NewAppModule(),
+		ibctm.NewAppModule(
+			app.Keepers.Modules.TMLight,
+		),
 		params.NewAppModule( //nolint: staticcheck
 			app.Keepers.Cosmos.Params,
 		),
@@ -224,11 +220,6 @@ func appSimModules(
 			app.Keepers.Cosmos.Bank,
 			app.Keepers.Cosmos.FeeGrant,
 			app.interfaceRegistry,
-		),
-		capability.NewAppModule(
-			app.cdc,
-			*app.Keepers.Cosmos.Cap,
-			false,
 		),
 		authzmodule.NewAppModule(
 			app.cdc,

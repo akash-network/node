@@ -7,10 +7,21 @@ import (
 	"os"
 	"testing"
 
+	"github.com/spf13/viper"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	abci "github.com/cometbft/cometbft/abci/types"
+
 	"cosmossdk.io/log"
+	"cosmossdk.io/store"
+	storetypes "cosmossdk.io/store/types"
 	evidencetypes "cosmossdk.io/x/evidence/types"
 	"cosmossdk.io/x/feegrant"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
+	dbm "github.com/cosmos/cosmos-db"
+	"github.com/cosmos/cosmos-sdk/baseapp"
+	sdksim "github.com/cosmos/cosmos-sdk/types/simulation"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -19,13 +30,12 @@ import (
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	paramtypes "github.com/cosmos/cosmos-sdk/x/params/types"
+	"github.com/cosmos/cosmos-sdk/x/simulation"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
-	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
-	"github.com/spf13/viper"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	ibctransfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
+	ibchost "github.com/cosmos/ibc-go/v10/modules/core/exported"
+
 	atypes "pkg.akt.dev/go/node/audit/v1"
 	ctypes "pkg.akt.dev/go/node/cert/v1"
 	dtypes "pkg.akt.dev/go/node/deployment/v1"
@@ -33,15 +43,6 @@ import (
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 	taketypes "pkg.akt.dev/go/node/take/v1"
 	"pkg.akt.dev/go/sdkutil"
-
-	abci "github.com/cometbft/cometbft/abci/types"
-
-	"cosmossdk.io/store"
-	storetypes "cosmossdk.io/store/types"
-	dbm "github.com/cosmos/cosmos-db"
-	"github.com/cosmos/cosmos-sdk/baseapp"
-	sdksim "github.com/cosmos/cosmos-sdk/types/simulation"
-	"github.com/cosmos/cosmos-sdk/x/simulation"
 
 	akash "pkg.akt.dev/node/app"
 	"pkg.akt.dev/node/app/sim"
@@ -236,6 +237,7 @@ func TestAppImportExport(t *testing.T) {
 			appB,
 			[][]byte{
 				authzkeeper.GrantQueuePrefix,
+				authzkeeper.GranteeKey,
 			},
 		},
 		{
@@ -291,12 +293,12 @@ func TestAppImportExport(t *testing.T) {
 			appB,
 			[][]byte{},
 		},
-		// {
-		//	ibchost.StoreKey,
-		//	appA,
-		//	appB,
-		//	[][]byte{},
-		// },
+		{
+			ibchost.StoreKey,
+			appA,
+			appB,
+			[][]byte{},
+		},
 		{
 			ibctransfertypes.StoreKey,
 			appA,
@@ -315,12 +317,6 @@ func TestAppImportExport(t *testing.T) {
 		},
 		{
 			evidencetypes.StoreKey,
-			appA,
-			appB,
-			[][]byte{},
-		},
-		{
-			capabilitytypes.StoreKey,
 			appA,
 			appB,
 			[][]byte{},

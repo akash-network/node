@@ -13,8 +13,8 @@ import (
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/stretchr/testify/require"
-	"pkg.akt.dev/go/cli"
 	"pkg.akt.dev/go/cli/flags"
+	aclient "pkg.akt.dev/go/node/client/discovery"
 	cltypes "pkg.akt.dev/go/node/client/types"
 	"pkg.akt.dev/go/node/client/v1beta3"
 	"pkg.akt.dev/go/sdkutil"
@@ -68,7 +68,7 @@ func (pu *postUpgrade) Run(ctx context.Context, t *testing.T, params uttypes.Tes
 		cltypes.WithGasAdjustment(2),
 	}
 
-	pu.cl, err = cli.DiscoverClient(ctx, cctx, opts...)
+	pu.cl, err = aclient.DiscoverClient(ctx, cctx, opts...)
 	require.NoError(t, err)
 	require.NotNil(t, pu.cl)
 

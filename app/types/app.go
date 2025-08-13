@@ -45,18 +45,17 @@ import (
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	capabilitykeeper "github.com/cosmos/ibc-go/modules/capability/keeper"
-	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
-	icacontrollertypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/controller/types"
-	icahosttypes "github.com/cosmos/ibc-go/v8/modules/apps/27-interchain-accounts/host/types"
-	"github.com/cosmos/ibc-go/v8/modules/apps/transfer"
-	ibctransferkeeper "github.com/cosmos/ibc-go/v8/modules/apps/transfer/keeper"
-	ibctransfertypes "github.com/cosmos/ibc-go/v8/modules/apps/transfer/types"
-	ibcclienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
-	ibcconnectiontypes "github.com/cosmos/ibc-go/v8/modules/core/03-connection/types"
-	porttypes "github.com/cosmos/ibc-go/v8/modules/core/05-port/types"
-	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
-	ibckeeper "github.com/cosmos/ibc-go/v8/modules/core/keeper"
+	icacontrollertypes "github.com/cosmos/ibc-go/v10/modules/apps/27-interchain-accounts/controller/types"
+	icahosttypes "github.com/cosmos/ibc-go/v10/modules/apps/27-interchain-accounts/host/types"
+	"github.com/cosmos/ibc-go/v10/modules/apps/transfer"
+	ibctransferkeeper "github.com/cosmos/ibc-go/v10/modules/apps/transfer/keeper"
+	ibctransfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
+	ibcclienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
+	ibcconnectiontypes "github.com/cosmos/ibc-go/v10/modules/core/03-connection/types"
+	porttypes "github.com/cosmos/ibc-go/v10/modules/core/05-port/types"
+	ibcexported "github.com/cosmos/ibc-go/v10/modules/core/exported"
+	ibckeeper "github.com/cosmos/ibc-go/v10/modules/core/keeper"
+	ibctm "github.com/cosmos/ibc-go/v10/modules/light-clients/07-tendermint"
 
 	atypes "pkg.akt.dev/go/node/audit/v1"
 	ctypes "pkg.akt.dev/go/node/cert/v1"
@@ -88,25 +87,22 @@ var ErrEmptyFieldName = errors.New("empty field name")
 
 type AppKeepers struct {
 	Cosmos struct {
-		Acct                 authkeeper.AccountKeeper
-		Authz                authzkeeper.Keeper
-		FeeGrant             feegrantkeeper.Keeper
-		Bank                 bankkeeper.Keeper
-		Cap                  *capabilitykeeper.Keeper
-		Staking              *stakingkeeper.Keeper
-		Slashing             slashingkeeper.Keeper
-		Mint                 mintkeeper.Keeper
-		Distr                distrkeeper.Keeper
-		Gov                  *govkeeper.Keeper
-		Upgrade              *upgradekeeper.Keeper
-		Crisis               *crisiskeeper.Keeper //nolint: staticcheck
-		Params               paramskeeper.Keeper  //nolint: staticcheck
-		ConsensusParams      *consensusparamkeeper.Keeper
-		IBC                  *ibckeeper.Keeper
-		Evidence             *evidencekeeper.Keeper
-		Transfer             ibctransferkeeper.Keeper
-		ScopedIBCKeeper      capabilitykeeper.ScopedKeeper
-		ScopedTransferKeeper capabilitykeeper.ScopedKeeper
+		Acct            authkeeper.AccountKeeper
+		Authz           authzkeeper.Keeper
+		FeeGrant        feegrantkeeper.Keeper
+		Bank            bankkeeper.Keeper
+		Staking         *stakingkeeper.Keeper
+		Slashing        slashingkeeper.Keeper
+		Mint            mintkeeper.Keeper
+		Distr           distrkeeper.Keeper
+		Gov             *govkeeper.Keeper
+		Upgrade         *upgradekeeper.Keeper
+		Crisis          *crisiskeeper.Keeper //nolint: staticcheck
+		Params          paramskeeper.Keeper  //nolint: staticcheck
+		ConsensusParams *consensusparamkeeper.Keeper
+		IBC             *ibckeeper.Keeper
+		Evidence        *evidencekeeper.Keeper
+		Transfer        ibctransferkeeper.Keeper
 	}
 
 	Akash struct {
@@ -117,6 +113,10 @@ type AppKeepers struct {
 		Provider   pkeeper.IKeeper
 		Audit      akeeper.Keeper
 		Cert       ckeeper.Keeper
+	}
+
+	Modules struct {
+		TMLight ibctm.LightClientModule
 	}
 }
 
@@ -224,20 +224,6 @@ func (app *App) InitSpecialKeepers(
 
 	bApp.SetParamStore(app.Keepers.Cosmos.ConsensusParams.ParamsStore)
 
-	// add capability keeper and ScopeToModule for ibc module
-	app.Keepers.Cosmos.Cap = capabilitykeeper.NewKeeper(
-		cdc,
-		app.keys[capabilitytypes.StoreKey],
-		app.memKeys[capabilitytypes.MemStoreKey],
-	)
-
-	app.Keepers.Cosmos.ScopedIBCKeeper = app.Keepers.Cosmos.Cap.ScopeToModule(ibcexported.ModuleName)
-	app.Keepers.Cosmos.ScopedTransferKeeper = app.Keepers.Cosmos.Cap.ScopeToModule(ibctransfertypes.ModuleName)
-
-	// seal the capability keeper so all persistent capabilities are loaded in-memory and prevent
-	// any further modules from creating scoped sub-keepers.
-	app.Keepers.Cosmos.Cap.Seal()
-
 	app.Keepers.Cosmos.Crisis = crisiskeeper.NewKeeper( //nolint: staticcheck
 		cdc, runtime.NewKVStoreService(app.keys[crisistypes.StoreKey]),
 		invCheckPeriod,
@@ -324,11 +310,9 @@ func (app *App) InitNormalKeepers(
 	// register IBC Keeper
 	app.Keepers.Cosmos.IBC = ibckeeper.NewKeeper(
 		cdc,
-		app.keys[ibcexported.StoreKey],
+		runtime.NewKVStoreService(app.keys[ibcexported.StoreKey]),
 		app.GetSubspace(ibcexported.ModuleName),
-		app.Keepers.Cosmos.Staking,
 		app.Keepers.Cosmos.Upgrade,
-		app.Keepers.Cosmos.ScopedIBCKeeper,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 
@@ -391,14 +375,13 @@ func (app *App) InitNormalKeepers(
 	// register Transfer Keepers
 	app.Keepers.Cosmos.Transfer = ibctransferkeeper.NewKeeper(
 		cdc,
-		app.keys[ibctransfertypes.StoreKey],
+		runtime.NewKVStoreService(app.keys[ibctransfertypes.StoreKey]),
 		app.GetSubspace(ibctransfertypes.ModuleName),
 		app.Keepers.Cosmos.IBC.ChannelKeeper,
 		app.Keepers.Cosmos.IBC.ChannelKeeper,
-		app.Keepers.Cosmos.IBC.PortKeeper,
+		bApp.MsgServiceRouter(),
 		app.Keepers.Cosmos.Acct,
 		app.Keepers.Cosmos.Bank,
-		app.Keepers.Cosmos.ScopedTransferKeeper,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 
@@ -409,6 +392,13 @@ func (app *App) InitNormalKeepers(
 	ibcRouter.AddRoute(ibctransfertypes.ModuleName, transferIBCModule)
 
 	app.Keepers.Cosmos.IBC.SetRouter(ibcRouter)
+
+	/// Light client modules
+	clientKeeper := app.Keepers.Cosmos.IBC.ClientKeeper
+	storeProvider := app.Keepers.Cosmos.IBC.ClientKeeper.GetStoreProvider()
+	app.Keepers.Modules.TMLight = ibctm.NewLightClientModule(cdc, storeProvider)
+
+	clientKeeper.AddRoute(ibctm.ModuleName, &app.Keepers.Modules.TMLight)
 
 	app.Keepers.Akash.Take = tkeeper.NewKeeper(
 		cdc,
@@ -526,7 +516,6 @@ func kvStoreKeys() []string {
 		upgradetypes.StoreKey,
 		evidencetypes.StoreKey,
 		ibctransfertypes.StoreKey,
-		capabilitytypes.StoreKey,
 	}
 
 	keys = append(keys, akashKVStoreKeys()...,
@@ -554,9 +543,7 @@ func transientStoreKeys() []string {
 }
 
 func memStoreKeys() []string {
-	return []string{
-		capabilitytypes.MemStoreKey,
-	}
+	return []string{}
 }
 
 // FindStructField if an interface is either a struct or a pointer to a struct
