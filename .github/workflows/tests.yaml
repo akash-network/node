@@ -20,7 +20,7 @@ jobs:
     steps:
       - name: Install dependencies
         run: |
-          brew install bash direnv pv lz4 git-cliff
+          brew install bash direnv pv lz4
           sudo chsh -s /usr/local/bin/bash
       - name: Hook direnv to bash
         run: echo 'eval "$(direnv hook bash)"' >> $HOME/.bashrc

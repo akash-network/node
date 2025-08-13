@@ -10,15 +10,10 @@ runs:
       # Shell must explicitly specify the shell for each step. https://github.com/orgs/community/discussions/18597
       shell: bash
       run: sudo apt install -y make direnv unzip lz4 wget curl npm jq pv coreutils
-    - uses: actions-rust-lang/setup-rust-toolchain@v1
     - name: Setup npm
       uses: actions/setup-node@v4
       with:
         node-version: 18
-    - name: Install git-cliff
-      uses: baptiste0928/cargo-install@v3
-      with:
-        crate: git-cliff
     - name: Detect required Go version
       shell: bash
       run: |

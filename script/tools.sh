@@ -10,7 +10,6 @@ macos_deps=(
 	"direnv"
 	"pv"
 	"lz4"
-	"git-cliff"
 )
 
 debian_deps=(
