@@ -34,7 +34,7 @@ UPGRADE_FROM=${UTEST_UPGRADE_FROM:=}
 UPGRADE_TO=${UTEST_UPGRADE_TO:=}
 CONFIG_FILE=${UTEST_CONFIG_FILE:=}
 CHAIN_METADATA_URL=https://raw.githubusercontent.com/akash-network/net/master/mainnet/meta.json
-SNAPSHOT_URL=https://snapshots.akash.network/akashnet-2/akashnet-2_22503451.tar.lz4
+SNAPSHOT_URL=https://snapshots.akash.network/akashnet-2/akashnet-2_22825219.tar.lz4
 STATE_CONFIG=
 
 short_opts=h
