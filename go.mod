@@ -47,7 +47,7 @@ require (
 	google.golang.org/grpc v1.74.2
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.2
-	pkg.akt.dev/go v0.0.3-rc11
+	pkg.akt.dev/go v0.0.3-rc12
 	pkg.akt.dev/go/cli v0.0.3-rc6
 	pkg.akt.dev/go/sdl v0.0.2-rc5
 )
@@ -67,7 +67,7 @@ replace (
 	// To be replaced by cosmos/gogoproto in future versions
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 
-	// as per v0.47.x migration guide goleveldb version must be pinned for the app to work correctly
+	// as per v0.53.x migration guide goleveldb version must be pinned for the app to work correctly
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 
 	// stick with compatible version or x/exp in v0.47.x line
