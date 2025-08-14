@@ -21,7 +21,6 @@ import (
 	paramsclient "github.com/cosmos/cosmos-sdk/x/params/client"
 	"github.com/cosmos/cosmos-sdk/x/slashing"
 	"github.com/cosmos/cosmos-sdk/x/staking"
-	"github.com/cosmos/ibc-go/modules/capability"
 	"github.com/cosmos/ibc-go/v10/modules/apps/transfer"
 	ibc "github.com/cosmos/ibc-go/v10/modules/core"
 	ibclightclient "github.com/cosmos/ibc-go/v10/modules/light-clients/07-tendermint"
@@ -37,7 +36,6 @@ var mbasics = module.NewBasicManager(
 		genutil.NewAppModuleBasic(genutiltypes.DefaultMessageValidator),
 		// tokens, token balance.
 		bank.AppModuleBasic{},
-		capability.AppModuleBasic{},
 		// validator staking
 		staking.AppModuleBasic{},
 		// inflation

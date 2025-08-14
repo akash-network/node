@@ -159,7 +159,6 @@ jobs:
         run: |
           sudo rm -rf ./* || true
           sudo rm -rf ./.??* || true
-      - uses: actions/checkout@v4
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Setup environment

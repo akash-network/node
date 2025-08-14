@@ -1428,8 +1428,6 @@ github.com/cosmos/gogogateway v1.2.0 h1:Ae/OivNhp8DqBi/sh2A8a1D0y638GpL3tkmLQAiK
 github.com/cosmos/gogogateway v1.2.0/go.mod h1:iQpLkGWxYcnCdz5iAdLcRBSw3h7NXeOkZ4GUkT+tbFI=
 github.com/cosmos/iavl v1.2.2 h1:qHhKW3I70w+04g5KdsdVSHRbFLgt3yY3qTMd4Xa4rC8=
 github.com/cosmos/iavl v1.2.2/go.mod h1:GiM43q0pB+uG53mLxLDzimxM9l/5N9UuSY3/D0huuVw=
-github.com/cosmos/ibc-go/modules/capability v1.0.1 h1:ibwhrpJ3SftEEZRxCRkH0fQZ9svjthrX2+oXdZvzgGI=
-github.com/cosmos/ibc-go/modules/capability v1.0.1/go.mod h1:rquyOV262nGJplkumH+/LeYs04P3eV8oB7ZM4Ygqk4E=
 github.com/cosmos/ibc-go/v10 v10.3.0 h1:w5DkHih8qn15deAeFoTk778WJU+xC1krJ5kDnicfUBc=
 github.com/cosmos/ibc-go/v10 v10.3.0/go.mod h1:CthaR7n4d23PJJ7wZHegmNgbVcLXCQql7EwHrAXnMtw=
 github.com/cosmos/ics23/go v0.11.0 h1:jk5skjT0TqX5e5QJbEnwXIS2yI2vnmLOgpQPeM5RtnU=
@@ -3276,12 +3274,12 @@ nhooyr.io/websocket v1.8.11/go.mod h1:rN9OFWIUwuxg4fR5tELlYC04bXYowCP9GX47ivo2l+
 nullprogram.com/x/optparse v1.0.0/go.mod h1:KdyPE+Igbe0jQUrVfMqDMeJQIJZEuyV7pjYmp6pbG50=
 pgregory.net/rapid v0.5.5 h1:jkgx1TjbQPD/feRoK+S/mXw9e1uj6WilpHrXJowi6oA=
 pgregory.net/rapid v0.5.5/go.mod h1:PY5XlDGj0+V1FCq0o192FdRhpKHGTRIWBgqjDBTrq04=
-pkg.akt.dev/go v0.0.3-rc10 h1:sP3S2/rbA/ADzCDp7KkkkKQ7ZArY6QQLQc7oUCWrxNE=
-pkg.akt.dev/go v0.0.3-rc10/go.mod h1:LE8ZbMg+SWfFhg9PH38zndtvAaGuv/iFfGf5pqzq5l4=
-pkg.akt.dev/go/cli v0.0.3-rc5 h1:0i7i4dtQ/ZIRYew6BvAUpgvdQ0h4N6SoT3iJLho3E1A=
-pkg.akt.dev/go/cli v0.0.3-rc5/go.mod h1:Snp/sQhvyfTRexkaSqzgBEmm59DFdY7g1E4zBBVGlL0=
-pkg.akt.dev/go/sdl v0.0.2-rc4 h1:iubfBjg/Pw562KrkLUocTl5XqSLZl69ZYPzVw/M7W3c=
-pkg.akt.dev/go/sdl v0.0.2-rc4/go.mod h1:14QiKgzx6KKrjPmx5n/LyLG3h1qBiAueIrs3aiZm+z0=
+pkg.akt.dev/go v0.0.3-rc11 h1:HC/QDKoOTx2fLxQYM98RnzXbutvIlqiZSgXF0zrFMEE=
+pkg.akt.dev/go v0.0.3-rc11/go.mod h1:LE8ZbMg+SWfFhg9PH38zndtvAaGuv/iFfGf5pqzq5l4=
+pkg.akt.dev/go/cli v0.0.3-rc6 h1:kTGbt+5qXRvcO1/EaRS/8N799r+Gp+UzotASn0kVJ8A=
+pkg.akt.dev/go/cli v0.0.3-rc6/go.mod h1:EJQD/5jDAyNYaN1D0ngfBzAUVd/8R7H8BiJ0NYvBMQw=
+pkg.akt.dev/go/sdl v0.0.2-rc5 h1:+9hA8F+K2TjIsS9WiKiptauL/X3xwdad51zvPccvTKA=
+pkg.akt.dev/go/sdl v0.0.2-rc5/go.mod h1:BUyrzQvtbx/6nPu1YGg3RVfAL5V//MS86uP1HznKwsU=
 pkg.akt.dev/specs v0.0.1 h1:OP0zil3Fr4kcCuybFqQ8LWgSlSP2Yn7306meWpu6/S4=
 pkg.akt.dev/specs v0.0.1/go.mod h1:tiFuJAqzn+lkz662lf9qaEdjdrrDr882r3YMDnWkbp4=
 pkg.akt.dev/testdata v0.0.1 h1:yHfqF0Uxf7Rg7WdwSggnyBWMxACtAg5VpBUVFXU+uvM=
