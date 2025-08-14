@@ -24,7 +24,7 @@ jobs:
           sudo chsh -s /usr/local/bin/bash
       - name: Hook direnv to bash
         run: echo 'eval "$(direnv hook bash)"' >> $HOME/.bashrc
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: git fetch --prune --unshallow
       - name: Detect required Go version
         run: |
@@ -42,7 +42,7 @@ jobs:
   build-bins:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: git fetch --prune --unshallow
       - name: Detect required Go version
         run: |
@@ -60,7 +60,7 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: git fetch --prune --unshallow
       - name: Detect required Go version
         run: |
@@ -76,7 +76,7 @@ jobs:
   coverage:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: git fetch --prune --unshallow
       - name: Detect required Go version
         run: |
@@ -93,7 +93,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: git fetch --prune --unshallow
       - name: Detect required Go version
         run: |
@@ -115,7 +115,7 @@ jobs:
   shellcheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: git fetch --prune --unshallow
       - name: Detect required Go version
         run: |
@@ -134,7 +134,7 @@ jobs:
       - uses: rokroskar/workflow-run-cleanup-action@master
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Detect required Go version
         run: |
           toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
@@ -156,7 +156,7 @@ jobs:
   release-dry-run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: git fetch --prune --unshallow
       - name: Detect required Go version
         run: |
@@ -186,7 +186,7 @@ jobs:
         run: |
           sudo rm -rf ./* || true
           sudo rm -rf ./.??* || true
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: git fetch --prune --unshallow
       - name: Detect required Go version
         run: |
@@ -229,7 +229,7 @@ jobs:
         run: |
           sudo rm -rf ./* || true
           sudo rm -rf ./.??* || true
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: git fetch --prune --unshallow
       - name: Detect required Go version
         run: |
@@ -285,7 +285,7 @@ jobs:
       - network-upgrade
       - shellcheck
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: trigger release process
