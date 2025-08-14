@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"os"
 
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	"github.com/rs/zerolog"
@@ -18,7 +17,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/pruning"
 	"github.com/cosmos/cosmos-sdk/client/snapshot"
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	rosettaCmd "github.com/cosmos/rosetta/cmd"
 
@@ -27,7 +25,6 @@ import (
 
 	"pkg.akt.dev/node/app"
 	"pkg.akt.dev/node/cmd/akash/cmd/testnetify"
-	utilcli "pkg.akt.dev/node/util/cli"
 )
 
 // NewRootCmd creates a new root command for akash. It is called once in the
@@ -41,37 +38,12 @@ func NewRootCmd() (*cobra.Command, sdkutil.EncodingConfig) {
 		Short:             "Akash Blockchain Application",
 		Long:              "Akash CLI Utility.\n\nAkash is a peer-to-peer marketplace for computing resources and \na deployment platform for heavily distributed applications. \nFind out more at https://akash.network",
 		SilenceUsage:      true,
-		PersistentPreRunE: GetPersistentPreRunE(encodingConfig, []string{"AKASH"}),
+		PersistentPreRunE: cli.GetPersistentPreRunE(encodingConfig, []string{"AKASH"}, cli.DefaultHome),
 	}
 
 	initRootCmd(rootCmd, encodingConfig)
 
 	return rootCmd, encodingConfig
-}
-
-// GetPersistentPreRunE persistent prerun hook for root command
-func GetPersistentPreRunE(encodingConfig sdkutil.EncodingConfig, envPrefixes []string) func(*cobra.Command, []string) error {
-	return func(cmd *cobra.Command, _ []string) error {
-		if err := utilcli.InterceptConfigsPreRunHandler(cmd, envPrefixes, false, "", nil); err != nil {
-			return err
-		}
-
-		initClientCtx := sdkclient.Context{}.
-			WithCodec(encodingConfig.Codec).
-			WithInterfaceRegistry(encodingConfig.InterfaceRegistry).
-			WithTxConfig(encodingConfig.TxConfig).
-			WithLegacyAmino(encodingConfig.Amino).
-			WithInput(os.Stdin).
-			WithAccountRetriever(authtypes.AccountRetriever{}).
-			WithBroadcastMode(cflags.BroadcastBlock).
-			WithHomeDir(app.DefaultHome)
-
-		if err := sdkclient.SetCmdClientContextHandler(initClientCtx, cmd); err != nil {
-			return err
-		}
-
-		return nil
-	}
 }
 
 // Execute executes the root command.
