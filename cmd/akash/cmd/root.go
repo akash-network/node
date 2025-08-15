@@ -12,7 +12,6 @@ import (
 
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/debug"
-	"github.com/cosmos/cosmos-sdk/client/keys"
 	"github.com/cosmos/cosmos-sdk/client/pruning"
 	"github.com/cosmos/cosmos-sdk/client/snapshot"
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
@@ -94,7 +93,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig sdkutil.EncodingConfig) 
 		cli.EventsCmd(),
 		cli.QueryCmd(),
 		cli.TxCmd(),
-		keys.Commands(),
+		cli.KeysCmds(),
 		genesisCommand(encodingConfig),
 		cmtcli.NewCompletionCmd(rootCmd, true),
 		debugCmd,
