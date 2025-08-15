@@ -6,7 +6,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/crisis"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
-	"pkg.akt.dev/go/cli"
 
 	cmtcfg "github.com/cometbft/cometbft/config"
 	cmtcli "github.com/cometbft/cometbft/libs/cli"
@@ -20,6 +19,7 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	rosettaCmd "github.com/cosmos/rosetta/cmd"
 
+	"pkg.akt.dev/go/cli"
 	cflags "pkg.akt.dev/go/cli/flags"
 	"pkg.akt.dev/go/sdkutil"
 
