@@ -62,7 +62,7 @@ func DiscoverClient(ctx context.Context, cctx sdkclient.Context, opts ...cltypes
 
 func RPCAkash(_ *cmtrpctypes.Context) (*aclient.Akash, error) {
 	result := &aclient.Akash{
-		ClientInfo: &aclient.ClientInfo{
+		ClientInfo: aclient.ClientInfo{
 			ApiVersion: "v1beta3",
 		},
 	}
