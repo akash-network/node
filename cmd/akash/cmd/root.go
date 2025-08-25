@@ -102,10 +102,10 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig sdkutil.EncodingConfig) 
 		snapshot.Cmd(ac.newApp),
 		testnetCmd(app.ModuleBasics(), banktypes.GenesisBalancesIterator{}),
 		PrepareGenesisCmd(app.DefaultHome, app.ModuleBasics()),
+		testnetify.GetCmd(ac.newTestnetApp),
 	)
 
-	rootCmd.AddCommand(testnetify.GetCmd(ac.newTestnetApp))
-	sdkserver.AddCommands(rootCmd, home, ac.newApp, ac.appExport, addModuleInitFlags)
+	cli.ServerCmds(rootCmd, home, ac.newApp, ac.appExport, addModuleInitFlags)
 
 	rootCmd.SetOut(rootCmd.OutOrStdout())
 	rootCmd.SetErr(rootCmd.ErrOrStderr())
