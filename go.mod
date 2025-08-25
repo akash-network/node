@@ -48,7 +48,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.2
 	pkg.akt.dev/go v0.0.3-rc13
-	pkg.akt.dev/go/cli v0.0.3-rc10
+	pkg.akt.dev/go/cli v0.0.3-rc11
 	pkg.akt.dev/go/sdl v0.0.2-rc6
 )
 
