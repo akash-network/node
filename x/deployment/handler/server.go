@@ -6,11 +6,11 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 
 	v1 "pkg.akt.dev/go/node/deployment/v1"
 	types "pkg.akt.dev/go/node/deployment/v1beta4"
+	aauthz "pkg.akt.dev/go/node/types/authz/v1"
 
 	"pkg.akt.dev/node/x/deployment/keeper"
 )
@@ -22,16 +22,18 @@ type msgServer struct {
 	market      MarketKeeper
 	escrow      EscrowKeeper
 	authzKeeper AuthzKeeper
+	bkeeper     BankKeeper
 }
 
 // NewServer returns an implementation of the deployment MsgServer interface
 // for the provided Keeper.
-func NewServer(k keeper.IKeeper, mkeeper MarketKeeper, ekeeper EscrowKeeper, authzKeeper AuthzKeeper) types.MsgServer {
+func NewServer(k keeper.IKeeper, mkeeper MarketKeeper, ekeeper EscrowKeeper, authzKeeper AuthzKeeper, bkeeper BankKeeper) types.MsgServer {
 	return &msgServer{
 		deployment:  k,
 		market:      mkeeper,
 		escrow:      ekeeper,
 		authzKeeper: authzKeeper,
+		bkeeper:     bkeeper,
 	}
 }
 
@@ -43,7 +45,7 @@ func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreate
 	}
 
 	params := ms.deployment.GetParams(ctx)
-	if err := params.ValidateDeposit(msg.Deposit); err != nil {
+	if err := params.ValidateDeposit(msg.Deposit.Amount); err != nil {
 		return nil, err
 	}
 
@@ -58,17 +60,8 @@ func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreate
 		return nil, fmt.Errorf("%w: %s", v1.ErrInvalidGroups, err.Error())
 	}
 
-	owner, err := sdk.AccAddressFromBech32(msg.ID.Owner)
+	deposits, err := aauthz.AuthorizeDeposit(ctx, ms.authzKeeper, ms.bkeeper, msg)
 	if err != nil {
-		return &types.MsgCreateDeploymentResponse{}, err
-	}
-
-	depositor, err := sdk.AccAddressFromBech32(msg.Depositor)
-	if err != nil {
-		return &types.MsgCreateDeploymentResponse{}, err
-	}
-
-	if err = ms.authorizeDeposit(ctx, owner, depositor, msg.Deposit); err != nil {
 		return nil, err
 	}
 
@@ -94,11 +87,12 @@ func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreate
 		}
 	}
 
+	owner, _ := sdk.AccAddressFromBech32(msg.ID.Owner)
+
 	if err := ms.escrow.AccountCreate(ctx,
 		types.EscrowAccountForDeployment(deployment.ID),
 		owner,
-		depositor,
-		msg.Deposit,
+		deposits,
 	); err != nil {
 		return &types.MsgCreateDeploymentResponse{}, err
 	}
@@ -106,87 +100,150 @@ func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreate
 	return &types.MsgCreateDeploymentResponse{}, nil
 }
 
-func (ms msgServer) authorizeDeposit(ctx sdk.Context, owner, depositor sdk.AccAddress, deposit sdk.Coin) error {
-	// if owner is the depositor, then no need to check authorization
-	if owner.Equals(depositor) {
-		return nil
-	}
+//func (ms msgServer) authorizeDeposit(sctx sdk.Context, msg sdk.Msg) ([]ev1.Deposit, error) {
+//	// find the DepositDeploymentAuthorization given to the owner by the depositor and check
+//	// acceptance
+//
+//	depositors := make([]ev1.Deposit, 0, 1)
+//
+//	hasDeposit, valid := msg.(types.HasDeposit)
+//	if !valid {
+//
+//	}
+//
+//	hasID, valid := msg.(types.HasDeploymentID)
+//	if !valid {
+//
+//	}
+//
+//	did := hasID.GetID()
+//	owner, err := sdk.AccAddressFromBech32(did.Owner)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	dep := hasDeposit.GetDeposit()
+//	denom := dep.Amount.Denom
+//
+//	remainder := sdkmath.NewInt(dep.Amount.Amount.Int64())
+//
+//	for _, source := range dep.Sources {
+//		switch source {
+//		case deposit.SourceBalance:
+//			spendableAmount := ms.bkeeper.SpendableCoin(sctx, owner, denom)
+//
+//			if spendableAmount.Amount.IsPositive() {
+//				requestedSpend := sdk.NewCoin(denom, remainder)
+//
+//				if spendableAmount.IsLT(requestedSpend) {
+//					requestedSpend = spendableAmount
+//				}
+//				depositors = append(depositors, ev1.Deposit{
+//					Depositor: owner.String(),
+//					Height:    sctx.BlockHeight(),
+//					Balance:   sdk.NewDecCoinFromCoin(requestedSpend),
+//				})
+//
+//				remainder = remainder.Sub(requestedSpend.Amount)
+//			}
+//		case deposit.SourceGrant:
+//			msgTypeUrl := (&types.DepositAuthorization{}).MsgTypeURL()
+//
+//			ms.authzKeeper.GetGranteeGrantsByMsgType(sctx, owner, msgTypeUrl, func(ctx context.Context, granter sdk.AccAddress, authorization authz.Authorization, expiration *time.Time) bool {
+//				deplAuthz, valid := authorization.(*types.DepositAuthorization)
+//				if !valid {
+//					return false
+//				}
+//
+//				allowedSpend := sdk.Coin{
+//					Denom:  denom,
+//					Amount: sdkmath.NewInt(deplAuthz.SpendLimit.Amount.Int64()),
+//				}
+//
+//				nDeposit := deposit.Deposit{
+//					Amount:  sdk.NewCoin(denom, remainder),
+//					Sources: nil,
+//				}
+//
+//				var authzMsg sdk.Msg
+//				switch m := msg.(type) {
+//				case *types.MsgCreateDeployment:
+//					authzMsg = types.NewMsgCreateDeployment(m.ID, m.Groups, m.Hash, nDeposit)
+//				case *types.MsgDepositDeployment:
+//					authzMsg = types.NewMsgDepositDeployment(m.ID, nDeposit)
+//				}
+//
+//				resp, err := authorization.Accept(ctx, authzMsg)
+//				if err != nil {
+//					return false
+//				}
+//
+//				if resp.Delete {
+//					err = ms.authzKeeper.DeleteGrant(ctx, owner, granter, msgTypeUrl)
+//				} else if resp.Updated != nil {
+//					err = ms.authzKeeper.SaveGrant(ctx, owner, granter, resp.Updated, expiration)
+//				}
+//
+//				if !resp.Accept {
+//					return false
+//				}
+//
+//				deplAuthz = resp.Updated.(*types.DepositAuthorization)
+//
+//				allowedSpend = allowedSpend.Sub(deplAuthz.SpendLimit)
+//
+//				depositors = append(depositors, ev1.Deposit{
+//					Depositor: owner.String(),
+//					Height:    sctx.BlockHeight(),
+//					Balance:   sdk.NewDecCoinFromCoin(allowedSpend),
+//				})
+//				remainder = remainder.Sub(allowedSpend.Amount)
+//
+//				return remainder.IsZero()
+//			})
+//		}
+//
+//		if remainder.IsZero() {
+//			break
+//		}
+//	}
+//
+//	if !remainder.IsZero() {
+//		// following check is for sanity. if value is negative, math above went horribly wrong
+//		if remainder.IsNegative() {
+//			return nil, fmt.Errorf("%w: deposit overflow", v1.ErrInvalidDeposit)
+//		} else {
+//			return nil, fmt.Errorf("%w: insufficient balance", v1.ErrInvalidDeposit)
+//		}
+//	}
+//
+//	return depositors, nil
+//}
 
-	// find the DepositDeploymentAuthorization given to the owner by the depositor and check
-	// acceptance
-	msg := &v1.MsgDepositDeployment{Amount: deposit}
-	authorization, expiration := ms.authzKeeper.GetAuthorization(ctx, owner, depositor, sdk.MsgTypeURL(msg))
-	if authorization == nil {
-		return sdkerrors.ErrUnauthorized.Wrap("authorization not found")
-	}
-
-	resp, err := authorization.Accept(ctx, msg)
-	if err != nil {
-		return err
-	}
-
-	if resp.Delete {
-		err = ms.authzKeeper.DeleteGrant(ctx, owner, depositor, sdk.MsgTypeURL(msg))
-	} else if resp.Updated != nil {
-		err = ms.authzKeeper.SaveGrant(ctx, owner, depositor, resp.Updated, expiration)
-	}
-	if err != nil {
-		return err
-	}
-
-	if !resp.Accept {
-		return sdkerrors.ErrUnauthorized
-	}
-
-	return nil
-}
-
-func (ms msgServer) DepositDeployment(goCtx context.Context, msg *v1.MsgDepositDeployment) (*v1.MsgDepositDeploymentResponse, error) {
+func (ms msgServer) DepositDeployment(goCtx context.Context, msg *types.MsgDepositDeployment) (*types.MsgDepositDeploymentResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	deployment, found := ms.deployment.GetDeployment(ctx, msg.ID)
 	if !found {
-		return &v1.MsgDepositDeploymentResponse{}, v1.ErrDeploymentNotFound
+		return &types.MsgDepositDeploymentResponse{}, v1.ErrDeploymentNotFound
 	}
 
 	if deployment.State != v1.DeploymentActive {
-		return &v1.MsgDepositDeploymentResponse{}, v1.ErrDeploymentClosed
+		return &types.MsgDepositDeploymentResponse{}, v1.ErrDeploymentClosed
 	}
 
-	owner, err := sdk.AccAddressFromBech32(deployment.ID.Owner)
+	deposits, err := aauthz.AuthorizeDeposit(ctx, ms.authzKeeper, ms.bkeeper, msg)
 	if err != nil {
-		return &v1.MsgDepositDeploymentResponse{}, err
-	}
-
-	depositor, err := sdk.AccAddressFromBech32(msg.Depositor)
-	if err != nil {
-		return &v1.MsgDepositDeploymentResponse{}, err
+		return nil, err
 	}
 
 	eID := types.EscrowAccountForDeployment(msg.ID)
 
-	eAccount, err := ms.escrow.GetAccount(ctx, eID)
-	if err != nil {
-		return &v1.MsgDepositDeploymentResponse{}, err
+	if err = ms.escrow.AccountDeposit(ctx, eID, deposits); err != nil {
+		return &types.MsgDepositDeploymentResponse{}, err
 	}
 
-	// error if depositor is not an owner and there is already exists authorization from another account
-	if (msg.Depositor != msg.ID.Owner) && eAccount.HasDepositor() && (eAccount.Depositor != msg.Depositor) {
-		return &v1.MsgDepositDeploymentResponse{}, v1.ErrInvalidDeploymentDepositor
-	}
-
-	if err = ms.authorizeDeposit(ctx, owner, depositor, msg.Amount); err != nil {
-		return nil, err
-	}
-
-	if err := ms.escrow.AccountDeposit(ctx,
-		eID,
-		depositor,
-		msg.Amount); err != nil {
-		return &v1.MsgDepositDeploymentResponse{}, err
-	}
-
-	return &v1.MsgDepositDeploymentResponse{}, nil
+	return &types.MsgDepositDeploymentResponse{}, nil
 }
 
 func (ms msgServer) UpdateDeployment(goCtx context.Context, msg *types.MsgUpdateDeployment) (*types.MsgUpdateDeploymentResponse, error) {

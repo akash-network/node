@@ -50,19 +50,20 @@ func (m escrowMigrations) handler(ctx sdk.Context) error {
 		bz := cdc.MustMarshal(&nVal)
 
 		switch nVal.State {
-		case etypes.AccountOpen:
+		case etypes.StateOpen:
 			accountsActive++
-		case etypes.AccountClosed:
+		case etypes.StateClosed:
 			accountsClosed++
-		case etypes.AccountOverdrawn:
+		case etypes.StateOverdrawn:
 			accountsOverdrawn++
 		}
 
 		accountsTotal++
 
-		key := ekeeper.AccountKey(nVal.ID)
-
+		key := ekeeper.LegacyAccountKey(nVal.ID)
 		oStore.Delete(iter.Key())
+
+		key = ekeeper.BuildAccountsKey(nVal.State, &nVal.ID)
 		store.Set(key, bz)
 	}
 
@@ -83,19 +84,20 @@ func (m escrowMigrations) handler(ctx sdk.Context) error {
 		bz := cdc.MustMarshal(&nVal)
 
 		switch nVal.State {
-		case etypes.PaymentOpen:
+		case etypes.StateOpen:
 			paymentsActive++
-		case etypes.PaymentClosed:
+		case etypes.StateClosed:
 			paymentsClosed++
-		case etypes.PaymentOverdrawn:
+		case etypes.StateOverdrawn:
 			paymentsOverdrawn++
 		}
 
 		paymentsTotal++
 
-		key := ekeeper.PaymentKey(nVal.AccountID, nVal.PaymentID)
-
+		key := ekeeper.LegacyPaymentKey(nVal.AccountID, nVal.PaymentID)
 		oStore.Delete(iter.Key())
+
+		key = ekeeper.BuildPaymentsKey(nVal.State, &nVal.AccountID, nVal.PaymentID)
 		store.Set(key, bz)
 	}
 

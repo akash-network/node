@@ -3,10 +3,9 @@ package keeper_test
 import (
 	"testing"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"pkg.akt.dev/go/node/escrow/v1"
 	"pkg.akt.dev/go/testutil"
@@ -27,14 +26,24 @@ func Test_AccountCreate(t *testing.T) {
 	bkeeper.
 		On("SendCoinsFromAccountToModule", ctx, owner, v1.ModuleName, sdk.NewCoins(amt)).
 		Return(nil)
-	assert.NoError(t, keeper.AccountCreate(ctx, id, owner, owner, amt))
+	assert.NoError(t, keeper.AccountCreate(ctx, id, owner, []v1.Deposit{{
+		Depositor: owner.String(),
+		Height:    ctx.BlockHeight(),
+		Amount:    sdk.NewCoin(amt.Denom, amt.Amount),
+		Balance:   sdk.NewDecCoinFromCoin(amt),
+	}}))
 
 	// deposit more tokens
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 10)
 	bkeeper.
 		On("SendCoinsFromAccountToModule", ctx, owner, v1.ModuleName, sdk.NewCoins(amt2)).
 		Return(nil)
-	assert.NoError(t, keeper.AccountDeposit(ctx, id, owner, amt2))
+	assert.NoError(t, keeper.AccountDeposit(ctx, id, []v1.Deposit{{
+		Depositor: owner.String(),
+		Height:    ctx.BlockHeight(),
+		Amount:    sdk.NewCoin(amt2.Denom, amt2.Amount),
+		Balance:   sdk.NewDecCoinFromCoin(amt2),
+	}}))
 
 	// close account
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 10)
@@ -44,10 +53,20 @@ func Test_AccountCreate(t *testing.T) {
 	assert.NoError(t, keeper.AccountClose(ctx, id))
 
 	// no deposits after closed
-	assert.Error(t, keeper.AccountDeposit(ctx, id, owner, amt))
+	assert.Error(t, keeper.AccountDeposit(ctx, id, []v1.Deposit{{
+		Depositor: owner.String(),
+		Height:    ctx.BlockHeight(),
+		Amount:    sdk.NewCoin(amt.Denom, amt.Amount),
+		Balance:   sdk.NewDecCoinFromCoin(amt),
+	}}))
 
 	// no re-creating account
-	assert.Error(t, keeper.AccountCreate(ctx, id, owner, owner, amt))
+	assert.Error(t, keeper.AccountCreate(ctx, id, owner, []v1.Deposit{{
+		Depositor: owner.String(),
+		Height:    ctx.BlockHeight(),
+		Amount:    sdk.NewCoin(amt.Denom, amt.Amount),
+		Balance:   sdk.NewDecCoinFromCoin(amt),
+	}}))
 }
 
 func Test_PaymentCreate(t *testing.T) {
@@ -64,7 +83,12 @@ func Test_PaymentCreate(t *testing.T) {
 	bkeeper.
 		On("SendCoinsFromAccountToModule", ctx, aowner, v1.ModuleName, sdk.NewCoins(amt)).
 		Return(nil)
-	assert.NoError(t, keeper.AccountCreate(ctx, aid, aowner, aowner, amt))
+	assert.NoError(t, keeper.AccountCreate(ctx, aid, aowner, []v1.Deposit{{
+		Depositor: aowner.String(),
+		Height:    ctx.BlockHeight(),
+		Amount:    sdk.NewCoin(amt.Denom, amt.Amount),
+		Balance:   sdk.NewDecCoinFromCoin(amt),
+	}}))
 
 	{
 		acct, err := keeper.GetAccount(ctx, aid)
@@ -88,14 +112,14 @@ func Test_PaymentCreate(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, ctx.BlockHeight(), acct.SettledAt)
 
-		require.Equal(t, v1.AccountOpen, acct.State)
-		require.Equal(t, testutil.AkashDecCoin(t, amt.Amount.Int64()-rate.Amount.Int64()*ctx.BlockHeight()), acct.Balance)
-		require.Equal(t, testutil.AkashDecCoin(t, rate.Amount.Int64()*ctx.BlockHeight()), acct.Transferred)
+		require.Equal(t, v1.StateOpen, acct.State)
+		require.Equal(t, testutil.AkashDecCoin(t, amt.Amount.Int64()-rate.Amount.Int64()*ctx.BlockHeight()), acct.Funds[0].Balance)
+		require.Equal(t, testutil.AkashDecCoin(t, rate.Amount.Int64()*ctx.BlockHeight()), acct.Transferred[0])
 
 		payment, err := keeper.GetPayment(ctx, aid, pid)
 		require.NoError(t, err)
 
-		require.Equal(t, v1.PaymentOpen, payment.State)
+		require.Equal(t, v1.StateOpen, payment.State)
 		require.Equal(t, testutil.AkashCoin(t, rate.Amount.Int64()*ctx.BlockHeight()), payment.Withdrawn)
 		require.Equal(t, testutil.AkashDecCoin(t, 0), payment.Balance)
 	}
@@ -113,14 +137,14 @@ func Test_PaymentCreate(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, ctx.BlockHeight(), acct.SettledAt)
 
-		require.Equal(t, v1.AccountOpen, acct.State)
-		require.Equal(t, testutil.AkashDecCoin(t, amt.Amount.Int64()-rate.Amount.Int64()*ctx.BlockHeight()), acct.Balance)
-		require.Equal(t, testutil.AkashDecCoin(t, rate.Amount.Int64()*ctx.BlockHeight()), acct.Transferred)
+		require.Equal(t, v1.StateOpen, acct.State)
+		require.Equal(t, testutil.AkashDecCoin(t, amt.Amount.Int64()-rate.Amount.Int64()*ctx.BlockHeight()), acct.Funds[0].Balance)
+		require.Equal(t, testutil.AkashDecCoin(t, rate.Amount.Int64()*ctx.BlockHeight()), acct.Transferred[0])
 
 		payment, err := keeper.GetPayment(ctx, aid, pid)
 		require.NoError(t, err)
 
-		require.Equal(t, v1.PaymentClosed, payment.State)
+		require.Equal(t, v1.StateClosed, payment.State)
 		require.Equal(t, testutil.AkashCoin(t, rate.Amount.Int64()*ctx.BlockHeight()), payment.Withdrawn)
 		require.Equal(t, testutil.AkashDecCoin(t, 0), payment.Balance)
 	}
@@ -153,36 +177,45 @@ func Test_Payment_Overdraw(t *testing.T) {
 	bkeeper.
 		On("SendCoinsFromAccountToModule", ctx, aowner, v1.ModuleName, sdk.NewCoins(amt)).
 		Return(nil)
-	assert.NoError(t, keeper.AccountCreate(ctx, aid, aowner, aowner, amt))
+	err := keeper.AccountCreate(ctx, aid, aowner, []v1.Deposit{{
+		Depositor: aowner.String(),
+		Height:    ctx.BlockHeight(),
+		Amount:    sdk.NewCoin(amt.Denom, amt.Amount),
+		Balance:   sdk.NewDecCoinFromCoin(amt),
+	}})
+
+	require.NoError(t, err)
 
 	// create payment
-	assert.NoError(t, keeper.PaymentCreate(ctx, aid, pid, powner, sdk.NewDecCoinFromCoin(rate)))
+	err = keeper.PaymentCreate(ctx, aid, pid, powner, sdk.NewDecCoinFromCoin(rate))
+	require.NoError(t, err)
 
 	// withdraw some funds
-	blkdelta := int64(1000/10 + 1)
+	blkdelta := int64(1000/10 + 5)
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + blkdelta)
 	bkeeper.
 		On("SendCoinsFromModuleToAccount", ctx, v1.ModuleName, powner, sdk.NewCoins(testutil.AkashCoin(t, 1000))).
 		Return(nil)
-	assert.NoError(t, keeper.PaymentWithdraw(ctx, aid, pid))
+
+	err = keeper.PaymentWithdraw(ctx, aid, pid)
+	require.NoError(t, err)
 
 	{
 		acct, err := keeper.GetAccount(ctx, aid)
 		require.NoError(t, err)
-		assert.Equal(t, ctx.BlockHeight(), acct.SettledAt)
+		require.Equal(t, ctx.BlockHeight(), acct.SettledAt)
 
-		assert.Equal(t, v1.AccountOverdrawn, acct.State)
-		assert.Equal(t, testutil.AkashDecCoin(t, 0), acct.Balance)
-		assert.Equal(t, sdk.NewDecCoinFromCoin(amt), acct.Transferred)
+		require.Equal(t, v1.StateOverdrawn, acct.State)
+		require.Equal(t, testutil.AkashDecCoin(t, 0), acct.Funds[0].Balance)
+		require.Equal(t, sdk.NewDecCoins(sdk.NewDecCoinFromCoin(amt)), acct.Transferred)
 
 		payment, err := keeper.GetPayment(ctx, aid, pid)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
-		assert.Equal(t, v1.PaymentOverdrawn, payment.State)
-		assert.Equal(t, amt, payment.Withdrawn)
-		assert.Equal(t, testutil.AkashDecCoin(t, 0), payment.Balance)
+		require.Equal(t, v1.StateOverdrawn, payment.State)
+		require.Equal(t, amt, payment.Withdrawn)
+		require.Equal(t, testutil.AkashDecCoin(t, 0), payment.Balance)
 	}
-
 }
 
 func Test_PaymentCreate_later(t *testing.T) {
@@ -199,7 +232,12 @@ func Test_PaymentCreate_later(t *testing.T) {
 	bkeeper.
 		On("SendCoinsFromAccountToModule", ctx, aowner, v1.ModuleName, sdk.NewCoins(amt)).
 		Return(nil)
-	assert.NoError(t, keeper.AccountCreate(ctx, aid, aowner, aowner, amt))
+	assert.NoError(t, keeper.AccountCreate(ctx, aid, aowner, []v1.Deposit{{
+		Depositor: aowner.String(),
+		Height:    ctx.BlockHeight(),
+		Amount:    sdk.NewCoin(amt.Denom, amt.Amount),
+		Balance:   sdk.NewDecCoinFromCoin(amt),
+	}}))
 
 	blkdelta := int64(10)
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + blkdelta)

@@ -7,6 +7,7 @@ import (
 	"os"
 	"testing"
 
+	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -23,7 +24,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdksim "github.com/cosmos/cosmos-sdk/types/simulation"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
+	authzkeys "github.com/cosmos/cosmos-sdk/x/authz/keeper/keys"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	consensustypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
@@ -236,8 +237,9 @@ func TestAppImportExport(t *testing.T) {
 			appA,
 			appB,
 			[][]byte{
-				authzkeeper.GrantQueuePrefix,
-				authzkeeper.GranteeKey,
+				authzkeys.GrantQueuePrefix,
+				authzkeys.GranteeKey,
+				authzkeys.GranteeMsgKey,
 			},
 		},
 		{

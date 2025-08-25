@@ -11,6 +11,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
+	deposit "pkg.akt.dev/go/node/types/deposit/v1"
 	"pkg.akt.dev/go/sdkutil"
 
 	"pkg.akt.dev/go/node/market/v1"
@@ -73,8 +74,7 @@ func WeightedOperations(
 
 // SimulateMsgCreateBid generates a MsgCreateBid with random values
 func SimulateMsgCreateBid(ks keepers.Keepers) simtypes.Operation {
-	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account,
-		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
+	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account, chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		orders := getOrdersWithState(ctx, ks, types.OrderOpen)
 		if len(orders) == 0 {
 			return simtypes.NoOpMsg(types.ModuleName, (&types.MsgCreateBid{}).Type(), "no open orders found"), nil, nil
@@ -122,7 +122,10 @@ func SimulateMsgCreateBid(ks keepers.Keepers) simtypes.Operation {
 			return simtypes.NoOpMsg(types.ModuleName, (&types.MsgCreateBid{}).Type(), "unable to generate fees"), nil, err
 		}
 
-		msg := types.NewMsgCreateBid(order.ID, simAccount.Address, order.Price(), depositAmount, nil)
+		msg := types.NewMsgCreateBid(v1.MakeBidID(order.ID, simAccount.Address), order.Price(), deposit.Deposit{
+			Amount:  depositAmount,
+			Sources: deposit.Sources{deposit.SourceBalance},
+		}, nil)
 
 		txGen := sdkutil.MakeEncodingConfig().TxConfig
 		tx, err := simtestutil.GenSignedMockTx(
@@ -225,11 +228,11 @@ func SimulateMsgCloseBid(ks keepers.Keepers) simtypes.Operation {
 // SimulateMsgCloseLease generates a MsgCloseLease with random values
 func SimulateMsgCloseLease(_ keepers.Keepers) simtypes.Operation {
 	return func(
-		r *rand.Rand,                // nolint revive
-		app *baseapp.BaseApp,        // nolint revive
-		ctx sdk.Context,             // nolint revive
+		r *rand.Rand, // nolint revive
+		app *baseapp.BaseApp, // nolint revive
+		ctx sdk.Context, // nolint revive
 		accounts []simtypes.Account, // nolint revive
-		chainID string,              // nolint revive
+		chainID string, // nolint revive
 	) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		// leases := getLeasesWithState(ctx, ks, v1.LeaseActive)
 		// if len(leases) == 0 {

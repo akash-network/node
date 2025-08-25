@@ -191,6 +191,64 @@ func (_c *AuthzKeeper_GetAuthorization_Call) RunAndReturn(run func(ctx context.C
 	return _c
 }
 
+// GetGranteeGrantsByMsgType provides a mock function for the type AuthzKeeper
+func (_mock *AuthzKeeper) GetGranteeGrantsByMsgType(ctx context.Context, grantee types.AccAddress, msgType string, onGrant func(context.Context, types.AccAddress, authz.Authorization, *time.Time) bool) {
+	_mock.Called(ctx, grantee, msgType, onGrant)
+	return
+}
+
+// AuthzKeeper_GetGranteeGrantsByMsgType_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetGranteeGrantsByMsgType'
+type AuthzKeeper_GetGranteeGrantsByMsgType_Call struct {
+	*mock.Call
+}
+
+// GetGranteeGrantsByMsgType is a helper method to define mock.On call
+//   - ctx context.Context
+//   - grantee types.AccAddress
+//   - msgType string
+//   - onGrant func(context.Context, types.AccAddress, authz.Authorization, *time.Time) bool
+func (_e *AuthzKeeper_Expecter) GetGranteeGrantsByMsgType(ctx interface{}, grantee interface{}, msgType interface{}, onGrant interface{}) *AuthzKeeper_GetGranteeGrantsByMsgType_Call {
+	return &AuthzKeeper_GetGranteeGrantsByMsgType_Call{Call: _e.mock.On("GetGranteeGrantsByMsgType", ctx, grantee, msgType, onGrant)}
+}
+
+func (_c *AuthzKeeper_GetGranteeGrantsByMsgType_Call) Run(run func(ctx context.Context, grantee types.AccAddress, msgType string, onGrant func(context.Context, types.AccAddress, authz.Authorization, *time.Time) bool)) *AuthzKeeper_GetGranteeGrantsByMsgType_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 types.AccAddress
+		if args[1] != nil {
+			arg1 = args[1].(types.AccAddress)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 func(context.Context, types.AccAddress, authz.Authorization, *time.Time) bool
+		if args[3] != nil {
+			arg3 = args[3].(func(context.Context, types.AccAddress, authz.Authorization, *time.Time) bool)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *AuthzKeeper_GetGranteeGrantsByMsgType_Call) Return() *AuthzKeeper_GetGranteeGrantsByMsgType_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *AuthzKeeper_GetGranteeGrantsByMsgType_Call) RunAndReturn(run func(ctx context.Context, grantee types.AccAddress, msgType string, onGrant func(context.Context, types.AccAddress, authz.Authorization, *time.Time) bool)) *AuthzKeeper_GetGranteeGrantsByMsgType_Call {
+	_c.Run(run)
+	return _c
+}
+
 // IterateGrants provides a mock function for the type AuthzKeeper
 func (_mock *AuthzKeeper) IterateGrants(ctx context.Context, handler func(granterAddr types.AccAddress, granteeAddr types.AccAddress, grant authz.Grant) bool) {
 	_mock.Called(ctx, handler)

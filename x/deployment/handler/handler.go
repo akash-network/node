@@ -5,15 +5,14 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	v1 "pkg.akt.dev/go/node/deployment/v1"
 	types "pkg.akt.dev/go/node/deployment/v1beta4"
 
 	"pkg.akt.dev/node/x/deployment/keeper"
 )
 
 // NewHandler returns a handler for "deployment" type messages
-func NewHandler(keeper keeper.IKeeper, mkeeper MarketKeeper, ekeeper EscrowKeeper, authzKeeper AuthzKeeper) baseapp.MsgServiceHandler {
-	ms := NewServer(keeper, mkeeper, ekeeper, authzKeeper)
+func NewHandler(keeper keeper.IKeeper, mkeeper MarketKeeper, ekeeper EscrowKeeper, authzKeeper AuthzKeeper, bkeeper BankKeeper) baseapp.MsgServiceHandler {
+	ms := NewServer(keeper, mkeeper, ekeeper, authzKeeper, bkeeper)
 
 	return func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
 		switch msg := msg.(type) {
@@ -21,7 +20,7 @@ func NewHandler(keeper keeper.IKeeper, mkeeper MarketKeeper, ekeeper EscrowKeepe
 			res, err := ms.CreateDeployment(ctx, msg)
 			return sdk.WrapServiceResult(ctx, res, err)
 
-		case *v1.MsgDepositDeployment:
+		case *types.MsgDepositDeployment:
 			res, err := ms.DepositDeployment(ctx, msg)
 			return sdk.WrapServiceResult(ctx, res, err)
 

@@ -28,11 +28,6 @@ var _ types.QueryServer = Querier{}
 func (k Querier) Deployments(c context.Context, req *types.QueryDeploymentsRequest) (*types.QueryDeploymentsResponse, error) {
 	ctx := sdk.UnwrapSDKContext(c)
 
-	defer func() {
-		if r := recover(); r != nil {
-			ctx.Logger().Error(fmt.Sprintf("%v", r))
-		}
-	}()
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}

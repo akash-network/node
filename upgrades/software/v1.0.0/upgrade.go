@@ -13,20 +13,18 @@ import (
 	storetypes "cosmossdk.io/store/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	"github.com/cosmos/cosmos-sdk/baseapp"
-	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	vestingtypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
-	"github.com/cosmos/cosmos-sdk/x/authz/keeper"
-	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	consensustypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	dv1beta "pkg.akt.dev/go/node/deployment/v1beta4"
 	mv1 "pkg.akt.dev/go/node/market/v1beta5"
+	aauthz "pkg.akt.dev/go/node/types/authz/v1"
 
 	dv1 "pkg.akt.dev/go/node/deployment/v1"
 	dv1beta3 "pkg.akt.dev/go/node/deployment/v1beta3"
@@ -122,7 +120,7 @@ func CanCreateModuleAccountAtAddr(ctx sdk.Context, ak AccountKeeper, addr sdk.Ac
 		overrideAccountTypes[extraAccountType] = struct{}{}
 	}
 
-	if _, clear := overrideAccountTypes[reflect.TypeOf(existingAcct)]; clear {
+	if _, isClear := overrideAccountTypes[reflect.TypeOf(existingAcct)]; isClear {
 		return nil
 	}
 
@@ -249,11 +247,6 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 			return nil, err
 		}
 
-		err = up.updateSecondaryIndexForAuthz(sctx)
-		if err != nil {
-			return nil, err
-		}
-
 		up.log.Info(fmt.Sprintf("migrating param agov.MinInitialDepositRate to gov.MinInitialDepositRatio"))
 		up.log.Info(fmt.Sprintf("setting gov.ExpeditedMinDeposit to 2000akt"))
 		up.log.Info(fmt.Sprintf("setting gov.ExpeditedThreshold to 67%%"))
@@ -296,19 +289,11 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 	}
 }
 
-type grantBackup struct {
-	murl       string
-	granter    sdk.AccAddress
-	grantee    sdk.AccAddress
-	expiration *time.Time
-	auth       *dv1beta3.DepositDeploymentAuthorization
-}
-
 func (up *upgrade) patchDepositAuthorizations(ctx sdk.Context) error {
 	msgUrlOld := "/akash.deployment.v1beta3.MsgDepositDeployment"
 
 	var err error
-	up.log.Info(fmt.Sprintf("migrating \"/akash.deployment.v1beta3.MsgDepositDeployment\" to \"%s\"", (&dv1.DepositAuthorization{}).MsgTypeURL()))
+	up.log.Info(fmt.Sprintf("migrating \"%s\" to \"%s\"", msgUrlOld, (&aauthz.DepositAuthorization{}).MsgTypeURL()))
 	up.Keepers.Cosmos.Authz.IterateGrants(ctx, func(granterAddr sdk.AccAddress, granteeAddr sdk.AccAddress, grant authz.Grant) bool {
 		var authorization authz.Authorization
 		authorization, err = grant.GetAuthorization()
@@ -317,19 +302,28 @@ func (up *upgrade) patchDepositAuthorizations(ctx sdk.Context) error {
 			return false
 		}
 
-		authzOld, valid := authorization.(*dv1beta3.DepositDeploymentAuthorization)
-		if !valid {
+		var nAuthz authz.Authorization
+
+		switch authorization.MsgTypeURL() {
+		case msgUrlOld:
+			authzOld, valid := authorization.(*dv1beta3.DepositDeploymentAuthorization)
+			if !valid {
+				up.log.Error(fmt.Sprintf("invalid authorization type %s", reflect.TypeOf(authorization).String()))
+				return false
+			}
+			nAuthz = aauthz.NewDepositAuthorization(authzOld.SpendLimit)
+
+		default:
 			return false
 		}
 
-		err = up.Keepers.Cosmos.Authz.DeleteGrant(ctx, granteeAddr, granterAddr, msgUrlOld)
+		err = up.Keepers.Cosmos.Authz.DeleteGrant(ctx, granteeAddr, granterAddr, authorization.MsgTypeURL())
 		if err != nil {
 			up.log.Error(fmt.Sprintf("unable to delete autorization. err=%s", err.Error()))
 			return true
 		}
 
-		authzNew := dv1.NewDepositAuthorization(authzOld.SpendLimit)
-		err = up.Keepers.Cosmos.Authz.SaveGrant(ctx, granteeAddr, granterAddr, authzNew, grant.Expiration)
+		err = up.Keepers.Cosmos.Authz.SaveGrant(ctx, granteeAddr, granterAddr, nAuthz, grant.Expiration)
 		if err != nil {
 			up.log.Error(fmt.Sprintf("unable to save autorization. err=%s", err.Error()))
 			return true
@@ -347,30 +341,6 @@ func (up *upgrade) patchDepositAuthorizations(ctx sdk.Context) error {
 		return err
 	}
 	up.log.Info("cleaning expired grants - DONE")
-
-	return nil
-}
-
-func (up *upgrade) updateSecondaryIndexForAuthz(ctx sdk.Context) error {
-	storeSvc := runtime.NewKVStoreService(up.GetKey(authzkeeper.StoreKey))
-	store1 := runtime.KVStoreAdapter(storeSvc.OpenKVStore(ctx))
-	store := storeSvc.OpenKVStore(ctx)
-
-	store1.Delete(authzkeeper.GranteeKey)
-
-	iter := storetypes.KVStorePrefixIterator(store1, keeper.GrantKey)
-
-	defer func() {
-		_ = iter.Close()
-	}()
-
-	for ; iter.Valid(); iter.Next() {
-		granter, grantee, _ := keeper.ParseGrantStoreKey(iter.Key())
-		err := keeper.IncGranteeGrants(store, grantee, granter)
-		if err != nil {
-			return err
-		}
-	}
 
 	return nil
 }

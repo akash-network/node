@@ -45,9 +45,7 @@ func DecodePaginationKey(key []byte) ([]byte, []byte, []byte, []byte, error) {
 	}
 
 	prefixLength := int(key[0])
-
 	key = key[1:]
-
 	if len(key) < prefixLength {
 		return nil, nil, nil, nil, fmt.Errorf("%w: invalid state length", ErrInvalidPaginationKey)
 	}

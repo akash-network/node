@@ -20,15 +20,19 @@ type MarketKeeper interface {
 }
 
 type EscrowKeeper interface {
-	AccountCreate(ctx sdk.Context, id etypes.AccountID, owner, depositor sdk.AccAddress, deposit sdk.Coin) error
-	AccountDeposit(ctx sdk.Context, id etypes.AccountID, depositor sdk.AccAddress, amount sdk.Coin) error
+	AccountCreate(ctx sdk.Context, id etypes.AccountID, owner sdk.AccAddress, deposits []etypes.Deposit) error
+	AccountDeposit(ctx sdk.Context, id etypes.AccountID, deposits []etypes.Deposit) error
 	AccountClose(ctx sdk.Context, id etypes.AccountID) error
 	GetAccount(ctx sdk.Context, id etypes.AccountID) (etypes.Account, error)
 }
 
-//go:generate mockery --name AuthzKeeper --output ./mocks
 type AuthzKeeper interface {
 	DeleteGrant(ctx context.Context, grantee sdk.AccAddress, granter sdk.AccAddress, msgType string) error
 	GetAuthorization(ctx context.Context, grantee sdk.AccAddress, granter sdk.AccAddress, msgType string) (authz.Authorization, *time.Time)
 	SaveGrant(ctx context.Context, grantee sdk.AccAddress, granter sdk.AccAddress, authorization authz.Authorization, expiration *time.Time) error
+	GetGranteeGrantsByMsgType(ctx context.Context, grantee sdk.AccAddress, msgType string, onGrant func(context.Context, sdk.AccAddress, authz.Authorization, *time.Time) bool)
+}
+
+type BankKeeper interface {
+	SpendableCoin(ctx context.Context, addr sdk.AccAddress, denom string) sdk.Coin
 }

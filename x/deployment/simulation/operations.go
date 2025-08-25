@@ -13,6 +13,7 @@ import (
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
+	deposit "pkg.akt.dev/go/node/types/deposit/v1"
 	"pkg.akt.dev/go/sdkutil"
 
 	"pkg.akt.dev/go/node/deployment/v1"
@@ -136,7 +137,10 @@ func SimulateMsgCreateDeployment(ak govtypes.AccountKeeper, bk bankkeeper.Keeper
 			return simtypes.NoOpMsg(v1.ModuleName, (&v1beta4.MsgCreateDeployment{}).Type(), "unable to generate fees"), nil, err
 		}
 
-		msg := v1beta4.NewMsgCreateDeployment(dID, make([]v1beta4.GroupSpec, 0, len(groupSpecs)), sdlSum, depositAmount, simAccount.Address)
+		msg := v1beta4.NewMsgCreateDeployment(dID, make([]v1beta4.GroupSpec, 0, len(groupSpecs)), sdlSum, deposit.Deposit{
+			Amount:  depositAmount,
+			Sources: deposit.Sources{deposit.SourceBalance},
+		})
 
 		msg.Groups = append(msg.Groups, groupSpecs...)
 

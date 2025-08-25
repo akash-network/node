@@ -8,6 +8,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	v1 "pkg.akt.dev/go/node/market/v1"
+	aauthz "pkg.akt.dev/go/node/types/authz/v1"
 
 	atypes "pkg.akt.dev/go/node/audit/v1"
 	dbeta "pkg.akt.dev/go/node/deployment/v1beta4"
@@ -33,18 +34,18 @@ func (ms msgServer) CreateBid(goCtx context.Context, msg *types.MsgCreateBid) (*
 	params := ms.keepers.Market.GetParams(ctx)
 
 	minDeposit := params.BidMinDeposit
-	if msg.Deposit.Denom != minDeposit.Denom {
+	if msg.Deposit.Amount.Denom != minDeposit.Denom {
 		return nil, fmt.Errorf("%w: mininum:%v received:%v", types.ErrInvalidDeposit, minDeposit, msg.Deposit)
 	}
-	if minDeposit.Amount.GT(msg.Deposit.Amount) {
+	if minDeposit.Amount.GT(msg.Deposit.Amount.Amount) {
 		return nil, fmt.Errorf("%w: mininum:%v received:%v", types.ErrInvalidDeposit, minDeposit, msg.Deposit)
 	}
 
-	if ms.keepers.Market.BidCountForOrder(ctx, msg.OrderID) > params.OrderMaxBids {
+	if ms.keepers.Market.BidCountForOrder(ctx, msg.ID.OrderID()) > params.OrderMaxBids {
 		return nil, fmt.Errorf("%w: too many existing bids (%v)", types.ErrInvalidBid, params.OrderMaxBids)
 	}
 
-	order, found := ms.keepers.Market.GetOrder(ctx, msg.OrderID)
+	order, found := ms.keepers.Market.GetOrder(ctx, msg.ID.OrderID())
 	if !found {
 		return nil, types.ErrOrderNotFound
 	}
@@ -65,7 +66,7 @@ func (ms msgServer) CreateBid(goCtx context.Context, msg *types.MsgCreateBid) (*
 		return nil, types.ErrCapabilitiesMismatch
 	}
 
-	provider, err := sdk.AccAddressFromBech32(msg.Provider)
+	provider, err := sdk.AccAddressFromBech32(msg.ID.Provider)
 	if err != nil {
 		return nil, types.ErrEmptyProvider
 	}
@@ -78,7 +79,7 @@ func (ms msgServer) CreateBid(goCtx context.Context, msg *types.MsgCreateBid) (*
 	provAttr, _ := ms.keepers.Audit.GetProviderAttributes(ctx, provider)
 
 	provAttr = append([]atypes.AuditedProvider{{
-		Owner:      msg.Provider,
+		Owner:      msg.ID.Provider,
 		Attributes: prov.Attributes,
 	}}, provAttr...)
 
@@ -90,17 +91,19 @@ func (ms msgServer) CreateBid(goCtx context.Context, msg *types.MsgCreateBid) (*
 		return nil, types.ErrCapabilitiesMismatch
 	}
 
-	bid, err := ms.keepers.Market.CreateBid(ctx, msg.OrderID, provider, msg.Price, msg.ResourcesOffer)
+	deposits, err := aauthz.AuthorizeDeposit(ctx, ms.keepers.Authz, ms.keepers.Bank, msg)
+	if err != nil {
+		return nil, err
+	}
+
+	bid, err := ms.keepers.Market.CreateBid(ctx, msg.ID, msg.Price, msg.ResourcesOffer)
 	if err != nil {
 		return nil, err
 	}
 
 	// create escrow account for this bid
-	if err := ms.keepers.Escrow.AccountCreate(ctx,
-		types.EscrowAccountForBid(bid.ID),
-		provider,
-		provider, // bids currently don't support deposits by non-owners
-		msg.Deposit); err != nil {
+	err = ms.keepers.Escrow.AccountCreate(ctx, types.EscrowAccountForBid(bid.ID), provider, deposits)
+	if err != nil {
 		return &types.MsgCreateBidResponse{}, err
 	}
 
@@ -204,7 +207,7 @@ func (ms msgServer) CreateLease(goCtx context.Context, msg *types.MsgCreateLease
 		return &types.MsgCreateLeaseResponse{}, types.ErrGroupNotOpen
 	}
 
-	owner, err := sdk.AccAddressFromBech32(msg.BidID.Provider)
+	provider, err := sdk.AccAddressFromBech32(msg.BidID.Provider)
 	if err != nil {
 		return &types.MsgCreateLeaseResponse{}, err
 	}
@@ -212,17 +215,20 @@ func (ms msgServer) CreateLease(goCtx context.Context, msg *types.MsgCreateLease
 	if err := ms.keepers.Escrow.PaymentCreate(ctx,
 		dbeta.EscrowAccountForDeployment(msg.BidID.DeploymentID()),
 		types.EscrowPaymentForLease(msg.BidID.LeaseID()),
-		owner,
+		provider,
 		bid.Price); err != nil {
 		return &types.MsgCreateLeaseResponse{}, err
 	}
 
-	_ = ms.keepers.Market.CreateLease(ctx, bid)
+	err = ms.keepers.Market.CreateLease(ctx, bid)
+	if err != nil {
+		return &types.MsgCreateLeaseResponse{}, err
+	}
+
 	ms.keepers.Market.OnOrderMatched(ctx, order)
 	ms.keepers.Market.OnBidMatched(ctx, bid)
 
 	// close losing bids
-
 	ms.keepers.Market.WithBidsForOrder(ctx, msg.BidID.OrderID(), types.BidOpen, func(bid types.Bid) bool {
 		ms.keepers.Market.OnBidLost(ctx, bid)
 

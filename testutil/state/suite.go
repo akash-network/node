@@ -84,6 +84,10 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 		bkeeper.
 			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Return(nil)
+		bkeeper.
+			On("SpendableCoin", mock.Anything, mock.Anything, mock.Anything).
+			Return(sdk.NewInt64Coin("uakt", 10000000))
+
 		keepers.Bank = bkeeper
 	}
 

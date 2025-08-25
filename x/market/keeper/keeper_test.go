@@ -11,6 +11,8 @@ import (
 	dtypes "pkg.akt.dev/go/node/deployment/v1beta4"
 	"pkg.akt.dev/go/node/market/v1"
 	types "pkg.akt.dev/go/node/market/v1beta5"
+	aauthz "pkg.akt.dev/go/node/types/authz/v1"
+	deposit "pkg.akt.dev/go/node/types/deposit/v1"
 	"pkg.akt.dev/go/testutil"
 
 	"pkg.akt.dev/node/testutil/state"
@@ -280,12 +282,21 @@ func createLease(t testing.TB, suite *state.TestSuite) v1.LeaseID {
 	defaultDeposit, err := dtypes.DefaultParams().MinDepositFor("uakt")
 	require.NoError(t, err)
 
+	msg := &dtypes.MsgCreateDeployment{
+		ID: order.ID.GroupID().DeploymentID(),
+		Deposit: deposit.Deposit{
+			Amount:  defaultDeposit,
+			Sources: deposit.Sources{deposit.SourceBalance},
+		}}
+
+	deposits, err := aauthz.AuthorizeDeposit(ctx, suite.AuthzKeeper(), suite.BankKeeper(), msg)
+	require.NoError(t, err)
+
 	err = suite.EscrowKeeper().AccountCreate(
 		ctx,
 		dtypes.EscrowAccountForDeployment(bid.ID.DeploymentID()),
 		owner,
-		owner,
-		defaultDeposit,
+		deposits,
 	)
 	require.NoError(t, err)
 
@@ -312,18 +323,29 @@ func createBid(t testing.TB, suite *state.TestSuite) (types.Bid, types.Order) {
 	price := testutil.AkashDecCoinRandom(t)
 	roffer := types.ResourceOfferFromRU(gspec.Resources)
 
-	bid, err := suite.MarketKeeper().CreateBid(ctx, order.ID, provider, price, roffer)
+	bidID := v1.MakeBidID(order.ID, provider)
+
+	bid, err := suite.MarketKeeper().CreateBid(ctx, bidID, price, roffer)
 	require.NoError(t, err)
 	assert.Equal(t, order.ID, bid.ID.OrderID())
 	assert.Equal(t, price, bid.Price)
 	assert.Equal(t, provider.String(), bid.ID.Provider)
 
+	msg := &types.MsgCreateBid{
+		ID: bidID,
+		Deposit: deposit.Deposit{
+			Amount:  types.DefaultBidMinDeposit,
+			Sources: deposit.Sources{deposit.SourceBalance},
+		}}
+
+	deposits, err := aauthz.AuthorizeDeposit(ctx, suite.AuthzKeeper(), suite.BankKeeper(), msg)
+	require.NoError(t, err)
+
 	err = suite.EscrowKeeper().AccountCreate(
 		ctx,
 		types.EscrowAccountForBid(bid.ID),
 		provider,
-		provider,
-		types.DefaultBidMinDeposit,
+		deposits,
 	)
 	require.NoError(t, err)
 

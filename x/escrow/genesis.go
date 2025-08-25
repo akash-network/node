@@ -41,10 +41,10 @@ func ValidateGenesis(data *types.GenesisState) error {
 
 		// ensure state is in sync with payment
 		switch {
-		case payment.State == types.PaymentOpen && account.State != types.AccountOpen:
+		case payment.State == types.StateOpen && account.State != types.StateOpen:
 			return fmt.Errorf("%w: invalid payment statefor payment %s %s (idx %v)",
 				types.ErrInvalidPayment, payment.AccountID, payment.PaymentID, idx)
-		case payment.State == types.PaymentOverdrawn && account.State != types.AccountOverdrawn:
+		case payment.State == types.StateOverdrawn && account.State != types.StateOverdrawn:
 			return fmt.Errorf("%w: invalid payment statefor payment %s %s (idx %v)",
 				types.ErrInvalidPayment, payment.AccountID, payment.PaymentID, idx)
 		}

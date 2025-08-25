@@ -170,6 +170,7 @@ func appModules(
 			app.Keepers.Akash.Deployment,
 			app.Keepers.Akash.Provider,
 			app.Keepers.Cosmos.Acct,
+			app.Keepers.Cosmos.Authz,
 			app.Keepers.Cosmos.Bank,
 		),
 		provider.NewAppModule(
@@ -302,6 +303,7 @@ func appSimModules(
 			app.Keepers.Akash.Deployment,
 			app.Keepers.Akash.Provider,
 			app.Keepers.Cosmos.Acct,
+			app.Keepers.Cosmos.Authz,
 			app.Keepers.Cosmos.Bank,
 		),
 

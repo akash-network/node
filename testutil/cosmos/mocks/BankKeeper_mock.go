@@ -244,3 +244,125 @@ func (_c *BankKeeper_SendCoinsFromModuleToModule_Call) RunAndReturn(run func(ctx
 	_c.Call.Return(run)
 	return _c
 }
+
+// SpendableCoin provides a mock function for the type BankKeeper
+func (_mock *BankKeeper) SpendableCoin(ctx context.Context, addr types.AccAddress, denom string) types.Coin {
+	ret := _mock.Called(ctx, addr, denom)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SpendableCoin")
+	}
+
+	var r0 types.Coin
+	if returnFunc, ok := ret.Get(0).(func(context.Context, types.AccAddress, string) types.Coin); ok {
+		r0 = returnFunc(ctx, addr, denom)
+	} else {
+		r0 = ret.Get(0).(types.Coin)
+	}
+	return r0
+}
+
+// BankKeeper_SpendableCoin_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SpendableCoin'
+type BankKeeper_SpendableCoin_Call struct {
+	*mock.Call
+}
+
+// SpendableCoin is a helper method to define mock.On call
+//   - ctx context.Context
+//   - addr types.AccAddress
+//   - denom string
+func (_e *BankKeeper_Expecter) SpendableCoin(ctx interface{}, addr interface{}, denom interface{}) *BankKeeper_SpendableCoin_Call {
+	return &BankKeeper_SpendableCoin_Call{Call: _e.mock.On("SpendableCoin", ctx, addr, denom)}
+}
+
+func (_c *BankKeeper_SpendableCoin_Call) Run(run func(ctx context.Context, addr types.AccAddress, denom string)) *BankKeeper_SpendableCoin_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 types.AccAddress
+		if args[1] != nil {
+			arg1 = args[1].(types.AccAddress)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *BankKeeper_SpendableCoin_Call) Return(coin types.Coin) *BankKeeper_SpendableCoin_Call {
+	_c.Call.Return(coin)
+	return _c
+}
+
+func (_c *BankKeeper_SpendableCoin_Call) RunAndReturn(run func(ctx context.Context, addr types.AccAddress, denom string) types.Coin) *BankKeeper_SpendableCoin_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SpendableCoins provides a mock function for the type BankKeeper
+func (_mock *BankKeeper) SpendableCoins(ctx context.Context, addr types.AccAddress) types.Coins {
+	ret := _mock.Called(ctx, addr)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SpendableCoins")
+	}
+
+	var r0 types.Coins
+	if returnFunc, ok := ret.Get(0).(func(context.Context, types.AccAddress) types.Coins); ok {
+		r0 = returnFunc(ctx, addr)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(types.Coins)
+		}
+	}
+	return r0
+}
+
+// BankKeeper_SpendableCoins_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SpendableCoins'
+type BankKeeper_SpendableCoins_Call struct {
+	*mock.Call
+}
+
+// SpendableCoins is a helper method to define mock.On call
+//   - ctx context.Context
+//   - addr types.AccAddress
+func (_e *BankKeeper_Expecter) SpendableCoins(ctx interface{}, addr interface{}) *BankKeeper_SpendableCoins_Call {
+	return &BankKeeper_SpendableCoins_Call{Call: _e.mock.On("SpendableCoins", ctx, addr)}
+}
+
+func (_c *BankKeeper_SpendableCoins_Call) Run(run func(ctx context.Context, addr types.AccAddress)) *BankKeeper_SpendableCoins_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 types.AccAddress
+		if args[1] != nil {
+			arg1 = args[1].(types.AccAddress)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *BankKeeper_SpendableCoins_Call) Return(coins types.Coins) *BankKeeper_SpendableCoins_Call {
+	_c.Call.Return(coins)
+	return _c
+}
+
+func (_c *BankKeeper_SpendableCoins_Call) RunAndReturn(run func(ctx context.Context, addr types.AccAddress) types.Coins) *BankKeeper_SpendableCoins_Call {
+	_c.Call.Return(run)
+	return _c
+}

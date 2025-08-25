@@ -19,7 +19,7 @@ type IKeeper interface {
 	Codec() codec.BinaryCodec
 	StoreKey() storetypes.StoreKey
 	CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypesBeta.GroupSpec) (types.Order, error)
-	CreateBid(ctx sdk.Context, oid mv1.OrderID, provider sdk.AccAddress, price sdk.DecCoin, roffer types.ResourcesOffer) (types.Bid, error)
+	CreateBid(ctx sdk.Context, id mv1.BidID, price sdk.DecCoin, roffer types.ResourcesOffer) (types.Bid, error)
 	CreateLease(ctx sdk.Context, bid types.Bid) error
 	OnOrderMatched(ctx sdk.Context, order types.Order)
 	OnBidMatched(ctx sdk.Context, bid types.Bid)
@@ -162,17 +162,15 @@ func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypesBeta
 }
 
 // CreateBid creates a bid for a order with given orderID, price for bid and provider
-func (k Keeper) CreateBid(ctx sdk.Context, oid mv1.OrderID, provider sdk.AccAddress, price sdk.DecCoin, roffer types.ResourcesOffer) (types.Bid, error) {
+func (k Keeper) CreateBid(ctx sdk.Context, id mv1.BidID, price sdk.DecCoin, roffer types.ResourcesOffer) (types.Bid, error) {
 	store := ctx.KVStore(k.skey)
 
-	bidID := mv1.MakeBidID(oid, provider)
-
-	if key := k.findBid(ctx, bidID); len(key) > 0 {
+	if key := k.findBid(ctx, id); len(key) > 0 {
 		return types.Bid{}, types.ErrBidExists
 	}
 
 	bid := types.Bid{
-		ID:             mv1.MakeBidID(oid, provider),
+		ID:             id,
 		State:          types.BidOpen,
 		Price:          price,
 		CreatedAt:      ctx.BlockHeight(),
@@ -181,8 +179,8 @@ func (k Keeper) CreateBid(ctx sdk.Context, oid mv1.OrderID, provider sdk.AccAddr
 
 	data := k.cdc.MustMarshal(&bid)
 
-	key := keys.MustBidKey(keys.BidStateToPrefix(bid.State), bidID)
-	revKey := keys.MustBidStateRevereKey(bid.State, bidID)
+	key := keys.MustBidKey(keys.BidStateToPrefix(bid.State), id)
+	revKey := keys.MustBidStateRevereKey(bid.State, id)
 
 	store.Set(key, data)
 

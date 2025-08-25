@@ -6,12 +6,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	aauthz "pkg.akt.dev/go/node/types/authz/v1"
+	deposit "pkg.akt.dev/go/node/types/deposit/v1"
 
 	"pkg.akt.dev/go/node/deployment/v1"
 	"pkg.akt.dev/go/node/deployment/v1beta4"
@@ -25,11 +26,13 @@ import (
 )
 
 type grpcTestSuite struct {
-	t       *testing.T
-	app     *app.AkashApp
-	ctx     sdk.Context
-	keeper  keeper.IKeeper
-	ekeeper ekeeper.Keeper
+	t           *testing.T
+	app         *app.AkashApp
+	ctx         sdk.Context
+	keeper      keeper.IKeeper
+	ekeeper     ekeeper.Keeper
+	authzKeeper ekeeper.AuthzKeeper
+	bankKeeper  ekeeper.BankKeeper
 
 	queryClient v1beta4.QueryClient
 }
@@ -37,11 +40,13 @@ type grpcTestSuite struct {
 func setupTest(t *testing.T) *grpcTestSuite {
 	ssuite := state.SetupTestSuite(t)
 	suite := &grpcTestSuite{
-		t:       t,
-		app:     ssuite.App(),
-		ctx:     ssuite.Context(),
-		keeper:  ssuite.DeploymentKeeper(),
-		ekeeper: ssuite.EscrowKeeper(),
+		t:           t,
+		app:         ssuite.App(),
+		ctx:         ssuite.Context(),
+		keeper:      ssuite.DeploymentKeeper(),
+		ekeeper:     ssuite.EscrowKeeper(),
+		authzKeeper: ssuite.AuthzKeeper(),
+		bankKeeper:  ssuite.BankKeeper(),
 	}
 
 	querier := suite.keeper.NewQuerier()
@@ -549,12 +554,17 @@ func (suite *grpcTestSuite) createEscrowAccount(id v1.DeploymentID) etypes.Accou
 	defaultDeposit, err := v1beta4.DefaultParams().MinDepositFor("uakt")
 	require.NoError(suite.t, err)
 
-	err = suite.ekeeper.AccountCreate(suite.ctx,
-		eid,
-		owner,
-		owner,
-		defaultDeposit,
-	)
+	msg := &v1beta4.MsgCreateDeployment{
+		ID: id,
+		Deposit: deposit.Deposit{
+			Amount:  defaultDeposit,
+			Sources: deposit.Sources{deposit.SourceBalance},
+		}}
+
+	deposits, err := aauthz.AuthorizeDeposit(suite.ctx, suite.authzKeeper, suite.bankKeeper, msg)
+	require.NoError(suite.t, err)
+
+	err = suite.ekeeper.AccountCreate(suite.ctx, eid, owner, deposits)
 	require.NoError(suite.t, err)
 	return eid
 }

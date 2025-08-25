@@ -7,6 +7,7 @@ import (
 
 	"cosmossdk.io/core/appmodule"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
+	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
@@ -113,6 +114,7 @@ func NewAppModule(
 	dkeeper handler.DeploymentKeeper,
 	pkeeper handler.ProviderKeeper,
 	acckeeper govtypes.AccountKeeper,
+	authzkeeper authzkeeper.Keeper,
 	bkeeper bankkeeper.Keeper,
 ) AppModule {
 	return AppModule{
@@ -124,6 +126,7 @@ func NewAppModule(
 			Market:     keeper,
 			Deployment: dkeeper,
 			Provider:   pkeeper,
+			Authz:      authzkeeper,
 			Bank:       bkeeper,
 		},
 	}

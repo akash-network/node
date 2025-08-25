@@ -1,8 +1,11 @@
 package handler
 
 import (
+	"context"
+	"time"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
+	"github.com/cosmos/cosmos-sdk/x/authz"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 
 	atypes "pkg.akt.dev/go/node/audit/v1"
@@ -15,10 +18,10 @@ import (
 )
 
 type EscrowKeeper interface {
-	AccountCreate(ctx sdk.Context, id etypes.AccountID, owner, depositor sdk.AccAddress, deposit sdk.Coin) error
-	AccountDeposit(ctx sdk.Context, id etypes.AccountID, depositor sdk.AccAddress, amount sdk.Coin) error
+	AccountCreate(ctx sdk.Context, id etypes.AccountID, owner sdk.AccAddress, deposits []etypes.Deposit) error
+	AccountDeposit(ctx sdk.Context, id etypes.AccountID, deposits []etypes.Deposit) error
 	AccountClose(ctx sdk.Context, id etypes.AccountID) error
-	PaymentCreate(ctx sdk.Context, id etypes.AccountID, pid string, owner sdk.AccAddress, rate sdk.DecCoin) error
+	PaymentCreate(ctx sdk.Context, id etypes.AccountID, pid string, provider sdk.AccAddress, rate sdk.DecCoin) error
 	PaymentWithdraw(ctx sdk.Context, id etypes.AccountID, pid string) error
 	PaymentClose(ctx sdk.Context, id etypes.AccountID, pid string) error
 }
@@ -40,6 +43,18 @@ type DeploymentKeeper interface {
 	OnLeaseClosed(ctx sdk.Context, id dtypes.GroupID) (dbeta.Group, error)
 }
 
+type AuthzKeeper interface {
+	DeleteGrant(ctx context.Context, grantee sdk.AccAddress, granter sdk.AccAddress, msgType string) error
+	GetAuthorization(ctx context.Context, grantee sdk.AccAddress, granter sdk.AccAddress, msgType string) (authz.Authorization, *time.Time)
+	SaveGrant(ctx context.Context, grantee sdk.AccAddress, granter sdk.AccAddress, authorization authz.Authorization, expiration *time.Time) error
+	GetGranteeGrantsByMsgType(ctx context.Context, grantee sdk.AccAddress, msgType string, onGrant func(context.Context, sdk.AccAddress, authz.Authorization, *time.Time) bool)
+}
+
+type BankKeeper interface {
+	SpendableCoins(ctx context.Context, addr sdk.AccAddress) sdk.Coins
+	SpendableCoin(ctx context.Context, addr sdk.AccAddress, denom string) sdk.Coin
+}
+
 // Keepers include all modules keepers
 type Keepers struct {
 	Escrow     EscrowKeeper
@@ -48,5 +63,6 @@ type Keepers struct {
 	Provider   ProviderKeeper
 	Audit      AuditKeeper
 	Account    govtypes.AccountKeeper
-	Bank       bankkeeper.Keeper
+	Authz      AuthzKeeper
+	Bank       BankKeeper
 }

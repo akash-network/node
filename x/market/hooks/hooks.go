@@ -44,7 +44,7 @@ func (h *hooks) OnEscrowAccountClosed(ctx sdk.Context, obj etypes.Account) {
 	_ = h.dkeeper.CloseDeployment(ctx, deployment)
 
 	gstate := dtypes.GroupClosed
-	if obj.State == etypes.AccountOverdrawn {
+	if obj.State == etypes.StateOverdrawn {
 		gstate = dtypes.GroupInsufficientFunds
 	}
 
@@ -84,7 +84,7 @@ func (h *hooks) OnEscrowPaymentClosed(ctx sdk.Context, obj etypes.FractionalPaym
 	_ = h.mkeeper.OnOrderClosed(ctx, order)
 	_ = h.mkeeper.OnBidClosed(ctx, bid)
 
-	if obj.State == etypes.PaymentOverdrawn {
+	if obj.State == etypes.StateOverdrawn {
 		_ = h.mkeeper.OnLeaseClosed(ctx, lease, mv1.LeaseInsufficientFunds)
 	} else {
 		_ = h.mkeeper.OnLeaseClosed(ctx, lease, mv1.LeaseClosed)
