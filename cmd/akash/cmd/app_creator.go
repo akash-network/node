@@ -6,10 +6,9 @@ import (
 	"path/filepath"
 
 	"cosmossdk.io/store"
+	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	"github.com/spf13/cast"
 	"github.com/spf13/viper"
-
-	tmtypes "github.com/cometbft/cometbft/types"
 
 	"cosmossdk.io/log"
 	"cosmossdk.io/store/snapshots"
@@ -57,7 +56,7 @@ func (a appCreator) newApp(
 	if chainID == "" {
 		// fallback to genesis chain-id
 		genDocFile := filepath.Join(homeDir, cast.ToString(appOpts.Get("genesis_file")))
-		appGenesis, err := tmtypes.GenesisDocFromFile(genDocFile)
+		appGenesis, err := genutiltypes.AppGenesisFromFile(genDocFile)
 		if err != nil {
 			panic(err)
 		}
