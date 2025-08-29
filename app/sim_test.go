@@ -238,8 +238,8 @@ func TestAppImportExport(t *testing.T) {
 			appB,
 			[][]byte{
 				authzkeys.GrantQueuePrefix,
-				authzkeys.GranteeKey,
-				authzkeys.GranteeMsgKey,
+				authzkeys.GranteeGranterKey,
+				authzkeys.GranteeMsgTypeUrlKey,
 			},
 		},
 		{
