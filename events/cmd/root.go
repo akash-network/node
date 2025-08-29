@@ -12,7 +12,6 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/akash-network/node/cmd/common"
-	cmdcommon "github.com/akash-network/node/cmd/common"
 	"github.com/akash-network/node/events"
 	"github.com/akash-network/node/pubsub"
 )
@@ -72,7 +71,7 @@ func getEvents(ctx context.Context, cmd *cobra.Command, _ []string) error {
 			case <-subscriber.Done():
 				return nil
 			case ev := <-subscriber.Events():
-				if err := cmdcommon.PrintJSON(cctx, ev); err != nil {
+				if err := common.PrintJSON(cctx, ev); err != nil {
 					return err
 				}
 			}
