@@ -10,7 +10,6 @@ import (
 
 	v1 "pkg.akt.dev/go/node/deployment/v1"
 	types "pkg.akt.dev/go/node/deployment/v1beta4"
-	aauthz "pkg.akt.dev/go/node/types/authz/v1"
 
 	"pkg.akt.dev/node/x/deployment/keeper"
 )
@@ -18,29 +17,27 @@ import (
 var _ types.MsgServer = msgServer{}
 
 type msgServer struct {
-	deployment  keeper.IKeeper
-	market      MarketKeeper
-	escrow      EscrowKeeper
-	authzKeeper AuthzKeeper
-	bkeeper     BankKeeper
+	deployment keeper.IKeeper
+	market     MarketKeeper
+	escrow     EscrowKeeper
 }
 
 // NewServer returns an implementation of the deployment MsgServer interface
 // for the provided Keeper.
-func NewServer(k keeper.IKeeper, mkeeper MarketKeeper, ekeeper EscrowKeeper, authzKeeper AuthzKeeper, bkeeper BankKeeper) types.MsgServer {
+func NewServer(k keeper.IKeeper, mkeeper MarketKeeper, ekeeper EscrowKeeper) types.MsgServer {
 	return &msgServer{
-		deployment:  k,
-		market:      mkeeper,
-		escrow:      ekeeper,
-		authzKeeper: authzKeeper,
-		bkeeper:     bkeeper,
+		deployment: k,
+		market:     mkeeper,
+		escrow:     ekeeper,
 	}
 }
 
 func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreateDeployment) (*types.MsgCreateDeploymentResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	if _, found := ms.deployment.GetDeployment(ctx, msg.ID); found {
+	did := msg.ID
+
+	if _, found := ms.deployment.GetDeployment(ctx, did); found {
 		return nil, v1.ErrDeploymentExists
 	}
 
@@ -50,7 +47,7 @@ func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreate
 	}
 
 	deployment := v1.Deployment{
-		ID:        msg.ID,
+		ID:        did,
 		State:     v1.DeploymentActive,
 		Hash:      msg.Hash,
 		CreatedAt: ctx.BlockHeight(),
@@ -60,7 +57,7 @@ func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreate
 		return nil, fmt.Errorf("%w: %s", v1.ErrInvalidGroups, err.Error())
 	}
 
-	deposits, err := aauthz.AuthorizeDeposit(ctx, ms.authzKeeper, ms.bkeeper, msg)
+	deposits, err := ms.escrow.AuthorizeDeposits(ctx, msg)
 	if err != nil {
 		return nil, err
 	}
@@ -87,13 +84,8 @@ func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreate
 		}
 	}
 
-	owner, _ := sdk.AccAddressFromBech32(msg.ID.Owner)
-
-	if err := ms.escrow.AccountCreate(ctx,
-		types.EscrowAccountForDeployment(deployment.ID),
-		owner,
-		deposits,
-	); err != nil {
+	owner, _ := sdk.AccAddressFromBech32(did.Owner)
+	if err := ms.escrow.AccountCreate(ctx, deployment.ID.ToEscrowAccountID(), owner, deposits); err != nil {
 		return &types.MsgCreateDeploymentResponse{}, err
 	}
 
@@ -220,31 +212,31 @@ func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreate
 //	return depositors, nil
 //}
 
-func (ms msgServer) DepositDeployment(goCtx context.Context, msg *types.MsgDepositDeployment) (*types.MsgDepositDeploymentResponse, error) {
-	ctx := sdk.UnwrapSDKContext(goCtx)
-
-	deployment, found := ms.deployment.GetDeployment(ctx, msg.ID)
-	if !found {
-		return &types.MsgDepositDeploymentResponse{}, v1.ErrDeploymentNotFound
-	}
-
-	if deployment.State != v1.DeploymentActive {
-		return &types.MsgDepositDeploymentResponse{}, v1.ErrDeploymentClosed
-	}
-
-	deposits, err := aauthz.AuthorizeDeposit(ctx, ms.authzKeeper, ms.bkeeper, msg)
-	if err != nil {
-		return nil, err
-	}
-
-	eID := types.EscrowAccountForDeployment(msg.ID)
-
-	if err = ms.escrow.AccountDeposit(ctx, eID, deposits); err != nil {
-		return &types.MsgDepositDeploymentResponse{}, err
-	}
-
-	return &types.MsgDepositDeploymentResponse{}, nil
-}
+//func (ms msgServer) DepositDeployment(goCtx context.Context, msg *types.MsgDepositDeployment) (*types.MsgDepositDeploymentResponse, error) {
+//	ctx := sdk.UnwrapSDKContext(goCtx)
+//
+//	deployment, found := ms.deployment.GetDeployment(ctx, msg.ID)
+//	if !found {
+//		return &types.MsgDepositDeploymentResponse{}, v1.ErrDeploymentNotFound
+//	}
+//
+//	if deployment.State != v1.DeploymentActive {
+//		return &types.MsgDepositDeploymentResponse{}, v1.ErrDeploymentClosed
+//	}
+//
+//	deposits, err := aauthz.AuthorizeDeposit(ctx, ms.authzKeeper, ms.bkeeper, msg)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	eID := types.EscrowAccountForDeployment(msg.ID)
+//
+//	if err = ms.escrow.AccountDeposit(ctx, eID, deposits); err != nil {
+//		return &types.MsgDepositDeploymentResponse{}, err
+//	}
+//
+//	return &types.MsgDepositDeploymentResponse{}, nil
+//}
 
 func (ms msgServer) UpdateDeployment(goCtx context.Context, msg *types.MsgUpdateDeployment) (*types.MsgUpdateDeploymentResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
@@ -285,14 +277,11 @@ func (ms msgServer) CloseDeployment(goCtx context.Context, msg *types.MsgCloseDe
 		return &types.MsgCloseDeploymentResponse{}, v1.ErrDeploymentClosed
 	}
 
-	if err := ms.escrow.AccountClose(ctx,
-		types.EscrowAccountForDeployment(deployment.ID),
-	); err != nil {
+	if err := ms.escrow.AccountClose(ctx, deployment.ID.ToEscrowAccountID()); err != nil {
 		return &types.MsgCloseDeploymentResponse{}, err
 	}
 
 	// Update state via escrow hooks.
-
 	return &types.MsgCloseDeploymentResponse{}, nil
 }
 

@@ -10,7 +10,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 
-	dtypes "pkg.akt.dev/go/node/deployment/v1beta4"
 	"pkg.akt.dev/go/node/market/v1"
 	types "pkg.akt.dev/go/node/market/v1beta5"
 
@@ -257,7 +256,7 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 			// filter bids with provided filters
 			if req.Filters.Accept(bid, state) {
 				if accumulate {
-					acct, err := k.ekeeper.GetAccount(ctx, types.EscrowAccountForBid(bid.ID))
+					acct, err := k.ekeeper.GetAccount(ctx, bid.ID.ToEscrowAccountID())
 					if err != nil {
 						return true, err
 					}
@@ -418,9 +417,7 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 			// filter leases with provided filters
 			if req.Filters.Accept(lease, state) {
 				if accumulate {
-					payment, err := k.ekeeper.GetPayment(ctx,
-						dtypes.EscrowAccountForDeployment(lease.ID.DeploymentID()),
-						types.EscrowPaymentForLease(lease.ID))
+					payment, err := k.ekeeper.GetPayment(ctx, lease.ID.ToEscrowPaymentID())
 					if err != nil {
 						return true, err
 					}
@@ -489,7 +486,7 @@ func (k Querier) Order(c context.Context, req *types.QueryOrderRequest) (*types.
 
 	order, found := k.GetOrder(ctx, req.ID)
 	if !found {
-		return nil, types.ErrOrderNotFound
+		return nil, v1.ErrOrderNotFound
 	}
 
 	return &types.QueryOrderResponse{Order: order}, nil
@@ -513,10 +510,10 @@ func (k Querier) Bid(c context.Context, req *types.QueryBidRequest) (*types.Quer
 
 	bid, found := k.GetBid(ctx, req.ID)
 	if !found {
-		return nil, types.ErrBidNotFound
+		return nil, v1.ErrBidNotFound
 	}
 
-	acct, err := k.ekeeper.GetAccount(ctx, types.EscrowAccountForBid(bid.ID))
+	acct, err := k.ekeeper.GetAccount(ctx, bid.ID.ToEscrowAccountID())
 	if err != nil {
 		return nil, err
 	}
@@ -545,12 +542,10 @@ func (k Querier) Lease(c context.Context, req *types.QueryLeaseRequest) (*types.
 
 	lease, found := k.GetLease(ctx, req.ID)
 	if !found {
-		return nil, types.ErrLeaseNotFound
+		return nil, v1.ErrLeaseNotFound
 	}
 
-	payment, err := k.ekeeper.GetPayment(ctx,
-		dtypes.EscrowAccountForDeployment(lease.ID.DeploymentID()),
-		types.EscrowPaymentForLease(lease.ID))
+	payment, err := k.ekeeper.GetPayment(ctx, lease.ID.ToEscrowPaymentID())
 	if err != nil {
 		return nil, err
 	}

@@ -17,23 +17,18 @@ func NewHandler(keepers Keepers) baseapp.MsgServiceHandler {
 		case *types.MsgCreateBid:
 			res, err := ms.CreateBid(ctx, msg)
 			return sdk.WrapServiceResult(ctx, res, err)
-
 		case *types.MsgCloseBid:
 			res, err := ms.CloseBid(ctx, msg)
 			return sdk.WrapServiceResult(ctx, res, err)
-
 		case *types.MsgWithdrawLease:
 			res, err := ms.WithdrawLease(ctx, msg)
 			return sdk.WrapServiceResult(ctx, res, err)
-
 		case *types.MsgCreateLease:
 			res, err := ms.CreateLease(ctx, msg)
 			return sdk.WrapServiceResult(ctx, res, err)
-
 		case *types.MsgCloseLease:
 			res, err := ms.CloseLease(ctx, msg)
 			return sdk.WrapServiceResult(ctx, res, err)
-
 		default:
 			return nil, sdkerrors.ErrUnknownRequest
 		}

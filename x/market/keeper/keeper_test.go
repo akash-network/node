@@ -11,7 +11,6 @@ import (
 	dtypes "pkg.akt.dev/go/node/deployment/v1beta4"
 	"pkg.akt.dev/go/node/market/v1"
 	types "pkg.akt.dev/go/node/market/v1beta5"
-	aauthz "pkg.akt.dev/go/node/types/authz/v1"
 	deposit "pkg.akt.dev/go/node/types/deposit/v1"
 	"pkg.akt.dev/go/testutil"
 
@@ -289,12 +288,12 @@ func createLease(t testing.TB, suite *state.TestSuite) v1.LeaseID {
 			Sources: deposit.Sources{deposit.SourceBalance},
 		}}
 
-	deposits, err := aauthz.AuthorizeDeposit(ctx, suite.AuthzKeeper(), suite.BankKeeper(), msg)
+	deposits, err := suite.EscrowKeeper().AuthorizeDeposits(ctx, msg)
 	require.NoError(t, err)
 
 	err = suite.EscrowKeeper().AccountCreate(
 		ctx,
-		dtypes.EscrowAccountForDeployment(bid.ID.DeploymentID()),
+		bid.ID.DeploymentID().ToEscrowAccountID(),
 		owner,
 		deposits,
 	)
@@ -305,8 +304,7 @@ func createLease(t testing.TB, suite *state.TestSuite) v1.LeaseID {
 
 	err = suite.EscrowKeeper().PaymentCreate(
 		ctx,
-		dtypes.EscrowAccountForDeployment(bid.ID.DeploymentID()),
-		types.EscrowPaymentForLease(bid.ID.LeaseID()),
+		bid.ID.LeaseID().ToEscrowPaymentID(),
 		provider,
 		bid.Price,
 	)
@@ -338,12 +336,12 @@ func createBid(t testing.TB, suite *state.TestSuite) (types.Bid, types.Order) {
 			Sources: deposit.Sources{deposit.SourceBalance},
 		}}
 
-	deposits, err := aauthz.AuthorizeDeposit(ctx, suite.AuthzKeeper(), suite.BankKeeper(), msg)
+	deposits, err := suite.EscrowKeeper().AuthorizeDeposits(ctx, msg)
 	require.NoError(t, err)
 
 	err = suite.EscrowKeeper().AccountCreate(
 		ctx,
-		types.EscrowAccountForBid(bid.ID),
+		bid.ID.ToEscrowAccountID(),
 		provider,
 		deposits,
 	)

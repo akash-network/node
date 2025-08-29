@@ -15,12 +15,12 @@ import (
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	"github.com/stretchr/testify/mock"
-	etypes "pkg.akt.dev/go/node/escrow/v1"
+	emodule "pkg.akt.dev/go/node/escrow/module"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	atypes "pkg.akt.dev/go/node/audit/v1"
 	dtypes "pkg.akt.dev/go/node/deployment/v1"
-	mtypes "pkg.akt.dev/go/node/market/v1beta5"
+	mtypes "pkg.akt.dev/go/node/market/v1"
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 	ttypes "pkg.akt.dev/go/node/take/v1"
 
@@ -142,7 +142,7 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 		sb := collections.NewSchemaBuilder(storeService)
 
 		feepool := collections.NewItem(sb, types.FeePoolKey, "fee_pool", codec.CollValue[types.FeePool](cdc))
-		keepers.Escrow = ekeeper.NewKeeper(cdc, app.GetKey(etypes.StoreKey), keepers.Bank, keepers.Take, keepers.Authz, feepool)
+		keepers.Escrow = ekeeper.NewKeeper(cdc, app.GetKey(emodule.StoreKey), keepers.Bank, keepers.Take, keepers.Authz, feepool)
 	}
 	if keepers.Market == nil {
 		keepers.Market = mkeeper.NewKeeper(cdc, app.GetKey(mtypes.StoreKey), keepers.Escrow, authtypes.NewModuleAddress(govtypes.ModuleName).String())

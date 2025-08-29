@@ -9,8 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	aauthz "pkg.akt.dev/go/node/types/authz/v1"
-	deposit "pkg.akt.dev/go/node/types/deposit/v1"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdktestdata "github.com/cosmos/cosmos-sdk/testutil/testdata"
@@ -19,6 +17,8 @@ import (
 
 	"pkg.akt.dev/go/node/deployment/v1"
 	"pkg.akt.dev/go/node/deployment/v1beta4"
+	ev1 "pkg.akt.dev/go/node/escrow/v1"
+	deposit "pkg.akt.dev/go/node/types/deposit/v1"
 	"pkg.akt.dev/go/testutil"
 
 	cmocks "pkg.akt.dev/node/testutil/cosmos/mocks"
@@ -48,26 +48,30 @@ func setupTestSuite(t *testing.T) *testSuite {
 	depositor := testutil.AccAddress(t)
 	authzKeeper := &cmocks.AuthzKeeper{}
 	bankKeeper := &cmocks.BankKeeper{}
-	msgTypeUrl := sdk.MsgTypeURL(&aauthz.DepositAuthorization{})
+	msgTypeUrl := sdk.MsgTypeURL(&ev1.DepositAuthorization{})
 
 	authzKeeper.
 		On("GetAuthorization", mock.Anything, mock.Anything, depositor, msgTypeUrl).
-		Return(&aauthz.DepositAuthorization{
+		Return(&ev1.DepositAuthorization{
+			Scopes:     ev1.DepositAuthorizationScopes{ev1.DepositScopeDeployment},
 			SpendLimit: defaultDeposit.Add(defaultDeposit),
 		}, &time.Time{}).
 		Once().
 		On("GetAuthorization", mock.Anything, mock.Anything, depositor, msgTypeUrl).
-		Return(&aauthz.DepositAuthorization{
+		Return(&ev1.DepositAuthorization{
+			Scopes:     ev1.DepositAuthorizationScopes{ev1.DepositScopeDeployment},
 			SpendLimit: defaultDeposit,
 		}, &time.Time{}).
 		Once().
 		On("GetAuthorization", mock.Anything, mock.Anything, depositor, msgTypeUrl).
-		Return(&aauthz.DepositAuthorization{
+		Return(&ev1.DepositAuthorization{
+			Scopes:     ev1.DepositAuthorizationScopes{ev1.DepositScopeDeployment},
 			SpendLimit: defaultDeposit,
 		}, &time.Time{}).
 		Once().
 		On("GetAuthorization", mock.Anything, mock.Anything, depositor, msgTypeUrl).
-		Return(&aauthz.DepositAuthorization{
+		Return(&ev1.DepositAuthorization{
+			Scopes:     ev1.DepositAuthorizationScopes{ev1.DepositScopeDeployment},
 			SpendLimit: defaultDeposit,
 		}, &time.Time{}).
 		Once().
@@ -114,7 +118,7 @@ func setupTestSuite(t *testing.T) *testSuite {
 		defaultDeposit: defaultDeposit,
 	}
 
-	suite.handler = handler.NewHandler(suite.dkeeper, suite.mkeeper, ssuite.EscrowKeeper(), suite.authzKeeper, suite.bankKeeper)
+	suite.handler = handler.NewHandler(suite.dkeeper, suite.mkeeper, ssuite.EscrowKeeper())
 
 	return suite
 }

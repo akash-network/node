@@ -77,7 +77,7 @@ func SimulateMsgCreateBid(ks keepers.Keepers) simtypes.Operation {
 	return func(r *rand.Rand, app *baseapp.BaseApp, ctx sdk.Context, accounts []simtypes.Account, chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		orders := getOrdersWithState(ctx, ks, types.OrderOpen)
 		if len(orders) == 0 {
-			return simtypes.NoOpMsg(types.ModuleName, (&types.MsgCreateBid{}).Type(), "no open orders found"), nil, nil
+			return simtypes.NoOpMsg(v1.ModuleName, (&types.MsgCreateBid{}).Type(), "no open orders found"), nil, nil
 		}
 
 		// Get random order
@@ -86,7 +86,7 @@ func SimulateMsgCreateBid(ks keepers.Keepers) simtypes.Operation {
 		providers := getProviders(ctx, ks)
 
 		if len(providers) == 0 {
-			return simtypes.NoOpMsg(types.ModuleName, (&types.MsgCreateBid{}).Type(), "no providers found"), nil, nil
+			return simtypes.NoOpMsg(v1.ModuleName, (&types.MsgCreateBid{}).Type(), "no providers found"), nil, nil
 		}
 
 		// Get random deployment
@@ -94,17 +94,17 @@ func SimulateMsgCreateBid(ks keepers.Keepers) simtypes.Operation {
 
 		ownerAddr, convertErr := sdk.AccAddressFromBech32(provider.Owner)
 		if convertErr != nil {
-			return simtypes.NoOpMsg(types.ModuleName, (&types.MsgCreateBid{}).Type(), "error while converting address"), nil, convertErr
+			return simtypes.NoOpMsg(v1.ModuleName, (&types.MsgCreateBid{}).Type(), "error while converting address"), nil, convertErr
 		}
 
 		simAccount, found := simtypes.FindAccount(accounts, ownerAddr)
 		if !found {
-			return simtypes.NoOpMsg(types.ModuleName, (&types.MsgCreateBid{}).Type(), "unable to find provider"),
+			return simtypes.NoOpMsg(v1.ModuleName, (&types.MsgCreateBid{}).Type(), "unable to find provider"),
 				nil, fmt.Errorf("provider with %s not found", provider.Owner)
 		}
 
 		if provider.Owner == order.ID.Owner {
-			return simtypes.NoOpMsg(types.ModuleName, (&types.MsgCreateBid{}).Type(), "provider and order owner cannot be same"),
+			return simtypes.NoOpMsg(v1.ModuleName, (&types.MsgCreateBid{}).Type(), "provider and order owner cannot be same"),
 				nil, nil
 		}
 
@@ -113,13 +113,13 @@ func SimulateMsgCreateBid(ks keepers.Keepers) simtypes.Operation {
 		spendable := ks.Bank.SpendableCoins(ctx, account.GetAddress())
 
 		if spendable.AmountOf(depositAmount.Denom).LT(depositAmount.Amount.MulRaw(2)) {
-			return simtypes.NoOpMsg(types.ModuleName, (&types.MsgCreateBid{}).Type(), "out of money"), nil, nil
+			return simtypes.NoOpMsg(v1.ModuleName, (&types.MsgCreateBid{}).Type(), "out of money"), nil, nil
 		}
 		spendable = spendable.Sub(depositAmount)
 
 		fees, err := simtypes.RandomFees(r, ctx, spendable)
 		if err != nil {
-			return simtypes.NoOpMsg(types.ModuleName, (&types.MsgCreateBid{}).Type(), "unable to generate fees"), nil, err
+			return simtypes.NoOpMsg(v1.ModuleName, (&types.MsgCreateBid{}).Type(), "unable to generate fees"), nil, err
 		}
 
 		msg := types.NewMsgCreateBid(v1.MakeBidID(order.ID, simAccount.Address), order.Price(), deposit.Deposit{
@@ -140,17 +140,17 @@ func SimulateMsgCreateBid(ks keepers.Keepers) simtypes.Operation {
 			simAccount.PrivKey,
 		)
 		if err != nil {
-			return simtypes.NoOpMsg(types.ModuleName, msg.Type(), "unable to generate mock tx"), nil, err
+			return simtypes.NoOpMsg(v1.ModuleName, msg.Type(), "unable to generate mock tx"), nil, err
 		}
 
 		_, _, err = app.SimDeliver(txGen.TxEncoder(), tx)
 		switch {
 		case err == nil:
 			return simtypes.NewOperationMsg(msg, true, ""), nil, nil
-		case errors.Is(err, types.ErrBidExists):
+		case errors.Is(err, v1.ErrBidExists):
 			return simtypes.NewOperationMsg(msg, false, ""), nil, nil
 		default:
-			return simtypes.NoOpMsg(types.ModuleName, msg.Type(), "unable to deliver mock tx"), nil, err
+			return simtypes.NoOpMsg(v1.ModuleName, msg.Type(), "unable to deliver mock tx"), nil, err
 		}
 	}
 }
@@ -173,7 +173,7 @@ func SimulateMsgCloseBid(ks keepers.Keepers) simtypes.Operation {
 		})
 
 		if len(bids) == 0 {
-			return simtypes.NoOpMsg(types.ModuleName, (&types.MsgCloseBid{}).Type(), "no matched bids found"), nil, nil
+			return simtypes.NoOpMsg(v1.ModuleName, (&types.MsgCloseBid{}).Type(), "no matched bids found"), nil, nil
 		}
 
 		// Get random bid
@@ -181,12 +181,12 @@ func SimulateMsgCloseBid(ks keepers.Keepers) simtypes.Operation {
 
 		providerAddr, convertErr := sdk.AccAddressFromBech32(bid.ID.Provider)
 		if convertErr != nil {
-			return simtypes.NoOpMsg(types.ModuleName, (&types.MsgCloseBid{}).Type(), "error while converting address"), nil, convertErr
+			return simtypes.NoOpMsg(v1.ModuleName, (&types.MsgCloseBid{}).Type(), "error while converting address"), nil, convertErr
 		}
 
 		simAccount, found := simtypes.FindAccount(accounts, providerAddr)
 		if !found {
-			return simtypes.NoOpMsg(types.ModuleName, (&types.MsgCloseBid{}).Type(), "unable to find bid with provider"),
+			return simtypes.NoOpMsg(v1.ModuleName, (&types.MsgCloseBid{}).Type(), "unable to find bid with provider"),
 				nil, fmt.Errorf("bid with %s not found", bid.ID.Provider)
 		}
 
@@ -195,7 +195,7 @@ func SimulateMsgCloseBid(ks keepers.Keepers) simtypes.Operation {
 
 		fees, err := simtypes.RandomFees(r, ctx, spendable)
 		if err != nil {
-			return simtypes.NoOpMsg(types.ModuleName, (&types.MsgCloseBid{}).Type(), "unable to generate fees"), nil, err
+			return simtypes.NoOpMsg(v1.ModuleName, (&types.MsgCloseBid{}).Type(), "unable to generate fees"), nil, err
 		}
 
 		msg := types.NewMsgCloseBid(bid.ID)
@@ -213,12 +213,12 @@ func SimulateMsgCloseBid(ks keepers.Keepers) simtypes.Operation {
 			simAccount.PrivKey,
 		)
 		if err != nil {
-			return simtypes.NoOpMsg(types.ModuleName, msg.Type(), "unable to generate mock tx"), nil, err
+			return simtypes.NoOpMsg(v1.ModuleName, msg.Type(), "unable to generate mock tx"), nil, err
 		}
 
 		_, _, err = app.SimDeliver(txGen.TxEncoder(), tx)
 		if err != nil {
-			return simtypes.NoOpMsg(types.ModuleName, msg.Type(), "unable to deliver tx"), nil, err
+			return simtypes.NoOpMsg(v1.ModuleName, msg.Type(), "unable to deliver tx"), nil, err
 		}
 
 		return simtypes.NewOperationMsg(msg, true, ""), nil, nil
@@ -289,6 +289,6 @@ func SimulateMsgCloseLease(_ keepers.Keepers) simtypes.Operation {
 		//
 		// return simtypes.NoOpMsg(types.ModuleName, (&types.MsgCloseLease{}).Type(), "skipping"), nil, nil
 
-		return simtypes.NoOpMsg(types.ModuleName, (&types.MsgCloseLease{}).Type(), "skipping"), nil, nil
+		return simtypes.NoOpMsg(v1.ModuleName, (&types.MsgCloseLease{}).Type(), "skipping"), nil, nil
 	}
 }

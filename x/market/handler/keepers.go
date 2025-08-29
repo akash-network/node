@@ -7,23 +7,25 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	escrowid "pkg.akt.dev/go/node/escrow/id/v1"
 
 	atypes "pkg.akt.dev/go/node/audit/v1"
 	dtypes "pkg.akt.dev/go/node/deployment/v1"
 	dbeta "pkg.akt.dev/go/node/deployment/v1beta4"
-	etypes "pkg.akt.dev/go/node/escrow/v1"
+	etypes "pkg.akt.dev/go/node/escrow/types/v1"
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 
 	"pkg.akt.dev/node/x/market/keeper"
 )
 
 type EscrowKeeper interface {
-	AccountCreate(ctx sdk.Context, id etypes.AccountID, owner sdk.AccAddress, deposits []etypes.Deposit) error
-	AccountDeposit(ctx sdk.Context, id etypes.AccountID, deposits []etypes.Deposit) error
-	AccountClose(ctx sdk.Context, id etypes.AccountID) error
-	PaymentCreate(ctx sdk.Context, id etypes.AccountID, pid string, provider sdk.AccAddress, rate sdk.DecCoin) error
-	PaymentWithdraw(ctx sdk.Context, id etypes.AccountID, pid string) error
-	PaymentClose(ctx sdk.Context, id etypes.AccountID, pid string) error
+	AccountCreate(ctx sdk.Context, id escrowid.Account, owner sdk.AccAddress, deposits []etypes.Depositor) error
+	AccountDeposit(ctx sdk.Context, id escrowid.Account, deposits []etypes.Depositor) error
+	AccountClose(ctx sdk.Context, id escrowid.Account) error
+	PaymentCreate(ctx sdk.Context, id escrowid.Payment, provider sdk.AccAddress, rate sdk.DecCoin) error
+	PaymentWithdraw(ctx sdk.Context, id escrowid.Payment) error
+	PaymentClose(ctx sdk.Context, id escrowid.Payment) error
+	AuthorizeDeposits(sctx sdk.Context, msg sdk.Msg) ([]etypes.Depositor, error)
 }
 
 // ProviderKeeper Interface includes provider methods

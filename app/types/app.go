@@ -56,12 +56,12 @@ import (
 	ibcexported "github.com/cosmos/ibc-go/v10/modules/core/exported"
 	ibckeeper "github.com/cosmos/ibc-go/v10/modules/core/keeper"
 	ibctm "github.com/cosmos/ibc-go/v10/modules/light-clients/07-tendermint"
+	emodule "pkg.akt.dev/go/node/escrow/module"
 
 	atypes "pkg.akt.dev/go/node/audit/v1"
 	ctypes "pkg.akt.dev/go/node/cert/v1"
 	dtypes "pkg.akt.dev/go/node/deployment/v1"
 	dv1beta "pkg.akt.dev/go/node/deployment/v1beta3"
-	etypes "pkg.akt.dev/go/node/escrow/v1"
 	agovtypes "pkg.akt.dev/go/node/gov/v1beta3"
 	mtypes "pkg.akt.dev/go/node/market/v1beta4"
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
@@ -408,7 +408,7 @@ func (app *App) InitNormalKeepers(
 
 	app.Keepers.Akash.Escrow = ekeeper.NewKeeper(
 		cdc,
-		app.keys[etypes.StoreKey],
+		app.keys[emodule.StoreKey],
 		app.Keepers.Cosmos.Bank,
 		app.Keepers.Akash.Take,
 		app.Keepers.Cosmos.Authz,
@@ -526,7 +526,7 @@ func kvStoreKeys() []string {
 func akashKVStoreKeys() []string {
 	return []string{
 		ttypes.StoreKey,
-		etypes.StoreKey,
+		emodule.StoreKey,
 		dtypes.StoreKey,
 		mtypes.StoreKey,
 		ptypes.StoreKey,

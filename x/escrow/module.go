@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
+	emodule "pkg.akt.dev/go/node/escrow/module"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -20,6 +21,7 @@ import (
 	v1 "pkg.akt.dev/go/node/escrow/v1"
 
 	"pkg.akt.dev/node/x/escrow/client/rest"
+	"pkg.akt.dev/node/x/escrow/handler"
 	"pkg.akt.dev/node/x/escrow/keeper"
 )
 
@@ -42,7 +44,7 @@ type AppModuleBasic struct {
 
 // Name returns provider module's name
 func (AppModuleBasic) Name() string {
-	return v1.ModuleName
+	return emodule.ModuleName
 }
 
 // RegisterLegacyAminoCodec registers the provider module's types for the given codec.
@@ -53,8 +55,6 @@ func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 // RegisterInterfaces registers the module's interface types
 func (b AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 	v1.RegisterInterfaces(registry)
-	// v1beta2types.RegisterInterfaces(registry)
-	// v1beta1types.RegisterInterfaces(registry)
 }
 
 // DefaultGenesis returns default genesis state as raw bytes for the provider
@@ -73,7 +73,7 @@ func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, _ client.TxEncodingCo
 
 	err := cdc.UnmarshalJSON(bz, &data)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal %s genesis state: %v", v1.ModuleName, err)
+		return fmt.Errorf("failed to unmarshal %s genesis state: %v", emodule.ModuleName, err)
 	}
 
 	return ValidateGenesis(&data)
@@ -81,7 +81,7 @@ func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, _ client.TxEncodingCo
 
 // RegisterRESTRoutes registers rest routes for this module
 func (AppModuleBasic) RegisterRESTRoutes(clientCtx client.Context, rtr *mux.Router) {
-	rest.RegisterRoutes(clientCtx, rtr, v1.StoreKey)
+	rest.RegisterRoutes(clientCtx, rtr, emodule.StoreKey)
 }
 
 // RegisterGRPCGatewayRoutes registers the gRPC Gateway routes for the provider module.
@@ -89,14 +89,6 @@ func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *r
 	err := v1.RegisterQueryHandlerClient(context.Background(), mux, v1.NewQueryClient(clientCtx))
 	if err != nil {
 		panic(fmt.Sprintf("couldn't register provider grpc routes: %s", err.Error()))
-	}
-}
-
-// RegisterGRPCRoutes registers the gRPC Gateway routes for the provider module.
-func (AppModuleBasic) RegisterGRPCRoutes(clientCtx client.Context, mux *runtime.ServeMux) {
-	err := v1.RegisterQueryHandlerClient(context.Background(), mux, v1.NewQueryClient(clientCtx))
-	if err != nil {
-		panic(fmt.Sprintf("couldn't register audit grpc routes: %s", err.Error()))
 	}
 }
 
@@ -118,20 +110,24 @@ func (AppModuleBasic) GetQueryClient(clientCtx client.Context) v1.QueryClient {
 // AppModule implements an application module for the audit module.
 type AppModule struct {
 	AppModuleBasic
-	keeper keeper.Keeper
+	keeper      keeper.Keeper
+	authzKeeper keeper.AuthzKeeper
+	bankKeeper  keeper.BankKeeper
 }
 
 // NewAppModule creates a new AppModule object
-func NewAppModule(cdc codec.Codec, k keeper.Keeper) AppModule {
+func NewAppModule(cdc codec.Codec, k keeper.Keeper, authzKeeper keeper.AuthzKeeper, bankKeeper keeper.BankKeeper) AppModule {
 	return AppModule{
 		AppModuleBasic: AppModuleBasic{cdc: cdc},
 		keeper:         k,
+		authzKeeper:    authzKeeper,
+		bankKeeper:     bankKeeper,
 	}
 }
 
 // Name returns the provider module name
 func (AppModule) Name() string {
-	return v1.ModuleName
+	return emodule.ModuleName
 }
 
 // IsOnePerModuleType implements the depinject.OnePerModuleType interface.
@@ -142,12 +138,14 @@ func (am AppModule) IsAppModule() {}
 
 // QuerierRoute returns the audit module's querier route name.
 func (am AppModule) QuerierRoute() string {
-	return v1.ModuleName
+	return emodule.ModuleName
 }
 
-// RegisterServices registers the module's servicess
+// RegisterServices registers the module's services
 func (am AppModule) RegisterServices(cfg module.Configurator) {
-	querier := keeper.NewQuerier(am.keeper)
+	v1.RegisterMsgServer(cfg.MsgServer(), handler.NewServer(am.keeper, am.authzKeeper, am.bankKeeper))
+
+	querier := am.keeper.NewQuerier()
 
 	v1.RegisterQueryServer(cfg.QueryServer(), querier)
 }

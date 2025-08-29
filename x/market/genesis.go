@@ -40,7 +40,7 @@ func InitGenesis(ctx sdk.Context, kpr keeper.IKeeper, data *v1beta5.GenesisState
 		key := keys.MustOrderKey(keys.OrderStateToPrefix(record.State), record.ID)
 
 		if store.Has(key) {
-			panic(fmt.Errorf("market genesis orders init. order id %s: %w", record.ID, v1beta5.ErrOrderExists))
+			panic(fmt.Errorf("market genesis orders init. order id %s: %w", record.ID, v1.ErrOrderExists))
 		}
 
 		store.Set(key, cdc.MustMarshal(&record))
@@ -51,10 +51,10 @@ func InitGenesis(ctx sdk.Context, kpr keeper.IKeeper, data *v1beta5.GenesisState
 		revKey := keys.MustBidReverseKey(keys.BidStateToPrefix(record.State), record.ID)
 
 		if store.Has(key) {
-			panic(fmt.Errorf("market genesis bids init. bid id %s: %w", record.ID, v1beta5.ErrBidExists))
+			panic(fmt.Errorf("market genesis bids init. bid id %s: %w", record.ID, v1.ErrBidExists))
 		}
 		if store.Has(revKey) {
-			panic(fmt.Errorf("market genesis bids init. reverse key for bid id %s: %w", record.ID, v1beta5.ErrBidExists))
+			panic(fmt.Errorf("market genesis bids init. reverse key for bid id %s: %w", record.ID, v1.ErrBidExists))
 		}
 
 		data := cdc.MustMarshal(&record)

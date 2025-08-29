@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/rakyll/statik/fs"
 	"github.com/spf13/cast"
+	emodule "pkg.akt.dev/go/node/escrow/module"
 	"pkg.akt.dev/go/sdkutil"
 
 	abci "github.com/cometbft/cometbft/abci/types"
@@ -63,8 +64,7 @@ import (
 	audittypes "pkg.akt.dev/go/node/audit/v1"
 	certtypes "pkg.akt.dev/go/node/cert/v1"
 	deploymenttypes "pkg.akt.dev/go/node/deployment/v1"
-	escrowtypes "pkg.akt.dev/go/node/escrow/v1"
-	markettypes "pkg.akt.dev/go/node/market/v1beta5"
+	markettypes "pkg.akt.dev/go/node/market/v1"
 	providertypes "pkg.akt.dev/go/node/provider/v1beta4"
 	taketypes "pkg.akt.dev/go/node/take/v1"
 
@@ -278,7 +278,7 @@ func orderBeginBlockers(_ []string) []string {
 		authtypes.ModuleName,
 		authz.ModuleName,
 		taketypes.ModuleName,
-		escrowtypes.ModuleName,
+		emodule.ModuleName,
 		minttypes.ModuleName,
 		distrtypes.ModuleName,
 		slashingtypes.ModuleName,
@@ -308,7 +308,7 @@ func OrderEndBlockers(_ []string) []string {
 		authtypes.ModuleName,
 		authz.ModuleName,
 		taketypes.ModuleName,
-		escrowtypes.ModuleName,
+		emodule.ModuleName,
 		minttypes.ModuleName,
 		distrtypes.ModuleName,
 		slashingtypes.ModuleName,

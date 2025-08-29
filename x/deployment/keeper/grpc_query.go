@@ -108,10 +108,7 @@ func (k Querier) Deployments(c context.Context, req *types.QueryDeploymentsReque
 			// filter deployments with provided filters
 			if req.Filters.Accept(deployment, state) {
 				if accumulate {
-					account, err := k.ekeeper.GetAccount(
-						ctx,
-						types.EscrowAccountForDeployment(deployment.ID),
-					)
+					account, err := k.ekeeper.GetAccount(ctx, deployment.ID.ToEscrowAccountID())
 					if err != nil {
 						return true, fmt.Errorf("%w: fetching escrow account for DeploymentID=%s", err, deployment.ID)
 					}
@@ -179,10 +176,7 @@ func (k Querier) Deployment(c context.Context, req *types.QueryDeploymentRequest
 		return nil, v1.ErrDeploymentNotFound
 	}
 
-	account, err := k.ekeeper.GetAccount(
-		ctx,
-		types.EscrowAccountForDeployment(req.ID),
-	)
+	account, err := k.ekeeper.GetAccount(ctx, req.ID.ToEscrowAccountID())
 	if err != nil {
 		return &types.QueryDeploymentResponse{}, err
 	}

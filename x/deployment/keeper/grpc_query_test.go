@@ -11,12 +11,11 @@ import (
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	aauthz "pkg.akt.dev/go/node/types/authz/v1"
 	deposit "pkg.akt.dev/go/node/types/deposit/v1"
 
 	"pkg.akt.dev/go/node/deployment/v1"
 	"pkg.akt.dev/go/node/deployment/v1beta4"
-	etypes "pkg.akt.dev/go/node/escrow/v1"
+	eid "pkg.akt.dev/go/node/escrow/id/v1"
 	"pkg.akt.dev/go/testutil"
 
 	"pkg.akt.dev/node/app"
@@ -546,11 +545,11 @@ func (suite *grpcTestSuite) createDeployment() (v1.Deployment, v1beta4.Groups) {
 	return deployment, groups
 }
 
-func (suite *grpcTestSuite) createEscrowAccount(id v1.DeploymentID) etypes.AccountID {
+func (suite *grpcTestSuite) createEscrowAccount(id v1.DeploymentID) eid.Account {
 	owner, err := sdk.AccAddressFromBech32(id.Owner)
 	require.NoError(suite.t, err)
 
-	eid := v1beta4.EscrowAccountForDeployment(id)
+	eid := id.ToEscrowAccountID()
 	defaultDeposit, err := v1beta4.DefaultParams().MinDepositFor("uakt")
 	require.NoError(suite.t, err)
 
@@ -561,7 +560,7 @@ func (suite *grpcTestSuite) createEscrowAccount(id v1.DeploymentID) etypes.Accou
 			Sources: deposit.Sources{deposit.SourceBalance},
 		}}
 
-	deposits, err := aauthz.AuthorizeDeposit(suite.ctx, suite.authzKeeper, suite.bankKeeper, msg)
+	deposits, err := suite.ekeeper.AuthorizeDeposits(suite.ctx, msg)
 	require.NoError(suite.t, err)
 
 	err = suite.ekeeper.AccountCreate(suite.ctx, eid, owner, deposits)

@@ -22,14 +22,15 @@ import (
 	crisistypes "github.com/cosmos/cosmos-sdk/x/crisis/types"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	dv1beta "pkg.akt.dev/go/node/deployment/v1beta4"
-	mv1 "pkg.akt.dev/go/node/market/v1beta5"
-	aauthz "pkg.akt.dev/go/node/types/authz/v1"
 
 	dv1 "pkg.akt.dev/go/node/deployment/v1"
 	dv1beta3 "pkg.akt.dev/go/node/deployment/v1beta3"
+	dv1beta "pkg.akt.dev/go/node/deployment/v1beta4"
+	ev1 "pkg.akt.dev/go/node/escrow/v1"
 	agovtypes "pkg.akt.dev/go/node/gov/v1beta3"
+	mv1 "pkg.akt.dev/go/node/market/v1"
 	mv1beta4 "pkg.akt.dev/go/node/market/v1beta4"
+	mv1beta "pkg.akt.dev/go/node/market/v1beta5"
 	astakingtypes "pkg.akt.dev/go/node/staking/v1beta3"
 	taketypes "pkg.akt.dev/go/node/take/v1"
 
@@ -212,7 +213,7 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 		mParams := &mv1beta4.Params{}
 		sspace.GetParamSet(sctx, mParams)
 
-		err = up.Keepers.Akash.Market.SetParams(sctx, mv1.Params{
+		err = up.Keepers.Akash.Market.SetParams(sctx, mv1beta.Params{
 			BidMinDeposit: mParams.BidMinDeposit,
 			OrderMaxBids:  mParams.OrderMaxBids,
 		})
@@ -293,7 +294,7 @@ func (up *upgrade) patchDepositAuthorizations(ctx sdk.Context) error {
 	msgUrlOld := "/akash.deployment.v1beta3.MsgDepositDeployment"
 
 	var err error
-	up.log.Info(fmt.Sprintf("migrating \"%s\" to \"%s\"", msgUrlOld, (&aauthz.DepositAuthorization{}).MsgTypeURL()))
+	up.log.Info(fmt.Sprintf("migrating \"%s\" to \"%s\"", msgUrlOld, (&dv1beta3.DepositDeploymentAuthorization{}).MsgTypeURL()))
 	up.Keepers.Cosmos.Authz.IterateGrants(ctx, func(granterAddr sdk.AccAddress, granteeAddr sdk.AccAddress, grant authz.Grant) bool {
 		var authorization authz.Authorization
 		authorization, err = grant.GetAuthorization()
@@ -311,7 +312,7 @@ func (up *upgrade) patchDepositAuthorizations(ctx sdk.Context) error {
 				up.log.Error(fmt.Sprintf("invalid authorization type %s", reflect.TypeOf(authorization).String()))
 				return false
 			}
-			nAuthz = aauthz.NewDepositAuthorization(authzOld.SpendLimit)
+			nAuthz = ev1.NewDepositAuthorization(ev1.DepositAuthorizationScopes{ev1.DepositScopeDeployment}, authzOld.SpendLimit)
 
 		default:
 			return false

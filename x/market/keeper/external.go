@@ -2,13 +2,13 @@ package keeper
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
-
-	v1 "pkg.akt.dev/go/node/escrow/v1"
+	escrowid "pkg.akt.dev/go/node/escrow/id/v1"
+	etypes "pkg.akt.dev/go/node/escrow/types/v1"
 )
 
 type EscrowKeeper interface {
-	GetAccount(ctx sdk.Context, id v1.AccountID) (v1.Account, error)
-	GetPayment(ctx sdk.Context, id v1.AccountID, pid string) (v1.FractionalPayment, error)
-	AccountClose(ctx sdk.Context, id v1.AccountID) error
-	PaymentClose(ctx sdk.Context, id v1.AccountID, pid string) error
+	GetAccount(ctx sdk.Context, id escrowid.Account) (etypes.Account, error)
+	GetPayment(ctx sdk.Context, id escrowid.Payment) (etypes.Payment, error)
+	AccountClose(ctx sdk.Context, id escrowid.Account) error
+	PaymentClose(ctx sdk.Context, id escrowid.Payment) error
 }

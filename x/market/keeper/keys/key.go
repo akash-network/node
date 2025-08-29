@@ -6,6 +6,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/address"
+	mv1beta4 "pkg.akt.dev/go/node/market/v1beta4"
 
 	dtypes "pkg.akt.dev/go/node/deployment/v1"
 	types "pkg.akt.dev/go/node/market/v1"
@@ -560,7 +561,7 @@ func LeaseReversePrefixFromFilter(f types.LeaseFilters) ([]byte, error) {
 }
 
 func OrderKeyLegacy(id types.OrderID) []byte {
-	buf := bytes.NewBuffer(mv1beta.OrderPrefix())
+	buf := bytes.NewBuffer(mv1beta4.OrderPrefix())
 	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
@@ -575,7 +576,7 @@ func OrderKeyLegacy(id types.OrderID) []byte {
 }
 
 func BidKeyLegacy(id types.BidID) []byte {
-	buf := bytes.NewBuffer(mv1beta.BidPrefix())
+	buf := bytes.NewBuffer(mv1beta4.BidPrefix())
 	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
@@ -591,7 +592,7 @@ func BidKeyLegacy(id types.BidID) []byte {
 }
 
 func LeaseKeyLegacy(id types.LeaseID) []byte {
-	buf := bytes.NewBuffer(mv1beta.LeasePrefix())
+	buf := bytes.NewBuffer(mv1beta4.LeasePrefix())
 	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
@@ -607,7 +608,7 @@ func LeaseKeyLegacy(id types.LeaseID) []byte {
 }
 
 func SecondaryLeaseKeyByProviderLegacy(id types.LeaseID) []byte {
-	buf := bytes.NewBuffer(mv1beta.SecondaryLeasePrefix())
+	buf := bytes.NewBuffer(mv1beta4.SecondaryLeasePrefix())
 	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Provider)))
 	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
@@ -629,7 +630,7 @@ func SecondaryKeysForLeaseLegacy(id types.LeaseID) [][]byte {
 }
 
 func OrdersForGroupPrefixLegacy(id dtypes.GroupID) []byte {
-	buf := bytes.NewBuffer(mv1beta.OrderPrefix())
+	buf := bytes.NewBuffer(mv1beta4.OrderPrefix())
 	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)
@@ -641,7 +642,7 @@ func OrdersForGroupPrefixLegacy(id dtypes.GroupID) []byte {
 }
 
 func BidsForOrderPrefixLegacy(id types.OrderID) []byte {
-	buf := bytes.NewBuffer(mv1beta.BidPrefix())
+	buf := bytes.NewBuffer(mv1beta4.BidPrefix())
 	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		panic(err)

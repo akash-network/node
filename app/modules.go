@@ -152,6 +152,8 @@ func appModules(
 		escrow.NewAppModule(
 			app.cdc,
 			app.Keepers.Akash.Escrow,
+			app.Keepers.Cosmos.Authz,
+			app.Keepers.Cosmos.Bank,
 		),
 		deployment.NewAppModule(
 			app.cdc,

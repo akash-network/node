@@ -5,14 +5,14 @@ import (
 
 	dv1 "pkg.akt.dev/go/node/deployment/v1"
 	dtypes "pkg.akt.dev/go/node/deployment/v1beta4"
-	etypes "pkg.akt.dev/go/node/escrow/v1"
+	etypes "pkg.akt.dev/go/node/escrow/types/v1"
 	mv1 "pkg.akt.dev/go/node/market/v1"
 	mtypes "pkg.akt.dev/go/node/market/v1beta5"
 )
 
 type Hooks interface {
 	OnEscrowAccountClosed(ctx sdk.Context, obj etypes.Account)
-	OnEscrowPaymentClosed(ctx sdk.Context, obj etypes.FractionalPayment)
+	OnEscrowPaymentClosed(ctx sdk.Context, obj etypes.Payment)
 }
 
 type hooks struct {
@@ -28,8 +28,8 @@ func New(dkeeper DeploymentKeeper, mkeeper MarketKeeper) Hooks {
 }
 
 func (h *hooks) OnEscrowAccountClosed(ctx sdk.Context, obj etypes.Account) {
-	id, found := dtypes.DeploymentIDFromEscrowAccount(obj.ID)
-	if !found {
+	id, err := dv1.DeploymentIDFromEscrowID(obj.ID)
+	if err != nil {
 		return
 	}
 
@@ -44,7 +44,7 @@ func (h *hooks) OnEscrowAccountClosed(ctx sdk.Context, obj etypes.Account) {
 	_ = h.dkeeper.CloseDeployment(ctx, deployment)
 
 	gstate := dtypes.GroupClosed
-	if obj.State == etypes.StateOverdrawn {
+	if obj.State.State == etypes.StateOverdrawn {
 		gstate = dtypes.GroupInsufficientFunds
 	}
 
@@ -56,9 +56,9 @@ func (h *hooks) OnEscrowAccountClosed(ctx sdk.Context, obj etypes.Account) {
 	}
 }
 
-func (h *hooks) OnEscrowPaymentClosed(ctx sdk.Context, obj etypes.FractionalPayment) {
-	id, ok := mtypes.LeaseIDFromEscrowAccount(obj.AccountID, obj.PaymentID)
-	if !ok {
+func (h *hooks) OnEscrowPaymentClosed(ctx sdk.Context, obj etypes.Payment) {
+	id, err := mv1.LeaseIDFromPaymentID(obj.ID)
+	if err != nil {
 		return
 	}
 
@@ -84,7 +84,7 @@ func (h *hooks) OnEscrowPaymentClosed(ctx sdk.Context, obj etypes.FractionalPaym
 	_ = h.mkeeper.OnOrderClosed(ctx, order)
 	_ = h.mkeeper.OnBidClosed(ctx, bid)
 
-	if obj.State == etypes.StateOverdrawn {
+	if obj.State.State == etypes.StateOverdrawn {
 		_ = h.mkeeper.OnLeaseClosed(ctx, lease, mv1.LeaseInsufficientFunds)
 	} else {
 		_ = h.mkeeper.OnLeaseClosed(ctx, lease, mv1.LeaseClosed)

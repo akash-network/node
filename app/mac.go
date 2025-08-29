@@ -7,14 +7,13 @@ import (
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	ibctransfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
-
-	escrowtypes "pkg.akt.dev/go/node/escrow/v1"
+	emodule "pkg.akt.dev/go/node/escrow/module"
 )
 
 func ModuleAccountPerms() map[string][]string {
 	return map[string][]string{
 		authtypes.FeeCollectorName:     nil,
-		escrowtypes.ModuleName:         nil,
+		emodule.ModuleName:             nil,
 		distrtypes.ModuleName:          nil,
 		minttypes.ModuleName:           {authtypes.Minter},
 		stakingtypes.BondedPoolName:    {authtypes.Burner, authtypes.Staking},

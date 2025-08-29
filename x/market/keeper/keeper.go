@@ -90,7 +90,7 @@ func (k Keeper) SetParams(ctx sdk.Context, p types.Params) error {
 
 	store := ctx.KVStore(k.skey)
 	bz := k.cdc.MustMarshal(&p)
-	store.Set(types.ParamsPrefix(), bz)
+	store.Set(mv1.ParamsPrefix(), bz)
 
 	return nil
 }
@@ -98,7 +98,7 @@ func (k Keeper) SetParams(ctx sdk.Context, p types.Params) error {
 // GetParams returns the current x/market module parameters.
 func (k Keeper) GetParams(ctx sdk.Context) (p types.Params) {
 	store := ctx.KVStore(k.skey)
-	bz := store.Get(types.ParamsPrefix())
+	bz := store.Get(mv1.ParamsPrefix())
 	if bz == nil {
 		return p
 	}
@@ -115,12 +115,12 @@ func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypesBeta
 	var err error
 
 	k.WithOrdersForGroup(ctx, gid, types.OrderActive, func(_ types.Order) bool {
-		err = types.ErrOrderActive
+		err = mv1.ErrOrderActive
 		return true
 	})
 
 	k.WithOrdersForGroup(ctx, gid, types.OrderOpen, func(_ types.Order) bool {
-		err = types.ErrOrderActive
+		err = mv1.ErrOrderActive
 		return true
 	})
 
@@ -136,7 +136,7 @@ func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypesBeta
 	orderID := mv1.MakeOrderID(gid, oseq)
 
 	if res := k.findOrder(ctx, orderID); len(res) > 0 {
-		return types.Order{}, types.ErrOrderExists
+		return types.Order{}, mv1.ErrOrderExists
 	}
 
 	order := types.Order{
@@ -166,7 +166,7 @@ func (k Keeper) CreateBid(ctx sdk.Context, id mv1.BidID, price sdk.DecCoin, roff
 	store := ctx.KVStore(k.skey)
 
 	if key := k.findBid(ctx, id); len(key) > 0 {
-		return types.Bid{}, types.ErrBidExists
+		return types.Bid{}, mv1.ErrBidExists
 	}
 
 	bid := types.Bid{
@@ -269,7 +269,7 @@ func (k Keeper) OnBidClosed(ctx sdk.Context, bid types.Bid) error {
 	bid.State = types.BidClosed
 	k.updateBid(ctx, bid, currState)
 
-	_ = k.ekeeper.AccountClose(ctx, types.EscrowAccountForBid(bid.ID))
+	_ = k.ekeeper.AccountClose(ctx, bid.ID.ToEscrowAccountID())
 
 	err := ctx.EventManager().EmitTypedEvent(
 		&mv1.EventBidClosed{
@@ -355,9 +355,7 @@ func (k Keeper) OnGroupClosed(ctx sdk.Context, id dtypes.GroupID) error {
 
 		if lease, ok := k.GetLease(ctx, bid.ID.LeaseID()); ok {
 			err = k.OnLeaseClosed(ctx, lease, mv1.LeaseClosed)
-			if err := k.ekeeper.PaymentClose(ctx,
-				dtypesBeta.EscrowAccountForDeployment(id.DeploymentID()),
-				types.EscrowPaymentForLease(lease.ID)); err != nil {
+			if err := k.ekeeper.PaymentClose(ctx, lease.ID.ToEscrowPaymentID()); err != nil {
 				ctx.Logger().With("err", err).Info("error closing payment")
 			}
 			if err != nil {

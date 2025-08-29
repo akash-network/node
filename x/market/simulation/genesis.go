@@ -2,6 +2,7 @@ package simulation
 
 import (
 	"github.com/cosmos/cosmos-sdk/types/module"
+	mv1 "pkg.akt.dev/go/node/market/v1"
 
 	dtypes "pkg.akt.dev/go/node/deployment/v1beta4"
 	types "pkg.akt.dev/go/node/market/v1beta5"
@@ -18,5 +19,5 @@ func RandomizedGenState(simState *module.SimulationState) {
 		},
 	}
 
-	simState.GenState[types.ModuleName] = simState.Cdc.MustMarshalJSON(marketGenesis)
+	simState.GenState[mv1.ModuleName] = simState.Cdc.MustMarshalJSON(marketGenesis)
 }

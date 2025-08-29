@@ -141,7 +141,7 @@ func (am AppModule) IsAppModule() {}
 
 // RegisterServices registers the module's services
 func (am AppModule) RegisterServices(cfg module.Configurator) {
-	types.RegisterMsgServer(cfg.MsgServer(), handler.NewServer(am.keeper, am.mkeeper, am.ekeeper, am.authzKeeper, am.coinKeeper))
+	types.RegisterMsgServer(cfg.MsgServer(), handler.NewServer(am.keeper, am.mkeeper, am.ekeeper))
 
 	querier := am.keeper.NewQuerier()
 

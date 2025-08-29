@@ -8,7 +8,7 @@ import (
 	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkmodule "github.com/cosmos/cosmos-sdk/types/module"
-	etypes "pkg.akt.dev/go/node/escrow/v1"
+	etypes "pkg.akt.dev/go/node/escrow/types/v1"
 	"pkg.akt.dev/go/node/migrate"
 
 	utypes "pkg.akt.dev/node/upgrades/types"
@@ -46,10 +46,12 @@ func (m escrowMigrations) handler(ctx sdk.Context) error {
 	var accountsOverdrawn uint64
 
 	for ; iter.Valid(); iter.Next() {
-		nVal := migrate.AccountFromV1beta3(cdc, iter.Value())
+		key := append(migrate.AccountV1beta3Prefix(), iter.Key()...)
+
+		nVal := migrate.AccountFromV1beta3(cdc, key, iter.Value())
 		bz := cdc.MustMarshal(&nVal)
 
-		switch nVal.State {
+		switch nVal.State.State {
 		case etypes.StateOpen:
 			accountsActive++
 		case etypes.StateClosed:
@@ -60,10 +62,9 @@ func (m escrowMigrations) handler(ctx sdk.Context) error {
 
 		accountsTotal++
 
-		key := ekeeper.LegacyAccountKey(nVal.ID)
-		oStore.Delete(iter.Key())
+		oStore.Delete(key)
 
-		key = ekeeper.BuildAccountsKey(nVal.State, &nVal.ID)
+		key = ekeeper.BuildAccountsKey(nVal.State.State, &nVal.ID)
 		store.Set(key, bz)
 	}
 
@@ -80,10 +81,12 @@ func (m escrowMigrations) handler(ctx sdk.Context) error {
 	var paymentsOverdrawn uint64
 
 	for ; iter.Valid(); iter.Next() {
-		nVal := migrate.FractionalPaymentFromV1beta3(cdc, iter.Value())
+		key := append(migrate.PaymentV1beta3Prefix(), iter.Key()...)
+
+		nVal := migrate.PaymentFromV1beta3(cdc, iter.Key(), iter.Value())
 		bz := cdc.MustMarshal(&nVal)
 
-		switch nVal.State {
+		switch nVal.State.State {
 		case etypes.StateOpen:
 			paymentsActive++
 		case etypes.StateClosed:
@@ -94,10 +97,9 @@ func (m escrowMigrations) handler(ctx sdk.Context) error {
 
 		paymentsTotal++
 
-		key := ekeeper.LegacyPaymentKey(nVal.AccountID, nVal.PaymentID)
-		oStore.Delete(iter.Key())
+		oStore.Delete(key)
 
-		key = ekeeper.BuildPaymentsKey(nVal.State, &nVal.AccountID, nVal.PaymentID)
+		key = ekeeper.BuildPaymentsKey(nVal.State.State, &nVal.ID)
 		store.Set(key, bz)
 	}
 

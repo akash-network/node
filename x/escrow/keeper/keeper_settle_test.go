@@ -4,12 +4,11 @@ import (
 	"testing"
 
 	sdkmath "cosmossdk.io/math"
+	etypes "pkg.akt.dev/go/node/escrow/types/v1"
 	"pkg.akt.dev/go/testutil"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/assert"
-
-	"pkg.akt.dev/go/node/escrow/v1"
 )
 
 const denom = "uakt"
@@ -27,7 +26,6 @@ func TestSettleFullBlocks(t *testing.T) {
 				rates:        []int64{1, 2},
 				balanceEnd:   85,
 				transferred:  []sdkmath.LegacyDec{sdkmath.LegacyNewDec(5), sdkmath.LegacyNewDec(10)},
-				overdraft:    0,
 			},
 		},
 		{
@@ -38,7 +36,6 @@ func TestSettleFullBlocks(t *testing.T) {
 				rates:        []int64{10, 10},
 				balanceEnd:   0,
 				transferred:  []sdkmath.LegacyDec{sdkmath.LegacyNewDec(50), sdkmath.LegacyNewDec(50)},
-				overdraft:    0,
 			},
 		},
 		{
@@ -47,9 +44,8 @@ func TestSettleFullBlocks(t *testing.T) {
 				blocks:       6,
 				balanceStart: 100,
 				rates:        []int64{10, 10},
-				balanceEnd:   0,
+				balanceEnd:   -20,
 				transferred:  []sdkmath.LegacyDec{sdkmath.LegacyNewDec(60), sdkmath.LegacyNewDec(40)},
-				overdraft:    20,
 			},
 		},
 		{
@@ -60,7 +56,6 @@ func TestSettleFullBlocks(t *testing.T) {
 				rates:        []int64{1, 2},
 				balanceEnd:   85,
 				transferred:  []sdkmath.LegacyDec{sdkmath.LegacyNewDec(5), sdkmath.LegacyNewDec(10)},
-				overdraft:    0,
 			},
 		},
 		{
@@ -71,7 +66,6 @@ func TestSettleFullBlocks(t *testing.T) {
 				rates:        []int64{10, 10},
 				balanceEnd:   100,
 				transferred:  []sdkmath.LegacyDec{sdkmath.LegacyNewDec(50), sdkmath.LegacyNewDec(50)},
-				overdraft:    0,
 			},
 		},
 		{
@@ -82,7 +76,6 @@ func TestSettleFullBlocks(t *testing.T) {
 				rates:        []int64{10, 10},
 				balanceEnd:   80,
 				transferred:  []sdkmath.LegacyDec{sdkmath.LegacyNewDec(60), sdkmath.LegacyNewDec(60)},
-				overdraft:    0,
 			},
 		},
 		{
@@ -93,7 +86,6 @@ func TestSettleFullBlocks(t *testing.T) {
 				rates:        []int64{10, 10},
 				balanceEnd:   0,
 				transferred:  []sdkmath.LegacyDec{sdkmath.LegacyNewDec(100), sdkmath.LegacyNewDec(100)},
-				overdraft:    0,
 			},
 		},
 		{
@@ -102,24 +94,21 @@ func TestSettleFullBlocks(t *testing.T) {
 				blocks:       11,
 				balanceStart: 200,
 				rates:        []int64{10, 10},
-				balanceEnd:   0,
+				balanceEnd:   -20,
 				transferred:  []sdkmath.LegacyDec{sdkmath.LegacyNewDec(110), sdkmath.LegacyNewDec(90)},
-				overdraft:    20,
 			},
 		},
 	} {
 		account, payments, blocks := setupDistTest(t, tt.cfg)
 
 		overdrawn := accountSettleFullBlocks(&account, payments, blocks)
-		assert.Equal(t, tt.cfg.overdraft != 0, overdrawn, tt.name)
+		assert.Equal(t, tt.cfg.balanceEnd < 0, overdrawn, tt.name)
 
-		assertCoinsEqual(t, sdk.NewInt64DecCoin(denom, tt.cfg.balanceEnd), account.Funds[0].Balance, tt.name)
+		assertAmountEqual(t, sdkmath.LegacyNewDec(tt.cfg.balanceEnd), account.State.Funds[0].Amount, tt.name)
 
 		for idx := range payments {
-			assert.Equal(t, sdk.NewDecCoinFromDec(denom, tt.cfg.transferred[idx]), payments[idx].Balance, tt.name)
+			assert.Equal(t, sdk.NewDecCoinFromDec(denom, tt.cfg.transferred[idx]), payments[idx].State.Balance, tt.name)
 		}
-
-		assertCoinsEqual(t, sdk.NewInt64DecCoin(denom, tt.cfg.overdraft), sdk.NewDecCoinFromDec(denom, account.Funds[0].Overdraft), tt.name)
 	}
 }
 
@@ -129,28 +118,27 @@ type distTestConfig struct {
 	rates        []int64
 	balanceEnd   int64
 	transferred  []sdkmath.LegacyDec
-	overdraft    int64
 }
 
 func setupDistTest(t *testing.T, cfg distTestConfig) (account, []payment, sdkmath.Int) {
-	balance := sdk.NewInt64Coin(denom, cfg.balanceStart)
 	account := account{
-		Account: v1.Account{
-			Funds: []v1.Funds{
-				{
-					Balance:   sdk.NewDecCoinFromCoin(balance),
-					Overdraft: sdkmath.LegacyZeroDec(),
+		Account: etypes.Account{
+			State: etypes.AccountState{
+				Funds: []etypes.Balance{
+					{
+						Denom:  denom,
+						Amount: sdkmath.LegacyNewDec(cfg.balanceStart),
+					},
 				},
-			},
-			Transferred: sdk.DecCoins{
-				sdk.NewInt64DecCoin(denom, 0),
-			},
-			Deposits: []v1.Deposit{
-				{
-					Depositor: testutil.AccAddress(t).String(),
-					Height:    0,
-					Amount:    sdk.NewCoin(balance.Denom, balance.Amount),
-					Balance:   sdk.NewDecCoinFromCoin(balance),
+				Transferred: sdk.DecCoins{
+					sdk.NewInt64DecCoin(denom, 0),
+				},
+				Deposits: []etypes.Depositor{
+					{
+						Owner:   testutil.AccAddress(t).String(),
+						Height:  0,
+						Balance: sdk.NewDecCoinFromCoin(sdk.NewInt64Coin(denom, cfg.balanceStart)),
+					},
 				},
 			},
 		},
@@ -163,9 +151,12 @@ func setupDistTest(t *testing.T, cfg distTestConfig) (account, []payment, sdkmat
 	for _, rate := range cfg.rates {
 		blockRate += rate
 		payments = append(payments, payment{
-			FractionalPayment: v1.FractionalPayment{
-				Rate:    sdk.NewInt64DecCoin(denom, rate),
-				Balance: sdk.NewInt64DecCoin(denom, 0),
+			Payment: etypes.Payment{
+				State: etypes.PaymentState{
+					Rate:      sdk.NewInt64DecCoin(denom, rate),
+					Balance:   sdk.NewInt64DecCoin(denom, 0),
+					Unsettled: sdk.NewInt64DecCoin(denom, 0),
+				},
 			},
 		})
 	}
@@ -173,7 +164,7 @@ func setupDistTest(t *testing.T, cfg distTestConfig) (account, []payment, sdkmat
 	return account, payments, sdkmath.NewInt(cfg.blocks)
 }
 
-func assertCoinsEqual(t testing.TB, c1 sdk.DecCoin, c2 sdk.DecCoin, msg string) {
+func assertAmountEqual(t testing.TB, c1 sdkmath.LegacyDec, c2 sdkmath.LegacyDec, msg string) {
 	t.Helper()
 	if c1.IsZero() {
 		if !c2.IsZero() {
@@ -181,5 +172,5 @@ func assertCoinsEqual(t testing.TB, c1 sdk.DecCoin, c2 sdk.DecCoin, msg string) 
 		}
 		return
 	}
-	assert.Equal(t, c1.Amount, c2.Amount, msg)
+	assert.Equal(t, c1, c2, msg)
 }
