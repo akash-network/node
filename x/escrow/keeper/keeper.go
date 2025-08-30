@@ -239,7 +239,7 @@ func (k *keeper) AuthorizeDeposits(sctx sdk.Context, msg sdk.Msg) ([]etypes.Depo
 				authorizedSpend = authorizedSpend.Sub(deplAuthz.SpendLimit)
 
 				depositors = append(depositors, etypes.Depositor{
-					Owner:   owner.String(),
+					Owner:   granter.String(),
 					Height:  sctx.BlockHeight(),
 					Balance: sdk.NewDecCoinFromCoin(authorizedSpend),
 				})
