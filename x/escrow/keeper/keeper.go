@@ -238,6 +238,11 @@ func (k *keeper) AuthorizeDeposits(sctx sdk.Context, msg sdk.Msg) ([]etypes.Depo
 
 				authorizedSpend = authorizedSpend.Sub(deplAuthz.SpendLimit)
 
+				// if authorized amount is bigger to what is remaining then just use remainder
+				if remainder.LT(authorizedSpend.Amount) {
+					authorizedSpend = sdk.NewCoin(authorizedSpend.Denom, remainder)
+				}
+
 				depositors = append(depositors, etypes.Depositor{
 					Owner:   granter.String(),
 					Height:  sctx.BlockHeight(),
