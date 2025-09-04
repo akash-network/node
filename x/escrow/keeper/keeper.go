@@ -13,6 +13,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
+	dv1beta "pkg.akt.dev/go/node/deployment/v1beta4"
+	mv1beta "pkg.akt.dev/go/node/market/v1beta5"
 
 	escrowid "pkg.akt.dev/go/node/escrow/id/v1"
 	"pkg.akt.dev/go/node/escrow/module"
@@ -219,6 +221,17 @@ func (k *keeper) AuthorizeDeposits(sctx sdk.Context, msg sdk.Msg) ([]etypes.Depo
 					Amount: sdkmath.NewInt(deplAuthz.SpendLimit.Amount.Int64()),
 				}
 
+				// bc authz.Accepts take sdk.Msg as an argument, the deposit amount from incoming message
+				// has to be modified in place to correctly calculate what deposits to take from grants
+				switch mt := msg.(type) {
+				case *ev1.MsgAccountDeposit:
+					mt.Deposit.Amount = sdk.NewCoin(denom, sdkmath.NewIntFromBigInt(remainder.BigInt()))
+				case *dv1beta.MsgCreateDeployment:
+					mt.Deposit.Amount = sdk.NewCoin(denom, sdkmath.NewIntFromBigInt(remainder.BigInt()))
+				case *mv1beta.MsgCreateBid:
+					mt.Deposit.Amount = sdk.NewCoin(denom, sdkmath.NewIntFromBigInt(remainder.BigInt()))
+				}
+
 				resp, err := authorization.Accept(ctx, msg)
 				if err != nil {
 					return false
@@ -237,11 +250,6 @@ func (k *keeper) AuthorizeDeposits(sctx sdk.Context, msg sdk.Msg) ([]etypes.Depo
 				deplAuthz = resp.Updated.(*ev1.DepositAuthorization)
 
 				authorizedSpend = authorizedSpend.Sub(deplAuthz.SpendLimit)
-
-				// if authorized amount is bigger to what is remaining then just use remainder
-				if remainder.LT(authorizedSpend.Amount) {
-					authorizedSpend = sdk.NewCoin(authorizedSpend.Denom, remainder)
-				}
 
 				depositors = append(depositors, etypes.Depositor{
 					Owner:   granter.String(),
