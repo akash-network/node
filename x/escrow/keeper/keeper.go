@@ -211,52 +211,51 @@ func (k *keeper) AuthorizeDeposits(sctx sdk.Context, msg sdk.Msg) ([]etypes.Depo
 			msgTypeUrl := (&ev1.DepositAuthorization{}).MsgTypeURL()
 
 			k.authzKeeper.GetGranteeGrantsByMsgType(sctx, owner, msgTypeUrl, func(ctx context.Context, granter sdk.AccAddress, authorization authz.Authorization, expiration *time.Time) bool {
-				deplAuthz, valid := authorization.(*ev1.DepositAuthorization)
+				depositAuthz, valid := authorization.(ev1.Authorization)
 				if !valid {
 					return false
 				}
 
-				authorizedSpend := sdk.Coin{
-					Denom:  denom,
-					Amount: sdkmath.NewInt(deplAuthz.SpendLimit.Amount.Int64()),
-				}
+				spendableAmount := depositAuthz.GetSpendLimit()
+				requestedSpend := sdk.NewCoin(denom, remainder)
 
 				// bc authz.Accepts take sdk.Msg as an argument, the deposit amount from incoming message
 				// has to be modified in place to correctly calculate what deposits to take from grants
 				switch mt := msg.(type) {
 				case *ev1.MsgAccountDeposit:
-					mt.Deposit.Amount = sdk.NewCoin(denom, sdkmath.NewIntFromBigInt(remainder.BigInt()))
+					mt.Deposit.Amount = requestedSpend
 				case *dv1beta.MsgCreateDeployment:
-					mt.Deposit.Amount = sdk.NewCoin(denom, sdkmath.NewIntFromBigInt(remainder.BigInt()))
+					mt.Deposit.Amount = requestedSpend
 				case *mv1beta.MsgCreateBid:
-					mt.Deposit.Amount = sdk.NewCoin(denom, sdkmath.NewIntFromBigInt(remainder.BigInt()))
+					mt.Deposit.Amount = requestedSpend
 				}
 
-				resp, err := authorization.Accept(ctx, msg)
+				resp, err := depositAuthz.TryAccept(ctx, msg, true)
 				if err != nil {
 					return false
-				}
-
-				if resp.Delete {
-					err = k.authzKeeper.DeleteGrant(ctx, owner, granter, msgTypeUrl)
-				} else if resp.Updated != nil {
-					err = k.authzKeeper.SaveGrant(ctx, owner, granter, resp.Updated, expiration)
 				}
 
 				if !resp.Accept {
 					return false
 				}
 
-				deplAuthz = resp.Updated.(*ev1.DepositAuthorization)
+				// Delete is ignored here as not all fund may be used during deployment lifetime.
+				// also, there can be another deployment using same authorization and may return funds before deposit is fully used
+				err = k.authzKeeper.SaveGrant(ctx, owner, granter, resp.Updated, expiration)
+				if err != nil {
+					return false
+				}
 
-				authorizedSpend = authorizedSpend.Sub(deplAuthz.SpendLimit)
+				depositAuthz = resp.Updated.(ev1.Authorization)
+
+				spendableAmount = spendableAmount.Sub(depositAuthz.GetSpendLimit())
 
 				depositors = append(depositors, etypes.Depositor{
 					Owner:   granter.String(),
 					Height:  sctx.BlockHeight(),
-					Balance: sdk.NewDecCoinFromCoin(authorizedSpend),
+					Balance: sdk.NewDecCoinFromCoin(spendableAmount),
 				})
-				remainder = remainder.Sub(authorizedSpend.Amount)
+				remainder = remainder.Sub(spendableAmount.Amount)
 
 				return remainder.IsZero()
 			})
