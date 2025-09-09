@@ -13,9 +13,15 @@
 For a high-level overview of the Akash protocol and network economics, check out the [whitepaper](https://ipfs.io/ipfs/QmVwsi5kTrg7UcUEGi5UfdheVLBWoHjze2pHy4tLqYvLYv); a detailed protocol definition can be 
 found in the [design documentation](https://docs.akash.network); and the target workload definition spec is [here](https://docs.akash.network/sdl).
 
-For an indept understanding of the code [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/akash-network/node)
+For an indepth understanding of the code [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/akash-network/node)
 
+# Roadmap and contributing
 
+Should you with to suggest feature or report an issue please open ticket in [support repo](https://github.com/akash-network/support/issues)
+
+Akash is written in Golang and is Apache 2.0 licensed - contributions are welcomed whether that means providing feedback, testing existing and new feature or hacking on the source.
+
+To become a contributor, please see the guide on [contributing](CONTRIBUTING.md)
 
 # Branching and Versioning
 
@@ -77,12 +83,6 @@ Or install a specific version with [GoDownloader](https://github.com/goreleaser/
 ```sh
 $ curl -sSfL https://raw.githubusercontent.com/akash-network/node/main/install | sh -s -- v0.22.0
 ```
-
-# Roadmap and contributing
-
-Akash is written in Golang and is Apache 2.0 licensed - contributions are welcomed whether that means providing feedback, testing existing and new feature or hacking on the source.
-
-To become a contributor, please see the guide on [contributing](CONTRIBUTING.md)
 
 ## Development environment
 [This doc](https://github.com/akash-network/node/blob/main/_docs/development-environment.md) guides through setting up local development environment
