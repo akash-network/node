@@ -4,46 +4,60 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/cosmos/cosmos-sdk/store"
+	"github.com/stretchr/testify/require"
+	"pkg.akt.dev/go/sdkutil"
+
+	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
+
+	"cosmossdk.io/log"
+	"cosmossdk.io/store"
+	storemetrics "cosmossdk.io/store/metrics"
+	storetypes "cosmossdk.io/store/types"
+	dbm "github.com/cosmos/cosmos-db"
+	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdktestdata "github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	"github.com/stretchr/testify/require"
-	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
-	dbm "github.com/tendermint/tm-db"
 
-	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+	types "pkg.akt.dev/go/node/cert/v1"
+	"pkg.akt.dev/go/testutil"
 
-	"github.com/akash-network/node/testutil"
-	"github.com/akash-network/node/x/cert/handler"
-	"github.com/akash-network/node/x/cert/keeper"
+	"pkg.akt.dev/node/x/cert/handler"
+	"pkg.akt.dev/node/x/cert/keeper"
 )
 
 type testSuite struct {
 	t       testing.TB
-	ms      sdk.CommitMultiStore
+	encCfg  sdkutil.EncodingConfig
+	kr      testutil.Keyring
+	ms      storetypes.CommitMultiStore
 	ctx     sdk.Context
 	keeper  keeper.Keeper
-	handler sdk.Handler
+	handler baseapp.MsgServiceHandler
 }
 
 func setupTestSuite(t *testing.T) *testSuite {
+	cfg := sdkutil.MakeEncodingConfig()
 	suite := &testSuite{
-		t: t,
+		t:      t,
+		encCfg: cfg,
+		kr:     testutil.NewTestKeyring(cfg.Codec),
 	}
 
-	aKey := sdk.NewTransientStoreKey(types.StoreKey)
+	cdc := cfg.Codec
+
+	aKey := storetypes.NewTransientStoreKey(types.StoreKey)
 
 	db := dbm.NewMemDB()
-	suite.ms = store.NewCommitMultiStore(db)
-	suite.ms.MountStoreWithDB(aKey, sdk.StoreTypeIAVL, db)
+	suite.ms = store.NewCommitMultiStore(db, log.NewNopLogger(), storemetrics.NewNoOpMetrics())
+	suite.ms.MountStoreWithDB(aKey, storetypes.StoreTypeIAVL, db)
 
 	err := suite.ms.LoadLatestVersion()
 	require.NoError(t, err)
 
 	suite.ctx = sdk.NewContext(suite.ms, tmproto.Header{}, true, testutil.Logger(t))
 
-	suite.keeper = keeper.NewKeeper(types.ModuleCdc, aKey)
+	suite.keeper = keeper.NewKeeper(cdc, aKey)
 
 	suite.handler = handler.NewHandler(suite.keeper)
 
@@ -72,8 +86,8 @@ func TestCertHandlerCreate(t *testing.T) {
 	}
 
 	res, err := suite.handler(suite.ctx, msg)
-	require.NotNil(t, res)
 	require.NoError(t, err)
+	require.NotNil(t, res)
 
 	resp, exists := suite.keeper.GetCertificateByID(suite.ctx, types.CertID{
 		Owner:  owner,
@@ -87,7 +101,6 @@ func TestCertHandlerCreateOwnerMismatch(t *testing.T) {
 	suite := setupTestSuite(t)
 
 	owner := testutil.AccAddress(t)
-
 	cert := testutil.Certificate(t, owner)
 
 	msg := &types.MsgCreateCertificate{
@@ -97,8 +110,8 @@ func TestCertHandlerCreateOwnerMismatch(t *testing.T) {
 	}
 
 	res, err := suite.handler(suite.ctx, msg)
-	require.Nil(t, res)
 	require.Error(t, err, types.ErrInvalidCertificateValue.Error())
+	require.Nil(t, res)
 
 	_, exists := suite.keeper.GetCertificateByID(suite.ctx, types.CertID{
 		Owner:  owner,
@@ -116,7 +129,6 @@ func TestCertHandlerDuplicate(t *testing.T) {
 	suite := setupTestSuite(t)
 
 	owner := testutil.AccAddress(t)
-
 	cert := testutil.Certificate(t, owner)
 
 	msg := &types.MsgCreateCertificate{
@@ -126,8 +138,8 @@ func TestCertHandlerDuplicate(t *testing.T) {
 	}
 
 	res, err := suite.handler(suite.ctx, msg)
-	require.NotNil(t, res)
 	require.NoError(t, err)
+	require.NotNil(t, res)
 
 	resp, exists := suite.keeper.GetCertificateByID(suite.ctx, types.CertID{
 		Owner:  owner,
@@ -148,8 +160,8 @@ func TestCertHandlerDuplicate(t *testing.T) {
 	}
 
 	res, err = suite.handler(suite.ctx, msg)
-	require.NotNil(t, res)
 	require.NoError(t, err)
+	require.NotNil(t, res)
 
 	resp, exists = suite.keeper.GetCertificateByID(suite.ctx, types.CertID{
 		Owner:  owner,
@@ -170,7 +182,6 @@ func TestCertHandlerRevoke(t *testing.T) {
 	suite := setupTestSuite(t)
 
 	owner := testutil.AccAddress(t)
-
 	cert := testutil.Certificate(t, owner)
 
 	msgCreate := &types.MsgCreateCertificate{
@@ -180,8 +191,8 @@ func TestCertHandlerRevoke(t *testing.T) {
 	}
 
 	res, err := suite.handler(suite.ctx, msgCreate)
-	require.NotNil(t, res)
 	require.NoError(t, err)
+	require.NotNil(t, res)
 
 	resp, exists := suite.keeper.GetCertificateByID(suite.ctx, types.CertID{
 		Owner:  owner,
@@ -191,15 +202,15 @@ func TestCertHandlerRevoke(t *testing.T) {
 	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateValid)
 
 	msgRevoke := &types.MsgRevokeCertificate{
-		ID: types.CertificateID{
+		ID: types.ID{
 			Owner:  owner.String(),
 			Serial: cert.Serial.String(),
 		},
 	}
 
 	res, err = suite.handler(suite.ctx, msgRevoke)
-	require.NotNil(t, res)
 	require.NoError(t, err)
+	require.NotNil(t, res)
 
 	resp, exists = suite.keeper.GetCertificateByID(suite.ctx, types.CertID{
 		Owner:  owner,
@@ -209,15 +220,14 @@ func TestCertHandlerRevoke(t *testing.T) {
 	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateRevoked)
 
 	res, err = suite.handler(suite.ctx, msgRevoke)
-	require.Nil(t, res)
 	require.Error(t, err, types.ErrCertificateAlreadyRevoked.Error())
+	require.Nil(t, res)
 }
 
 func TestCertHandlerRevokeCreateRevoked(t *testing.T) {
 	suite := setupTestSuite(t)
 
 	owner := testutil.AccAddress(t)
-
 	cert := testutil.Certificate(t, owner)
 
 	msgCreate := &types.MsgCreateCertificate{
@@ -227,8 +237,8 @@ func TestCertHandlerRevokeCreateRevoked(t *testing.T) {
 	}
 
 	res, err := suite.handler(suite.ctx, msgCreate)
-	require.NotNil(t, res)
 	require.NoError(t, err)
+	require.NotNil(t, res)
 
 	resp, exists := suite.keeper.GetCertificateByID(suite.ctx, types.CertID{
 		Owner:  owner,
@@ -238,15 +248,15 @@ func TestCertHandlerRevokeCreateRevoked(t *testing.T) {
 	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateValid)
 
 	msgRevoke := &types.MsgRevokeCertificate{
-		ID: types.CertificateID{
+		ID: types.ID{
 			Owner:  owner.String(),
 			Serial: cert.Serial.String(),
 		},
 	}
 
 	res, err = suite.handler(suite.ctx, msgRevoke)
-	require.NotNil(t, res)
 	require.NoError(t, err)
+	require.NotNil(t, res)
 
 	resp, exists = suite.keeper.GetCertificateByID(suite.ctx, types.CertID{
 		Owner:  owner,
@@ -256,12 +266,13 @@ func TestCertHandlerRevokeCreateRevoked(t *testing.T) {
 	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateRevoked)
 
 	res, err = suite.handler(suite.ctx, msgCreate)
-	require.Nil(t, res)
 	require.Error(t, err, types.ErrCertificateExists.Error())
+	require.Nil(t, res)
 }
 
 func TestCertHandlerRevokeCreate(t *testing.T) {
 	suite := setupTestSuite(t)
+
 	owner := testutil.AccAddress(t)
 	cert := testutil.Certificate(t, owner)
 
@@ -272,8 +283,8 @@ func TestCertHandlerRevokeCreate(t *testing.T) {
 	}
 
 	res, err := suite.handler(suite.ctx, msgCreate)
-	require.NotNil(t, res)
 	require.NoError(t, err)
+	require.NotNil(t, res)
 
 	resp, exists := suite.keeper.GetCertificateByID(suite.ctx, types.CertID{
 		Owner:  owner,
@@ -283,15 +294,15 @@ func TestCertHandlerRevokeCreate(t *testing.T) {
 	testutil.CertificateRequireEqualResponse(t, cert, resp, types.CertificateValid)
 
 	msgRevoke := &types.MsgRevokeCertificate{
-		ID: types.CertificateID{
+		ID: types.ID{
 			Owner:  owner.String(),
 			Serial: cert.Serial.String(),
 		},
 	}
 
 	res, err = suite.handler(suite.ctx, msgRevoke)
-	require.NotNil(t, res)
 	require.NoError(t, err)
+	require.NotNil(t, res)
 
 	resp, exists = suite.keeper.GetCertificateByID(suite.ctx, types.CertID{
 		Owner:  owner,
@@ -309,6 +320,6 @@ func TestCertHandlerRevokeCreate(t *testing.T) {
 	}
 
 	res, err = suite.handler(suite.ctx, msgCreate)
-	require.NotNil(t, res)
 	require.NoError(t, err)
+	require.NotNil(t, res)
 }

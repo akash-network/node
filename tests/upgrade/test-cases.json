@@ -1,16 +1,50 @@
 {
-    "v0.38.0": {
+    "v1.0.0": {
+        "modules": {
+            "added": [
+                "07-tendermint",
+                "consensus"
+            ],
+            "removed": [
+                "crisis",
+                "agov",
+                "astaking"
+            ]
+        },
         "migrations": {
-            "cert": [
+            "auth": [
+                {
+                    "from": "2",
+                    "to": "3"
+                },
+                {
+                    "from": "3",
+                    "to": "4"
+                },                {
+                    "from": "4",
+                    "to": "5"
+                }
+            ],
+            "authz": [
                 {
                     "from": "2",
                     "to": "3"
                 }
             ],
-            "market": [
+            "bank": [
                 {
-                    "from": "5",
-                    "to": "6"
+                    "from": "2",
+                    "to": "3"
+                },
+                {
+                    "from": "3",
+                    "to": "4"
+                }
+            ],
+            "cert": [
+                {
+                    "from": "2",
+                    "to": "3"
                 }
             ],
             "deployment": [
@@ -19,7 +53,118 @@
                     "to": "4"
                 }
             ],
-            "authz": [
+            "distribution": [
+                {
+                    "from": "2",
+                    "to": "3"
+                }
+            ],
+            "audit": [
+                {
+                    "from": "2",
+                    "to": "3"
+                }
+            ],
+            "escrow": [
+                {
+                    "from": "2",
+                    "to": "3"
+                }
+            ],
+            "feegrant": [
+                {
+                    "from": "1",
+                    "to": "2"
+                }
+            ],
+            "gov": [
+                {
+                    "from": "2",
+                    "to": "3"
+                },
+                {
+                    "from": "3",
+                    "to": "4"
+                },
+                {
+                    "from": "4",
+                    "to": "5"
+                }
+            ],
+            "ibc": [
+                {
+                    "from": "2",
+                    "to": "3"
+                },
+                {
+                    "from": "3",
+                    "to": "4"
+                },
+                {
+                    "from": "4",
+                    "to": "5"
+                },
+                {
+                    "from": "5",
+                    "to": "6"
+                }
+            ],
+            "mint": [
+                {
+                    "from": "1",
+                    "to": "2"
+                }
+            ],
+            "provider": [
+                {
+                    "from": "2",
+                    "to": "3"
+                }
+            ],
+            "slashing": [
+                {
+                    "from": "2",
+                    "to": "3"
+                },
+                {
+                    "from": "3",
+                    "to": "4"
+                }
+            ],
+            "staking": [
+                {
+                    "from": "2",
+                    "to": "3"
+                },
+                {
+                    "from": "3",
+                    "to": "4"
+                },
+                {
+                    "from": "4",
+                    "to": "5"
+                }
+            ],
+            "take": [
+                {
+                    "from": "2",
+                    "to": "3"
+                }
+            ],
+            "transfer": [
+                {
+                    "from": "2",
+                    "to": "3"
+                },                {
+                    "from": "3",
+                    "to": "4"
+                },
+                {
+                    "from": "4",
+                    "to": "5"
+                }
+            ],
+            "upgrade": [
                 {
                     "from": "1",
                     "to": "2"

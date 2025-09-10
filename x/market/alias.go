@@ -1,16 +1,16 @@
 package market
 
 import (
-	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
+	v1 "pkg.akt.dev/go/node/market/v1"
 
-	"github.com/akash-network/node/x/market/keeper"
+	"pkg.akt.dev/node/x/market/keeper"
 )
 
 const (
 	// StoreKey represents storekey of market module
-	StoreKey = types.StoreKey
+	StoreKey = v1.StoreKey
 	// ModuleName represents current module name
-	ModuleName = types.ModuleName
+	ModuleName = v1.ModuleName
 )
 
 type (

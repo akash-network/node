@@ -1,25 +1,29 @@
 package testnetify
 
 import (
+	"context"
 	"io"
 	"os"
 	"path/filepath"
 
+	dbm "github.com/cosmos/cosmos-db"
 	sdksrv "github.com/cosmos/cosmos-sdk/server"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	dbm "github.com/tendermint/tm-db"
+	"golang.org/x/sync/errgroup"
+	cflags "pkg.akt.dev/go/cli/flags"
+
+	"pkg.akt.dev/node/util/server"
 )
 
-func openDB(rootDir string) (dbm.DB, error) {
+func openDB(rootDir string, backendType dbm.BackendType) (dbm.DB, error) {
 	dataDir := filepath.Join(rootDir, "data")
-	return sdk.NewLevelDB("application", dataDir)
+	return dbm.NewDB("application", backendType, dataDir)
 }
 
 func setupTraceWriter(svrCtx *sdksrv.Context) (traceWriter io.WriteCloser, cleanup func(), err error) {
 	// clean up the traceWriter when the server is shutting down
 	cleanup = func() {}
 
-	traceWriterFile := svrCtx.Viper.GetString(FlagTraceStore)
+	traceWriterFile := svrCtx.Viper.GetString(cflags.FlagTraceStore)
 	traceWriter, err = openTraceWriter(traceWriterFile)
 	if err != nil {
 		return traceWriter, cleanup, err
@@ -41,9 +45,18 @@ func openTraceWriter(traceWriterFile string) (w io.WriteCloser, err error) {
 	if traceWriterFile == "" {
 		return
 	}
-	return os.OpenFile(
+	return os.OpenFile( //nolint: gosec
 		traceWriterFile,
 		os.O_WRONLY|os.O_APPEND|os.O_CREATE,
 		0o666,
 	)
+}
+
+func getCtx(sctx *sdksrv.Context, block bool) (*errgroup.Group, context.Context) {
+	ctx, cancelFn := context.WithCancel(context.Background())
+	g, ctx := errgroup.WithContext(ctx)
+	// listen for quit signals so the calling parent process can gracefully exit
+	server.ListenForQuitSignals(g, block, cancelFn, sctx.Logger)
+
+	return g, ctx
 }

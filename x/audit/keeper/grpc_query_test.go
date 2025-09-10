@@ -4,17 +4,17 @@ import (
 	"fmt"
 	"testing"
 
-	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/stretchr/testify/require"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 
-	types "github.com/akash-network/akash-api/go/node/audit/v1beta3"
+	types "pkg.akt.dev/go/node/audit/v1"
+	"pkg.akt.dev/go/testutil"
 
-	"github.com/akash-network/node/app"
-	"github.com/akash-network/node/testutil"
-	"github.com/akash-network/node/x/audit/keeper"
+	"pkg.akt.dev/node/app"
+	"pkg.akt.dev/node/x/audit/keeper"
 )
 
 type grpcTestSuite struct {
@@ -31,7 +31,8 @@ func setupTest(t *testing.T) *grpcTestSuite {
 		t: t,
 	}
 
-	suite.app = app.Setup(false)
+	suite.app = app.Setup(app.WithGenesis(app.GenesisStateWithValSet))
+
 	suite.ctx, suite.keeper = setupKeeper(t)
 	querier := keeper.Querier{Keeper: suite.keeper}
 
@@ -51,7 +52,7 @@ func TestGRPCQueryProvider(t *testing.T) {
 	require.NoError(t, err)
 
 	var req *types.QueryProviderAuditorRequest
-	var expProvider types.Provider
+	var expProvider types.AuditedProvider
 
 	testCases := []struct {
 		msg      string
@@ -91,7 +92,7 @@ func TestGRPCQueryProvider(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
-			ctx := sdk.WrapSDKContext(suite.ctx)
+			ctx := suite.ctx
 
 			res, err := suite.queryClient.ProviderAuditorAttributes(ctx, req)
 
@@ -151,7 +152,7 @@ func TestGRPCQueryProviders(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("Case %s", tc.msg), func(t *testing.T) {
 			tc.malleate()
-			ctx := sdk.WrapSDKContext(suite.ctx)
+			ctx := suite.ctx
 
 			res, err := suite.queryClient.AllProvidersAttributes(ctx, req)
 

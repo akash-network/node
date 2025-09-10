@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"hash/crc32"
 
-	"github.com/akash-network/node/util/validation"
+	"pkg.akt.dev/node/util/validation"
 )
 
 var (
@@ -36,9 +36,7 @@ func DecodePaginationKey(key []byte) ([]byte, []byte, []byte, []byte, error) {
 	}
 
 	states := make([]byte, 0, statesC)
-	for _, state := range key[:statesC] {
-		states = append(states, state)
-	}
+	states = append(states, key[:statesC]...)
 
 	key = key[len(states):]
 
@@ -47,9 +45,7 @@ func DecodePaginationKey(key []byte) ([]byte, []byte, []byte, []byte, error) {
 	}
 
 	prefixLength := int(key[0])
-
 	key = key[1:]
-
 	if len(key) < prefixLength {
 		return nil, nil, nil, nil, fmt.Errorf("%w: invalid state length", ErrInvalidPaginationKey)
 	}
