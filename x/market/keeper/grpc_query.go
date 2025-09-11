@@ -3,6 +3,7 @@ package keeper
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -50,26 +51,28 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 
 	// setup for case 3 - cross-index search
 	hasPaginationKey := len(req.Pagination.Key) > 0
-	if hasPaginationKey { // nolint: gocritic
+	switch {
+	case hasPaginationKey:
 		var key []byte
 		var err error
 		
-		// Handle Base64 encoded pagination keys
+		// Accept both raw and base64-encoded keys: try raw first, then base64.
 		paginationKeyBytes := req.Pagination.Key
-		if isBase64String(req.Pagination.Key) {
-			paginationKeyBytes, err = base64.StdEncoding.DecodeString(string(req.Pagination.Key))
-			if err != nil {
-				return nil, status.Error(codes.InvalidArgument, "invalid base64 pagination key")
-			}
-		}
-		
 		states, searchPrefix, key, _, err = query.DecodePaginationKey(paginationKeyBytes)
 		if err != nil {
+			if decoded, decErr := base64.StdEncoding.DecodeString(string(req.Pagination.Key)); decErr == nil {
+				states, searchPrefix, key, _, err = query.DecodePaginationKey(decoded)
+			}
+		}
+		if err != nil {
+			if errors.Is(err, query.ErrInvalidPaginationKey) {
+				return nil, status.Error(codes.InvalidArgument, err.Error())
+			}
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
 		req.Pagination.Key = key
-	} else if req.Filters.State != "" {
+	case req.Filters.State != "":
 		stateVal := types.Order_State(types.Order_State_value[req.Filters.State])
 
 		if req.Filters.State != "" && stateVal == types.OrderStateInvalid {
@@ -77,7 +80,7 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 		}
 
 		states = append(states, byte(stateVal))
-	} else {
+	default:
 		// request does not have pagination set. Start from open store
 		states = append(states, byte(types.OrderOpen))
 		states = append(states, byte(types.OrderActive))
@@ -557,16 +560,4 @@ func (k Querier) Lease(c context.Context, req *types.QueryLeaseRequest) (*types.
 		Lease:         lease,
 		EscrowPayment: payment,
 	}, nil
-}
-
-// Helper function to check if bytes represent a Base64 string
-func isBase64String(data []byte) bool {
-	// Check if all bytes are valid Base64 characters
-	for _, b := range data {
-		if !((b >= 'A' && b <= 'Z') || (b >= 'a' && b <= 'z') || (b >= '0' && b <= '9') || b == '+' || b == '/' || b == '=') {
-			return false
-		}
-	}
-	// Additional check: Base64 strings should have length divisible by 4 (with padding)
-	return len(data) > 0 && len(data)%4 == 0
 }
