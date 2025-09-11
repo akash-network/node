@@ -55,7 +55,7 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 	case hasPaginationKey:
 		var key []byte
 		var err error
-		
+
 		// Accept both raw and base64-encoded keys: try raw first, then base64.
 		paginationKeyBytes := req.Pagination.Key
 		states, searchPrefix, key, _, err = query.DecodePaginationKey(paginationKeyBytes)
