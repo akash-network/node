@@ -49,9 +49,8 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 	var searchPrefix []byte
 
 	// setup for case 3 - cross-index search
-	// nolint: gocritic
 	hasPaginationKey := len(req.Pagination.Key) > 0
-	if hasPaginationKey {
+	if hasPaginationKey { // nolint: gocritic
 		var key []byte
 		var err error
 		
