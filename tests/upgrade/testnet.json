@@ -1,0 +1,25 @@
+{
+    "chain_id": "localakash",
+    "gov": {
+        "voting_params": {
+            "voting_period": "60s"
+        }
+    },
+    "accounts": [
+        "akash1dge0lcc5rqxkw52rgav4q0fyhx7arcufmrkyww"
+    ],
+    "validators": [
+        {
+            "moniker": "upgrade-tester-1",
+            "operator": "akash1dge0lcc5rqxkw52rgav4q0fyhx7arcufmrkyww",
+            "bonded": true,
+            "home": ".akash0",
+            "commission": {
+                "rate": "0.05",
+                "maxRate": "0.8",
+                "maxChangeRate": "0.1"
+            },
+            "min_self_delegation": "1"
+        }
+    ]
+}

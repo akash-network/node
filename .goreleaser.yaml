@@ -80,25 +80,6 @@ builds:
       - "{{ .Env.STRIP_FLAGS }}"
       - "-linkmode={{ .Env.LINKMODE }}"
       - -extldflags "-lc -lrt -lpthread --static"
-  - id: akash-windows-amd64
-    binary: akash
-    main: ./cmd/akash
-    goarch:
-      - amd64
-    goos:
-      - windows
-    env:
-      - CC=x86_64-w64-mingw32-gcc
-      - CXX=x86_64-w64-mingw32-g++
-    flags:
-      - "-mod={{ .Env.MOD }}"
-      - "-tags={{ .Env.BUILD_TAGS }}"
-      - -trimpath
-      - -buildmode=exe
-    ldflags:
-      - "{{ .Env.BUILD_VARS }}"
-      - "{{ .Env.STRIP_FLAGS }}"
-      - "-linkmode={{ .Env.LINKMODE }}"
 universal_binaries:
   - id: akash-darwin-universal
     ids:
@@ -112,7 +93,6 @@ archives:
       - akash-darwin-universal
       - akash-linux-amd64
       - akash-linux-arm64
-      - akash-windows-amd64
     name_template: "akash_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: false
     formats:
@@ -124,7 +104,6 @@ archives:
       - akash-darwin-universal
       - akash-linux-amd64
       - akash-linux-arm64
-      - akash-windows-amd64
     name_template: "akash_{{ .Os }}_{{ .Arch }}"
     wrap_in_directory: false
     formats:
