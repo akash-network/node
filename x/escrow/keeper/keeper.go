@@ -202,6 +202,7 @@ func (k *keeper) AuthorizeDeposits(sctx sdk.Context, msg sdk.Msg) ([]etypes.Depo
 				depositors = append(depositors, etypes.Depositor{
 					Owner:   owner.String(),
 					Height:  sctx.BlockHeight(),
+					Source:  deposit.SourceBalance,
 					Balance: sdk.NewDecCoinFromCoin(requestedSpend),
 				})
 
@@ -253,6 +254,7 @@ func (k *keeper) AuthorizeDeposits(sctx sdk.Context, msg sdk.Msg) ([]etypes.Depo
 				depositors = append(depositors, etypes.Depositor{
 					Owner:   granter.String(),
 					Height:  sctx.BlockHeight(),
+					Source:  deposit.SourceBalance,
 					Balance: sdk.NewDecCoinFromCoin(spendableAmount),
 				})
 				remainder = remainder.Sub(spendableAmount.Amount)
@@ -290,10 +292,6 @@ func (k *keeper) AccountClose(ctx sdk.Context, id escrowid.Account) error {
 
 	acc.State.State = etypes.StateClosed
 	acc.dirty = true
-
-	if err := k.accountWithdraw(ctx, &acc); err != nil {
-		return err
-	}
 
 	for idx := range payments {
 		payments[idx].State.State = etypes.StateClosed
@@ -738,7 +736,7 @@ func (k *keeper) saveAccount(ctx sdk.Context, obj account) error {
 				}
 
 				// if depositor is not an owner then funds came from the grant.
-				if d.Owner != obj.State.Owner {
+				if d.Source == deposit.SourceGrant {
 					owner, err := sdk.AccAddressFromBech32(obj.State.Owner)
 					if err != nil {
 						return err
@@ -839,60 +837,6 @@ func (k *keeper) accountOpenPayments(ctx sdk.Context, id escrowid.Account) []pay
 	}
 
 	return payments
-}
-
-func (k *keeper) accountWithdraw(ctx sdk.Context, obj *account) error {
-	//if obj.Balance.Amount.LT(sdkmath.LegacyNewDec(1)) {
-	//	return nil
-	//}
-	//
-	//owner, err := sdk.AccAddressFromBech32(obj.Owner)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//if !obj.Balance.Amount.LT(sdkmath.LegacyNewDec(1)) {
-	//	withdrawal := sdk.NewCoin(obj.Balance.Denom, obj.Balance.Amount.TruncateInt())
-	//
-	//	if err = k.bkeeper.SendCoinsFromModuleToAccount(ctx, v1.ModuleName, owner, sdk.NewCoins(withdrawal)); err != nil {
-	//		ctx.Logger().Error("account withdraw", "err", err, "id", obj.ID)
-	//		return err
-	//	}
-	//	obj.Balance = obj.Balance.Sub(sdk.NewDecCoinFromCoin(withdrawal))
-	//}
-
-	//if obj.Balance.IsPositive() {
-	//	depositor, err := sdk.AccAddressFromBech32(obj.Depositor)
-	//	if err != nil {
-	//		return err
-	//	}
-	//
-	//	withdrawal := sdk.NewCoin(obj.Balance.Denom, obj.Funds.Amount.TruncateInt())
-	//	if err = k.bkeeper.SendCoinsFromModuleToAccount(ctx, v1.ModuleName, depositor, sdk.NewCoins(withdrawal)); err != nil {
-	//		ctx.Logger().Error("account withdraw", "err", err, "id", obj.ID)
-	//		return err
-	//	}
-	//
-	//	obj.Funds = obj.Funds.Sub(sdk.NewDecCoinFromCoin(withdrawal))
-	//
-	//	msg := &dv1.MsgDepositDeployment{Amount: sdk.NewCoin(obj.Balance.Denom, sdkmath.NewInt(0))}
-	//
-	//	// Funds field is solely to track deposits via authz.
-	//	// check if there is active deployment authorization from given depositor
-	//	// if exists, increase allowed authz deposit by remainder in the Funds, it will allow owner to reuse active authz
-	//	// without asking for renew.
-	//	authorization, expiration := k.authzKeeper.GetAuthorization(ctx, owner, depositor, sdk.MsgTypeURL(msg))
-	//	dauthz, valid := authorization.(*dv1.DepositAuthorization)
-	//	if valid && authorization != nil {
-	//		dauthz.SpendLimit = dauthz.SpendLimit.Add(withdrawal)
-	//		err = k.authzKeeper.SaveGrant(ctx, owner, depositor, dauthz, expiration)
-	//		if err != nil {
-	//			return err
-	//		}
-	//	}
-	//}
-
-	return nil
 }
 
 func (k *keeper) paymentWithdraw(ctx sdk.Context, obj *payment) error {
