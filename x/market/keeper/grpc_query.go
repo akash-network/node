@@ -2,6 +2,8 @@ package keeper
 
 import (
 	"context"
+	"encoding/base64"
+	"errors"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -48,17 +50,29 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 	var searchPrefix []byte
 
 	// setup for case 3 - cross-index search
-	// nolint: gocritic
-	if len(req.Pagination.Key) > 0 {
+	hasPaginationKey := len(req.Pagination.Key) > 0
+	switch {
+	case hasPaginationKey:
 		var key []byte
 		var err error
-		states, searchPrefix, key, _, err = query.DecodePaginationKey(req.Pagination.Key)
+
+		// Accept both raw and base64-encoded keys: try raw first, then base64.
+		paginationKeyBytes := req.Pagination.Key
+		states, searchPrefix, key, _, err = query.DecodePaginationKey(paginationKeyBytes)
 		if err != nil {
+			if decoded, decErr := base64.StdEncoding.DecodeString(string(req.Pagination.Key)); decErr == nil {
+				states, searchPrefix, key, _, err = query.DecodePaginationKey(decoded)
+			}
+		}
+		if err != nil {
+			if errors.Is(err, query.ErrInvalidPaginationKey) {
+				return nil, status.Error(codes.InvalidArgument, err.Error())
+			}
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
 		req.Pagination.Key = key
-	} else if req.Filters.State != "" {
+	case req.Filters.State != "":
 		stateVal := types.Order_State(types.Order_State_value[req.Filters.State])
 
 		if req.Filters.State != "" && stateVal == types.OrderStateInvalid {
@@ -66,7 +80,7 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 		}
 
 		states = append(states, byte(stateVal))
-	} else {
+	default:
 		// request does not have pagination set. Start from open store
 		states = append(states, byte(types.OrderOpen))
 		states = append(states, byte(types.OrderActive))
@@ -84,7 +98,7 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 		state := types.Order_State(states[idx])
 		var err error
 
-		if idx > 0 {
+		if idx > 0 && !hasPaginationKey {
 			req.Pagination.Key = nil
 		}
 
@@ -125,13 +139,7 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		if len(pageRes.NextKey) > 0 {
-			nextKey := make([]byte, len(searchPrefix)+len(pageRes.NextKey))
-			copy(nextKey, searchPrefix)
-			copy(nextKey[len(searchPrefix):], pageRes.NextKey)
-
-			pageRes.NextKey = nextKey
-		}
+		// Keep raw Cosmos SDK nextKey; do not prepend searchPrefix
 
 		req.Pagination.Limit -= count
 		total += count
@@ -186,8 +194,19 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 		var key []byte
 		var unsolicited []byte
 		var err error
-		states, searchPrefix, key, unsolicited, err = query.DecodePaginationKey(req.Pagination.Key)
+
+		// Accept both raw and base64-encoded keys: try raw first, then base64.
+		paginationKeyBytes := req.Pagination.Key
+		states, searchPrefix, key, unsolicited, err = query.DecodePaginationKey(paginationKeyBytes)
 		if err != nil {
+			if decoded, decErr := base64.StdEncoding.DecodeString(string(req.Pagination.Key)); decErr == nil {
+				states, searchPrefix, key, unsolicited, err = query.DecodePaginationKey(decoded)
+			}
+		}
+		if err != nil {
+			if errors.Is(err, query.ErrInvalidPaginationKey) {
+				return nil, status.Error(codes.InvalidArgument, err.Error())
+			}
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
@@ -196,7 +215,7 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 		}
 		req.Pagination.Key = key
 
-		if unsolicited[1] == 1 {
+		if unsolicited[0] == 1 {
 			reverseSearch = true
 		}
 	} else if req.Filters.State != "" {
@@ -278,13 +297,7 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		if len(pageRes.NextKey) > 0 {
-			nextKey := make([]byte, len(searchPrefix)+len(pageRes.NextKey))
-			copy(nextKey, searchPrefix)
-			copy(nextKey[len(searchPrefix):], pageRes.NextKey)
-
-			pageRes.NextKey = nextKey
-		}
+		// Keep raw Cosmos SDK nextKey; do not prepend searchPrefix
 
 		req.Pagination.Limit -= count
 		total += count
@@ -346,8 +359,19 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 		var key []byte
 		var unsolicited []byte
 		var err error
-		states, searchPrefix, key, unsolicited, err = query.DecodePaginationKey(req.Pagination.Key)
+
+		// Accept both raw and base64-encoded keys: try raw first, then base64.
+		paginationKeyBytes := req.Pagination.Key
+		states, searchPrefix, key, unsolicited, err = query.DecodePaginationKey(paginationKeyBytes)
 		if err != nil {
+			if decoded, decErr := base64.StdEncoding.DecodeString(string(req.Pagination.Key)); decErr == nil {
+				states, searchPrefix, key, unsolicited, err = query.DecodePaginationKey(decoded)
+			}
+		}
+		if err != nil {
+			if errors.Is(err, query.ErrInvalidPaginationKey) {
+				return nil, status.Error(codes.InvalidArgument, err.Error())
+			}
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
