@@ -194,7 +194,7 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 		var key []byte
 		var unsolicited []byte
 		var err error
-		
+
 		// Accept both raw and base64-encoded keys: try raw first, then base64.
 		paginationKeyBytes := req.Pagination.Key
 		states, searchPrefix, key, unsolicited, err = query.DecodePaginationKey(paginationKeyBytes)
@@ -359,7 +359,7 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 		var key []byte
 		var unsolicited []byte
 		var err error
-		
+
 		// Accept both raw and base64-encoded keys: try raw first, then base64.
 		paginationKeyBytes := req.Pagination.Key
 		states, searchPrefix, key, unsolicited, err = query.DecodePaginationKey(paginationKeyBytes)
