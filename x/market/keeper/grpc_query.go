@@ -194,8 +194,19 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 		var key []byte
 		var unsolicited []byte
 		var err error
-		states, searchPrefix, key, unsolicited, err = query.DecodePaginationKey(req.Pagination.Key)
+		
+		// Accept both raw and base64-encoded keys: try raw first, then base64.
+		paginationKeyBytes := req.Pagination.Key
+		states, searchPrefix, key, unsolicited, err = query.DecodePaginationKey(paginationKeyBytes)
 		if err != nil {
+			if decoded, decErr := base64.StdEncoding.DecodeString(string(req.Pagination.Key)); decErr == nil {
+				states, searchPrefix, key, unsolicited, err = query.DecodePaginationKey(decoded)
+			}
+		}
+		if err != nil {
+			if errors.Is(err, query.ErrInvalidPaginationKey) {
+				return nil, status.Error(codes.InvalidArgument, err.Error())
+			}
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
@@ -204,7 +215,7 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 		}
 		req.Pagination.Key = key
 
-		if unsolicited[1] == 1 {
+		if unsolicited[0] == 1 {
 			reverseSearch = true
 		}
 	} else if req.Filters.State != "" {
@@ -348,8 +359,19 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 		var key []byte
 		var unsolicited []byte
 		var err error
-		states, searchPrefix, key, unsolicited, err = query.DecodePaginationKey(req.Pagination.Key)
+		
+		// Accept both raw and base64-encoded keys: try raw first, then base64.
+		paginationKeyBytes := req.Pagination.Key
+		states, searchPrefix, key, unsolicited, err = query.DecodePaginationKey(paginationKeyBytes)
 		if err != nil {
+			if decoded, decErr := base64.StdEncoding.DecodeString(string(req.Pagination.Key)); decErr == nil {
+				states, searchPrefix, key, unsolicited, err = query.DecodePaginationKey(decoded)
+			}
+		}
+		if err != nil {
+			if errors.Is(err, query.ErrInvalidPaginationKey) {
+				return nil, status.Error(codes.InvalidArgument, err.Error())
+			}
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
