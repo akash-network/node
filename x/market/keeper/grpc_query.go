@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"encoding/base64"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -49,10 +50,21 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 
 	// setup for case 3 - cross-index search
 	// nolint: gocritic
-	if len(req.Pagination.Key) > 0 {
+	hasPaginationKey := len(req.Pagination.Key) > 0
+	if hasPaginationKey {
 		var key []byte
 		var err error
-		states, searchPrefix, key, _, err = query.DecodePaginationKey(req.Pagination.Key)
+		
+		// Handle Base64 encoded pagination keys
+		paginationKeyBytes := req.Pagination.Key
+		if isBase64String(req.Pagination.Key) {
+			paginationKeyBytes, err = base64.StdEncoding.DecodeString(string(req.Pagination.Key))
+			if err != nil {
+				return nil, status.Error(codes.InvalidArgument, "invalid base64 pagination key")
+			}
+		}
+		
+		states, searchPrefix, key, _, err = query.DecodePaginationKey(paginationKeyBytes)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -84,7 +96,7 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 		state := types.Order_State(states[idx])
 		var err error
 
-		if idx > 0 {
+		if idx > 0 && !hasPaginationKey {
 			req.Pagination.Key = nil
 		}
 
@@ -125,13 +137,7 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		if len(pageRes.NextKey) > 0 {
-			nextKey := make([]byte, len(searchPrefix)+len(pageRes.NextKey))
-			copy(nextKey, searchPrefix)
-			copy(nextKey[len(searchPrefix):], pageRes.NextKey)
-
-			pageRes.NextKey = nextKey
-		}
+		// Keep raw Cosmos SDK nextKey; do not prepend searchPrefix
 
 		req.Pagination.Limit -= count
 		total += count
@@ -278,13 +284,7 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		if len(pageRes.NextKey) > 0 {
-			nextKey := make([]byte, len(searchPrefix)+len(pageRes.NextKey))
-			copy(nextKey, searchPrefix)
-			copy(nextKey[len(searchPrefix):], pageRes.NextKey)
-
-			pageRes.NextKey = nextKey
-		}
+		// Keep raw Cosmos SDK nextKey; do not prepend searchPrefix
 
 		req.Pagination.Limit -= count
 		total += count
@@ -558,4 +558,16 @@ func (k Querier) Lease(c context.Context, req *types.QueryLeaseRequest) (*types.
 		Lease:         lease,
 		EscrowPayment: payment,
 	}, nil
+}
+
+// Helper function to check if bytes represent a Base64 string
+func isBase64String(data []byte) bool {
+	// Check if all bytes are valid Base64 characters
+	for _, b := range data {
+		if !((b >= 'A' && b <= 'Z') || (b >= 'a' && b <= 'z') || (b >= '0' && b <= '9') || b == '+' || b == '/' || b == '=') {
+			return false
+		}
+	}
+	// Additional check: Base64 strings should have length divisible by 4 (with padding)
+	return len(data) > 0 && len(data)%4 == 0
 }
