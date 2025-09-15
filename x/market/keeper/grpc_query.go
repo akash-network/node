@@ -125,8 +125,13 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		// Keep raw SDK NextKey to prevent corruption across page boundaries
-		// Do not prepend searchPrefix as it corrupts the key for subsequent requests
+		if len(pageRes.NextKey) > 0 {
+			nextKey := make([]byte, len(searchPrefix)+len(pageRes.NextKey))
+			copy(nextKey, searchPrefix)
+			copy(nextKey[len(searchPrefix):], pageRes.NextKey)
+
+			pageRes.NextKey = nextKey
+		}
 
 		req.Pagination.Limit -= count
 		total += count
@@ -191,7 +196,7 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 		}
 		req.Pagination.Key = key
 
-		if unsolicited[0] == 1 {
+		if unsolicited[1] == 1 {
 			reverseSearch = true
 		}
 	} else if req.Filters.State != "" {
@@ -273,8 +278,13 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		// Keep raw SDK NextKey to prevent corruption across page boundaries
-		// Do not prepend searchPrefix as it corrupts the key for subsequent requests
+		if len(pageRes.NextKey) > 0 {
+			nextKey := make([]byte, len(searchPrefix)+len(pageRes.NextKey))
+			copy(nextKey, searchPrefix)
+			copy(nextKey[len(searchPrefix):], pageRes.NextKey)
+
+			pageRes.NextKey = nextKey
+		}
 
 		req.Pagination.Limit -= count
 		total += count
