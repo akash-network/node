@@ -7,11 +7,11 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
-	escrowid "pkg.akt.dev/go/node/escrow/id/v1"
 
 	atypes "pkg.akt.dev/go/node/audit/v1"
 	dtypes "pkg.akt.dev/go/node/deployment/v1"
 	dbeta "pkg.akt.dev/go/node/deployment/v1beta4"
+	escrowid "pkg.akt.dev/go/node/escrow/id/v1"
 	etypes "pkg.akt.dev/go/node/escrow/types/v1"
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 

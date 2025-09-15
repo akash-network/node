@@ -269,7 +269,7 @@ func (k *keeper) AuthorizeDeposits(sctx sdk.Context, msg sdk.Msg) ([]etypes.Depo
 	}
 
 	if !remainder.IsZero() {
-		// following check is for sanity. if value is negative, math above went horribly wrong
+		// the following check is for sanity. if value is negative, math above went horribly wrong
 		if remainder.IsNegative() {
 			return nil, fmt.Errorf("%w: deposit overflow", types.ErrInvalidDeposit)
 		} else {
@@ -348,7 +348,7 @@ func (k *keeper) AccountSettle(ctx sdk.Context, id escrowid.Account) (bool, erro
 	return od, err
 }
 
-// fetchDepositToAccount fetches deposit amount from the depositor's account to the escrow
+// fetchDepositToAccount fetches the deposit amount from the depositor's account to the escrow
 // account and accordingly updates the balance or funds.
 func (k *keeper) fetchDepositsToAccount(ctx sdk.Context, acc *account, deposits []etypes.Depositor) error {
 	if len(deposits) > 0 {

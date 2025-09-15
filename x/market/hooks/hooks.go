@@ -85,8 +85,8 @@ func (h *hooks) OnEscrowPaymentClosed(ctx sdk.Context, obj etypes.Payment) {
 	_ = h.mkeeper.OnBidClosed(ctx, bid)
 
 	if obj.State.State == etypes.StateOverdrawn {
-		_ = h.mkeeper.OnLeaseClosed(ctx, lease, mv1.LeaseInsufficientFunds)
+		_ = h.mkeeper.OnLeaseClosed(ctx, lease, mv1.LeaseInsufficientFunds, mv1.LeaseClosedReasonInsufficientFunds)
 	} else {
-		_ = h.mkeeper.OnLeaseClosed(ctx, lease, mv1.LeaseClosed)
+		_ = h.mkeeper.OnLeaseClosed(ctx, lease, mv1.LeaseClosed, mv1.LeaseClosedReasonUnspecified)
 	}
 }

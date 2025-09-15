@@ -231,7 +231,7 @@ func Test_OnLeaseClosed(t *testing.T) {
 	suite.SetBlockHeight(testBlockHeight)
 
 	require.Equal(t, v1.LeaseActive, lease.State)
-	err := keeper.OnLeaseClosed(suite.Context(), lease, v1.LeaseClosed)
+	err := keeper.OnLeaseClosed(suite.Context(), lease, v1.LeaseClosed, v1.LeaseClosedReasonUnspecified)
 	require.NoError(t, err)
 
 	result, ok := keeper.GetLease(suite.Context(), id)

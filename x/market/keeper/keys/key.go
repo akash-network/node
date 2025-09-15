@@ -118,6 +118,10 @@ func BidKey(statePrefix []byte, id types.BidID) ([]byte, error) {
 
 	buf.Write(lenPrefixedProvider)
 
+	if err := binary.Write(buf, binary.BigEndian, id.BSeq); err != nil {
+		return nil, err
+	}
+
 	return buf.Bytes(), nil
 }
 
@@ -154,6 +158,10 @@ func BidReverseKey(statePrefix []byte, id types.BidID) ([]byte, error) {
 
 	buf.Write(statePrefix)
 	buf.Write(lenPrefixedProvider)
+
+	if err := binary.Write(buf, binary.BigEndian, id.BSeq); err != nil {
+		return nil, err
+	}
 
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		return nil, err
@@ -238,6 +246,10 @@ func LeaseKey(statePrefix []byte, id types.LeaseID) ([]byte, error) {
 
 	buf.Write(lenPrefixedProvider)
 
+	if err := binary.Write(buf, binary.BigEndian, id.BSeq); err != nil {
+		return nil, err
+	}
+
 	return buf.Bytes(), nil
 }
 
@@ -273,6 +285,9 @@ func LeaseReverseKey(statePrefix []byte, id types.LeaseID) ([]byte, error) {
 	buf := bytes.NewBuffer(LeasePrefixReverse)
 	buf.Write(statePrefix)
 	buf.Write(lenPrefixedProvider)
+	if err := binary.Write(buf, binary.BigEndian, id.BSeq); err != nil {
+		return nil, err
+	}
 
 	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
 		return nil, err
@@ -398,7 +413,7 @@ func LeaseStateToPrefix(state types.Lease_State) []byte {
 	return res
 }
 
-func filterToPrefix(prefix []byte, owner string, dseq uint64, gseq, oseq uint32, provider string) ([]byte, error) {
+func filterToPrefix(prefix []byte, owner string, dseq uint64, gseq, oseq uint32, provider string, bseq uint32) ([]byte, error) {
 	buf := bytes.NewBuffer(prefix)
 
 	if len(owner) == 0 {
@@ -438,11 +453,18 @@ func filterToPrefix(prefix []byte, owner string, dseq uint64, gseq, oseq uint32,
 		return nil, err
 	}
 
+	if bseq == 0 {
+		return buf.Bytes(), nil
+	}
+	if err := binary.Write(buf, binary.BigEndian, bseq); err != nil {
+		return nil, err
+	}
+
 	return buf.Bytes(), nil
 }
 
 // nolint: unused
-func reverseFilterToPrefix(prefix []byte, provider string, dseq uint64, gseq, oseq uint32, owner string) ([]byte, error) {
+func reverseFilterToPrefix(prefix []byte, provider string, bseq uint32, dseq uint64, gseq, oseq uint32, owner string) ([]byte, error) {
 	buf := bytes.NewBuffer(prefix)
 
 	if len(provider) == 0 {
@@ -450,6 +472,13 @@ func reverseFilterToPrefix(prefix []byte, provider string, dseq uint64, gseq, os
 	}
 
 	if _, err := buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(provider))); err != nil {
+		return nil, err
+	}
+
+	if bseq == 0 {
+		return buf.Bytes(), nil
+	}
+	if err := binary.Write(buf, binary.BigEndian, bseq); err != nil {
 		return nil, err
 	}
 
@@ -500,7 +529,7 @@ func OrderPrefixFromFilter(f mv1beta.OrderFilters) ([]byte, error) {
 	prefix = append(prefix, OrderPrefix...)
 	prefix = append(prefix, idx...)
 
-	return filterToPrefix(prefix, f.Owner, f.DSeq, f.GSeq, f.OSeq, "")
+	return filterToPrefix(prefix, f.Owner, f.DSeq, f.GSeq, f.OSeq, "", 0)
 }
 
 func buildLeasePrefix(prefix []byte, state string) []byte {
@@ -542,21 +571,21 @@ func buildBidPrefix(prefix []byte, state string) []byte {
 }
 
 func BidPrefixFromFilter(f mv1beta.BidFilters) ([]byte, error) {
-	return filterToPrefix(buildBidPrefix(BidPrefix, f.State), f.Owner, f.DSeq, f.GSeq, f.OSeq, f.Provider)
+	return filterToPrefix(buildBidPrefix(BidPrefix, f.State), f.Owner, f.DSeq, f.GSeq, f.OSeq, f.Provider, f.BSeq)
 }
 
 func BidReversePrefixFromFilter(f mv1beta.BidFilters) ([]byte, error) {
-	prefix, err := filterToPrefix(buildBidPrefix(BidPrefixReverse, f.State), f.Provider, f.DSeq, f.GSeq, f.OSeq, f.Owner)
+	prefix, err := reverseFilterToPrefix(buildBidPrefix(BidPrefixReverse, f.State), f.Provider, f.BSeq, f.DSeq, f.GSeq, f.OSeq, f.Owner)
 	return prefix, err
 }
 
 func LeasePrefixFromFilter(f types.LeaseFilters) ([]byte, error) {
-	prefix, err := filterToPrefix(buildLeasePrefix(LeasePrefix, f.State), f.Owner, f.DSeq, f.GSeq, f.OSeq, f.Provider)
+	prefix, err := filterToPrefix(buildLeasePrefix(LeasePrefix, f.State), f.Owner, f.DSeq, f.GSeq, f.OSeq, f.Provider, f.BSeq)
 	return prefix, err
 }
 
 func LeaseReversePrefixFromFilter(f types.LeaseFilters) ([]byte, error) {
-	prefix, err := filterToPrefix(buildLeasePrefix(LeasePrefixReverse, f.State), f.Provider, f.DSeq, f.GSeq, f.OSeq, f.Owner)
+	prefix, err := reverseFilterToPrefix(buildLeasePrefix(LeasePrefixReverse, f.State), f.Provider, f.BSeq, f.DSeq, f.GSeq, f.OSeq, f.Owner)
 	return prefix, err
 }
 

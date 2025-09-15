@@ -81,6 +81,7 @@ func TestGRPCQueryAccounts(t *testing.T) {
 					{
 						Owner:   did1.Owner,
 						Height:  0,
+						Source:  deposit.SourceBalance,
 						Balance: sdk.NewDecCoin("uakt", sdkmath.NewInt(500000)),
 					},
 				},

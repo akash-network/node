@@ -7,10 +7,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
-	v1 "pkg.akt.dev/go/node/market/v1"
 
 	atypes "pkg.akt.dev/go/node/audit/v1"
 	dbeta "pkg.akt.dev/go/node/deployment/v1beta4"
+	v1 "pkg.akt.dev/go/node/market/v1"
 	types "pkg.akt.dev/go/node/market/v1beta5"
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 )
@@ -42,6 +42,10 @@ func (ms msgServer) CreateBid(goCtx context.Context, msg *types.MsgCreateBid) (*
 
 	if ms.keepers.Market.BidCountForOrder(ctx, msg.ID.OrderID()) > params.OrderMaxBids {
 		return nil, fmt.Errorf("%w: too many existing bids (%v)", v1.ErrInvalidBid, params.OrderMaxBids)
+	}
+
+	if msg.ID.BSeq != 0 {
+		return nil, v1.ErrInvalidBid
 	}
 
 	order, found := ms.keepers.Market.GetOrder(ctx, msg.ID.OrderID())
@@ -100,7 +104,7 @@ func (ms msgServer) CreateBid(goCtx context.Context, msg *types.MsgCreateBid) (*
 		return nil, err
 	}
 
-	// create escrow account for this bid
+	// create an escrow account for this bid
 	err = ms.keepers.Escrow.AccountCreate(ctx, bid.ID.ToEscrowAccountID(), provider, deposits)
 	if err != nil {
 		return &types.MsgCreateBidResponse{}, err
@@ -145,7 +149,7 @@ func (ms msgServer) CloseBid(goCtx context.Context, msg *types.MsgCloseBid) (*ty
 		return nil, err
 	}
 
-	_ = ms.keepers.Market.OnLeaseClosed(ctx, lease, v1.LeaseClosed)
+	_ = ms.keepers.Market.OnLeaseClosed(ctx, lease, v1.LeaseClosed, msg.Reason)
 	_ = ms.keepers.Market.OnBidClosed(ctx, bid)
 	_ = ms.keepers.Market.OnOrderClosed(ctx, order)
 
@@ -260,7 +264,7 @@ func (ms msgServer) CloseLease(goCtx context.Context, msg *types.MsgCloseLease) 
 		return &types.MsgCloseLeaseResponse{}, v1.ErrOrderClosed
 	}
 
-	_ = ms.keepers.Market.OnLeaseClosed(ctx, lease, v1.LeaseClosed)
+	_ = ms.keepers.Market.OnLeaseClosed(ctx, lease, v1.LeaseClosed, v1.LeaseClosedReasonOwner)
 	_ = ms.keepers.Market.OnBidClosed(ctx, bid)
 	_ = ms.keepers.Market.OnOrderClosed(ctx, order)
 

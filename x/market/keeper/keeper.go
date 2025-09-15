@@ -6,6 +6,7 @@ import (
 	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	dtypes "pkg.akt.dev/go/node/deployment/v1"
 	dtypesBeta "pkg.akt.dev/go/node/deployment/v1beta4"
 	mv1 "pkg.akt.dev/go/node/market/v1"
@@ -26,7 +27,7 @@ type IKeeper interface {
 	OnBidLost(ctx sdk.Context, bid types.Bid)
 	OnBidClosed(ctx sdk.Context, bid types.Bid) error
 	OnOrderClosed(ctx sdk.Context, order types.Order) error
-	OnLeaseClosed(ctx sdk.Context, lease mv1.Lease, state mv1.Lease_State) error
+	OnLeaseClosed(ctx sdk.Context, lease mv1.Lease, state mv1.Lease_State, reason mv1.LeaseClosedReason) error
 	OnGroupClosed(ctx sdk.Context, id dtypes.GroupID) error
 	GetOrder(ctx sdk.Context, id mv1.OrderID) (types.Order, bool)
 	GetBid(ctx sdk.Context, id mv1.BidID) (types.Bid, bool)
@@ -308,7 +309,7 @@ func (k Keeper) OnOrderClosed(ctx sdk.Context, order types.Order) error {
 }
 
 // OnLeaseClosed updates lease state to closed
-func (k Keeper) OnLeaseClosed(ctx sdk.Context, lease mv1.Lease, state mv1.Lease_State) error {
+func (k Keeper) OnLeaseClosed(ctx sdk.Context, lease mv1.Lease, state mv1.Lease_State, reason mv1.LeaseClosedReason) error {
 	switch lease.State {
 	case mv1.LeaseClosed, mv1.LeaseInsufficientFunds:
 		return nil
@@ -334,7 +335,8 @@ func (k Keeper) OnLeaseClosed(ctx sdk.Context, lease mv1.Lease, state mv1.Lease_
 
 	err := ctx.EventManager().EmitTypedEvent(
 		&mv1.EventLeaseClosed{
-			ID: lease.ID,
+			ID:     lease.ID,
+			Reason: reason,
 		},
 	)
 	if err != nil {
@@ -345,7 +347,6 @@ func (k Keeper) OnLeaseClosed(ctx sdk.Context, lease mv1.Lease, state mv1.Lease_
 }
 
 // OnGroupClosed updates state of all orders, bids and leases in group to closed
-
 func (k Keeper) OnGroupClosed(ctx sdk.Context, id dtypes.GroupID) error {
 	processClose := func(ctx sdk.Context, bid types.Bid) error {
 		err := k.OnBidClosed(ctx, bid)
@@ -354,7 +355,8 @@ func (k Keeper) OnGroupClosed(ctx sdk.Context, id dtypes.GroupID) error {
 		}
 
 		if lease, ok := k.GetLease(ctx, bid.ID.LeaseID()); ok {
-			err = k.OnLeaseClosed(ctx, lease, mv1.LeaseClosed)
+			// OnGroupClosed is callable by x/deployment only so only reason is owner
+			err = k.OnLeaseClosed(ctx, lease, mv1.LeaseClosed, mv1.LeaseClosedReasonOwner)
 			if err := k.ekeeper.PaymentClose(ctx, lease.ID.ToEscrowPaymentID()); err != nil {
 				ctx.Logger().With("err", err).Info("error closing payment")
 			}
@@ -399,6 +401,7 @@ func (k Keeper) OnGroupClosed(ctx sdk.Context, id dtypes.GroupID) error {
 
 func (k Keeper) findOrder(ctx sdk.Context, id mv1.OrderID) []byte {
 	store := ctx.KVStore(k.skey)
+
 	aKey := keys.MustOrderKey(keys.OrderStateActivePrefix, id)
 	oKey := keys.MustOrderKey(keys.OrderStateOpenPrefix, id)
 	cKey := keys.MustOrderKey(keys.OrderStateClosedPrefix, id)

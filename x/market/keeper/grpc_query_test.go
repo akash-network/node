@@ -1082,7 +1082,7 @@ func TestGRPCQueryLeases(t *testing.T) {
 	leaseID2 := createLease(t, suite.TestSuite)
 	lease2, ok := suite.keeper.GetLease(suite.ctx, leaseID2)
 	require.True(t, ok)
-	err := suite.keeper.OnLeaseClosed(suite.ctx, lease2, types.LeaseClosed)
+	err := suite.keeper.OnLeaseClosed(suite.ctx, lease2, types.LeaseClosed, types.LeaseClosedReasonUnspecified)
 	require.NoError(t, err)
 
 	var req *v1beta5.QueryLeasesRequest

@@ -198,7 +198,7 @@ func SimulateMsgCloseBid(ks keepers.Keepers) simtypes.Operation {
 			return simtypes.NoOpMsg(v1.ModuleName, (&types.MsgCloseBid{}).Type(), "unable to generate fees"), nil, err
 		}
 
-		msg := types.NewMsgCloseBid(bid.ID)
+		msg := types.NewMsgCloseBid(bid.ID, v1.LeaseClosedReasonUnspecified)
 
 		txGen := sdkutil.MakeEncodingConfig().TxConfig
 		tx, err := simtestutil.GenSignedMockTx(

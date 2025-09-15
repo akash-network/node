@@ -23,5 +23,5 @@ type MarketKeeper interface {
 	OnGroupClosed(ctx sdk.Context, id dv1.GroupID) error
 	OnOrderClosed(ctx sdk.Context, order mtypes.Order) error
 	OnBidClosed(ctx sdk.Context, bid mtypes.Bid) error
-	OnLeaseClosed(ctx sdk.Context, lease mv1.Lease, state mv1.Lease_State) error
+	OnLeaseClosed(ctx sdk.Context, lease mv1.Lease, state mv1.Lease_State, reason mv1.LeaseClosedReason) error
 }
