@@ -8,6 +8,7 @@ import (
 	types "github.com/akash-network/akash-api/go/node/market/v1beta4"
 
 	aclient "github.com/akash-network/node/client"
+	clientutils "github.com/akash-network/node/client"
 )
 
 func cmdGetLeases() *cobra.Command {
@@ -32,7 +33,7 @@ func cmdGetLeases() *cobra.Command {
 				return err
 			}
 
-			pageReq, err := sdkclient.ReadPageRequest(cmd.Flags())
+			pageReq, err := clientutils.ReadPageRequest(cmd.Flags())
 			if err != nil {
 				return err
 			}

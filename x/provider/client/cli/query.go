@@ -9,6 +9,7 @@ import (
 	types "github.com/akash-network/akash-api/go/node/provider/v1beta3"
 
 	aclient "github.com/akash-network/node/client"
+	clientutils "github.com/akash-network/node/client"
 )
 
 // GetQueryCmd returns the transaction commands for the provider module
@@ -45,7 +46,7 @@ func cmdGetProviders() *cobra.Command {
 				return err
 			}
 
-			pageReq, err := sdkclient.ReadPageRequest(cmd.Flags())
+			pageReq, err := clientutils.ReadPageRequest(cmd.Flags())
 			if err != nil {
 				return err
 			}
