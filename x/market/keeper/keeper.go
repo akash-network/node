@@ -6,6 +6,7 @@ import (
 	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	dtypes "pkg.akt.dev/go/node/deployment/v1"
 	dtypesBeta "pkg.akt.dev/go/node/deployment/v1beta4"
 	mv1 "pkg.akt.dev/go/node/market/v1"
@@ -345,7 +346,6 @@ func (k Keeper) OnLeaseClosed(ctx sdk.Context, lease mv1.Lease, state mv1.Lease_
 }
 
 // OnGroupClosed updates state of all orders, bids and leases in group to closed
-
 func (k Keeper) OnGroupClosed(ctx sdk.Context, id dtypes.GroupID) error {
 	processClose := func(ctx sdk.Context, bid types.Bid) error {
 		err := k.OnBidClosed(ctx, bid)
