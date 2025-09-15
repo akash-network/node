@@ -130,7 +130,7 @@ echoerr() {
     echo "$@" 1>&2
 }
 
-#shellcheck disable=SC2317
+#shellcheck disable=SC2329
 log_prefix() {
     echo "$0"
 }
