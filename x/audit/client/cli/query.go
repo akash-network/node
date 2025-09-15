@@ -11,6 +11,7 @@ import (
 	types "github.com/akash-network/akash-api/go/node/audit/v1beta3"
 
 	aclient "github.com/akash-network/node/client"
+	clientutils "github.com/akash-network/node/client"
 )
 
 func GetQueryCmd() *cobra.Command {
@@ -46,7 +47,7 @@ func cmdGetProviders() *cobra.Command {
 				return err
 			}
 
-			pageReq, err := sdkclient.ReadPageRequest(cmd.Flags())
+			pageReq, err := clientutils.ReadPageRequest(cmd.Flags())
 			if err != nil {
 				return err
 			}
