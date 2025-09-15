@@ -10,6 +10,7 @@ import (
 	types "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
 
 	aclient "github.com/akash-network/node/client"
+	clientutils "github.com/akash-network/node/client"
 )
 
 // GetQueryCmd returns the query commands for the deployment module
@@ -53,7 +54,7 @@ func cmdDeployments() *cobra.Command {
 				return err
 			}
 
-			pageReq, err := sdkclient.ReadPageRequest(cmd.Flags())
+			pageReq, err := clientutils.ReadPageRequest(cmd.Flags())
 			if err != nil {
 				return err
 			}
