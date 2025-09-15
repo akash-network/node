@@ -80,10 +80,11 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 
 	total := uint64(0)
 
-	for idx := range states {
-		state := types.Order_State(states[idx])
-		var err error
+	var idx int
+	var err error
 
+	for idx = range states {
+		state := types.Order_State(states[idx])
 		if idx > 0 {
 			req.Pagination.Key = nil
 		}
@@ -125,34 +126,27 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		if len(pageRes.NextKey) > 0 {
-			nextKey := make([]byte, len(searchPrefix)+len(pageRes.NextKey))
-			copy(nextKey, searchPrefix)
-			copy(nextKey[len(searchPrefix):], pageRes.NextKey)
-
-			pageRes.NextKey = nextKey
-		}
-
 		req.Pagination.Limit -= count
 		total += count
 
 		if req.Pagination.Limit == 0 {
-			if len(pageRes.NextKey) > 0 {
-				pageRes.NextKey, err = query.EncodePaginationKey(states[idx:], searchPrefix, pageRes.NextKey, nil)
-				if err != nil {
-					pageRes.Total = total
-					return &types.QueryOrdersResponse{
-						Orders:     orders,
-						Pagination: pageRes,
-					}, status.Error(codes.Internal, err.Error())
-				}
-			}
-
 			break
 		}
 	}
 
-	pageRes.Total = total
+	if pageRes != nil {
+		pageRes.Total = total
+
+		if len(pageRes.NextKey) > 0 {
+			pageRes.NextKey, err = query.EncodePaginationKey(states[idx:], searchPrefix, pageRes.NextKey, nil)
+			if err != nil {
+				return &types.QueryOrdersResponse{
+					Orders:     orders,
+					Pagination: pageRes,
+				}, status.Error(codes.Internal, err.Error())
+			}
+		}
+	}
 
 	return &types.QueryOrdersResponse{
 		Orders:     orders,
@@ -196,7 +190,7 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 		}
 		req.Pagination.Key = key
 
-		if unsolicited[1] == 1 {
+		if unsolicited[0] == 1 {
 			reverseSearch = true
 		}
 	} else if req.Filters.State != "" {
@@ -220,9 +214,11 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 
 	total := uint64(0)
 
-	for idx := range states {
+	var idx int
+	var err error
+
+	for idx = range states {
 		state := types.Bid_State(states[idx])
-		var err error
 
 		if idx > 0 {
 			req.Pagination.Key = nil
@@ -278,40 +274,33 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		if len(pageRes.NextKey) > 0 {
-			nextKey := make([]byte, len(searchPrefix)+len(pageRes.NextKey))
-			copy(nextKey, searchPrefix)
-			copy(nextKey[len(searchPrefix):], pageRes.NextKey)
-
-			pageRes.NextKey = nextKey
-		}
-
 		req.Pagination.Limit -= count
 		total += count
 
 		if req.Pagination.Limit == 0 {
-			if len(pageRes.NextKey) > 0 {
-				unsolicited := make([]byte, 1)
-				unsolicited[0] = 0
-				if reverseSearch {
-					unsolicited[0] = 1
-				}
-
-				pageRes.NextKey, err = query.EncodePaginationKey(states[idx:], searchPrefix, pageRes.NextKey, unsolicited)
-				if err != nil {
-					pageRes.Total = total
-					return &types.QueryBidsResponse{
-						Bids:       bids,
-						Pagination: pageRes,
-					}, status.Error(codes.Internal, err.Error())
-				}
-			}
-
 			break
 		}
 	}
 
-	pageRes.Total = total
+	if pageRes != nil {
+		pageRes.Total = total
+		if len(pageRes.NextKey) > 0 {
+			unsolicited := make([]byte, 1)
+			unsolicited[0] = 0
+			if reverseSearch {
+				unsolicited[0] = 1
+			}
+
+			pageRes.NextKey, err = query.EncodePaginationKey(states[idx:], searchPrefix, pageRes.NextKey, unsolicited)
+			if err != nil {
+				pageRes.Total = total
+				return &types.QueryBidsResponse{
+					Bids:       bids,
+					Pagination: pageRes,
+				}, status.Error(codes.Internal, err.Error())
+			}
+		}
+	}
 
 	return &types.QueryBidsResponse{
 		Bids:       bids,
@@ -380,9 +369,10 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 
 	total := uint64(0)
 
-	for idx := range states {
+	var idx int
+	var err error
+	for idx = range states {
 		state := types.Lease_State(states[idx])
-		var err error
 
 		if idx > 0 {
 			req.Pagination.Key = nil
@@ -445,28 +435,30 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 		total += count
 
 		if req.Pagination.Limit == 0 {
-			if len(pageRes.NextKey) > 0 {
-				unsolicited := make([]byte, 1)
-				unsolicited[0] = 0
-				if reverseSearch {
-					unsolicited[0] = 1
-				}
-
-				pageRes.NextKey, err = query.EncodePaginationKey(states[idx:], searchPrefix, pageRes.NextKey, unsolicited)
-				if err != nil {
-					pageRes.Total = total
-					return &types.QueryLeasesResponse{
-						Leases:     leases,
-						Pagination: pageRes,
-					}, status.Error(codes.Internal, err.Error())
-				}
-			}
-
 			break
 		}
 	}
 
-	pageRes.Total = total
+	if pageRes != nil {
+		pageRes.Total = total
+
+		if len(pageRes.NextKey) > 0 {
+			unsolicited := make([]byte, 1)
+			unsolicited[0] = 0
+			if reverseSearch {
+				unsolicited[0] = 1
+			}
+
+			pageRes.NextKey, err = query.EncodePaginationKey(states[idx:], searchPrefix, pageRes.NextKey, unsolicited)
+			if err != nil {
+				pageRes.Total = total
+				return &types.QueryLeasesResponse{
+					Leases:     leases,
+					Pagination: pageRes,
+				}, status.Error(codes.Internal, err.Error())
+			}
+		}
+	}
 
 	return &types.QueryLeasesResponse{
 		Leases:     leases,
