@@ -161,9 +161,6 @@ func (k *keeper) AccountCreate(ctx sdk.Context, id escrowid.Account, owner sdk.A
 }
 
 func (k *keeper) AuthorizeDeposits(sctx sdk.Context, msg sdk.Msg) ([]etypes.Depositor, error) {
-	// find the DepositDeploymentAuthorization given to the owner by the depositor and check
-	// acceptance
-
 	depositors := make([]etypes.Depositor, 0, 1)
 
 	hasDeposit, valid := msg.(deposit.HasDeposit)
@@ -209,6 +206,8 @@ func (k *keeper) AuthorizeDeposits(sctx sdk.Context, msg sdk.Msg) ([]etypes.Depo
 				remainder = remainder.Sub(requestedSpend.Amount)
 			}
 		case deposit.SourceGrant:
+			// find the DepositDeploymentAuthorization given to the owner by the depositor and check
+			// acceptance
 			msgTypeUrl := (&ev1.DepositAuthorization{}).MsgTypeURL()
 
 			k.authzKeeper.GetGranteeGrantsByMsgType(sctx, owner, msgTypeUrl, func(ctx context.Context, granter sdk.AccAddress, authorization authz.Authorization, expiration *time.Time) bool {
