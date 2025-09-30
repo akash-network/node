@@ -71,7 +71,7 @@ GOLANGCI_LINT_VERSION        ?= v2.3.0
 STATIK_VERSION               ?= v0.1.7
 GIT_CHGLOG_VERSION           ?= v0.15.1
 MOCKERY_VERSION              ?= 3.5.0
-COSMOVISOR_VERSION           ?= v1.5.0
+COSMOVISOR_VERSION           ?= v1.7.1
 
 # ==== Build tools version tracking ====
 # <TOOL>_VERSION_FILE points to the marker file for the installed version.

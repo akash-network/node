@@ -83,7 +83,7 @@ func (m escrowMigrations) handler(ctx sdk.Context) error {
 	for ; iter.Valid(); iter.Next() {
 		key := append(migrate.PaymentV1beta3Prefix(), iter.Key()...)
 
-		nVal := migrate.PaymentFromV1beta3(cdc, iter.Key(), iter.Value())
+		nVal := migrate.PaymentFromV1beta3(cdc, key, iter.Value())
 		bz := cdc.MustMarshal(&nVal)
 
 		switch nVal.State.State {

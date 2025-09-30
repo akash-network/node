@@ -1281,8 +1281,8 @@ github.com/ajstarks/svgo v0.0.0-20180226025133-644b8db467af/go.mod h1:K08gAheRH3
 github.com/ajstarks/svgo v0.0.0-20211024235047-1546f124cd8b/go.mod h1:1KcenG0jGWcpt8ov532z81sp/kMMUG485J2InIOyADM=
 github.com/akash-network/cometbft v0.38.17-akash.2 h1:ZSlROvuSOUd3f6Jld43Wp5cgAmTY/BgKpSKi3228R7Y=
 github.com/akash-network/cometbft v0.38.17-akash.2/go.mod h1:5l0SkgeLRXi6bBfQuevXjKqML1jjfJJlvI1Ulp02/o4=
-github.com/akash-network/cosmos-sdk v0.53.4-akash.1 h1:AnO3bt7z6jZX9ME+fPSNHjHr3R32VF6Rgq5ApU2Q6Ig=
-github.com/akash-network/cosmos-sdk v0.53.4-akash.1/go.mod h1:UJNjxvMQqI15nc5G2rhPIV/+ol3xDDoE+tif3v/W1pA=
+github.com/akash-network/cosmos-sdk v0.53.4-akash.2 h1:m25lSYG3Gj7TSsKJKJyS+wDxZZBfzKCe4sHr2Mf6rmw=
+github.com/akash-network/cosmos-sdk v0.53.4-akash.2/go.mod h1:UJNjxvMQqI15nc5G2rhPIV/+ol3xDDoE+tif3v/W1pA=
 github.com/akash-network/gogoproto v1.7.0-akash.2 h1:zY5seM6kBOLMBWn15t8vrY1ao4J1HjrhNaEeO/Soro0=
 github.com/akash-network/gogoproto v1.7.0-akash.2/go.mod h1:yWChEv5IUEYURQasfyBW5ffkMHR/90hiHgbNgrtp4j0=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
@@ -3278,8 +3278,8 @@ nhooyr.io/websocket v1.8.11/go.mod h1:rN9OFWIUwuxg4fR5tELlYC04bXYowCP9GX47ivo2l+
 nullprogram.com/x/optparse v1.0.0/go.mod h1:KdyPE+Igbe0jQUrVfMqDMeJQIJZEuyV7pjYmp6pbG50=
 pgregory.net/rapid v0.5.5 h1:jkgx1TjbQPD/feRoK+S/mXw9e1uj6WilpHrXJowi6oA=
 pgregory.net/rapid v0.5.5/go.mod h1:PY5XlDGj0+V1FCq0o192FdRhpKHGTRIWBgqjDBTrq04=
-pkg.akt.dev/go v0.0.3-rc20 h1:1U7brEPHetU33VRN4ziu6Fl/UebXi0y1+8XCbzJa9FM=
-pkg.akt.dev/go v0.0.3-rc20/go.mod h1:TF85k1RuubGnnESQud3FYoDT4/SWWHlccJ/JPw7gDzo=
+pkg.akt.dev/go v0.0.3-rc21 h1:0VaxH2AN0aAadncGP+6oIOqLWqlmyhgFYKPSkp4U6Qs=
+pkg.akt.dev/go v0.0.3-rc21/go.mod h1:gGRN0kbkHsW+/TXV6F+cFf7Hn79uT22mPm8kR+DG0CQ=
 pkg.akt.dev/go/cli v0.0.3-rc15 h1:N6EI96ANOAw6hwV9YdKdQNnB2GsAKPrtcYBblUTB2RU=
 pkg.akt.dev/go/cli v0.0.3-rc15/go.mod h1:FL6HuOFTqez4wPd/58ZbW8EtMY510/CdYhnNkvIvFV4=
 pkg.akt.dev/go/sdl v0.0.2-rc6 h1:rlaiBL2xTl06Rq/MNePmMRyl6ucWweA5q4Mt9tZzwzM=

@@ -52,7 +52,7 @@ const (
 	nodeEventStart nodeEvent = iota
 	nodeEventReplayBlocksStart
 	nodeEventReplayBlocksDone
-	nodeEventBlockIndexed
+	nodeEventBlockCommited
 	nodeEventUpgradeDetected
 	nodeEventAddedModule
 	nodeEventRemovedModule
@@ -1027,7 +1027,7 @@ loop:
 					l.t.Logf("[%s][%s]: node done replaying blocks", l.params.name, nodeTestStageMapStr[stage])
 					wdCtrl(l.ctx, watchdogCtrlStart)
 					replayDone = true
-				case nodeEventBlockIndexed:
+				case nodeEventBlockCommited:
 					// ignore index events until replay done
 					if !replayDone {
 						break
@@ -1263,6 +1263,7 @@ func (l *validator) scanner(stdout io.Reader, p publisher) error {
 	replayBlocksStart := "INF ABCI Replay Blocks appHeight"
 	replayBlocksDone := "INF Replay: Done module=consensus"
 	executedBlock := "INF indexed block "
+	executedBlock2 := "INF committed state block_app_hash="
 	upgradeNeeded := fmt.Sprintf(`ERR UPGRADE "%s" NEEDED at height:`, l.params.upgradeName)
 	addingNewModule := "INF adding a new module: "
 	migratingModule := "INF migrating module "
@@ -1291,8 +1292,8 @@ scan:
 			evt.id = nodeEventReplayBlocksStart
 		} else if strings.Contains(line, replayBlocksDone) {
 			evt.id = nodeEventReplayBlocksDone
-		} else if strings.Contains(line, executedBlock) {
-			evt.id = nodeEventBlockIndexed
+		} else if strings.Contains(line, executedBlock) || strings.Contains(line, executedBlock2) {
+			evt.id = nodeEventBlockCommited
 		} else if strings.Contains(line, addingNewModule) {
 			evt.id = nodeEventAddedModule
 			res := rNewModule.FindAllStringSubmatch(line, -1)

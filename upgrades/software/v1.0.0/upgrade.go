@@ -294,7 +294,7 @@ func (up *upgrade) patchDepositAuthorizations(ctx sdk.Context) error {
 	msgUrlOld := "/akash.deployment.v1beta3.MsgDepositDeployment"
 
 	var err error
-	up.log.Info(fmt.Sprintf("migrating \"%s\" to \"%s\"", msgUrlOld, (&dv1beta3.DepositDeploymentAuthorization{}).MsgTypeURL()))
+	up.log.Info(fmt.Sprintf("migrating \"%s\" to \"%s\"", msgUrlOld, (&ev1.DepositAuthorization{}).MsgTypeURL()))
 	up.Keepers.Cosmos.Authz.IterateGrants(ctx, func(granterAddr sdk.AccAddress, granteeAddr sdk.AccAddress, grant authz.Grant) bool {
 		var authorization authz.Authorization
 		authorization, err = grant.GetAuthorization()
@@ -313,7 +313,6 @@ func (up *upgrade) patchDepositAuthorizations(ctx sdk.Context) error {
 				return false
 			}
 			nAuthz = ev1.NewDepositAuthorization(ev1.DepositAuthorizationScopes{ev1.DepositScopeDeployment}, authzOld.SpendLimit)
-
 		default:
 			return false
 		}
@@ -321,7 +320,7 @@ func (up *upgrade) patchDepositAuthorizations(ctx sdk.Context) error {
 		err = up.Keepers.Cosmos.Authz.DeleteGrant(ctx, granteeAddr, granterAddr, authorization.MsgTypeURL())
 		if err != nil {
 			up.log.Error(fmt.Sprintf("unable to delete autorization. err=%s", err.Error()))
-			return true
+			return false
 		}
 
 		err = up.Keepers.Cosmos.Authz.SaveGrant(ctx, granteeAddr, granterAddr, nAuthz, grant.Expiration)

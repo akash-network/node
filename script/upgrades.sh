@@ -34,7 +34,7 @@ UPGRADE_FROM=${UTEST_UPGRADE_FROM:=}
 UPGRADE_TO=${UTEST_UPGRADE_TO:=}
 CONFIG_FILE=${UTEST_CONFIG_FILE:=}
 CHAIN_METADATA_URL=https://raw.githubusercontent.com/akash-network/net/master/mainnet/meta.json
-SNAPSHOT_URL=https://snapshots.akash.network/akashnet-2/akashnet-2_22825219.tar.lz4
+SNAPSHOT_URL=https://snapshots.akash.network/akashnet-2/latest
 STATE_CONFIG=
 
 short_opts=h
@@ -436,10 +436,11 @@ function prepare_state() {
 			popd
 
 			$AKASH testnetify --home="$valdir" --testnet-rootdir="$validators_dir" --testnet-config="${STATE_CONFIG}" --yes || true
-
 		else
 			pushd "$(pwd)"
 			cd "${valdir}"
+
+			cp -r "${validators_dir}/.akash0/config" ./
 			cp -r "${validators_dir}/.akash0/data" ./
 
 			pushd "$(pwd)"
@@ -481,6 +482,7 @@ function clean() {
 		rm -rf "$cosmovisor_dir/upgrades/${UPGRADE_TO}/upgrade-info.json"
 		rm -rf "$cosmovisor_dir/upgrades/${UPGRADE_TO}/bin/akash"
 
+		mkdir -p "$valdir/data"
 		echo '{"height":"0","round": 0,"step": 0}' | jq > "$valdir/data/priv_validator_state.json"
 
 		((cnt++)) || true
