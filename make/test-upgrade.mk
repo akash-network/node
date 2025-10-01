@@ -21,6 +21,19 @@ UPGRADE_FROM            := $(shell cat $(ROOT_DIR)/meta.json | jq -r --arg name 
 GENESIS_BINARY_VERSION  := $(shell cat $(ROOT_DIR)/meta.json | jq -r --arg name $(UPGRADE_TO) '.upgrades[$$name].from_binary' | tr -d '\n')
 UPGRADE_BINARY_VERSION  ?= local
 
+SNAPSHOT_SOURCE         ?= mainnet
+
+ifneq ($(SNAPSHOT_SOURCE),mainnet)
+	ifeq ($(SNAPSHOT_SOURCE),sandbox)
+		SNAPSHOT_NETWORK    := sandbox-01
+	else
+$(error "invalid snapshot source $(SNAPSHOT_SOURCE)")
+	endif
+else
+	SNAPSHOT_NETWORK    := akashnet-2
+endif
+
+SNAPSHOT_URL            ?= https://snapshots.akash.network/$(SNAPSHOT_NETWORK)/latest
 REMOTE_TEST_WORKDIR     ?= ~/go/src/github.com/akash-network/node
 REMOTE_TEST_HOST        ?=
 
@@ -49,7 +62,7 @@ test-reset:
 	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) clean
 	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) --gbv=$(GENESIS_BINARY_VERSION) bins
 	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) keys
-	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --state-config=$(STATE_CONFIG) prepare-state
+	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --state-config=$(STATE_CONFIG) --snapshot-url=$(SNAPSHOT_URL) prepare-state
 
 .PHONY: prepare-state
 prepare-state:

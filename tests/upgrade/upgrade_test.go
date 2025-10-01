@@ -1259,7 +1259,7 @@ loop:
 func (l *validator) scanner(stdout io.Reader, p publisher) error {
 	scanner := bufio.NewScanner(stdout)
 
-	serverStart := "INF starting node with ABCI Tendermint in-process"
+	serverStart := "INF starting node with ABCI "
 	replayBlocksStart := "INF ABCI Replay Blocks appHeight"
 	replayBlocksDone := "INF Replay: Done module=consensus"
 	executedBlock := "INF indexed block "
@@ -1267,6 +1267,11 @@ func (l *validator) scanner(stdout io.Reader, p publisher) error {
 	upgradeNeeded := fmt.Sprintf(`ERR UPGRADE "%s" NEEDED at height:`, l.params.upgradeName)
 	addingNewModule := "INF adding a new module: "
 	migratingModule := "INF migrating module "
+
+	rServerStart, err := regexp.Compile(`^` + serverStart + `(Tendermint|CometBFT) in-process`)
+	if err != nil {
+		return err
+	}
 
 	rNewModule, err := regexp.Compile(`^` + addingNewModule + `(.+) (.+)$`)
 	if err != nil {
@@ -1287,6 +1292,10 @@ scan:
 		if strings.Contains(line, upgradeNeeded) {
 			evt.id = nodeEventUpgradeDetected
 		} else if strings.Contains(line, serverStart) {
+			res := rServerStart.FindAllStringSubmatch(line, -1)
+			if len(res) != 1 && len(res[0]) != 2 {
+				return fmt.Errorf("line \"%s\" does not match regex \"%s\"", line, rServerStart.String())
+			}
 			evt.id = nodeEventStart
 		} else if strings.Contains(line, replayBlocksStart) {
 			evt.id = nodeEventReplayBlocksStart

@@ -176,7 +176,9 @@ jobs:
       - name: configure variables
         run: |
           test_required=$(./script/upgrades.sh test-required ${{ github.ref }})
+          snapshot_source=$(./script/upgrades.sh snapshot-source ${{ github.ref }})
           echo "TEST_REQUIRED=$test_required" >> $GITHUB_ENV
+          echo "SNAPSHOT_SOURCE=$snapshot_source" >> $GITHUB_ENV
       - name: run test
         id: test
         if: env.TEST_REQUIRED != ''

@@ -4,11 +4,6 @@
             "added": [
                 "07-tendermint",
                 "consensus"
-            ],
-            "removed": [
-                "crisis",
-                "agov",
-                "astaking"
             ]
         },
         "migrations": {
