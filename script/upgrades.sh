@@ -596,6 +596,46 @@ case "$1" in
 		fi
 
 		;;
+	snapshot-source)
+		shift
+
+		curr_ref=$1
+		snapshot_source="sandbox"
+
+		is_valid=$($semver validate "$curr_ref")
+
+		if [[ $is_valid == "valid" ]]; then
+			build=$($semver get build "$curr_ref")
+			if [[ -n $build ]]; then
+				# Split the input by dots, as only dot is allowed in semver build token
+				IFS='.' read -ra PARTS <<< "$build"
+				# Process pairs (key at even index, value at odd index)
+				for ((i=0; i<${#PARTS[@]}; i+=2)); do
+					key="${PARTS[i]}"
+					value="${PARTS[i+1]}"
+
+					# Skip if value is missing
+					if [ -z "$value" ]; then
+						continue
+					fi
+
+					case "$key" in
+						network)
+							snapshot_source=$value
+							;;
+						*)
+							;;
+					esac
+				done
+			fi
+		elif [[ $curr_ref == "mainnet/main" || $curr_ref == "main" ]]; then
+			snapshot_source="mainnet"
+		fi
+
+		echo -n "$snapshot_source"
+
+		exit 0
+		;;
 	test-required)
 		shift
 		curr_ref=$1

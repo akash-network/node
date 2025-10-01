@@ -6,19 +6,23 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	sdkmath "cosmossdk.io/math"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	"github.com/stretchr/testify/require"
+
 	"pkg.akt.dev/go/cli/flags"
+	arpcclient "pkg.akt.dev/go/node/client"
 	aclient "pkg.akt.dev/go/node/client/discovery"
 	cltypes "pkg.akt.dev/go/node/client/types"
 	"pkg.akt.dev/go/node/client/v1beta3"
 	"pkg.akt.dev/go/sdkutil"
 
+	"pkg.akt.dev/node/app"
 	uttypes "pkg.akt.dev/node/tests/upgrade/types"
 )
 
@@ -34,8 +38,9 @@ var _ uttypes.TestWorker = (*postUpgrade)(nil)
 
 func (pu *postUpgrade) Run(ctx context.Context, t *testing.T, params uttypes.TestParams) {
 	encodingConfig := sdkutil.MakeEncodingConfig()
+	app.ModuleBasics().RegisterInterfaces(encodingConfig.InterfaceRegistry)
 
-	rpcClient, err := sdkclient.NewClientFromNode(params.Node)
+	rpcClient, err := arpcclient.NewClient(ctx, params.Node)
 	require.NoError(t, err)
 
 	cctx := sdkclient.Context{}.
