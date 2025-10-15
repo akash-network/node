@@ -37,12 +37,12 @@ func writeKey(buf *bytes.Buffer, state etypes.State, id escrowid.ID) {
 		buf.Write(stateToPrefix(state))
 
 		if id != nil {
-			writePrefix(buf, id)
+			writeId(buf, id)
 		}
 	}
 }
 
-func writePrefix(buf *bytes.Buffer, id escrowid.ID) {
+func writeId(buf *bytes.Buffer, id escrowid.ID) {
 	buf.WriteRune('/')
 	buf.WriteString(id.Key())
 }

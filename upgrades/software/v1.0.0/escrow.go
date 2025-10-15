@@ -49,7 +49,7 @@ func (m escrowMigrations) handler(ctx sdk.Context) error {
 		key := append(migrate.AccountV1beta3Prefix(), iter.Key()...)
 
 		nVal := migrate.AccountFromV1beta3(cdc, key, iter.Value())
-		bz := cdc.MustMarshal(&nVal)
+		bz := cdc.MustMarshal(&nVal.State)
 
 		switch nVal.State.State {
 		case etypes.StateOpen:
@@ -84,7 +84,7 @@ func (m escrowMigrations) handler(ctx sdk.Context) error {
 		key := append(migrate.PaymentV1beta3Prefix(), iter.Key()...)
 
 		nVal := migrate.PaymentFromV1beta3(cdc, key, iter.Value())
-		bz := cdc.MustMarshal(&nVal)
+		bz := cdc.MustMarshal(&nVal.State)
 
 		switch nVal.State.State {
 		case etypes.StateOpen:
