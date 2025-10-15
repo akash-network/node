@@ -519,8 +519,8 @@ func kvStoreKeys() []string {
 		ibctransfertypes.StoreKey,
 	}
 
-	keys = append(keys, akashKVStoreKeys()...,
-	)
+	keys = append(keys, akashKVStoreKeys()...)
+
 	return keys
 }
 
@@ -533,7 +533,6 @@ func akashKVStoreKeys() []string {
 		ptypes.StoreKey,
 		atypes.StoreKey,
 		ctypes.StoreKey,
-		astakingtypes.StoreKey,
 	}
 }
 
