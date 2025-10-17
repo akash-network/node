@@ -14,7 +14,7 @@ macos_deps=(
 
 debian_deps=(
 	"make"
-	"build-essentials"
+	"build-essential"
 	"direnv"
 	"unzip"
 	"wget"
@@ -32,15 +32,26 @@ function get_gotoolchain() {
 	local gotoolchain
 	local goversion
 	local local_goversion
+	local toolfile
 
-	gotoolchain=$(grep -E '^toolchain go[0-9]{1,}.[0-9]{1,}.[0-9]{1,}$' <"$gomod" | cut -d ' ' -f 2 | tr -d '\n')
-	goversion=$(grep -E '^go [0-9]{1,}.[0-9]{1,}(.[0-9]{1,})?$' <"$gomod" | cut -d ' ' -f 2 | tr -d '\n')
+	toolfile=$gomod
+
+	if [[ "$GOWORK" != "off" ]] && [ -f "$GOWORK" ]; then
+		toolfile=$GOWORK
+	fi
+
+	gotoolchain=$(grep -E '^toolchain go[0-9]{1,}.[0-9]{1,}.[0-9]{1,}$' <"$toolfile" | cut -d ' ' -f 2 | tr -d '\n')
+	goversion=$(grep -E '^go [0-9]{1,}.[0-9]{1,}(.[0-9]{1,})?$' <"$toolfile" | cut -d ' ' -f 2 | tr -d '\n')
+
+	if [[ ${gotoolchain} == "" ]]; then
+		gotoolchain=go$goversion
+	fi
 
 	if [[ ${gotoolchain} == "" ]]; then
 		# determine go toolchain from go version in go.mod
 		if which go >/dev/null 2>&1; then
-			local_goversion=$(GOTOOLCHAIN=local go version | cut -d ' ' -f 3 | sed 's/go*//' | tr -d '\n')
-			if [[ $($SEMVER compare "v$local_goversion" v"$goversion") -ge 0 ]]; then
+			local_goversion=$(env -i HOME=$HOME GOTOOLCHAIN=local $SHELL -l -c "go version | cut -d ' ' -f 3 | sed 's/go*//' | tr -d '\n'")
+			if ! [[ $($SEMVER compare "v$local_goversion" v"$goversion") -ge 0 ]]; then
 				goversion=$local_goversion
 			else
 				local_goversion=
@@ -54,7 +65,7 @@ function get_gotoolchain() {
 		if [[ $goversion != "" ]] && [[ $($SEMVER compare "v$goversion" v1.21.0) -ge 0 ]]; then
 			gotoolchain=go${goversion}
 		else
-			gotoolchain=go$(grep -E '^go [0-9]{1,}.[0-9]{1,}$' <"$gomod" | cut -d ' ' -f 2 | tr -d '\n').0
+			gotoolchain=go$(grep -E '^go [0-9]{1,}.[0-9]{1,}$' <"$toolfile" | cut -d ' ' -f 2 | tr -d '\n').0
 		fi
 	fi
 
