@@ -27,7 +27,7 @@ ifeq ($(SNAPSHOT_SOURCE),mainnet)
 	SNAPSHOT_NETWORK    := akashnet-2
 else
 	ifeq ($(SNAPSHOT_SOURCE),sandbox)
-		SNAPSHOT_NETWORK    := sandbox-2
+		SNAPSHOT_NETWORK    := sandbox-01
 	else
 $(error "invalid snapshot source $(SNAPSHOT_SOURCE)")
 	endif
