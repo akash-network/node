@@ -45,9 +45,9 @@ require (
 	google.golang.org/grpc v1.74.2
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.2
-	pkg.akt.dev/go v0.0.3-rc31
-	pkg.akt.dev/go/cli v0.0.3-rc20
-	pkg.akt.dev/go/sdl v0.0.2-rc7
+	pkg.akt.dev/go v0.0.3-rc32
+	pkg.akt.dev/go/cli v0.0.3-rc21
+	pkg.akt.dev/go/sdl v0.0.2-rc8
 )
 
 replace (
@@ -59,7 +59,7 @@ replace (
 	// use akash fork of cometbft
 	github.com/cometbft/cometbft => github.com/akash-network/cometbft v0.38.17-akash.2
 	// use akash fork of cosmos sdk
-	github.com/cosmos/cosmos-sdk => github.com/akash-network/cosmos-sdk v0.53.4-akash.4
+	github.com/cosmos/cosmos-sdk => github.com/akash-network/cosmos-sdk v0.53.4-akash.5
 
 	github.com/cosmos/gogoproto => github.com/akash-network/gogoproto v1.7.0-akash.2
 
