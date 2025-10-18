@@ -310,8 +310,7 @@ function init() {
 
 		$AKASH init --home "$valdir" "$(jq -rc '.moniker' <<<"$val")" >/dev/null 2>&1
 
-		if [[ $cnt -eq 0 ]]; then
-			cat >"$valdir/.envrc" <<EOL
+		cat >"$valdir/.envrc" <<EOL
 PATH_add "\$(pwd)/cosmovisor/current/bin"
 AKASH_HOME="\$(pwd)"
 AKASH_FROM=validator0
@@ -331,8 +330,8 @@ export AKASH_CHAIN_ID
 export AKASH_KEYRING_BACKEND
 export AKASH_SIGN_MODE
 EOL
-		fi
 
+		echo "$val"
 		jq -r '.keys.priv' <<<"$val" >"$valdir/config/priv_validator_key.json"
 		jq -r '.keys.node' <<<"$val" >"$valdir/config/node_key.json"
 
@@ -373,7 +372,9 @@ function prepare_state() {
 		AKASH=$genesis_bin/akash
 
 		genesis_file=${valdir}/config/genesis.json
+		addrbook_file=${valdir}/config/genesis.json
 		rm -f "$genesis_file"
+		rm -f "$addrbook_file"
 
 		if [[ $cnt -eq 0 ]]; then
 			if [[ "${GENESIS_URL}" =~ ^https?:\/\/.* ]]; then
@@ -435,6 +436,8 @@ function prepare_state() {
 				rm -rf data
 			fi
 
+			rm -f upgrade-info.json
+
 			popd
 
 			$AKASH testnetify --home="$valdir" --testnet-rootdir="$validators_dir" --testnet-config="${STATE_CONFIG}" --yes || true
@@ -442,7 +445,6 @@ function prepare_state() {
 			pushd "$(pwd)"
 			cd "${valdir}"
 
-			cp -r "${validators_dir}/.akash0/config" ./
 			cp -r "${validators_dir}/.akash0/data" ./
 
 			pushd "$(pwd)"
@@ -482,10 +484,9 @@ function clean() {
 		rm -rf "$valdir"/data/*
 		rm -rf "$cosmovisor_dir/current"
 		rm -rf "$cosmovisor_dir/upgrades/${UPGRADE_TO}/upgrade-info.json"
-		rm -rf "$cosmovisor_dir/upgrades/${UPGRADE_TO}/bin/akash"
 
-		mkdir -p "$valdir/data"
-		echo '{"height":"0","round": 0,"step": 0}' | jq > "$valdir/data/priv_validator_state.json"
+#		mkdir -p "$valdir/data"
+#		echo '{"height":"0","round": 0,"step": 0}' | jq > "$valdir/data/priv_validator_state.json"
 
 		((cnt++)) || true
 	done

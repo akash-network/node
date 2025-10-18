@@ -458,16 +458,16 @@ func TestUpgrade(t *testing.T) {
 	listenAddr := "127.0.0.1"
 
 	for name, params := range initParams {
-		var unconditionalPeerIDs string
-		var persistentPeers string
+		unconditionalPeerIDs := make([]string, 0, len(initParams))
+		persistentPeers := make([]string, 0, len(initParams))
 
 		for nm1, params1 := range initParams {
 			if name == nm1 {
 				continue
 			}
 
-			unconditionalPeerIDs += params1.nodeID + ","
-			persistentPeers += fmt.Sprintf("%s@%s:%d,", params1.nodeID, listenAddr, params1.p2pPort)
+			unconditionalPeerIDs = append(unconditionalPeerIDs, params1.nodeID)
+			persistentPeers = append(persistentPeers, fmt.Sprintf("%s@%s:%d", params1.nodeID, listenAddr, params1.p2pPort))
 		}
 
 		validatorsParams[name] = validatorParams{
@@ -486,8 +486,8 @@ func TestUpgrade(t *testing.T) {
 				fmt.Sprintf("HOME=%s", *workdir),
 				fmt.Sprintf("AKASH_HOME=%s", params.homedir),
 				fmt.Sprintf("AKASH_CHAIN_ID=%s", cfg.ChainID),
-				fmt.Sprintf("AKASH_P2P_PERSISTENT_PEERS=%s", strings.TrimSuffix(persistentPeers, ",")),
-				fmt.Sprintf("AKASH_P2P_UNCONDITIONAL_PEER_IDS=%s", strings.TrimSuffix(unconditionalPeerIDs, ",")),
+				fmt.Sprintf("AKASH_P2P_PERSISTENT_PEERS=%s", strings.Join(persistentPeers, ",")),
+				fmt.Sprintf("AKASH_P2P_UNCONDITIONAL_PEER_IDS=%s", strings.Join(unconditionalPeerIDs, ",")),
 				fmt.Sprintf("AKASH_P2P_LADDR=tcp://%s:%d", listenAddr, params.p2pPort),
 				fmt.Sprintf("AKASH_RPC_LADDR=tcp://%s:%d", listenAddr, params.rpc.port),
 				fmt.Sprintf("AKASH_RPC_GRPC_LADDR=tcp://%s:%d", listenAddr, params.rpc.grpc),
@@ -1261,7 +1261,7 @@ func (l *validator) scanner(stdout io.Reader, p publisher) error {
 
 	serverStart := "INF starting node with ABCI "
 	replayBlocksStart := "INF ABCI Replay Blocks appHeight"
-	replayBlocksDone := "INF Replay: Done module=consensus"
+	replayBlocksDone := "INF service start impl=Evidence"
 	executedBlock := "INF indexed block "
 	executedBlock2 := "INF committed state block_app_hash="
 	upgradeNeeded := fmt.Sprintf(`ERR UPGRADE "%s" NEEDED at height:`, l.params.upgradeName)

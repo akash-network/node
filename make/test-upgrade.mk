@@ -67,7 +67,7 @@ test: init
 .PHONY: test-reset
 test-reset:
 	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) --snapshot-url=$(SNAPSHOT_URL) clean
-	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) --snapshot-url=$(SNAPSHOT_URL) --gbv=$(GENESIS_BINARY_VERSION) bins
+	#$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) --snapshot-url=$(SNAPSHOT_URL) --gbv=$(GENESIS_BINARY_VERSION) bins
 	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) --snapshot-url=$(SNAPSHOT_URL) keys
 	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --state-config=$(STATE_CONFIG) --snapshot-url=$(SNAPSHOT_URL) prepare-state
 
