@@ -56,8 +56,8 @@ func (m providerMigrations) handler(ctx sdk.Context) (err error) {
 		store.Set(pkeeper.ProviderKey(id), bz)
 	}
 
-	ctx.Logger().Info(fmt.Sprintf("[upgrade %s]: updated x/deployment store keys:"+
-		"\n\tproviders total:              %d",
+	ctx.Logger().Info(fmt.Sprintf("[upgrade %s]: updated x/provider store keys:"+
+		"\n\tproviders total: %d",
 		UpgradeName,
 		providersTotal))
 
