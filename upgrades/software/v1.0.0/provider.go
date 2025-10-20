@@ -3,11 +3,12 @@
 package v1_0_0
 
 import (
-	"cosmossdk.io/store/prefix"
+	"fmt"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/address"
 	sdkmodule "github.com/cosmos/cosmos-sdk/types/module"
 	"pkg.akt.dev/go/node/migrate"
-	types "pkg.akt.dev/go/node/provider/v1beta4"
 	"pkg.akt.dev/go/sdkutil"
 
 	utypes "pkg.akt.dev/node/upgrades/types"
@@ -26,10 +27,13 @@ func (m providerMigrations) GetHandler() sdkmodule.MigrationHandler {
 	return m.handler
 }
 
+func ProviderKey(id sdk.Address) []byte {
+	return address.MustLengthPrefix(id.Bytes())
+}
+
 // handler migrates provider store from version 2 to 3.
 func (m providerMigrations) handler(ctx sdk.Context) (err error) {
 	store := ctx.KVStore(m.StoreKey())
-	pstore := prefix.NewStore(store, types.ProviderPrefix())
 
 	iter := store.Iterator(nil, nil)
 	defer func() {
@@ -38,15 +42,24 @@ func (m providerMigrations) handler(ctx sdk.Context) (err error) {
 
 	cdc := m.Codec()
 
+	var providersTotal uint64
+
 	for ; iter.Valid(); iter.Next() {
 		to := migrate.ProviderFromV1beta3(cdc, iter.Value())
 
 		id := sdkutil.MustAccAddressFromBech32(to.Owner)
 		bz := cdc.MustMarshal(&to)
 
+		providersTotal++
+
 		store.Delete(iter.Key())
-		pstore.Set(pkeeper.ProviderKey(id), bz)
+		store.Set(pkeeper.ProviderKey(id), bz)
 	}
+
+	ctx.Logger().Info(fmt.Sprintf("[upgrade %s]: updated x/deployment store keys:"+
+		"\n\tproviders total:              %d",
+		UpgradeName,
+		providersTotal))
 
 	return nil
 }

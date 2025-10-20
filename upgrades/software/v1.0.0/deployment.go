@@ -32,6 +32,7 @@ func (m deploymentsMigrations) GetHandler() sdkmodule.MigrationHandler {
 func (m deploymentsMigrations) handler(ctx sdk.Context) error {
 	store := ctx.KVStore(m.StoreKey())
 
+	// deployment prefix does not change in this upgrade
 	oStore := prefix.NewStore(store, dkeeper.DeploymentPrefix)
 
 	iter := oStore.Iterator(nil, nil)
@@ -66,6 +67,7 @@ func (m deploymentsMigrations) handler(ctx sdk.Context) error {
 		store.Set(key, bz)
 	}
 
+	// group prefix does not change in this upgrade
 	oStore = prefix.NewStore(store, dkeeper.GroupPrefix)
 
 	iter = oStore.Iterator(nil, nil)

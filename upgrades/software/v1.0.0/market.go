@@ -35,6 +35,7 @@ func (m marketMigrations) handler(ctx sdk.Context) error {
 
 	cdc := m.Codec()
 
+	// order prefix does not change in this upgrade
 	oiter := storetypes.KVStorePrefixIterator(store, mkeys.OrderPrefix)
 	defer func() {
 		_ = oiter.Close()
@@ -69,8 +70,8 @@ func (m marketMigrations) handler(ctx sdk.Context) error {
 		store.Set(key, bz)
 	}
 
+	// bid prefixes do not change in this upgrade
 	store.Delete(mkeys.BidPrefixReverse)
-
 	biter := storetypes.KVStorePrefixIterator(store, mkeys.BidPrefix)
 	defer func() {
 		_ = biter.Close()
@@ -124,6 +125,7 @@ func (m marketMigrations) handler(ctx sdk.Context) error {
 		}
 	}
 
+	// lease prefixes do not change in this upgrade
 	store.Delete(mkeys.LeasePrefixReverse)
 	liter := storetypes.KVStorePrefixIterator(store, mkeys.LeasePrefix)
 	defer func() {
