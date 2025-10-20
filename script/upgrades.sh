@@ -439,21 +439,45 @@ function prepare_state() {
 			rm -f upgrade-info.json
 
 			popd
-
-			$AKASH testnetify --home="$valdir" --testnet-rootdir="$validators_dir" --testnet-config="${STATE_CONFIG}" --yes || true
 		else
 			pushd "$(pwd)"
 			cd "${valdir}"
 
-			cp -r "${validators_dir}/.akash0/data" ./
+			mkdir -p "data"
 
-			pushd "$(pwd)"
-
-			cd "config"
-
-			ln -snf "../../.akash0/config/genesis.json" "genesis.json"
+			echo '{"height": "0", "round": 0, "step": 0}' > data/priv_validator_state.json
 
 			popd
+		fi
+
+		((cnt++)) || true
+	done
+
+	cnt=0
+
+	for val in $(jq -c '.validators[]' <<<"$config"); do
+		local valdir
+
+		valdir=$validators_dir/.akash${cnt}
+
+		if [[ $cnt -eq 0 ]]; then
+			$AKASH testnetify --home="$valdir" --testnet-rootdir="$validators_dir" --testnet-config="${STATE_CONFIG}" --yes || true
+		else
+			pushd "$(pwd)"
+
+			cd "${valdir}"
+
+			rm -f "config/genesis.json"
+
+			cp -r "${validators_dir}/.akash0/config/genesis.json" "config/genesis.json"
+
+			local state
+			state=$(cat data/priv_validator_state.json)
+
+			rm -rf "data"
+			cp -r "${validators_dir}/.akash0/data" ./
+
+			echo "$state" > data/priv_validator_state.json
 			popd
 		fi
 
@@ -484,9 +508,6 @@ function clean() {
 		rm -rf "$valdir"/data/*
 		rm -rf "$cosmovisor_dir/current"
 		rm -rf "$cosmovisor_dir/upgrades/${UPGRADE_TO}/upgrade-info.json"
-
-#		mkdir -p "$valdir/data"
-#		echo '{"height":"0","round": 0,"step": 0}' | jq > "$valdir/data/priv_validator_state.json"
 
 		((cnt++)) || true
 	done

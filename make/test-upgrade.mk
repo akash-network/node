@@ -25,9 +25,11 @@ SNAPSHOT_SOURCE         ?= sandbox
 
 ifeq ($(SNAPSHOT_SOURCE),mainnet)
 	SNAPSHOT_NETWORK    := akashnet-2
+	CHAIN_METADATA_URL  := https://raw.githubusercontent.com/akash-network/net/master/mainnet/meta.json
 else
 	ifeq ($(SNAPSHOT_SOURCE),sandbox)
 		SNAPSHOT_NETWORK    := sandbox-01
+		CHAIN_METADATA_URL  := https://raw.githubusercontent.com/akash-network/net/master/sandbox/meta.json
 	else
 $(error "invalid snapshot source $(SNAPSHOT_SOURCE)")
 	endif
@@ -44,6 +46,7 @@ $(AKASH_INIT):
 		--ufrom=$(UPGRADE_FROM) \
 		--uto=$(UPGRADE_TO) \
 		--config="$(PWD)/config.json" \
+		--chain-meta=$(CHAIN_METADATA_URL) \
 		--state-config=$(STATE_CONFIG) \
 		--snapshot-url=$(SNAPSHOT_URL) init
 	touch $@
@@ -66,20 +69,20 @@ test: init
 
 .PHONY: test-reset
 test-reset:
-	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) --snapshot-url=$(SNAPSHOT_URL) clean
-	#$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) --snapshot-url=$(SNAPSHOT_URL) --gbv=$(GENESIS_BINARY_VERSION) bins
-	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) --snapshot-url=$(SNAPSHOT_URL) keys
-	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --state-config=$(STATE_CONFIG) --snapshot-url=$(SNAPSHOT_URL) prepare-state
+	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) --snapshot-url=$(SNAPSHOT_URL) --chain-meta=$(CHAIN_METADATA_URL)  clean
+	#$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) --snapshot-url=$(SNAPSHOT_URL) --gbv=$(GENESIS_BINARY_VERSION) --chain-meta=$(CHAIN_METADATA_URL) bins
+	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) --snapshot-url=$(SNAPSHOT_URL) --chain-meta=$(CHAIN_METADATA_URL) keys
+	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --state-config=$(STATE_CONFIG) --snapshot-url=$(SNAPSHOT_URL) --chain-meta=$(CHAIN_METADATA_URL) prepare-state
 
 .PHONY: prepare-state
 prepare-state:
-	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --state-config=$(STATE_CONFIG) prepare-state
+	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --state-config=$(STATE_CONFIG) --chain-meta=$(CHAIN_METADATA_URL) prepare-state
 
 .PHONY: bins
 bins:
 ifneq ($(findstring build,$(SKIP)),build)
 bins:
-	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) bins
+	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) --chain-meta=$(CHAIN_METADATA_URL) bins
 endif
 
 .PHONY: clean
