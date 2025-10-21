@@ -23,9 +23,11 @@ type TestnetValidator struct {
 	OperatorAddress   sdk.ValAddress
 	ConsensusAddress  sdk.ConsAddress
 	ConsensusPubKey   *types.Any
+	Status            stakingtypes.BondStatus
 	Moniker           string
 	Commission        stakingtypes.Commission
 	MinSelfDelegation sdk.Int
+	Delegations       []TestnetDelegation
 }
 
 type TestnetUpgrade struct {
@@ -42,8 +44,18 @@ type TestnetGovConfig struct {
 	} `json:"voting_params,omitempty"`
 }
 
+type TestnetAccount struct {
+	Address  sdk.AccAddress `json:"address"`
+	Balances []sdk.Coin     `json:"balances"`
+}
+
+type TestnetDelegation struct {
+	Address sdk.AccAddress `json:"address"`
+	Amount  sdk.Coin       `json:"amount"`
+}
+
 type TestnetConfig struct {
-	Accounts   []sdk.AccAddress
+	Accounts   []TestnetAccount
 	Validators []TestnetValidator
 	Gov        TestnetGovConfig
 	Upgrade    TestnetUpgrade
@@ -131,33 +143,41 @@ func InitAkashAppForTestnet(
 		panic(err)
 	}
 
+	// BANK
+	//
+
+	for _, account := range tcfg.Accounts {
+		err := app.Keepers.Cosmos.Bank.MintCoins(ctx, minttypes.ModuleName, account.Balances)
+		if err != nil {
+			panic(err)
+		}
+		err = app.Keepers.Cosmos.Bank.SendCoinsFromModuleToAccount(ctx, minttypes.ModuleName, account.Address, account.Balances)
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	for _, val := range tcfg.Validators {
 		// Create Validator struct for our new validator.
 		newVal := stakingtypes.Validator{
 			OperatorAddress: val.OperatorAddress.String(),
 			ConsensusPubkey: val.ConsensusPubKey,
 			Jailed:          false,
-			Status:          stakingtypes.Bonded,
-			Tokens:          sdk.NewInt(900000000000000),
-			DelegatorShares: sdk.MustNewDecFromStr("10000000"),
+			Status:          val.Status,
+			Tokens:          sdk.NewInt(0),
+			DelegatorShares: sdk.MustNewDecFromStr("0"),
 			Description: stakingtypes.Description{
-				Moniker: "Testnet Validator",
+				Moniker: val.Moniker,
 			},
-			Commission: stakingtypes.Commission{
-				CommissionRates: stakingtypes.CommissionRates{
-					Rate:          sdk.MustNewDecFromStr("0.05"),
-					MaxRate:       sdk.MustNewDecFromStr("0.1"),
-					MaxChangeRate: sdk.MustNewDecFromStr("0.05"),
-				},
-			},
-			MinSelfDelegation: sdk.OneInt(),
+			Commission:        val.Commission,
+			MinSelfDelegation: val.MinSelfDelegation,
 		}
 
 		// Add our validator to power and last validators store
 		app.Keepers.Cosmos.Staking.SetValidator(ctx, newVal)
 		err = app.Keepers.Cosmos.Staking.SetValidatorByConsAddr(ctx, newVal)
 		if err != nil {
-			return nil
+			panic(err)
 		}
 
 		app.Keepers.Cosmos.Staking.SetValidatorByPowerIndex(ctx, newVal)
@@ -189,9 +209,24 @@ func InitAkashAppForTestnet(
 			Tombstoned:  false,
 		}
 
-		_, _ = app.Keepers.Cosmos.Staking.ApplyAndReturnValidatorSetUpdates(ctx)
+		_, err = app.Keepers.Cosmos.Staking.ApplyAndReturnValidatorSetUpdates(ctx)
+		if err != nil {
+			panic(err)
+		}
 
 		app.Keepers.Cosmos.Slashing.SetValidatorSigningInfo(ctx, newConsAddr, newValidatorSigningInfo)
+
+		for _, del := range val.Delegations {
+			vl, found := app.Keepers.Cosmos.Staking.GetValidator(ctx, valAddr)
+			if !found {
+				panic("validator not found")
+			}
+
+			_, err = app.Keepers.Cosmos.Staking.Delegate(ctx, del.Address, del.Amount.Amount, stakingtypes.Unbonded, vl, true)
+			if err != nil {
+				panic(err)
+			}
+		}
 	}
 
 	//
@@ -204,25 +239,6 @@ func InitAkashAppForTestnet(
 	voteParams := app.Keepers.Cosmos.Gov.GetVotingParams(ctx)
 	voteParams.VotingPeriod = tcfg.Gov.VotingParams.VotingPeriod.Duration
 	app.Keepers.Cosmos.Gov.SetVotingParams(ctx, voteParams)
-
-	// BANK
-	//
-
-	defaultCoins := sdk.NewCoins(
-		sdk.NewInt64Coin("uakt", 1000000000000),
-		sdk.NewInt64Coin("ibc/12C6A0C374171B595A0A9E18B83FA09D295FB1F2D8C6DAA3AC28683471752D84", 1000000000000), // axlUSDC
-	)
-
-	for _, account := range tcfg.Accounts {
-		err := app.Keepers.Cosmos.Bank.MintCoins(ctx, minttypes.ModuleName, defaultCoins)
-		if err != nil {
-			return nil
-		}
-		err = app.Keepers.Cosmos.Bank.SendCoinsFromModuleToAccount(ctx, minttypes.ModuleName, account, defaultCoins)
-		if err != nil {
-			return nil
-		}
-	}
 
 	// UPGRADE
 	//
