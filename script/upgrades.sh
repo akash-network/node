@@ -17,13 +17,13 @@ Options:
   -h, --help             Print this help message.
 Commands:
   test-required  Determine if latest present upgrade needed test run.
-                 Conditions to run test:
-                  - If current reference matches last upgrade in a codebase
-                  - If the codebase has tag matching to the upgrade name, but release is marked as revoked
-                  - If the codebase does not have tag matching upgrade name
-                 Exit codes:
-                  - 0 test required
-                  - 1 something went wrong. check stderr"
+				 Conditions to run test:
+				  - If current reference matches last upgrade in a codebase
+				  - If the codebase has tag matching to the upgrade name, but release is marked as revoked
+				  - If the codebase does not have tag matching upgrade name
+				 Exit codes:
+				  - 0 test required
+				  - 1 something went wrong. check stderr"
 
 echoerr() { echo "$@" 1>&2; }
 
@@ -36,9 +36,10 @@ CONFIG_FILE=${UTEST_CONFIG_FILE:=}
 CHAIN_METADATA_URL=https://raw.githubusercontent.com/akash-network/net/master/mainnet/meta.json
 SNAPSHOT_URL=https://snapshots.akash.network/akashnet-2/latest
 STATE_CONFIG=
+MAX_VALIDATORS=1
 
 short_opts=h
-long_opts=help/workdir:/ufrom:/uto:/gbv:/config:/chain-meta:/snapshot-url:/state-config: # those who take an arg END with :
+long_opts=help/workdir:/ufrom:/uto:/gbv:/config:/chain-meta:/snapshot-url:/state-config:/max-validators: # those who take an arg END with :
 
 while getopts ":$short_opts-:" o; do
 	case $o in
@@ -120,12 +121,63 @@ while getopts ":$short_opts-:" o; do
 		state-config)
 			STATE_CONFIG=$OPTARG
 			;;
+		max-validators)
+			MAX_VALIDATORS=$OPTARG
+			;;
 	esac
 done
 shift "$((OPTIND - 1))"
 
 CHAIN_METADATA=$(curl -s "${CHAIN_METADATA_URL}")
 GENESIS_URL="$(echo "$CHAIN_METADATA" | jq -r '.codebase.genesis.genesis_url? // .genesis?')"
+
+# Stack-based trap management
+trap_add() {
+	local sig="$1"
+	shift
+	local new_cmd="$*"
+
+	if [ -z "$sig" ] || [ -z "$new_cmd" ]; then
+		echo "Usage: trap_add SIGNAL COMMAND" >&2
+		return 1
+	fi
+
+	# Get existing trap command for this signal
+	local existing_cmd
+	existing_cmd=$(trap -p "$sig" 2>/dev/null | sed -n "s/^trap -- '\(.*\)' ${sig}$/\1/p")
+
+	# Build the new trap command
+	if [ -n "$existing_cmd" ]; then
+		# Append to existing trap
+		# shellcheck disable=SC2064
+		trap "${existing_cmd}; ${new_cmd}" "$sig"
+	else
+		# Create new trap
+		# shellcheck disable=SC2064
+		trap "$new_cmd" "$sig"
+	fi
+}
+
+# Optional: Function to show current trap stack
+trap_show() {
+	local sig="$1"
+	if [ -z "$sig" ]; then
+		trap -p
+	else
+		trap -p "$sig"
+	fi
+}
+
+function cleanup() {
+	jb=$(jobs -p)
+
+	if [[ "$jb" != "" ]]; then
+		# shellcheck disable=SC2086
+		kill $jb
+	fi
+}
+
+trap_add EXIT 'cleanup'
 
 pushd() {
 	command pushd "$@" >/dev/null
@@ -303,6 +355,11 @@ function init() {
 			cp "$validators_dir/.akash0/cosmovisor/upgrades/$UPGRADE_TO/bin/akash" "$upgrade_bin/akash"
 		fi
 
+		pushd "$(pwd)"
+		cd "$cosmovisor_dir"
+		ln -snf genesis current
+		popd
+
 		AKASH=$genesis_bin/akash
 
 		genesis_file=${valdir}/config/genesis.json
@@ -329,6 +386,18 @@ export AKASH_NODE
 export AKASH_CHAIN_ID
 export AKASH_KEYRING_BACKEND
 export AKASH_SIGN_MODE
+EOL
+
+		cat >"$valdir/validator.json" <<EOL
+{
+	"pubkey": $($AKASH --home="$valdir" tendermint show-validator),
+	"amount": "1000000uakt",
+	"moniker": "$(jq -rc '.moniker' <<<"$val")",
+	"commission-rate": "0.1",
+	"commission-max-rate": "0.2",
+	"commission-max-change-rate": "0.01",
+	"min-self-delegation": "1"
+}
 EOL
 
 		echo "$val"
@@ -364,12 +433,10 @@ function prepare_state() {
 		local cosmovisor_dir
 		local genesis_bin
 		local upgrade_bin
-		local AKASH
 
 		valdir=$validators_dir/.akash${cnt}
 		cosmovisor_dir=$valdir/cosmovisor
 		genesis_bin=$cosmovisor_dir/genesis/bin
-		AKASH=$genesis_bin/akash
 
 		genesis_file=${valdir}/config/genesis.json
 		addrbook_file=${valdir}/config/genesis.json
@@ -453,36 +520,96 @@ function prepare_state() {
 		((cnt++)) || true
 	done
 
-	cnt=0
+	local rvaldir
+	local rpid
+	local akashversion
+	local AKASH
+	AKASH=$validators_dir/.akash0/cosmovisor/genesis/bin/akash
 
-	for val in $(jq -c '.validators[]' <<<"$config"); do
-		local valdir
+	rvaldir=$validators_dir/.akash0
 
-		valdir=$validators_dir/.akash${cnt}
+	echo "testnetifying state"
+	$AKASH testnetify --home="$rvaldir" --testnet-rootdir="$validators_dir" --testnet-config="${STATE_CONFIG}" --yes
 
-		if [[ $cnt -eq 0 ]]; then
-			$AKASH testnetify --home="$valdir" --testnet-rootdir="$validators_dir" --testnet-config="${STATE_CONFIG}" --yes || true
-		else
-			pushd "$(pwd)"
+	if [[ $MAX_VALIDATORS -gt 1 ]]; then
+		echo "starting testnet validator"
+		$AKASH start --home="$rvaldir" >/dev/null 2>&1 & rpid=$!
 
-			cd "${valdir}"
+		akashversion=$($AKASH version)
 
-			rm -f "config/genesis.json"
+		sleep 10
 
-			cp -r "${validators_dir}/.akash0/config/genesis.json" "config/genesis.json"
+		echo "adding remaining validators to the state"
+		cnt=0
+		for val in $(jq -c '.validators[]' <<<"$config"); do
+			local valdir
+			local valjson
 
-			local state
-			state=$(cat data/priv_validator_state.json)
+			valdir=$validators_dir/.akash${cnt}
 
-			rm -rf "data"
-			cp -r "${validators_dir}/.akash0/data" ./
+			valjson=$(cat "$valdir/validator.json")
+			if [[ $cnt -gt 0 ]]; then
+				if [[ $($semver compare "$akashversion" v1.0.0-rc0) -ge 0 ]]; then
+					$AKASH tx staking create-validator "$valjson" --home="$rvaldir" --from="validator$cnt" --yes
+				else
+					$AKASH tx staking create-validator \
+						--home="$rvaldir" \
+						--moniker="$(jq -rc '.moniker' <<<"$valjson")" \
+						--amount="$(jq -rc '.amount' <<<"$valjson")" \
+						--min-self-delegation="$(jq -rc '."min-self-delegation"' <<<"$valjson")" \
+						--commission-max-change-rate="$(jq -rc '."commission-max-change-rate"' <<<"$valjson")" \
+						--commission-max-rate="$(jq -rc '."commission-max-rate"' <<<"$valjson")" \
+						--commission-rate="$(jq -rc '."commission-rate"' <<<"$valjson")" \
+						--pubkey="$($AKASH tendermint show-validator --home="$valdir")" \
+						--from="validator$cnt" \
+						--yes
+				fi
+			fi
+			((cnt++)) || true
 
-			echo "$state" > data/priv_validator_state.json
-			popd
-		fi
+			if [[ $cnt -eq $MAX_VALIDATORS ]]; then
+				break
+			fi
+		done
 
-		((cnt++)) || true
-	done
+		sleep 10
+
+		kill -SIGINT $rpid
+		wait $rpid
+
+		echo "copying testnetified state to remaining validators"
+		cnt=0
+
+		local srcval
+		srcval="${validators_dir}/.akash0"
+
+		for val in $(jq -c '.validators[]' <<<"$config"); do
+			local valdir
+
+			valdir=$validators_dir/.akash${cnt}
+
+			if [[ $cnt -gt 0 ]]; then
+				pushd "$(pwd)"
+
+				cd "${valdir}"
+
+				rm -f "config/genesis.json"
+
+				cp -r "$srcval/config/genesis.json" "config/genesis.json"
+
+				local state
+				state=$(cat data/priv_validator_state.json)
+
+				rm -rf "data"
+				cp -r "$srcval/data" ./
+
+				echo "$state" > data/priv_validator_state.json
+				popd
+			fi
+
+			((cnt++)) || true
+		done
+	fi
 }
 
 function clean() {
@@ -508,6 +635,14 @@ function clean() {
 		rm -rf "$valdir"/data/*
 		rm -rf "$cosmovisor_dir/current"
 		rm -rf "$cosmovisor_dir/upgrades/${UPGRADE_TO}/upgrade-info.json"
+
+		pushd "$(pwd)"
+
+		cd "$cosmovisor_dir"
+
+		ln -snf genesis current
+
+		popd
 
 		((cnt++)) || true
 	done

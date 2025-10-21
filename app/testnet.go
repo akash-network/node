@@ -26,13 +26,20 @@ import (
 	utypes "pkg.akt.dev/node/upgrades/types"
 )
 
+type TestnetDelegation struct {
+	Address sdk.AccAddress `json:"address"`
+	Amount  sdk.Coin       `json:"amount"`
+}
+
 type TestnetValidator struct {
 	OperatorAddress   sdk.Address
 	ConsensusAddress  sdk.ConsAddress
 	ConsensusPubKey   *types.Any
+	Status            stakingtypes.BondStatus
 	Moniker           string
 	Commission        stakingtypes.Commission
 	MinSelfDelegation sdkmath.Int
+	Delegations       []TestnetDelegation
 }
 
 type TestnetGov struct {
@@ -44,8 +51,13 @@ type TestnetUpgrade struct {
 	Name string
 }
 
+type TestnetAccount struct {
+	Address  sdk.AccAddress `json:"address"`
+	Balances []sdk.Coin     `json:"balances"`
+}
+
 type TestnetConfig struct {
-	Accounts   []sdk.AccAddress
+	Accounts   []TestnetAccount
 	Validators []TestnetValidator
 	Gov        TestnetGov
 	Upgrade    TestnetUpgrade
@@ -81,14 +93,14 @@ func InitAkashAppForTestnet(
 	stakingStore := ctx.KVStore(stakingKey)
 	iterator, err := app.Keepers.Cosmos.Staking.ValidatorsPowerStoreIterator(ctx)
 	if err != nil {
-		return nil
+		panic(err.Error())
 	}
 	for ; iterator.Valid(); iterator.Next() {
 		stakingStore.Delete(iterator.Key())
 	}
 	_ = iterator.Close()
 
-	// Remove all validators from last validators store
+	// Remove all validators from the last validators store
 	iterator, err = app.Keepers.Cosmos.Staking.LastValidatorsIterator(ctx)
 	if err != nil {
 		return nil
@@ -98,7 +110,7 @@ func InitAkashAppForTestnet(
 	}
 	_ = iterator.Close()
 
-	// Remove all validators from validator store
+	// Remove all validators from the validator store
 	iterator = storetypes.KVStorePrefixIterator(stakingStore, stakingtypes.ValidatorsKey)
 	for ; iterator.Valid(); iterator.Next() {
 		stakingStore.Delete(iterator.Key())
@@ -112,14 +124,29 @@ func InitAkashAppForTestnet(
 	}
 	_ = iterator.Close()
 
+	// BANK
+	//
+
+	// Fund localakash accounts
+	for _, account := range tcfg.Accounts {
+		err := app.Keepers.Cosmos.Bank.MintCoins(ctx, minttypes.ModuleName, account.Balances)
+		if err != nil {
+			panic(err.Error())
+		}
+		err = app.Keepers.Cosmos.Bank.SendCoinsFromModuleToAccount(ctx, minttypes.ModuleName, account.Address, account.Balances)
+		if err != nil {
+			panic(err.Error())
+		}
+	}
+
 	for _, val := range tcfg.Validators {
 		_, bz, err := bech32.DecodeAndConvert(val.OperatorAddress.String())
 		if err != nil {
-			return nil
+			panic(err.Error())
 		}
 		bech32Addr, err := bech32.ConvertAndEncode("akashvaloper", bz)
 		if err != nil {
-			return nil
+			panic(err.Error())
 		}
 
 		// Create Validator struct for our new validator.
@@ -128,41 +155,35 @@ func InitAkashAppForTestnet(
 			ConsensusPubkey: val.ConsensusPubKey,
 			Jailed:          false,
 			Status:          stakingtypes.Bonded,
-			Tokens:          sdkmath.NewInt(900000000000000),
-			DelegatorShares: sdkmath.LegacyMustNewDecFromStr("10000000"),
+			Tokens:          sdkmath.NewInt(0),
+			DelegatorShares: sdkmath.LegacyMustNewDecFromStr("0"),
 			Description: stakingtypes.Description{
-				Moniker: "Testnet Validator",
+				Moniker: val.Moniker,
 			},
-			Commission: stakingtypes.Commission{
-				CommissionRates: stakingtypes.CommissionRates{
-					Rate:          sdkmath.LegacyMustNewDecFromStr("0.05"),
-					MaxRate:       sdkmath.LegacyMustNewDecFromStr("0.1"),
-					MaxChangeRate: sdkmath.LegacyMustNewDecFromStr("0.05"),
-				},
-			},
-			MinSelfDelegation: sdkmath.OneInt(),
+			Commission:        val.Commission,
+			MinSelfDelegation: val.MinSelfDelegation,
 		}
 
 		// Add our validator to power and last validators store
 		err = app.Keepers.Cosmos.Staking.SetValidator(ctx, newVal)
 		if err != nil {
-			return nil
+			panic(err.Error())
 		}
 		err = app.Keepers.Cosmos.Staking.SetValidatorByConsAddr(ctx, newVal)
 		if err != nil {
-			return nil
+			panic(err.Error())
 		}
 		err = app.Keepers.Cosmos.Staking.SetValidatorByPowerIndex(ctx, newVal)
 		if err != nil {
-			return nil
+			panic(err.Error())
 		}
 		valAddr, err := sdk.ValAddressFromBech32(newVal.GetOperator())
 		if err != nil {
-			return nil
+			panic(err.Error())
 		}
 		err = app.Keepers.Cosmos.Staking.SetLastValidatorPower(ctx, valAddr, 0)
 		if err != nil {
-			return nil
+			panic(err.Error())
 		}
 		if err := app.Keepers.Cosmos.Staking.Hooks().AfterValidatorCreated(ctx, valAddr); err != nil {
 			panic(err)
@@ -174,23 +195,23 @@ func InitAkashAppForTestnet(
 		// Initialize records for this validator across all distribution stores
 		valAddr, err = sdk.ValAddressFromBech32(newVal.GetOperator())
 		if err != nil {
-			return nil
+			panic(err.Error())
 		}
 		err = app.Keepers.Cosmos.Distr.SetValidatorHistoricalRewards(ctx, valAddr, 0, distrtypes.NewValidatorHistoricalRewards(sdk.DecCoins{}, 1))
 		if err != nil {
-			return nil
+			panic(err.Error())
 		}
 		err = app.Keepers.Cosmos.Distr.SetValidatorCurrentRewards(ctx, valAddr, distrtypes.NewValidatorCurrentRewards(sdk.DecCoins{}, 1))
 		if err != nil {
-			return nil
+			panic(err.Error())
 		}
 		err = app.Keepers.Cosmos.Distr.SetValidatorAccumulatedCommission(ctx, valAddr, distrtypes.InitialValidatorAccumulatedCommission())
 		if err != nil {
-			return nil
+			panic(err.Error())
 		}
 		err = app.Keepers.Cosmos.Distr.SetValidatorOutstandingRewards(ctx, valAddr, distrtypes.ValidatorOutstandingRewards{Rewards: sdk.DecCoins{}})
 		if err != nil {
-			return nil
+			panic(err.Error())
 		}
 
 		// SLASHING
@@ -205,7 +226,19 @@ func InitAkashAppForTestnet(
 		}
 		err = app.Keepers.Cosmos.Slashing.SetValidatorSigningInfo(ctx, newConsAddr, newValidatorSigningInfo)
 		if err != nil {
-			return nil
+			panic(err.Error())
+		}
+
+		for _, del := range val.Delegations {
+			vl, err := app.Keepers.Cosmos.Staking.GetValidator(ctx, valAddr)
+			if err != nil {
+				panic(err.Error())
+			}
+
+			_, err = app.Keepers.Cosmos.Staking.Delegate(ctx, del.Address, del.Amount.Amount, stakingtypes.Unbonded, vl, true)
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
 	//
@@ -217,7 +250,7 @@ func InitAkashAppForTestnet(
 
 	govParams, err := app.Keepers.Cosmos.Gov.Params.Get(ctx)
 	if err != nil {
-		return nil
+		panic(err.Error())
 	}
 	govParams.ExpeditedVotingPeriod = &tcfg.Gov.ExpeditedVotePeriod
 	govParams.VotingPeriod = &tcfg.Gov.VotePeriod
@@ -226,27 +259,7 @@ func InitAkashAppForTestnet(
 
 	err = app.Keepers.Cosmos.Gov.Params.Set(ctx, govParams)
 	if err != nil {
-		return nil
-	}
-
-	// BANK
-	//
-
-	defaultCoins := sdk.NewCoins(
-		sdk.NewInt64Coin("uakt", 1000000000000),
-		sdk.NewInt64Coin("ibc/12C6A0C374171B595A0A9E18B83FA09D295FB1F2D8C6DAA3AC28683471752D84", 1000000000000), // axlUSDC
-	)
-
-	// Fund localakash accounts
-	for _, account := range tcfg.Accounts {
-		err := app.Keepers.Cosmos.Bank.MintCoins(ctx, minttypes.ModuleName, defaultCoins)
-		if err != nil {
-			return nil
-		}
-		err = app.Keepers.Cosmos.Bank.SendCoinsFromModuleToAccount(ctx, minttypes.ModuleName, account, defaultCoins)
-		if err != nil {
-			return nil
-		}
+		panic(err.Error())
 	}
 
 	// UPGRADE

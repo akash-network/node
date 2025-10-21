@@ -254,7 +254,10 @@ func (app *AkashApp) prepForZeroHeightGenesis(ctx sdk.Context, jailAllowedAddrs 
 
 	_ = iter.Close()
 
-	_, _ = app.Keepers.Cosmos.Staking.ApplyAndReturnValidatorSetUpdates(ctx)
+	_, err = app.Keepers.Cosmos.Staking.ApplyAndReturnValidatorSetUpdates(ctx)
+	if err != nil {
+		panic(err)
+	}
 
 	/* Handle slashing state. */
 

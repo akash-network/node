@@ -42,7 +42,7 @@
         },
         "v1.0.0": {
             "skipped": false,
-            "from_binary": "v0.38.5-rc3",
+            "from_binary": "v0.38.6-rc2",
             "from_version": "v0.38.0"
         }
     }

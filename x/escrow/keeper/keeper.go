@@ -217,6 +217,10 @@ func (k *keeper) AuthorizeDeposits(sctx sdk.Context, msg sdk.Msg) ([]etypes.Depo
 				}
 
 				spendableAmount := depositAuthz.GetSpendLimit()
+				if spendableAmount.IsZero() {
+					return false
+				}
+
 				requestedSpend := sdk.NewCoin(denom, remainder)
 
 				// bc authz.Accepts take sdk.Msg as an argument, the deposit amount from incoming message
