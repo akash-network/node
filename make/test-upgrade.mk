@@ -21,7 +21,7 @@ UPGRADE_FROM            := $(shell cat $(ROOT_DIR)/meta.json | jq -r --arg name 
 GENESIS_BINARY_VERSION  := $(shell cat $(ROOT_DIR)/meta.json | jq -r --arg name $(UPGRADE_TO) '.upgrades[$$name].from_binary' | tr -d '\n')
 UPGRADE_BINARY_VERSION  ?= local
 
-SNAPSHOT_SOURCE         ?= sandbox
+SNAPSHOT_SOURCE         ?= sandbox1
 
 ifeq ($(SNAPSHOT_SOURCE),mainnet)
 	SNAPSHOT_NETWORK    := akashnet-2
