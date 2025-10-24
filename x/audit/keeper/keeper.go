@@ -66,13 +66,14 @@ func (k Keeper) GetProviderAttributes(ctx sdk.Context, id sdk.Address) (types.Au
 
 	var res types.AuditedProviders
 
-	iter := storetypes.KVStorePrefixIterator(store, ProviderPrefix(id))
+	prefix := ProviderPrefix(id)
+	iter := storetypes.KVStorePrefixIterator(store, prefix)
 	defer func() {
 		_ = iter.Close()
 	}()
 
 	for ; iter.Valid(); iter.Next() {
-		aID := ParseIDFromKey(iter.Key())
+		aID := ParseIDFromKey(append(prefix, iter.Key()...))
 
 		var sVal types.AuditedAttributesStore
 		k.cdc.MustUnmarshal(iter.Value(), &sVal)
