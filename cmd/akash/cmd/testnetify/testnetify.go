@@ -2,6 +2,7 @@ package testnetify
 
 import (
 	"bufio"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/flags"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/spf13/cobra"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 
@@ -29,6 +31,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keys/ed25519"
 	sdksrv "github.com/cosmos/cosmos-sdk/server"
 	"github.com/cosmos/cosmos-sdk/server/types"
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
 
 	akash "github.com/akash-network/node/app"
 )
@@ -112,6 +115,17 @@ you want to test the upgrade handler itself.
 
 			if err = json.Unmarshal(cfgData, &cfg); err != nil {
 				return err
+			}
+
+			for i, acc := range cfg.Accounts {
+				if len(acc.Balances) > 0 {
+					cfg.Accounts[i].Balances = sdk.NewCoins(acc.Balances...)
+				} else {
+					cfg.Accounts[i].Balances = sdk.NewCoins(
+						sdk.NewInt64Coin("uakt", 10000000000000),
+						sdk.NewInt64Coin("ibc/12C6A0C374171B595A0A9E18B83FA09D295FB1F2D8C6DAA3AC28683471752D84", 1000000000000), // axlUSDC
+					)
+				}
 			}
 
 			sctx.Logger.Info(fmt.Sprintf("loaded config from %s", cfgFilePath))
@@ -296,7 +310,7 @@ func testnetify(sctx *sdksrv.Context, tcfg TestnetConfig, testnetAppCreator type
 		return nil, node.ErrSaveGenesisDocHash{Err: err}
 	}
 
-	state, stateStore, _, err := node.LoadStateFromDBOrGenesisDocProvider(stateDB, genDocProvider, "")
+	state, stateStore, _, err := node.LoadStateFromDBOrGenesisDocProvider(stateDB, genDocProvider, hex.EncodeToString(updatedChecksum))
 	if err != nil {
 		return nil, err
 	}
@@ -346,6 +360,8 @@ func testnetify(sctx *sdksrv.Context, tcfg TestnetConfig, testnetAppCreator type
 			Moniker:           val.Moniker,
 			Commission:        val.Commission,
 			MinSelfDelegation: val.MinSelfDelegation,
+			Status:            val.Status,
+			Delegations:       val.Delegations,
 		})
 
 		tcfg.Validators[i].privValidator = privValidator
@@ -447,15 +463,20 @@ func testnetify(sctx *sdksrv.Context, tcfg TestnetConfig, testnetAppCreator type
 			Signature:        voteProto.Signature,
 		})
 
+		var vp int64
+
+		for _, del := range val.Delegations {
+			vp += del.Amount.Amount.Quo(sdktypes.DefaultPowerReduction).Int64()
+		}
 		newValidators = append(newValidators, &cmttypes.Validator{
 			Address:     val.validatorAddress,
 			PubKey:      val.pubKey,
-			VotingPower: 900000000000000,
+			VotingPower: vp,
 		})
 	}
 
 	// Replace all valSets in state to be the valSet with just our validator.
-	// and set the very first validator as proposer
+	// and set the very first validator as a proposer
 	newValSet := &cmttypes.ValidatorSet{
 		Validators: newValidators,
 		Proposer:   newValidators[0],

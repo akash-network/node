@@ -41,12 +41,13 @@ type ConsAddress struct {
 }
 
 type TestnetValidator struct {
-	Moniker           string                  `json:"moniker"`
-	Operator          AccAddress              `json:"operator"`
-	Bonded            bool                    `json:"bonded"`
-	Commission        stakingtypes.Commission `json:"commission"`
-	MinSelfDelegation sdk.Int                 `json:"min_self_delegation"`
-	Home              string                  `json:"home"`
+	Moniker           string                    `json:"moniker"`
+	Operator          AccAddress                `json:"operator"`
+	Status            stakingtypes.BondStatus   `json:"status"`
+	Commission        stakingtypes.Commission   `json:"commission"`
+	MinSelfDelegation sdk.Int                   `json:"min_self_delegation"`
+	Home              string                    `json:"home"`
+	Delegations       []akash.TestnetDelegation `json:"delegations"`
 
 	privValidator    *pvm.FilePV
 	pubKey           crypto.PubKey
@@ -59,7 +60,7 @@ type TestnetValidators []TestnetValidator
 type TestnetConfig struct {
 	ChainID    string                 `json:"chain_id"`
 	Validators TestnetValidators      `json:"validators"`
-	Accounts   []sdk.AccAddress       `json:"accounts"`
+	Accounts   []akash.TestnetAccount `json:"accounts"`
 	Gov        akash.TestnetGovConfig `json:"gov"`
 	upgrade    akash.TestnetUpgrade
 }
