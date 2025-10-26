@@ -8,11 +8,10 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	abci "github.com/tendermint/tendermint/abci/types"
 
-	"github.com/akash-network/node/x/cert/keeper"
+	"pkg.akt.dev/node/x/cert/keeper"
 
-	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+	types "pkg.akt.dev/go/node/cert/v1"
 )
 
 // ValidateGenesis does validation check of the Genesis and returns error in case of failure
@@ -27,7 +26,7 @@ func ValidateGenesis(data *types.GenesisState) error {
 }
 
 // InitGenesis initiate genesis state and return updated validator details
-func InitGenesis(ctx sdk.Context, kpr keeper.Keeper, data *types.GenesisState) []abci.ValidatorUpdate {
+func InitGenesis(ctx sdk.Context, kpr keeper.Keeper, data *types.GenesisState) {
 	store := ctx.KVStore(kpr.StoreKey())
 	cdc := kpr.Codec()
 
@@ -53,8 +52,6 @@ func InitGenesis(ctx sdk.Context, kpr keeper.Keeper, data *types.GenesisState) [
 
 		store.Set(key, cdc.MustMarshal(&record.Certificate))
 	}
-
-	return []abci.ValidatorUpdate{}
 }
 
 // ExportGenesis returns genesis state as raw bytes for the provider module

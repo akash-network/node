@@ -1,7 +1,7 @@
 ---
 version: 2
 project_name: node
-dist: ./.cache/goreleaser
+dist: ./.cache/goreleaser/main
 env:
   - GO111MODULE=on
   - CGO_ENABLED=1
@@ -89,7 +89,7 @@ universal_binaries:
     name_template: "akash"
 archives:
   - id: w/version
-    builds:
+    ids:
       - akash-darwin-universal
       - akash-linux-amd64
       - akash-linux-arm64
@@ -100,7 +100,7 @@ archives:
     files:
       - none*
   - id: wo/version
-    builds:
+    ids:
       - akash-darwin-universal
       - akash-linux-amd64
       - akash-linux-arm64
@@ -125,14 +125,14 @@ dockers:
       - --platform=linux/amd64
       - --label=org.opencontainers.image.title={{ .ProjectName }}
       - --label=org.opencontainers.image.description={{ .ProjectName }}
-      - --label=org.opencontainers.image.url={{.GitURL}}
-      - --label=org.opencontainers.image.source={{.GitURL}}
-      - --label=org.opencontainers.image.version={{ .Version }}
+      - --label=org.opencontainers.image.url={{ .GitURL }}
+      - --label=org.opencontainers.image.source={{ .GitURL }}
+      - --label=org.opencontainers.image.version={{ replace .Version "+" "-" }}
       - --label=org.opencontainers.image.created={{ time "2006-01-02T15:04:05Z07:00" }}
       - --label=org.opencontainers.image.revision={{ .FullCommit }}
     image_templates:
       - '{{ .Env.DOCKER_IMAGE }}:{{ .ShortCommit }}-amd64'
-      - '{{ .Env.DOCKER_IMAGE }}:{{ .Version }}-amd64'
+      - '{{ .Env.DOCKER_IMAGE }}:{{ replace .Version "+" "-" }}-amd64'
       - '{{ .Env.DOCKER_IMAGE }}:{{if eq .Env.STABLE "true"}}stable{{else}}latest{{end}}-amd64'
   - dockerfile: _build/Dockerfile.akash
     use: buildx
@@ -142,24 +142,24 @@ dockers:
       - --platform=linux/arm64
       - --label=org.opencontainers.image.title={{ .ProjectName }}
       - --label=org.opencontainers.image.description={{ .ProjectName }}
-      - --label=org.opencontainers.image.url={{.GitURL}}
-      - --label=org.opencontainers.image.source={{.GitURL}}
-      - --label=org.opencontainers.image.version={{ .Version }}
+      - --label=org.opencontainers.image.url={{ .GitURL }}
+      - --label=org.opencontainers.image.source={{ .GitURL }}
+      - --label=org.opencontainers.image.version={{ replace .Version "+" "-" }}
       - --label=org.opencontainers.image.created={{ time "2006-01-02T15:04:05Z07:00" }}
       - --label=org.opencontainers.image.revision={{ .FullCommit }}
     image_templates:
       - '{{ .Env.DOCKER_IMAGE }}:{{ .ShortCommit }}-arm64'
-      - '{{ .Env.DOCKER_IMAGE }}:{{ .Version }}-arm64'
+      - '{{ .Env.DOCKER_IMAGE }}:{{ replace .Version "+" "-" }}-arm64'
       - '{{ .Env.DOCKER_IMAGE }}:{{if eq .Env.STABLE "true"}}stable{{else}}latest{{end}}-arm64'
 docker_manifests:
   - name_template: "{{ .Env.DOCKER_IMAGE }}:{{ .ShortCommit }}"
     image_templates:
-      - "{{ .Env.DOCKER_IMAGE }}:{{ .ShortCommit }}-amd64"
-      - "{{ .Env.DOCKER_IMAGE }}:{{ .ShortCommit }}-arm64"
-  - name_template: "{{ .Env.DOCKER_IMAGE }}:{{ .Version }}"
+      - '{{ .Env.DOCKER_IMAGE }}:{{ .ShortCommit }}-amd64'
+      - '{{ .Env.DOCKER_IMAGE }}:{{ .ShortCommit }}-arm64'
+  - name_template: '{{ .Env.DOCKER_IMAGE }}:{{ replace .Version "+" "-" }}'
     image_templates:
-      - "{{ .Env.DOCKER_IMAGE }}:{{ .Version }}-amd64"
-      - "{{ .Env.DOCKER_IMAGE }}:{{ .Version }}-arm64"
+      - '{{ .Env.DOCKER_IMAGE }}:{{ replace .Version "+" "-" }}-amd64'
+      - '{{ .Env.DOCKER_IMAGE }}:{{ replace .Version "+" "-" }}-arm64'
   - name_template: "{{ .Env.DOCKER_IMAGE }}:latest"
     image_templates:
       - "{{ .Env.DOCKER_IMAGE }}:latest-amd64"

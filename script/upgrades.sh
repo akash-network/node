@@ -17,13 +17,13 @@ Options:
   -h, --help             Print this help message.
 Commands:
   test-required  Determine if latest present upgrade needed test run.
-                 Conditions to run test:
-                  - If current reference matches last upgrade in a codebase
-                  - If the codebase has tag matching to the upgrade name, but release is marked as revoked
-                  - If the codebase does not have tag matching upgrade name
-                 Exit codes:
-                  - 0 test required
-                  - 1 something went wrong. check stderr"
+				 Conditions to run test:
+				  - If current reference matches last upgrade in a codebase
+				  - If the codebase has tag matching to the upgrade name, but release is marked as revoked
+				  - If the codebase does not have tag matching upgrade name
+				 Exit codes:
+				  - 0 test required
+				  - 1 something went wrong. check stderr"
 
 echoerr() { echo "$@" 1>&2; }
 
@@ -33,9 +33,13 @@ WORKDIR=${UTEST_WORKDIR:=}
 UPGRADE_FROM=${UTEST_UPGRADE_FROM:=}
 UPGRADE_TO=${UTEST_UPGRADE_TO:=}
 CONFIG_FILE=${UTEST_CONFIG_FILE:=}
+CHAIN_METADATA_URL=https://raw.githubusercontent.com/akash-network/net/master/mainnet/meta.json
+SNAPSHOT_URL=https://snapshots.akash.network/akashnet-2/latest
+STATE_CONFIG=
+MAX_VALIDATORS=1
 
 short_opts=h
-long_opts=help/workdir:/ufrom:/uto:/gbv:/config: # those who take an arg END with :
+long_opts=help/workdir:/ufrom:/uto:/gbv:/config:/chain-meta:/snapshot-url:/state-config:/max-validators: # those who take an arg END with :
 
 while getopts ":$short_opts-:" o; do
 	case $o in
@@ -96,6 +100,7 @@ while getopts ":$short_opts-:" o; do
 			WORKDIR=$OPTARG
 			;;
 		ufrom)
+			# shellcheck disable=SC2034
 			UPGRADE_FROM=$OPTARG
 			;;
 		uto)
@@ -107,11 +112,72 @@ while getopts ":$short_opts-:" o; do
 		config)
 			CONFIG_FILE=$OPTARG
 			;;
+		chain-meta)
+			CHAIN_METADATA_URL=$OPTARG
+			;;
+		snapshot-url)
+			SNAPSHOT_URL=$OPTARG
+			;;
+		state-config)
+			STATE_CONFIG=$OPTARG
+			;;
+		max-validators)
+			MAX_VALIDATORS=$OPTARG
+			;;
 	esac
 done
 shift "$((OPTIND - 1))"
 
-GENESIS_ORIG=${UTEST_GENESIS_ORIGIN:=https://github.com/akash-network/testnetify/releases/download/${UPGRADE_FROM}/genesis.json.tar.lz4}
+CHAIN_METADATA=$(curl -s "${CHAIN_METADATA_URL}")
+GENESIS_URL="$(echo "$CHAIN_METADATA" | jq -r '.codebase.genesis.genesis_url? // .genesis?')"
+
+# Stack-based trap management
+trap_add() {
+	local sig="$1"
+	shift
+	local new_cmd="$*"
+
+	if [ -z "$sig" ] || [ -z "$new_cmd" ]; then
+		echo "Usage: trap_add SIGNAL COMMAND" >&2
+		return 1
+	fi
+
+	# Get existing trap command for this signal
+	local existing_cmd
+	existing_cmd=$(trap -p "$sig" 2>/dev/null | sed -n "s/^trap -- '\(.*\)' ${sig}$/\1/p")
+
+	# Build the new trap command
+	if [ -n "$existing_cmd" ]; then
+		# Append to existing trap
+		# shellcheck disable=SC2064
+		trap "${existing_cmd}; ${new_cmd}" "$sig"
+	else
+		# Create new trap
+		# shellcheck disable=SC2064
+		trap "$new_cmd" "$sig"
+	fi
+}
+
+# Optional: Function to show current trap stack
+trap_show() {
+	local sig="$1"
+	if [ -z "$sig" ]; then
+		trap -p
+	else
+		trap -p "$sig"
+	fi
+}
+
+function cleanup() {
+	jb=$(jobs -p)
+
+	if [[ "$jb" != "" ]]; then
+		# shellcheck disable=SC2086
+		kill $jb
+	fi
+}
+
+trap_add EXIT 'cleanup'
 
 pushd() {
 	command pushd "$@" >/dev/null
@@ -121,7 +187,7 @@ popd() {
 	command popd >/dev/null
 }
 
-function content_type() {
+function tar_by_content_type() {
 	case "$1" in
 		*.tar.cz*)
 			tar_cmd="tar -xJ -"
@@ -137,6 +203,25 @@ function content_type() {
 			;;
 		*)
 			tar_cmd="tar xf -"
+			;;
+	esac
+
+	echo "$tar_cmd"
+}
+
+function content_type() {
+	case "$1" in
+		*.tar.cz*)
+			tar_cmd="tar.cz"
+			;;
+		*.tar.gz*)
+			tar_cmd="tar.gz"
+			;;
+		*.tar.lz4*)
+			tar_cmd="tar.lz4"
+			;;
+		*.tar.zst*)
+			tar_cmd="tar.zst"
 			;;
 	esac
 
@@ -159,7 +244,17 @@ function content_size() {
 }
 
 function content_name() {
-	name=$(wget "$1" --spider --server-response -O - 2>&1 | grep "Content-Disposition:" | tail -1 | awk -F"filename=" '{print $2}')
+	name=$(wget "$1" --spider --server-response -O - 2>&1 | grep -i "content-disposition" | awk -F"filename=" '{print $2}')
+	# shellcheck disable=SC2181
+	if [[ "$name" == "" ]]; then
+		echo "$1"
+	else
+		echo "$name"
+	fi
+}
+
+function content_location() {
+	name=$(wget "$1" --spider --server-response -O - 2>&1 | grep -i -m 1 "Location:" | awk '{print $2}' | tr -d '\n')
 	# shellcheck disable=SC2181
 	if [[ "$name" == "" ]]; then
 		echo "$1"
@@ -213,7 +308,7 @@ function build_bins() {
 	if [[ $GOOS == "darwin" ]]; then
 		archive="${archive}_darwin_all"
 	else
-		archive="${archive}_linux_$(uname_arch)"
+		archive="${archive}_linux_$GOARCH"
 	fi
 
 	unzip -o "${AKASH_DEVCACHE}/goreleaser/test-bins/${archive}.zip" -d "$upgrade_bin"
@@ -235,6 +330,8 @@ function init() {
 	local validators_dir=${WORKDIR}/validators
 
 	mkdir -p "${WORKDIR}/validators/logs"
+
+	snapshot_file=${validators_dir}/snapshot
 
 	for val in $(jq -c '.validators[]' <<<"$config"); do
 		local valdir
@@ -258,48 +355,19 @@ function init() {
 			cp "$validators_dir/.akash0/cosmovisor/upgrades/$UPGRADE_TO/bin/akash" "$upgrade_bin/akash"
 		fi
 
+		pushd "$(pwd)"
+		cd "$cosmovisor_dir"
+		ln -snf genesis current
+		popd
+
 		AKASH=$genesis_bin/akash
+
+		genesis_file=${valdir}/config/genesis.json
+		rm -f "$genesis_file"
 
 		$AKASH init --home "$valdir" "$(jq -rc '.moniker' <<<"$val")" >/dev/null 2>&1
 
-		if [[ $cnt -eq 0 ]]; then
-			pushd "$(pwd)"
-			cd "$valdir/config"
-
-			if [[ "${GENESIS_ORIG}" =~ ^https?:\/\/.* ]]; then
-				echo "Downloading genesis from $GENESIS_ORIG"
-
-				pv_args="-petrafb -i 5"
-				sz=$(content_size "$GENESIS_ORIG")
-				# shellcheck disable=SC2181
-				if [ $? -eq 0 ]; then
-					if [[ -n $sz ]]; then
-						pv_args+=" -s $sz"
-					fi
-
-					tar_cmd=$(content_type "$(content_name "$GENESIS_ORIG")")
-
-					# shellcheck disable=SC2086
-					wget -nv -O - "$GENESIS_ORIG" | pv $pv_args | eval "$tar_cmd"
-				else
-					echo "unable to download genesis"
-				fi
-			else
-				echo "Unpacking genesis from $GENESIS_ORIG"
-				tar_cmd=$(content_type "$GENESIS_ORIG")
-				# shellcheck disable=SC2086
-				(pv -petrafb -i 5 "$GENESIS_ORIG" | eval "$tar_cmd") 2>&1 | stdbuf -o0 tr '\r' '\n'
-			fi
-
-			popd
-
-			jq -c '.mnemonics[]' <<<"$config" | while read -r mnemonic; do
-				jq -c '.keys[]' <<<"$mnemonic" | while read -r key; do
-					jq -rc '.phrase' <<<"$mnemonic" | $AKASH --home="$valdir" --keyring-backend=test keys add "$(jq -rc '.name' <<<"$key")" --recover --index "$(jq -rc '.index' <<<"$key")"
-				done
-			done
-
-			cat >"$valdir/.envrc" <<EOL
+		cat >"$valdir/.envrc" <<EOL
 PATH_add "\$(pwd)/cosmovisor/current/bin"
 AKASH_HOME="\$(pwd)"
 AKASH_FROM=validator0
@@ -320,21 +388,228 @@ export AKASH_KEYRING_BACKEND
 export AKASH_SIGN_MODE
 EOL
 
-		else
-			pushd "$(pwd)"
+		cat >"$valdir/validator.json" <<EOL
+{
+	"pubkey": $($AKASH --home="$valdir" tendermint show-validator),
+	"amount": "1000000uakt",
+	"moniker": "$(jq -rc '.moniker' <<<"$val")",
+	"commission-rate": "0.1",
+	"commission-max-rate": "0.2",
+	"commission-max-change-rate": "0.01",
+	"min-self-delegation": "1"
+}
+EOL
 
-			cd "$valdir/config"
-
-			ln -snf "../../.akash0/config/genesis.json" "genesis.json"
-
-			popd
-		fi
-
+		echo "$val"
 		jq -r '.keys.priv' <<<"$val" >"$valdir/config/priv_validator_key.json"
 		jq -r '.keys.node' <<<"$val" >"$valdir/config/node_key.json"
 
 		((cnt++)) || true
 	done
+
+	import_keys
+	prepare_state
+}
+
+function prepare_state() {
+	if [[ -z "${WORKDIR}" ]]; then
+		echo "workdir is not set"
+		echo -e "$USAGE"
+		exit 1
+	fi
+
+	local config
+	config=$(cat "$CONFIG_FILE")
+
+	local cnt=0
+	local validators_dir=${WORKDIR}/validators
+
+	mkdir -p "${WORKDIR}/validators/logs"
+
+	snapshot_file=${validators_dir}/snapshot
+
+	for val in $(jq -c '.validators[]' <<<"$config"); do
+		local valdir
+		local cosmovisor_dir
+		local genesis_bin
+		local upgrade_bin
+
+		valdir=$validators_dir/.akash${cnt}
+		cosmovisor_dir=$valdir/cosmovisor
+		genesis_bin=$cosmovisor_dir/genesis/bin
+
+		genesis_file=${valdir}/config/genesis.json
+		addrbook_file=${valdir}/config/genesis.json
+		rm -f "$genesis_file"
+		rm -f "$addrbook_file"
+
+		if [[ $cnt -eq 0 ]]; then
+			if [[ "${GENESIS_URL}" =~ ^https?:\/\/.* ]]; then
+				echo "Downloading genesis from ${GENESIS_URL}"
+
+				pv_args="-petrafb -i 5"
+				sz=$(content_size "${GENESIS_URL}")
+				# shellcheck disable=SC2181
+				if [ $? -eq 0 ]; then
+					if [[ -n $sz ]]; then
+						pv_args+=" -s $sz"
+					fi
+
+					tar_cmd=$(content_type "$(content_name "${GENESIS_URL}")")
+
+					if [ "$tar_cmd" != "" ]; then
+						# shellcheck disable=SC2086
+						wget -q -O - "${GENESIS_URL}" | pv $pv_args | eval "$tar_cmd"
+					else
+						wget -q --show-progress -O "$genesis_file" "${GENESIS_URL}"
+					fi
+				else
+					echo "unable to download genesis"
+				fi
+			else
+				echo "Unpacking genesis from ${GENESIS_URL}"
+				tar_cmd=$(content_type "${GENESIS_URL}")
+				# shellcheck disable=SC2086
+				(pv -petrafb -i 5 "${GENESIS_URL}" | eval "$tar_cmd") 2>&1 | stdbuf -o0 tr '\r' '\n'
+			fi
+
+			if ! ls "${snapshot_file}"* 1> /dev/null 2>&1; then
+				file_url=$(content_location "$SNAPSHOT_URL")
+				content_ext=$(content_type "$file_url")
+
+				sfile="${snapshot_file}.${content_ext}"
+
+				echo "Downloading snapshot to [$sfile] from $file_url..."
+
+				wget --show-progress -q -O "$sfile" "$file_url"
+			fi
+
+			snap_file=${validators_dir}/$(find "$validators_dir" -name "snapshot.*" -type f -exec basename {} \;)
+			tar_cmd=$(tar_by_content_type "$snap_file")
+
+			pushd "$(pwd)"
+			mkdir -p "${valdir}/data"
+			cd "${valdir}/data"
+
+			echo "Unpacking snapshot from $snap_file..."
+
+			# shellcheck disable=SC2086
+			(pv -petrafb -i 5 "$snap_file" | eval "$tar_cmd") 2>&1 | stdbuf -o0 tr '\r' '\n'
+
+			# if snapshot provides data dir then move all things up
+			if [[ -d data ]]; then
+				echo "snapshot has data dir. moving content..."
+				mv data/* ./
+				rm -rf data
+			fi
+
+			rm -f upgrade-info.json
+
+			popd
+		else
+			pushd "$(pwd)"
+			cd "${valdir}"
+
+			mkdir -p "data"
+
+			echo '{"height": "0", "round": 0, "step": 0}' > data/priv_validator_state.json
+
+			popd
+		fi
+
+		((cnt++)) || true
+	done
+
+	local rvaldir
+	local rpid
+	local akashversion
+	local AKASH
+	AKASH=$validators_dir/.akash0/cosmovisor/genesis/bin/akash
+
+	rvaldir=$validators_dir/.akash0
+
+	echo "testnetifying state"
+	$AKASH testnetify --home="$rvaldir" --testnet-rootdir="$validators_dir" --testnet-config="${STATE_CONFIG}" --yes
+
+	if [[ $MAX_VALIDATORS -gt 1 ]]; then
+		echo "starting testnet validator"
+		$AKASH start --home="$rvaldir" >/dev/null 2>&1 & rpid=$!
+
+		akashversion=$($AKASH version)
+
+		sleep 10
+
+		echo "adding remaining validators to the state"
+		cnt=0
+		for val in $(jq -c '.validators[]' <<<"$config"); do
+			local valdir
+			local valjson
+
+			valdir=$validators_dir/.akash${cnt}
+
+			valjson=$(cat "$valdir/validator.json")
+			if [[ $cnt -gt 0 ]]; then
+				if [[ $($semver compare "$akashversion" v1.0.0-rc0) -ge 0 ]]; then
+					$AKASH tx staking create-validator "$valjson" --home="$rvaldir" --from="validator$cnt" --yes
+				else
+					$AKASH tx staking create-validator \
+						--home="$rvaldir" \
+						--moniker="$(jq -rc '.moniker' <<<"$valjson")" \
+						--amount="$(jq -rc '.amount' <<<"$valjson")" \
+						--min-self-delegation="$(jq -rc '."min-self-delegation"' <<<"$valjson")" \
+						--commission-max-change-rate="$(jq -rc '."commission-max-change-rate"' <<<"$valjson")" \
+						--commission-max-rate="$(jq -rc '."commission-max-rate"' <<<"$valjson")" \
+						--commission-rate="$(jq -rc '."commission-rate"' <<<"$valjson")" \
+						--pubkey="$($AKASH tendermint show-validator --home="$valdir")" \
+						--from="validator$cnt" \
+						--yes
+				fi
+			fi
+			((cnt++)) || true
+
+			if [[ $cnt -eq $MAX_VALIDATORS ]]; then
+				break
+			fi
+		done
+
+		sleep 10
+
+		kill -SIGINT $rpid
+		wait $rpid
+
+		echo "copying testnetified state to remaining validators"
+		cnt=0
+
+		local srcval
+		srcval="${validators_dir}/.akash0"
+
+		for val in $(jq -c '.validators[]' <<<"$config"); do
+			local valdir
+
+			valdir=$validators_dir/.akash${cnt}
+
+			if [[ $cnt -gt 0 ]]; then
+				pushd "$(pwd)"
+
+				cd "${valdir}"
+
+				rm -f "config/genesis.json"
+
+				cp -r "$srcval/config/genesis.json" "config/genesis.json"
+
+				local state
+				state=$(cat data/priv_validator_state.json)
+
+				rm -rf "data"
+				cp -r "$srcval/data" ./
+
+				echo "$state" > data/priv_validator_state.json
+				popd
+			fi
+
+			((cnt++)) || true
+		done
+	fi
 }
 
 function clean() {
@@ -360,9 +635,14 @@ function clean() {
 		rm -rf "$valdir"/data/*
 		rm -rf "$cosmovisor_dir/current"
 		rm -rf "$cosmovisor_dir/upgrades/${UPGRADE_TO}/upgrade-info.json"
-		rm -rf "$cosmovisor_dir/upgrades/${UPGRADE_TO}/bin/akash"
 
-		echo '{"height":"0","round": 0,"step": 0}' | jq > "$valdir/data/priv_validator_state.json"
+		pushd "$(pwd)"
+
+		cd "$cosmovisor_dir"
+
+		ln -snf genesis current
+
+		popd
 
 		((cnt++)) || true
 	done
@@ -456,6 +736,10 @@ case "$1" in
 		shift
 		clean
 		;;
+	prepare-state)
+		shift
+		prepare_state
+		;;
 	upgrade-from-release)
 		shift
 		upgrades_dir=${ROOT_DIR}/upgrades/software
@@ -469,7 +753,46 @@ case "$1" in
 		else
 			exit 1
 		fi
+		;;
+	snapshot-source)
+		shift
 
+		curr_ref=$1
+		snapshot_source="sandbox"
+
+		is_valid=$($semver validate "$curr_ref")
+
+		if [[ $is_valid == "valid" ]]; then
+			build=$($semver get build "$curr_ref")
+			if [[ -n $build ]]; then
+				# Split the input by dots, as only dot is allowed in semver build token
+				IFS='.' read -ra PARTS <<< "$build"
+				# Process pairs (key at even index, value at odd index)
+				for ((i=0; i<${#PARTS[@]}; i+=2)); do
+					key="${PARTS[i]}"
+					value="${PARTS[i+1]}"
+
+					# Skip if value is missing
+					if [ -z "$value" ]; then
+						continue
+					fi
+
+					case "$key" in
+						network)
+							snapshot_source=$value
+							;;
+						*)
+							;;
+					esac
+				done
+			fi
+		elif [[ $curr_ref == "mainnet/main" || $curr_ref == "main" ]]; then
+			snapshot_source="mainnet"
+		fi
+
+		echo -n "$snapshot_source"
+
+		exit 0
 		;;
 	test-required)
 		shift

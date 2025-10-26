@@ -3,34 +3,31 @@ package keeper
 import (
 	"sort"
 
+	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	types "github.com/akash-network/akash-api/go/node/audit/v1beta3"
-
-	akashtypes "github.com/akash-network/akash-api/go/node/types/v1beta3"
-	atypes "github.com/akash-network/akash-api/go/node/types/v1beta3"
+	types "pkg.akt.dev/go/node/audit/v1"
+	attrv1 "pkg.akt.dev/go/node/types/attributes/v1"
 )
 
-// TODO: use interfaces for keepers, queriers
 type IKeeper interface {
-	GetProviderByAuditor(ctx sdk.Context, id types.ProviderID) (types.Provider, bool)
-	GetProviderAttributes(ctx sdk.Context, id sdk.Address) (types.Providers, bool)
-	CreateOrUpdateProviderAttributes(ctx sdk.Context, id types.ProviderID, attr akashtypes.Attributes) error
+	GetProviderByAuditor(ctx sdk.Context, id types.ProviderID) (types.AuditedProvider, bool)
+	GetProviderAttributes(ctx sdk.Context, id sdk.Address) (types.AuditedProviders, bool)
+	CreateOrUpdateProviderAttributes(ctx sdk.Context, id types.ProviderID, attr attrv1.Attributes) error
 	DeleteProviderAttributes(ctx sdk.Context, id types.ProviderID, keys []string) error
-	WithProviders(ctx sdk.Context, fn func(types.Provider) bool)
-	WithProvider(ctx sdk.Context, id sdk.Address, fn func(types.Provider) bool)
+	WithProviders(ctx sdk.Context, fn func(types.AuditedProvider) bool)
+	WithProvider(ctx sdk.Context, id sdk.Address, fn func(types.AuditedProvider) bool)
 }
 
 // Keeper of the provider store
 type Keeper struct {
-	skey sdk.StoreKey
+	skey storetypes.StoreKey
 	cdc  codec.BinaryCodec
 }
 
 // NewKeeper creates and returns an instance for Market keeper
-func NewKeeper(cdc codec.BinaryCodec, skey sdk.StoreKey) Keeper {
+func NewKeeper(cdc codec.BinaryCodec, skey storetypes.StoreKey) Keeper {
 	return Keeper{cdc: cdc, skey: skey}
 }
 
@@ -40,65 +37,74 @@ func (k Keeper) Codec() codec.BinaryCodec {
 }
 
 // StoreKey returns store key
-func (k Keeper) StoreKey() sdk.StoreKey {
+func (k Keeper) StoreKey() storetypes.StoreKey {
 	return k.skey
 }
 
 // GetProviderByAuditor returns a provider with given auditor and owner id
-func (k Keeper) GetProviderByAuditor(ctx sdk.Context, id types.ProviderID) (types.Provider, bool) {
+func (k Keeper) GetProviderByAuditor(ctx sdk.Context, id types.ProviderID) (types.AuditedProvider, bool) {
 	store := ctx.KVStore(k.skey)
 
 	buf := store.Get(ProviderKey(id))
 	if buf == nil {
-		return types.Provider{}, false
+		return types.AuditedProvider{}, false
 	}
 
-	var val types.Provider
-	k.cdc.MustUnmarshal(buf, &val)
+	var sVal types.AuditedAttributesStore
+	k.cdc.MustUnmarshal(buf, &sVal)
 
-	return val, true
+	return types.AuditedProvider{
+		Owner:      id.Owner.String(),
+		Auditor:    id.Auditor.String(),
+		Attributes: sVal.Attributes,
+	}, true
 }
 
 // GetProviderAttributes returns a provider with given auditor and owner id's
-func (k Keeper) GetProviderAttributes(ctx sdk.Context, id sdk.Address) (types.Providers, bool) {
+func (k Keeper) GetProviderAttributes(ctx sdk.Context, id sdk.Address) (types.AuditedProviders, bool) {
 	store := ctx.KVStore(k.skey)
 
-	var attr types.Providers
+	var res types.AuditedProviders
 
-	iter := sdk.KVStorePrefixIterator(store, ProviderPrefix(id))
+	prefix := ProviderPrefix(id)
+	iter := storetypes.KVStorePrefixIterator(store, prefix)
 	defer func() {
 		_ = iter.Close()
 	}()
 
 	for ; iter.Valid(); iter.Next() {
-		var val types.Provider
-		k.cdc.MustUnmarshal(iter.Value(), &val)
-		attr = append(attr, val)
+		aID := ParseIDFromKey(iter.Key())
+
+		var sVal types.AuditedAttributesStore
+		k.cdc.MustUnmarshal(iter.Value(), &sVal)
+		res = append(res, types.AuditedProvider{
+			Owner:      id.String(),
+			Auditor:    aID.Auditor.String(),
+			Attributes: sVal.Attributes,
+		})
 	}
 
-	if len(attr) == 0 {
+	if len(res) == 0 {
 		return nil, false
 	}
 
-	return attr, true
+	return res, true
 }
 
 // CreateOrUpdateProviderAttributes update signed provider attributes.
 // creates new if key does not exist
 // if key exists, existing values for matching pairs will be replaced
-func (k Keeper) CreateOrUpdateProviderAttributes(ctx sdk.Context, id types.ProviderID, attr akashtypes.Attributes) error {
+func (k Keeper) CreateOrUpdateProviderAttributes(ctx sdk.Context, id types.ProviderID, attr attrv1.Attributes) error {
 	store := ctx.KVStore(k.skey)
 	key := ProviderKey(id)
 
-	prov := types.Provider{
-		Owner:      id.Owner.String(),
-		Auditor:    id.Auditor.String(),
+	attrRec := types.AuditedAttributesStore{
 		Attributes: attr,
 	}
 
 	buf := store.Get(key)
 	if buf != nil {
-		tmp := types.Provider{}
+		tmp := types.AuditedAttributesStore{}
 		k.cdc.MustUnmarshal(buf, &tmp)
 
 		kv := make(map[string]string)
@@ -107,31 +113,35 @@ func (k Keeper) CreateOrUpdateProviderAttributes(ctx sdk.Context, id types.Provi
 			kv[entry.Key] = entry.Value
 		}
 
-		for _, entry := range prov.Attributes {
+		for _, entry := range attrRec.Attributes {
 			kv[entry.Key] = entry.Value
 		}
 
-		attr = akashtypes.Attributes{}
+		attr = attrv1.Attributes{}
 
 		for ky, val := range kv {
-			attr = append(attr, atypes.Attribute{
+			attr = append(attr, attrv1.Attribute{
 				Key:   ky,
 				Value: val,
 			})
 		}
 
-		prov.Attributes = attr
+		attrRec.Attributes = attr
 	}
 
-	sort.SliceStable(prov.Attributes, func(i, j int) bool {
-		return prov.Attributes[i].Key < prov.Attributes[j].Key
-	})
+	sort.Stable(attrRec.Attributes)
 
-	store.Set(key, k.cdc.MustMarshal(&prov))
+	store.Set(key, k.cdc.MustMarshal(&attrRec))
 
-	ctx.EventManager().EmitEvent(
-		types.NewEventTrustedAuditorCreated(id.Owner, id.Auditor).ToSDKEvent(),
+	err := ctx.EventManager().EmitTypedEvent(
+		&types.EventTrustedAuditorCreated{
+			Owner:   id.Owner.String(),
+			Auditor: id.Auditor.String(),
+		},
 	)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -148,12 +158,9 @@ func (k Keeper) DeleteProviderAttributes(ctx sdk.Context, id types.ProviderID, k
 	if keys == nil {
 		store.Delete(key)
 	} else {
-		prov := types.Provider{
-			Owner:   id.Owner.String(),
-			Auditor: id.Auditor.String(),
-		}
+		prov := types.AuditedAttributesStore{}
 
-		tmp := types.Provider{}
+		tmp := types.AuditedAttributesStore{}
 		k.cdc.MustUnmarshal(buf, &tmp)
 
 		kv := make(map[string]string)
@@ -164,19 +171,19 @@ func (k Keeper) DeleteProviderAttributes(ctx sdk.Context, id types.ProviderID, k
 
 		for _, entry := range keys {
 			if _, exists := kv[entry]; !exists {
-				return sdkerrors.Wrapf(types.ErrAttributeNotFound, "trying to delete non-existing attribute \"%s\" for auditor/provider \"%s/%s\"",
+				return types.ErrAttributeNotFound.Wrapf("trying to delete non-existing attribute \"%s\" for auditor/provider \"%s/%s\"",
 					entry,
-					prov.Auditor,
-					prov.Owner)
+					id.Auditor,
+					id.Owner)
 			}
 
 			delete(kv, entry)
 		}
 
-		var attr akashtypes.Attributes
+		var attr attrv1.Attributes
 
 		for ky, val := range kv {
-			attr = append(attr, atypes.Attribute{
+			attr = append(attr, attrv1.Attribute{
 				Key:   ky,
 				Value: val,
 			})
@@ -195,41 +202,65 @@ func (k Keeper) DeleteProviderAttributes(ctx sdk.Context, id types.ProviderID, k
 		}
 	}
 
-	ctx.EventManager().EmitEvent(
-		types.NewEventTrustedAuditorDeleted(id.Owner, id.Auditor).ToSDKEvent(),
+	err := ctx.EventManager().EmitTypedEvent(
+		&types.EventTrustedAuditorDeleted{
+			Owner:   id.Owner.String(),
+			Auditor: id.Auditor.String(),
+		},
 	)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
 // WithProviders iterates all signed provider's attributes
-func (k Keeper) WithProviders(ctx sdk.Context, fn func(types.Provider) bool) {
+func (k Keeper) WithProviders(ctx sdk.Context, fn func(types.AuditedProvider) bool) {
 	store := ctx.KVStore(k.skey)
-	iter := store.Iterator(nil, nil)
 
+	iter := storetypes.KVStorePrefixIterator(store, types.PrefixProviderID())
 	defer func() {
 		_ = iter.Close()
 	}()
 
 	for ; iter.Valid(); iter.Next() {
-		var val types.Provider
-		k.cdc.MustUnmarshal(iter.Value(), &val)
+		id := ParseIDFromKey(iter.Key())
+
+		var attr types.AuditedAttributesStore
+		k.cdc.MustUnmarshal(iter.Value(), &attr)
+
+		val := types.AuditedProvider{
+			Owner:      id.Owner.String(),
+			Auditor:    id.Auditor.String(),
+			Attributes: attr.Attributes,
+		}
+
 		if stop := fn(val); stop {
 			break
 		}
 	}
 }
 
-// WithProvider iterates all signed provider's attributes
-func (k Keeper) WithProvider(ctx sdk.Context, id sdk.Address, fn func(types.Provider) bool) {
+// WithProvider returns requested signed provider attributes
+func (k Keeper) WithProvider(ctx sdk.Context, id sdk.Address, fn func(types.AuditedProvider) bool) {
 	store := ctx.KVStore(k.skey)
-	iter := sdk.KVStorePrefixIterator(store, ProviderPrefix(id))
+	iter := storetypes.KVStorePrefixIterator(store, ProviderPrefix(id))
 	defer func() {
 		_ = iter.Close()
 	}()
 
 	for ; iter.Valid(); iter.Next() {
-		var val types.Provider
+		aID := ParseIDFromKey(iter.Key())
+
+		var attr types.AuditedAttributesStore
+		k.cdc.MustUnmarshal(iter.Value(), &attr)
+
+		val := types.AuditedProvider{
+			Owner:      id.String(),
+			Auditor:    aID.Auditor.String(),
+			Attributes: attr.Attributes,
+		}
 		k.cdc.MustUnmarshal(iter.Value(), &val)
 		if stop := fn(val); stop {
 			break

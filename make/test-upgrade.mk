@@ -12,6 +12,7 @@ export AKASH_GAS                = auto
 export AKASH_STATESYNC_ENABLE   = false
 export AKASH_LOG_COLOR          = true
 
+STATE_CONFIG            ?= $(ROOT_DIR)/tests/upgrade/testnet.json
 TEST_CONFIG             ?= test-config.json
 KEY_OPTS                := --keyring-backend=$(AKASH_KEYRING_BACKEND)
 KEY_NAME                ?= validator
@@ -20,21 +21,49 @@ UPGRADE_FROM            := $(shell cat $(ROOT_DIR)/meta.json | jq -r --arg name 
 GENESIS_BINARY_VERSION  := $(shell cat $(ROOT_DIR)/meta.json | jq -r --arg name $(UPGRADE_TO) '.upgrades[$$name].from_binary' | tr -d '\n')
 UPGRADE_BINARY_VERSION  ?= local
 
+SNAPSHOT_SOURCE         ?= sandbox1
+
+ifeq ($(SNAPSHOT_SOURCE),mainnet)
+	SNAPSHOT_NETWORK    := akashnet-2
+	CHAIN_METADATA_URL  := https://raw.githubusercontent.com/akash-network/net/master/mainnet/meta.json
+else ifeq ($(SNAPSHOT_SOURCE),sandbox)
+	SNAPSHOT_NETWORK    := sandbox-2
+	CHAIN_METADATA_URL  := https://raw.githubusercontent.com/akash-network/net/master/sandbox-2/meta.json
+else ifeq ($(SNAPSHOT_SOURCE),sandbox1)
+	SNAPSHOT_NETWORK    := sandbox-01
+	CHAIN_METADATA_URL  := https://raw.githubusercontent.com/akash-network/net/master/sandbox/meta.json
+else
+$(error "invalid snapshot source $(SNAPSHOT_SOURCE)")
+endif
+
+SNAPSHOT_URL            ?= https://snapshots.akash.network/$(SNAPSHOT_NETWORK)/latest
 REMOTE_TEST_WORKDIR     ?= ~/go/src/github.com/akash-network/node
 REMOTE_TEST_HOST        ?=
 
+MAX_VALIDATORS          := $(shell cat $(TEST_CONFIG) | jq -r '.validators | length' | tr -d '\n')
+
 $(AKASH_INIT):
-	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --gbv=$(GENESIS_BINARY_VERSION) --ufrom=$(UPGRADE_FROM) --uto=$(UPGRADE_TO) --config="$(PWD)/config.json" init
+	$(ROOT_DIR)/script/upgrades.sh \
+		--workdir=$(AP_RUN_DIR) \
+		--gbv=$(GENESIS_BINARY_VERSION) \
+		--ufrom=$(UPGRADE_FROM) \
+		--uto=$(UPGRADE_TO) \
+		--config="$(PWD)/config.json" \
+		--chain-meta=$(CHAIN_METADATA_URL) \
+		--state-config=$(STATE_CONFIG) \
+		--snapshot-url=$(SNAPSHOT_URL) \
+		--max-validators=$(MAX_VALIDATORS) \
+		init
 	touch $@
 
 .PHONY: init
-init: $(AKASH_INIT) $(COSMOVISOR)
+init: $(COSMOVISOR) $(AKASH_INIT)
 
 .PHONY: genesis
 genesis: $(GENESIS_DEST)
 
 .PHONY: test
-test: $(COSMOVISOR) init
+test: init
 	$(GO_TEST) -run "^\QTestUpgrade\E$$" -tags e2e.upgrade -timeout 180m -v -args \
 		-cosmovisor=$(COSMOVISOR) \
 		-workdir=$(AP_RUN_DIR)/validators \
@@ -45,16 +74,20 @@ test: $(COSMOVISOR) init
 
 .PHONY: test-reset
 test-reset:
-	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) clean
-	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) --gbv=$(GENESIS_BINARY_VERSION) bins
-	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) keys
+	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) --snapshot-url=$(SNAPSHOT_URL) --chain-meta=$(CHAIN_METADATA_URL) --max-validators=$(MAX_VALIDATORS) clean
+	#$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) --snapshot-url=$(SNAPSHOT_URL) --gbv=$(GENESIS_BINARY_VERSION) --chain-meta=$(CHAIN_METADATA_URL) bins
+	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) --snapshot-url=$(SNAPSHOT_URL) --chain-meta=$(CHAIN_METADATA_URL) keys
+	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --state-config=$(STATE_CONFIG) --snapshot-url=$(SNAPSHOT_URL) --chain-meta=$(CHAIN_METADATA_URL) --max-validators=$(MAX_VALIDATORS) prepare-state
 
+.PHONY: prepare-state
+prepare-state:
+	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --state-config=$(STATE_CONFIG) --chain-meta=$(CHAIN_METADATA_URL) --max-validators=$(MAX_VALIDATORS) prepare-state
 
 .PHONY: bins
 bins:
 ifneq ($(findstring build,$(SKIP)),build)
 bins:
-	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) bins
+	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) --gbv=$(GENESIS_BINARY_VERSION) --chain-meta=$(CHAIN_METADATA_URL) bins
 endif
 
 .PHONY: clean
