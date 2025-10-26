@@ -3,15 +3,16 @@ package hooks
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	dtypes "github.com/akash-network/akash-api/go/node/deployment/v1beta3"
-	etypes "github.com/akash-network/akash-api/go/node/escrow/v1beta3"
-
-	mtypes "github.com/akash-network/akash-api/go/node/market/v1beta4"
+	dv1 "pkg.akt.dev/go/node/deployment/v1"
+	dtypes "pkg.akt.dev/go/node/deployment/v1beta4"
+	etypes "pkg.akt.dev/go/node/escrow/types/v1"
+	mv1 "pkg.akt.dev/go/node/market/v1"
+	mtypes "pkg.akt.dev/go/node/market/v1beta5"
 )
 
 type Hooks interface {
 	OnEscrowAccountClosed(ctx sdk.Context, obj etypes.Account)
-	OnEscrowPaymentClosed(ctx sdk.Context, obj etypes.FractionalPayment)
+	OnEscrowPaymentClosed(ctx sdk.Context, obj etypes.Payment)
 }
 
 type hooks struct {
@@ -27,8 +28,8 @@ func New(dkeeper DeploymentKeeper, mkeeper MarketKeeper) Hooks {
 }
 
 func (h *hooks) OnEscrowAccountClosed(ctx sdk.Context, obj etypes.Account) {
-	id, found := dtypes.DeploymentIDFromEscrowAccount(obj.ID)
-	if !found {
+	id, err := dv1.DeploymentIDFromEscrowID(obj.ID)
+	if err != nil {
 		return
 	}
 
@@ -37,27 +38,27 @@ func (h *hooks) OnEscrowAccountClosed(ctx sdk.Context, obj etypes.Account) {
 		return
 	}
 
-	if deployment.State != dtypes.DeploymentActive {
+	if deployment.State != dv1.DeploymentActive {
 		return
 	}
-	h.dkeeper.CloseDeployment(ctx, deployment)
+	_ = h.dkeeper.CloseDeployment(ctx, deployment)
 
 	gstate := dtypes.GroupClosed
-	if obj.State == etypes.AccountOverdrawn {
+	if obj.State.State == etypes.StateOverdrawn {
 		gstate = dtypes.GroupInsufficientFunds
 	}
 
-	for _, group := range h.dkeeper.GetGroups(ctx, deployment.ID()) {
+	for _, group := range h.dkeeper.GetGroups(ctx, deployment.ID) {
 		if group.ValidateClosable() == nil {
 			_ = h.dkeeper.OnCloseGroup(ctx, group, gstate)
-			h.mkeeper.OnGroupClosed(ctx, group.ID())
+			_ = h.mkeeper.OnGroupClosed(ctx, group.ID)
 		}
 	}
 }
 
-func (h *hooks) OnEscrowPaymentClosed(ctx sdk.Context, obj etypes.FractionalPayment) {
-	id, ok := mtypes.LeaseIDFromEscrowAccount(obj.AccountID, obj.PaymentID)
-	if !ok {
+func (h *hooks) OnEscrowPaymentClosed(ctx sdk.Context, obj etypes.Payment) {
+	id, err := mv1.LeaseIDFromPaymentID(obj.ID)
+	if err != nil {
 		return
 	}
 
@@ -80,12 +81,12 @@ func (h *hooks) OnEscrowPaymentClosed(ctx sdk.Context, obj etypes.FractionalPaym
 		return
 	}
 
-	h.mkeeper.OnOrderClosed(ctx, order)
-	h.mkeeper.OnBidClosed(ctx, bid)
+	_ = h.mkeeper.OnOrderClosed(ctx, order)
+	_ = h.mkeeper.OnBidClosed(ctx, bid)
 
-	if obj.State == etypes.PaymentOverdrawn {
-		h.mkeeper.OnLeaseClosed(ctx, lease, mtypes.LeaseInsufficientFunds)
+	if obj.State.State == etypes.StateOverdrawn {
+		_ = h.mkeeper.OnLeaseClosed(ctx, lease, mv1.LeaseInsufficientFunds, mv1.LeaseClosedReasonInsufficientFunds)
 	} else {
-		h.mkeeper.OnLeaseClosed(ctx, lease, mtypes.LeaseClosed)
+		_ = h.mkeeper.OnLeaseClosed(ctx, lease, mv1.LeaseClosed, mv1.LeaseClosedReasonUnspecified)
 	}
 }

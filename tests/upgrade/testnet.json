@@ -6,20 +6,67 @@
         }
     },
     "accounts": [
-        "akash1dge0lcc5rqxkw52rgav4q0fyhx7arcufmrkyww"
+        {
+            "address": "akash1dge0lcc5rqxkw52rgav4q0fyhx7arcufmrkyww",
+            "balances": [
+                {
+                    "denom": "uakt",
+                    "amount": "1000000000000000"
+                },
+                {
+                    "denom": "ibc/12C6A0C374171B595A0A9E18B83FA09D295FB1F2D8C6DAA3AC28683471752D84",
+                    "amount": "1000000000000"
+                }
+            ]
+        },
+        {
+            "address": "akash18tdthhtcvfmzl60r0r6gvjdcelc0wtwfumqsdz",
+            "balances": [
+                {
+                    "denom": "uakt",
+                    "amount": "1000000000000000"
+                },
+                {
+                    "denom": "ibc/12C6A0C374171B595A0A9E18B83FA09D295FB1F2D8C6DAA3AC28683471752D84",
+                    "amount": "1000000000000"
+                }
+            ]
+        },
+        {
+            "address": "akash1sdv7sz7y4j2z9l6nyrk9g4ztjh9dvml75gfgra",
+            "balances": [
+                {
+                    "denom": "uakt",
+                    "amount": "1000000000000000"
+                },
+                {
+                    "denom": "ibc/12C6A0C374171B595A0A9E18B83FA09D295FB1F2D8C6DAA3AC28683471752D84",
+                    "amount": "1000000000000"
+                }
+            ]
+        }
     ],
     "validators": [
         {
             "moniker": "upgrade-tester-1",
             "operator": "akash1dge0lcc5rqxkw52rgav4q0fyhx7arcufmrkyww",
-            "bonded": true,
+            "status": 3,
             "home": ".akash0",
             "commission": {
                 "rate": "0.05",
                 "maxRate": "0.8",
                 "maxChangeRate": "0.1"
             },
-            "min_self_delegation": "1"
+            "min_self_delegation": "1",
+            "delegations": [
+                {
+                    "address": "akash1dge0lcc5rqxkw52rgav4q0fyhx7arcufmrkyww",
+                    "amount": {
+                        "denom": "uakt",
+                        "amount": "900000000000000"
+                    }
+                }
+            ]
         }
     ]
 }

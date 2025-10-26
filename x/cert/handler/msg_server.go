@@ -5,9 +5,9 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+	types "pkg.akt.dev/go/node/cert/v1"
 
-	"github.com/akash-network/node/x/cert/keeper"
+	"pkg.akt.dev/node/x/cert/keeper"
 )
 
 type msgServer struct {

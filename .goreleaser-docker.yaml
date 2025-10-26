@@ -1,6 +1,5 @@
 ---
 version: 2
-project_name: node
 dist: ./.cache/goreleaser/docker
 env:
   - GO111MODULE=on
@@ -77,4 +76,5 @@ dockers:
       - '{{ .Env.DOCKER_IMAGE }}:latest-arm64'
 
 archives:
-  - format: binary
+  - formats:
+      - binary

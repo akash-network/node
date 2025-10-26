@@ -34,7 +34,7 @@ The `main` branch contains new features and is under active development; the `ma
 
 Akash Suite is the reference implementation of the [Akash Protocol](https://ipfs.io/ipfs/QmdV52bF7j4utynJ6L11RgG93FuJiUmBH1i7pRD6NjUt6B). Akash is an actively-developed prototype currently focused on the distributed marketplace functionality.
 
-The Suite is composed of one binary, `akash`, which contains a ([tendermint](https://github.com/tendermint/tendermint)-powered) blockchain node that
+The Suite is composed of one binary, `akash`, which contains a ([tendermint](https://github.com/cometbft/cometbft)-powered) blockchain node that
 implements the decentralized exchange as well as client functionality to access the exchange and network data in general.
 
 ## Get Started with Akash

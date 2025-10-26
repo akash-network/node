@@ -4,14 +4,16 @@ import (
 	"bytes"
 	"math/big"
 
+	errorsmod "cosmossdk.io/errors"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/address"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/types/kv"
 
-	types "github.com/akash-network/akash-api/go/node/cert/v1beta3"
+	types "pkg.akt.dev/go/node/cert/v1"
 
-	"github.com/akash-network/node/util/validation"
+	"pkg.akt.dev/node/util/validation"
 )
 
 const (
@@ -29,7 +31,7 @@ var (
 	CertStateRevokedPrefix = []byte{CertStateRevokedPrefixID}
 )
 
-func certStateToPrefix(state types.Certificate_State) []byte {
+func certStateToPrefix(state types.State) []byte {
 	var idx []byte
 
 	switch state {
@@ -44,7 +46,7 @@ func certStateToPrefix(state types.Certificate_State) []byte {
 	return idx
 }
 
-func buildCertPrefix(state types.Certificate_State) []byte {
+func buildCertPrefix(state types.State) []byte {
 	idx := certStateToPrefix(state)
 
 	res := make([]byte, 0, len(CertPrefix)+len(idx))
@@ -55,7 +57,7 @@ func buildCertPrefix(state types.Certificate_State) []byte {
 }
 
 func filterToPrefix(filter types.CertificateFilter) ([]byte, error) {
-	prefix := buildCertPrefix(types.Certificate_State(types.Certificate_State_value[filter.State]))
+	prefix := buildCertPrefix(types.State(types.State_value[filter.State]))
 	buf := bytes.NewBuffer(prefix)
 
 	if len(filter.Owner) == 0 {
@@ -96,9 +98,9 @@ func filterToPrefix(filter types.CertificateFilter) ([]byte, error) {
 
 // CertificateKey creates a store key of the format:
 // prefix_bytes | state 1 byte | owner_address_len (1 byte) | owner_address_bytes | serial length (1 byte) | serial_bytes
-func CertificateKey(state types.Certificate_State, id types.CertID) ([]byte, error) {
+func CertificateKey(state types.State, id types.CertID) ([]byte, error) {
 	if id.Owner.Empty() {
-		return nil, sdkerrors.Wrap(sdkerrors.ErrInvalidAddress, "owner address is empty")
+		return nil, errorsmod.Wrap(sdkerrors.ErrInvalidAddress, "owner address is empty")
 	}
 
 	addr, err := address.LengthPrefix(id.Owner.Bytes())
@@ -123,7 +125,7 @@ func CertificateKey(state types.Certificate_State, id types.CertID) ([]byte, err
 	return buf.Bytes(), nil
 }
 
-func MustCertificateKey(state types.Certificate_State, id types.CertID) []byte {
+func MustCertificateKey(state types.State, id types.CertID) []byte {
 	key, err := CertificateKey(state, id)
 	if err != nil {
 		panic(err)
@@ -134,7 +136,7 @@ func MustCertificateKey(state types.Certificate_State, id types.CertID) []byte {
 
 // ParseCertKey parse certificate key into id
 // format <0x11><state><add len><add bytes><serial length><serial bytes>
-func ParseCertKey(from []byte) (types.Certificate_State, types.CertID, error) {
+func ParseCertKey(from []byte) (types.State, types.CertID, error) {
 	res := types.CertID{
 		Serial: *big.NewInt(0),
 	}
@@ -146,7 +148,7 @@ func ParseCertKey(from []byte) (types.Certificate_State, types.CertID, error) {
 
 	// skip prefix
 	from = from[len(CertPrefix):]
-	state := types.Certificate_State(from[0])
+	state := types.State(from[0])
 	from = from[1:]
 
 	// parse address length
@@ -247,7 +249,7 @@ func serialPrefix(bz []byte) ([]byte, error) {
 	}
 
 	if bzLen > maxSerialLength {
-		return nil, sdkerrors.Wrapf(sdkerrors.ErrUnknownAddress, "serial length should be max %d bytes, got %d", maxSerialLength, bzLen)
+		return nil, errorsmod.Wrapf(sdkerrors.ErrUnknownAddress, "serial length should be max %d bytes, got %d", maxSerialLength, bzLen)
 	}
 
 	return append([]byte{byte(bzLen)}, bz...), nil
@@ -261,4 +263,32 @@ func mustSerialPrefix(bz []byte) []byte {
 	}
 
 	return res
+}
+
+func ParseCertID(prefix []byte, from []byte) (types.CertID, error) {
+	res := types.CertID{
+		Serial: *big.NewInt(0),
+	}
+
+	// skip prefix if set
+	if len(prefix) > 0 {
+		from = from[len(prefix):]
+	}
+
+	addLen := from[0]
+
+	from = from[1:]
+
+	addr := from[:addLen-1]
+	serial := from[addLen:]
+
+	err := sdk.VerifyAddressFormat(addr)
+	if err != nil {
+		return res, err
+	}
+
+	res.Owner = sdk.AccAddress(addr)
+	res.Serial.SetBytes(serial)
+
+	return res, nil
 }
