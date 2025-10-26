@@ -90,7 +90,7 @@ func (up *upgrade) migrateDeploymentAuthz(ctx sdk.Context) error {
 		authzGen := grant.grant.GetAuthorization()
 		authzOld, valid := authzGen.(*v1beta2dtypes.DepositDeploymentAuthorization)
 		if !valid {
-			return fmt.Errorf("unexpected authorization type. expected (%s), actual (%s)", reflect.TypeOf(&v1beta2dtypes.DepositDeploymentAuthorization{}), reflect.TypeOf(authzGen))
+			return fmt.Errorf("unexpected authorization type. expected (%s), actual (%s)", reflect.TypeFor[*v1beta2dtypes.DepositDeploymentAuthorization](), reflect.TypeOf(authzGen))
 		}
 
 		err := up.Keepers.Cosmos.Authz.DeleteGrant(ctx, grant.grantee, grant.granter, msgUrlOld)
