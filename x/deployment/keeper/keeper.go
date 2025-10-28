@@ -328,7 +328,6 @@ func (k Keeper) OnPauseGroup(ctx sdk.Context, group types.Group) error {
 		return err
 	}
 
-	store.Set(key, k.cdc.MustMarshal(&group))
 	return nil
 }
 
