@@ -319,7 +319,7 @@ func (k *keeper) AccountDeposit(ctx sdk.Context, id escrowid.Account, deposits [
 		return err
 	}
 
-	if obj.State.State != etypes.StateOpen {
+	if obj.State.State != etypes.StateOpen && obj.State.State != etypes.StateOverdrawn {
 		return module.ErrAccountClosed
 	}
 
