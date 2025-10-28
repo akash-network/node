@@ -311,9 +311,15 @@ func (k Keeper) OnPauseGroup(ctx sdk.Context, group types.Group) error {
 	store.Delete(key)
 
 	group.State = types.GroupPaused
+
+	key, err := GroupKey(GroupStateToPrefix(group.State), group.ID)
+	if err != nil {
+		return fmt.Errorf("%s: failed to encode group key", err)
+	}
+
 	store.Set(key, k.cdc.MustMarshal(&group))
 
-	err := ctx.EventManager().EmitTypedEvent(
+	err = ctx.EventManager().EmitTypedEvent(
 		&v1.EventGroupPaused{
 			ID: group.ID,
 		},
