@@ -6,6 +6,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	v1 "pkg.akt.dev/go/node/deployment/v1"
 	"pkg.akt.dev/go/node/deployment/v1beta4"
 
 	types "pkg.akt.dev/go/node/deployment/v1"
@@ -117,40 +118,49 @@ func Test_UpdateDeployment(t *testing.T) {
 	require.Equal(t, deployment, result)
 }
 
-func Test_OnEscrowAccountClosed_overdrawn(t *testing.T) {
-	t.Skip("Hooks Refactor")
+func Test_OnEscrowAccountPaused_overdrawn(t *testing.T) {
 	ctx, keeper := setupKeeper(t)
-
 	_, groups := createActiveDeployment(t, ctx, keeper)
 
 	did := groups[0].ID.DeploymentID()
 
-	// eid := types.EscrowAccountForDeployment(did)
-
-	// eobj := etypes.Account{
-	// 	ID:    eid,
-	// 	State: etypes.AccountOverdrawn,
-	// }
-
-	// keeper.OnEscrowAccountClosed(ctx, eobj)
-
-	{
-		group, ok := keeper.GetGroup(ctx, groups[0].ID)
-		assert.True(t, ok)
-		assert.Equal(t, v1beta4.GroupInsufficientFunds, group.State)
-	}
-
-	{
-		group, ok := keeper.GetGroup(ctx, groups[1].ID)
-		assert.True(t, ok)
-		assert.Equal(t, v1beta4.GroupInsufficientFunds, group.State)
-	}
-
-	{
+	t.Run("assert that deployment starts in active state", func(t *testing.T) {
 		deployment, ok := keeper.GetDeployment(ctx, did)
 		assert.True(t, ok)
-		assert.Equal(t, types.DeploymentClosed, deployment.State)
+		assert.Equal(t, v1.DeploymentActive, deployment.State)
+	})
+	t.Run("assert group 0 starts in open state", func(t *testing.T) {
+		group, ok := keeper.GetGroup(ctx, groups[0].ID)
+		assert.True(t, ok)
+		assert.Equal(t, v1beta4.GroupOpen, group.State)
+	})
+	t.Run("assert group 1 starts in open state", func(t *testing.T) {
+		group, ok := keeper.GetGroup(ctx, groups[1].ID)
+		assert.True(t, ok)
+		assert.Equal(t, v1beta4.GroupOpen, group.State)
+	})
+
+	// Simulate escrow account becoming overdrawn by calling OnEscrowAccountPaused
+	for _, group := range groups {
+		err := keeper.OnPauseGroup(ctx, group)
+		assert.NoError(t, err)
 	}
+
+	t.Run("assert deployment is still active", func(t *testing.T) {
+		deployment, ok := keeper.GetDeployment(ctx, did)
+		assert.True(t, ok)
+		assert.Equal(t, v1.DeploymentActive, deployment.State)
+	})
+	t.Run("assert group 0 is paused", func(t *testing.T) {
+		group, ok := keeper.GetGroup(ctx, groups[0].ID)
+		assert.True(t, ok)
+		assert.Equal(t, v1beta4.GroupPaused, group.State)
+	})
+	t.Run("assert group 1 is paused", func(t *testing.T) {
+		group, ok := keeper.GetGroup(ctx, groups[1].ID)
+		assert.True(t, ok)
+		assert.Equal(t, v1beta4.GroupPaused, group.State)
+	})
 }
 
 func Test_OnBidClosed(t *testing.T) {
