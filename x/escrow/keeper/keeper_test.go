@@ -182,11 +182,15 @@ func Test_Payment_Overdraw(t *testing.T) {
 	// Track hook calls
 	var accountPausedHookCalled bool
 	var accountPausedHookAccount etypes.Account
+	var accountClosedHookCalled bool
 
 	// Add hook to track when account becomes overdrawn
 	keeper.AddOnAccountPausedHook(func(ctx sdk.Context, account etypes.Account) {
 		accountPausedHookCalled = true
 		accountPausedHookAccount = account
+	})
+	keeper.AddOnAccountClosedHook(func(ctx sdk.Context, account etypes.Account) {
+		accountClosedHookCalled = true
 	})
 
 	// create account
@@ -237,6 +241,9 @@ func Test_Payment_Overdraw(t *testing.T) {
 		require.True(t, accountPausedHookCalled, "OnEscrowAccountPaused hook should have been called")
 		require.Equal(t, aid, accountPausedHookAccount.ID, "hook should have been called with correct account ID")
 		require.Equal(t, etypes.StateOverdrawn, accountPausedHookAccount.State.State, "hook should have been called with overdrawn account")
+	})
+	t.Run("ensure closed hook was not called when overdrawn", func(t *testing.T) {
+		require.False(t, accountClosedHookCalled, "OnEscrowAccountClosed hook should not have been called")
 	})
 }
 
