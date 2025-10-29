@@ -139,10 +139,10 @@ func Test_OnEscrowAccountPaused_overdrawn(t *testing.T) {
 		assert.Equal(t, v1beta4.GroupOpen, group.State)
 	})
 
-	// Simulate escrow account becoming overdrawn by calling OnEscrowAccountPaused
+	// Simulate escrow account becoming overdrawn by calling pausing all groups
 	for _, group := range groups {
 		err := keeper.OnPauseGroup(ctx, group)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
 
 	t.Run("assert deployment is still active", func(t *testing.T) {
