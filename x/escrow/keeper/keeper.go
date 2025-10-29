@@ -41,6 +41,7 @@ type Keeper interface {
 	GetAccount(ctx sdk.Context, id escrowid.Account) (etypes.Account, error)
 	GetPayment(ctx sdk.Context, id escrowid.Payment) (etypes.Payment, error)
 	AddOnAccountClosedHook(AccountHook) Keeper
+	AddOnAccountPausedHook(AccountHook) Keeper
 	AddOnPaymentClosedHook(PaymentHook) Keeper
 	WithAccounts(sdk.Context, func(etypes.Account) bool)
 	WithPayments(sdk.Context, func(etypes.Payment) bool)
@@ -76,6 +77,7 @@ type keeper struct {
 	feepool     collections.Item[distrtypes.FeePool]
 	hooks       struct {
 		onAccountClosed []AccountHook
+		onAccountPaused []AccountHook
 		onPaymentClosed []PaymentHook
 	}
 }
@@ -584,6 +586,11 @@ func (k *keeper) AddOnAccountClosedHook(hook AccountHook) Keeper {
 	return k
 }
 
+func (k *keeper) AddOnAccountPausedHook(hook AccountHook) Keeper {
+	k.hooks.onAccountPaused = append(k.hooks.onAccountPaused, hook)
+	return k
+}
+
 func (k *keeper) AddOnPaymentClosedHook(hook PaymentHook) Keeper {
 	k.hooks.onPaymentClosed = append(k.hooks.onPaymentClosed, hook)
 	return k
@@ -769,9 +776,14 @@ func (k *keeper) saveAccount(ctx sdk.Context, obj account) error {
 
 	store.Set(key, k.cdc.MustMarshal(&obj.State))
 
-	if obj.State.State == etypes.StateClosed || obj.State.State == etypes.StateOverdrawn {
+	if obj.State.State == etypes.StateClosed {
 		// call hooks
 		for _, hook := range k.hooks.onAccountClosed {
+			hook(ctx, obj.Account)
+		}
+	} else if obj.State.State == etypes.StateOverdrawn {
+		// call hooks
+		for _, hook := range k.hooks.onAccountPaused {
 			hook(ctx, obj.Account)
 		}
 	}

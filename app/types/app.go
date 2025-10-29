@@ -467,6 +467,7 @@ func (app *App) SetupHooks() {
 	)
 
 	app.Keepers.Akash.Escrow.AddOnAccountClosedHook(hook.OnEscrowAccountClosed)
+	app.Keepers.Akash.Escrow.AddOnAccountPausedHook(hook.OnEscrowAccountPaused)
 	app.Keepers.Akash.Escrow.AddOnPaymentClosedHook(hook.OnEscrowPaymentClosed)
 }
 
