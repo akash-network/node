@@ -6,7 +6,6 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	v1 "pkg.akt.dev/go/node/deployment/v1"
 	"pkg.akt.dev/go/node/deployment/v1beta4"
 
 	types "pkg.akt.dev/go/node/deployment/v1"
@@ -127,7 +126,7 @@ func Test_OnEscrowAccountPaused_overdrawn(t *testing.T) {
 	t.Run("assert that deployment starts in active state", func(t *testing.T) {
 		deployment, ok := keeper.GetDeployment(ctx, did)
 		assert.True(t, ok)
-		assert.Equal(t, v1.DeploymentActive, deployment.State)
+		assert.Equal(t, types.DeploymentActive, deployment.State)
 	})
 	t.Run("assert group 0 starts in open state", func(t *testing.T) {
 		group, ok := keeper.GetGroup(ctx, groups[0].ID)
@@ -149,7 +148,7 @@ func Test_OnEscrowAccountPaused_overdrawn(t *testing.T) {
 	t.Run("assert deployment is still active", func(t *testing.T) {
 		deployment, ok := keeper.GetDeployment(ctx, did)
 		assert.True(t, ok)
-		assert.Equal(t, v1.DeploymentActive, deployment.State)
+		assert.Equal(t, types.DeploymentActive, deployment.State)
 	})
 	t.Run("assert group 0 is paused", func(t *testing.T) {
 		group, ok := keeper.GetGroup(ctx, groups[0].ID)
