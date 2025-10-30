@@ -12,6 +12,7 @@ import (
 
 type Hooks interface {
 	OnEscrowAccountClosed(ctx sdk.Context, obj etypes.Account)
+	OnEscrowAccountPaused(ctx sdk.Context, obj etypes.Account)
 	OnEscrowPaymentClosed(ctx sdk.Context, obj etypes.Payment)
 }
 
@@ -51,6 +52,29 @@ func (h *hooks) OnEscrowAccountClosed(ctx sdk.Context, obj etypes.Account) {
 	for _, group := range h.dkeeper.GetGroups(ctx, deployment.ID) {
 		if group.ValidateClosable() == nil {
 			_ = h.dkeeper.OnCloseGroup(ctx, group, gstate)
+			_ = h.mkeeper.OnGroupClosed(ctx, group.ID)
+		}
+	}
+}
+
+func (h *hooks) OnEscrowAccountPaused(ctx sdk.Context, obj etypes.Account) {
+	id, err := dv1.DeploymentIDFromEscrowID(obj.ID)
+	if err != nil {
+		return
+	}
+
+	deployment, found := h.dkeeper.GetDeployment(ctx, id)
+	if !found {
+		return
+	}
+
+	if deployment.State != dv1.DeploymentActive {
+		return
+	}
+
+	for _, group := range h.dkeeper.GetGroups(ctx, deployment.ID) {
+		if group.ValidatePausable() == nil {
+			_ = h.dkeeper.OnPauseGroup(ctx, group)
 			_ = h.mkeeper.OnGroupClosed(ctx, group.ID)
 		}
 	}

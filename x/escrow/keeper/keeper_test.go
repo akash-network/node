@@ -179,6 +179,20 @@ func Test_Payment_Overdraw(t *testing.T) {
 	powner := testutil.AccAddress(t)
 	rate := testutil.AkashCoin(t, 10)
 
+	// Track hook calls
+	var accountPausedHookCalled bool
+	var accountPausedHookAccount etypes.Account
+	var accountClosedHookCalled bool
+
+	// Add hook to track when account becomes overdrawn
+	keeper.AddOnAccountPausedHook(func(ctx sdk.Context, account etypes.Account) {
+		accountPausedHookCalled = true
+		accountPausedHookAccount = account
+	})
+	keeper.AddOnAccountClosedHook(func(ctx sdk.Context, account etypes.Account) {
+		accountClosedHookCalled = true
+	})
+
 	// create account
 	bkeeper.
 		On("SendCoinsFromAccountToModule", ctx, aowner, module.ModuleName, sdk.NewCoins(amt)).
@@ -221,6 +235,16 @@ func Test_Payment_Overdraw(t *testing.T) {
 		require.Equal(t, amt, payment.State.Withdrawn)
 		require.Equal(t, testutil.AkashDecCoin(t, 0), payment.State.Balance)
 	}
+
+	t.Run("ensure hooks were called when overdrawn", func(t *testing.T) {
+		// Verify hook was called
+		require.True(t, accountPausedHookCalled, "OnEscrowAccountPaused hook should have been called")
+		require.Equal(t, aid, accountPausedHookAccount.ID, "hook should have been called with correct account ID")
+		require.Equal(t, etypes.StateOverdrawn, accountPausedHookAccount.State.State, "hook should have been called with overdrawn account")
+	})
+	t.Run("ensure closed hook was not called when overdrawn", func(t *testing.T) {
+		require.False(t, accountClosedHookCalled, "OnEscrowAccountClosed hook should not have been called")
+	})
 }
 
 func Test_PaymentCreate_later(t *testing.T) {
