@@ -29,6 +29,7 @@ type IKeeper interface {
 	OnOrderClosed(ctx sdk.Context, order types.Order) error
 	OnLeaseClosed(ctx sdk.Context, lease mv1.Lease, state mv1.Lease_State, reason mv1.LeaseClosedReason) error
 	OnGroupClosed(ctx sdk.Context, id dtypes.GroupID) error
+	OnGroupPaused(ctx sdk.Context, id dtypes.GroupID) error
 	GetOrder(ctx sdk.Context, id mv1.OrderID) (types.Order, bool)
 	GetBid(ctx sdk.Context, id mv1.BidID) (types.Bid, bool)
 	GetLease(ctx sdk.Context, id mv1.LeaseID) (mv1.Lease, bool)
@@ -346,8 +347,23 @@ func (k Keeper) OnLeaseClosed(ctx sdk.Context, lease mv1.Lease, state mv1.Lease_
 	return nil
 }
 
-// OnGroupClosed updates state of all orders, bids and leases in group to closed
+// OnGroupClosed updates market resources when the group is closed
 func (k Keeper) OnGroupClosed(ctx sdk.Context, id dtypes.GroupID) error {
+	// OnGroupClosed is callable by x/deployment only so only reason is owner
+	return k.closeMarketResourcesForGroup(ctx, id, mv1.LeaseClosedReasonOwner)
+}
+
+// OnGroupPaused updates market resources when the group is paused
+func (k Keeper) OnGroupPaused(ctx sdk.Context, id dtypes.GroupID) error {
+	// OnGroupPaused can only be called when the group is paused due to insufficient funds (at the moment).
+	// This is hardcoded here to avoid passing extra parameters through multiple layers.
+	// And avoid exposing the lease closed reason in the signature.
+	// TODO Consider adding a group paused reason in the future if needed.
+	return k.closeMarketResourcesForGroup(ctx, id, mv1.LeaseClosedReasonInsufficientFunds)
+}
+
+// closeMarketResourcesForGroup updates the state of all orders, bids and leases to closed for the associated group
+func (k Keeper) closeMarketResourcesForGroup(ctx sdk.Context, id dtypes.GroupID, reason mv1.LeaseClosedReason) error {
 	processClose := func(ctx sdk.Context, bid types.Bid) error {
 		err := k.OnBidClosed(ctx, bid)
 		if err != nil {
@@ -355,8 +371,7 @@ func (k Keeper) OnGroupClosed(ctx sdk.Context, id dtypes.GroupID) error {
 		}
 
 		if lease, ok := k.GetLease(ctx, bid.ID.LeaseID()); ok {
-			// OnGroupClosed is callable by x/deployment only so only reason is owner
-			err = k.OnLeaseClosed(ctx, lease, mv1.LeaseClosed, mv1.LeaseClosedReasonOwner)
+			err = k.OnLeaseClosed(ctx, lease, mv1.LeaseClosed, reason)
 			if err := k.ekeeper.PaymentClose(ctx, lease.ID.ToEscrowPaymentID()); err != nil {
 				ctx.Logger().With("err", err).Info("error closing payment")
 			}
