@@ -41,17 +41,29 @@ func (h *hooks) OnEscrowAccountClosed(ctx sdk.Context, obj etypes.Account) {
 	if deployment.State != dv1.DeploymentActive {
 		return
 	}
-	_ = h.dkeeper.CloseDeployment(ctx, deployment)
 
-	gstate := dtypes.GroupClosed
-	if obj.State.State == etypes.StateOverdrawn {
-		gstate = dtypes.GroupInsufficientFunds
+	var gstate dtypes.Group_State
+
+	switch obj.State.State {
+	case etypes.StateOverdrawn:
+		gstate = dtypes.GroupPaused
+	default:
+		gstate = dtypes.GroupClosed
+		h.dkeeper.CloseDeployment(ctx, deployment)
 	}
 
 	for _, group := range h.dkeeper.GetGroups(ctx, deployment.ID) {
-		if group.ValidateClosable() == nil {
-			_ = h.dkeeper.OnCloseGroup(ctx, group, gstate)
-			_ = h.mkeeper.OnGroupClosed(ctx, group.ID)
+		switch gstate {
+		case dtypes.GroupPaused:
+			if group.ValidatePausable() == nil {
+				_ = h.dkeeper.OnPauseGroup(ctx, group)
+				h.mkeeper.OnGroupClosed(ctx, group.ID)
+			}
+		case dtypes.GroupClosed:
+			if group.ValidateClosable() == nil {
+				_ = h.dkeeper.OnCloseGroup(ctx, group, gstate)
+				h.mkeeper.OnGroupClosed(ctx, group.ID)
+			}
 		}
 	}
 }

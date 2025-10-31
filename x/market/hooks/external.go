@@ -14,6 +14,7 @@ type DeploymentKeeper interface {
 	GetGroups(ctx sdk.Context, id dv1.DeploymentID) dtypes.Groups
 	CloseDeployment(ctx sdk.Context, deployment dv1.Deployment) error
 	OnCloseGroup(ctx sdk.Context, group dtypes.Group, state dtypes.Group_State) error
+	OnPauseGroup(ctx sdk.Context, group dtypes.Group) error
 }
 
 type MarketKeeper interface {
