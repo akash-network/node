@@ -24,7 +24,7 @@ import (
 
 	"pkg.akt.dev/go/sdkutil"
 
-	utypes "pkg.akt.dev/node/upgrades/types"
+	utypes "pkg.akt.dev/node/v2/upgrades/types"
 )
 
 type TestnetDelegation struct {

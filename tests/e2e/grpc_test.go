@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"pkg.akt.dev/node/testutil"
+	"pkg.akt.dev/node/v2/testutil"
 )
 
 func TestIntegrationGRPC(t *testing.T) {
@@ -23,8 +23,17 @@ func TestIntegrationGRPC(t *testing.T) {
 	pg := &providerGRPCRestTestSuite{}
 	pg.NetworkTestSuite = testutil.NewNetworkTestSuite(nil, pg)
 
+	og := &oracleGRPCRestTestSuite{}
+	og.NetworkTestSuite = testutil.NewNetworkTestSuite(nil, og)
+
+	// Contract deployment test suite with custom config for short governance voting period
+	poc := &priceOracleContractTestSuite{}
+	poc.NetworkTestSuite = testutil.NewNetworkTestSuite(NetworkConfig(), poc)
+
 	suite.Run(t, dg)
 	suite.Run(t, cg)
 	suite.Run(t, mg)
 	suite.Run(t, pg)
+	suite.Run(t, og)
+	suite.Run(t, poc)
 }

@@ -21,7 +21,7 @@ import (
 )
 
 // SetupSimulation creates the config, db (levelDB), temporary directory and logger for the simulation tests.
-// If `skip` is false it skips the current test. `skip` should be set using the `FlagEnabledValue` flag.
+// If `skip` is false, it skips the current test. `skip` should be set using the `FlagEnabledValue` flag.
 // Returns error on an invalid db instantiation or temp dir creation.
 func SetupSimulation(config simtypes.Config, dirPrefix, dbName string, verbose, skip bool) (dbm.DB, string, log.Logger, bool, error) {
 	if !skip {
@@ -56,7 +56,7 @@ func SimulationOperations(app runtime.AppI, cdc codec.JSONCodec, config simtypes
 }
 
 // BuildSimulationOperations retrieves the simulation params from the provided file path
-// and returns all the modules weighted operations
+// and returns all the module-weighted operations
 func BuildSimulationOperations(app runtime.AppI, cdc codec.JSONCodec, config simtypes.Config, txConfig client.TxConfig) []simtypes.WeightedOperation {
 	simState := module.SimulationState{
 		AppParams: make(simtypes.AppParams),
@@ -196,8 +196,8 @@ func getDiffFromKVPair(kvAs, kvBs []kv.Pair) (diffA, diffB []kv.Pair) {
 	}
 
 	index := make(map[string][]byte, len(kvBs))
-	for _, kv := range kvBs {
-		index[string(kv.Key)] = kv.Value
+	for _, pair := range kvBs {
+		index[string(pair.Key)] = pair.Value
 	}
 
 	for _, kvA := range kvAs {

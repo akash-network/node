@@ -213,7 +213,7 @@ func MainnetGenesisParams() GenesisParams {
 				},
 				{
 					Denom:    sdkutil.DenomAkt,
-					Exponent: sdkutil.DenomUaktExponent,
+					Exponent: sdkutil.DenomUExponent,
 					Aliases:  nil,
 				},
 			},

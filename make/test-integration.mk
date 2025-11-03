@@ -7,28 +7,28 @@ TEST_MODULES ?= $(shell $(GO) list ./... | grep -v '/mocks')
 ###############################################################################
 
 .PHONY: test
-test:
-	$(GO_TEST) -v -timeout 600s $(TEST_MODULES)
+test: wasmvm-libs
+	$(GO_TEST) $(BUILD_FLAGS) -v -timeout 600s $(TEST_MODULES)
 
 .PHONY: test-nocache
-test-nocache:
-	$(GO_TEST) -count=1 $(TEST_MODULES)
+test-nocache: wasmvm-libs
+	$(GO_TEST) $(BUILD_FLAGS) -count=1 $(TEST_MODULES)
 
 .PHONY: test-full
-test-full:
-	$(GO_TEST) -v -tags=$(BUILD_TAGS) $(TEST_MODULES)
+test-full: wasmvm-libs
+	$(GO_TEST) -v $(BUILD_FLAGS) $(TEST_MODULES)
 
 .PHONY: test-integration
 test-integration:
-	$(GO_TEST) -v -tags="e2e.integration" $(TEST_MODULES)
+	$(GO_TEST) -v -tags="e2e.integration" -ldflags '$(ldflags)' ./tests/e2e/...
 
 .PHONY: test-coverage
-test-coverage:
-	$(GO_TEST) -tags=$(BUILD_MAINNET) -coverprofile=coverage.txt \
+test-coverage: wasmvm-libs
+	$(GO_TEST) $(BUILD_FLAGS) -coverprofile=coverage.txt \
 		-covermode=count \
 		-coverpkg="$(COVER_PACKAGES)" \
 		./...
 
 .PHONY: test-vet
-test-vet:
-	$(GO_VET) ./...
+test-vet: wasmvm-libs
+	$(GO_VET) $(BUILD_FLAGS) ./...
