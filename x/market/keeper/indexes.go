@@ -5,30 +5,30 @@ import (
 	"cosmossdk.io/collections/indexes"
 
 	mv1 "pkg.akt.dev/go/node/market/v1"
-	types "pkg.akt.dev/go/node/market/v1beta5"
+	mvbeta "pkg.akt.dev/go/node/market/v1beta5"
 
-	"pkg.akt.dev/node/x/market/keeper/keys"
+	"pkg.akt.dev/node/v2/x/market/keeper/keys"
 )
 
 // OrderIndexes defines the secondary indexes for the order IndexedMap
 type OrderIndexes struct {
 	// State indexes orders by their state (Open, Active, Closed)
-	State *indexes.Multi[int32, keys.OrderPrimaryKey, types.Order]
+	State *indexes.Multi[int32, keys.OrderPrimaryKey, mvbeta.Order]
 
 	// GroupState indexes orders by (owner, dseq, gseq, state) for WithOrdersForGroup queries
-	GroupState *indexes.Multi[collections.Pair[keys.GroupPartKey, int32], keys.OrderPrimaryKey, types.Order]
+	GroupState *indexes.Multi[collections.Pair[keys.GroupPartKey, int32], keys.OrderPrimaryKey, mvbeta.Order]
 }
 
 // BidIndexes defines the secondary indexes for the bid IndexedMap
 type BidIndexes struct {
 	// State indexes bids by their state (Open, Active, Lost, Closed)
-	State *indexes.Multi[int32, keys.BidPrimaryKey, types.Bid]
+	State *indexes.Multi[int32, keys.BidPrimaryKey, mvbeta.Bid]
 
 	// Provider indexes bids by provider address (covers all states)
-	Provider *indexes.Multi[string, keys.BidPrimaryKey, types.Bid]
+	Provider *indexes.Multi[string, keys.BidPrimaryKey, mvbeta.Bid]
 
 	// OrderState indexes bids by (owner, dseq, gseq, oseq, state) for WithBidsForOrder queries
-	OrderState *indexes.Multi[collections.Pair[keys.OrderPrimaryKey, int32], keys.BidPrimaryKey, types.Bid]
+	OrderState *indexes.Multi[collections.Pair[keys.OrderPrimaryKey, int32], keys.BidPrimaryKey, mvbeta.Bid]
 }
 
 // LeaseIndexes defines the secondary indexes for the lease IndexedMap
@@ -40,8 +40,8 @@ type LeaseIndexes struct {
 	Provider *indexes.Multi[string, keys.LeasePrimaryKey, mv1.Lease]
 }
 
-func (b BidIndexes) IndexesList() []collections.Index[keys.BidPrimaryKey, types.Bid] {
-	return []collections.Index[keys.BidPrimaryKey, types.Bid]{
+func (b BidIndexes) IndexesList() []collections.Index[keys.BidPrimaryKey, mvbeta.Bid] {
+	return []collections.Index[keys.BidPrimaryKey, mvbeta.Bid]{
 		b.State,
 		b.Provider,
 		b.OrderState,
@@ -55,8 +55,8 @@ func (l LeaseIndexes) IndexesList() []collections.Index[keys.LeasePrimaryKey, mv
 	}
 }
 
-func (o OrderIndexes) IndexesList() []collections.Index[keys.OrderPrimaryKey, types.Order] {
-	return []collections.Index[keys.OrderPrimaryKey, types.Order]{
+func (o OrderIndexes) IndexesList() []collections.Index[keys.OrderPrimaryKey, mvbeta.Order] {
+	return []collections.Index[keys.OrderPrimaryKey, mvbeta.Order]{
 		o.State,
 		o.GroupState,
 	}
@@ -71,7 +71,7 @@ func NewOrderIndexes(sb *collections.SchemaBuilder) OrderIndexes {
 			"orders_by_state",
 			collections.Int32Key,
 			keys.OrderPrimaryKeyCodec,
-			func(_ keys.OrderPrimaryKey, order types.Order) (int32, error) {
+			func(_ keys.OrderPrimaryKey, order mvbeta.Order) (int32, error) {
 				return int32(order.State), nil
 			},
 		),
@@ -88,7 +88,7 @@ func NewOrderIndexes(sb *collections.SchemaBuilder) OrderIndexes {
 				collections.Int32Key,
 			),
 			keys.OrderPrimaryKeyCodec,
-			func(_ keys.OrderPrimaryKey, order types.Order) (collections.Pair[keys.GroupPartKey, int32], error) {
+			func(_ keys.OrderPrimaryKey, order mvbeta.Order) (collections.Pair[keys.GroupPartKey, int32], error) {
 				groupPart := collections.Join3(order.ID.Owner, order.ID.DSeq, order.ID.GSeq)
 				return collections.Join(groupPart, int32(order.State)), nil
 			},
@@ -105,7 +105,7 @@ func NewBidIndexes(sb *collections.SchemaBuilder) BidIndexes {
 			"bids_by_state",
 			collections.Int32Key,
 			keys.BidPrimaryKeyCodec,
-			func(_ keys.BidPrimaryKey, bid types.Bid) (int32, error) {
+			func(_ keys.BidPrimaryKey, bid mvbeta.Bid) (int32, error) {
 				return int32(bid.State), nil
 			},
 		),
@@ -115,7 +115,7 @@ func NewBidIndexes(sb *collections.SchemaBuilder) BidIndexes {
 			"bids_by_provider",
 			collections.StringKey,
 			keys.BidPrimaryKeyCodec,
-			func(_ keys.BidPrimaryKey, bid types.Bid) (string, error) {
+			func(_ keys.BidPrimaryKey, bid mvbeta.Bid) (string, error) {
 				return bid.ID.Provider, nil
 			},
 		),
@@ -133,7 +133,7 @@ func NewBidIndexes(sb *collections.SchemaBuilder) BidIndexes {
 				collections.Int32Key,
 			),
 			keys.BidPrimaryKeyCodec,
-			func(_ keys.BidPrimaryKey, bid types.Bid) (collections.Pair[keys.OrderPrimaryKey, int32], error) {
+			func(_ keys.BidPrimaryKey, bid mvbeta.Bid) (collections.Pair[keys.OrderPrimaryKey, int32], error) {
 				orderPart := collections.Join4(bid.ID.Owner, bid.ID.DSeq, bid.ID.GSeq, bid.ID.OSeq)
 				return collections.Join(orderPart, int32(bid.State)), nil
 			},

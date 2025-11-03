@@ -1,0 +1,23 @@
+[workspace]
+resolver = "2"
+members = [
+    "contracts/wormhole",
+    "contracts/pyth",
+]
+
+[workspace.package]
+version = "0.0.1"
+authors = ["Artur Troian <troian.ap@gmail.com>"]
+edition = "2021"
+rust-version  = "1.93.0"
+
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+panic = 'abort'
+incremental = false
+overflow-checks = true
