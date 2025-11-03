@@ -7,11 +7,12 @@ import (
 
 	types "pkg.akt.dev/go/node/deployment/v1beta4"
 
-	"pkg.akt.dev/node/x/deployment/keeper"
+	dimports "pkg.akt.dev/node/v2/x/deployment/imports"
+	"pkg.akt.dev/node/v2/x/deployment/keeper"
 )
 
 // NewHandler returns a handler for "deployment" type messages
-func NewHandler(keeper keeper.IKeeper, mkeeper MarketKeeper, ekeeper EscrowKeeper) baseapp.MsgServiceHandler {
+func NewHandler(keeper keeper.IKeeper, mkeeper dimports.MarketKeeper, ekeeper dimports.EscrowKeeper) baseapp.MsgServiceHandler {
 	ms := NewServer(keeper, mkeeper, ekeeper)
 
 	return func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {

@@ -7,15 +7,15 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"pkg.akt.dev/go/node/market/v1"
-	"pkg.akt.dev/go/node/market/v1beta5"
+	mv1 "pkg.akt.dev/go/node/market/v1"
+	mvbeta "pkg.akt.dev/go/node/market/v1beta5"
 
-	"pkg.akt.dev/node/x/market/keeper"
-	"pkg.akt.dev/node/x/market/keeper/keys"
+	"pkg.akt.dev/node/v2/x/market/keeper"
+	"pkg.akt.dev/node/v2/x/market/keeper/keys"
 )
 
 // ValidateGenesis does validation check of the Genesis
-func ValidateGenesis(data *v1beta5.GenesisState) error {
+func ValidateGenesis(data *mvbeta.GenesisState) error {
 	if err := data.Params.Validate(); err != nil {
 		return err
 	}
@@ -25,14 +25,14 @@ func ValidateGenesis(data *v1beta5.GenesisState) error {
 
 // DefaultGenesisState returns default genesis state as raw bytes for the market
 // module.
-func DefaultGenesisState() *v1beta5.GenesisState {
-	return &v1beta5.GenesisState{
-		Params: v1beta5.DefaultParams(),
+func DefaultGenesisState() *mvbeta.GenesisState {
+	return &mvbeta.GenesisState{
+		Params: mvbeta.DefaultParams(),
 	}
 }
 
 // InitGenesis initiate genesis state and return updated validator details
-func InitGenesis(ctx sdk.Context, kpr keeper.IKeeper, data *v1beta5.GenesisState) {
+func InitGenesis(ctx sdk.Context, kpr keeper.IKeeper, data *mvbeta.GenesisState) {
 	k := kpr.(*keeper.Keeper)
 
 	for _, record := range data.Orders {
@@ -42,7 +42,7 @@ func InitGenesis(ctx sdk.Context, kpr keeper.IKeeper, data *v1beta5.GenesisState
 			panic(fmt.Errorf("market genesis orders init. order id %s: %w", record.ID, err))
 		}
 		if has {
-			panic(fmt.Errorf("market genesis orders init. order id %s: %w", record.ID, v1.ErrOrderExists))
+			panic(fmt.Errorf("market genesis orders init. order id %s: %w", record.ID, mv1.ErrOrderExists))
 		}
 		if err := k.Orders().Set(ctx, pk, record); err != nil {
 			panic(fmt.Errorf("market genesis orders init. order id %s: %w", record.ID, err))
@@ -56,8 +56,9 @@ func InitGenesis(ctx sdk.Context, kpr keeper.IKeeper, data *v1beta5.GenesisState
 			panic(fmt.Errorf("market genesis bids init. bid id %s: %w", record.ID, err))
 		}
 		if has {
-			panic(fmt.Errorf("market genesis bids init. bid id %s: %w", record.ID, v1.ErrBidExists))
+			panic(fmt.Errorf("market genesis bids init. bid id %s: %w", record.ID, mv1.ErrBidExists))
 		}
+
 		if err := k.Bids().Set(ctx, pk, record); err != nil {
 			panic(fmt.Errorf("market genesis bids init. bid id %s: %w", record.ID, err))
 		}
@@ -84,29 +85,29 @@ func InitGenesis(ctx sdk.Context, kpr keeper.IKeeper, data *v1beta5.GenesisState
 }
 
 // ExportGenesis returns genesis state as raw bytes for the market module
-func ExportGenesis(ctx sdk.Context, k keeper.IKeeper) *v1beta5.GenesisState {
+func ExportGenesis(ctx sdk.Context, k keeper.IKeeper) *mvbeta.GenesisState {
 	params := k.GetParams(ctx)
 
-	var bids v1beta5.Bids
-	var leases v1.Leases
-	var orders v1beta5.Orders
+	var bids mvbeta.Bids
+	var leases mv1.Leases
+	var orders mvbeta.Orders
 
-	k.WithLeases(ctx, func(lease v1.Lease) bool {
+	k.WithLeases(ctx, func(lease mv1.Lease) bool {
 		leases = append(leases, lease)
 		return false
 	})
 
-	k.WithOrders(ctx, func(order v1beta5.Order) bool {
+	k.WithOrders(ctx, func(order mvbeta.Order) bool {
 		orders = append(orders, order)
 		return false
 	})
 
-	k.WithBids(ctx, func(bid v1beta5.Bid) bool {
+	k.WithBids(ctx, func(bid mvbeta.Bid) bool {
 		bids = append(bids, bid)
 		return false
 	})
 
-	return &v1beta5.GenesisState{
+	return &mvbeta.GenesisState{
 		Params: params,
 		Orders: orders,
 		Leases: leases,
@@ -116,8 +117,8 @@ func ExportGenesis(ctx sdk.Context, k keeper.IKeeper) *v1beta5.GenesisState {
 
 // GetGenesisStateFromAppState returns x/market GenesisState given raw application
 // genesis state.
-func GetGenesisStateFromAppState(cdc codec.JSONCodec, appState map[string]json.RawMessage) *v1beta5.GenesisState {
-	var genesisState v1beta5.GenesisState
+func GetGenesisStateFromAppState(cdc codec.JSONCodec, appState map[string]json.RawMessage) *mvbeta.GenesisState {
+	var genesisState mvbeta.GenesisState
 
 	if appState[ModuleName] != nil {
 		cdc.MustUnmarshalJSON(appState[ModuleName], &genesisState)

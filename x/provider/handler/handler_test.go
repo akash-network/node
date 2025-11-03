@@ -15,10 +15,10 @@ import (
 	akashtypes "pkg.akt.dev/go/node/types/attributes/v1"
 	"pkg.akt.dev/go/testutil"
 
-	"pkg.akt.dev/node/testutil/state"
-	mkeeper "pkg.akt.dev/node/x/market/keeper"
-	"pkg.akt.dev/node/x/provider/handler"
-	"pkg.akt.dev/node/x/provider/keeper"
+	"pkg.akt.dev/node/v2/testutil/state"
+	mkeeper "pkg.akt.dev/node/v2/x/market/keeper"
+	"pkg.akt.dev/node/v2/x/provider/handler"
+	"pkg.akt.dev/node/v2/x/provider/keeper"
 )
 
 const (
@@ -68,14 +68,7 @@ func TestProviderCreate(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("ensure event created", func(t *testing.T) {
-		ev, err := sdk.ParseTypedEvent(res.Events[0])
-		require.NoError(t, err)
-
-		require.IsType(t, &types.EventProviderCreated{}, ev)
-
-		dev := ev.(*types.EventProviderCreated)
-
-		require.Equal(t, msg.Owner, dev.Owner)
+		testutil.EnsureEvent(t, res.Events, &types.EventProviderCreated{Owner: msg.Owner})
 	})
 
 	res, err = suite.handler(suite.ctx, msg)
@@ -101,14 +94,7 @@ func TestProviderCreateWithInfo(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("ensure event created", func(t *testing.T) {
-		ev, err := sdk.ParseTypedEvent(res.Events[0])
-		require.NoError(t, err)
-
-		require.IsType(t, &types.EventProviderCreated{}, ev)
-
-		dev := ev.(*types.EventProviderCreated)
-
-		require.Equal(t, msg.Owner, dev.Owner)
+		testutil.EnsureEvent(t, res.Events, &types.EventProviderCreated{Owner: msg.Owner})
 	})
 
 	res, err = suite.handler(suite.ctx, msg)
@@ -181,14 +167,7 @@ func TestProviderUpdateExisting(t *testing.T) {
 	res, err := suite.handler(suite.ctx, updateMsg)
 
 	t.Run("ensure event created", func(t *testing.T) {
-		ev, err := sdk.ParseTypedEvent(res.Events[1])
-		require.NoError(t, err)
-
-		require.IsType(t, &types.EventProviderUpdated{}, ev)
-
-		dev := ev.(*types.EventProviderUpdated)
-
-		require.Equal(t, updateMsg.Owner, dev.Owner)
+		testutil.EnsureEvent(t, res.Events, &types.EventProviderUpdated{Owner: updateMsg.Owner})
 	})
 
 	require.NoError(t, err)

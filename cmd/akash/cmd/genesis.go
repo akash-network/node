@@ -115,6 +115,25 @@ func PrepareGenesis(clientCtx client.Context, appState map[string]json.RawMessag
 	genDoc.Consensus.Params = genesisParams.ConsensusParams
 
 	// ---
+	// bank module genesis
+	bankGenState := banktypes.GetGenesisStateFromAppState(depCdc, appState)
+	bankGenState.DenomMetadata = genesisParams.NativeCoinMetadatas
+	bankGenState.SendEnabled = []banktypes.SendEnabled{
+		{
+			sdkutil.DenomUakt,
+			true,
+		},
+		{
+			sdkutil.DenomUact,
+			false,
+		},
+	}
+	bankGenStateBz, err := cdc.MarshalJSON(bankGenState)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to marshal bank genesis state: %w", err)
+	}
+	appState[banktypes.ModuleName] = bankGenStateBz
+
 	// staking module genesis
 	stakingGenState := stakingtypes.GetGenesisStateFromAppState(depCdc, appState)
 	stakingGenState.Params = genesisParams.StakingParams
@@ -213,12 +232,35 @@ func MainnetGenesisParams() GenesisParams {
 				},
 				{
 					Denom:    sdkutil.DenomAkt,
-					Exponent: sdkutil.DenomUaktExponent,
+					Exponent: sdkutil.DenomUExponent,
 					Aliases:  nil,
 				},
 			},
 			Base:    sdkutil.DenomUakt,
 			Display: sdkutil.DenomAkt,
+			Name:    "Akash Native Token",
+			Symbol:  "AKT",
+		},
+		{
+			Description: "Akash Compute Token",
+			DenomUnits: []*banktypes.DenomUnit{
+				{
+					Denom:    sdkutil.DenomAct,
+					Exponent: 6,
+				},
+				{
+					Denom:    sdkutil.DenomMact,
+					Exponent: 3,
+				},
+				{
+					Denom:    sdkutil.DenomUact,
+					Exponent: 0,
+				},
+			},
+			Base:    sdkutil.DenomUact,
+			Display: sdkutil.DenomUact,
+			Name:    "Akash Compute Token",
+			Symbol:  "ACT",
 		},
 	}
 
