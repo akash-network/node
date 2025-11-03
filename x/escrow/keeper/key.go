@@ -3,9 +3,9 @@ package keeper
 import (
 	"bytes"
 	"fmt"
-	"strings"
 
 	escrowid "pkg.akt.dev/go/node/escrow/id/v1"
+	emodule "pkg.akt.dev/go/node/escrow/module"
 	etypes "pkg.akt.dev/go/node/escrow/types/v1"
 	"pkg.akt.dev/go/node/escrow/v1beta3"
 )
@@ -22,6 +22,7 @@ var (
 	StateOpenPrefix      = []byte{StateOpenPrefixID}
 	StateClosedPrefix    = []byte{StateClosedPrefixID}
 	StateOverdrawnPrefix = []byte{StateOverdrawnPrefixID}
+	BmeAccountsPrefix    = []byte{0x14, 0x01}
 )
 
 func BuildAccountsKey(state etypes.State, id escrowid.ID) []byte {
@@ -68,13 +69,13 @@ func stateToPrefix(state etypes.State) []byte {
 	}
 }
 
-func ParseAccountKey(key []byte) (escrowid.Account, etypes.State) {
+func ParseAccountKey(key []byte) (escrowid.Account, etypes.State, error) {
 	if len(key) < len(AccountPrefix)+2 {
-		panic("malformed account key")
+		return escrowid.Account{}, etypes.StateInvalid, emodule.ErrMalformedKey
 	}
 
 	if !bytes.HasPrefix(key, AccountPrefix) {
-		panic("malformed account prefix")
+		return escrowid.Account{}, etypes.StateInvalid, emodule.ErrMalformedKey.Wrap("malformed prefix")
 	}
 
 	key = key[len(AccountPrefix):]
@@ -83,49 +84,26 @@ func ParseAccountKey(key []byte) (escrowid.Account, etypes.State) {
 	key = key[1:]
 
 	if key[0] != '/' {
-		panic("malformed account separator")
+		return escrowid.Account{}, etypes.StateInvalid, emodule.ErrMalformedKey.Wrap("malformed separator")
 	}
 
 	key = key[1:]
 
-	parts := strings.Split(string(key), "/")
-	if len(parts) < 3 {
-		panic(fmt.Sprintf("malformed account key \"%s\"", string(key)))
+	acc, err := escrowid.ParseAccount(string(key))
+	if err != nil {
+		return escrowid.Account{}, etypes.StateInvalid, err
 	}
 
-	scopeVal, valid := escrowid.Scope_value[parts[0]]
-	if !valid {
-		panic(fmt.Sprintf("invalid account scope \"%s\"", parts[0]))
-	}
-
-	parts = parts[1:]
-
-	scope := escrowid.Scope(scopeVal)
-
-	switch scope {
-	case escrowid.ScopeDeployment:
-		if len(parts) != 2 {
-			panic(fmt.Sprintf("malformed account key \"%s\"", string(key)))
-		}
-	case escrowid.ScopeBid:
-		if len(parts) != 5 {
-			panic(fmt.Sprintf("malformed account key \"%s\"", string(key)))
-		}
-	}
-
-	return escrowid.Account{
-		Scope: scope,
-		XID:   strings.Join(parts, "/"),
-	}, state
+	return acc, state, nil
 }
 
-func ParsePaymentKey(key []byte) (escrowid.Payment, etypes.State) {
+func ParsePaymentKey(key []byte) (escrowid.Payment, etypes.State, error) {
 	if len(key) < len(PaymentPrefix)+1 {
-		panic("malformed payment key")
+		return escrowid.Payment{}, etypes.StateInvalid, emodule.ErrMalformedKey
 	}
 
 	if !bytes.HasPrefix(key, PaymentPrefix) {
-		panic("malformed payment prefix")
+		return escrowid.Payment{}, etypes.StateInvalid, emodule.ErrMalformedKey.Wrap("malformed prefix")
 	}
 
 	key = key[len(PaymentPrefix):]
@@ -134,29 +112,17 @@ func ParsePaymentKey(key []byte) (escrowid.Payment, etypes.State) {
 	key = key[1:]
 
 	if key[0] != '/' {
-		panic("malformed payment separator")
+		return escrowid.Payment{}, etypes.StateInvalid, emodule.ErrMalformedKey.Wrap("malformed separator")
 	}
 
 	key = key[1:]
 
-	parts := strings.Split(string(key), "/")
-
-	if len(parts) != 6 {
-		panic(fmt.Sprintf("malformed payment key \"%s\"", string(key)))
+	pmnt, err := escrowid.ParsePayment(string(key))
+	if err != nil {
+		return escrowid.Payment{}, etypes.StateInvalid, err
 	}
 
-	scope, valid := escrowid.Scope_value[parts[0]]
-	if !valid {
-		panic(fmt.Sprintf("invalid payment scope \"%s\"", parts[0]))
-	}
-
-	return escrowid.Payment{
-		AID: escrowid.Account{
-			Scope: escrowid.Scope(scope),
-			XID:   strings.Join(parts[1:3], "/"),
-		},
-		XID: strings.Join(parts[3:], "/"),
-	}, state
+	return pmnt, state, nil
 }
 
 func LegacyAccountKey(id v1beta3.AccountID) []byte {
