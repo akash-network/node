@@ -19,10 +19,10 @@ import (
 
 	types "pkg.akt.dev/go/node/provider/v1beta4"
 
-	appparams "pkg.akt.dev/node/app/params"
-	testsim "pkg.akt.dev/node/testutil/sim"
-	"pkg.akt.dev/node/x/provider/config"
-	"pkg.akt.dev/node/x/provider/keeper"
+	appparams "pkg.akt.dev/node/v2/app/params"
+	testsim "pkg.akt.dev/node/v2/testutil/sim"
+	"pkg.akt.dev/node/v2/x/provider/config"
+	"pkg.akt.dev/node/v2/x/provider/keeper"
 )
 
 // Simulation operation weights constants

@@ -70,6 +70,15 @@ test: init
 		-upgrade-version="$(UPGRADE_BINARY_VERSION)" \
 		-test-cases=test-cases.json
 
+
+.PHONY: setup-hermes
+.ONESHELL:
+setup-hermes:
+	@cat << 'EOF' > "$(AKASH_RUN_DIR)/hermes.env"
+	CONTRACT_ADDRESS="akash1nc5tatafv6eyq7llkr2gv50ff9e22mnf70qgjlv737ktmt4eswrqyagled"
+	WALLET_SECRET="privateKey:47affbcbbcc1b68241f5090549f4ccf7bc9fdab6870ae760d1e3469fd82e828e"
+	EOF
+
 .PHONY: test-reset
 test-reset:
 	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) --snapshot-url=$(SNAPSHOT_URL) --chain-meta=$(CHAIN_METADATA_URL) --max-validators=$(MAX_VALIDATORS) clean
