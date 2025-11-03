@@ -7,7 +7,7 @@ import (
 	v1 "pkg.akt.dev/go/node/deployment/v1"
 	types "pkg.akt.dev/go/node/deployment/v1beta4"
 
-	"pkg.akt.dev/node/x/deployment/keeper/keys"
+	"pkg.akt.dev/node/v2/x/deployment/keeper/keys"
 )
 
 // DeploymentIndexes defines the secondary indexes for the deployment IndexedMap

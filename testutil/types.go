@@ -14,8 +14,8 @@ import (
 	cflags "pkg.akt.dev/go/cli/flags"
 	"pkg.akt.dev/go/sdkutil"
 
-	"pkg.akt.dev/node/app"
-	"pkg.akt.dev/node/testutil/network"
+	"pkg.akt.dev/node/v2/app"
+	"pkg.akt.dev/node/v2/testutil/network"
 )
 
 // NewTestNetworkFixture returns a new simapp AppConstructor for network simulation tests

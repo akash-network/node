@@ -20,14 +20,16 @@ builds:
     env:
       - CC=o64-clang
       - CXX=o64-clang++
+      - CGO_CFLAGS=-mmacosx-version-min=10.12
+      - CGO_LDFLAGS=-L./.cache/lib -mmacosx-version-min=10.12
     flags:
       - "-mod={{ .Env.MOD }}"
-      - "-tags={{ .Env.BUILD_TAGS }}"
+      - "-tags={{ .Env.BUILD_TAGS }} static_wasm"
       - -trimpath
     ldflags:
-      - "{{ .Env.BUILD_VARS }}"
-      - "{{ .Env.STRIP_FLAGS }}"
-      - "-linkmode={{ .Env.LINKMODE }}"
+      - "{{ .Env.BUILD_LDFLAGS }}"
+      - -s -w
+      - -linkmode=external
   - id: akash-darwin-arm64
     binary: akash
     main: ./cmd/akash
@@ -38,14 +40,16 @@ builds:
     env:
       - CC=oa64-clang
       - CXX=oa64-clang++
+      - CGO_CFLAGS=-mmacosx-version-min=10.12
+      - CGO_LDFLAGS=-L./.cache/lib -mmacosx-version-min=10.12
     flags:
       - "-mod={{ .Env.MOD }}"
-      - "-tags={{ .Env.BUILD_TAGS }}"
+      - "-tags={{ .Env.BUILD_TAGS }} static_wasm"
       - -trimpath
     ldflags:
-      - "{{ .Env.BUILD_VARS }}"
-      - "{{ .Env.STRIP_FLAGS }}"
-      - "-linkmode={{ .Env.LINKMODE }}"
+      - "{{ .Env.BUILD_LDFLAGS }}"
+      - -s -w
+      - -linkmode=external
   - id: akash-linux-amd64
     binary: akash
     main: ./cmd/akash
@@ -61,10 +65,11 @@ builds:
       - "-tags={{ .Env.BUILD_TAGS }}"
       - -trimpath
     ldflags:
-      - "{{ .Env.BUILD_VARS }}"
-      - "{{ .Env.STRIP_FLAGS }}"
-      - "-linkmode={{ .Env.LINKMODE }}"
-      - -extldflags "-lc -lrt -lpthread"
+      - "{{ .Env.BUILD_LDFLAGS }}"
+      - -s -w
+      - -linkmode=external
+      # yamllint disable-line rule:line-length
+      - -extldflags "-L./.cache/lib -lwasmvm_muslc.x86_64 -Wl,-z,muldefs -lm -lrt -lc"
   - id: akash-linux-arm64
     binary: akash
     main: ./cmd/akash
@@ -80,10 +85,11 @@ builds:
       - "-tags={{ .Env.BUILD_TAGS }}"
       - -trimpath
     ldflags:
-      - "{{ .Env.BUILD_VARS }}"
-      - "{{ .Env.STRIP_FLAGS }}"
-      - "-linkmode={{ .Env.LINKMODE }}"
-      - -extldflags "-lc -lrt -lpthread"
+      - "{{ .Env.BUILD_LDFLAGS }}"
+      - -s -w
+      - -linkmode=external
+      # yamllint disable-line rule:line-length
+      - -extldflags "-L./.cache/lib -lwasmvm_muslc.aarch64 -Wl,-z,muldefs -lm -lrt -lc"
 universal_binaries:
   - id: akash-darwin-universal
     ids:
@@ -104,3 +110,12 @@ archives:
       - zip
     files:
       - none*
+  - id: contracts
+    name_template: "contracts"
+    meta: true
+    wrap_in_directory: false
+    formats:
+      - zip
+    files:
+      - src: .cache/cosmwasm/artifacts/**.*
+        strip_parent: true
