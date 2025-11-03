@@ -1,0 +1,8 @@
+source_up .envrc
+
+AKASH_RUN_NAME=$(basename "$(pwd)")
+AKASH_RUN_DIR="${AKASH_RUN}/${AKASH_RUN_NAME}"
+
+export AKASH_HOME="${AKASH_RUN_DIR}/.akash"
+export AKASH_RUN_NAME
+export AKASH_RUN_DIR

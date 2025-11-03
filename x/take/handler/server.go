@@ -8,7 +8,7 @@ import (
 
 	types "pkg.akt.dev/go/node/take/v1"
 
-	"pkg.akt.dev/node/x/take/keeper"
+	"pkg.akt.dev/node/v2/x/take/keeper"
 )
 
 var _ types.MsgServer = msgServer{}
