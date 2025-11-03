@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	"github.com/gorilla/mux"
 	"github.com/rakyll/statik/fs"
 	"github.com/spf13/cast"
@@ -27,6 +28,7 @@ import (
 	evidencetypes "cosmossdk.io/x/evidence/types"
 	"cosmossdk.io/x/feegrant"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
+	"github.com/CosmWasm/wasmd/x/wasm"
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -56,6 +58,7 @@ import (
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	ibcwasmtypes "github.com/cosmos/ibc-go/modules/light-clients/08-wasm/types"
 	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 	ibchost "github.com/cosmos/ibc-go/v10/modules/core/exported"
 	ibctm "github.com/cosmos/ibc-go/v10/modules/light-clients/07-tendermint"
@@ -140,6 +143,19 @@ func NewApp(
 		txConfig:          txConfig,
 		interfaceRegistry: interfaceRegistry,
 		invCheckPeriod:    invCheckPeriod,
+	}
+
+	wasmDir := filepath.Join(homePath, "wasm")
+	ibcWasmConfig := ibcwasmtypes.WasmConfig{
+		DataDir:               filepath.Join(homePath, "ibc_08-wasm"),
+		SupportedCapabilities: []string{"iterator", "stargate", "abort"},
+		ContractDebugMode:     false,
+	}
+	wasmConfig, err := wasm.ReadNodeConfig(appOpts)
+	// Uncomment this for debugging contracts. In the future this could be made into a param passed by the tests
+	// wasmConfig.ContractDebugMode = true
+	if err != nil {
+		panic(fmt.Sprintf("error while reading wasm config: %s", err))
 	}
 
 	app.InitSpecialKeepers(
@@ -288,6 +304,8 @@ func orderBeginBlockers(_ []string) []string {
 		ibctm.ModuleName,
 		ibchost.ModuleName,
 		feegrant.ModuleName,
+		// wasm after ibc transfer
+		wasmtypes.ModuleName,
 	}
 }
 
@@ -317,6 +335,8 @@ func OrderEndBlockers(_ []string) []string {
 		transfertypes.ModuleName,
 		ibchost.ModuleName,
 		feegrant.ModuleName,
+		// wasm after ibc transfer
+		wasmtypes.ModuleName,
 	}
 }
 

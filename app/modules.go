@@ -4,6 +4,7 @@ import (
 	"cosmossdk.io/x/evidence"
 	feegrantmodule "cosmossdk.io/x/feegrant/module"
 	"cosmossdk.io/x/upgrade"
+	"github.com/CosmWasm/wasmd/x/wasm"
 	addresscodec "github.com/cosmos/cosmos-sdk/codec/address"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -189,6 +190,15 @@ func appModules(
 		cert.NewAppModule(
 			app.cdc,
 			app.Keepers.Akash.Cert,
+		),
+		wasm.NewAppModule(
+			app.cdc,
+			app.Keepers.External.Wasm,
+			app.Keepers.Cosmos.Staking,
+			app.Keepers.Cosmos.Acct,
+			app.Keepers.Cosmos.Bank,
+			app.MsgServiceRouter(),
+			nil,
 		),
 	}
 }
