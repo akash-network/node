@@ -26,7 +26,7 @@ import (
 	cclient "pkg.akt.dev/go/node/client/v1beta3"
 	sdktestutil "pkg.akt.dev/go/testutil"
 
-	"pkg.akt.dev/node/testutil/network"
+	"pkg.akt.dev/node/v2/testutil/network"
 )
 
 type NetworkTestSuite struct {

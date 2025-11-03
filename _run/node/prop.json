@@ -1,0 +1,27 @@
+{
+    "messages": [
+        {
+            "@type": "/akash.oracle.v1.MsgUpdateParams",
+            "authority": "akash10d07y265gmmuvt4z0w9aw880jnsr700jhe7z0f",
+            "params": {
+                "sources": [
+                    "akash1xcfl5u6g2yprvpr4q8j2pp5h6l5ys3nuf529qa"
+                ],
+                "min_price_sources": 1,
+                "max_price_staleness_blocks": "60",
+                "twap_window": "50",
+                "max_price_deviation_bps": "150",
+                "feed_contracts_params": [
+                    {
+                        "@type": "/akash.oracle.v1.PythContractParams",
+                        "akt_price_feed_id": "0x4ea5bb4d2f5900cc2e97ba534240950740b4d3b89fe712a94a7304fd2fd92702"
+                    }
+                ]
+            }
+        }
+    ],
+    "deposit": "50000000uakt",
+    "title": "Add Oracle Price Feeder Source"
+    "summary": "Authorize price feeder address for AKT/USD oracle",
+    "expedited": true
+}
