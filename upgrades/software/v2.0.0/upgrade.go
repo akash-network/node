@@ -1,0 +1,149 @@
+// Package v2_0_0
+// nolint revive
+package v2_0_0
+
+import (
+	"context"
+	"fmt"
+
+	"cosmossdk.io/log"
+	storetypes "cosmossdk.io/store/types"
+	upgradetypes "cosmossdk.io/x/upgrade/types"
+	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/module"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	epochstypes "pkg.akt.dev/go/node/epochs/v1beta1"
+	otypes "pkg.akt.dev/go/node/oracle/v1"
+	ttypes "pkg.akt.dev/go/node/take/v1"
+	"pkg.akt.dev/go/sdkutil"
+
+	apptypes "pkg.akt.dev/node/v2/app/types"
+	utypes "pkg.akt.dev/node/v2/upgrades/types"
+	"pkg.akt.dev/node/v2/x/bme"
+	"pkg.akt.dev/node/v2/x/oracle"
+	awasm "pkg.akt.dev/node/v2/x/wasm"
+)
+
+const (
+	UpgradeName = "v2.0.0"
+)
+
+type upgrade struct {
+	*apptypes.App
+	log log.Logger
+}
+
+var _ utypes.IUpgrade = (*upgrade)(nil)
+
+func initUpgrade(log log.Logger, app *apptypes.App) (utypes.IUpgrade, error) {
+	up := &upgrade{
+		App: app,
+		log: log.With("module", fmt.Sprintf("upgrade/%s", UpgradeName)),
+	}
+
+	return up, nil
+}
+
+func (up *upgrade) StoreLoader() *storetypes.StoreUpgrades {
+	return &storetypes.StoreUpgrades{
+		Added: []string{
+			epochstypes.StoreKey,
+			oracle.StoreKey,
+			awasm.StoreKey,
+			wasmtypes.StoreKey,
+			bme.StoreKey,
+		},
+		Deleted: []string{
+			ttypes.ModuleName,
+		},
+	}
+}
+
+func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
+	return func(ctx context.Context, plan upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
+		// Set wasm old version to 1 if we want to call wasm's InitGenesis ourselves
+		// in this upgrade logic ourselves.
+		//
+		// vm[wasm.ModuleName] = wasm.ConsensusVersion
+		//
+		// Otherwise we run this, which will run wasm.InitGenesis(wasm.DefaultGenesis())
+		// and then override it after.
+
+		// Set the initial wasm module version
+		//fromVM[wasmtypes.ModuleName] = wasm.AppModule{}.ConsensusVersion()
+
+		toVM, err := up.MM.RunMigrations(ctx, up.Configurator, fromVM)
+		if err != nil {
+			return toVM, err
+		}
+
+		up.Keepers.Cosmos.Bank.SetDenomMetaData(ctx, banktypes.Metadata{
+			Description: "Akash Compute Token",
+			DenomUnits: []*banktypes.DenomUnit{
+				{
+					Denom:    sdkutil.DenomAct,
+					Exponent: 6,
+				},
+				{
+					Denom:    sdkutil.DenomMact,
+					Exponent: 3,
+				},
+				{
+					Denom:    sdkutil.DenomUact,
+					Exponent: 0,
+				},
+			},
+			Base:    sdkutil.DenomUact,
+			Display: sdkutil.DenomUact,
+			Name:    sdkutil.DenomUact,
+			Symbol:  sdkutil.DenomUact,
+			URI:     "",
+			URIHash: "",
+		})
+
+		up.Keepers.Cosmos.Bank.SetSendEnabled(ctx, sdkutil.DenomUact, false)
+
+		params := up.Keepers.Cosmos.Wasm.GetParams(ctx)
+		// Configure code upload access - RESTRICTED TO GOVERNANCE ONLY
+		// Only governance proposals can upload contract code
+		// This provides maximum security for mainnet deployment
+		params.CodeUploadAccess = wasmtypes.AccessConfig{
+			Permission: wasmtypes.AccessTypeNobody,
+		}
+
+		// Configure instantiate default permission
+		params.InstantiateDefaultPermission = wasmtypes.AccessTypeEverybody
+
+		err = up.Keepers.Cosmos.Wasm.SetParams(ctx, params)
+		if err != nil {
+			return toVM, err
+		}
+
+		sctx := sdk.UnwrapSDKContext(ctx)
+
+		oparams := otypes.DefaultParams()
+
+		// Instantiate oracle contracts via wasm message server.
+		// The keeper's create method is unexported, so we go through MsgServer.
+		// Using the governance module address as a sender grants GovAuthorizationPolicy,
+		// which bypasses upload access restrictions.
+		pythContractAddr, err := up.instantiateOracleContracts(ctx)
+		if err != nil {
+			return toVM, fmt.Errorf("failed to instantiate oracle contracts: %w", err)
+		}
+
+		// Set the pyth contract as an authorized oracle price source
+		oparams.Sources = []string{pythContractAddr}
+		err = up.Keepers.Akash.Oracle.SetParams(sctx, oparams)
+		if err != nil {
+			return toVM, err
+		}
+
+		if err := up.migrateDenoms(ctx); err != nil {
+			return toVM, fmt.Errorf("failed to migrate denoms: %w", err)
+		}
+
+		return toVM, err
+	}
+}

@@ -1,21 +1,23 @@
 package keeper
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
 	"cosmossdk.io/collections"
 	"cosmossdk.io/collections/indexes"
+	sdkmath "cosmossdk.io/math"
 	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/runtime"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-
 	"pkg.akt.dev/go/node/deployment/v1"
 	types "pkg.akt.dev/go/node/deployment/v1beta4"
 
-	"pkg.akt.dev/node/x/deployment/keeper/keys"
+	dimports "pkg.akt.dev/node/v2/x/deployment/imports"
+	"pkg.akt.dev/node/v2/x/deployment/keeper/keys"
 )
 
 type IKeeper interface {
@@ -24,6 +26,7 @@ type IKeeper interface {
 	GetDeployment(ctx sdk.Context, id v1.DeploymentID) (v1.Deployment, bool)
 	GetGroup(ctx sdk.Context, id v1.GroupID) (types.Group, bool)
 	GetGroups(ctx sdk.Context, id v1.DeploymentID) (types.Groups, error)
+	SaveGroup(ctx sdk.Context, group types.Group) error
 	Create(ctx sdk.Context, deployment v1.Deployment, groups []types.Group) error
 	UpdateDeployment(ctx sdk.Context, deployment v1.Deployment) error
 	CloseDeployment(ctx sdk.Context, deployment v1.Deployment) error
@@ -37,33 +40,52 @@ type IKeeper interface {
 	SetParams(ctx sdk.Context, params types.Params) error
 	GetAuthority() string
 	NewQuerier() Querier
+
+	EndBlocker(context.Context) error
+
+	AddPendingDenomMigration(ctx sdk.Context, did v1.DeploymentID) error
 }
 
 // Keeper of the deployment store
 type Keeper struct {
-	cdc     codec.BinaryCodec
-	skey    storetypes.StoreKey
-	ekeeper EscrowKeeper
+	cdc          codec.BinaryCodec
+	skey         storetypes.StoreKey
+	ekeeper      dimports.EscrowKeeper
+	oracleKeeper dimports.OracleKeeper
+	marketKeeper dimports.MarketKeeper
+	authzKeeper  dimports.AuthzKeeper
+	bankKeeper   dimports.BankKeeper
 
 	// The address capable of executing a MsgUpdateParams message.
 	// This should be the x/gov module account.
 	authority string
 
-	schema      collections.Schema
-	deployments *collections.IndexedMap[keys.DeploymentPrimaryKey, v1.Deployment, DeploymentIndexes]
-	groups      *collections.IndexedMap[keys.GroupPrimaryKey, types.Group, GroupIndexes]
+	schema                 collections.Schema
+	deployments            *collections.IndexedMap[keys.DeploymentPrimaryKey, v1.Deployment, DeploymentIndexes]
+	groups                 *collections.IndexedMap[keys.GroupPrimaryKey, types.Group, GroupIndexes]
+	pendingDenomMigrations collections.Map[keys.DeploymentPrimaryKey, sdkmath.Int]
 }
 
 // NewKeeper creates and returns an instance for deployment keeper
-func NewKeeper(cdc codec.BinaryCodec, skey *storetypes.KVStoreKey, ekeeper EscrowKeeper, authority string) IKeeper {
+func NewKeeper(
+	cdc codec.BinaryCodec,
+	skey *storetypes.KVStoreKey,
+	ekeeper dimports.EscrowKeeper,
+	oracleKeeper dimports.OracleKeeper,
+	marketKeeper dimports.MarketKeeper,
+	authzKeeper dimports.AuthzKeeper,
+	bankKeeper dimports.BankKeeper,
+	authority string,
+) IKeeper {
 	ssvc := runtime.NewKVStoreService(skey)
 	sb := collections.NewSchemaBuilder(ssvc)
 
 	deploymentIndexes := NewDeploymentIndexes(sb)
 	groupIndexes := NewGroupIndexes(sb)
 
-	deployments := collections.NewIndexedMap(sb, collections.NewPrefix(keys.DeploymentPrefixNew), "deployments", keys.DeploymentPrimaryKeyCodec, codec.CollValue[v1.Deployment](cdc), deploymentIndexes)
-	groups := collections.NewIndexedMap(sb, collections.NewPrefix(keys.GroupPrefixNew), "groups", keys.GroupPrimaryKeyCodec, codec.CollValue[types.Group](cdc), groupIndexes)
+	deployments := collections.NewIndexedMap(sb, collections.NewPrefix(keys.DeploymentPrefix), "deployments", keys.DeploymentPrimaryKeyCodec, codec.CollValue[v1.Deployment](cdc), deploymentIndexes)
+	groups := collections.NewIndexedMap(sb, collections.NewPrefix(keys.GroupPrefix), "groups", keys.GroupPrimaryKeyCodec, codec.CollValue[types.Group](cdc), groupIndexes)
+	pendingDenomMigrations := collections.NewMap(sb, collections.NewPrefix(keys.PendingDenomMigrationPrefix), "pending_denom_migrations", keys.DeploymentPrimaryKeyCodec, sdk.IntValue)
 
 	schema, err := sb.Build()
 	if err != nil {
@@ -71,13 +93,18 @@ func NewKeeper(cdc codec.BinaryCodec, skey *storetypes.KVStoreKey, ekeeper Escro
 	}
 
 	return &Keeper{
-		skey:        skey,
-		cdc:         cdc,
-		ekeeper:     ekeeper,
-		authority:   authority,
-		schema:      schema,
-		deployments: deployments,
-		groups:      groups,
+		skey:                   skey,
+		cdc:                    cdc,
+		ekeeper:                ekeeper,
+		oracleKeeper:           oracleKeeper,
+		marketKeeper:           marketKeeper,
+		authzKeeper:            authzKeeper,
+		bankKeeper:             bankKeeper,
+		authority:              authority,
+		schema:                 schema,
+		deployments:            deployments,
+		groups:                 groups,
+		pendingDenomMigrations: pendingDenomMigrations,
 	}
 }
 
@@ -383,6 +410,24 @@ func (k Keeper) WithDeployments(ctx sdk.Context, fn func(v1.Deployment) bool) er
 	return nil
 }
 
+// IterateDeploymentFiltered iterates all deployments in deployment store
+func (k Keeper) IterateDeploymentFiltered(ctx sdk.Context, state v1.Deployment_State, fn func(v1.Deployment) bool) error {
+	iter, err := k.deployments.Indexes.State.MatchExact(ctx, int32(state))
+	if err != nil {
+		return err
+	}
+
+	err = indexes.ScanValues(ctx, k.deployments, iter, func(deployment v1.Deployment) bool {
+		return fn(deployment)
+	})
+
+	if err != nil {
+		return fmt.Errorf("WithDeployments iteration failed: %w", err)
+	}
+
+	return nil
+}
+
 // OnBidClosed sets the group to state paused.
 func (k Keeper) OnBidClosed(ctx sdk.Context, id v1.GroupID) error {
 	group, ok := k.GetGroup(ctx, id)
@@ -399,4 +444,15 @@ func (k Keeper) OnLeaseClosed(ctx sdk.Context, id v1.GroupID) (types.Group, erro
 		return types.Group{}, v1.ErrGroupNotFound
 	}
 	return group, nil
+}
+
+// SaveGroup persists a group to the store. Used during denom migration.
+func (k Keeper) SaveGroup(ctx sdk.Context, group types.Group) error {
+	pk := keys.GroupIDToKey(group.ID)
+	return k.groups.Set(ctx, pk, group)
+}
+
+// AddPendingDenomMigration marks a deployment for deferred denom migration.
+func (k Keeper) AddPendingDenomMigration(ctx sdk.Context, did v1.DeploymentID) error {
+	return k.pendingDenomMigrations.Set(ctx, keys.DeploymentIDToKey(did), sdkmath.OneInt())
 }

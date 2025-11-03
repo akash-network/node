@@ -10,7 +10,7 @@ import (
 
 	types "pkg.akt.dev/go/node/audit/v1"
 
-	"pkg.akt.dev/node/util/validation"
+	"pkg.akt.dev/node/v2/util/validation"
 )
 
 func ProviderKey(id types.ProviderID) []byte {
