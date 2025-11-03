@@ -1,9 +1,7 @@
 package app
 
 import (
-	"bytes"
 	"encoding/json"
-	"strings"
 	"time"
 
 	abci "github.com/cometbft/cometbft/abci/types"
@@ -30,38 +28,9 @@ import (
 // object provided to it during init.
 type GenesisState map[string]json.RawMessage
 
-func genesisFilterTokens(from GenesisState) GenesisState {
-	genesisState := make(GenesisState)
-	for k, v := range from {
-		data, err := v.MarshalJSON()
-		if err != nil {
-			panic(err)
-		}
-
-		buf := &bytes.Buffer{}
-		_, err = buf.Write(data)
-		if err != nil {
-			panic(err)
-		}
-
-		stringData := buf.String()
-		stringDataAfter := strings.ReplaceAll(stringData, `"stake"`, `"uakt"`)
-		if stringData == stringDataAfter {
-			genesisState[k] = v
-			continue
-		}
-
-		replacementV := json.RawMessage(stringDataAfter)
-		genesisState[k] = replacementV
-	}
-
-	return genesisState
-}
-
 // NewDefaultGenesisState generates the default state for the application.
 func NewDefaultGenesisState(cdc codec.Codec) GenesisState {
-	genesis := ModuleBasics().DefaultGenesis(cdc)
-	return genesisFilterTokens(genesis)
+	return ModuleBasics().DefaultGenesis(cdc)
 }
 
 func GenesisStateWithValSet(cdc codec.Codec) GenesisState {

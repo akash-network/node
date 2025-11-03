@@ -14,7 +14,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/runtime"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 
-	akash "pkg.akt.dev/node/app"
+	akash "pkg.akt.dev/node/v2/app"
 )
 
 // SetupSimulation creates the config, db (levelDB), temporary directory and logger for

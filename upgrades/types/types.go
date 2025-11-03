@@ -10,7 +10,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkmodule "github.com/cosmos/cosmos-sdk/types/module"
 
-	apptypes "pkg.akt.dev/node/app/types"
+	apptypes "pkg.akt.dev/node/v2/app/types"
 )
 
 var (

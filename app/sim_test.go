@@ -5,9 +5,13 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"runtime/debug"
+	"strings"
 	"testing"
 	"time"
 
+	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
+	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,17 +42,18 @@ import (
 	ibctransfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 	ibchost "github.com/cosmos/ibc-go/v10/modules/core/exported"
 
+	cflags "pkg.akt.dev/go/cli/flags"
 	atypes "pkg.akt.dev/go/node/audit/v1"
 	ctypes "pkg.akt.dev/go/node/cert/v1"
 	dtypes "pkg.akt.dev/go/node/deployment/v1"
 	mtypes "pkg.akt.dev/go/node/market/v1"
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
-	taketypes "pkg.akt.dev/go/node/take/v1"
 	"pkg.akt.dev/go/sdkutil"
 
-	akash "pkg.akt.dev/node/app"
-	"pkg.akt.dev/node/app/sim"
-	simtestutil "pkg.akt.dev/node/testutil/sims"
+	akash "pkg.akt.dev/node/v2/app"
+	"pkg.akt.dev/node/v2/app/sim"
+	simtestutil "pkg.akt.dev/node/v2/testutil/sims"
+	dkeys "pkg.akt.dev/node/v2/x/deployment/keeper/keys"
 )
 
 // AppChainID hardcoded chainID for simulation
@@ -141,37 +146,14 @@ func TestFullAppSimulation(t *testing.T) {
 }
 
 func TestAppImportExport(t *testing.T) {
-	config, db, dir, logger, skip, err := sim.SetupSimulation("leveldb-app-sim", "Simulation")
-	if skip {
-		t.Skip("skipping application import/export simulation")
-	}
-	require.NoError(t, err, "simulation setup failed")
-
-	defer func() {
-		_ = db.Close()
-		require.NoError(t, os.RemoveAll(dir))
-	}()
-
-	encodingConfig := sdkutil.MakeEncodingConfig()
-
-	akash.ModuleBasics().RegisterInterfaces(encodingConfig.InterfaceRegistry)
-
-	appOpts := viper.New()
-	appOpts.Set("home", akash.DefaultHome)
-
-	r := rand.New(rand.NewSource(config.Seed)) // nolint: gosec
-	genTime := sdksim.RandTimestamp(r)
-
-	appOpts.Set("GenesisTime", genTime)
-
-	appA := akash.NewApp(logger, db, nil, true, sim.FlagPeriodValue, map[int64]bool{}, encodingConfig, appOpts, fauxMerkleModeOpt, baseapp.SetChainID(AppChainID))
-	require.Equal(t, akash.AppName, appA.Name())
+	config, encodingConfig, db, appOpts, logger, appA := setupSimulationApp(t, "skipping application import/export simulation")
 
 	// Run randomized simulation
 	_, simParams, simErr := simulateFromSeedFunc(t, appA, config)
+	require.Equal(t, akash.AppName, appA.Name())
 
 	// export state and simParams before the simulation error is checked
-	err = simtestutil.CheckExportSimulation(appA, config, simParams)
+	err := simtestutil.CheckExportSimulation(appA, config, simParams)
 	require.NoError(t, err)
 	require.NoError(t, simErr)
 
@@ -179,38 +161,48 @@ func TestAppImportExport(t *testing.T) {
 		sim.PrintStats(db)
 	}
 
-	fmt.Printf("exporting genesis...\n")
-
+	t.Log("exporting genesis...\n")
 	exported, err := appA.ExportAppStateAndValidators(false, []string{}, []string{})
 	require.NoError(t, err)
 
-	fmt.Printf("importing genesis...\n")
+	t.Log("importing genesis...\n")
 
-	_, newDB, newDir, _, _, err := sim.SetupSimulation("leveldb-app-sim-2", "Simulation-2")
+	newDB, newDir, _, skip, err := simtestutil.SetupSimulation(config, "leveldb-app-sim-2", "Simulation-2", sim.FlagVerboseValue, sim.FlagEnabledValue)
 	require.NoError(t, err, "simulation setup failed")
+	if skip {
+		t.Skip("skipping application import/export simulation")
+	}
 
 	defer func() {
-		_ = newDB.Close()
+		require.NoError(t, newDB.Close())
 		require.NoError(t, os.RemoveAll(newDir))
 	}()
 
+	appOpts[cflags.FlagHome] = t.TempDir() // ensure a unique folder for the new app
 	appB := akash.NewApp(logger, newDB, nil, true, sim.FlagPeriodValue, map[int64]bool{}, encodingConfig, appOpts, fauxMerkleModeOpt, baseapp.SetChainID(AppChainID))
 	require.Equal(t, akash.AppName, appB.Name())
 
-	var genesisState akash.GenesisState
-	err = json.Unmarshal(exported.AppState, &genesisState)
+	ctxA := appA.NewContextLegacy(true, cmtproto.Header{Height: appA.LastBlockHeight()})
+	ctxB := appB.NewContextLegacy(true, cmtproto.Header{Height: appA.LastBlockHeight()})
+
+	initReq := &abci.RequestInitChain{
+		AppStateBytes: exported.AppState,
+	}
+
+	_, err = appB.InitChainer(ctxB, initReq)
+	if err != nil {
+		if strings.Contains(err.Error(), "validator set is empty after InitGenesis") {
+			t.Log("Skipping simulation as all validators have been unbonded")
+			t.Logf("err: %s stacktrace: %s\n", err, string(debug.Stack()))
+			return
+		}
+	}
+
 	require.NoError(t, err)
-
-	ctxA := appA.NewContext(true)
-	ctxB := appB.NewContext(true)
-
-	_, err = appB.MM.InitGenesis(ctxB, appA.AppCodec(), genesisState)
-	require.NoError(t, err)
-
 	err = appB.StoreConsensusParams(ctxB, exported.ConsensusParams)
 	require.NoError(t, err)
 
-	fmt.Printf("comparing stores...\n")
+	t.Log("comparing stores...")
 
 	storeKeysPrefixes := []StoreKeysPrefixes{
 		{
@@ -340,7 +332,9 @@ func TestAppImportExport(t *testing.T) {
 			dtypes.StoreKey,
 			appA,
 			appB,
-			[][]byte{},
+			[][]byte{
+				dkeys.PendingDenomMigrationPrefix,
+			},
 		},
 		{
 			mtypes.StoreKey,
@@ -355,10 +349,12 @@ func TestAppImportExport(t *testing.T) {
 			[][]byte{},
 		},
 		{
-			taketypes.StoreKey,
+			wasmtypes.StoreKey,
 			appA,
 			appB,
-			[][]byte{},
+			[][]byte{
+				wasmtypes.TXCounterPrefix,
+			},
 		},
 	}
 
@@ -399,8 +395,7 @@ func TestAppSimulationAfterImport(t *testing.T) {
 	akash.ModuleBasics().RegisterInterfaces(encodingConfig.InterfaceRegistry)
 
 	appOpts := viper.New()
-
-	appOpts.Set("home", akash.DefaultHome)
+	appOpts.Set("home", t.TempDir()) // ensure a unique folder per run
 
 	r := rand.New(rand.NewSource(config.Seed)) // nolint: gosec
 	genTime := sdksim.RandTimestamp(r)
@@ -442,6 +437,7 @@ func TestAppSimulationAfterImport(t *testing.T) {
 		require.NoError(t, os.RemoveAll(newDir))
 	}()
 
+	appOpts.Set("home", t.TempDir()) // ensure a unique folder per run
 	newApp := akash.NewApp(log.NewNopLogger(), newDB, nil, true, sim.FlagPeriodValue, map[int64]bool{}, encodingConfig, appOpts, fauxMerkleModeOpt, baseapp.SetChainID(AppChainID))
 	require.Equal(t, akash.AppName, newApp.Name())
 
@@ -487,7 +483,7 @@ func TestAppStateDeterminism(t *testing.T) {
 			db := dbm.NewMemDB()
 
 			appOpts := viper.New()
-			appOpts.Set("home", akash.DefaultHome)
+			appOpts.Set("home", t.TempDir()) // ensure a unique folder per run
 
 			r := rand.New(rand.NewSource(config.Seed)) // nolint: gosec
 			genTime := sdksim.RandTimestamp(r)
@@ -520,4 +516,32 @@ func TestAppStateDeterminism(t *testing.T) {
 			}
 		}
 	}
+}
+
+func setupSimulationApp(t *testing.T, msg string) (sdksim.Config, sdkutil.EncodingConfig, dbm.DB, simtestutil.AppOptionsMap, log.Logger, *akash.AkashApp) {
+	config := sim.NewConfigFromFlags()
+	config.ChainID = AppChainID
+
+	encodingConfig := sdkutil.MakeEncodingConfig()
+
+	akash.ModuleBasics().RegisterInterfaces(encodingConfig.InterfaceRegistry)
+
+	db, dir, logger, skip, err := simtestutil.SetupSimulation(config, "leveldb-app-sim", "Simulation", sim.FlagVerboseValue, sim.FlagEnabledValue)
+	if skip {
+		t.Skip(msg)
+	}
+	require.NoError(t, err, "simulation setup failed")
+
+	t.Cleanup(func() {
+		require.NoError(t, db.Close())
+		require.NoError(t, os.RemoveAll(dir))
+	})
+
+	appOpts := make(simtestutil.AppOptionsMap)
+	appOpts[cflags.FlagHome] = dir // ensure a unique folder
+	appOpts[cflags.FlagInvCheckPeriod] = sim.FlagPeriodValue
+	app := akash.NewApp(logger, db, nil, true, sim.FlagPeriodValue, map[int64]bool{}, encodingConfig, appOpts, fauxMerkleModeOpt, baseapp.SetChainID(AppChainID))
+
+	require.Equal(t, akash.AppName, app.Name())
+	return config, encodingConfig, db, appOpts, logger, app
 }
