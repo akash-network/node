@@ -16,7 +16,7 @@ runs:
       shell: bash
       run: |
         sudo apt-get update
-        sudo apt-get install -y make direnv unzip lz4 wget curl npm jq pv coreutils libudev-dev
+        sudo apt install -y make direnv unzip lz4 wget curl npm jq pv coreutils musl-tools libudev-dev
     - name: Setup npm
       uses: actions/setup-node@v4
       with:

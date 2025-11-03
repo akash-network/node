@@ -29,10 +29,10 @@ import (
 	deposit "pkg.akt.dev/go/node/types/deposit/v1"
 	"pkg.akt.dev/go/testutil"
 
-	"pkg.akt.dev/node/testutil/state"
-	dhandler "pkg.akt.dev/node/x/deployment/handler"
-	ehandler "pkg.akt.dev/node/x/escrow/handler"
-	"pkg.akt.dev/node/x/market/handler"
+	"pkg.akt.dev/node/v2/testutil/state"
+	dhandler "pkg.akt.dev/node/v2/x/deployment/handler"
+	ehandler "pkg.akt.dev/node/v2/x/escrow/handler"
+	"pkg.akt.dev/node/v2/x/market/handler"
 )
 
 type testSuite struct {

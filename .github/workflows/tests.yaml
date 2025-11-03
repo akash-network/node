@@ -57,7 +57,7 @@ jobs:
           large-packages: true # large packages (llvm, php, mysql, etc). Saves ~5.3GB. Total CI impact: +60s (not used in build)
       - name: Setup environment
         uses: ./.github/actions/setup-ubuntu
-      - run: make bins
+      - run: BUILD_OPTIONS=static-link make bins
       - run: make docker-image
 
   tests:
