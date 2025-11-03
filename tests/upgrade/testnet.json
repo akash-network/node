@@ -45,6 +45,15 @@
                     "amount": "1000000000000"
                 }
             ]
+        },
+        {
+            "address": "akash1kwngmq9s7mfs6x7aes5t0jcm5yvmd7367jm3ke",
+            "balances": [
+                {
+                    "denom": "uakt",
+                    "amount": "1000000000000000"
+                }
+            ]
         }
     ],
     "validators": [

@@ -1,4 +1,23 @@
 {
+    "v2.0.0": {
+        "modules": {
+            "added": [
+                "bme",
+                "oracle",
+                "epochs",
+                "wasm",
+                "awasm"
+            ]
+        },
+        "migrations": {
+            "deployment": [
+                {
+                    "from": "6",
+                    "to": "7"
+                }
+            ]
+        }
+    },
     "v1.2.0": {
         "modules": {
         },
