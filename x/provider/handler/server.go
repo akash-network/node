@@ -8,8 +8,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	types "pkg.akt.dev/go/node/provider/v1beta4"
 
-	mkeeper "pkg.akt.dev/node/x/market/keeper"
-	"pkg.akt.dev/node/x/provider/keeper"
+	mkeeper "pkg.akt.dev/node/v2/x/market/keeper"
+	"pkg.akt.dev/node/v2/x/provider/keeper"
 )
 
 var (

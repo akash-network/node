@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra/doc"
-	root "pkg.akt.dev/node/cmd/akash/cmd"
+	root "pkg.akt.dev/node/v2/cmd/akash/cmd"
 )
 
 func main() {

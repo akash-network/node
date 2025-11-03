@@ -46,6 +46,7 @@ func SimulateMsgUpdateParams(r *rand.Rand, _ sdk.Context, _ []simtypes.Account) 
 
 	// uakt and uact must always be present
 	coins = append(coins, sdk.NewInt64Coin("uakt", int64(simtypes.RandIntBetween(r, 500000, 50000000))))
+	coins = append(coins, sdk.NewInt64Coin("uact", int64(simtypes.RandIntBetween(r, 500000, 50000000))))
 
 	params := types.DefaultParams()
 	params.MinDeposits = coins

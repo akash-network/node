@@ -11,12 +11,12 @@ import (
 
 	dtypes "pkg.akt.dev/go/node/deployment/v1beta4"
 	mv1 "pkg.akt.dev/go/node/market/v1"
-	types "pkg.akt.dev/go/node/market/v1beta5"
+	mvbeta "pkg.akt.dev/go/node/market/v1beta5"
 	deposit "pkg.akt.dev/go/node/types/deposit/v1"
 	"pkg.akt.dev/go/testutil"
 
-	"pkg.akt.dev/node/testutil/state"
-	"pkg.akt.dev/node/x/market/keeper"
+	"pkg.akt.dev/node/v2/testutil/state"
+	"pkg.akt.dev/node/v2/x/market/keeper"
 )
 
 func Test_CreateOrder(t *testing.T) {
@@ -47,7 +47,7 @@ func Test_WithOrders(t *testing.T) {
 	order, _ := createOrder(t, ctx, keeper)
 
 	count := 0
-	keeper.WithOrders(ctx, func(result types.Order) bool {
+	keeper.WithOrders(ctx, func(result mvbeta.Order) bool {
 		if assert.Equal(t, order.ID, result.ID) {
 			count++
 		}
@@ -65,7 +65,7 @@ func Test_WithOrdersForGroup(t *testing.T) {
 	createOrder(t, ctx, keeper)
 
 	count := 0
-	keeper.WithOrdersForGroup(ctx, order.ID.GroupID(), types.OrderOpen, func(result types.Order) bool {
+	keeper.WithOrdersForGroup(ctx, order.ID.GroupID(), mvbeta.OrderOpen, func(result mvbeta.Order) bool {
 		if assert.Equal(t, order.ID, result.ID) {
 			count++
 		}
@@ -101,7 +101,7 @@ func Test_WithBids(t *testing.T) {
 	ctx, keeper, suite := setupKeeper(t)
 	bid, _ := createBid(t, suite)
 	count := 0
-	keeper.WithBids(ctx, func(result types.Bid) bool {
+	keeper.WithBids(ctx, func(result mvbeta.Bid) bool {
 		if assert.Equal(t, bid.ID, result.ID) {
 			count++
 		}
@@ -120,7 +120,7 @@ func Test_WithBidsForOrder(t *testing.T) {
 
 	count := 0
 
-	keeper.WithBidsForOrder(ctx, bid.ID.OrderID(), types.BidOpen, func(result types.Bid) bool {
+	keeper.WithBidsForOrder(ctx, bid.ID.OrderID(), mvbeta.BidOpen, func(result mvbeta.Bid) bool {
 		if assert.Equal(t, bid.ID, result.ID) {
 			count++
 		}
@@ -166,7 +166,7 @@ func Test_LeaseForOrder(t *testing.T) {
 	createLease(t, suite)
 	createLease(t, suite)
 
-	result, ok := keeper.LeaseForOrder(ctx, types.BidActive, id.OrderID())
+	result, ok := keeper.LeaseForOrder(ctx, mvbeta.BidActive, id.OrderID())
 	assert.True(t, ok)
 
 	assert.Equal(t, id, result.ID)
@@ -174,7 +174,7 @@ func Test_LeaseForOrder(t *testing.T) {
 	// no match
 	{
 		bid, _ := createBid(t, suite)
-		_, ok := keeper.LeaseForOrder(ctx, types.BidActive, bid.ID.OrderID())
+		_, ok := keeper.LeaseForOrder(ctx, mvbeta.BidActive, bid.ID.OrderID())
 		assert.False(t, ok)
 	}
 }
@@ -185,7 +185,7 @@ func Test_OnOrderMatched(t *testing.T) {
 
 	result, ok := keeper.GetOrder(ctx, id.OrderID())
 	require.True(t, ok)
-	assert.Equal(t, types.OrderActive, result.State)
+	assert.Equal(t, mvbeta.OrderActive, result.State)
 }
 
 func Test_OnBidMatched(t *testing.T) {
@@ -194,7 +194,7 @@ func Test_OnBidMatched(t *testing.T) {
 
 	result, ok := keeper.GetBid(ctx, id.BidID())
 	require.True(t, ok)
-	assert.Equal(t, types.BidActive, result.State)
+	assert.Equal(t, mvbeta.BidActive, result.State)
 }
 
 func Test_OnBidLost(t *testing.T) {
@@ -204,7 +204,7 @@ func Test_OnBidLost(t *testing.T) {
 	keeper.OnBidLost(ctx, bid)
 	result, ok := keeper.GetBid(ctx, bid.ID)
 	require.True(t, ok)
-	assert.Equal(t, types.BidLost, result.State)
+	assert.Equal(t, mvbeta.BidLost, result.State)
 }
 
 func Test_OnOrderClosed(t *testing.T) {
@@ -216,7 +216,7 @@ func Test_OnOrderClosed(t *testing.T) {
 
 	result, ok := keeper.GetOrder(ctx, order.ID)
 	require.True(t, ok)
-	assert.Equal(t, types.OrderClosed, result.State)
+	assert.Equal(t, mvbeta.OrderClosed, result.State)
 }
 
 func Test_OnLeaseClosed(t *testing.T) {
@@ -385,10 +385,8 @@ func Test_OnGroupClosed(t *testing.T) {
 			deployment := testutil.Deployment(t)
 			deployment.ID = gid.DeploymentID()
 			group := testutil.DeploymentGroup(t, deployment.ID, gid.GSeq)
-
 			err := suite.DeploymentKeeper().Create(suite.Context(), deployment, []dtypes.Group{group})
 			require.NoError(t, err)
-
 			const testBlockHeight = 133
 			suite.SetBlockHeight(testBlockHeight)
 			err = keeper.OnGroupClosed(suite.Context(), gid, tt.groupState)
@@ -402,11 +400,11 @@ func Test_OnGroupClosed(t *testing.T) {
 
 			bid, ok := keeper.GetBid(suite.Context(), id.BidID())
 			require.True(t, ok)
-			assert.Equal(t, types.BidClosed, bid.State)
+			assert.Equal(t, mvbeta.BidClosed, bid.State)
 
 			order, ok := keeper.GetOrder(suite.Context(), id.OrderID())
 			require.True(t, ok)
-			assert.Equal(t, types.OrderClosed, order.State)
+			assert.Equal(t, mvbeta.OrderClosed, order.State)
 		})
 	}
 }
@@ -461,13 +459,13 @@ func createLease(t testing.TB, suite *state.TestSuite) mv1.LeaseID {
 	return bid.ID.LeaseID()
 }
 
-func createBid(t testing.TB, suite *state.TestSuite) (types.Bid, types.Order) {
+func createBid(t testing.TB, suite *state.TestSuite) (mvbeta.Bid, mvbeta.Order) {
 	t.Helper()
 	ctx := suite.Context()
 	order, gspec := createOrder(t, suite.Context(), suite.MarketKeeper())
 	provider := testutil.AccAddress(t)
 	price := testutil.AkashDecCoinRandom(t)
-	roffer := types.ResourceOfferFromRU(gspec.Resources)
+	roffer := mvbeta.ResourceOfferFromRU(gspec.Resources)
 
 	bidID := mv1.MakeBidID(order.ID, provider)
 
@@ -477,10 +475,10 @@ func createBid(t testing.TB, suite *state.TestSuite) (types.Bid, types.Order) {
 	assert.Equal(t, price, bid.Price)
 	assert.Equal(t, provider.String(), bid.ID.Provider)
 
-	msg := &types.MsgCreateBid{
+	msg := &mvbeta.MsgCreateBid{
 		ID: bidID,
 		Deposit: deposit.Deposit{
-			Amount:  types.DefaultBidMinDeposit,
+			Amount:  mvbeta.DefaultBidMinDeposit,
 			Sources: deposit.Sources{deposit.SourceBalance},
 		}}
 
@@ -498,7 +496,7 @@ func createBid(t testing.TB, suite *state.TestSuite) (types.Bid, types.Order) {
 	return bid, order
 }
 
-func createOrder(t testing.TB, ctx sdk.Context, keeper keeper.IKeeper) (types.Order, dtypes.GroupSpec) {
+func createOrder(t testing.TB, ctx sdk.Context, keeper keeper.IKeeper) (mvbeta.Order, dtypes.GroupSpec) {
 	t.Helper()
 	group := testutil.DeploymentGroup(t, testutil.DeploymentID(t), 0)
 
@@ -507,7 +505,7 @@ func createOrder(t testing.TB, ctx sdk.Context, keeper keeper.IKeeper) (types.Or
 
 	require.Equal(t, group.ID, order.ID.GroupID())
 	require.Equal(t, uint32(1), order.ID.OSeq)
-	require.Equal(t, types.OrderOpen, order.State)
+	require.Equal(t, mvbeta.OrderOpen, order.State)
 	return order, group.GroupSpec
 }
 
@@ -526,6 +524,11 @@ func setupKeeper(t testing.TB) (sdk.Context, keeper.IKeeper, *state.TestSuite) {
 			Return(nil)
 		bkeeper.
 			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+
+		bkeeper.On("BurnCoins", mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.On("MintCoins", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil)
 	})
 
