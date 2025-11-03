@@ -19,8 +19,8 @@ import (
 
 	types "pkg.akt.dev/go/node/audit/v1"
 
-	"pkg.akt.dev/node/x/audit/handler"
-	"pkg.akt.dev/node/x/audit/keeper"
+	"pkg.akt.dev/node/v2/x/audit/handler"
+	"pkg.akt.dev/node/v2/x/audit/keeper"
 )
 
 var (
@@ -35,17 +35,17 @@ var (
 	_ module.AppModuleSimulation = AppModule{}
 )
 
-// AppModuleBasic defines the basic application module used by the provider module.
+// AppModuleBasic defines the basic application module used by the audit module.
 type AppModuleBasic struct {
 	cdc codec.Codec
 }
 
-// Name returns provider module's name
+// Name returns audit module's name
 func (AppModuleBasic) Name() string {
 	return types.ModuleName
 }
 
-// RegisterLegacyAminoCodec registers the provider module's types for the given codec.
+// RegisterLegacyAminoCodec registers the audit module's types for the given codec.
 func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 	types.RegisterLegacyAminoCodec(cdc) // nolint: staticcheck
 }
@@ -55,8 +55,7 @@ func (b AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) 
 	types.RegisterInterfaces(registry)
 }
 
-// DefaultGenesis returns default genesis state as raw bytes for the provider
-// module.
+// DefaultGenesis returns default genesis state as raw bytes for the audit module.
 func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
 	return cdc.MustMarshalJSON(DefaultGenesisState())
 }
@@ -84,7 +83,7 @@ func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, _ client.TxEncodingCo
 // 	rest.RegisterRoutes(clientCtx, rtr, StoreKey)
 // }
 
-// RegisterGRPCGatewayRoutes registers the gRPC Gateway routes for the provider module.
+// RegisterGRPCGatewayRoutes registers the gRPC Gateway routes for the audit module.
 func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *runtime.ServeMux) {
 	err := types.RegisterQueryHandlerClient(context.Background(), mux, types.NewQueryClient(clientCtx))
 	if err != nil {
@@ -166,7 +165,7 @@ func (am AppModule) BeginBlock(_ context.Context) error {
 	return nil
 }
 
-// EndBlock returns the end blocker for the deployment module. It returns no validator
+// EndBlock returns the end blocker for the audit module. It returns no validator
 // updates.
 func (am AppModule) EndBlock(_ context.Context) error {
 	return nil

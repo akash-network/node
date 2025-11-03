@@ -11,18 +11,19 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	dtypes "pkg.akt.dev/go/node/deployment/v1"
-	dtypesBeta "pkg.akt.dev/go/node/deployment/v1beta4"
+	dvbeta "pkg.akt.dev/go/node/deployment/v1beta4"
+
 	mv1 "pkg.akt.dev/go/node/market/v1"
 	types "pkg.akt.dev/go/node/market/v1beta5"
 
-	"pkg.akt.dev/node/x/market/keeper/keys"
+	"pkg.akt.dev/node/v2/x/market/keeper/keys"
 )
 
 type IKeeper interface {
 	NewQuerier() Querier
 	Codec() codec.BinaryCodec
 	StoreKey() storetypes.StoreKey
-	CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypesBeta.GroupSpec) (types.Order, error)
+	CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dvbeta.GroupSpec) (types.Order, error)
 	CreateBid(ctx sdk.Context, id mv1.BidID, price sdk.DecCoin, roffer types.ResourcesOffer) (types.Bid, error)
 	CreateLease(ctx sdk.Context, bid types.Bid) error
 	OnOrderMatched(ctx sdk.Context, order types.Order)
@@ -31,7 +32,7 @@ type IKeeper interface {
 	OnBidClosed(ctx sdk.Context, bid types.Bid) error
 	OnOrderClosed(ctx sdk.Context, order types.Order) error
 	OnLeaseClosed(ctx sdk.Context, lease mv1.Lease, state mv1.Lease_State, reason mv1.LeaseClosedReason) error
-	OnGroupClosed(ctx sdk.Context, id dtypes.GroupID, state dtypesBeta.Group_State) error
+	OnGroupClosed(ctx sdk.Context, id dtypes.GroupID, state dvbeta.Group_State) error
 	GetOrder(ctx sdk.Context, id mv1.OrderID) (types.Order, bool)
 	GetBid(ctx sdk.Context, id mv1.BidID) (types.Bid, bool)
 	GetLease(ctx sdk.Context, id mv1.LeaseID) (mv1.Lease, bool)
@@ -45,6 +46,9 @@ type IKeeper interface {
 	GetParams(ctx sdk.Context) (params types.Params)
 	SetParams(ctx sdk.Context, params types.Params) error
 	GetAuthority() string
+	SaveOrder(ctx sdk.Context, order types.Order) error
+	SaveBid(ctx sdk.Context, bid types.Bid) error
+	SaveLease(ctx sdk.Context, lease mv1.Lease) error
 }
 
 // Keeper of the market store
@@ -154,7 +158,7 @@ func (k Keeper) GetParams(ctx sdk.Context) (p types.Params) {
 }
 
 // CreateOrder creates a new order with given group id and specifications. It returns created order
-func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypesBeta.GroupSpec) (types.Order, error) {
+func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dvbeta.GroupSpec) (types.Order, error) {
 	oseq := uint32(1)
 	var err error
 
@@ -376,11 +380,11 @@ func (k Keeper) OnLeaseClosed(ctx sdk.Context, lease mv1.Lease, state mv1.Lease_
 }
 
 // OnGroupClosed updates state of all orders, bids and leases in group to closed
-func (k Keeper) OnGroupClosed(ctx sdk.Context, id dtypes.GroupID, state dtypesBeta.Group_State) error {
+func (k Keeper) OnGroupClosed(ctx sdk.Context, id dtypes.GroupID, state dvbeta.Group_State) error {
 	leaseState := mv1.LeaseClosed
 	leaseReason := mv1.LeaseClosedReasonOwner
 
-	if state == dtypesBeta.GroupInsufficientFunds {
+	if state == dvbeta.GroupInsufficientFunds {
 		leaseState = mv1.LeaseInsufficientFunds
 		leaseReason = mv1.LeaseClosedReasonInsufficientFunds
 	}
@@ -579,4 +583,19 @@ func (k Keeper) updateBid(ctx sdk.Context, bid types.Bid, _ types.Bid_State) {
 	if err := k.bids.Set(ctx, keys.BidIDToKey(bid.ID), bid); err != nil {
 		panic(fmt.Sprintf("failed to update bid: %v", err))
 	}
+}
+
+// SaveOrder persists an order to the store. Used during denom migration.
+func (k Keeper) SaveOrder(ctx sdk.Context, order types.Order) error {
+	return k.orders.Set(ctx, keys.OrderIDToKey(order.ID), order)
+}
+
+// SaveBid persists a bid to the store. Used during denom migration.
+func (k Keeper) SaveBid(ctx sdk.Context, bid types.Bid) error {
+	return k.bids.Set(ctx, keys.BidIDToKey(bid.ID), bid)
+}
+
+// SaveLease persists a lease to the store. Used during denom migration.
+func (k Keeper) SaveLease(ctx sdk.Context, lease mv1.Lease) error {
+	return k.leases.Set(ctx, keys.LeaseIDToKey(lease.ID), lease)
 }
