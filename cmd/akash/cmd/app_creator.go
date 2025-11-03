@@ -22,7 +22,7 @@ import (
 	cflags "pkg.akt.dev/go/cli/flags"
 	"pkg.akt.dev/go/sdkutil"
 
-	akash "pkg.akt.dev/node/app"
+	akash "pkg.akt.dev/node/v2/app"
 )
 
 type appCreator struct {
