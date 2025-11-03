@@ -7,6 +7,7 @@ import (
 
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
+	"pkg.akt.dev/go/node/migrate"
 
 	"cosmossdk.io/core/appmodule"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -20,11 +21,11 @@ import (
 
 	v1 "pkg.akt.dev/go/node/deployment/v1"
 	types "pkg.akt.dev/go/node/deployment/v1beta4"
-	"pkg.akt.dev/go/node/migrate"
 
-	"pkg.akt.dev/node/x/deployment/handler"
-	"pkg.akt.dev/node/x/deployment/keeper"
-	"pkg.akt.dev/node/x/deployment/simulation"
+	"pkg.akt.dev/node/v2/x/deployment/handler"
+	dimports "pkg.akt.dev/node/v2/x/deployment/imports"
+	"pkg.akt.dev/node/v2/x/deployment/keeper"
+	"pkg.akt.dev/node/v2/x/deployment/simulation"
 )
 
 // type check to ensure the interface is properly implemented
@@ -33,10 +34,10 @@ var (
 	_ module.HasGenesisBasics = AppModuleBasic{}
 
 	_ appmodule.AppModule        = AppModule{}
+	_ appmodule.HasEndBlocker    = AppModule{}
 	_ module.HasConsensusVersion = AppModule{}
 	_ module.HasGenesis          = AppModule{}
 	_ module.HasServices         = AppModule{}
-
 	_ module.AppModuleSimulation = AppModule{}
 )
 
@@ -48,12 +49,11 @@ type AppModuleBasic struct {
 // AppModule implements an application module for the deployment module.
 type AppModule struct {
 	AppModuleBasic
-	keeper      keeper.IKeeper
-	mkeeper     handler.MarketKeeper
-	ekeeper     handler.EscrowKeeper
-	coinKeeper  bankkeeper.Keeper
-	authzKeeper handler.AuthzKeeper
-	acckeeper   govtypes.AccountKeeper
+	keeper     keeper.IKeeper
+	mkeeper    dimports.MarketKeeper
+	ekeeper    dimports.EscrowKeeper
+	bankKeeper bankkeeper.Keeper
+	acckeeper  govtypes.AccountKeeper
 }
 
 // Name returns deployment module's name
@@ -111,11 +111,10 @@ func (AppModuleBasic) GetTxCmd() *cobra.Command {
 func NewAppModule(
 	cdc codec.Codec,
 	k keeper.IKeeper,
-	mkeeper handler.MarketKeeper,
-	ekeeper handler.EscrowKeeper,
+	mkeeper dimports.MarketKeeper,
+	ekeeper dimports.EscrowKeeper,
 	acckeeper govtypes.AccountKeeper,
 	bankKeeper bankkeeper.Keeper,
-	authzKeeper handler.AuthzKeeper,
 ) AppModule {
 	return AppModule{
 		AppModuleBasic: AppModuleBasic{cdc: cdc},
@@ -123,8 +122,7 @@ func NewAppModule(
 		mkeeper:        mkeeper,
 		ekeeper:        ekeeper,
 		acckeeper:      acckeeper,
-		coinKeeper:     bankKeeper,
-		authzKeeper:    authzKeeper,
+		bankKeeper:     bankKeeper,
 	}
 }
 
@@ -153,10 +151,9 @@ func (am AppModule) BeginBlock(_ context.Context) error {
 	return nil
 }
 
-// EndBlock returns the end blocker for the deployment module. It returns no validator
-// updates.
-func (am AppModule) EndBlock(_ context.Context) error {
-	return nil
+// EndBlock processes deferred uakt→uact denom migrations using oracle price.
+func (am AppModule) EndBlock(ctx context.Context) error {
+	return am.keeper.EndBlocker(ctx)
 }
 
 // InitGenesis performs genesis initialization for the deployment module. It returns
@@ -180,7 +177,7 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 
 // ConsensusVersion implements module.AppModule#ConsensusVersion
 func (am AppModule) ConsensusVersion() uint64 {
-	return 6
+	return 7
 }
 
 // AppModuleSimulation functions
@@ -200,5 +197,5 @@ func (am AppModule) RegisterStoreDecoder(_ simtypes.StoreDecoderRegistry) {}
 
 // WeightedOperations doesn't return any take module operation.
 func (am AppModule) WeightedOperations(simState module.SimulationState) []simtypes.WeightedOperation {
-	return simulation.WeightedOperations(simState.AppParams, simState.Cdc, am.acckeeper, am.coinKeeper, am.keeper)
+	return simulation.WeightedOperations(simState.AppParams, simState.Cdc, am.acckeeper, am.bankKeeper, am.keeper)
 }
