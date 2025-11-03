@@ -34,22 +34,22 @@ ifeq ($(GORELEASER_MOUNT_CONFIG),true)
 endif
 
 .PHONY: bins
-bins: $(BINS)
+bins: $(AKASH)
 
 .PHONY: build
-build:
-	$(GO_BUILD) -a  ./...
+build: wasmvm-libs
+	$(GO_BUILD) -a $(BUILD_FLAGS) ./...
 
 .PHONY: $(AKASH)
-$(AKASH):
-	$(GO_BUILD) -o $@ $(BUILD_FLAGS) ./cmd/akash
+$(AKASH): wasmvm-libs
+	$(GO_BUILD) -v $(BUILD_FLAGS) -o $@ ./cmd/akash
 
 .PHONY: akash
 akash: $(AKASH)
 
 .PHONY: akash_docgen
 akash_docgen: $(AKASH_DEVCACHE)
-	$(GO_BUILD) -o $(AKASH_DEVCACHE_BIN)/akash_docgen $(BUILD_FLAGS) ./docgen
+	$(GO_BUILD) $(BUILD_FLAGS) -o $(AKASH_DEVCACHE_BIN)/akash_docgen ./docgen
 
 .PHONY: install
 install:
@@ -61,15 +61,13 @@ image-minikube:
 	eval $$(minikube docker-env) && docker-image
 
 .PHONY: test-bins
-test-bins:
+test-bins: wasmvm-libs
 	docker run \
 		--rm \
-		-e STABLE=$(IS_STABLE) \
 		-e MOD="$(GOMOD)" \
-		-e BUILD_TAGS="$(BUILD_TAGS)" \
-		-e BUILD_VARS="$(GORELEASER_BUILD_VARS)" \
-		-e STRIP_FLAGS="$(GORELEASER_STRIP_FLAGS)" \
-		-e LINKMODE="$(GO_LINKMODE)" \
+		-e STABLE=$(IS_STABLE) \
+		-e BUILD_TAGS="$(GORELEASER_TAGS)" \
+		-e BUILD_LDFLAGS="$(GORELEASER_LDFLAGS)" \
 		-e DOCKER_IMAGE=$(RELEASE_DOCKER_IMAGE) \
 		-e GOPATH=/go \
 		-e GOTOOLCHAIN="$(GOTOOLCHAIN)" \
@@ -86,15 +84,13 @@ test-bins:
 		--snapshot
 
 .PHONY: docker-image
-docker-image:
+docker-image: wasmvm-libs
 	docker run \
 		--rm \
-		-e STABLE=$(IS_STABLE) \
 		-e MOD="$(GOMOD)" \
-		-e BUILD_TAGS="$(BUILD_TAGS)" \
-		-e BUILD_VARS="$(GORELEASER_BUILD_VARS)" \
-		-e STRIP_FLAGS="$(GORELEASER_STRIP_FLAGS)" \
-		-e LINKMODE="$(GO_LINKMODE)" \
+		-e STABLE=$(IS_STABLE) \
+		-e BUILD_TAGS="$(GORELEASER_TAGS)" \
+		-e BUILD_LDFLAGS="$(GORELEASER_LDFLAGS)" \
 		-e DOCKER_IMAGE=$(RELEASE_DOCKER_IMAGE) \
 		-e GOPATH=/go \
 		-e GOTOOLCHAIN="$(GOTOOLCHAIN)" \
@@ -116,15 +112,13 @@ gen-changelog: $(GIT_CHGLOG)
 	./script/genchangelog.sh "$(RELEASE_TAG)" .cache/changelog.md
 
 .PHONY: release
-release: gen-changelog
+release: wasmvm-libs gen-changelog
 	docker run \
 		--rm \
-		-e STABLE=$(IS_STABLE) \
 		-e MOD="$(GOMOD)" \
-		-e BUILD_TAGS="$(BUILD_TAGS)" \
-		-e BUILD_VARS="$(GORELEASER_BUILD_VARS)" \
-		-e STRIP_FLAGS="$(GORELEASER_STRIP_FLAGS)" \
-		-e LINKMODE="$(GO_LINKMODE)" \
+		-e STABLE=$(IS_STABLE) \
+		-e BUILD_TAGS="$(GORELEASER_TAGS)" \
+		-e BUILD_LDFLAGS="$(GORELEASER_LDFLAGS)" \
 		-e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
 		-e GORELEASER_CURRENT_TAG="$(RELEASE_TAG)" \
 		-e DOCKER_IMAGE=$(RELEASE_DOCKER_IMAGE) \

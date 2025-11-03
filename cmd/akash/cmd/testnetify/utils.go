@@ -11,7 +11,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	cflags "pkg.akt.dev/go/cli/flags"
 
-	"pkg.akt.dev/node/util/server"
+	"pkg.akt.dev/node/v2/util/server"
 )
 
 func openDB(rootDir string, backendType dbm.BackendType) (dbm.DB, error) {
