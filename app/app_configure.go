@@ -4,6 +4,7 @@ import (
 	evidencetypes "cosmossdk.io/x/evidence/types"
 	"cosmossdk.io/x/feegrant"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
+	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	vestingtypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
@@ -24,24 +25,30 @@ import (
 	audittypes "pkg.akt.dev/go/node/audit/v1"
 	taketypes "pkg.akt.dev/go/node/take/v1"
 
-	"pkg.akt.dev/node/x/audit"
-	"pkg.akt.dev/node/x/cert"
-	"pkg.akt.dev/node/x/deployment"
-	"pkg.akt.dev/node/x/escrow"
-	"pkg.akt.dev/node/x/market"
-	"pkg.akt.dev/node/x/provider"
-	"pkg.akt.dev/node/x/take"
+	"pkg.akt.dev/node/v2/x/audit"
+	"pkg.akt.dev/node/v2/x/cert"
+	"pkg.akt.dev/node/v2/x/deployment"
+	"pkg.akt.dev/node/v2/x/epochs"
+	"pkg.akt.dev/node/v2/x/escrow"
+	"pkg.akt.dev/node/v2/x/market"
+	"pkg.akt.dev/node/v2/x/oracle"
+	"pkg.akt.dev/node/v2/x/provider"
+	"pkg.akt.dev/node/v2/x/take"
+	awasm "pkg.akt.dev/node/v2/x/wasm"
 )
 
 func akashModuleBasics() []module.AppModuleBasic {
 	return []module.AppModuleBasic{
 		take.AppModuleBasic{},
+		epochs.AppModuleBasic{},
 		escrow.AppModuleBasic{},
 		deployment.AppModuleBasic{},
 		market.AppModuleBasic{},
 		provider.AppModuleBasic{},
 		audit.AppModuleBasic{},
 		cert.AppModuleBasic{},
+		oracle.AppModuleBasic{},
+		awasm.AppModuleBasic{},
 	}
 }
 
@@ -78,5 +85,8 @@ func OrderInitGenesis(_ []string) []string {
 		provider.ModuleName,
 		market.ModuleName,
 		genutiltypes.ModuleName,
+		oracle.ModuleName,
+		awasm.ModuleName,
+		wasmtypes.ModuleName,
 	}
 }

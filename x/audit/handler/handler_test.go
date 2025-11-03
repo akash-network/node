@@ -23,8 +23,8 @@ import (
 
 	"pkg.akt.dev/go/testutil"
 
-	"pkg.akt.dev/node/x/audit/handler"
-	"pkg.akt.dev/node/x/audit/keeper"
+	"pkg.akt.dev/node/v2/x/audit/handler"
+	"pkg.akt.dev/node/v2/x/audit/keeper"
 )
 
 type testSuite struct {

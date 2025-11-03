@@ -13,9 +13,9 @@ import (
 	types "pkg.akt.dev/go/node/provider/v1beta4"
 	"pkg.akt.dev/go/testutil"
 
-	"pkg.akt.dev/node/app"
-	"pkg.akt.dev/node/testutil/state"
-	"pkg.akt.dev/node/x/provider/keeper"
+	"pkg.akt.dev/node/v2/app"
+	"pkg.akt.dev/node/v2/testutil/state"
+	"pkg.akt.dev/node/v2/x/provider/keeper"
 )
 
 type grpcTestSuite struct {
