@@ -11,7 +11,7 @@ import (
 	emodule "pkg.akt.dev/go/node/escrow/module"
 	etypes "pkg.akt.dev/go/node/escrow/types/v1"
 
-	"pkg.akt.dev/node/x/escrow/keeper"
+	"pkg.akt.dev/node/v2/x/escrow/keeper"
 
 	types "pkg.akt.dev/go/node/escrow/v1"
 )

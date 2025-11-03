@@ -15,7 +15,7 @@ import (
 	"pkg.akt.dev/go/node/deployment/v1"
 	types "pkg.akt.dev/go/node/deployment/v1beta4"
 
-	"pkg.akt.dev/node/x/deployment/keeper/keys"
+	"pkg.akt.dev/node/v2/x/deployment/keeper/keys"
 )
 
 // Querier is used as Keeper will have duplicate methods if used directly, and gRPC names take precedence over keeper

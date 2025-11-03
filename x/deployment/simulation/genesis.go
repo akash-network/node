@@ -12,7 +12,6 @@ func RandomizedGenState(simState *module.SimulationState) {
 
 	deploymentGenesis := &types.GenesisState{
 		Params: types.DefaultParams(),
-		// Deployments: make([]types.GenesisDeployment, 0, numDeployments),
 	}
 
 	// for range cap(deploymentGenesis.Deployments) {

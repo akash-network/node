@@ -28,12 +28,13 @@ import (
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 	attr "pkg.akt.dev/go/node/types/attributes/v1"
 	deposit "pkg.akt.dev/go/node/types/deposit/v1"
+	"pkg.akt.dev/go/sdkutil"
 	"pkg.akt.dev/go/testutil"
 
-	"pkg.akt.dev/node/testutil/state"
-	dhandler "pkg.akt.dev/node/x/deployment/handler"
-	ehandler "pkg.akt.dev/node/x/escrow/handler"
-	"pkg.akt.dev/node/x/market/handler"
+	"pkg.akt.dev/node/v2/testutil/state"
+	dhandler "pkg.akt.dev/node/v2/x/deployment/handler"
+	ehandler "pkg.akt.dev/node/v2/x/escrow/handler"
+	"pkg.akt.dev/node/v2/x/market/handler"
 )
 
 type testSuite struct {
@@ -209,13 +210,7 @@ func TestMarketFullFlowCloseDeployment(t *testing.T) {
 	bid := v1.MakeBidID(order.ID, providerAddr)
 
 	t.Run("ensure bid event created", func(t *testing.T) {
-		iev, err := sdk.ParseTypedEvent(res.Events[3])
-		require.NoError(t, err)
-		require.IsType(t, &v1.EventBidCreated{}, iev)
-
-		dev := iev.(*v1.EventBidCreated)
-
-		require.Equal(t, bid, dev.ID)
+		testutil.EnsureEvent(t, res.Events, &v1.EventBidCreated{ID: bmsg.ID, Price: bmsg.Price})
 	})
 
 	_, found = suite.MarketKeeper().GetBid(ctx, bid)
@@ -231,13 +226,7 @@ func TestMarketFullFlowCloseDeployment(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("ensure lease event created", func(t *testing.T) {
-		iev, err := sdk.ParseTypedEvent(res.Events[4])
-		require.NoError(t, err)
-		require.IsType(t, &v1.EventLeaseCreated{}, iev)
-
-		dev := iev.(*v1.EventLeaseCreated)
-
-		require.Equal(t, lid, dev.ID)
+		testutil.EnsureEvent(t, res.Events, &v1.EventLeaseCreated{ID: lid, Price: bmsg.Price})
 	})
 
 	// find just created escrow account
@@ -452,13 +441,7 @@ func TestMarketFullFlowCloseLease(t *testing.T) {
 	bid := v1.MakeBidID(order.ID, providerAddr)
 
 	t.Run("ensure bid event created", func(t *testing.T) {
-		iev, err := sdk.ParseTypedEvent(res.Events[3])
-		require.NoError(t, err)
-		require.IsType(t, &v1.EventBidCreated{}, iev)
-
-		dev := iev.(*v1.EventBidCreated)
-
-		require.Equal(t, bid, dev.ID)
+		testutil.EnsureEvent(t, res.Events, &v1.EventBidCreated{ID: bmsg.ID, Price: bmsg.Price})
 	})
 
 	_, found = suite.MarketKeeper().GetBid(ctx, bid)
@@ -474,13 +457,7 @@ func TestMarketFullFlowCloseLease(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("ensure lease event created", func(t *testing.T) {
-		iev, err := sdk.ParseTypedEvent(res.Events[4])
-		require.NoError(t, err)
-		require.IsType(t, &v1.EventLeaseCreated{}, iev)
-
-		dev := iev.(*v1.EventLeaseCreated)
-
-		require.Equal(t, lid, dev.ID)
+		testutil.EnsureEvent(t, res.Events, &v1.EventLeaseCreated{ID: lid, Price: bmsg.Price})
 	})
 
 	// find just created escrow account
@@ -690,13 +667,7 @@ func TestMarketFullFlowCloseBid(t *testing.T) {
 	bid := v1.MakeBidID(order.ID, providerAddr)
 
 	t.Run("ensure bid event created", func(t *testing.T) {
-		iev, err := sdk.ParseTypedEvent(res.Events[3])
-		require.NoError(t, err)
-		require.IsType(t, &v1.EventBidCreated{}, iev)
-
-		dev := iev.(*v1.EventBidCreated)
-
-		require.Equal(t, bid, dev.ID)
+		testutil.EnsureEvent(t, res.Events, &v1.EventBidCreated{ID: bmsg.ID, Price: bmsg.Price})
 	})
 
 	_, found = suite.MarketKeeper().GetBid(ctx, bid)
@@ -712,13 +683,7 @@ func TestMarketFullFlowCloseBid(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("ensure lease event created", func(t *testing.T) {
-		iev, err := sdk.ParseTypedEvent(res.Events[4])
-		require.NoError(t, err)
-		require.IsType(t, &v1.EventLeaseCreated{}, iev)
-
-		dev := iev.(*v1.EventLeaseCreated)
-
-		require.Equal(t, lid, dev.ID)
+		testutil.EnsureEvent(t, res.Events, &v1.EventLeaseCreated{ID: lid, Price: bmsg.Price})
 	})
 
 	// find just created escrow account
@@ -896,14 +861,7 @@ func TestCreateBidValid(t *testing.T) {
 	bid := v1.MakeBidID(order.ID, providerAddr)
 
 	t.Run("ensure event created", func(t *testing.T) {
-		iev, err := sdk.ParseTypedEvent(res.Events[3])
-		require.NoError(t, err)
-
-		require.IsType(t, &v1.EventBidCreated{}, iev)
-
-		dev := iev.(*v1.EventBidCreated)
-
-		require.Equal(t, bid, dev.ID)
+		testutil.EnsureEvent(t, res.Events, &v1.EventBidCreated{ID: msg.ID, Price: msg.Price})
 	})
 
 	_, found := suite.MarketKeeper().GetBid(suite.Context(), bid)
@@ -1271,15 +1229,7 @@ func TestCloseBidValid(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("ensure event created", func(t *testing.T) {
-		iev, err := sdk.ParseTypedEvent(res.Events[6])
-		require.NoError(t, err)
-
-		// iev := testutil.ParseMarketEvent(t, res.Events[3:4])
-		require.IsType(t, &v1.EventBidClosed{}, iev)
-
-		dev := iev.(*v1.EventBidClosed)
-
-		require.Equal(t, msg.ID, dev.ID)
+		testutil.EnsureEvent(t, res.Events, &v1.EventBidClosed{ID: msg.ID})
 	})
 }
 
@@ -1310,15 +1260,7 @@ func TestCloseBidWithStateOpen(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("ensure event created", func(t *testing.T) {
-		iev, err := sdk.ParseTypedEvent(res.Events[3])
-		require.NoError(t, err)
-
-		// iev := testutil.ParseMarketEvent(t, res.Events[2:])
-		require.IsType(t, &v1.EventBidClosed{}, iev)
-
-		dev := iev.(*v1.EventBidClosed)
-
-		require.Equal(t, msg.ID, dev.ID)
+		testutil.EnsureEvent(t, res.Events, &v1.EventBidClosed{ID: msg.ID})
 	})
 }
 

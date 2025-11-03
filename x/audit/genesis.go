@@ -10,7 +10,7 @@ import (
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	types "pkg.akt.dev/go/node/audit/v1"
 
-	"pkg.akt.dev/node/x/audit/keeper"
+	"pkg.akt.dev/node/v2/x/audit/keeper"
 )
 
 // ValidateGenesis does validation check of the Genesis and returns error in-case of failure

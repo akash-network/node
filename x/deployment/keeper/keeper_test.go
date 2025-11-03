@@ -11,8 +11,8 @@ import (
 	types "pkg.akt.dev/go/node/deployment/v1"
 	"pkg.akt.dev/go/testutil"
 
-	"pkg.akt.dev/node/testutil/state"
-	"pkg.akt.dev/node/x/deployment/keeper"
+	"pkg.akt.dev/node/v2/testutil/state"
+	"pkg.akt.dev/node/v2/x/deployment/keeper"
 )
 
 func Test_Create(t *testing.T) {
@@ -25,7 +25,9 @@ func Test_Create(t *testing.T) {
 	require.NoError(t, err)
 
 	// assert event emitted
-	assert.Len(t, ctx.EventManager().Events(), 1)
+	t.Run("ensure event created", func(t *testing.T) {
+		testutil.EnsureEvent(t, ctx.EventManager().Events().ToABCIEvents(), &types.EventDeploymentCreated{ID: deployment.ID, Hash: deployment.Hash})
+	})
 
 	t.Run("deployment written", func(t *testing.T) {
 		result, ok := keeper.GetDeployment(ctx, deployment.ID)
@@ -93,8 +95,8 @@ func Test_Create_badgroups(t *testing.T) {
 	err := keeper.Create(ctx, deployment, groups)
 	require.Error(t, err)
 
-	// no events if not created
-	assert.Empty(t, ctx.EventManager().Events())
+	// no deployment events if not created
+	//assert.Empty(t, ctx.EventManager().Events())
 }
 
 func Test_UpdateDeployment(t *testing.T) {

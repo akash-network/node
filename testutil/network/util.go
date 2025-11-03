@@ -84,7 +84,7 @@ func startInProcess(cfg Config, val *Validator) error {
 	val.tmNode = tmNode
 
 	if val.RPCAddress != "" {
-		val.RPCClient = local.New(tmNode)
+		val.RPCClient = NewLocalRPCClient(local.New(tmNode))
 	}
 
 	// We'll need a RPC client if the validator exposes a gRPC or REST endpoint.

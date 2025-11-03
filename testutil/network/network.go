@@ -49,7 +49,7 @@ import (
 	cflags "pkg.akt.dev/go/cli/flags"
 	"pkg.akt.dev/go/sdkutil"
 
-	"pkg.akt.dev/node/app"
+	"pkg.akt.dev/node/v2/app"
 )
 
 const (
@@ -580,7 +580,16 @@ func (n *Network) Cleanup() {
 		}
 
 		if v.api != nil {
-			_ = v.api.Close()
+			// Recover from panic if api.Close() is called before the server fully started
+			// (cosmos-sdk api.Server.Close panics if listener is nil)
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						n.T.Logf("recovered from api.Close panic: %v", r)
+					}
+				}()
+				_ = v.api.Close()
+			}()
 		}
 
 		if v.grpc != nil {
