@@ -10,10 +10,9 @@ import (
 	eid "pkg.akt.dev/go/node/escrow/id/v1"
 	emodule "pkg.akt.dev/go/node/escrow/module"
 	etypes "pkg.akt.dev/go/node/escrow/types/v1"
-
-	"pkg.akt.dev/node/x/escrow/keeper"
-
 	types "pkg.akt.dev/go/node/escrow/v1"
+
+	"pkg.akt.dev/node/v2/x/escrow/keeper"
 )
 
 // ValidateGenesis does validation check of the Genesis and returns an error in case of failure
