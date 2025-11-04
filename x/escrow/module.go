@@ -20,9 +20,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 	v1 "pkg.akt.dev/go/node/escrow/v1"
 
-	"pkg.akt.dev/node/x/escrow/client/rest"
-	"pkg.akt.dev/node/x/escrow/handler"
-	"pkg.akt.dev/node/x/escrow/keeper"
+	"pkg.akt.dev/node/v2/x/escrow/client/rest"
+	"pkg.akt.dev/node/v2/x/escrow/handler"
+	"pkg.akt.dev/node/v2/x/escrow/keeper"
 )
 
 var (

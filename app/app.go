@@ -6,8 +6,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"time"
 
+	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	"github.com/gorilla/mux"
 	"github.com/rakyll/statik/fs"
@@ -58,7 +60,6 @@ import (
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	ibcwasmtypes "github.com/cosmos/ibc-go/modules/light-clients/08-wasm/types"
 	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 	ibchost "github.com/cosmos/ibc-go/v10/modules/core/exported"
 	ibctm "github.com/cosmos/ibc-go/v10/modules/light-clients/07-tendermint"
@@ -71,10 +72,11 @@ import (
 	providertypes "pkg.akt.dev/go/node/provider/v1beta4"
 	taketypes "pkg.akt.dev/go/node/take/v1"
 
-	apptypes "pkg.akt.dev/node/app/types"
-	utypes "pkg.akt.dev/node/upgrades/types"
+	apptypes "pkg.akt.dev/node/v2/app/types"
+	utypes "pkg.akt.dev/node/v2/upgrades/types"
+	awasm "pkg.akt.dev/node/v2/x/wasm"
 	// unnamed import of statik for swagger UI support
-	_ "pkg.akt.dev/node/client/docs/statik"
+	_ "pkg.akt.dev/node/v2/client/docs/statik"
 )
 
 const (
@@ -133,6 +135,16 @@ func NewApp(
 		homePath = DefaultHome
 	}
 
+	var wasmOpts []wasmkeeper.Option
+
+	if val := appOpts.Get("wasm"); val != nil {
+		if vl, valid := val.([]wasmkeeper.Option); valid {
+			wasmOpts = append(wasmOpts, vl...)
+		} else {
+			panic(fmt.Sprintf("invalid type for aptOpts.Get(\"wasmh\"). expected %s, actual %s", reflect.TypeOf(wasmOpts).String(), reflect.TypeOf(vl).String()))
+		}
+	}
+
 	app := &AkashApp{
 		BaseApp: bapp,
 		App: &apptypes.App{
@@ -146,17 +158,24 @@ func NewApp(
 	}
 
 	wasmDir := filepath.Join(homePath, "wasm")
-	ibcWasmConfig := ibcwasmtypes.WasmConfig{
-		DataDir:               filepath.Join(homePath, "ibc_08-wasm"),
-		SupportedCapabilities: []string{"iterator", "stargate", "abort"},
-		ContractDebugMode:     false,
-	}
+	//ibcWasmConfig := ibcwasmtypes.WasmConfig{
+	//	DataDir:               filepath.Join(homePath, "ibc_08-wasm"),
+	//	SupportedCapabilities: []string{"iterator", "stargate", "abort"},
+	//	ContractDebugMode:     false,
+	//}
 	wasmConfig, err := wasm.ReadNodeConfig(appOpts)
-	// Uncomment this for debugging contracts. In the future this could be made into a param passed by the tests
-	// wasmConfig.ContractDebugMode = true
 	if err != nil {
 		panic(fmt.Sprintf("error while reading wasm config: %s", err))
 	}
+
+	wasmConfig.ContractDebugMode = false
+	// Memory limits - prevent DoS
+	wasmConfig.MemoryCacheSize = 100 // 100 MB max
+	// Query gas limit - prevent expensive queries
+	wasmConfig.SmartQueryGasLimit = 3_000_000
+	// Debug mode - MUST be false in production
+	// Uncomment this for debugging contracts. In the future this could be made into a param passed by the tests
+	wasmConfig.ContractDebugMode = false
 
 	app.InitSpecialKeepers(
 		app.cdc,
@@ -171,6 +190,9 @@ func NewApp(
 		encodingConfig,
 		app.BaseApp,
 		ModuleAccountPerms(),
+		wasmDir,
+		wasmConfig,
+		wasmOpts,
 		app.BlockedAddrs(),
 		invCheckPeriod,
 	)
@@ -212,7 +234,7 @@ func NewApp(
 	app.MM.SetOrderInitGenesis(OrderInitGenesis(app.MM.ModuleNames())...)
 
 	app.Configurator = module.NewConfigurator(app.AppCodec(), app.MsgServiceRouter(), app.GRPCQueryRouter())
-	err := app.MM.RegisterServices(app.Configurator)
+	err = app.MM.RegisterServices(app.Configurator)
 	if err != nil {
 		panic(err)
 	}
@@ -304,6 +326,8 @@ func orderBeginBlockers(_ []string) []string {
 		ibctm.ModuleName,
 		ibchost.ModuleName,
 		feegrant.ModuleName,
+		// akash wasm module must be prior wasm
+		awasm.ModuleName,
 		// wasm after ibc transfer
 		wasmtypes.ModuleName,
 	}
@@ -335,6 +359,8 @@ func OrderEndBlockers(_ []string) []string {
 		transfertypes.ModuleName,
 		ibchost.ModuleName,
 		feegrant.ModuleName,
+		// akash wasm module must be prior wasm
+		awasm.ModuleName,
 		// wasm after ibc transfer
 		wasmtypes.ModuleName,
 	}

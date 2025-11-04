@@ -40,8 +40,8 @@ import (
 
 	cflags "pkg.akt.dev/go/cli/flags"
 
-	akash "pkg.akt.dev/node/app"
-	"pkg.akt.dev/node/util/server"
+	akash "pkg.akt.dev/node/v2/app"
+	"pkg.akt.dev/node/v2/util/server"
 )
 
 // GetCmd uses the provided chainID and operatorAddress as well as the local private validator key to

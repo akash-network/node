@@ -21,11 +21,11 @@ import (
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 	types "pkg.akt.dev/go/node/market/v1beta5"
 
-	akeeper "pkg.akt.dev/node/x/audit/keeper"
-	ekeeper "pkg.akt.dev/node/x/escrow/keeper"
-	"pkg.akt.dev/node/x/market/handler"
-	"pkg.akt.dev/node/x/market/keeper"
-	"pkg.akt.dev/node/x/market/simulation"
+	akeeper "pkg.akt.dev/node/v2/x/audit/keeper"
+	ekeeper "pkg.akt.dev/node/v2/x/escrow/keeper"
+	"pkg.akt.dev/node/v2/x/market/handler"
+	"pkg.akt.dev/node/v2/x/market/keeper"
+	"pkg.akt.dev/node/v2/x/market/simulation"
 )
 
 // type check to ensure the interface is properly implemented

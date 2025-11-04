@@ -18,10 +18,10 @@ import (
 	eid "pkg.akt.dev/go/node/escrow/id/v1"
 	"pkg.akt.dev/go/testutil"
 
-	"pkg.akt.dev/node/app"
-	"pkg.akt.dev/node/testutil/state"
-	"pkg.akt.dev/node/x/deployment/keeper"
-	ekeeper "pkg.akt.dev/node/x/escrow/keeper"
+	"pkg.akt.dev/node/v2/app"
+	"pkg.akt.dev/node/v2/testutil/state"
+	"pkg.akt.dev/node/v2/x/deployment/keeper"
+	ekeeper "pkg.akt.dev/node/v2/x/escrow/keeper"
 )
 
 type grpcTestSuite struct {

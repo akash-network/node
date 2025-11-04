@@ -9,7 +9,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"pkg.akt.dev/node/x/cert/keeper"
+	"pkg.akt.dev/node/v2/x/cert/keeper"
 
 	types "pkg.akt.dev/go/node/cert/v1"
 )

@@ -13,8 +13,8 @@ import (
 	types "pkg.akt.dev/go/node/audit/v1"
 	"pkg.akt.dev/go/testutil"
 
-	"pkg.akt.dev/node/app"
-	"pkg.akt.dev/node/x/audit/keeper"
+	"pkg.akt.dev/node/v2/app"
+	"pkg.akt.dev/node/v2/x/audit/keeper"
 )
 
 type grpcTestSuite struct {
@@ -31,7 +31,7 @@ func setupTest(t *testing.T) *grpcTestSuite {
 		t: t,
 	}
 
-	suite.app = app.Setup(app.WithGenesis(app.GenesisStateWithValSet))
+	suite.app = app.Setup(app.WithHome(t.TempDir()), app.WithGenesis(app.GenesisStateWithValSet))
 
 	suite.ctx, suite.keeper = setupKeeper(t)
 	querier := keeper.Querier{Keeper: suite.keeper}
