@@ -3,7 +3,7 @@ package audit
 import (
 	types "pkg.akt.dev/go/node/audit/v1"
 
-	"pkg.akt.dev/node/x/audit/keeper"
+	"pkg.akt.dev/node/v2/x/audit/keeper"
 )
 
 const (

@@ -5,6 +5,7 @@ import (
 	feegrantmodule "cosmossdk.io/x/feegrant/module"
 	"cosmossdk.io/x/upgrade"
 	"github.com/CosmWasm/wasmd/x/wasm"
+	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	addresscodec "github.com/cosmos/cosmos-sdk/codec/address"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -33,13 +34,14 @@ import (
 
 	"pkg.akt.dev/go/sdkutil"
 
-	"pkg.akt.dev/node/x/audit"
-	"pkg.akt.dev/node/x/cert"
-	"pkg.akt.dev/node/x/deployment"
-	"pkg.akt.dev/node/x/escrow"
-	"pkg.akt.dev/node/x/market"
-	"pkg.akt.dev/node/x/provider"
-	"pkg.akt.dev/node/x/take"
+	"pkg.akt.dev/node/v2/x/audit"
+	"pkg.akt.dev/node/v2/x/cert"
+	"pkg.akt.dev/node/v2/x/deployment"
+	"pkg.akt.dev/node/v2/x/escrow"
+	"pkg.akt.dev/node/v2/x/market"
+	"pkg.akt.dev/node/v2/x/provider"
+	"pkg.akt.dev/node/v2/x/take"
+	awasm "pkg.akt.dev/node/v2/x/wasm"
 )
 
 func appModules(
@@ -191,6 +193,10 @@ func appModules(
 			app.cdc,
 			app.Keepers.Akash.Cert,
 		),
+		awasm.NewAppModule(
+			app.cdc,
+			app.Keepers.Akash.Wasm,
+		),
 		wasm.NewAppModule(
 			app.cdc,
 			app.Keepers.External.Wasm,
@@ -198,7 +204,7 @@ func appModules(
 			app.Keepers.Cosmos.Acct,
 			app.Keepers.Cosmos.Bank,
 			app.MsgServiceRouter(),
-			nil,
+			app.GetSubspace(wasmtypes.ModuleName),
 		),
 	}
 }
@@ -330,6 +336,21 @@ func appSimModules(
 		cert.NewAppModule(
 			app.cdc,
 			app.Keepers.Akash.Cert,
+		),
+
+		awasm.NewAppModule(
+			app.cdc,
+			app.Keepers.Akash.Wasm,
+		),
+
+		wasm.NewAppModule(
+			app.cdc,
+			app.Keepers.External.Wasm,
+			app.Keepers.Cosmos.Staking,
+			app.Keepers.Cosmos.Acct,
+			app.Keepers.Cosmos.Bank,
+			app.MsgServiceRouter(),
+			app.GetSubspace(wasmtypes.ModuleName),
 		),
 	}
 }

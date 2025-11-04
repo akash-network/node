@@ -6,7 +6,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/gorilla/mux"
-	// "pkg.akt.dev/node/x/market/query"
+	// "pkg.akt.dev/node/v2/x/market/query"
 )
 
 // RegisterRoutes registers all query routes

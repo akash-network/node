@@ -16,8 +16,8 @@ import (
 	"pkg.akt.dev/go/node/market/v1beta5"
 	"pkg.akt.dev/go/testutil"
 
-	"pkg.akt.dev/node/testutil/state"
-	"pkg.akt.dev/node/x/market/keeper"
+	"pkg.akt.dev/node/v2/testutil/state"
+	"pkg.akt.dev/node/v2/x/market/keeper"
 )
 
 type grpcTestSuite struct {

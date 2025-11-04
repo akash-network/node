@@ -33,9 +33,9 @@ import (
 	// init sdk config
 	_ "pkg.akt.dev/go/sdkutil"
 
-	"pkg.akt.dev/node/pubsub"
-	uttypes "pkg.akt.dev/node/tests/upgrade/types"
-	"pkg.akt.dev/node/util/cli"
+	"pkg.akt.dev/node/v2/pubsub"
+	uttypes "pkg.akt.dev/node/v2/tests/upgrade/types"
+	"pkg.akt.dev/node/v2/util/cli"
 )
 
 const (

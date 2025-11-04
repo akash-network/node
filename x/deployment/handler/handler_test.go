@@ -25,12 +25,12 @@ import (
 	deposit "pkg.akt.dev/go/node/types/deposit/v1"
 	"pkg.akt.dev/go/testutil"
 
-	cmocks "pkg.akt.dev/node/testutil/cosmos/mocks"
-	"pkg.akt.dev/node/testutil/state"
-	"pkg.akt.dev/node/x/deployment/handler"
-	"pkg.akt.dev/node/x/deployment/keeper"
-	ehandler "pkg.akt.dev/node/x/escrow/handler"
-	mkeeper "pkg.akt.dev/node/x/market/keeper"
+	cmocks "pkg.akt.dev/node/v2/testutil/cosmos/mocks"
+	"pkg.akt.dev/node/v2/testutil/state"
+	"pkg.akt.dev/node/v2/x/deployment/handler"
+	"pkg.akt.dev/node/v2/x/deployment/keeper"
+	ehandler "pkg.akt.dev/node/v2/x/escrow/handler"
+	mkeeper "pkg.akt.dev/node/v2/x/market/keeper"
 )
 
 type testSuite struct {

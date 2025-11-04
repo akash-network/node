@@ -13,8 +13,8 @@ import (
 	"pkg.akt.dev/go/node/market/v1"
 	types "pkg.akt.dev/go/node/market/v1beta5"
 
-	"pkg.akt.dev/node/util/query"
-	"pkg.akt.dev/node/x/market/keeper/keys"
+	"pkg.akt.dev/node/v2/util/query"
+	"pkg.akt.dev/node/v2/x/market/keeper/keys"
 )
 
 // Querier is used as Keeper will have duplicate methods if used directly, and gRPC names take precedence over keeper

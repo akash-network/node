@@ -17,9 +17,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 	types "pkg.akt.dev/go/node/take/v1"
 
-	"pkg.akt.dev/node/x/take/handler"
-	"pkg.akt.dev/node/x/take/keeper"
-	"pkg.akt.dev/node/x/take/simulation"
+	"pkg.akt.dev/node/v2/x/take/handler"
+	"pkg.akt.dev/node/v2/x/take/keeper"
+	"pkg.akt.dev/node/v2/x/take/simulation"
 )
 
 var (

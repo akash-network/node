@@ -26,15 +26,15 @@ import (
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 	ttypes "pkg.akt.dev/go/node/take/v1"
 
-	"pkg.akt.dev/node/app"
-	emocks "pkg.akt.dev/node/testutil/cosmos/mocks"
-	akeeper "pkg.akt.dev/node/x/audit/keeper"
-	dkeeper "pkg.akt.dev/node/x/deployment/keeper"
-	ekeeper "pkg.akt.dev/node/x/escrow/keeper"
-	mhooks "pkg.akt.dev/node/x/market/hooks"
-	mkeeper "pkg.akt.dev/node/x/market/keeper"
-	pkeeper "pkg.akt.dev/node/x/provider/keeper"
-	tkeeper "pkg.akt.dev/node/x/take/keeper"
+	"pkg.akt.dev/node/v2/app"
+	emocks "pkg.akt.dev/node/v2/testutil/cosmos/mocks"
+	akeeper "pkg.akt.dev/node/v2/x/audit/keeper"
+	dkeeper "pkg.akt.dev/node/v2/x/deployment/keeper"
+	ekeeper "pkg.akt.dev/node/v2/x/escrow/keeper"
+	mhooks "pkg.akt.dev/node/v2/x/market/hooks"
+	mkeeper "pkg.akt.dev/node/v2/x/market/keeper"
+	pkeeper "pkg.akt.dev/node/v2/x/provider/keeper"
+	tkeeper "pkg.akt.dev/node/v2/x/take/keeper"
 )
 
 // TestSuite encapsulates a functional Akash nodes data stores for
@@ -105,7 +105,6 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 	)
 
 	ctx := app.NewContext(false)
-
 	cdc := app.AppCodec()
 
 	vals, err := app.Keepers.Cosmos.Staking.GetAllValidators(ctx)

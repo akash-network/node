@@ -20,10 +20,10 @@ import (
 
 	types "pkg.akt.dev/go/node/provider/v1beta4"
 
-	mkeeper "pkg.akt.dev/node/x/market/keeper"
-	"pkg.akt.dev/node/x/provider/handler"
-	"pkg.akt.dev/node/x/provider/keeper"
-	"pkg.akt.dev/node/x/provider/simulation"
+	mkeeper "pkg.akt.dev/node/v2/x/market/keeper"
+	"pkg.akt.dev/node/v2/x/provider/handler"
+	"pkg.akt.dev/node/v2/x/provider/keeper"
+	"pkg.akt.dev/node/v2/x/provider/simulation"
 )
 
 // type check to ensure the interface is properly implemented

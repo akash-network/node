@@ -18,9 +18,9 @@ import (
 
 	types "pkg.akt.dev/go/node/cert/v1"
 
-	"pkg.akt.dev/node/x/cert/handler"
-	"pkg.akt.dev/node/x/cert/keeper"
-	"pkg.akt.dev/node/x/cert/simulation"
+	"pkg.akt.dev/node/v2/x/cert/handler"
+	"pkg.akt.dev/node/v2/x/cert/keeper"
+	"pkg.akt.dev/node/v2/x/cert/simulation"
 )
 
 var (

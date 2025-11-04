@@ -22,8 +22,8 @@ import (
 	"pkg.akt.dev/go/node/client/v1beta3"
 	"pkg.akt.dev/go/sdkutil"
 
-	"pkg.akt.dev/node/app"
-	uttypes "pkg.akt.dev/node/tests/upgrade/types"
+	"pkg.akt.dev/node/v2/app"
+	uttypes "pkg.akt.dev/node/v2/tests/upgrade/types"
 )
 
 func init() {

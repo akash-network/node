@@ -76,16 +76,19 @@ import (
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 	astakingtypes "pkg.akt.dev/go/node/staking/v1beta3"
 	ttypes "pkg.akt.dev/go/node/take/v1"
+	wtypes "pkg.akt.dev/go/node/wasm/v1"
 	"pkg.akt.dev/go/sdkutil"
 
-	akeeper "pkg.akt.dev/node/x/audit/keeper"
-	ckeeper "pkg.akt.dev/node/x/cert/keeper"
-	dkeeper "pkg.akt.dev/node/x/deployment/keeper"
-	ekeeper "pkg.akt.dev/node/x/escrow/keeper"
-	mhooks "pkg.akt.dev/node/x/market/hooks"
-	mkeeper "pkg.akt.dev/node/x/market/keeper"
-	pkeeper "pkg.akt.dev/node/x/provider/keeper"
-	tkeeper "pkg.akt.dev/node/x/take/keeper"
+	akeeper "pkg.akt.dev/node/v2/x/audit/keeper"
+	ckeeper "pkg.akt.dev/node/v2/x/cert/keeper"
+	dkeeper "pkg.akt.dev/node/v2/x/deployment/keeper"
+	ekeeper "pkg.akt.dev/node/v2/x/escrow/keeper"
+	mhooks "pkg.akt.dev/node/v2/x/market/hooks"
+	mkeeper "pkg.akt.dev/node/v2/x/market/keeper"
+	pkeeper "pkg.akt.dev/node/v2/x/provider/keeper"
+	tkeeper "pkg.akt.dev/node/v2/x/take/keeper"
+	awasm "pkg.akt.dev/node/v2/x/wasm"
+	wkeeper "pkg.akt.dev/node/v2/x/wasm/keeper"
 )
 
 const (
@@ -124,6 +127,7 @@ type AppKeepers struct {
 		Provider   pkeeper.IKeeper
 		Audit      akeeper.Keeper
 		Cert       ckeeper.Keeper
+		Wasm       wkeeper.Keeper
 	}
 
 	External struct {
@@ -455,9 +459,21 @@ func (app *App) InitNormalKeepers(
 		app.keys[ctypes.StoreKey],
 	)
 
-	// The last arguments can contain custom message handlers, and custom query handlers,
-	// if we want to allow any custom callbacks
-	// The last arguments can contain custom message handlers, and custom query handlers,
+	app.Keepers.Akash.Wasm = wkeeper.NewKeeper(
+		cdc,
+		app.keys[wtypes.StoreKey],
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+	)
+
+	wOpts := make([]wasmkeeper.Option, 0, len(wasmOpts)+1)
+
+	wOpts = append(wOpts, wasmkeeper.WithMessageHandlerDecorator(
+		app.Keepers.Akash.Wasm.NewMsgFilterDecorator(),
+	))
+
+	wOpts = append(wOpts, wasmOpts...)
+
+	// The last arguments can contain custom message handlers and custom query handlers
 	// if we want to allow any custom callbacks
 	wasmCapabilities := wasmkeeper.BuiltInCapabilities()
 	wasmCapabilities = append(wasmCapabilities, "akash")
@@ -480,7 +496,7 @@ func (app *App) InitNormalKeepers(
 		wasmtypes.VMConfig{},
 		wasmCapabilities,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
-		wasmOpts...,
+		wOpts...,
 	)
 	app.Keepers.External.Wasm = &wasmKeeper
 
@@ -517,7 +533,6 @@ func (app *App) InitNormalKeepers(
 		AddPrefixRoute(wasmkeeper.PortIDPrefixV2, wasmkeeper.NewIBC2Handler(app.Keepers.External.Wasm))
 
 	app.Keepers.Cosmos.IBC.SetRouterV2(ibcRouterV2)
-
 }
 
 func (app *App) SetupHooks() {
@@ -609,6 +624,7 @@ func akashKVStoreKeys() []string {
 		ptypes.StoreKey,
 		atypes.StoreKey,
 		ctypes.StoreKey,
+		awasm.StoreKey,
 	}
 }
 

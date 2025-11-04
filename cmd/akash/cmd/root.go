@@ -22,8 +22,8 @@ import (
 	cflags "pkg.akt.dev/go/cli/flags"
 	"pkg.akt.dev/go/sdkutil"
 
-	"pkg.akt.dev/node/app"
-	"pkg.akt.dev/node/cmd/akash/cmd/testnetify"
+	"pkg.akt.dev/node/v2/app"
+	"pkg.akt.dev/node/v2/cmd/akash/cmd/testnetify"
 )
 
 // NewRootCmd creates a new root command for akash. It is called once in the
