@@ -75,7 +75,7 @@ those stores will be registered in order to prevent panics. Therefore, you only 
 you want to test the upgrade handler itself.
 `,
 		Example: "testnetify",
-		Args:    cobra.ExactArgs(1),
+		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			sctx := sdksrv.GetServerContextFromCmd(cmd)
 			cctx, err := client.GetClientQueryContext(cmd)
