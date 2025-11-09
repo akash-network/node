@@ -4,68 +4,76 @@ package upgrade
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"testing"
 
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	"github.com/stretchr/testify/require"
 
-	sdkmath "cosmossdk.io/math"
+	"github.com/CosmWasm/wasmd/x/wasm/ioutils"
+	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	"pkg.akt.dev/go/cli/flags"
-	arpcclient "pkg.akt.dev/go/node/client"
-	aclient "pkg.akt.dev/go/node/client/discovery"
+	client "pkg.akt.dev/go/node/client/discovery"
 	cltypes "pkg.akt.dev/go/node/client/types"
-	"pkg.akt.dev/go/node/client/v1beta3"
+	clt "pkg.akt.dev/go/node/client/v1beta3"
+
+	cflags "pkg.akt.dev/go/cli/flags"
+	arpcclient "pkg.akt.dev/go/node/client"
 	"pkg.akt.dev/go/sdkutil"
 
-	"pkg.akt.dev/node/v2/app"
+	akash "pkg.akt.dev/node/v2/app"
 	uttypes "pkg.akt.dev/node/v2/tests/upgrade/types"
 )
 
 func init() {
-	uttypes.RegisterPostUpgradeWorker("v1.0.0", &postUpgrade{})
+	uttypes.RegisterPostUpgradeWorker("v2.0.0", &postUpgrade{})
 }
 
-type postUpgrade struct {
-	cl v1beta3.Client
-}
+type postUpgrade struct{}
 
 var _ uttypes.TestWorker = (*postUpgrade)(nil)
 
 func (pu *postUpgrade) Run(ctx context.Context, t *testing.T, params uttypes.TestParams) {
-	encodingConfig := sdkutil.MakeEncodingConfig()
-	app.ModuleBasics().RegisterInterfaces(encodingConfig.InterfaceRegistry)
+	encCfg := sdkutil.MakeEncodingConfig()
+	akash.ModuleBasics().RegisterInterfaces(encCfg.InterfaceRegistry)
 
 	rpcClient, err := arpcclient.NewClient(ctx, params.Node)
 	require.NoError(t, err)
 
 	cctx := sdkclient.Context{}.
-		WithCodec(encodingConfig.Codec).
-		WithInterfaceRegistry(encodingConfig.InterfaceRegistry).
-		WithTxConfig(encodingConfig.TxConfig).
-		WithLegacyAmino(encodingConfig.Amino).
+		WithCodec(encCfg.Codec).
+		WithInterfaceRegistry(encCfg.InterfaceRegistry).
+		WithTxConfig(encCfg.TxConfig).
+		WithLegacyAmino(encCfg.Amino).
 		WithAccountRetriever(authtypes.AccountRetriever{}).
-		WithBroadcastMode(flags.BroadcastBlock).
+		WithBroadcastMode(cflags.BroadcastBlock).
 		WithHomeDir(params.Home).
 		WithChainID(params.ChainID).
 		WithNodeURI(params.Node).
 		WithClient(rpcClient).
 		WithSkipConfirmation(true).
 		WithFrom(params.From).
-		WithFromName(params.From).
-		WithFromAddress(params.FromAddress).
 		WithKeyringDir(params.Home).
-		WithSignModeStr(flags.SignModeDirect).
-		WithSimulation(false)
+		WithSignModeStr("direct")
 
 	kr, err := sdkclient.NewKeyringFromBackend(cctx, params.KeyringBackend)
 	require.NoError(t, err)
 
 	cctx = cctx.WithKeyring(kr)
+
+	info, err := kr.Key(params.From)
+	require.NoError(t, err)
+
+	mainAddr, err := info.GetAddress()
+	require.NoError(t, err)
+
+	mainCctx := cctx.WithFromName(info.Name).
+		WithFromAddress(mainAddr)
 
 	opts := []cltypes.ClientOption{
 		cltypes.WithGasPrices("0.025uakt"),
@@ -73,72 +81,66 @@ func (pu *postUpgrade) Run(ctx context.Context, t *testing.T, params uttypes.Tes
 		cltypes.WithGasAdjustment(2),
 	}
 
-	pu.cl, err = aclient.DiscoverClient(ctx, cctx, opts...)
+	mcl, err := client.DiscoverClient(ctx, mainCctx, opts...)
 	require.NoError(t, err)
-	require.NotNil(t, pu.cl)
+	require.NotNil(t, mcl)
 
-	pu.testGov(ctx, t)
-
-	pu.testStaking(ctx, t)
-}
-
-func (pu *postUpgrade) testGov(ctx context.Context, t *testing.T) {
-	t.Logf("testing gov module")
-	cctx := pu.cl.ClientContext()
-
-	paramsResp, err := pu.cl.Query().Gov().Params(ctx, &govtypes.QueryParamsRequest{ParamsType: "deposit"})
-	require.NoError(t, err)
-	require.NotNil(t, paramsResp)
-
-	// paramsResp.Params.ExpeditedMinDeposit.
-	require.Equal(t, sdk.Coins{sdk.NewCoin("uakt", sdkmath.NewInt(2000000000))}.String(), sdk.Coins(paramsResp.Params.ExpeditedMinDeposit).String(), "ExpeditedMinDeposit must have 2000AKT")
-	require.Equal(t, paramsResp.Params.MinInitialDepositRatio, sdkmath.LegacyNewDecWithPrec(40, 2).String(), "MinInitialDepositRatio must be 40%")
-
-	opAddr := sdk.ValAddress(cctx.FromAddress)
-
-	comVal := sdkmath.LegacyNewDecWithPrec(4, 2)
-
-	valResp, err := pu.cl.Query().Staking().Validator(ctx, &stakingtypes.QueryValidatorRequest{ValidatorAddr: opAddr.String()})
+	// should not be able to deploy smart contract directly
+	wasm, err := os.ReadFile(fmt.Sprintf("%s/tests/upgrade/testdata/hackatom.wasm", params.SourceDir))
 	require.NoError(t, err)
 
-	minSelfDelegation := sdkmath.NewInt(1)
+	// gzip the wasm file
+	if ioutils.IsWasm(wasm) {
+		wasm, err = ioutils.GzipIt(wasm)
+		require.NoError(t, err)
+	} else {
+		require.True(t, ioutils.IsGzip(wasm))
+	}
 
-	tx := stakingtypes.NewMsgEditValidator(opAddr.String(), valResp.Validator.Description, &comVal, &minSelfDelegation)
-	broadcastResp, err := pu.cl.Tx().BroadcastMsgs(ctx, []sdk.Msg{tx})
+	msg := &wasmtypes.MsgStoreCode{
+		Sender:                mainAddr.String(),
+		WASMByteCode:          wasm,
+		InstantiatePermission: &wasmtypes.AllowNobody,
+	}
+
+	err = msg.ValidateBasic()
+	require.NoError(t, err)
+
+	resp, err := mcl.Tx().BroadcastMsgs(ctx, []sdk.Msg{msg})
 	require.Error(t, err)
-	require.NotNil(t, broadcastResp)
+	require.NotNil(t, resp)
+	require.IsType(t, &sdk.TxResponse{}, resp)
+	require.ErrorIs(t, err, sdkerrors.ErrUnauthorized)
 
-	require.IsType(t, &sdk.TxResponse{}, broadcastResp)
-	txResp := broadcastResp.(*sdk.TxResponse)
-	require.NotEqual(t, uint32(0), txResp.Code, "update validator commission should fail if new value is < 5%")
-}
-
-func (pu *postUpgrade) testStaking(ctx context.Context, t *testing.T) {
-	t.Logf("testing staking module")
-
-	cctx := pu.cl.ClientContext()
-
-	paramsResp, err := pu.cl.Query().Staking().Params(ctx, &stakingtypes.QueryParamsRequest{})
-	require.NoError(t, err)
-	require.NotNil(t, paramsResp)
-
-	require.True(t, paramsResp.Params.MinCommissionRate.GTE(sdkmath.LegacyNewDecWithPrec(5, 2)), "per upgrade v1.0.0 MinCommissionRate should be 5%")
-
-	opAddr := sdk.ValAddress(cctx.FromAddress)
-
-	comVal := sdkmath.LegacyNewDecWithPrec(4, 2)
-
-	valResp, err := pu.cl.Query().Staking().Validator(ctx, &stakingtypes.QueryValidatorRequest{ValidatorAddr: opAddr.String()})
+	govMsg, err := govv1.NewMsgSubmitProposal([]sdk.Msg{msg}, sdk.Coins{sdk.NewInt64Coin("uakt", 1000000000)}, mainCctx.GetFromAddress().String(), "", "test wasm store", "test wasm store", false)
 	require.NoError(t, err)
 
-	minSelfDelegation := sdkmath.NewInt(1)
-
-	tx := stakingtypes.NewMsgEditValidator(opAddr.String(), valResp.Validator.Description, &comVal, &minSelfDelegation)
-	broadcastResp, err := pu.cl.Tx().BroadcastMsgs(ctx, []sdk.Msg{tx})
+	// sending contract via gov with sender not as the gov module account should fail as well
+	resp, err = mcl.Tx().BroadcastMsgs(ctx, []sdk.Msg{govMsg})
 	require.Error(t, err)
-	require.NotNil(t, broadcastResp)
+	require.NotNil(t, resp)
+	require.IsType(t, &sdk.TxResponse{}, resp)
 
-	require.IsType(t, &sdk.TxResponse{}, broadcastResp)
-	txResp := broadcastResp.(*sdk.TxResponse)
-	require.NotEqual(t, uint32(0), txResp.Code, "update validator commission should fail if new value is < 5%")
+	qResp, err := mcl.Query().Auth().ModuleAccountByName(ctx, &authtypes.QueryModuleAccountByNameRequest{Name: "gov"})
+	require.NoError(t, err)
+	require.NotNil(t, qResp)
+
+	var acc sdk.AccountI
+	err = encCfg.InterfaceRegistry.UnpackAny(qResp.Account, &acc)
+	require.NoError(t, err)
+	macc, ok := acc.(sdk.ModuleAccountI)
+	require.True(t, ok)
+
+	err = encCfg.InterfaceRegistry.UnpackAny(qResp.Account, &macc)
+	require.NoError(t, err)
+	msg.Sender = macc.GetAddress().String()
+
+	govMsg, err = govv1.NewMsgSubmitProposal([]sdk.Msg{msg}, sdk.Coins{sdk.NewInt64Coin("uakt", 1000000000)}, mainCctx.GetFromAddress().String(), "", "test wasm store", "test wasm store", false)
+	require.NoError(t, err)
+
+	// sending contract via gov with sender as the gov module account shall pass
+	resp, err = mcl.Tx().BroadcastMsgs(ctx, []sdk.Msg{govMsg}, clt.WithGas(cltypes.GasSetting{Simulate: true}))
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.IsType(t, &sdk.TxResponse{}, resp)
 }

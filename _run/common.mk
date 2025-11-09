@@ -75,6 +75,7 @@ client-init-key-multisig:
 		--multisig "$(subst $(space),$(comma),$(strip $(MULTISIG_SIGNERS)))" \
 		--multisig-threshold 2
 
+.NOTPARALLEL: node-init
 .INTERMEDIATE: node-init
 node-init: node-init-genesis node-init-genesis-accounts node-init-genesis-certs node-init-gentx node-init-finalize
 

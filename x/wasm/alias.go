@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	// StoreKey represents storekey of take module
+	// StoreKey represents storekey of wasm module
 	StoreKey = types.StoreKey
 	// ModuleName represents current module name
 	ModuleName = types.ModuleName

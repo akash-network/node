@@ -141,7 +141,7 @@ func NewApp(
 		if vl, valid := val.([]wasmkeeper.Option); valid {
 			wasmOpts = append(wasmOpts, vl...)
 		} else {
-			panic(fmt.Sprintf("invalid type for aptOpts.Get(\"wasmh\"). expected %s, actual %s", reflect.TypeOf(wasmOpts).String(), reflect.TypeOf(vl).String()))
+			panic(fmt.Sprintf("invalid type for aptOpts.Get(\"wasm\"). expected %s, actual %s", reflect.TypeOf(wasmOpts).String(), reflect.TypeOf(val).String()))
 		}
 	}
 
@@ -163,7 +163,6 @@ func NewApp(
 		panic(fmt.Sprintf("error while reading wasm config: %s", err))
 	}
 
-	wasmConfig.ContractDebugMode = false
 	// Memory limits - prevent DoS
 	wasmConfig.MemoryCacheSize = 100 // 100 MB max
 	// Query gas limit - prevent expensive queries

@@ -35,23 +35,23 @@ var (
 	_ module.AppModuleSimulation = AppModule{}
 )
 
-// AppModuleBasic defines the basic application module used by the provider module.
+// AppModuleBasic defines the basic application module used by the wasm module.
 type AppModuleBasic struct {
 	cdc codec.Codec
 }
 
-// AppModule implements an application module for the take module.
+// AppModule implements an application module for the wasm module.
 type AppModule struct {
 	AppModuleBasic
 	keeper keeper.Keeper
 }
 
-// Name returns provider module's name
+// Name returns wasm module's name
 func (AppModuleBasic) Name() string {
 	return types.ModuleName
 }
 
-// RegisterLegacyAminoCodec registers the provider module's types for the given codec.
+// RegisterLegacyAminoCodec registers the wasm module's types for the given codec.
 func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 	types.RegisterLegacyAminoCodec(cdc) // nolint staticcheck
 }
@@ -61,8 +61,7 @@ func (b AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) 
 	types.RegisterInterfaces(registry)
 }
 
-// DefaultGenesis returns default genesis state as raw bytes for the provider
-// module.
+// DefaultGenesis returns default genesis state as raw bytes for the wasm module.
 func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
 	return cdc.MustMarshalJSON(DefaultGenesisState())
 }
@@ -83,7 +82,7 @@ func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, _ client.TxEncodingCo
 	return ValidateGenesis(&data)
 }
 
-// RegisterGRPCGatewayRoutes registers the gRPC Gateway routes for the provider module.
+// RegisterGRPCGatewayRoutes registers the gRPC Gateway routes for the wasm module.
 func (AppModuleBasic) RegisterGRPCGatewayRoutes(cctx client.Context, mux *runtime.ServeMux) {
 	if err := types.RegisterQueryHandlerClient(context.Background(), mux, types.NewQueryClient(cctx)); err != nil {
 		panic(err)
@@ -92,12 +91,12 @@ func (AppModuleBasic) RegisterGRPCGatewayRoutes(cctx client.Context, mux *runtim
 
 // GetQueryCmd returns the root query command of this module
 func (AppModuleBasic) GetQueryCmd() *cobra.Command {
-	return nil
+	panic("akash modules do not export cli commands via cosmos interface")
 }
 
 // GetTxCmd returns the transaction commands for this module
 func (AppModuleBasic) GetTxCmd() *cobra.Command {
-	return nil
+	panic("akash modules do not export cli commands via cosmos interface")
 }
 
 // NewAppModule creates a new AppModule object
@@ -119,7 +118,7 @@ func (am AppModule) IsOnePerModuleType() {}
 // IsAppModule implements the appmodule.AppModule interface.
 func (am AppModule) IsAppModule() {}
 
-// QuerierRoute returns the take module's querier route name.
+// QuerierRoute returns the wasm module's querier route name.
 func (am AppModule) QuerierRoute() string {
 	return types.ModuleName
 }
@@ -136,13 +135,13 @@ func (am AppModule) BeginBlock(_ context.Context) error {
 	return nil
 }
 
-// EndBlock returns the end blocker for the deployment module. It returns no validator
+// EndBlock returns the end blocker for the wasm module. It returns no validator
 // updates.
 func (am AppModule) EndBlock(_ context.Context) error {
 	return nil
 }
 
-// InitGenesis performs genesis initialization for the take module. It returns
+// InitGenesis performs genesis initialization for the wasm module. It returns
 // no validator updates.
 func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, data json.RawMessage) {
 	var genesisState types.GenesisState
@@ -150,7 +149,7 @@ func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, data json.
 	InitGenesis(ctx, am.keeper, &genesisState)
 }
 
-// ExportGenesis returns the exported genesis state as raw bytes for the take
+// ExportGenesis returns the exported genesis state as raw bytes for the wasm
 // module.
 func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.RawMessage {
 	gs := ExportGenesis(ctx, am.keeper)

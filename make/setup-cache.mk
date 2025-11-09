@@ -59,8 +59,22 @@ $(COSMOVISOR): $(COSMOVISOR_VERSION_FILE)
 cache-clean:
 	rm -rf $(AKASH_DEVCACHE)
 
-$(AKASH_DEVCACHE_LIB)/%.a:
-	wget -q --show-progress https://github.com/CosmWasm/wasmvm/releases/download/$(WASMVM_VERSION)/$*.a -O $(AKASH_DEVCACHE_LIB)/$*.a
+$(AKASH_DEVCACHE_LIB)/%:
+	wget -q --show-progress https://github.com/CosmWasm/wasmvm/releases/download/$(WASMVM_VERSION)/$* -O $@
+	@rm -f $(AKASH_DEVCACHE_LIB)/.wasmvm_verified
 
+$(AKASH_DEVCACHE_LIB)/wasmvm_checksums.txt:
+	wget -q --show-progress https://github.com/CosmWasm/wasmvm/releases/download/$(WASMVM_VERSION)/checksums.txt -O $@
+	@rm -f $(AKASH_DEVCACHE_LIB)/.wasmvm_verified
+
+$(AKASH_DEVCACHE_LIB)/.wasmvm_verified: $(patsubst %, $(AKASH_DEVCACHE_LIB)/%,$(WASMVM_LIBS)) $(AKASH_DEVCACHE_LIB)/wasmvm_checksums.txt
+	cd $(AKASH_DEVCACHE_LIB) && sha256sum -c --ignore-missing wasmvm_checksums.txt
+	@touch $@
+
+.PHONY: wasmvm-libs-verify
+wasmvm-libs-verify:
+	@$(MAKE) -s $(AKASH_DEVCACHE_LIB)/.wasmvm_verified
+
+.NOTPARALLEL: wasmvm-libs
 .PHONY: wasmvm-libs
-wasmvm-libs: $(AKASH_DEVCACHE) $(patsubst %, $(AKASH_DEVCACHE_LIB)/%,$(WASMVM_LIBS))
+wasmvm-libs: $(AKASH_DEVCACHE) $(patsubst %, $(AKASH_DEVCACHE_LIB)/%,$(WASMVM_LIBS)) $(AKASH_DEVCACHE_LIB)/wasmvm_checksums.txt wasmvm-libs-verify

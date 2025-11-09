@@ -18,9 +18,20 @@ GIT_HEAD_ABBREV       := $(shell git rev-parse --abbrev-ref HEAD)
 
 IS_PREREL             := $(shell $(ROOT_DIR)/script/is_prerelease.sh "$(RELEASE_TAG)" && echo "true" || echo "false")
 IS_MAINNET            := $(shell $(ROOT_DIR)/script/mainnet-from-tag.sh "$(RELEASE_TAG)" && echo "true" || echo "false")
+IS_STABLE             ?= false
+
+ifeq ($(IS_MAINNET), true)
+	ifeq ($(IS_PREREL), false)
+		IS_STABLE                  := true
+	endif
+endif
 
 GOMOD                  ?= readonly
+
+ifneq ($(UNAME_OS),Darwin)
 BUILD_OPTIONS          ?= static-link
+endif
+
 BUILD_TAGS             := osusergo netgo ledger muslc gcc
 DB_BACKEND             := goleveldb
 BUILD_FLAGS            :=
@@ -51,8 +62,12 @@ ldflags := -X github.com/cosmos/cosmos-sdk/version.Name=akash \
 
 GORELEASER_LDFLAGS := $(ldflags)
 
-ifeq (,$(findstring static-link,$(BUILD_OPTIONS)))
-	ldflags += -linkmode=external -extldflags "-Wl,-z,muldefs -static"
+ldflags += -linkmode=external
+
+ifeq (static-link,$(findstring static-link,$(BUILD_OPTIONS)))
+	ldflags += -extldflags "-L$(AKASH_DEVCACHE_LIB) -lm -Wl,-z,muldefs -static"
+else
+	ldflags += -extldflags "-L$(AKASH_DEVCACHE_LIB)"
 endif
 
 # check for nostrip option

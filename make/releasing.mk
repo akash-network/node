@@ -34,15 +34,15 @@ ifeq ($(GORELEASER_MOUNT_CONFIG),true)
 endif
 
 .PHONY: bins
-bins: $(BINS)
+bins: $(AKASH)
 
 .PHONY: build
-build:
+build: wasmvm-libs
 	$(GO_BUILD) -a $(BUILD_FLAGS) ./...
 
 .PHONY: $(AKASH)
 $(AKASH): wasmvm-libs
-	$(GO_BUILD) -v -o $@ $(BUILD_FLAGS) ./cmd/akash
+	$(GO_BUILD) -v $(BUILD_FLAGS) -o $@ ./cmd/akash
 
 .PHONY: akash
 akash: $(AKASH)
@@ -65,6 +65,7 @@ test-bins: wasmvm-libs
 	docker run \
 		--rm \
 		-e MOD="$(GOMOD)" \
+		-e STABLE=$(IS_STABLE) \
 		-e BUILD_TAGS="$(GORELEASER_TAGS)" \
 		-e BUILD_LDFLAGS="$(GORELEASER_LDFLAGS)" \
 		-e DOCKER_IMAGE=$(RELEASE_DOCKER_IMAGE) \
@@ -87,6 +88,7 @@ docker-image: wasmvm-libs
 	docker run \
 		--rm \
 		-e MOD="$(GOMOD)" \
+		-e STABLE=$(IS_STABLE) \
 		-e BUILD_TAGS="$(GORELEASER_TAGS)" \
 		-e BUILD_LDFLAGS="$(GORELEASER_LDFLAGS)" \
 		-e DOCKER_IMAGE=$(RELEASE_DOCKER_IMAGE) \
@@ -114,6 +116,7 @@ release: wasmvm-libs gen-changelog
 	docker run \
 		--rm \
 		-e MOD="$(GOMOD)" \
+		-e STABLE=$(IS_STABLE) \
 		-e BUILD_TAGS="$(GORELEASER_TAGS)" \
 		-e BUILD_LDFLAGS="$(GORELEASER_LDFLAGS)" \
 		-e GITHUB_TOKEN="$(GITHUB_TOKEN)" \

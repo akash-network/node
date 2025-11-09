@@ -12,7 +12,6 @@ import (
 
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
-	simcli "github.com/cosmos/cosmos-sdk/x/simulation/client/cli"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -169,8 +168,12 @@ func TestAppImportExport(t *testing.T) {
 
 	t.Log("importing genesis...\n")
 
-	newDB, newDir, _, _, err := simtestutil.SetupSimulation(config, "leveldb-app-sim-2", "Simulation-2", simcli.FlagVerboseValue, simcli.FlagEnabledValue)
+	newDB, newDir, _, skip, err := simtestutil.SetupSimulation(config, "leveldb-app-sim-2", "Simulation-2", sim.FlagVerboseValue, sim.FlagEnabledValue)
 	require.NoError(t, err, "simulation setup failed")
+	if skip {
+		t.Skip("skipping application import/export simulation")
+	}
+
 	defer func() {
 		require.NoError(t, newDB.Close())
 		require.NoError(t, os.RemoveAll(newDir))
@@ -521,14 +524,14 @@ func TestAppStateDeterminism(t *testing.T) {
 }
 
 func setupSimulationApp(t *testing.T, msg string) (simtypes.Config, sdkutil.EncodingConfig, dbm.DB, simtestutil.AppOptionsMap, log.Logger, *akash.AkashApp) {
-	config := simcli.NewConfigFromFlags()
+	config := sim.NewConfigFromFlags()
 	config.ChainID = AppChainID
 
 	encodingConfig := sdkutil.MakeEncodingConfig()
 
 	akash.ModuleBasics().RegisterInterfaces(encodingConfig.InterfaceRegistry)
 
-	db, dir, logger, skip, err := simtestutil.SetupSimulation(config, "leveldb-app-sim", "Simulation", simcli.FlagVerboseValue, simcli.FlagEnabledValue)
+	db, dir, logger, skip, err := simtestutil.SetupSimulation(config, "leveldb-app-sim", "Simulation", sim.FlagVerboseValue, sim.FlagEnabledValue)
 	if skip {
 		t.Skip(msg)
 	}
@@ -539,11 +542,11 @@ func setupSimulationApp(t *testing.T, msg string) (simtypes.Config, sdkutil.Enco
 		require.NoError(t, os.RemoveAll(dir))
 	})
 
-	appOpts := make(simtestutil.AppOptionsMap, 0)
+	appOpts := make(simtestutil.AppOptionsMap)
 	appOpts[cflags.FlagHome] = dir // ensure a unique folder
-	appOpts[cflags.FlagInvCheckPeriod] = simcli.FlagPeriodValue
+	appOpts[cflags.FlagInvCheckPeriod] = sim.FlagPeriodValue
 	app := akash.NewApp(logger, db, nil, true, sim.FlagPeriodValue, map[int64]bool{}, encodingConfig, appOpts, fauxMerkleModeOpt, baseapp.SetChainID(AppChainID))
 
-	require.Equal(t, "AkashApp", app.Name())
+	require.Equal(t, akash.AppName, app.Name())
 	return config, encodingConfig, db, appOpts, logger, app
 }

@@ -1,4 +1,12 @@
 {
+    "v2.0.0": {
+        "modules": {
+            "added": [
+                "wasm",
+                "awasm"
+            ]
+        }
+    },
     "v1.0.0": {
         "modules": {
             "added": [

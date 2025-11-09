@@ -92,10 +92,19 @@ func (k *keeper) FilterMessage(sctx sdk.Context, contractAddr sdk.AccAddress, ms
 		)
 	}
 
-	// ALLOW IBC messages (for DeFi composability)
+	// BLOCK IBC messages
 	if msg.IBC != nil {
-		// IBC allowed in Phase 1
-		return nil
+		return errorsmod.Wrap(
+			sdkerrors.ErrUnauthorized,
+			"IBC messages not allowed",
+		)
+	}
+
+	if msg.IBC2 != nil {
+		return errorsmod.Wrap(
+			sdkerrors.ErrUnauthorized,
+			"IBC2 messages not allowed",
+		)
 	}
 
 	// BLOCK Custom messages (no Akash bindings)
@@ -120,7 +129,11 @@ func (k *keeper) FilterMessage(sctx sdk.Context, contractAddr sdk.AccAddress, ms
 		return nil
 	}
 
-	return nil
+	// BLOCK unknown/unhandled message types
+	return errorsmod.Wrap(
+		sdkerrors.ErrUnauthorized,
+		"Unknown message type not allowed",
+	)
 }
 
 // filterBankMessage applies restrictions to bank operations
@@ -174,6 +187,9 @@ func getMessageType(msg wasmvmtypes.CosmosMsg) string {
 	}
 	if msg.IBC != nil {
 		return "ibc"
+	}
+	if msg.IBC2 != nil {
+		return "ibc2"
 	}
 	if msg.Wasm != nil {
 		return "wasm"

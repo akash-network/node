@@ -17,7 +17,6 @@ builds:
       - CC=o64-clang
       - CXX=o64-clang++
       - CGO_CFLAGS=-mmacosx-version-min=10.12
-      - CGO_LDFLAGS=-L./.cache/lib -mmacosx-version-min=10.12
     flags:
       - "-mod={{ .Env.MOD }}"
       - "-tags={{ .Env.BUILD_TAGS }} static_wasm"
@@ -26,6 +25,7 @@ builds:
       - "{{ .Env.BUILD_LDFLAGS }}"
       - -s -w
       - -linkmode=external
+      - -extldflags "-L./.cache/lib -mmacosx-version-min=10.12"
   - id: akash-darwin-arm64
     binary: akash
     main: ./cmd/akash
@@ -37,7 +37,6 @@ builds:
       - CC=oa64-clang
       - CXX=oa64-clang++
       - CGO_CFLAGS=-mmacosx-version-min=10.12
-      - CGO_LDFLAGS=-L./.cache/lib -mmacosx-version-min=10.12
     flags:
       - "-mod={{ .Env.MOD }}"
       - "-tags={{ .Env.BUILD_TAGS }} static_wasm"
@@ -46,6 +45,7 @@ builds:
       - "{{ .Env.BUILD_LDFLAGS }}"
       - -s -w
       - -linkmode=external
+      - -extldflags "-L./.cache/lib -mmacosx-version-min=10.12"
   - id: akash-linux-amd64
     binary: akash
     main: ./cmd/akash

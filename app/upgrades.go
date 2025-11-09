@@ -20,7 +20,12 @@ func (app *AkashApp) registerUpgradeHandlers() error {
 		return nil
 	}
 
-	currentHeight := app.CommitMultiStore().LastCommitID().Version
+	cms := app.CommitMultiStore()
+	if cms == nil {
+		return fmt.Errorf("unable to get CommitMultiStore")
+	}
+
+	currentHeight := cms.LastCommitID().Version
 
 	if upgradeInfo.Height == currentHeight+1 {
 		app.customPreUpgradeHandler(upgradeInfo)

@@ -34,7 +34,7 @@ var (
 	_ module.AppModuleSimulation = AppModule{}
 )
 
-// AppModuleBasic defines the basic application module used by the provider module.
+// AppModuleBasic defines the basic application module used by the take module.
 type AppModuleBasic struct {
 	cdc codec.Codec
 }
@@ -45,12 +45,12 @@ type AppModule struct {
 	keeper keeper.IKeeper
 }
 
-// Name returns provider module's name
+// Name returns take module's name
 func (AppModuleBasic) Name() string {
 	return types.ModuleName
 }
 
-// RegisterLegacyAminoCodec registers the provider module's types for the given codec.
+// RegisterLegacyAminoCodec registers the take module's types for the given codec.
 func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 	types.RegisterLegacyAminoCodec(cdc) // nolint staticcheck
 }
@@ -60,8 +60,7 @@ func (b AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) 
 	types.RegisterInterfaces(registry)
 }
 
-// DefaultGenesis returns default genesis state as raw bytes for the provider
-// module.
+// DefaultGenesis returns default genesis state as raw bytes for the take module.
 func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
 	return cdc.MustMarshalJSON(DefaultGenesisState())
 }
@@ -82,7 +81,7 @@ func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, _ client.TxEncodingCo
 	return ValidateGenesis(&data)
 }
 
-// RegisterGRPCGatewayRoutes registers the gRPC Gateway routes for the provider module.
+// RegisterGRPCGatewayRoutes registers the gRPC Gateway routes for the take module.
 func (AppModuleBasic) RegisterGRPCGatewayRoutes(cctx client.Context, mux *runtime.ServeMux) {
 	if err := types.RegisterQueryHandlerClient(context.Background(), mux, types.NewQueryClient(cctx)); err != nil {
 		panic(err)
@@ -135,7 +134,7 @@ func (am AppModule) BeginBlock(_ context.Context) error {
 	return nil
 }
 
-// EndBlock returns the end blocker for the deployment module. It returns no validator
+// EndBlock returns the end blocker for the take module. It returns no validator
 // updates.
 func (am AppModule) EndBlock(_ context.Context) error {
 	return nil

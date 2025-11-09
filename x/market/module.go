@@ -156,7 +156,7 @@ func (am AppModule) BeginBlock(_ context.Context) error {
 	return nil
 }
 
-// EndBlock returns the end blocker for the deployment module. It returns no validator
+// EndBlock returns the end blocker for the market module. It returns no validator
 // updates.
 func (am AppModule) EndBlock(_ context.Context) error {
 	return nil

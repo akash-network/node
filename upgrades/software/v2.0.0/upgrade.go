@@ -9,7 +9,6 @@ import (
 	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
-	"github.com/CosmWasm/wasmd/x/wasm"
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 
@@ -42,8 +41,6 @@ func (up *upgrade) StoreLoader() *storetypes.StoreUpgrades {
 	return &storetypes.StoreUpgrades{
 		Added: []string{
 			awasm.StoreKey,
-			// With the migrations of all modules away from x/params, the crisis module now has a store.
-			// The store must be created during a chain upgrade to v0.53.x.
 			wasmtypes.StoreKey,
 		},
 		Deleted: []string{},
@@ -61,11 +58,14 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 		// and then override it after.
 
 		// Set the initial wasm module version
-		fromVM[wasmtypes.ModuleName] = wasm.AppModule{}.ConsensusVersion()
+		//fromVM[wasmtypes.ModuleName] = wasm.AppModule{}.ConsensusVersion()
 
-		// Set default wasm params
-		params := wasmtypes.DefaultParams()
+		toVM, err := up.MM.RunMigrations(ctx, up.Configurator, fromVM)
+		if err != nil {
+			return toVM, err
+		}
 
+		params := up.Keepers.Cosmos.Wasm.GetParams(ctx)
 		// Configure code upload access - RESTRICTED TO GOVERNANCE ONLY
 		// Only governance proposals can upload contract code
 		// This provides maximum security for mainnet deployment
@@ -73,15 +73,14 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 			Permission: wasmtypes.AccessTypeNobody,
 		}
 
-		params.CodeUploadAccess = wasmtypes.AllowNobody
 		// Configure instantiate default permission
 		params.InstantiateDefaultPermission = wasmtypes.AccessTypeEverybody
 
-		err := up.Keepers.Cosmos.Wasm.SetParams(ctx, params)
+		err = up.Keepers.Cosmos.Wasm.SetParams(ctx, params)
 		if err != nil {
-			return fromVM, err
+			return toVM, err
 		}
 
-		return up.MM.RunMigrations(ctx, up.Configurator, fromVM)
+		return toVM, err
 	}
 }

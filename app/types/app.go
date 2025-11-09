@@ -48,12 +48,6 @@ import (
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingkeeper "github.com/cosmos/cosmos-sdk/x/staking/keeper"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	icacontroller "github.com/cosmos/ibc-go/v10/modules/apps/27-interchain-accounts/controller"
-	icacontrollerkeeper "github.com/cosmos/ibc-go/v10/modules/apps/27-interchain-accounts/controller/keeper"
-	icacontrollertypes "github.com/cosmos/ibc-go/v10/modules/apps/27-interchain-accounts/controller/types"
-	icahostkeeper "github.com/cosmos/ibc-go/v10/modules/apps/27-interchain-accounts/host/keeper"
-	icahosttypes "github.com/cosmos/ibc-go/v10/modules/apps/27-interchain-accounts/host/types"
-	ibccallbacks "github.com/cosmos/ibc-go/v10/modules/apps/callbacks"
 	"github.com/cosmos/ibc-go/v10/modules/apps/transfer"
 	ibctransferkeeper "github.com/cosmos/ibc-go/v10/modules/apps/transfer/keeper"
 	ibctransfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
@@ -115,8 +109,6 @@ type AppKeepers struct {
 		IBC             *ibckeeper.Keeper
 		Evidence        *evidencekeeper.Keeper
 		Transfer        ibctransferkeeper.Keeper
-		ICAController   icacontrollerkeeper.Keeper
-		ICAHost         icahostkeeper.Keeper
 		Wasm            *wasmkeeper.Keeper
 	}
 
@@ -500,21 +492,6 @@ func (app *App) InitNormalKeepers(
 	// Create fee enabled wasm ibc Stack
 	wasmStackIBCHandler := wasm.NewIBCHandler(app.Keepers.Cosmos.Wasm, app.Keepers.Cosmos.IBC.ChannelKeeper, app.Keepers.Cosmos.Transfer, app.Keepers.Cosmos.IBC.ChannelKeeper)
 
-	// Create Interchain Accounts Stack
-	// SendPacket, since it is originating from the application to core IBC:
-	// icaAuthModuleKeeper.SendTx -> icaController.SendPacket -> fee.SendPacket -> channel.SendPacket
-	var icaControllerStack porttypes.IBCModule
-	// integration point for custom authentication modules
-	// sees https://medium.com/the-interchain-foundation/ibc-go-v6-changes-to-interchain-accounts-and-how-it-impacts-your-chain-806c185300d7
-	var noAuthzModule porttypes.IBCModule
-	icaControllerStack = icacontroller.NewIBCMiddlewareWithAuth(noAuthzModule, app.Keepers.Cosmos.ICAController)
-	// app.ICAAuthModule = icaControllerStack.(ibcmock.IBCModule)
-	icaControllerStack = icacontroller.NewIBCMiddlewareWithAuth(icaControllerStack, app.Keepers.Cosmos.ICAController)
-	icaControllerStack = ibccallbacks.NewIBCMiddleware(icaControllerStack, app.Keepers.Cosmos.IBC.ChannelKeeper, wasmStackIBCHandler, wasm.DefaultMaxIBCCallbackGas)
-	icaICS4Wrapper := icaControllerStack.(porttypes.ICS4Wrapper)
-	// Since the callback middleware itself is an ics4wrapper, it needs to be passed to the ica controller keeper
-	app.Keepers.Cosmos.ICAController.WithICS4Wrapper(icaICS4Wrapper)
-
 	transferIBCModule := transfer.NewIBCModule(app.Keepers.Cosmos.Transfer)
 
 	// Create static IBC router, add transfer route, then set and seal it
@@ -540,7 +517,6 @@ func (app *App) SetupHooks() {
 			app.Keepers.Cosmos.Slashing.Hooks(),
 		),
 	)
-
 	app.Keepers.Cosmos.Gov.SetHooks(
 		govtypes.NewMultiGovHooks(
 		// insert governance hooks receivers here
@@ -573,8 +549,6 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	paramsKeeper.Subspace(crisistypes.ModuleName).WithKeyTable(crisistypes.ParamKeyTable())     // nolint: staticcheck // SA1019
 	paramsKeeper.Subspace(ibctransfertypes.ModuleName).WithKeyTable(ibctransfertypes.ParamKeyTable())
 	paramsKeeper.Subspace(ibcexported.ModuleName).WithKeyTable(ibctable)
-	paramsKeeper.Subspace(icacontrollertypes.SubModuleName)
-	paramsKeeper.Subspace(icahosttypes.SubModuleName)
 
 	// akash params subspaces
 	paramsKeeper.Subspace(dtypes.ModuleName).WithKeyTable(dv1beta.ParamKeyTable())

@@ -37,12 +37,6 @@ else
 endif
 
 ifneq ($(GOWORK),off)
-#	ifeq ($(shell test -e $(AKASH_ROOT)/go.work && echo -n yes),yes)
-#		GOWORK=${AKASH_ROOT}/go.work
-#	else
-#		GOWORK=off
-#	endif
-
 	ifeq ($(GOMOD),$(filter $(GOMOD),mod ""))
 $(error '-mod may only be set to readonly or vendor when in workspace mode, but it is set to ""')
 	endif
@@ -100,6 +94,9 @@ RELEASE_TAG                      ?= $(shell git describe --tags --abbrev=0)
 
 WASMVM_LIBS  := libwasmvm_muslc.x86_64.a \
 libwasmvm_muslc.aarch64.a \
-libwasmvmstatic_darwin.a
+libwasmvmstatic_darwin.a \
+libwasmvm.aarch64.so \
+libwasmvm.dylib \
+libwasmvm.x86_64.so
 
 include $(AKASH_ROOT)/make/setup-cache.mk

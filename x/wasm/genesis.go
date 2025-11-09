@@ -20,15 +20,16 @@ func ValidateGenesis(data *types.GenesisState) error {
 // DefaultGenesisState returns default genesis state as raw bytes for the deployment
 // module.
 func DefaultGenesisState() *types.GenesisState {
+	params := types.DefaultParams()
+	params.BlockedAddresses = []string{
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		authtypes.NewModuleAddress(distrtypes.ModuleName).String(),
+		authtypes.NewModuleAddress(stakingtypes.BondedPoolName).String(),
+		authtypes.NewModuleAddress(stakingtypes.NotBondedPoolName).String(),
+	}
+
 	return &types.GenesisState{
-		Params: types.Params{
-			BlockedAddresses: []string{
-				authtypes.NewModuleAddress(govtypes.ModuleName).String(),
-				authtypes.NewModuleAddress(distrtypes.ModuleName).String(),
-				authtypes.NewModuleAddress(stakingtypes.BondedPoolName).String(),
-				authtypes.NewModuleAddress(stakingtypes.NotBondedPoolName).String(),
-			},
-		},
+		Params: params,
 	}
 }
 

@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	sdkmath "cosmossdk.io/math"
+	upgradetypes "cosmossdk.io/x/upgrade/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/mod/semver"
@@ -131,40 +131,9 @@ type postUpgradeTestDone struct{}
 
 type eventShutdown struct{}
 
-type votingParams struct {
-	VotingPeriod string `json:"voting_period"`
-}
-
-type depositParams struct {
-	MinDeposit sdk.Coins `json:"min_deposit"`
-}
-
-type govParams struct {
-	VotingParams  votingParams  `json:"voting_params"`
-	DepositParams depositParams `json:"deposit_params"`
-}
-
-type proposalResp struct {
-	ProposalID string `json:"proposal_id"`
-	Content    struct {
-		Title string `json:"title"`
-	} `json:"content"`
-}
-
-type proposalsResp struct {
-	Proposals []proposalResp `json:"proposals"`
-}
-
 type wdReq struct {
 	event watchdogCtrl
 	resp  chan<- struct{}
-}
-
-type nodeStatus struct {
-	SyncInfo struct {
-		LatestBlockHeight string `json:"latest_block_height"`
-		CatchingUp        bool   `json:"catching_up"`
-	} `json:"SyncInfo"`
 }
 
 type testMigration struct {
@@ -238,6 +207,7 @@ type upgradeTest struct {
 	cancel            context.CancelFunc
 	group             *errgroup.Group
 	cmdr              *commander
+	cacheDir          string
 	upgradeName       string
 	upgradeInfo       string
 	postUpgradeParams uttypes.TestParams
@@ -261,6 +231,7 @@ type nodeInitParams struct {
 
 var (
 	workdir        = flag.String("workdir", "", "work directory")
+	sourcesdir     = flag.String("sourcesdir", "", "sources directory")
 	config         = flag.String("config", "", "config file")
 	cosmovisor     = flag.String("cosmovisor", "", "path to cosmovisor")
 	upgradeVersion = flag.String("upgrade-version", "local", "akash release to download. local if it is built locally")
@@ -297,6 +268,7 @@ func TestUpgrade(t *testing.T) {
 	t.Log("detecting arguments")
 
 	require.NotEqual(t, "", *workdir, "empty workdir flag")
+	require.NotEqual(t, "", *sourcesdir, "empty sourcesdir flag")
 	require.NotEqual(t, "", *config, "empty config flag")
 	require.NotEqual(t, "", *upgradeVersion, "empty upgrade-version flag")
 	require.NotEqual(t, "", *upgradeName, "empty upgrade-name flag")
@@ -312,6 +284,7 @@ func TestUpgrade(t *testing.T) {
 	require.True(t, info.IsDir(), "workdir flag is not a dir")
 
 	*workdir = strings.TrimSuffix(*workdir, "/")
+	*sourcesdir = strings.TrimSuffix(*sourcesdir, "/")
 
 	info, err = os.Stat(*cosmovisor)
 	require.NoError(t, err)
@@ -373,8 +346,13 @@ func TestUpgrade(t *testing.T) {
 
 	postUpgradeParams := uttypes.TestParams{}
 
+	var upgradeCache string
 	for idx, name := range cfg.Validators {
 		homedir := fmt.Sprintf("%s/%s", *workdir, name)
+
+		if idx == 0 {
+			upgradeCache = homedir
+		}
 
 		genesisBin := fmt.Sprintf("%s/cosmovisor/genesis/bin/akash", homedir)
 
@@ -417,6 +395,7 @@ func TestUpgrade(t *testing.T) {
 			t.Logf("validator address: \"%s\"", addr.String())
 
 			postUpgradeParams.Home = homedir
+			postUpgradeParams.SourceDir = *sourcesdir
 			postUpgradeParams.ChainID = cfg.ChainID
 			postUpgradeParams.Node = "tcp://127.0.0.1:26657"
 			postUpgradeParams.KeyringBackend = "test"
@@ -533,6 +512,7 @@ func TestUpgrade(t *testing.T) {
 		ctx:               ctx,
 		group:             group,
 		cmdr:              cmdr,
+		cacheDir:          upgradeCache,
 		upgradeName:       *upgradeName,
 		upgradeInfo:       upgradeInfo,
 		postUpgradeParams: postUpgradeParams,
@@ -658,6 +638,18 @@ loop:
 	return err
 }
 
+type baseAccount struct {
+	Address string `json:"address"`
+}
+
+type moduleAccount struct {
+	BaseAccount baseAccount `json:"base_account"`
+}
+
+type accountResp struct {
+	Account moduleAccount `json:"account"`
+}
+
 func (l *upgradeTest) submitUpgradeProposal() error {
 	var err error
 
@@ -688,16 +680,28 @@ func (l *upgradeTest) submitUpgradeProposal() error {
 		}
 	}
 
-	tm := time.NewTimer(30 * time.Second)
-	select {
-	case <-l.ctx.Done():
-		if !tm.Stop() {
-			<-tm.C
-		}
-		err = l.ctx.Err()
+	cmdRes, err = l.cmdr.execute(l.ctx, "query auth module-account gov")
+	if err != nil {
+		l.t.Logf("executing cmd failed: %s\n", string(cmdRes))
 		return err
-	case <-tm.C:
 	}
+
+	macc := accountResp{}
+	err = json.Unmarshal(cmdRes, &macc)
+	if err != nil {
+		return err
+	}
+
+	//tm := time.NewTimer(30 * time.Second)
+	//select {
+	//case <-l.ctx.Done():
+	//	if !tm.Stop() {
+	//		<-tm.C
+	//	}
+	//	err = l.ctx.Err()
+	//	return err
+	//case <-tm.C:
+	//}
 
 	cmdRes, err = l.cmdr.execute(l.ctx, "query gov params")
 	if err != nil {
@@ -712,12 +716,10 @@ func (l *upgradeTest) submitUpgradeProposal() error {
 		return err
 	}
 
-	votePeriod, valid := sdkmath.NewIntFromString(params.VotingParams.VotingPeriod)
-	if !valid {
+	votePeriod, err := time.ParseDuration(params.VotingParams.VotingPeriod)
+	if err != nil {
 		return fmt.Errorf("invalid vote period value (%s)", params.VotingParams.VotingPeriod)
 	}
-
-	votePeriod = votePeriod.QuoRaw(1e9)
 
 	cmdRes, err = l.cmdr.execute(l.ctx, "status")
 	if err != nil {
@@ -730,27 +732,55 @@ func (l *upgradeTest) submitUpgradeProposal() error {
 		return err
 	}
 
-	upgradeHeight, err := strconv.ParseUint(statusResp.SyncInfo.LatestBlockHeight, 10, 64)
+	upgradeHeight, err := strconv.ParseInt(statusResp.SyncInfo.LatestBlockHeight, 10, 64)
 	if err != nil {
 		return err
 	}
 
-	upgradeHeight += (votePeriod.Uint64() / 6) + 10
+	upgradeHeight += int64(votePeriod/(6*time.Second)) + 10
 
-	l.t.Logf("voting period: %ss, curr height: %s, upgrade height: %d",
+	upgradeProp := SoftwareUpgradeProposal{
+		Type:      "/cosmos.upgrade.v1beta1.MsgSoftwareUpgrade",
+		Authority: macc.Account.BaseAccount.Address,
+		Plan: upgradetypes.Plan{
+			Name:   l.upgradeName,
+			Height: upgradeHeight,
+			Info:   l.upgradeInfo,
+		},
+	}
+
+	jup, err := json.Marshal(&upgradeProp)
+	if err != nil {
+		return err
+	}
+
+	prop := &ProposalMsg{
+		Messages: []json.RawMessage{
+			jup,
+		},
+		Deposit:   params.DepositParams.MinDeposit[0].String(),
+		Title:     l.upgradeName,
+		Summary:   l.upgradeName,
+		Expedited: false,
+	}
+
+	jProp, err := json.Marshal(prop)
+	if err != nil {
+		return err
+	}
+
+	propFile := fmt.Sprintf("%s/upgrade-prop-%s.json", l.cacheDir, l.upgradeName)
+	err = os.WriteFile(propFile, jProp, 0644)
+	if err != nil {
+		return err
+	}
+
+	l.t.Logf("voting period: %s, curr height: %s, upgrade height: %d",
 		votePeriod,
 		statusResp.SyncInfo.LatestBlockHeight,
 		upgradeHeight)
 
-	cmd := fmt.Sprintf(`tx gov submit-proposal software-upgrade %s --title=%[1]s --description="%[1]s" --upgrade-height=%d --deposit=%s`,
-		l.upgradeName,
-		upgradeHeight,
-		params.DepositParams.MinDeposit[0].String(),
-	)
-
-	if l.upgradeInfo != "" {
-		cmd += fmt.Sprintf(` --upgrade-info='%s'`, l.upgradeInfo)
-	}
+	cmd := fmt.Sprintf(`tx gov submit-proposal %s`, propFile)
 
 	cmdRes, err = l.cmdr.execute(l.ctx, cmd)
 	if err != nil {
@@ -758,8 +788,8 @@ func (l *upgradeTest) submitUpgradeProposal() error {
 		return err
 	}
 
-	// give it two blocks to make sure proposal has been commited
-	tmctx, cancel := context.WithTimeout(l.ctx, 12*time.Second)
+	// give it two blocks to make sure a proposal has been commited
+	tmctx, cancel := context.WithTimeout(l.ctx, 18*time.Second)
 	defer cancel()
 
 	<-tmctx.Done()
@@ -784,8 +814,8 @@ func (l *upgradeTest) submitUpgradeProposal() error {
 
 	var propID string
 	for i := len(proposals.Proposals) - 1; i >= 0; i-- {
-		if proposals.Proposals[i].Content.Title == l.upgradeName {
-			propID = proposals.Proposals[i].ProposalID
+		if proposals.Proposals[i].Title == l.upgradeName {
+			propID = proposals.Proposals[i].ID
 			break
 		}
 	}
