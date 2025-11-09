@@ -41,7 +41,7 @@ build:
 	$(GO_BUILD) -a $(BUILD_FLAGS) ./...
 
 .PHONY: $(AKASH)
-$(AKASH):
+$(AKASH): wasmvm-libs
 	$(GO_BUILD) -v -o $@ $(BUILD_FLAGS) ./cmd/akash
 
 .PHONY: akash
@@ -61,7 +61,7 @@ image-minikube:
 	eval $$(minikube docker-env) && docker-image
 
 .PHONY: test-bins
-test-bins:
+test-bins: wasmvm-libs
 	docker run \
 		--rm \
 		-e MOD="$(GOMOD)" \
@@ -83,7 +83,7 @@ test-bins:
 		--snapshot
 
 .PHONY: docker-image
-docker-image:
+docker-image: wasmvm-libs
 	docker run \
 		--rm \
 		-e MOD="$(GOMOD)" \
@@ -110,7 +110,7 @@ gen-changelog: $(GIT_CHGLOG)
 	./script/genchangelog.sh "$(RELEASE_TAG)" .cache/changelog.md
 
 .PHONY: release
-release: gen-changelog
+release: wasmvm-libs gen-changelog
 	docker run \
 		--rm \
 		-e MOD="$(GOMOD)" \
