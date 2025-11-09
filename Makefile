@@ -2,10 +2,6 @@ APP_DIR               := ./app
 
 GOBIN                 ?= $(shell go env GOPATH)/bin
 
-KIND_APP_IP           ?= $(shell make -sC _run/kube kind-k8s-ip)
-KIND_APP_PORT         ?= $(shell make -sC _run/kube app-http-port)
-KIND_VARS             ?= KUBE_INGRESS_IP="$(KIND_APP_IP)" KUBE_INGRESS_PORT="$(KIND_APP_PORT)"
-
 include make/init.mk
 
 .DEFAULT_GOAL         := bins
@@ -22,46 +18,56 @@ GIT_HEAD_ABBREV       := $(shell git rev-parse --abbrev-ref HEAD)
 
 IS_PREREL             := $(shell $(ROOT_DIR)/script/is_prerelease.sh "$(RELEASE_TAG)" && echo "true" || echo "false")
 IS_MAINNET            := $(shell $(ROOT_DIR)/script/mainnet-from-tag.sh "$(RELEASE_TAG)" && echo "true" || echo "false")
-IS_STABLE             ?= false
 
-GO_LINKMODE            ?= external
 GOMOD                  ?= readonly
-BUILD_TAGS             ?= osusergo,netgo,ledger
+BUILD_OPTIONS          ?= static-link
+BUILD_TAGS             := osusergo netgo ledger muslc gcc
+DB_BACKEND             := goleveldb
+BUILD_FLAGS            :=
+
 GORELEASER_STRIP_FLAGS ?=
 
-ifeq ($(IS_MAINNET), true)
-	ifeq ($(IS_PREREL), false)
-		IS_STABLE                  := true
-	endif
+ifeq (cleveldb,$(findstring cleveldb,$(BUILD_OPTIONS)))
+	DB_BACKEND=cleveldb
+else ifeq (rocksdb,$(findstring rocksdb,$(BUILD_OPTIONS)))
+	DB_BACKEND=rocksdb
+else ifeq (goleveldb,$(findstring goleveldb,$(BUILD_OPTIONS)))
+	DB_BACKEND=goleveldb
 endif
 
 ifneq (,$(findstring cgotrace,$(BUILD_OPTIONS)))
-	BUILD_TAGS := $(BUILD_TAGS),cgotrace
+	BUILD_TAGS += cgotrace
 endif
 
-GORELEASER_BUILD_VARS := \
--X github.com/cosmos/cosmos-sdk/version.Name=akash \
--X github.com/cosmos/cosmos-sdk/version.AppName=akash \
--X github.com/cosmos/cosmos-sdk/version.BuildTags=\"$(BUILD_TAGS)\" \
--X github.com/cosmos/cosmos-sdk/version.Version=$(RELEASE_TAG) \
--X github.com/cosmos/cosmos-sdk/version.Commit=$(GIT_HEAD_COMMIT_LONG)
+build_tags    := $(strip $(BUILD_TAGS))
+build_tags_cs := $(subst $(WHITESPACE),$(COMMA),$(build_tags))
 
-ldflags = -linkmode=$(GO_LINKMODE) -X github.com/cosmos/cosmos-sdk/version.Name=akash \
+ldflags := -X github.com/cosmos/cosmos-sdk/version.Name=akash \
 -X github.com/cosmos/cosmos-sdk/version.AppName=akash \
--X github.com/cosmos/cosmos-sdk/version.BuildTags="$(BUILD_TAGS)" \
+-X github.com/cosmos/cosmos-sdk/version.BuildTags="$(build_tags_cs)" \
 -X github.com/cosmos/cosmos-sdk/version.Version=$(shell git describe --tags | sed 's/^v//') \
--X github.com/cosmos/cosmos-sdk/version.Commit=$(GIT_HEAD_COMMIT_LONG)
+-X github.com/cosmos/cosmos-sdk/version.Commit=$(GIT_HEAD_COMMIT_LONG) \
+-X github.com/cosmos/cosmos-sdk/types.DBBackend=$(DB_BACKEND)
+
+GORELEASER_LDFLAGS := $(ldflags)
+
+ifeq (,$(findstring static-link,$(BUILD_OPTIONS)))
+	ldflags += -linkmode=external -extldflags "-Wl,-z,muldefs -static"
+endif
 
 # check for nostrip option
 ifeq (,$(findstring nostrip,$(BUILD_OPTIONS)))
-	ldflags                += -s -w
-	GORELEASER_STRIP_FLAGS += -s -w
+	ldflags     += -s -w
+	BUILD_FLAGS += -trimpath
 endif
 
 ldflags += $(LDFLAGS)
 ldflags := $(strip $(ldflags))
 
-BUILD_FLAGS := -mod=$(GOMOD) -tags='$(BUILD_TAGS)' -ldflags '$(ldflags)'
+GORELEASER_TAGS  := $(BUILD_TAGS)
+GORELEASER_FLAGS := $(BUILD_FLAGS) -mod=$(GOMOD) -tags='$(build_tags)'
+
+BUILD_FLAGS += -mod=$(GOMOD) -tags='$(build_tags_cs)' -ldflags '$(ldflags)'
 
 .PHONY: all
 all: build bins

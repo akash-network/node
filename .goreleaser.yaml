@@ -16,14 +16,16 @@ builds:
     env:
       - CC=o64-clang
       - CXX=o64-clang++
+      - CGO_CFLAGS=-mmacosx-version-min=10.12
+      - CGO_LDFLAGS=-L./.cache/lib -mmacosx-version-min=10.12
     flags:
       - "-mod={{ .Env.MOD }}"
-      - "-tags={{ .Env.BUILD_TAGS }}"
+      - "-tags={{ .Env.BUILD_TAGS }} static_wasm"
       - -trimpath
     ldflags:
-      - "{{ .Env.BUILD_VARS }}"
-      - "{{ .Env.STRIP_FLAGS }}"
-      - "-linkmode={{ .Env.LINKMODE }}"
+      - "{{ .Env.BUILD_LDFLAGS }}"
+      - -s -w
+      - -linkmode=external
   - id: akash-darwin-arm64
     binary: akash
     main: ./cmd/akash
@@ -34,14 +36,16 @@ builds:
     env:
       - CC=oa64-clang
       - CXX=oa64-clang++
+      - CGO_CFLAGS=-mmacosx-version-min=10.12
+      - CGO_LDFLAGS=-L./.cache/lib -mmacosx-version-min=10.12
     flags:
       - "-mod={{ .Env.MOD }}"
-      - "-tags={{ .Env.BUILD_TAGS }}"
+      - "-tags={{ .Env.BUILD_TAGS }} static_wasm"
       - -trimpath
     ldflags:
-      - "{{ .Env.BUILD_VARS }}"
-      - "{{ .Env.STRIP_FLAGS }}"
-      - "-linkmode={{ .Env.LINKMODE }}"
+      - "{{ .Env.BUILD_LDFLAGS }}"
+      - -s -w
+      - -linkmode=external
   - id: akash-linux-amd64
     binary: akash
     main: ./cmd/akash
@@ -57,10 +61,10 @@ builds:
       - "-tags={{ .Env.BUILD_TAGS }}"
       - -trimpath
     ldflags:
-      - "{{ .Env.BUILD_VARS }}"
-      - "{{ .Env.STRIP_FLAGS }}"
-      - "-linkmode={{ .Env.LINKMODE }}"
-      - -extldflags "-lc -lrt -lpthread --static"
+      - "{{ .Env.BUILD_LDFLAGS }}"
+      - -s -w
+      - -linkmode=external
+      - -extldflags "-L./.cache/lib -lwasmvm_muslc.x86_64 -Wl,-z,muldefs -lm -lrt -lc -static"
   - id: akash-linux-arm64
     binary: akash
     main: ./cmd/akash
@@ -76,10 +80,10 @@ builds:
       - "-tags={{ .Env.BUILD_TAGS }}"
       - -trimpath
     ldflags:
-      - "{{ .Env.BUILD_VARS }}"
-      - "{{ .Env.STRIP_FLAGS }}"
-      - "-linkmode={{ .Env.LINKMODE }}"
-      - -extldflags "-lc -lrt -lpthread --static"
+      - "{{ .Env.BUILD_LDFLAGS }}"
+      - -s -w
+      - -linkmode=external
+      - -extldflags "-L./.cache/lib -lwasmvm_muslc.aarch64 -Wl,-z,muldefs -lm -lrt -lc -static"
 universal_binaries:
   - id: akash-darwin-universal
     ids:
@@ -117,7 +121,7 @@ checksum:
   name_template: "akash_{{ .Version }}_checksums.txt"
 
 dockers:
-  - dockerfile: _build/Dockerfile.akash
+  - dockerfile: _build/akash.Dockerfile
     use: buildx
     goarch: amd64
     goos: linux
@@ -134,7 +138,7 @@ dockers:
       - '{{ .Env.DOCKER_IMAGE }}:{{ .ShortCommit }}-amd64'
       - '{{ .Env.DOCKER_IMAGE }}:{{ replace .Version "+" "-" }}-amd64'
       - '{{ .Env.DOCKER_IMAGE }}:{{if eq .Env.STABLE "true"}}stable{{else}}latest{{end}}-amd64'
-  - dockerfile: _build/Dockerfile.akash
+  - dockerfile: _build/akash.Dockerfile
     use: buildx
     goarch: arm64
     goos: linux

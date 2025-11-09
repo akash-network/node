@@ -9,13 +9,9 @@ import (
 	"reflect"
 	"time"
 
-	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
-	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	"github.com/gorilla/mux"
 	"github.com/rakyll/statik/fs"
 	"github.com/spf13/cast"
-	emodule "pkg.akt.dev/go/node/escrow/module"
-	"pkg.akt.dev/go/sdkutil"
 
 	abci "github.com/cometbft/cometbft/abci/types"
 	tmjson "github.com/cometbft/cometbft/libs/json"
@@ -31,6 +27,8 @@ import (
 	"cosmossdk.io/x/feegrant"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	"github.com/CosmWasm/wasmd/x/wasm"
+	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
+	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -68,9 +66,11 @@ import (
 	audittypes "pkg.akt.dev/go/node/audit/v1"
 	certtypes "pkg.akt.dev/go/node/cert/v1"
 	deploymenttypes "pkg.akt.dev/go/node/deployment/v1"
+	emodule "pkg.akt.dev/go/node/escrow/module"
 	markettypes "pkg.akt.dev/go/node/market/v1"
 	providertypes "pkg.akt.dev/go/node/provider/v1beta4"
 	taketypes "pkg.akt.dev/go/node/take/v1"
+	"pkg.akt.dev/go/sdkutil"
 
 	apptypes "pkg.akt.dev/node/v2/app/types"
 	utypes "pkg.akt.dev/node/v2/upgrades/types"
@@ -158,11 +158,6 @@ func NewApp(
 	}
 
 	wasmDir := filepath.Join(homePath, "wasm")
-	//ibcWasmConfig := ibcwasmtypes.WasmConfig{
-	//	DataDir:               filepath.Join(homePath, "ibc_08-wasm"),
-	//	SupportedCapabilities: []string{"iterator", "stargate", "abort"},
-	//	ContractDebugMode:     false,
-	//}
 	wasmConfig, err := wasm.ReadNodeConfig(appOpts)
 	if err != nil {
 		panic(fmt.Sprintf("error while reading wasm config: %s", err))
