@@ -20,10 +20,10 @@ builds:
       - "-tags={{ .Env.BUILD_TAGS }}"
       - -trimpath
     ldflags:
-      - "{{ .Env.BUILD_VARS }}"
-      - "{{ .Env.STRIP_FLAGS }}"
-      - "-linkmode={{ .Env.LINKMODE }}"
-      - -extldflags "-lc -lrt -lpthread --static"
+      - "{{ .Env.BUILD_LDFLAGS }}"
+      - -s -w
+      - -linkmode=external
+      - -extldflags "-L./.cache/lib -lwasmvm_muslc.x86_64 -Wl,-z,muldefs -lm -lrt -lc -static"
   - id: akash-linux-arm64
     binary: akash
     main: ./cmd/akash
@@ -39,12 +39,12 @@ builds:
       - "-tags={{ .Env.BUILD_TAGS }}"
       - -trimpath
     ldflags:
-      - "{{ .Env.BUILD_VARS }}"
-      - "{{ .Env.STRIP_FLAGS }}"
-      - "-linkmode={{ .Env.LINKMODE }}"
-      - -extldflags "-lc -lrt -lpthread --static"
+      - "{{ .Env.BUILD_LDFLAGS }}"
+      - -s -w
+      - -linkmode=external
+      - -extldflags "-L./.cache/lib -lwasmvm_muslc.aarch64 -Wl,-z,muldefs -lm -lrt -lc -static"
 dockers:
-  - dockerfile: _build/Dockerfile.akash
+  - dockerfile: _build/akash.Dockerfile
     use: buildx
     goarch: amd64
     goos: linux
@@ -59,7 +59,7 @@ dockers:
       - --label=org.opencontainers.image.revision={{ .FullCommit }}
     image_templates:
       - '{{ .Env.DOCKER_IMAGE }}:latest-amd64'
-  - dockerfile: _build/Dockerfile.akash
+  - dockerfile: _build/akash.Dockerfile
     use: buildx
     goarch: arm64
     goos: linux

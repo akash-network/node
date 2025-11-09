@@ -41,10 +41,10 @@ func initUpgrade(log log.Logger, app *apptypes.App) (utypes.IUpgrade, error) {
 func (up *upgrade) StoreLoader() *storetypes.StoreUpgrades {
 	return &storetypes.StoreUpgrades{
 		Added: []string{
-			awasm.ModuleName,
+			awasm.StoreKey,
 			// With the migrations of all modules away from x/params, the crisis module now has a store.
 			// The store must be created during a chain upgrade to v0.53.x.
-			wasmtypes.ModuleName,
+			wasmtypes.StoreKey,
 		},
 		Deleted: []string{},
 	}
@@ -77,7 +77,7 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 		// Configure instantiate default permission
 		params.InstantiateDefaultPermission = wasmtypes.AccessTypeEverybody
 
-		err := up.Keepers.External.Wasm.SetParams(ctx, params)
+		err := up.Keepers.Cosmos.Wasm.SetParams(ctx, params)
 		if err != nil {
 			return fromVM, err
 		}

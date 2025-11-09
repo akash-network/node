@@ -38,18 +38,18 @@ bins: $(BINS)
 
 .PHONY: build
 build:
-	$(GO_BUILD) -a  ./...
+	$(GO_BUILD) -a $(BUILD_FLAGS) ./...
 
 .PHONY: $(AKASH)
 $(AKASH):
-	$(GO_BUILD) -o $@ $(BUILD_FLAGS) ./cmd/akash
+	$(GO_BUILD) -v -o $@ $(BUILD_FLAGS) ./cmd/akash
 
 .PHONY: akash
 akash: $(AKASH)
 
 .PHONY: akash_docgen
 akash_docgen: $(AKASH_DEVCACHE)
-	$(GO_BUILD) -o $(AKASH_DEVCACHE_BIN)/akash_docgen $(BUILD_FLAGS) ./docgen
+	$(GO_BUILD) $(BUILD_FLAGS) -o $(AKASH_DEVCACHE_BIN)/akash_docgen ./docgen
 
 .PHONY: install
 install:
@@ -64,12 +64,9 @@ image-minikube:
 test-bins:
 	docker run \
 		--rm \
-		-e STABLE=$(IS_STABLE) \
 		-e MOD="$(GOMOD)" \
-		-e BUILD_TAGS="$(BUILD_TAGS)" \
-		-e BUILD_VARS="$(GORELEASER_BUILD_VARS)" \
-		-e STRIP_FLAGS="$(GORELEASER_STRIP_FLAGS)" \
-		-e LINKMODE="$(GO_LINKMODE)" \
+		-e BUILD_TAGS="$(GORELEASER_TAGS)" \
+		-e BUILD_LDFLAGS="$(GORELEASER_LDFLAGS)" \
 		-e DOCKER_IMAGE=$(RELEASE_DOCKER_IMAGE) \
 		-e GOPATH=/go \
 		-e GOTOOLCHAIN="$(GOTOOLCHAIN)" \
@@ -89,12 +86,9 @@ test-bins:
 docker-image:
 	docker run \
 		--rm \
-		-e STABLE=$(IS_STABLE) \
 		-e MOD="$(GOMOD)" \
-		-e BUILD_TAGS="$(BUILD_TAGS)" \
-		-e BUILD_VARS="$(GORELEASER_BUILD_VARS)" \
-		-e STRIP_FLAGS="$(GORELEASER_STRIP_FLAGS)" \
-		-e LINKMODE="$(GO_LINKMODE)" \
+		-e BUILD_TAGS="$(GORELEASER_TAGS)" \
+		-e BUILD_LDFLAGS="$(GORELEASER_LDFLAGS)" \
 		-e DOCKER_IMAGE=$(RELEASE_DOCKER_IMAGE) \
 		-e GOPATH=/go \
 		-e GOTOOLCHAIN="$(GOTOOLCHAIN)" \
@@ -119,12 +113,9 @@ gen-changelog: $(GIT_CHGLOG)
 release: gen-changelog
 	docker run \
 		--rm \
-		-e STABLE=$(IS_STABLE) \
 		-e MOD="$(GOMOD)" \
-		-e BUILD_TAGS="$(BUILD_TAGS)" \
-		-e BUILD_VARS="$(GORELEASER_BUILD_VARS)" \
-		-e STRIP_FLAGS="$(GORELEASER_STRIP_FLAGS)" \
-		-e LINKMODE="$(GO_LINKMODE)" \
+		-e BUILD_TAGS="$(GORELEASER_TAGS)" \
+		-e BUILD_LDFLAGS="$(GORELEASER_LDFLAGS)" \
 		-e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
 		-e GORELEASER_CURRENT_TAG="$(RELEASE_TAG)" \
 		-e DOCKER_IMAGE=$(RELEASE_DOCKER_IMAGE) \

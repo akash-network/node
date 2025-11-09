@@ -25,7 +25,8 @@ $(error "GOTOOLCHAIN is not set")
 endif
 
 NULL  :=
-SPACE := $(NULL) #
+SPACE := $(NULL)
+WHITESPACE := $(NULL) $(NULL)
 COMMA := ,
 
 BINS := $(AKASH)
@@ -73,6 +74,9 @@ GIT_CHGLOG_VERSION           ?= v0.15.1
 MOCKERY_VERSION              ?= 3.5.0
 COSMOVISOR_VERSION           ?= v1.7.1
 
+WASMVM_MOD                   := $(shell $(GO) list -m -f '{{ .Path }}' all | grep github.com/CosmWasm/wasmvm)
+WASMVM_VERSION               := $(shell $(GO) list -mod=readonly -m -f '{{ .Version }}' $(WASMVM_MOD))
+
 # ==== Build tools version tracking ====
 # <TOOL>_VERSION_FILE points to the marker file for the installed version.
 # If <TOOL>_VERSION_FILE is changed, the binary will be re-downloaded.
@@ -92,7 +96,10 @@ STATIK                           := $(AKASH_DEVCACHE_BIN)/statik
 COSMOVISOR                       := $(AKASH_DEVCACHE_BIN)/cosmovisor
 COSMOVISOR_DEBUG                 := $(AKASH_RUN_BIN)/cosmovisor
 
+RELEASE_TAG                      ?= $(shell git describe --tags --abbrev=0)
 
-RELEASE_TAG           ?= $(shell git describe --tags --abbrev=0)
+WASMVM_LIBS  := libwasmvm_muslc.x86_64.a \
+libwasmvm_muslc.aarch64.a \
+libwasmvmstatic_darwin.a
 
 include $(AKASH_ROOT)/make/setup-cache.mk

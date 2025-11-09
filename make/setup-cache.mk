@@ -2,6 +2,7 @@ $(AKASH_DEVCACHE):
 	@echo "creating .cache dir structure..."
 	mkdir -p $@
 	mkdir -p $(AKASH_DEVCACHE_BIN)
+	mkdir -p $(AKASH_DEVCACHE_LIB)
 	mkdir -p $(AKASH_DEVCACHE_INCLUDE)
 	mkdir -p $(AKASH_DEVCACHE_VERSIONS)
 	mkdir -p $(AKASH_DEVCACHE_NODE_MODULES)
@@ -57,3 +58,9 @@ $(COSMOVISOR): $(COSMOVISOR_VERSION_FILE)
 
 cache-clean:
 	rm -rf $(AKASH_DEVCACHE)
+
+$(AKASH_DEVCACHE_LIB)/%.a:
+	wget -q --show-progress https://github.com/CosmWasm/wasmvm/releases/download/$(WASMVM_VERSION)/$*.a -O $(AKASH_DEVCACHE_LIB)/$*.a
+
+.PHONY: wasmvm-libs
+wasmvm-libs: $(AKASH_DEVCACHE) $(patsubst %, $(AKASH_DEVCACHE_LIB)/%,$(WASMVM_LIBS))

@@ -199,7 +199,7 @@ func appModules(
 		),
 		wasm.NewAppModule(
 			app.cdc,
-			app.Keepers.External.Wasm,
+			app.Keepers.Cosmos.Wasm,
 			app.Keepers.Cosmos.Staking,
 			app.Keepers.Cosmos.Acct,
 			app.Keepers.Cosmos.Bank,
@@ -302,7 +302,6 @@ func appSimModules(
 			app.cdc,
 			app.Keepers.Akash.Take,
 		),
-
 		deployment.NewAppModule(
 			app.cdc,
 			app.Keepers.Akash.Deployment,
@@ -345,7 +344,7 @@ func appSimModules(
 
 		wasm.NewAppModule(
 			app.cdc,
-			app.Keepers.External.Wasm,
+			app.Keepers.Cosmos.Wasm,
 			app.Keepers.Cosmos.Staking,
 			app.Keepers.Cosmos.Acct,
 			app.Keepers.Cosmos.Bank,

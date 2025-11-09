@@ -117,6 +117,7 @@ type AppKeepers struct {
 		Transfer        ibctransferkeeper.Keeper
 		ICAController   icacontrollerkeeper.Keeper
 		ICAHost         icahostkeeper.Keeper
+		Wasm            *wasmkeeper.Keeper
 	}
 
 	Akash struct {
@@ -128,10 +129,6 @@ type AppKeepers struct {
 		Audit      akeeper.Keeper
 		Cert       ckeeper.Keeper
 		Wasm       wkeeper.Keeper
-	}
-
-	External struct {
-		Wasm *wasmkeeper.Keeper
 	}
 
 	Modules struct {
@@ -498,10 +495,10 @@ func (app *App) InitNormalKeepers(
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 		wOpts...,
 	)
-	app.Keepers.External.Wasm = &wasmKeeper
+	app.Keepers.Cosmos.Wasm = &wasmKeeper
 
 	// Create fee enabled wasm ibc Stack
-	wasmStackIBCHandler := wasm.NewIBCHandler(app.Keepers.External.Wasm, app.Keepers.Cosmos.IBC.ChannelKeeper, app.Keepers.Cosmos.Transfer, app.Keepers.Cosmos.IBC.ChannelKeeper)
+	wasmStackIBCHandler := wasm.NewIBCHandler(app.Keepers.Cosmos.Wasm, app.Keepers.Cosmos.IBC.ChannelKeeper, app.Keepers.Cosmos.Transfer, app.Keepers.Cosmos.IBC.ChannelKeeper)
 
 	// Create Interchain Accounts Stack
 	// SendPacket, since it is originating from the application to core IBC:
@@ -530,7 +527,7 @@ func (app *App) InitNormalKeepers(
 	ibcRouterV2 := ibcapi.NewRouter()
 	ibcRouterV2 = ibcRouterV2.
 		AddRoute(ibctransfertypes.PortID, transferv2.NewIBCModule(app.Keepers.Cosmos.Transfer)).
-		AddPrefixRoute(wasmkeeper.PortIDPrefixV2, wasmkeeper.NewIBC2Handler(app.Keepers.External.Wasm))
+		AddPrefixRoute(wasmkeeper.PortIDPrefixV2, wasmkeeper.NewIBC2Handler(app.Keepers.Cosmos.Wasm))
 
 	app.Keepers.Cosmos.IBC.SetRouterV2(ibcRouterV2)
 }
