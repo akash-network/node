@@ -69,11 +69,15 @@ type TestnetConfig struct {
 func InitAkashAppForTestnet(
 	app *AkashApp,
 	db dbm.DB,
-	tcfg TestnetConfig,
+	tcfg *TestnetConfig,
 ) *AkashApp {
 	//
 	// Required Changes:
 	//
+
+	if tcfg == nil {
+		tmos.Exit("TestnetConfig cannot be nil")
+	}
 
 	var err error
 

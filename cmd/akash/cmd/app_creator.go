@@ -150,9 +150,9 @@ func (a appCreator) newTestnetApp(logger log.Logger, db dbm.DB, traceStore io.Wr
 		panic("app created from newApp is not of type AkashApp")
 	}
 
-	tcfg, valid := appOpts.Get(cflags.KeyTestnetConfig).(akash.TestnetConfig)
+	tcfg, valid := appOpts.Get(cflags.KeyTestnetConfig).(*akash.TestnetConfig)
 	if !valid {
-		panic("cflags.KeyTestnetConfig is not of type akash.TestnetConfig")
+		panic("cflags.KeyTestnetConfig is not of type *akash.TestnetConfig")
 	}
 
 	// Make modifications to the normal AkashApp required to run the network locally
