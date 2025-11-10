@@ -169,12 +169,10 @@ trap_show() {
 }
 
 function cleanup() {
-	jb=$(jobs -p)
-
-	if [[ "$jb" != "" ]]; then
+	while IFS= read -r pid; do
 		# shellcheck disable=SC2086
-		kill $jb
-	fi
+		kill $pid
+	done < <(jobs -p)
 }
 
 trap_add EXIT 'cleanup'
@@ -365,7 +363,7 @@ function init() {
 		genesis_file=${valdir}/config/genesis.json
 		rm -f "$genesis_file"
 
-		$AKASH init --home "$valdir" "$(jq -rc '.moniker' <<<"$val")" >/dev/null 2>&1
+		$AKASH genesis init --home "$valdir" "$(jq -rc '.moniker' <<<"$val")" >/dev/null 2>&1
 
 		cat >"$valdir/.envrc" <<EOL
 PATH_add "\$(pwd)/cosmovisor/current/bin"
