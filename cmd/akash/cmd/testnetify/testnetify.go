@@ -17,7 +17,6 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	cmtcfg "github.com/cometbft/cometbft/config"
-	"github.com/cometbft/cometbft/crypto/tmhash"
 	"github.com/cometbft/cometbft/node"
 	pvm "github.com/cometbft/cometbft/privval"
 	cmtstate "github.com/cometbft/cometbft/proto/tendermint/state"
@@ -303,7 +302,7 @@ func testnetify(sctx *sdksrv.Context, tcfg TestnetConfig, testnetAppCreator type
 	}
 
 	// Load the comet genesis doc provider.
-	genDocProvider := node.DefaultGenesisDocProviderFunc(config)
+	genDocProvider := sdksrv.GetGenDocProvider(config)
 
 	// Initialize blockStore and stateDB.
 	blockStoreDB, err := cmtcfg.DefaultDBProvider(&cmtcfg.DBContext{ID: "blockstore", Config: config})
@@ -325,14 +324,17 @@ func testnetify(sctx *sdksrv.Context, tcfg TestnetConfig, testnetAppCreator type
 		_ = stateDB.Close()
 	}()
 
-	jsonBlob, err := os.ReadFile(config.GenesisFile())
-	if err != nil {
-		return nil, fmt.Errorf("couldn't read GenesisDoc file: %w", err)
+	var updatedChecksum []byte
+	{
+		genDoc, err := genDocProvider()
+		if err != nil {
+			return nil, err
+		}
+
+		updatedChecksum = genDoc.Sha256Checksum
 	}
 
 	// Since we modified the chainID, we set the new genesisDocHash in the stateDB.
-	updatedChecksum := tmhash.Sum(jsonBlob)
-
 	if err = stateDB.SetSync(node.GenesisDocHashKey, updatedChecksum); err != nil {
 		return nil, node.ErrSaveGenesisDocHash{Err: err}
 	}
