@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	tmos "github.com/cometbft/cometbft/libs/os"
@@ -42,10 +43,14 @@ type TestnetValidator struct {
 	Delegations       []TestnetDelegation
 }
 
+type TestnetVotingPeriod struct {
+	time.Duration
+}
+
 type TestnetGovConfig struct {
 	VotingParams *struct {
-		VotingPeriod        time.Duration `json:"voting_period,omitempty"`
-		ExpeditedVotePeriod time.Duration `json:"expedited_vote_period"`
+		VotingPeriod        TestnetVotingPeriod `json:"voting_period,omitempty"`
+		ExpeditedVotePeriod TestnetVotingPeriod `json:"expedited_vote_period"`
 	} `json:"voting_params,omitempty"`
 }
 
@@ -63,6 +68,27 @@ type TestnetConfig struct {
 	Validators []TestnetValidator
 	Gov        TestnetGovConfig
 	Upgrade    TestnetUpgrade
+}
+
+func TrimQuotes(data string) string {
+	data = strings.TrimPrefix(data, "\"")
+	return strings.TrimSuffix(data, "\"")
+}
+
+func (t *TestnetVotingPeriod) UnmarshalJSON(data []byte) error {
+	val := TrimQuotes(string(data))
+
+	if !strings.HasSuffix(val, "s") {
+		return fmt.Errorf("invalid format of voting period. must contain time unit. Valid time units are ns|us(µs)|ms|s|m|h") // nolint: goerr113
+	}
+
+	var err error
+	t.Duration, err = time.ParseDuration(val)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // InitAkashAppForTestnet is broken down into two sections:
@@ -258,8 +284,8 @@ func InitAkashAppForTestnet(
 	if err != nil {
 		panic(err.Error())
 	}
-	govParams.ExpeditedVotingPeriod = &tcfg.Gov.VotingParams.ExpeditedVotePeriod
-	govParams.VotingPeriod = &tcfg.Gov.VotingParams.VotingPeriod
+	govParams.ExpeditedVotingPeriod = &tcfg.Gov.VotingParams.ExpeditedVotePeriod.Duration
+	govParams.VotingPeriod = &tcfg.Gov.VotingParams.VotingPeriod.Duration
 	govParams.MinDeposit = sdk.NewCoins(sdk.NewInt64Coin(sdkutil.DenomUakt, 100000000))
 	govParams.ExpeditedMinDeposit = sdk.NewCoins(sdk.NewInt64Coin(sdkutil.DenomUakt, 150000000))
 
