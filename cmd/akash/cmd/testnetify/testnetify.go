@@ -185,7 +185,7 @@ you want to test the upgrade handler itself.
 			getCtx := func(svrCtx *sdksrv.Context, block bool) (*errgroup.Group, context.Context) {
 				g, ctx := errgroup.WithContext(ctx)
 				// listen for quit signals so the calling parent process can gracefully exit
-				server.ListenForQuitSignals(g, block, cancelFn, svrCtx.Logger)
+				server.ListenForQuitSignals(ctx, cancelFn, g, block, svrCtx.Logger)
 				return g, ctx
 			}
 
@@ -238,7 +238,7 @@ you want to test the upgrade handler itself.
 					case <-ticker.C:
 						status, err := cctx.Client.Status(ctx)
 						if err == nil && status != nil {
-							if status.SyncInfo.LatestBlockHeight > h+1 {
+							if status.SyncInfo.LatestBlockHeight > h+2 {
 								return
 							}
 						}
