@@ -2,7 +2,8 @@
     "chain_id": "localakash",
     "gov": {
         "voting_params": {
-            "voting_period": "60s"
+            "voting_period": "60s",
+            "expedited_vote_period": "60s"
         }
     },
     "accounts": [

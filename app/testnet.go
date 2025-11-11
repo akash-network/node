@@ -42,9 +42,11 @@ type TestnetValidator struct {
 	Delegations       []TestnetDelegation
 }
 
-type TestnetGov struct {
-	VotePeriod          time.Duration `json:"vote_period"`
-	ExpeditedVotePeriod time.Duration `json:"expedited_vote_period"`
+type TestnetGovConfig struct {
+	VotingParams *struct {
+		VotingPeriod        time.Duration `json:"voting_period,omitempty"`
+		ExpeditedVotePeriod time.Duration `json:"expedited_vote_period"`
+	} `json:"voting_params,omitempty"`
 }
 
 type TestnetUpgrade struct {
@@ -59,7 +61,7 @@ type TestnetAccount struct {
 type TestnetConfig struct {
 	Accounts   []TestnetAccount
 	Validators []TestnetValidator
-	Gov        TestnetGov
+	Gov        TestnetGovConfig
 	Upgrade    TestnetUpgrade
 }
 
@@ -256,8 +258,8 @@ func InitAkashAppForTestnet(
 	if err != nil {
 		panic(err.Error())
 	}
-	govParams.ExpeditedVotingPeriod = &tcfg.Gov.ExpeditedVotePeriod
-	govParams.VotingPeriod = &tcfg.Gov.VotePeriod
+	govParams.ExpeditedVotingPeriod = &tcfg.Gov.VotingParams.ExpeditedVotePeriod
+	govParams.VotingPeriod = &tcfg.Gov.VotingParams.VotingPeriod
 	govParams.MinDeposit = sdk.NewCoins(sdk.NewInt64Coin(sdkutil.DenomUakt, 100000000))
 	govParams.ExpeditedMinDeposit = sdk.NewCoins(sdk.NewInt64Coin(sdkutil.DenomUakt, 150000000))
 

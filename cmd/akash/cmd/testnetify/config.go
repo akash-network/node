@@ -62,7 +62,7 @@ type TestnetConfig struct {
 	ChainID    string                 `json:"chain_id"`
 	Validators TestnetValidators      `json:"validators"`
 	Accounts   []akash.TestnetAccount `json:"accounts"`
-	Gov        akash.TestnetGov       `json:"gov"`
+	Gov        akash.TestnetGovConfig `json:"gov"`
 	upgrade    akash.TestnetUpgrade
 }
 
