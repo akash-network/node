@@ -56,7 +56,7 @@ func getCtx(sctx *sdksrv.Context, block bool) (*errgroup.Group, context.Context)
 	ctx, cancelFn := context.WithCancel(context.Background())
 	g, ctx := errgroup.WithContext(ctx)
 	// listen for quit signals so the calling parent process can gracefully exit
-	server.ListenForQuitSignals(g, block, cancelFn, sctx.Logger)
+	server.ListenForQuitSignals(ctx, cancelFn, g, block, sctx.Logger)
 
 	return g, ctx
 }

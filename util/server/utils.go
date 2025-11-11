@@ -16,15 +16,19 @@ import (
 //
 // Note, the blocking behavior of this depends on the block argument.
 // The caller must ensure the corresponding context derived from the cancelFn is used correctly.
-func ListenForQuitSignals(g *errgroup.Group, block bool, cancelFn context.CancelFunc, logger log.Logger) {
+func ListenForQuitSignals(ctx context.Context, cancelFn context.CancelFunc, g *errgroup.Group, block bool, logger log.Logger) {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
 	f := func() {
-		sig := <-sigCh
-		cancelFn()
+		select {
+		case sig := <-sigCh:
+			logger.Info("caught signal", "signal", sig.String())
+		case <-ctx.Done():
+			logger.Info("context canceled")
+		}
 
-		logger.Info("caught signal", "signal", sig.String())
+		cancelFn()
 	}
 
 	if block {
