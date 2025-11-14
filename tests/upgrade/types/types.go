@@ -11,6 +11,7 @@ import (
 type TestParams struct {
 	Home           string
 	Node           string
+	SourceDir      string
 	ChainID        string
 	KeyringBackend string
 	From           string

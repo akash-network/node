@@ -10,9 +10,9 @@ import (
 	etypes "pkg.akt.dev/go/node/escrow/types/v1"
 	"pkg.akt.dev/go/testutil"
 
-	cmocks "pkg.akt.dev/node/testutil/cosmos/mocks"
-	"pkg.akt.dev/node/testutil/state"
-	"pkg.akt.dev/node/x/escrow/keeper"
+	cmocks "pkg.akt.dev/node/v2/testutil/cosmos/mocks"
+	"pkg.akt.dev/node/v2/testutil/state"
+	"pkg.akt.dev/node/v2/x/escrow/keeper"
 )
 
 func Test_AccountCreate(t *testing.T) {

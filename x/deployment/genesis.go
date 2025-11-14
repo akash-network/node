@@ -10,7 +10,7 @@ import (
 	"pkg.akt.dev/go/node/deployment/v1"
 	"pkg.akt.dev/go/node/deployment/v1beta4"
 
-	"pkg.akt.dev/node/x/deployment/keeper"
+	"pkg.akt.dev/node/v2/x/deployment/keeper"
 )
 
 // ValidateGenesis does validation check of the Genesis and return error in case of failure

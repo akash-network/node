@@ -3,7 +3,7 @@ package provider
 import (
 	types "pkg.akt.dev/go/node/provider/v1beta4"
 
-	"pkg.akt.dev/node/x/provider/keeper"
+	"pkg.akt.dev/node/v2/x/provider/keeper"
 )
 
 const (

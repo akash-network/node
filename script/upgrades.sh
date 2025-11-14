@@ -548,7 +548,7 @@ function prepare_state() {
 			valjson=$(cat "$valdir/validator.json")
 			if [[ $cnt -gt 0 ]]; then
 				if [[ $($semver compare "$akashversion" v1.0.0-rc0) -ge 0 ]]; then
-					$AKASH tx staking create-validator "$valjson" --home="$rvaldir" --from="validator$cnt" --yes
+					$AKASH tx staking create-validator "$valdir/validator.json" --home="$rvaldir" --from="validator$cnt" --yes
 				else
 					$AKASH tx staking create-validator \
 						--home="$rvaldir" \

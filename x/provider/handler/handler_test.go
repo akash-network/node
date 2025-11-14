@@ -15,10 +15,10 @@ import (
 	akashtypes "pkg.akt.dev/go/node/types/attributes/v1"
 	"pkg.akt.dev/go/testutil"
 
-	"pkg.akt.dev/node/testutil/state"
-	mkeeper "pkg.akt.dev/node/x/market/keeper"
-	"pkg.akt.dev/node/x/provider/handler"
-	"pkg.akt.dev/node/x/provider/keeper"
+	"pkg.akt.dev/node/v2/testutil/state"
+	mkeeper "pkg.akt.dev/node/v2/x/market/keeper"
+	"pkg.akt.dev/node/v2/x/provider/handler"
+	"pkg.akt.dev/node/v2/x/provider/keeper"
 )
 
 const (
