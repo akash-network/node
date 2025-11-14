@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"reflect"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -140,8 +139,6 @@ func NewApp(
 	if val := appOpts.Get("wasm"); val != nil {
 		if vl, valid := val.([]wasmkeeper.Option); valid {
 			wasmOpts = append(wasmOpts, vl...)
-		} else {
-			panic(fmt.Sprintf("invalid type for aptOpts.Get(\"wasm\"). expected %s, actual %s", reflect.TypeOf(wasmOpts).String(), reflect.TypeOf(val).String()))
 		}
 	}
 
