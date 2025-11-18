@@ -2,6 +2,10 @@
 project_name: node
 version: 2
 dist: ./.cache/goreleaser/test-bins
+before:
+  hooks:
+    - apt update
+    - apt install -y pkg-config libudev-dev:amd64 libudev-dev:arm64
 env:
   - GO111MODULE=on
   - CGO_ENABLED=1
@@ -60,7 +64,7 @@ builds:
       - "{{ .Env.BUILD_VARS }}"
       - "{{ .Env.STRIP_FLAGS }}"
       - "-linkmode={{ .Env.LINKMODE }}"
-      - -extldflags "-lc -lrt -lpthread --static"
+      - -extldflags "-lc -lrt -lpthread"
   - id: akash-linux-arm64
     binary: akash
     main: ./cmd/akash
@@ -79,7 +83,7 @@ builds:
       - "{{ .Env.BUILD_VARS }}"
       - "{{ .Env.STRIP_FLAGS }}"
       - "-linkmode={{ .Env.LINKMODE }}"
-      - -extldflags "-lc -lrt -lpthread --static"
+      - -extldflags "-lc -lrt -lpthread"
 universal_binaries:
   - id: akash-darwin-universal
     ids:
