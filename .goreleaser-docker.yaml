@@ -4,6 +4,10 @@ dist: ./.cache/goreleaser/docker
 env:
   - GO111MODULE=on
   - CGO_ENABLED=1
+before:
+  hooks:
+    - apt update
+    - apt install -y pkg-config libudev-dev:amd64 libudev-dev:arm64
 builds:
   - id: akash-linux-amd64
     binary: akash
@@ -23,7 +27,7 @@ builds:
       - "{{ .Env.BUILD_VARS }}"
       - "{{ .Env.STRIP_FLAGS }}"
       - "-linkmode={{ .Env.LINKMODE }}"
-      - -extldflags "-lc -lrt -lpthread --static"
+      - -extldflags "-lc -lrt -lpthread"
   - id: akash-linux-arm64
     binary: akash
     main: ./cmd/akash
@@ -42,7 +46,7 @@ builds:
       - "{{ .Env.BUILD_VARS }}"
       - "{{ .Env.STRIP_FLAGS }}"
       - "-linkmode={{ .Env.LINKMODE }}"
-      - -extldflags "-lc -lrt -lpthread --static"
+      - -extldflags "-lc -lrt -lpthread"
 dockers:
   - dockerfile: _build/Dockerfile.akash
     use: buildx
