@@ -73,7 +73,10 @@ func InitGenesis(ctx sdk.Context, keeper keeper.Keeper, data *types.GenesisState
 		}
 	}
 	for idx := range data.Payments {
-		keeper.SavePayment(ctx, data.Payments[idx])
+		err := keeper.SavePayment(ctx, data.Payments[idx])
+		if err != nil {
+			panic(fmt.Sprintf("error saving payment: %s", err.Error()))
+		}
 	}
 }
 

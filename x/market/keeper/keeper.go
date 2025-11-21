@@ -357,6 +357,9 @@ func (k Keeper) OnGroupClosed(ctx sdk.Context, id dtypes.GroupID) error {
 		if lease, ok := k.GetLease(ctx, bid.ID.LeaseID()); ok {
 			// OnGroupClosed is callable by x/deployment only so only reason is owner
 			err = k.OnLeaseClosed(ctx, lease, mv1.LeaseClosed, mv1.LeaseClosedReasonOwner)
+			if err != nil {
+				return err
+			}
 			if err := k.ekeeper.PaymentClose(ctx, lease.ID.ToEscrowPaymentID()); err != nil {
 				ctx.Logger().With("err", err).Info("error closing payment")
 			}

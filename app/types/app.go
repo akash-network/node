@@ -121,6 +121,7 @@ type AppKeepers struct {
 }
 
 type App struct {
+	Cdc          codec.Codec
 	Keepers      AppKeepers
 	Configurator module.Configurator
 	MM           *module.Manager
@@ -190,6 +191,10 @@ func (app *App) GetTKey(storeKey string) *storetypes.TransientStoreKey {
 // NOTE: This is solely used for testing purposes.
 func (app *App) GetMemKey(storeKey string) *storetypes.MemoryStoreKey {
 	return app.memKeys[storeKey]
+}
+
+func (app *App) GetCodec() codec.Codec {
+	return app.Cdc
 }
 
 // InitSpecialKeepers initiates special keepers (crisis appkeeper, upgradekeeper, params keeper)

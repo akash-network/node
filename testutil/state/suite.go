@@ -76,15 +76,8 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 
 	if keepers.Bank == nil {
 		bkeeper := &emocks.BankKeeper{}
-		bkeeper.
-			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-			Return(nil)
-		bkeeper.
-			On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-			Return(nil)
-		bkeeper.
-			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-			Return(nil)
+		// do not set bank mock during suite setup, each test must set them manually
+		// to make sure escrow balance values are tracked correctly
 		bkeeper.
 			On("SpendableCoin", mock.Anything, mock.Anything, mock.Anything).
 			Return(sdk.NewInt64Coin("uakt", 10000000))
@@ -167,6 +160,10 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 		ctx:     ctx,
 		keepers: keepers,
 	}
+}
+
+func (ts *TestSuite) PrepareMocks(fn func(ts *TestSuite)) {
+	fn(ts)
 }
 
 func (ts *TestSuite) App() *app.AkashApp {

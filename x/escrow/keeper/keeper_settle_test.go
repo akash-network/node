@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"fmt"
 	"testing"
 
 	sdkmath "cosmossdk.io/math"
@@ -106,8 +107,35 @@ func TestSettleFullBlocks(t *testing.T) {
 
 		assertAmountEqual(t, sdkmath.LegacyNewDec(tt.cfg.balanceEnd), account.State.Funds[0].Amount, tt.name)
 
+		totalTransferred := sdkmath.LegacyZeroDec()
+		for _, transfer := range tt.cfg.transferred {
+			totalTransferred.AddMut(transfer)
+		}
+
+		assert.Equal(t, totalTransferred, account.State.Transferred[0].Amount, fmt.Sprintf("%s: deposit balance should be decremented by total transferred", tt.name))
+
+		totalPayments := sdkmath.LegacyZeroDec()
+		totalUnsettled := sdkmath.LegacyZeroDec()
+
 		for idx := range payments {
 			assert.Equal(t, sdk.NewDecCoinFromDec(denom, tt.cfg.transferred[idx]), payments[idx].State.Balance, tt.name)
+			totalPayments.AddMut(payments[idx].State.Balance.Amount)
+			totalPayments.AddMut(payments[idx].State.Unsettled.Amount)
+			totalUnsettled.AddMut(payments[idx].State.Unsettled.Amount)
+		}
+
+		// Check that funds were decremented by the total payments amount
+		expectedRemainingBalance := sdkmath.LegacyNewDec(tt.cfg.balanceStart).Sub(totalPayments)
+
+		assert.Equal(t, expectedRemainingBalance, account.State.Funds[0].Amount, fmt.Sprintf("%s: deposit balance should be decremented by total payments", tt.name))
+
+		// Check unsettled amounts are tracked when overdrawn
+		if overdrawn {
+			// balance expected to be negative
+			assert.True(t, account.State.Funds[0].Amount.IsNegative())
+
+			unsettledDiff := account.State.Funds[0].Amount.Add(totalUnsettled)
+			assert.Equal(t, sdkmath.LegacyZeroDec().String(), unsettledDiff.String())
 		}
 	}
 }
