@@ -545,11 +545,14 @@ function prepare_state() {
 
 			valdir=$validators_dir/.akash${cnt}
 
-			valjson=$(cat "$valdir/validator.json")
+			valjsonfile="$valdir/validator.json"
+
 			if [[ $cnt -gt 0 ]]; then
 				if [[ $($semver compare "$akashversion" v1.0.0-rc0) -ge 0 ]]; then
-					$AKASH tx staking create-validator "$valjson" --home="$rvaldir" --from="validator$cnt" --yes
+					$AKASH tx staking create-validator "$valjsonfile" --home="$rvaldir" --from="validator$cnt" --yes
 				else
+					valjson=$(cat "$valjsonfile")
+
 					$AKASH tx staking create-validator \
 						--home="$rvaldir" \
 						--moniker="$(jq -rc '.moniker' <<<"$valjson")" \
