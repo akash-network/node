@@ -243,7 +243,7 @@ func (k *keeper) AuthorizeDeposits(sctx sdk.Context, msg sdk.Msg) ([]etypes.Depo
 					return false
 				}
 
-				// Delete is ignored here as not all fund may be used during deployment lifetime.
+				// Delete is ignored here as not all funds may be used during deployment lifetime.
 				// also, there can be another deployment using same authorization and may return funds before deposit is fully used
 				err = k.authzKeeper.SaveGrant(ctx, owner, granter, resp.Updated, expiration)
 				if err != nil {
@@ -941,8 +941,6 @@ func (acc *account) deductFromBalance(amount sdk.DecCoin) (sdk.DecCoin, bool) {
 			toWithdraw.AddMut(remaining)
 		}
 
-		funds.Amount.SubMut(toWithdraw)
-
 		acc.State.Deposits[i].Balance.Amount.SubMut(toWithdraw)
 		if acc.State.Deposits[i].Balance.IsZero() {
 			idx++
@@ -956,16 +954,19 @@ func (acc *account) deductFromBalance(amount sdk.DecCoin) (sdk.DecCoin, bool) {
 		}
 	}
 
+	// clean empty deposits
 	if idx > 0 {
 		acc.State.Deposits = acc.State.Deposits[idx:]
 	}
 
+	funds.Amount.SubMut(withdrew)
 	res := sdk.NewDecCoinFromDec(amount.Denom, withdrew)
 
 	if remaining.IsZero() {
 		return res, false
 	}
 
+	// at this point the account is overdrawn
 	funds.Amount.SubMut(remaining)
 
 	return res, true
@@ -983,7 +984,7 @@ func accountSettleFullBlocks(acc *account, payments []payment, heightDelta sdkma
 
 	for idx := range payments {
 		p := payments[idx]
-		paymentTransfer := sdk.NewDecCoinFromDec(p.State.Rate.Denom, p.State.Rate.Amount.Mul(sdkmath.LegacyNewDecFromInt(heightDelta)))
+		paymentTransfer := sdk.NewDecCoinFromDec(p.State.Rate.Denom, p.State.Rate.Amount.Mul(sdkmath.LegacyNewDecFromInt(heightDelta)).TruncateDec())
 
 		paymentsTransfers = append(paymentsTransfers, paymentTransfer)
 	}
@@ -994,7 +995,7 @@ func accountSettleFullBlocks(acc *account, payments []payment, heightDelta sdkma
 		unsettledAmount := paymentsTransfers[idx]
 
 		settledAmount, od := acc.deductFromBalance(unsettledAmount)
-		unsettledAmount.Amount.SubMut(unsettledAmount.Amount)
+		unsettledAmount.Amount.SubMut(settledAmount.Amount)
 
 		if settledAmount.IsPositive() {
 			payments[idx].State.Balance.Amount.AddMut(settledAmount.Amount)
