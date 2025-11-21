@@ -7,21 +7,23 @@ import (
 	"testing"
 	"time"
 
-	sdkmath "cosmossdk.io/math"
-	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	mtypes "pkg.akt.dev/go/node/market/v1"
 
+	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdktestdata "github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
+	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 
 	"pkg.akt.dev/go/node/deployment/v1"
 	"pkg.akt.dev/go/node/deployment/v1beta4"
+	emodule "pkg.akt.dev/go/node/escrow/module"
 	ev1 "pkg.akt.dev/go/node/escrow/v1"
+	mtypes "pkg.akt.dev/go/node/market/v1"
 	deposit "pkg.akt.dev/go/node/types/deposit/v1"
 	"pkg.akt.dev/go/testutil"
 
@@ -112,15 +114,6 @@ func setupTestSuite(t *testing.T) *testSuite {
 	bankKeeper.
 		On("SpendableCoin", mock.Anything, mock.Anything, mock.Anything).
 		Return(sdk.NewInt64Coin("uakt", 10000000))
-	bankKeeper.
-		On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(nil)
-	bankKeeper.
-		On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(nil)
-	bankKeeper.
-		On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return(nil)
 
 	keepers := state.Keepers{
 		Authz: authzKeeper,
@@ -147,7 +140,7 @@ func setupTestSuite(t *testing.T) *testSuite {
 	return suite
 }
 
-func TestProviderBadMessageType(t *testing.T) {
+func TestHandlerBadMessageType(t *testing.T) {
 	suite := setupTestSuite(t)
 
 	res, err := suite.dhandler(suite.ctx, sdk.Msg(sdktestdata.NewTestMsg()))
@@ -161,6 +154,8 @@ func TestCreateDeployment(t *testing.T) {
 
 	deployment, groups := suite.createDeployment()
 
+	owner := sdk.MustAccAddressFromBech32(deployment.ID.Owner)
+
 	msg := &v1beta4.MsgCreateDeployment{
 		ID:     deployment.ID,
 		Groups: make(v1beta4.GroupSpecs, 0, len(groups)),
@@ -173,6 +168,14 @@ func TestCreateDeployment(t *testing.T) {
 	for _, group := range groups {
 		msg.Groups = append(msg.Groups, group.GroupSpec)
 	}
+
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, owner, emodule.ModuleName, sdk.Coins{msg.Deposit.Amount}).
+			Return(nil).Once()
+	})
 
 	res, err := suite.dhandler(suite.ctx, msg)
 	require.NoError(t, err)
@@ -203,6 +206,22 @@ func TestCreateDeployment(t *testing.T) {
 	res, err = suite.dhandler(suite.ctx, msg)
 	require.EqualError(t, err, v1.ErrDeploymentExists.Error())
 	require.Nil(t, res)
+
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, emodule.ModuleName, owner, sdk.Coins{msg.Deposit.Amount}).
+			Return(nil).Once()
+	})
+
+	cmsg := &v1beta4.MsgCloseDeployment{
+		ID: deployment.ID,
+	}
+
+	res, err = suite.dhandler(suite.ctx, cmsg)
+	require.NoError(t, err)
+	require.NotNil(t, res)
 }
 
 func TestCreateDeploymentEmptyGroups(t *testing.T) {
@@ -258,6 +277,16 @@ func TestUpdateDeploymentExisting(t *testing.T) {
 			Sources: deposit.Sources{deposit.SourceBalance},
 		},
 	}
+
+	owner := sdk.MustAccAddressFromBech32(deployment.ID.Owner)
+
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, owner, emodule.ModuleName, sdk.Coins{msg.Deposit.Amount}).
+			Return(nil).Once()
+	})
 
 	res, err := suite.dhandler(suite.ctx, msg)
 	require.NoError(t, err)
@@ -335,6 +364,15 @@ func TestCloseDeploymentExisting(t *testing.T) {
 		msg.Groups = append(msg.Groups, group.GroupSpec)
 	}
 
+	owner := sdk.MustAccAddressFromBech32(deployment.ID.Owner)
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, owner, emodule.ModuleName, sdk.Coins{msg.Deposit.Amount}).
+			Return(nil).Once()
+	})
+
 	res, err := suite.dhandler(suite.ctx, msg)
 	require.NoError(t, err)
 	require.NotNil(t, res)
@@ -353,6 +391,14 @@ func TestCloseDeploymentExisting(t *testing.T) {
 	msgClose := &v1beta4.MsgCloseDeployment{
 		ID: deployment.ID,
 	}
+
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, emodule.ModuleName, owner, mock.Anything).
+			Return(nil).Once()
+	})
 
 	res, err = suite.dhandler(suite.ctx, msgClose)
 	require.NotNil(t, res)
@@ -394,6 +440,13 @@ func TestFundedDeployment(t *testing.T) {
 		msg.Groups = append(msg.Groups, group.GroupSpec)
 	}
 
+	//owner := sdk.MustAccAddressFromBech32(deployment.ID.Owner)
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, emodule.ModuleName, sdk.Coins{msg.Deposit.Amount}).
+			Return(nil).Once()
+	})
 	res, err := suite.dhandler(suite.ctx, msg)
 	require.NoError(t, err)
 	require.NotNil(t, res)
@@ -426,6 +479,14 @@ func TestFundedDeployment(t *testing.T) {
 			Sources: deposit.Sources{deposit.SourceBalance},
 		},
 	}
+
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, emodule.ModuleName, sdk.Coins{depositMsg.Deposit.Amount}).
+			Return(nil).Once()
+	})
+
 	res, err = suite.ehandler(suite.ctx, depositMsg)
 	require.NoError(t, err)
 	require.NotNil(t, res)
@@ -451,6 +512,13 @@ func TestFundedDeployment(t *testing.T) {
 			Sources: deposit.Sources{deposit.SourceGrant},
 		},
 	}
+
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, emodule.ModuleName, sdk.Coins{depositMsg1.Deposit.Amount}).
+			Return(nil).Once()
+	})
 	res, err = suite.ehandler(suite.ctx, depositMsg1)
 	require.NoError(t, err)
 	require.NotNil(t, res)
@@ -468,14 +536,23 @@ func TestFundedDeployment(t *testing.T) {
 	require.Equal(t, fundsAmount, acc.State.Funds[0].Amount)
 
 	// depositing additional amount from a random depositor should pass
+	rndDepositor := testutil.AccAddress(t)
+
 	depositMsg2 := &ev1.MsgAccountDeposit{
-		Signer: testutil.AccAddress(t).String(),
+		Signer: rndDepositor.String(),
 		ID:     deployment.ID.ToEscrowAccountID(),
 		Deposit: deposit.Deposit{
 			Amount:  suite.defaultDeposit,
 			Sources: deposit.Sources{deposit.SourceBalance},
 		},
 	}
+
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, emodule.ModuleName, sdk.Coins{depositMsg2.Deposit.Amount}).
+			Return(nil).Once()
+	})
 	res, err = suite.ehandler(suite.ctx, depositMsg2)
 	require.NoError(t, err)
 	require.NotNil(t, res)
@@ -511,6 +588,15 @@ func TestFundedDeployment(t *testing.T) {
 
 	ctx := suite.ctx.WithBlockHeight(acc.State.SettledAt + 1)
 
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+		bkeeper.
+			On("SendCoinsFromModuleToModule", mock.Anything, emodule.ModuleName, distrtypes.ModuleName, sdk.Coins{sdk.NewInt64Coin(depositMsg.Deposit.Amount.Denom, 10_000)}).
+			Return(nil).Once().
+			On("SendCoinsFromModuleToAccount", mock.Anything, emodule.ModuleName, mock.Anything, sdk.NewCoins(testutil.AkashCoin(t, 490_000))).
+			Return(nil).Once()
+	})
+
 	err = suite.EscrowKeeper().PaymentWithdraw(ctx, pid)
 	require.NoError(t, err)
 
@@ -527,6 +613,21 @@ func TestFundedDeployment(t *testing.T) {
 
 	// close the deployment
 	closeMsg := &v1beta4.MsgCloseDeployment{ID: deployment.ID}
+
+	owner := sdk.MustAccAddressFromBech32(deployment.ID.Owner)
+
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, emodule.ModuleName, owner, sdk.NewCoins(testutil.AkashCoin(t, 500_000))).
+			Return(nil).Once().
+			On("SendCoinsFromModuleToAccount", mock.Anything, emodule.ModuleName, suite.granter, sdk.NewCoins(testutil.AkashCoin(t, 500_000))).
+			Return(nil).Once().
+			On("SendCoinsFromModuleToAccount", mock.Anything, emodule.ModuleName, rndDepositor, sdk.NewCoins(testutil.AkashCoin(t, 500_000))).
+			Return(nil).Once().
+			On("SendCoinsFromModuleToAccount", mock.Anything, emodule.ModuleName, providerAddr, sdk.NewCoins(testutil.AkashCoin(t, 500_000))).
+			Return(nil).Once()
+	})
 	res, err = suite.dhandler(ctx, closeMsg)
 	require.NoError(t, err)
 	require.NotNil(t, res)

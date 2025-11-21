@@ -11,8 +11,8 @@ import (
 )
 
 type Hooks interface {
-	OnEscrowAccountClosed(ctx sdk.Context, obj etypes.Account)
-	OnEscrowPaymentClosed(ctx sdk.Context, obj etypes.Payment)
+	OnEscrowAccountClosed(ctx sdk.Context, obj etypes.Account) error
+	OnEscrowPaymentClosed(ctx sdk.Context, obj etypes.Payment) error
 }
 
 type hooks struct {
@@ -27,21 +27,24 @@ func New(dkeeper DeploymentKeeper, mkeeper MarketKeeper) Hooks {
 	}
 }
 
-func (h *hooks) OnEscrowAccountClosed(ctx sdk.Context, obj etypes.Account) {
+func (h *hooks) OnEscrowAccountClosed(ctx sdk.Context, obj etypes.Account) error {
 	id, err := dv1.DeploymentIDFromEscrowID(obj.ID)
 	if err != nil {
-		return
+		return err
 	}
 
 	deployment, found := h.dkeeper.GetDeployment(ctx, id)
 	if !found {
-		return
+		return nil
 	}
 
 	if deployment.State != dv1.DeploymentActive {
-		return
+		return nil
 	}
-	_ = h.dkeeper.CloseDeployment(ctx, deployment)
+	err = h.dkeeper.CloseDeployment(ctx, deployment)
+	if err != nil {
+		return err
+	}
 
 	gstate := dtypes.GroupClosed
 	if obj.State.State == etypes.StateOverdrawn {
@@ -50,43 +53,65 @@ func (h *hooks) OnEscrowAccountClosed(ctx sdk.Context, obj etypes.Account) {
 
 	for _, group := range h.dkeeper.GetGroups(ctx, deployment.ID) {
 		if group.ValidateClosable() == nil {
-			_ = h.dkeeper.OnCloseGroup(ctx, group, gstate)
-			_ = h.mkeeper.OnGroupClosed(ctx, group.ID)
+			err = h.dkeeper.OnCloseGroup(ctx, group, gstate)
+			if err != nil {
+				return err
+			}
+			err = h.mkeeper.OnGroupClosed(ctx, group.ID)
+			if err != nil {
+				return err
+			}
 		}
 	}
+
+	return nil
 }
 
-func (h *hooks) OnEscrowPaymentClosed(ctx sdk.Context, obj etypes.Payment) {
+func (h *hooks) OnEscrowPaymentClosed(ctx sdk.Context, obj etypes.Payment) error {
 	id, err := mv1.LeaseIDFromPaymentID(obj.ID)
 	if err != nil {
-		return
+		return nil
 	}
 
 	bid, ok := h.mkeeper.GetBid(ctx, id.BidID())
 	if !ok {
-		return
+		return nil
 	}
 
 	if bid.State != mtypes.BidActive {
-		return
+		return nil
 	}
 
 	order, ok := h.mkeeper.GetOrder(ctx, id.OrderID())
 	if !ok {
-		return
+		return mv1.ErrOrderNotFound
 	}
 
 	lease, ok := h.mkeeper.GetLease(ctx, id)
 	if !ok {
-		return
+		return mv1.ErrLeaseNotFound
 	}
 
-	_ = h.mkeeper.OnOrderClosed(ctx, order)
-	_ = h.mkeeper.OnBidClosed(ctx, bid)
+	err = h.mkeeper.OnOrderClosed(ctx, order)
+	if err != nil {
+		return err
+	}
+	err = h.mkeeper.OnBidClosed(ctx, bid)
+	if err != nil {
+		return err
+	}
 
 	if obj.State.State == etypes.StateOverdrawn {
-		_ = h.mkeeper.OnLeaseClosed(ctx, lease, mv1.LeaseInsufficientFunds, mv1.LeaseClosedReasonInsufficientFunds)
+		err = h.mkeeper.OnLeaseClosed(ctx, lease, mv1.LeaseInsufficientFunds, mv1.LeaseClosedReasonInsufficientFunds)
+		if err != nil {
+			return err
+		}
 	} else {
-		_ = h.mkeeper.OnLeaseClosed(ctx, lease, mv1.LeaseClosed, mv1.LeaseClosedReasonUnspecified)
+		err = h.mkeeper.OnLeaseClosed(ctx, lease, mv1.LeaseClosed, mv1.LeaseClosedReasonUnspecified)
+		if err != nil {
+			return err
+		}
 	}
+
+	return nil
 }

@@ -170,10 +170,10 @@ jobs:
         uses: ./.github/actions/setup-ubuntu
       - name: Setup docker user
         run: |
-          DOCKER_USER=$(id -u)
-          DOCKER_GROUP=$(id -g)
-            echo "DOCKER_USER=$DOCKER_USER" >> $GITHUB_ENV
-            echo "DOCKER_GROUP=$DOCKER_GROUP" >> $GITHUB_ENV
+          DOCKER_IDU=$(id -u)
+          DOCKER_IDG=$(id -g)
+            echo "DOCKER_IDU=$DOCKER_IDU" >> $GITHUB_ENV
+            echo "DOCKER_IDG=$DOCKER_IDG" >> $GITHUB_ENV
       - name: configure variables
         run: |
           test_required=$(./script/upgrades.sh test-required ${{ github.ref }})

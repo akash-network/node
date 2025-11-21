@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -367,5 +368,19 @@ func setupKeeper(t testing.TB) (sdk.Context, keeper.IKeeper, *state.TestSuite) {
 	t.Helper()
 
 	suite := state.SetupTestSuite(t)
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+	})
+
 	return suite.Context(), suite.MarketKeeper(), suite
 }

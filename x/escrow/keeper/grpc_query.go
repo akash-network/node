@@ -81,7 +81,7 @@ func (k Querier) Accounts(c context.Context, req *v1.QueryAccountsRequest) (*v1.
 		if len(req.Pagination.Key) == 0 {
 			req.State = state.String()
 
-			searchPrefix = buildSearchPrefix(AccountPrefix, req.State, req.XID)
+			searchPrefix = BuildSearchPrefix(AccountPrefix, req.State, req.XID)
 		}
 
 		searchStore := prefix.NewStore(ctx.KVStore(k.skey), searchPrefix)
@@ -193,7 +193,7 @@ func (k Querier) Payments(c context.Context, req *v1.QueryPaymentsRequest) (*v1.
 		if len(req.Pagination.Key) == 0 {
 			req.State = state.String()
 
-			searchPrefix = buildSearchPrefix(PaymentPrefix, req.State, req.XID)
+			searchPrefix = BuildSearchPrefix(PaymentPrefix, req.State, req.XID)
 		}
 
 		searchStore := prefix.NewStore(ctx.KVStore(k.skey), searchPrefix)
@@ -247,7 +247,7 @@ func (k Querier) Payments(c context.Context, req *v1.QueryPaymentsRequest) (*v1.
 	}, nil
 }
 
-func buildSearchPrefix(prefix []byte, state string, xid string) []byte {
+func BuildSearchPrefix(prefix []byte, state string, xid string) []byte {
 	buf := &bytes.Buffer{}
 
 	buf.Write(prefix)

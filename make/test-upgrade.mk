@@ -21,7 +21,7 @@ UPGRADE_FROM            := $(shell cat $(ROOT_DIR)/meta.json | jq -r --arg name 
 GENESIS_BINARY_VERSION  := $(shell cat $(ROOT_DIR)/meta.json | jq -r --arg name $(UPGRADE_TO) '.upgrades[$$name].from_binary' | tr -d '\n')
 UPGRADE_BINARY_VERSION  ?= local
 
-SNAPSHOT_SOURCE         ?= sandbox1
+SNAPSHOT_SOURCE         ?= mainnet
 
 ifeq ($(SNAPSHOT_SOURCE),mainnet)
 	SNAPSHOT_NETWORK    := akashnet-2
@@ -63,10 +63,11 @@ init: $(COSMOVISOR) $(AKASH_INIT)
 genesis: $(GENESIS_DEST)
 
 .PHONY: test
-test: init
+test: #init
 	$(GO_TEST) -run "^\QTestUpgrade\E$$" -tags e2e.upgrade -timeout 180m -v -args \
 		-cosmovisor=$(COSMOVISOR) \
 		-workdir=$(AP_RUN_DIR)/validators \
+		-sourcesdir=$(AKASH_ROOT) \
 		-config=$(TEST_CONFIG) \
 		-upgrade-name=$(UPGRADE_TO) \
 		-upgrade-version="$(UPGRADE_BINARY_VERSION)" \
@@ -75,7 +76,7 @@ test: init
 .PHONY: test-reset
 test-reset:
 	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) --snapshot-url=$(SNAPSHOT_URL) --chain-meta=$(CHAIN_METADATA_URL) --max-validators=$(MAX_VALIDATORS) clean
-	#$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) --snapshot-url=$(SNAPSHOT_URL) --gbv=$(GENESIS_BINARY_VERSION) --chain-meta=$(CHAIN_METADATA_URL) bins
+	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) --snapshot-url=$(SNAPSHOT_URL) --gbv=$(GENESIS_BINARY_VERSION) --chain-meta=$(CHAIN_METADATA_URL) bins
 	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) --snapshot-url=$(SNAPSHOT_URL) --chain-meta=$(CHAIN_METADATA_URL) keys
 	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --state-config=$(STATE_CONFIG) --snapshot-url=$(SNAPSHOT_URL) --chain-meta=$(CHAIN_METADATA_URL) --max-validators=$(MAX_VALIDATORS) prepare-state
 

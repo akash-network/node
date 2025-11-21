@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -416,6 +417,20 @@ func TestGRPCQueryOrdersWithFilter(t *testing.T) {
 func TestGRPCQueryBidsWithFilter(t *testing.T) {
 	suite := setupTest(t)
 
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+	})
+
 	// creating bids with different states
 	bidA, _ := createBid(t, suite.TestSuite)
 	bidB, _ := createBid(t, suite.TestSuite)
@@ -638,6 +653,20 @@ func TestGRPCQueryBidsWithFilter(t *testing.T) {
 
 func TestGRPCQueryLeasesWithFilter(t *testing.T) {
 	suite := setupTest(t)
+
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+	})
 
 	// creating leases with different states
 	leaseA := createLease(t, suite.TestSuite)
@@ -862,6 +891,20 @@ func TestGRPCQueryLeasesWithFilter(t *testing.T) {
 func TestGRPCQueryBid(t *testing.T) {
 	suite := setupTest(t)
 
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+	})
+
 	// creating bid
 	bid, _ := createBid(t, suite.TestSuite)
 
@@ -934,6 +977,19 @@ func TestGRPCQueryBid(t *testing.T) {
 
 func TestGRPCQueryBids(t *testing.T) {
 	suite := setupTest(t)
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+	})
 
 	// creating bids with different states
 	_, _ = createBid(t, suite.TestSuite)
@@ -998,6 +1054,19 @@ func TestGRPCQueryBids(t *testing.T) {
 
 func TestGRPCQueryLease(t *testing.T) {
 	suite := setupTest(t)
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+	})
 
 	// creating lease
 	leaseID := createLease(t, suite.TestSuite)
@@ -1073,6 +1142,19 @@ func TestGRPCQueryLease(t *testing.T) {
 
 func TestGRPCQueryLeases(t *testing.T) {
 	suite := setupTest(t)
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+	})
 
 	// creating leases with different states
 	leaseID := createLease(t, suite.TestSuite)

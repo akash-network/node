@@ -133,6 +133,7 @@ func NewApp(
 	app := &AkashApp{
 		BaseApp: bapp,
 		App: &apptypes.App{
+			Cdc: appCodec,
 			Log: logger,
 		},
 		aminoCdc:          aminoCdc,
