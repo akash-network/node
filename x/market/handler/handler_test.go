@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/cometbft/cometbft/libs/rand"
@@ -79,6 +80,20 @@ func TestCreateBidValid(t *testing.T) {
 		},
 	}
 
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+	})
+
 	res, err := suite.handler(suite.Context(), msg)
 	require.NotNil(t, res)
 	require.NoError(t, err)
@@ -102,6 +117,19 @@ func TestCreateBidValid(t *testing.T) {
 
 func TestCreateBidInvalidPrice(t *testing.T) {
 	suite := setupTestSuite(t)
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+	})
 
 	order, gspec := suite.createOrder(nil)
 
@@ -141,6 +169,19 @@ func TestCreateBidNonExistingOrder(t *testing.T) {
 
 func TestCreateBidClosedOrder(t *testing.T) {
 	suite := setupTestSuite(t)
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+	})
 
 	order, gspec := suite.createOrder(nil)
 	provider := suite.createProvider(gspec.Requirements.Attributes).Owner
@@ -162,6 +203,19 @@ func TestCreateBidClosedOrder(t *testing.T) {
 
 func TestCreateBidOverprice(t *testing.T) {
 	suite := setupTestSuite(t)
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+	})
 
 	resources := dtypes.ResourceUnits{
 		{
@@ -185,6 +239,19 @@ func TestCreateBidOverprice(t *testing.T) {
 
 func TestCreateBidInvalidProvider(t *testing.T) {
 	suite := setupTestSuite(t)
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+	})
 
 	order, _ := suite.createOrder(testutil.Resources(t))
 
@@ -200,6 +267,19 @@ func TestCreateBidInvalidProvider(t *testing.T) {
 
 func TestCreateBidInvalidAttributes(t *testing.T) {
 	suite := setupTestSuite(t)
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+	})
 
 	order, _ := suite.createOrder(testutil.Resources(t))
 	providerAddr, err := sdk.AccAddressFromBech32(suite.createProvider(nil).Owner)
@@ -217,6 +297,20 @@ func TestCreateBidInvalidAttributes(t *testing.T) {
 
 func TestCreateBidAlreadyExists(t *testing.T) {
 	suite := setupTestSuite(t)
+
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+	})
 
 	order, gspec := suite.createOrder(testutil.Resources(t))
 	provider := suite.createProvider(gspec.Requirements.Attributes).Owner
@@ -296,6 +390,19 @@ func TestCloseOrderValid(t *testing.T) {
 
 func TestCloseBidNonExisting(t *testing.T) {
 	suite := setupTestSuite(t)
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+	})
 
 	order, gspec := suite.createOrder(testutil.Resources(t))
 
@@ -315,6 +422,19 @@ func TestCloseBidNonExisting(t *testing.T) {
 
 func TestCloseBidUnknownLease(t *testing.T) {
 	suite := setupTestSuite(t)
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+	})
 
 	bid, _ := suite.createBid()
 
@@ -331,6 +451,19 @@ func TestCloseBidUnknownLease(t *testing.T) {
 
 func TestCloseBidValid(t *testing.T) {
 	suite := setupTestSuite(t)
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+	})
 
 	_, bid, _ := suite.createLease()
 
@@ -357,6 +490,19 @@ func TestCloseBidValid(t *testing.T) {
 
 func TestCloseBidWithStateOpen(t *testing.T) {
 	suite := setupTestSuite(t)
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+	})
 
 	bid, _ := suite.createBid()
 

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	sdkmath "cosmossdk.io/math"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -25,6 +26,7 @@ import (
 )
 
 type grpcTestSuite struct {
+	*state.TestSuite
 	t           *testing.T
 	app         *app.AkashApp
 	ctx         sdk.Context
@@ -38,6 +40,8 @@ type grpcTestSuite struct {
 func setupTest(t *testing.T) *grpcTestSuite {
 	ssuite := state.SetupTestSuite(t)
 	suite := &grpcTestSuite{
+		TestSuite: ssuite,
+
 		t:           t,
 		app:         ssuite.App(),
 		ctx:         ssuite.Context(),
@@ -263,6 +267,20 @@ func TestGRPCQueryPayments(t *testing.T) {
 }
 
 func (suite *grpcTestSuite) createEscrowAccount(id dv1.DeploymentID) eid.Account {
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+	})
+
 	owner, err := sdk.AccAddressFromBech32(id.Owner)
 	require.NoError(suite.t, err)
 

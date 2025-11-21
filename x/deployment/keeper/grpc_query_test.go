@@ -10,6 +10,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	deposit "pkg.akt.dev/go/node/types/deposit/v1"
 
@@ -25,6 +26,7 @@ import (
 )
 
 type grpcTestSuite struct {
+	*state.TestSuite
 	t           *testing.T
 	app         *app.AkashApp
 	ctx         sdk.Context
@@ -39,6 +41,7 @@ type grpcTestSuite struct {
 func setupTest(t *testing.T) *grpcTestSuite {
 	ssuite := state.SetupTestSuite(t)
 	suite := &grpcTestSuite{
+		TestSuite:   ssuite,
 		t:           t,
 		app:         ssuite.App(),
 		ctx:         ssuite.Context(),
@@ -60,6 +63,20 @@ func setupTest(t *testing.T) *grpcTestSuite {
 func TestGRPCQueryDeployment(t *testing.T) {
 	suite := setupTest(t)
 
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+	})
+
 	// creating deployment
 	deployment, groups := suite.createDeployment()
 	err := suite.keeper.Create(suite.ctx, deployment, groups)
@@ -67,10 +84,8 @@ func TestGRPCQueryDeployment(t *testing.T) {
 
 	eid := suite.createEscrowAccount(deployment.ID)
 
-	var (
-		req           *v1beta4.QueryDeploymentRequest
-		expDeployment v1beta4.QueryDeploymentResponse
-	)
+	var req *v1beta4.QueryDeploymentRequest
+	var expDeployment v1beta4.QueryDeploymentResponse
 
 	testCases := []struct {
 		msg      string
@@ -138,6 +153,19 @@ func TestGRPCQueryDeployment(t *testing.T) {
 
 func TestGRPCQueryDeployments(t *testing.T) {
 	suite := setupTest(t)
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+	})
 
 	// creating deployments with different states
 	deployment, groups := suite.createDeployment()
@@ -258,6 +286,19 @@ type deploymentFilterModifier struct {
 
 func TestGRPCQueryDeploymentsWithFilter(t *testing.T) {
 	suite := setupTest(t)
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+	})
 
 	// creating orders with different states
 	depA, _ := createActiveDeployment(t, suite.ctx, suite.keeper)
@@ -452,6 +493,20 @@ func TestGRPCQueryDeploymentsWithFilter(t *testing.T) {
 func TestGRPCQueryGroup(t *testing.T) {
 	suite := setupTest(t)
 
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+	})
+
 	// creating group
 	deployment, groups := suite.createDeployment()
 	err := suite.keeper.Create(suite.ctx, deployment, groups)
@@ -524,6 +579,20 @@ func TestGRPCQueryGroup(t *testing.T) {
 
 func (suite *grpcTestSuite) createDeployment() (v1.Deployment, v1beta4.Groups) {
 	suite.t.Helper()
+
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+	})
 
 	deployment := testutil.Deployment(suite.t)
 	group := testutil.DeploymentGroup(suite.t, deployment.ID, 0)
