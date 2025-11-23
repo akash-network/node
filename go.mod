@@ -1,6 +1,6 @@
 module pkg.akt.dev/node
 
-go 1.25.2
+go 1.25.4
 
 require (
 	cosmossdk.io/api v0.9.2
