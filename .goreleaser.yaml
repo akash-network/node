@@ -84,6 +84,44 @@ builds:
       - "{{ .Env.STRIP_FLAGS }}"
       - "-linkmode={{ .Env.LINKMODE }}"
       - -extldflags "-lc -lrt -lpthread"
+  - id: akash-linux-amd64-static
+    binary: akash
+    main: ./cmd/akash
+    env:
+      - CC=x86_64-linux-gnu-gcc
+      - CXX=x86_64-linux-gnu-g++
+    goarch:
+      - amd64
+    goos:
+      - linux
+    flags:
+      - "-mod={{ .Env.MOD }}"
+      - "-tags=osusergo,netgo"
+      - -trimpath
+    ldflags:
+      - "{{ .Env.BUILD_VARS }}"
+      - "{{ .Env.STRIP_FLAGS }}"
+      - "-linkmode={{ .Env.LINKMODE }}"
+      - -extldflags "-lc -lrt -lpthread --static"
+  - id: akash-linux-arm64-static
+    binary: akash
+    main: ./cmd/akash
+    goarch:
+      - arm64
+    goos:
+      - linux
+    env:
+      - CC=aarch64-linux-gnu-gcc
+      - CXX=aarch64-linux-gnu-g++
+    flags:
+      - "-mod={{ .Env.MOD }}"
+      - "-tags=osusergo,netgo"
+      - -trimpath
+    ldflags:
+      - "{{ .Env.BUILD_VARS }}"
+      - "{{ .Env.STRIP_FLAGS }}"
+      - "-linkmode={{ .Env.LINKMODE }}"
+      - -extldflags "-lc -lrt -lpthread --static"
 universal_binaries:
   - id: akash-darwin-universal
     ids:
@@ -114,7 +152,16 @@ archives:
       - zip
     files:
       - none*
-
+  - id: static
+    ids:
+      - akash-linux-amd64-static
+      - akash-linux-arm64-static
+    name_template: "akash_{{ .Os }}_{{ .Arch }}_static"
+    wrap_in_directory: false
+    formats:
+      - zip
+    files:
+      - none*
 checksum:
   # You can change the name of the checksums file.
   # Default is `{{ .ProjectName }}_{{ .Version }}_checksums.txt`.

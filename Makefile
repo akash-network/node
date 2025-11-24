@@ -26,7 +26,7 @@ IS_STABLE             ?= false
 
 GO_LINKMODE            ?= external
 GOMOD                  ?= readonly
-BUILD_TAGS             ?= osusergo,netgo,hidraw,ledger
+BUILD_TAGS             ?= osusergo,netgo
 GORELEASER_STRIP_FLAGS ?=
 
 ifeq ($(IS_MAINNET), true)
@@ -37,6 +37,10 @@ endif
 
 ifneq (,$(findstring cgotrace,$(BUILD_OPTIONS)))
 	BUILD_TAGS := $(BUILD_TAGS),cgotrace
+endif
+
+ifneq (,$(findstring noledger,$(BUILD_OPTIONS)))
+	BUILD_TAGS := $(BUILD_TAGS),hidraw,ledger
 endif
 
 GORELEASER_BUILD_VARS := \
