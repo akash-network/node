@@ -180,12 +180,27 @@ jobs:
           #snapshot_source=$(./script/upgrades.sh snapshot-source ${{ github.ref }})
           echo "TEST_REQUIRED=$test_required" >> $GITHUB_ENV
           #echo "SNAPSHOT_SOURCE=$snapshot_source" >> $GITHUB_ENV
+      - name: Fix Go module cache permissions
+        if: env.TEST_REQUIRED != ''
+        run: |
+          # Fix permissions on Go module cache to prevent permission denied errors
+          # This is needed because sudo cleanup may have affected cache permissions
+          if [ -d "$HOME/go/pkg/mod" ]; then
+            sudo chown -R $(id -u):$(id -g) "$HOME/go/pkg/mod" 2>/dev/null || true
+          fi
+          # Ensure Go cache directories exist with correct permissions
+          mkdir -p "$HOME/go/pkg/mod/cache/download"
+          chmod -R u+w "$HOME/go/pkg/mod" 2>/dev/null || true
       - name: run test
         id: test
         if: env.TEST_REQUIRED != ''
         env:
           TEST_CONFIG: test-config-gha.json
+          GOMODCACHE: ${{ runner.temp }}/go-mod-cache
+          GOCACHE: ${{ runner.temp }}/go-build-cache
         run: |
+          # Ensure cache directories exist with correct permissions
+          mkdir -p "$GOMODCACHE" "$GOCACHE"
           cd tests/upgrade
           make test
       - name: upload validator(s) stdout/stderr
