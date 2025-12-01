@@ -11,8 +11,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/rakyll/statik/fs"
 	"github.com/spf13/cast"
-	emodule "pkg.akt.dev/go/node/escrow/module"
-	"pkg.akt.dev/go/sdkutil"
 
 	abci "github.com/cometbft/cometbft/abci/types"
 	tmjson "github.com/cometbft/cometbft/libs/json"
@@ -27,6 +25,9 @@ import (
 	evidencetypes "cosmossdk.io/x/evidence/types"
 	"cosmossdk.io/x/feegrant"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
+	"github.com/CosmWasm/wasmd/x/wasm"
+	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
+	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -64,14 +65,17 @@ import (
 	audittypes "pkg.akt.dev/go/node/audit/v1"
 	certtypes "pkg.akt.dev/go/node/cert/v1"
 	deploymenttypes "pkg.akt.dev/go/node/deployment/v1"
+	emodule "pkg.akt.dev/go/node/escrow/module"
 	markettypes "pkg.akt.dev/go/node/market/v1"
 	providertypes "pkg.akt.dev/go/node/provider/v1beta4"
 	taketypes "pkg.akt.dev/go/node/take/v1"
+	"pkg.akt.dev/go/sdkutil"
 
-	apptypes "pkg.akt.dev/node/app/types"
-	utypes "pkg.akt.dev/node/upgrades/types"
+	apptypes "pkg.akt.dev/node/v2/app/types"
+	utypes "pkg.akt.dev/node/v2/upgrades/types"
+	awasm "pkg.akt.dev/node/v2/x/wasm"
 	// unnamed import of statik for swagger UI support
-	_ "pkg.akt.dev/node/client/docs/statik"
+	_ "pkg.akt.dev/node/v2/client/docs/statik"
 )
 
 const (
@@ -130,6 +134,14 @@ func NewApp(
 		homePath = DefaultHome
 	}
 
+	var wasmOpts []wasmkeeper.Option
+
+	if val := appOpts.Get("wasm"); val != nil {
+		if vl, valid := val.([]wasmkeeper.Option); valid {
+			wasmOpts = append(wasmOpts, vl...)
+		}
+	}
+
 	app := &AkashApp{
 		BaseApp: bapp,
 		App: &apptypes.App{
@@ -142,6 +154,20 @@ func NewApp(
 		interfaceRegistry: interfaceRegistry,
 		invCheckPeriod:    invCheckPeriod,
 	}
+
+	wasmDir := filepath.Join(homePath, "wasm")
+	wasmConfig, err := wasm.ReadNodeConfig(appOpts)
+	if err != nil {
+		panic(fmt.Sprintf("error while reading wasm config: %s", err))
+	}
+
+	// Memory limits - prevent DoS
+	wasmConfig.MemoryCacheSize = 100 // 100 MB max
+	// Query gas limit - prevent expensive queries
+	wasmConfig.SmartQueryGasLimit = 3_000_000
+	// Debug mode - MUST be false in production
+	// Uncomment this for debugging contracts. In the future this could be made into a param passed by the tests
+	wasmConfig.ContractDebugMode = false
 
 	app.InitSpecialKeepers(
 		app.cdc,
@@ -156,6 +182,9 @@ func NewApp(
 		encodingConfig,
 		app.BaseApp,
 		ModuleAccountPerms(),
+		wasmDir,
+		wasmConfig,
+		wasmOpts,
 		app.BlockedAddrs(),
 		invCheckPeriod,
 	)
@@ -197,7 +226,7 @@ func NewApp(
 	app.MM.SetOrderInitGenesis(OrderInitGenesis(app.MM.ModuleNames())...)
 
 	app.Configurator = module.NewConfigurator(app.AppCodec(), app.MsgServiceRouter(), app.GRPCQueryRouter())
-	err := app.MM.RegisterServices(app.Configurator)
+	err = app.MM.RegisterServices(app.Configurator)
 	if err != nil {
 		panic(err)
 	}
@@ -289,6 +318,10 @@ func orderBeginBlockers(_ []string) []string {
 		ibctm.ModuleName,
 		ibchost.ModuleName,
 		feegrant.ModuleName,
+		// akash wasm module must be prior wasm
+		awasm.ModuleName,
+		// wasm after ibc transfer
+		wasmtypes.ModuleName,
 	}
 }
 
@@ -318,6 +351,10 @@ func OrderEndBlockers(_ []string) []string {
 		transfertypes.ModuleName,
 		ibchost.ModuleName,
 		feegrant.ModuleName,
+		// akash wasm module must be prior wasm
+		awasm.ModuleName,
+		// wasm after ibc transfer
+		wasmtypes.ModuleName,
 	}
 }
 

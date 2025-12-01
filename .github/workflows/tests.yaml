@@ -47,7 +47,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup environment
         uses: ./.github/actions/setup-ubuntu
-      - run: make bins
+      - run: BUILD_OPTIONS=static-link make bins
       - run: make docker-image
 
   tests:

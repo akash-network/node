@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	types "pkg.akt.dev/go/node/cert/v1"
 
-	"pkg.akt.dev/node/testutil"
+	"pkg.akt.dev/node/v2/testutil"
 )
 
 type certsGRPCRestTestSuite struct {

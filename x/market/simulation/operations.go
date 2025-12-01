@@ -17,9 +17,9 @@ import (
 	"pkg.akt.dev/go/node/market/v1"
 	types "pkg.akt.dev/go/node/market/v1beta5"
 
-	appparams "pkg.akt.dev/node/app/params"
-	testsim "pkg.akt.dev/node/testutil/sim"
-	keepers "pkg.akt.dev/node/x/market/handler"
+	appparams "pkg.akt.dev/node/v2/app/params"
+	testsim "pkg.akt.dev/node/v2/testutil/sim"
+	keepers "pkg.akt.dev/node/v2/x/market/handler"
 )
 
 // Simulation operation weights constants

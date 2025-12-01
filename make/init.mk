@@ -25,7 +25,8 @@ $(error "GOTOOLCHAIN is not set")
 endif
 
 NULL  :=
-SPACE := $(NULL) #
+SPACE := $(NULL)
+WHITESPACE := $(NULL) $(NULL)
 COMMA := ,
 
 BINS := $(AKASH)
@@ -36,12 +37,6 @@ else
 endif
 
 ifneq ($(GOWORK),off)
-#	ifeq ($(shell test -e $(AKASH_ROOT)/go.work && echo -n yes),yes)
-#		GOWORK=${AKASH_ROOT}/go.work
-#	else
-#		GOWORK=off
-#	endif
-
 	ifeq ($(GOMOD),$(filter $(GOMOD),mod ""))
 $(error '-mod may only be set to readonly or vendor when in workspace mode, but it is set to ""')
 	endif
@@ -72,6 +67,18 @@ STATIK_VERSION               ?= v0.1.7
 GIT_CHGLOG_VERSION           ?= v0.15.1
 MOCKERY_VERSION              ?= 3.5.0
 COSMOVISOR_VERSION           ?= v1.7.1
+COSMWASM_OPTIMIZER_VERSION   ?= 0.17.0
+
+WASMVM_MOD                   := $(shell $(GO) list -m -f '{{ .Path }}' all | grep github.com/CosmWasm/wasmvm)
+WASMVM_VERSION               := $(shell $(GO) list -mod=readonly -m -f '{{ .Version }}' $(WASMVM_MOD))
+
+COSMWASM_OPTIMIZER_IMAGE     := cosmwasm/rust-optimizer
+
+ifeq (arm64,$(UNAME_ARCH))
+	COSMWASM_OPTIMIZER_IMAGE := $(COSMWASM_OPTIMIZER_IMAGE)-arm64
+endif
+
+COSMWASM_OPTIMIZER_IMAGE     := $(COSMWASM_OPTIMIZER_IMAGE):$(COSMWASM_OPTIMIZER_VERSION)
 
 # ==== Build tools version tracking ====
 # <TOOL>_VERSION_FILE points to the marker file for the installed version.
@@ -92,7 +99,13 @@ STATIK                           := $(AKASH_DEVCACHE_BIN)/statik
 COSMOVISOR                       := $(AKASH_DEVCACHE_BIN)/cosmovisor
 COSMOVISOR_DEBUG                 := $(AKASH_RUN_BIN)/cosmovisor
 
+RELEASE_TAG                      ?= $(shell git describe --tags --abbrev=0)
 
-RELEASE_TAG           ?= $(shell git describe --tags --abbrev=0)
+WASMVM_LIBS  := libwasmvm_muslc.x86_64.a \
+libwasmvm_muslc.aarch64.a \
+libwasmvmstatic_darwin.a \
+libwasmvm.aarch64.so \
+libwasmvm.dylib \
+libwasmvm.x86_64.so
 
 include $(AKASH_ROOT)/make/setup-cache.mk

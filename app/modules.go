@@ -4,6 +4,8 @@ import (
 	"cosmossdk.io/x/evidence"
 	feegrantmodule "cosmossdk.io/x/feegrant/module"
 	"cosmossdk.io/x/upgrade"
+	"github.com/CosmWasm/wasmd/x/wasm"
+	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	addresscodec "github.com/cosmos/cosmos-sdk/codec/address"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/cosmos/cosmos-sdk/x/auth"
@@ -32,13 +34,15 @@ import (
 
 	"pkg.akt.dev/go/sdkutil"
 
-	"pkg.akt.dev/node/x/audit"
-	"pkg.akt.dev/node/x/cert"
-	"pkg.akt.dev/node/x/deployment"
-	"pkg.akt.dev/node/x/escrow"
-	"pkg.akt.dev/node/x/market"
-	"pkg.akt.dev/node/x/provider"
-	"pkg.akt.dev/node/x/take"
+	"pkg.akt.dev/node/v2/x/audit"
+	"pkg.akt.dev/node/v2/x/cert"
+	"pkg.akt.dev/node/v2/x/deployment"
+	"pkg.akt.dev/node/v2/x/escrow"
+	"pkg.akt.dev/node/v2/x/market"
+	oracle "pkg.akt.dev/node/v2/x/oracle"
+	"pkg.akt.dev/node/v2/x/provider"
+	"pkg.akt.dev/node/v2/x/take"
+	awasm "pkg.akt.dev/node/v2/x/wasm"
 )
 
 func appModules(
@@ -190,6 +194,23 @@ func appModules(
 			app.cdc,
 			app.Keepers.Akash.Cert,
 		),
+		awasm.NewAppModule(
+			app.cdc,
+			app.Keepers.Akash.Wasm,
+		),
+		oracle.NewAppModule(
+			app.cdc,
+			app.Keepers.Akash.Oracle,
+		),
+		wasm.NewAppModule(
+			app.cdc,
+			app.Keepers.Cosmos.Wasm,
+			app.Keepers.Cosmos.Staking,
+			app.Keepers.Cosmos.Acct,
+			app.Keepers.Cosmos.Bank,
+			app.MsgServiceRouter(),
+			app.GetSubspace(wasmtypes.ModuleName),
+		),
 	}
 }
 
@@ -286,7 +307,6 @@ func appSimModules(
 			app.cdc,
 			app.Keepers.Akash.Take,
 		),
-
 		deployment.NewAppModule(
 			app.cdc,
 			app.Keepers.Akash.Deployment,
@@ -296,7 +316,6 @@ func appSimModules(
 			app.Keepers.Cosmos.Bank,
 			app.Keepers.Cosmos.Authz,
 		),
-
 		market.NewAppModule(
 			app.cdc,
 			app.Keepers.Akash.Market,
@@ -308,7 +327,6 @@ func appSimModules(
 			app.Keepers.Cosmos.Authz,
 			app.Keepers.Cosmos.Bank,
 		),
-
 		provider.NewAppModule(
 			app.cdc,
 			app.Keepers.Akash.Provider,
@@ -316,10 +334,26 @@ func appSimModules(
 			app.Keepers.Cosmos.Bank,
 			app.Keepers.Akash.Market,
 		),
-
 		cert.NewAppModule(
 			app.cdc,
 			app.Keepers.Akash.Cert,
+		),
+		oracle.NewAppModule(
+			app.cdc,
+			app.Keepers.Akash.Oracle,
+		),
+		awasm.NewAppModule(
+			app.cdc,
+			app.Keepers.Akash.Wasm,
+		),
+		wasm.NewAppModule(
+			app.cdc,
+			app.Keepers.Cosmos.Wasm,
+			app.Keepers.Cosmos.Staking,
+			app.Keepers.Cosmos.Acct,
+			app.Keepers.Cosmos.Bank,
+			app.MsgServiceRouter(),
+			app.GetSubspace(wasmtypes.ModuleName),
 		),
 	}
 }

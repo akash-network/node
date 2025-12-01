@@ -10,8 +10,8 @@ import (
 	"pkg.akt.dev/go/node/market/v1"
 	"pkg.akt.dev/go/node/market/v1beta5"
 
-	"pkg.akt.dev/node/x/market/keeper"
-	"pkg.akt.dev/node/x/market/keeper/keys"
+	"pkg.akt.dev/node/v2/x/market/keeper"
+	"pkg.akt.dev/node/v2/x/market/keeper/keys"
 )
 
 // ValidateGenesis does validation check of the Genesis
