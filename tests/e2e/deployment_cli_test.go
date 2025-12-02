@@ -215,6 +215,7 @@ func (s *deploymentIntegrationTestSuite) TestDeployment() {
 		cli.TestFlags().
 			WithFrom(s.addrDeployer.String()).
 			WithDSeq(createdDep.Deployment.ID.DSeq).
+			WithSkipConfirm().
 			WithBroadcastModeBlock().
 			WithGasAuto()...,
 	)
