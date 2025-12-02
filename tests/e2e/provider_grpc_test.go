@@ -3,7 +3,6 @@
 package e2e
 
 import (
-	"context"
 	"fmt"
 	"path/filepath"
 
@@ -25,31 +24,34 @@ type providerGRPCRestTestSuite struct {
 func (s *providerGRPCRestTestSuite) SetupSuite() {
 	s.NetworkTestSuite.SetupSuite()
 
+	// Wait for API server to be ready
+	s.Require().NoError(s.Network().WaitForBlocks(2))
+
 	providerPath, err := filepath.Abs("../../x/provider/testdata/provider.yaml")
 	s.Require().NoError(err)
 
-	ctx := context.Background()
+	ctx := s.CLIContext()
 
 	val := s.Network().Validators[0]
-	cctx := val.ClientCtx
+	cctx := s.CLIClientContext()
 
-	// create deployment
-	_, err = clitestutil.TxCreateProviderExec(
+	// create provider
+	_, err = clitestutil.ExecTxCreateProvider(
 		ctx,
 		cctx,
-		providerPath,
 		cli.TestFlags().
+			With(providerPath).
 			WithFrom(val.Address.String()).
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
 	s.Require().NoError(err)
 
-	s.Require().NoError(s.Network().WaitForNextBlock())
+	s.Require().NoError(s.Network().WaitForBlocks(2))
 
 	// get provider
-	resp, err := clitestutil.QueryProvidersExec(
+	resp, err := clitestutil.ExecQueryProviders(
 		ctx,
 		cctx,
 		cli.TestFlags().
@@ -69,7 +71,7 @@ func (s *providerGRPCRestTestSuite) SetupSuite() {
 
 func (s *providerGRPCRestTestSuite) TestGetProviders() {
 	val := s.Network().Validators[0]
-	cctx := val.ClientCtx
+	cctx := s.CLIClientContext()
 
 	provider := s.provider
 
@@ -113,7 +115,7 @@ func (s *providerGRPCRestTestSuite) TestGetProviders() {
 
 func (s *providerGRPCRestTestSuite) TestGetProvider() {
 	val := s.Network().Validators[0]
-	cctx := val.ClientCtx
+	cctx := s.CLIClientContext()
 
 	provider := s.provider
 

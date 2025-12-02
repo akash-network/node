@@ -3,7 +3,6 @@
 package e2e
 
 import (
-	"context"
 	"path/filepath"
 
 	"pkg.akt.dev/go/cli"
@@ -28,16 +27,16 @@ func (s *providerIntegrationTestSuite) TestProvider() {
 	providerPath2, err := filepath.Abs("../../x/provider/testdata/provider2.yaml")
 	s.Require().NoError(err)
 
-	ctx := context.Background()
+	ctx := s.CLIContext()
 
 	// create provider
-	_, err = clitestutil.TxCreateProviderExec(
+	_, err = clitestutil.ExecTxCreateProvider(
 		ctx,
 		cctx,
-		providerPath,
 		cli.TestFlags().
+			With(providerPath).
 			WithFrom(addr.String()).
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
@@ -45,7 +44,7 @@ func (s *providerIntegrationTestSuite) TestProvider() {
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
 	// test query providers
-	resp, err := clitestutil.QueryProvidersExec(
+	resp, err := clitestutil.ExecQueryProviders(
 		ctx,
 		cctx,
 		cli.TestFlags().
@@ -62,7 +61,7 @@ func (s *providerIntegrationTestSuite) TestProvider() {
 
 	// test query provider
 	createdProvider := providers[0]
-	resp, err = clitestutil.QueryProviderExec(
+	resp, err = clitestutil.ExecQueryProvider(
 		ctx,
 		cctx,
 		cli.TestFlags().
@@ -77,13 +76,13 @@ func (s *providerIntegrationTestSuite) TestProvider() {
 	s.Require().Equal(createdProvider, provider)
 
 	// test updating provider
-	_, err = clitestutil.TxUpdateProviderExec(
+	_, err = clitestutil.ExecTxUpdateProvider(
 		ctx,
 		cctx,
-		providerPath2,
 		cli.TestFlags().
+			With(providerPath2).
 			WithFrom(addr.String()).
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
@@ -91,7 +90,7 @@ func (s *providerIntegrationTestSuite) TestProvider() {
 
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
-	resp, err = clitestutil.QueryProviderExec(
+	resp, err = clitestutil.ExecQueryProvider(
 		ctx,
 		cctx,
 		cli.TestFlags().

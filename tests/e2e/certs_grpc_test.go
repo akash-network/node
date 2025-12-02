@@ -3,7 +3,6 @@
 package e2e
 
 import (
-	"context"
 	"crypto/x509"
 	"encoding/pem"
 
@@ -22,7 +21,7 @@ type certsGRPCRestTestSuite struct {
 }
 
 func (s *certsGRPCRestTestSuite) TestGenerateParse() {
-	ctx := context.Background()
+	ctx := s.CLIContext()
 	cctx := s.ClientContextForTest()
 
 	addr := s.WalletForTest()
@@ -44,7 +43,7 @@ func (s *certsGRPCRestTestSuite) TestGenerateParse() {
 			WithFrom(addr.String()).
 			WithSkipConfirm().
 			WithBroadcastModeBlock().
-			WithGasAutoFlags()...,
+			WithGasAuto()...,
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.Network().WaitForNextBlock())
