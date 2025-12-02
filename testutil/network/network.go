@@ -299,7 +299,8 @@ func New(t *testing.T, cfg Config) *Network {
 
 			apiURL, err := url.Parse(apiListenAddr)
 			require.NoError(t, err)
-			apiAddr = fmt.Sprintf("http://%s:%s", apiURL.Hostname(), apiURL.Port())
+			// Use 127.0.0.1 for connecting (0.0.0.0 is only for binding)
+			apiAddr = fmt.Sprintf("http://127.0.0.1:%s", apiURL.Port())
 
 			tmCfg.RPC.ListenAddress = fmt.Sprintf("tcp://127.0.0.1:%d", ports.mustGetPort())
 			appCfg.GRPC.Address = fmt.Sprintf("127.0.0.1:%d", ports.mustGetPort())

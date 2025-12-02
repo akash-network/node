@@ -1,0 +1,62 @@
+---
+version: "2.0"
+
+services:
+  web:
+    image: bubuntux/riot-web
+    expose:
+      - port: 80
+        to:
+          - global: true
+        accept:
+          - test.localhost
+  api:
+    image: nginx:alpine
+    expose:
+      - port: 8080
+        to:
+          - global: true
+        accept:
+          - api.localhost
+
+profiles:
+  compute:
+    web:
+      resources:
+        cpu:
+          units: "0.01"
+        memory:
+          size: "128Mi"
+        storage:
+          size: "512Mi"
+    api:
+      resources:
+        cpu:
+          units: "0.02"
+        memory:
+          size: "256Mi"
+        storage:
+          size: "256Mi"
+
+  placement:
+    east:
+      pricing:
+        web:
+          denom: uakt
+          amount: 30
+    west:
+      pricing:
+        api:
+          denom: uakt
+          amount: 40
+
+deployment:
+  web:
+    east:
+      profile: web
+      count: 1
+  api:
+    west:
+      profile: api
+      count: 1
+

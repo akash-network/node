@@ -17,13 +17,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	cosmosauthtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/gogoproto/jsonpb"
 
+	"pkg.akt.dev/go/cli"
 	cflags "pkg.akt.dev/go/cli/flags"
-	aclient "pkg.akt.dev/go/node/client/discovery"
-	cltypes "pkg.akt.dev/go/node/client/types"
-	cclient "pkg.akt.dev/go/node/client/v1beta3"
+	clitestutil "pkg.akt.dev/go/cli/testutil"
+	arpcclient "pkg.akt.dev/go/node/client"
+	"pkg.akt.dev/go/sdkutil"
 	sdktestutil "pkg.akt.dev/go/testutil"
 
 	"pkg.akt.dev/node/testutil/network"
@@ -38,6 +38,8 @@ type NetworkTestSuite struct {
 	testCtx       context.Context
 	cancelTestCtx context.CancelFunc
 	container     interface{}
+	cliCtx        context.Context   // Context with address codec for CLI commands
+	cliCctx       sdkclient.Context // Client context with proper Akash RPC client
 }
 
 func NewNetworkTestSuite(cfg *network.Config, container interface{}) *NetworkTestSuite {
@@ -84,8 +86,20 @@ func (nts *NetworkTestSuite) SetupSuite() {
 
 	walletCount := nts.countTests()
 	nts.T().Logf("setting up %d wallets for test", walletCount)
-	var msgs []sdk.Msg
-	//
+
+	// Set up context with address codec (required by CLI commands)
+	signingOpts := sdkutil.NewSigningOptions()
+	nts.cliCtx = context.WithValue(context.Background(), cli.ContextTypeAddressCodec, signingOpts.AddressCodec)
+	nts.cliCtx = context.WithValue(nts.cliCtx, cli.ContextTypeValidatorCodec, signingOpts.ValidatorAddressCodec)
+
+	val := nts.Validator()
+
+	// Create proper Akash RPC client that implements the RPCClient interface
+	client, err := arpcclient.NewClient(nts.cliCtx, val.RPCAddress)
+	require.NoError(nts.T(), err)
+
+	nts.cliCctx = val.ClientCtx.WithClient(client)
+
 	for i := 0; i != walletCount; i++ {
 		name := fmt.Sprintf("wallet%d", i)
 		kinfo, str, err := nts.kr.NewMnemonic(name, keyring.English, sdk.FullFundraiserPath, keyring.DefaultBIP39Passphrase, hd.Secp256k1)
@@ -95,75 +109,35 @@ func (nts *NetworkTestSuite) SetupSuite() {
 		toAddr, err := kinfo.GetAddress()
 		require.NoError(nts.T(), err)
 
-		coins := sdk.NewCoins(sdk.NewCoin(nts.Config().BondDenom, sdkmath.NewInt(1000000)))
-		msg := banktypes.NewMsgSend(nts.Validator().Address, toAddr, coins)
-		msgs = append(msgs, msg)
+		// Fund with enough for deposits (5M uakt each) plus gas fees
+		coins := sdk.NewCoins(sdk.NewCoin(nts.Config().BondDenom, sdkmath.NewInt(50000000)))
+
+		_, err = clitestutil.ExecSend(
+			nts.cliCtx,
+			nts.cliCctx,
+			cli.TestFlags().
+				With(
+					val.Address.String(),
+					toAddr.String(),
+					coins.String()).
+				WithFrom(val.Address.String()).
+				WithGasAuto().
+				WithSkipConfirm().
+				WithBroadcastModeBlock()...,
+		)
+		require.NoError(nts.T(), err)
+		require.NoError(nts.T(), nts.network.WaitForNextBlock())
 	}
+}
 
-	ctx := context.Background()
-	cctx := nts.ClientContext().WithFrom(nts.network.Validators[0].Address.String())
+// CLIContext returns the context configured with address codec for CLI commands
+func (nts *NetworkTestSuite) CLIContext() context.Context {
+	return nts.cliCtx
+}
 
-	cl, err := aclient.DiscoverClient(
-		ctx,
-		cctx,
-		cltypes.WithGas(cltypes.GasSetting{Simulate: true}),
-		cltypes.WithGasAdjustment(1.5),
-		cltypes.WithGasPrices("0.0025uakt"),
-	)
-	require.NoError(nts.T(), err)
-
-	_, err = cl.Tx().BroadcastMsgs(ctx, msgs, cclient.WithBroadcastMode("block"))
-	require.NoError(nts.T(), err)
-
-	// txf, err := tx.NewFactoryCLI(nts.ClientContext(), &pflag.FlagSet{})
-	// require.NoError(nts.T(), err)
-	//
-	// txf = txf.WithSignMode(signing.SignMode_SIGN_MODE_DIRECT)
-	// txf = txf.WithSimulateAndExecute(false)
-	//
-	// require.Equal(nts.T(), "node0", nts.ClientContext().GetFromName())
-	// keyInfo, err := txf.Keybase().Key(nts.ClientContext().GetFromName())
-	// require.NoError(nts.T(), err)
-	// require.NotNil(nts.T(), keyInfo)
-	//
-	// num, seq, err := txf.AccountRetriever().GetAccountNumberSequence(nts.ClientContext(), nts.Validator().Address)
-	// require.NoError(nts.T(), err)
-	// txf = txf.WithAccountNumber(num)
-	// txf = txf.WithSequence(seq)
-	// // txf = txf.WithGas(uint64(150000 * nts.countTests()))                 // Just made this up
-	// txf = txf.WithFees(fmt.Sprintf("%d%s", 100, nts.Config().BondDenom)) // Just made this up
-	//
-	// txb, err := txf.BuildUnsignedTx(msgs...)
-	// require.NoError(nts.T(), err)
-	//
-	// txb.SetFeeGranter(nts.ClientContext().GetFeeGranterAddress())
-	//
-	// require.NoError(nts.T(), tx.Sign(txf, nts.ClientContext().GetFromName(), txb, true))
-	// txBytes, err := nts.ClientContext().TxConfig.TxEncoder()(txb.GetTx())
-	// require.NoError(nts.T(), err)
-	//
-	// txr, err := nts.ClientContext().BroadcastTxSync(txBytes)
-	// require.NoError(nts.T(), err)
-	// require.Equal(nts.T(), uint32(0), txr.Code)
-
-	// lctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	// defer cancel()
-	//
-	// for lctx.Err() == nil {
-	// 	// check the TX
-	// 	txStatus, err := cl.Query()..QueryTx(nts.Context(), txr.TxHash)
-	// 	if err != nil {
-	// 		if strings.Contains(err.Error(), ") not found") {
-	// 			continue
-	// 		}
-	// 	}
-	// 	require.NoError(nts.T(), err)
-	// 	require.NotNil(nts.T(), txStatus)
-	// 	require.Equalf(nts.T(), uint32(0), txStatus.Code, "tx status is %v", txStatus)
-	// 	break
-	// }
-	// require.NoError(nts.T(), lctx.Err())
-
+// CLIClientContext returns the client context with proper Akash RPC client
+func (nts *NetworkTestSuite) CLIClientContext() sdkclient.Context {
+	return nts.cliCctx
 }
 
 func (nts *NetworkTestSuite) Validator(idxT ...int) *network.Validator {
@@ -225,7 +199,8 @@ func (nts *NetworkTestSuite) ClientContext(idxT ...int) sdkclient.Context {
 	if len(idxT) != 0 {
 		idx = idxT[0]
 	}
-	result := validator.ClientCtx
+	// Use the properly configured client context with Akash RPC client
+	result := nts.cliCctx
 
 	return result.WithFromAddress(validator.Address).WithFromName(fmt.Sprintf("node%d", idx))
 }

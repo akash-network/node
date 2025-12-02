@@ -1,6 +1,7 @@
 COVER_PACKAGES = $(shell go list ./... | grep -v mock | paste -sd, -)
 
 TEST_MODULES ?= $(shell $(GO) list ./... | grep -v '/mocks')
+TEST_MODULES_E2E ?= $(shell $(GO) list -tags="e2e.integration" ./tests/e2e | grep -v '/mocks')
 
 ###############################################################################
 ###                           Misc tests                                    ###
@@ -20,7 +21,7 @@ test-full:
 
 .PHONY: test-integration
 test-integration:
-	$(GO_TEST) -v -tags="e2e.integration" $(TEST_MODULES)
+	$(GO_TEST) -v -tags="e2e.integration" $(TEST_MODULES_E2E)
 
 .PHONY: test-coverage
 test-coverage:

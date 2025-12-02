@@ -3,7 +3,6 @@
 package e2e
 
 import (
-	"context"
 	"fmt"
 	"path/filepath"
 
@@ -29,12 +28,12 @@ func (s *deploymentGRPCRestTestSuite) SetupSuite() {
 
 	val := s.Network().Validators[0]
 
-	s.cctx = val.ClientCtx
+	s.cctx = s.CLIClientContext()
 
 	deploymentPath, err := filepath.Abs("../../x/deployment/testdata/deployment.yaml")
 	s.Require().NoError(err)
 
-	ctx := context.Background()
+	ctx := s.CLIContext()
 
 	// Generate client certificate
 	_, err = clitestutil.TxGenerateClientExec(
@@ -54,28 +53,28 @@ func (s *deploymentGRPCRestTestSuite) SetupSuite() {
 			WithFrom(val.Address.String()).
 			WithSkipConfirm().
 			WithBroadcastModeBlock().
-			WithGasAutoFlags()...,
+			WithGasAuto()...,
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
 	// create deployment
-	_, err = clitestutil.TxCreateDeploymentExec(
+	_, err = clitestutil.ExecDeploymentCreate(
 		ctx,
 		s.cctx,
-		deploymentPath,
 		cli.TestFlags().
+			With(deploymentPath).
 			WithFrom(val.Address.String()).
 			WithSkipConfirm().
 			WithBroadcastModeBlock().
 			WithDeposit(DefaultDeposit).
-			WithGasAutoFlags()...,
+			WithGasAuto()...,
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
 	// get deployment
-	resp, err := clitestutil.QueryDeploymentsExec(
+	resp, err := clitestutil.ExecQueryDeployments(
 		ctx,
 		s.cctx,
 		cli.TestFlags().
