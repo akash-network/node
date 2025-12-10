@@ -68,14 +68,7 @@ func TestProviderCreate(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("ensure event created", func(t *testing.T) {
-		ev, err := sdk.ParseTypedEvent(res.Events[0])
-		require.NoError(t, err)
-
-		require.IsType(t, &types.EventProviderCreated{}, ev)
-
-		dev := ev.(*types.EventProviderCreated)
-
-		require.Equal(t, msg.Owner, dev.Owner)
+		testutil.EnsureEvent(t, res.Events, &types.EventProviderCreated{Owner: msg.Owner})
 	})
 
 	res, err = suite.handler(suite.ctx, msg)
@@ -101,14 +94,7 @@ func TestProviderCreateWithInfo(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("ensure event created", func(t *testing.T) {
-		ev, err := sdk.ParseTypedEvent(res.Events[0])
-		require.NoError(t, err)
-
-		require.IsType(t, &types.EventProviderCreated{}, ev)
-
-		dev := ev.(*types.EventProviderCreated)
-
-		require.Equal(t, msg.Owner, dev.Owner)
+		testutil.EnsureEvent(t, res.Events, &types.EventProviderCreated{Owner: msg.Owner})
 	})
 
 	res, err = suite.handler(suite.ctx, msg)
@@ -181,14 +167,7 @@ func TestProviderUpdateExisting(t *testing.T) {
 	res, err := suite.handler(suite.ctx, updateMsg)
 
 	t.Run("ensure event created", func(t *testing.T) {
-		ev, err := sdk.ParseTypedEvent(res.Events[1])
-		require.NoError(t, err)
-
-		require.IsType(t, &types.EventProviderUpdated{}, ev)
-
-		dev := ev.(*types.EventProviderUpdated)
-
-		require.Equal(t, updateMsg.Owner, dev.Owner)
+		testutil.EnsureEvent(t, res.Events, &types.EventProviderUpdated{Owner: updateMsg.Owner})
 	})
 
 	require.NoError(t, err)

@@ -11,7 +11,7 @@ import (
 
 	atypes "pkg.akt.dev/go/node/audit/v1"
 	dtypes "pkg.akt.dev/go/node/deployment/v1"
-	dbeta "pkg.akt.dev/go/node/deployment/v1beta4"
+	dbeta "pkg.akt.dev/go/node/deployment/v1beta5"
 	escrowid "pkg.akt.dev/go/node/escrow/id/v1"
 	etypes "pkg.akt.dev/go/node/escrow/types/v1"
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"

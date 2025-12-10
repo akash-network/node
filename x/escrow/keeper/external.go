@@ -7,6 +7,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
+	bmetypes "pkg.akt.dev/go/node/bme/v1"
 )
 
 type BankKeeper interface {
@@ -17,8 +18,11 @@ type BankKeeper interface {
 	SendCoinsFromAccountToModule(ctx context.Context, senderAddr sdk.AccAddress, recipientModule string, amt sdk.Coins) error
 }
 
-type TakeKeeper interface {
-	SubtractFees(ctx sdk.Context, amt sdk.Coin) (sdk.Coin, sdk.Coin, error)
+type BMEKeeper interface {
+	BurnMintFromAddressToModuleAccount(sdk.Context, sdk.AccAddress, string, sdk.Coin, string) (sdk.DecCoin, error)
+	BurnMintFromModuleAccountToAddress(sdk.Context, string, sdk.AccAddress, sdk.Coin, string) (sdk.DecCoin, error)
+	BurnMintOnAccount(sdk.Context, sdk.AccAddress, sdk.Coin, string) (sdk.DecCoin, error)
+	GetCircuitBreakerStatus(sdk.Context) (bmetypes.CircuitBreakerStatus, error)
 }
 
 type AuthzKeeper interface {

@@ -124,7 +124,7 @@ node-init-finalize:
 
 .PHONY: node-run
 node-run:
-	$(AKASH) start --minimum-gas-prices=$(AKASH_GAS_PRICES)
+	$(AKASH) start --trace=true
 
 .PHONY: node-status
 node-status:

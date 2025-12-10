@@ -16,8 +16,7 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
 	dv1 "pkg.akt.dev/go/node/deployment/v1"
-	dv1beta4 "pkg.akt.dev/go/node/deployment/v1beta4"
-	types "pkg.akt.dev/go/node/deployment/v1beta4"
+	dvbeta "pkg.akt.dev/go/node/deployment/v1beta5"
 
 	"pkg.akt.dev/go/cli"
 	clitestutil "pkg.akt.dev/go/cli/testutil"
@@ -63,7 +62,7 @@ func (s *deploymentIntegrationTestSuite) SetupSuite() {
 	s.addrDeployer, err = s.keyDeployer.GetAddress()
 	s.Require().NoError(err)
 
-	s.defaultDeposit, err = dv1beta4.DefaultParams().MinDepositFor(s.Config().BondDenom)
+	s.defaultDeposit, err = dvbeta.DefaultParams().MinDepositFor(s.Config().BondDenom)
 	s.Require().NoError(err)
 
 	ctx := context.Background()
@@ -76,7 +75,7 @@ func (s *deploymentIntegrationTestSuite) SetupSuite() {
 				val.Address.String(),
 				s.addrFunder.String(),
 				sdk.NewCoins(sdk.NewCoin(s.Config().BondDenom, s.defaultDeposit.Amount.MulRaw(4))).String()).
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
@@ -92,7 +91,7 @@ func (s *deploymentIntegrationTestSuite) SetupSuite() {
 				val.Address.String(),
 				s.addrDeployer.String(),
 				sdk.NewCoins(sdk.NewCoin(s.Config().BondDenom, s.defaultDeposit.Amount.MulRaw(4))).String()).
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
@@ -114,7 +113,7 @@ func (s *deploymentIntegrationTestSuite) SetupSuite() {
 		s.cctx,
 		cli.TestFlags().
 			WithFrom(s.addrDeployer.String()).
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
@@ -132,28 +131,28 @@ func (s *deploymentIntegrationTestSuite) TestDeployment() {
 	ctx := context.Background()
 
 	// create deployment
-	_, err = clitestutil.TxCreateDeploymentExec(
+	_, err = clitestutil.ExecDeploymentCreate(
 		ctx,
 		s.cctx,
-		deploymentPath,
 		cli.TestFlags().
+			With(deploymentPath).
 			WithFrom(s.addrDeployer.String()).
 			WithDeposit(DefaultDeposit).
 			WithSkipConfirm().
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithBroadcastModeBlock()...,
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
 	// test query deployments
-	resp, err := clitestutil.QueryDeploymentsExec(ctx,
+	resp, err := clitestutil.ExecQueryDeployments(ctx,
 		s.cctx,
 		cli.TestFlags().WithOutputJSON()...,
 	)
 	s.Require().NoError(err)
 
-	out := &dv1beta4.QueryDeploymentsResponse{}
+	out := &dvbeta.QueryDeploymentsResponse{}
 	err = s.cctx.Codec.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Deployments, 1, "Deployment Create Failed")
@@ -162,67 +161,67 @@ func (s *deploymentIntegrationTestSuite) TestDeployment() {
 
 	// test query deployment
 	createdDep := deployments[0]
-	resp, err = clitestutil.QueryDeploymentExec(
+	resp, err = clitestutil.ExecQueryDeployment(
 		ctx,
 		s.cctx,
 		cli.TestFlags().WithOutputJSON().
 			WithOwner(createdDep.Deployment.ID.Owner).
-			WithDseq(createdDep.Deployment.ID.DSeq)...,
+			WithDSeq(createdDep.Deployment.ID.DSeq)...,
 	)
 	s.Require().NoError(err)
 
-	var deployment types.QueryDeploymentResponse
+	var deployment dvbeta.QueryDeploymentResponse
 	err = s.cctx.Codec.UnmarshalJSON(resp.Bytes(), &deployment)
 	s.Require().NoError(err)
 	s.Require().Equal(createdDep, deployment)
 
 	// test query deployments with filters
-	resp, err = clitestutil.QueryDeploymentsExec(
+	resp, err = clitestutil.ExecQueryDeployments(
 		ctx,
 		s.cctx,
 		cli.TestFlags().
 			WithOutputJSON().
 			WithOwner(s.addrDeployer.String()).
-			WithDseq(createdDep.Deployment.ID.DSeq)...,
+			WithDSeq(createdDep.Deployment.ID.DSeq)...,
 	)
 	s.Require().NoError(err, "Error when fetching deployments with owner filter")
 
-	out = &dv1beta4.QueryDeploymentsResponse{}
+	out = &dvbeta.QueryDeploymentsResponse{}
 	err = s.cctx.Codec.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Deployments, 1)
 
 	// test updating deployment
-	_, err = clitestutil.TxUpdateDeploymentExec(
+	_, err = clitestutil.ExecDeploymentUpdate(
 		ctx,
 		s.cctx,
-		deploymentPath2,
 		cli.TestFlags().
+			With(deploymentPath2).
 			WithFrom(s.addrDeployer.String()).
-			WithDseq(createdDep.Deployment.ID.DSeq).
+			WithDSeq(createdDep.Deployment.ID.DSeq).
 			WithBroadcastModeBlock().
-			WithGasAutoFlags()...,
+			WithGasAuto()...,
 	)
 	s.Require().NoError(err)
 
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
-	resp, err = clitestutil.QueryDeploymentExec(
+	resp, err = clitestutil.ExecQueryDeployment(
 		ctx,
 		s.cctx,
 		cli.TestFlags().WithOutputJSON().
 			WithOwner(createdDep.Deployment.ID.Owner).
-			WithDseq(createdDep.Deployment.ID.DSeq)...,
+			WithDSeq(createdDep.Deployment.ID.DSeq)...,
 	)
 	s.Require().NoError(err)
 
-	var deploymentV2 types.QueryDeploymentResponse
+	var deploymentV2 dvbeta.QueryDeploymentResponse
 	err = s.cctx.Codec.UnmarshalJSON(resp.Bytes(), &deploymentV2)
 	s.Require().NoError(err)
 	s.Require().NotEqual(deployment.Deployment.Hash, deploymentV2.Deployment.Hash)
 
 	// test query deployments with wrong owner value
-	_, err = clitestutil.QueryDeploymentsExec(
+	_, err = clitestutil.ExecQueryDeployments(
 		ctx,
 		s.cctx,
 		cli.TestFlags().
@@ -232,7 +231,7 @@ func (s *deploymentIntegrationTestSuite) TestDeployment() {
 	s.Require().Error(err)
 
 	// test query deployments with wrong state value
-	_, err = clitestutil.QueryDeploymentsExec(
+	_, err = clitestutil.ExecQueryDeployments(
 		ctx,
 		s.cctx,
 		cli.TestFlags().
@@ -242,21 +241,21 @@ func (s *deploymentIntegrationTestSuite) TestDeployment() {
 	s.Require().Error(err)
 
 	// test close deployment
-	_, err = clitestutil.TxCloseDeploymentExec(
+	_, err = clitestutil.ExecDeploymentClose(
 		ctx,
 		s.cctx,
 		cli.TestFlags().
 			WithFrom(s.addrDeployer.String()).
-			WithDseq(createdDep.Deployment.ID.DSeq).
+			WithDSeq(createdDep.Deployment.ID.DSeq).
 			WithBroadcastModeBlock().
-			WithGasAutoFlags()...,
+			WithGasAuto()...,
 	)
 	s.Require().NoError(err)
 
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
 	// test query deployments with state filter closed
-	resp, err = clitestutil.QueryDeploymentsExec(
+	resp, err = clitestutil.ExecQueryDeployments(
 		ctx,
 		s.cctx,
 		cli.TestFlags().
@@ -265,7 +264,7 @@ func (s *deploymentIntegrationTestSuite) TestDeployment() {
 	)
 	s.Require().NoError(err)
 
-	out = &dv1beta4.QueryDeploymentsResponse{}
+	out = &dvbeta.QueryDeploymentsResponse{}
 	err = s.cctx.Codec.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Deployments, 1, "Deployment Close Failed")
@@ -278,22 +277,22 @@ func (s *deploymentIntegrationTestSuite) TestGroup() {
 	ctx := context.Background()
 
 	// create deployment
-	_, err = clitestutil.TxCreateDeploymentExec(
+	_, err = clitestutil.ExecDeploymentCreate(
 		ctx,
 		s.cctx,
-		deploymentPath,
 		cli.TestFlags().
+			With(deploymentPath).
 			WithFrom(s.addrDeployer.String()).
 			WithSkipConfirm().
 			WithBroadcastModeBlock().
 			WithDeposit(DefaultDeposit).
-			WithGasAutoFlags()...,
+			WithGasAuto()...,
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
 	// test query deployments
-	resp, err := clitestutil.QueryDeploymentsExec(
+	resp, err := clitestutil.ExecQueryDeployments(
 		ctx,
 		s.cctx,
 		cli.TestFlags().
@@ -302,7 +301,7 @@ func (s *deploymentIntegrationTestSuite) TestGroup() {
 	)
 	s.Require().NoError(err)
 
-	out := &dv1beta4.QueryDeploymentsResponse{}
+	out := &dvbeta.QueryDeploymentsResponse{}
 	err = s.cctx.Codec.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Deployments, 1, "Deployment Create Failed")
@@ -314,7 +313,7 @@ func (s *deploymentIntegrationTestSuite) TestGroup() {
 	s.Require().NotEqual(0, len(createdDep.Groups))
 
 	// test close group tx
-	_, err = clitestutil.TxCloseGroupExec(
+	_, err = clitestutil.ExecDeploymentGroupClose(
 		ctx,
 		s.cctx,
 		cli.TestFlags().
@@ -322,7 +321,7 @@ func (s *deploymentIntegrationTestSuite) TestGroup() {
 			WithGroupID(createdDep.Groups[0].ID).
 			WithSkipConfirm().
 			WithBroadcastModeBlock().
-			WithGasAutoFlags()...,
+			WithGasAuto()...,
 	)
 	s.Require().NoError(err)
 
@@ -330,21 +329,21 @@ func (s *deploymentIntegrationTestSuite) TestGroup() {
 
 	grp := createdDep.Groups[0]
 
-	resp, err = clitestutil.QueryGroupExec(
+	resp, err = clitestutil.ExecQueryGroup(
 		ctx,
 		s.cctx,
 		cli.TestFlags().
 			WithOutputJSON().
 			WithOwner(grp.ID.Owner).
-			WithDseq(grp.ID.DSeq).
-			WithGseq(grp.ID.GSeq)...,
+			WithDSeq(grp.ID.DSeq).
+			WithGSeq(grp.ID.GSeq)...,
 	)
 	s.Require().NoError(err)
 
-	var group types.Group
+	var group dvbeta.Group
 	err = s.cctx.Codec.UnmarshalJSON(resp.Bytes(), &group)
 	s.Require().NoError(err)
-	s.Require().Equal(types.GroupClosed, group.State)
+	s.Require().Equal(dvbeta.GroupClosed, group.State)
 }
 
 func (s *deploymentIntegrationTestSuite) TestFundedDeployment() {
@@ -361,14 +360,14 @@ func (s *deploymentIntegrationTestSuite) TestFundedDeployment() {
 	ctx := context.Background()
 
 	// Creating deployment paid by funder's account without any authorization from funder should fail
-	_, err = clitestutil.TxCreateDeploymentExec(
+	_, err = clitestutil.ExecDeploymentCreate(
 		ctx,
 		s.cctx,
-		deploymentPath,
 		cli.TestFlags().
+			With(deploymentPath).
 			WithFrom(s.addrDeployer.String()).
 			WithDepositor(s.addrFunder).
-			WithDseq(deploymentID.DSeq).
+			WithDSeq(deploymentID.DSeq).
 			WithSkipConfirm().
 			WithBroadcastModeBlock().
 			WithGasAutoFlags()...,
@@ -387,7 +386,7 @@ func (s *deploymentIntegrationTestSuite) TestFundedDeployment() {
 			WithFrom(s.addrFunder.String()).
 			WithSkipConfirm().
 			WithBroadcastModeBlock().
-			WithGasAutoFlags()...,
+			WithGasAuto()...,
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.Network().WaitForNextBlock())
@@ -397,13 +396,13 @@ func (s *deploymentIntegrationTestSuite) TestFundedDeployment() {
 	ownerBal := s.getAccountBalance(s.addrDeployer)
 
 	// Creating deployment paid by funder's account should work now
-	res, err = clitestutil.TxCreateDeploymentExec(
+	res, err = clitestutil.ExecDeploymentCreate(
 		ctx,
 		s.cctx,
 		deploymentPath,
 		cli.TestFlags().
 			WithFrom(s.addrDeployer.String()).
-			WithDseq(deploymentID.DSeq).
+			WithDSeq(deploymentID.DSeq).
 			WithDepositor(s.addrFunder).
 			WithSkipConfirm().
 			WithBroadcastModeBlock().

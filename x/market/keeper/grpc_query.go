@@ -10,8 +10,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 
-	"pkg.akt.dev/go/node/market/v1"
-	types "pkg.akt.dev/go/node/market/v1beta5"
+	mtypes "pkg.akt.dev/go/node/market/v2beta1"
 
 	"pkg.akt.dev/node/v2/util/query"
 	"pkg.akt.dev/node/v2/x/market/keeper/keys"
@@ -22,10 +21,10 @@ type Querier struct {
 	Keeper
 }
 
-var _ types.QueryServer = Querier{}
+var _ mtypes.QueryServer = Querier{}
 
 // Orders returns orders based on filters
-func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*types.QueryOrdersResponse, error) {
+func (k Querier) Orders(c context.Context, req *mtypes.QueryOrdersRequest) (*mtypes.QueryOrdersResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
@@ -59,19 +58,19 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 
 		req.Pagination.Key = key
 	} else if req.Filters.State != "" {
-		stateVal := types.Order_State(types.Order_State_value[req.Filters.State])
+		stateVal := mtypes.Order_State(mtypes.Order_State_value[req.Filters.State])
 
-		if req.Filters.State != "" && stateVal == types.OrderStateInvalid {
+		if req.Filters.State != "" && stateVal == mtypes.OrderStateInvalid {
 			return nil, status.Error(codes.InvalidArgument, "invalid state value")
 		}
 
 		states = append(states, byte(stateVal))
 	} else {
 		// request does not have a pagination set. Start from an open store
-		states = append(states, []byte{byte(types.OrderOpen), byte(types.OrderActive), byte(types.OrderClosed)}...)
+		states = append(states, []byte{byte(mtypes.OrderOpen), byte(mtypes.OrderActive), byte(mtypes.OrderClosed)}...)
 	}
 
-	var orders types.Orders
+	var orders mtypes.Orders
 	var pageRes *sdkquery.PageResponse
 
 	ctx := sdk.UnwrapSDKContext(c)
@@ -82,7 +81,7 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 	var err error
 
 	for idx = range states {
-		state := types.Order_State(states[idx])
+		state := mtypes.Order_State(states[idx])
 		if idx > 0 {
 			req.Pagination.Key = nil
 		}
@@ -101,7 +100,7 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 		count := uint64(0)
 
 		pageRes, err = sdkquery.FilteredPaginate(searchStore, req.Pagination, func(_ []byte, value []byte, accumulate bool) (bool, error) {
-			var order types.Order
+			var order mtypes.Order
 
 			err := k.cdc.Unmarshal(value, &order)
 			if err != nil {
@@ -139,7 +138,7 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 			pageRes.NextKey, err = query.EncodePaginationKey(states[idx:], searchPrefix, pageRes.NextKey, nil)
 			if err != nil {
 				pageRes.Total = total
-				return &types.QueryOrdersResponse{
+				return &mtypes.QueryOrdersResponse{
 					Orders:     orders,
 					Pagination: pageRes,
 				}, status.Error(codes.Internal, err.Error())
@@ -147,14 +146,14 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 		}
 	}
 
-	return &types.QueryOrdersResponse{
+	return &mtypes.QueryOrdersResponse{
 		Orders:     orders,
 		Pagination: pageRes,
 	}, nil
 }
 
 // Bids returns bids based on filters
-func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.QueryBidsResponse, error) {
+func (k Querier) Bids(c context.Context, req *mtypes.QueryBidsRequest) (*mtypes.QueryBidsResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
@@ -195,19 +194,19 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 	} else if req.Filters.State != "" {
 		reverseSearch = (req.Filters.Owner == "") && (req.Filters.Provider != "")
 
-		stateVal := types.Bid_State(types.Bid_State_value[req.Filters.State])
+		stateVal := mtypes.Bid_State(mtypes.Bid_State_value[req.Filters.State])
 
-		if req.Filters.State != "" && stateVal == types.BidStateInvalid {
+		if req.Filters.State != "" && stateVal == mtypes.BidStateInvalid {
 			return nil, status.Error(codes.InvalidArgument, "invalid state value")
 		}
 
 		states = append(states, byte(stateVal))
 	} else {
 		// request does not have a pagination set. Start from an open store
-		states = append(states, byte(types.BidOpen), byte(types.BidActive), byte(types.BidLost), byte(types.BidClosed))
+		states = append(states, byte(mtypes.BidOpen), byte(mtypes.BidActive), byte(mtypes.BidLost), byte(mtypes.BidClosed))
 	}
 
-	var bids []types.QueryBidResponse
+	var bids []mtypes.QueryBidResponse
 	var pageRes *sdkquery.PageResponse
 	ctx := sdk.UnwrapSDKContext(c)
 
@@ -217,7 +216,7 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 	var err error
 
 	for idx = range states {
-		state := types.Bid_State(states[idx])
+		state := mtypes.Bid_State(states[idx])
 
 		if idx > 0 {
 			req.Pagination.Key = nil
@@ -241,7 +240,7 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 		searchStore := prefix.NewStore(ctx.KVStore(k.skey), searchPrefix)
 
 		pageRes, err = sdkquery.FilteredPaginate(searchStore, req.Pagination, func(_ []byte, value []byte, accumulate bool) (bool, error) {
-			var bid types.Bid
+			var bid mtypes.Bid
 
 			err := k.cdc.Unmarshal(value, &bid)
 			if err != nil {
@@ -256,7 +255,7 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 						return true, err
 					}
 
-					bids = append(bids, types.QueryBidResponse{
+					bids = append(bids, mtypes.QueryBidResponse{
 						Bid:           bid,
 						EscrowAccount: acct,
 					})
@@ -294,7 +293,7 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 			pageRes.NextKey, err = query.EncodePaginationKey(states[idx:], searchPrefix, pageRes.NextKey, unsolicited)
 			if err != nil {
 				pageRes.Total = total
-				return &types.QueryBidsResponse{
+				return &mtypes.QueryBidsResponse{
 					Bids:       bids,
 					Pagination: pageRes,
 				}, status.Error(codes.Internal, err.Error())
@@ -302,14 +301,14 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 		}
 	}
 
-	return &types.QueryBidsResponse{
+	return &mtypes.QueryBidsResponse{
 		Bids:       bids,
 		Pagination: pageRes,
 	}, nil
 }
 
 // Leases returns leases based on filters
-func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*types.QueryLeasesResponse, error) {
+func (k Querier) Leases(c context.Context, req *mtypes.QueryLeasesRequest) (*mtypes.QueryLeasesResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
@@ -351,19 +350,19 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 	} else if req.Filters.State != "" {
 		reverseSearch = (req.Filters.Owner == "") && (req.Filters.Provider != "")
 
-		stateVal := v1.Lease_State(v1.Lease_State_value[req.Filters.State])
+		stateVal := mtypes.Lease_State(mtypes.Lease_State_value[req.Filters.State])
 
-		if req.Filters.State != "" && stateVal == v1.LeaseStateInvalid {
+		if req.Filters.State != "" && stateVal == mtypes.LeaseStateInvalid {
 			return nil, status.Error(codes.InvalidArgument, "invalid state value")
 		}
 
 		states = append(states, byte(stateVal))
 	} else {
 		// request does not have a pagination set. Start from an open store
-		states = append(states, byte(v1.LeaseActive), byte(v1.LeaseInsufficientFunds), byte(v1.LeaseClosed))
+		states = append(states, byte(mtypes.LeaseActive), byte(mtypes.LeaseInsufficientFunds), byte(mtypes.LeaseClosed))
 	}
 
-	var leases []types.QueryLeaseResponse
+	var leases []mtypes.QueryLeaseResponse
 	var pageRes *sdkquery.PageResponse
 	ctx := sdk.UnwrapSDKContext(c)
 
@@ -373,7 +372,7 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 	var err error
 
 	for idx = range states {
-		state := v1.Lease_State(states[idx])
+		state := mtypes.Lease_State(states[idx])
 
 		if idx > 0 {
 			req.Pagination.Key = nil
@@ -398,7 +397,7 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 		count := uint64(0)
 
 		pageRes, err = sdkquery.FilteredPaginate(searchedStore, req.Pagination, func(_ []byte, value []byte, accumulate bool) (bool, error) {
-			var lease v1.Lease
+			var lease mtypes.Lease
 
 			err := k.cdc.Unmarshal(value, &lease)
 			if err != nil {
@@ -413,7 +412,7 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 						return true, err
 					}
 
-					leases = append(leases, types.QueryLeaseResponse{
+					leases = append(leases, mtypes.QueryLeaseResponse{
 						Lease:         lease,
 						EscrowPayment: payment,
 					})
@@ -451,7 +450,7 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 			pageRes.NextKey, err = query.EncodePaginationKey(states[idx:], searchPrefix, pageRes.NextKey, unsolicited)
 			if err != nil {
 				pageRes.Total = total
-				return &types.QueryLeasesResponse{
+				return &mtypes.QueryLeasesResponse{
 					Leases:     leases,
 					Pagination: pageRes,
 				}, status.Error(codes.Internal, err.Error())
@@ -459,14 +458,14 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 		}
 	}
 
-	return &types.QueryLeasesResponse{
+	return &mtypes.QueryLeasesResponse{
 		Leases:     leases,
 		Pagination: pageRes,
 	}, nil
 }
 
 // Order returns order details based on OrderID
-func (k Querier) Order(c context.Context, req *types.QueryOrderRequest) (*types.QueryOrderResponse, error) {
+func (k Querier) Order(c context.Context, req *mtypes.QueryOrderRequest) (*mtypes.QueryOrderResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
@@ -479,14 +478,14 @@ func (k Querier) Order(c context.Context, req *types.QueryOrderRequest) (*types.
 
 	order, found := k.GetOrder(ctx, req.ID)
 	if !found {
-		return nil, v1.ErrOrderNotFound
+		return nil, mtypes.ErrOrderNotFound
 	}
 
-	return &types.QueryOrderResponse{Order: order}, nil
+	return &mtypes.QueryOrderResponse{Order: order}, nil
 }
 
 // Bid returns bid details based on BidID
-func (k Querier) Bid(c context.Context, req *types.QueryBidRequest) (*types.QueryBidResponse, error) {
+func (k Querier) Bid(c context.Context, req *mtypes.QueryBidRequest) (*mtypes.QueryBidResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
@@ -503,7 +502,7 @@ func (k Querier) Bid(c context.Context, req *types.QueryBidRequest) (*types.Quer
 
 	bid, found := k.GetBid(ctx, req.ID)
 	if !found {
-		return nil, v1.ErrBidNotFound
+		return nil, mtypes.ErrBidNotFound
 	}
 
 	acct, err := k.ekeeper.GetAccount(ctx, bid.ID.ToEscrowAccountID())
@@ -511,14 +510,14 @@ func (k Querier) Bid(c context.Context, req *types.QueryBidRequest) (*types.Quer
 		return nil, err
 	}
 
-	return &types.QueryBidResponse{
+	return &mtypes.QueryBidResponse{
 		Bid:           bid,
 		EscrowAccount: acct,
 	}, nil
 }
 
 // Lease returns lease details based on LeaseID
-func (k Querier) Lease(c context.Context, req *types.QueryLeaseRequest) (*types.QueryLeaseResponse, error) {
+func (k Querier) Lease(c context.Context, req *mtypes.QueryLeaseRequest) (*mtypes.QueryLeaseResponse, error) {
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
@@ -535,7 +534,7 @@ func (k Querier) Lease(c context.Context, req *types.QueryLeaseRequest) (*types.
 
 	lease, found := k.GetLease(ctx, req.ID)
 	if !found {
-		return nil, v1.ErrLeaseNotFound
+		return nil, mtypes.ErrLeaseNotFound
 	}
 
 	payment, err := k.ekeeper.GetPayment(ctx, lease.ID.ToEscrowPaymentID())
@@ -543,13 +542,13 @@ func (k Querier) Lease(c context.Context, req *types.QueryLeaseRequest) (*types.
 		return nil, err
 	}
 
-	return &types.QueryLeaseResponse{
+	return &mtypes.QueryLeaseResponse{
 		Lease:         lease,
 		EscrowPayment: payment,
 	}, nil
 }
 
-func (k Querier) Params(ctx context.Context, req *types.QueryParamsRequest) (*types.QueryParamsResponse, error) {
+func (k Querier) Params(ctx context.Context, req *mtypes.QueryParamsRequest) (*mtypes.QueryParamsResponse, error) {
 	if req == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "empty request")
 	}
@@ -557,5 +556,5 @@ func (k Querier) Params(ctx context.Context, req *types.QueryParamsRequest) (*ty
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	params := k.GetParams(sdkCtx)
 
-	return &types.QueryParamsResponse{Params: params}, nil
+	return &mtypes.QueryParamsResponse{Params: params}, nil
 }

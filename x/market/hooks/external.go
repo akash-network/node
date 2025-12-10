@@ -4,9 +4,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	dv1 "pkg.akt.dev/go/node/deployment/v1"
-	dtypes "pkg.akt.dev/go/node/deployment/v1beta4"
-	mv1 "pkg.akt.dev/go/node/market/v1"
-	mtypes "pkg.akt.dev/go/node/market/v1beta5"
+	dtypes "pkg.akt.dev/go/node/deployment/v1beta5"
+	mtypes "pkg.akt.dev/go/node/market/v2beta1"
 )
 
 type DeploymentKeeper interface {
@@ -17,11 +16,11 @@ type DeploymentKeeper interface {
 }
 
 type MarketKeeper interface {
-	GetOrder(ctx sdk.Context, id mv1.OrderID) (mtypes.Order, bool)
-	GetBid(ctx sdk.Context, id mv1.BidID) (mtypes.Bid, bool)
-	GetLease(ctx sdk.Context, id mv1.LeaseID) (mv1.Lease, bool)
+	GetOrder(ctx sdk.Context, id mtypes.OrderID) (mtypes.Order, bool)
+	GetBid(ctx sdk.Context, id mtypes.BidID) (mtypes.Bid, bool)
+	GetLease(ctx sdk.Context, id mtypes.LeaseID) (mtypes.Lease, bool)
 	OnGroupClosed(ctx sdk.Context, id dv1.GroupID) error
 	OnOrderClosed(ctx sdk.Context, order mtypes.Order) error
 	OnBidClosed(ctx sdk.Context, bid mtypes.Bid) error
-	OnLeaseClosed(ctx sdk.Context, lease mv1.Lease, state mv1.Lease_State, reason mv1.LeaseClosedReason) error
+	OnLeaseClosed(ctx sdk.Context, lease mtypes.Lease, state mtypes.Lease_State, reason mtypes.LeaseClosedReason) error
 }

@@ -19,8 +19,7 @@ import (
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 
 	v1 "pkg.akt.dev/go/node/deployment/v1"
-	types "pkg.akt.dev/go/node/deployment/v1beta4"
-	"pkg.akt.dev/go/node/migrate"
+	types "pkg.akt.dev/go/node/deployment/v1beta5"
 
 	"pkg.akt.dev/node/v2/x/deployment/handler"
 	"pkg.akt.dev/node/v2/x/deployment/keeper"
@@ -70,7 +69,7 @@ func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 func (b AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 	types.RegisterInterfaces(registry)
 
-	migrate.RegisterDeploymentInterfaces(registry)
+	//migrate.RegisterDeploymentInterfaces(registry)
 }
 
 // DefaultGenesis returns default genesis state as raw bytes for the deployment

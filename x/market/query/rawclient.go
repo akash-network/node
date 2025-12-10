@@ -4,17 +4,17 @@ import (
 	"fmt"
 
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
-	v1 "pkg.akt.dev/go/node/market/v1"
+	mtypes "pkg.akt.dev/go/node/market/v2beta1"
 )
 
 // RawClient interface
 type RawClient interface {
 	Orders(filters OrderFilters) ([]byte, error)
-	Order(id v1.OrderID) ([]byte, error)
+	Order(id mtypes.OrderID) ([]byte, error)
 	Bids(filters BidFilters) ([]byte, error)
-	Bid(id v1.BidID) ([]byte, error)
+	Bid(id mtypes.BidID) ([]byte, error)
 	Leases(filters LeaseFilters) ([]byte, error)
-	Lease(id v1.LeaseID) ([]byte, error)
+	Lease(id mtypes.LeaseID) ([]byte, error)
 }
 
 // NewRawClient creates a raw client instance with provided context and key
@@ -35,7 +35,7 @@ func (c *rawclient) Orders(ofilters OrderFilters) ([]byte, error) {
 	return buf, nil
 }
 
-func (c *rawclient) Order(id v1.OrderID) ([]byte, error) {
+func (c *rawclient) Order(id mtypes.OrderID) ([]byte, error) {
 	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, OrderPath(id)), nil)
 	if err != nil {
 		return []byte{}, err
@@ -51,7 +51,7 @@ func (c *rawclient) Bids(bfilters BidFilters) ([]byte, error) {
 	return buf, nil
 }
 
-func (c *rawclient) Bid(id v1.BidID) ([]byte, error) {
+func (c *rawclient) Bid(id mtypes.BidID) ([]byte, error) {
 	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, getBidPath(id)), nil)
 	if err != nil {
 		return []byte{}, err
@@ -67,7 +67,7 @@ func (c *rawclient) Leases(lfilters LeaseFilters) ([]byte, error) {
 	return buf, nil
 }
 
-func (c *rawclient) Lease(id v1.LeaseID) ([]byte, error) {
+func (c *rawclient) Lease(id mtypes.LeaseID) ([]byte, error) {
 	buf, _, err := c.ctx.QueryWithData(fmt.Sprintf("custom/%s/%s", c.key, LeasePath(id)), nil)
 	if err != nil {
 		return []byte{}, err

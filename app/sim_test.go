@@ -47,7 +47,7 @@ import (
 	atypes "pkg.akt.dev/go/node/audit/v1"
 	ctypes "pkg.akt.dev/go/node/cert/v1"
 	dtypes "pkg.akt.dev/go/node/deployment/v1"
-	mtypes "pkg.akt.dev/go/node/market/v1"
+	mtypes "pkg.akt.dev/go/node/market/v2beta1"
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 	taketypes "pkg.akt.dev/go/node/take/v1"
 	"pkg.akt.dev/go/sdkutil"

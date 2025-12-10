@@ -30,22 +30,22 @@ func ExportGenesis(ctx sdk.Context, k keeper.Keeper) *types.GenesisState {
 		panic(err)
 	}
 
-	prices := make([]types.PriceEntry, 0)
-	latestHeights := make([]types.PriceEntryID, 0)
-
-	k.WithPriceEntries(ctx, func(val types.PriceEntry) bool {
-		prices = append(prices, val)
-		return false
-	})
-
-	k.WithLatestHeights(ctx, func(val types.PriceEntryID) bool {
-		latestHeights = append(latestHeights, val)
-		return false
-	})
+	//prices := make([]types.PriceEntry, 0)
+	//latestHeights := make([]types.PriceEntryID, 0)
+	//
+	//k.WithPriceEntries(ctx, func(val types.PriceEntry) bool {
+	//	prices = append(prices, val)
+	//	return false
+	//})
+	//
+	//k.WithLatestHeights(ctx, func(val types.PriceEntryID) bool {
+	//	latestHeights = append(latestHeights, val)
+	//	return false
+	//})
 
 	return &types.GenesisState{
-		Params:       params,
-		Prices:       prices,
-		LatestHeight: latestHeights,
+		Params: params,
+		//Prices:       prices,
+		//LatestHeight: latestHeights,
 	}
 }

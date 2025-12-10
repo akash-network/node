@@ -1,16 +1,16 @@
 package market
 
 import (
-	v1 "pkg.akt.dev/go/node/market/v1"
+	mtypes "pkg.akt.dev/go/node/market/v2beta1"
 
 	"pkg.akt.dev/node/v2/x/market/keeper"
 )
 
 const (
 	// StoreKey represents storekey of market module
-	StoreKey = v1.StoreKey
+	StoreKey = mtypes.StoreKey
 	// ModuleName represents current module name
-	ModuleName = v1.ModuleName
+	ModuleName = mtypes.ModuleName
 )
 
 type (

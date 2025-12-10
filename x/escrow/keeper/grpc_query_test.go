@@ -5,18 +5,17 @@ import (
 	"testing"
 
 	sdkmath "cosmossdk.io/math"
+	"github.com/cosmos/cosmos-sdk/baseapp"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/cosmos/cosmos-sdk/baseapp"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-
 	dv1 "pkg.akt.dev/go/node/deployment/v1"
-	"pkg.akt.dev/go/node/deployment/v1beta4"
+	dvbeta "pkg.akt.dev/go/node/deployment/v1beta5"
 	eid "pkg.akt.dev/go/node/escrow/id/v1"
 	types "pkg.akt.dev/go/node/escrow/types/v1"
 	"pkg.akt.dev/go/node/escrow/v1"
-	mv1 "pkg.akt.dev/go/node/market/v1"
+	mv1 "pkg.akt.dev/go/node/market/v2beta1"
 	deposit "pkg.akt.dev/go/node/types/deposit/v1"
 	"pkg.akt.dev/go/testutil"
 
@@ -65,6 +64,7 @@ func TestGRPCQueryAccounts(t *testing.T) {
 	did1 := testutil.DeploymentID(t)
 	eid1 := suite.createEscrowAccount(did1)
 
+	// After BME conversion: 500000 uakt -> 1500000 uact (3x)
 	expAccounts1 := types.Accounts{
 		{
 			ID: eid1,
@@ -72,13 +72,13 @@ func TestGRPCQueryAccounts(t *testing.T) {
 				Owner: did1.Owner,
 				State: types.StateOpen,
 				Transferred: sdk.DecCoins{
-					sdk.NewDecCoin("uakt", sdkmath.ZeroInt()),
+					sdk.NewDecCoin("uact", sdkmath.ZeroInt()),
 				},
 				SettledAt: 0,
 				Funds: []types.Balance{
 					{
-						Denom:  "uakt",
-						Amount: sdkmath.LegacyNewDec(500000),
+						Denom:  "uact",
+						Amount: sdkmath.LegacyNewDec(1500000),
 					},
 				},
 				Deposits: []types.Depositor{
@@ -86,7 +86,7 @@ func TestGRPCQueryAccounts(t *testing.T) {
 						Owner:   did1.Owner,
 						Height:  0,
 						Source:  deposit.SourceBalance,
-						Balance: sdk.NewDecCoin("uakt", sdkmath.NewInt(500000)),
+						Balance: sdk.NewDecCoin("uact", sdkmath.NewInt(1500000)),
 					},
 				},
 			},
@@ -175,7 +175,9 @@ func TestGRPCQueryPayments(t *testing.T) {
 	did1 := lid1.DeploymentID()
 
 	_ = suite.createEscrowAccount(did1)
-	pid1 := suite.createEscrowPayment(lid1, sdk.NewDecCoin("uakt", sdkmath.NewInt(1)))
+	// Account has uact funds after BME conversion, so payment rate must be in uact
+	// 1 uakt/block * 3 (swap rate) = 3 uact/block
+	pid1 := suite.createEscrowPayment(lid1, sdk.NewDecCoin("uact", sdkmath.NewInt(3)))
 
 	expPayments1 := types.Payments{
 		{
@@ -183,10 +185,10 @@ func TestGRPCQueryPayments(t *testing.T) {
 			State: types.PaymentState{
 				Owner:     lid1.Provider,
 				State:     types.StateOpen,
-				Rate:      sdk.NewDecCoin("uakt", sdkmath.NewInt(1)),
-				Balance:   sdk.NewDecCoin("uakt", sdkmath.NewInt(0)),
-				Unsettled: sdk.NewDecCoin("uakt", sdkmath.ZeroInt()),
-				Withdrawn: sdk.NewCoin("uakt", sdkmath.NewInt(0)),
+				Rate:      sdk.NewDecCoin("uact", sdkmath.NewInt(3)),
+				Balance:   sdk.NewDecCoin("uact", sdkmath.NewInt(0)),
+				Unsettled: sdk.NewDecCoin("uact", sdkmath.ZeroInt()),
+				Withdrawn: sdk.NewCoin("uact", sdkmath.NewInt(0)),
 			},
 		},
 	}
@@ -279,20 +281,25 @@ func (suite *grpcTestSuite) createEscrowAccount(id dv1.DeploymentID) eid.Account
 		bkeeper.
 			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Return(nil)
+
+		bkeeper.On("BurnCoins", mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
 	})
 
 	owner, err := sdk.AccAddressFromBech32(id.Owner)
 	require.NoError(suite.t, err)
 
 	aid := id.ToEscrowAccountID()
-	defaultDeposit, err := v1beta4.DefaultParams().MinDepositFor("uakt")
+	defaultDeposit, err := dvbeta.DefaultParams().MinDepositFor("uakt")
 	require.NoError(suite.t, err)
 
-	msg := &v1beta4.MsgCreateDeployment{
+	msg := &dvbeta.MsgCreateDeployment{
 		ID: id,
-		Deposit: deposit.Deposit{
-			Amount:  defaultDeposit,
-			Sources: deposit.Sources{deposit.SourceBalance},
+		Deposits: deposit.Deposits{
+			{
+				Amount:  defaultDeposit,
+				Sources: deposit.Sources{deposit.SourceBalance},
+			},
 		}}
 
 	deposits, err := suite.keeper.AuthorizeDeposits(suite.ctx, msg)

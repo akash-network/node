@@ -6,16 +6,14 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-
-	"pkg.akt.dev/go/node/market/v1"
-	"pkg.akt.dev/go/node/market/v1beta5"
+	mtypes "pkg.akt.dev/go/node/market/v2beta1"
 
 	"pkg.akt.dev/node/v2/x/market/keeper"
 	"pkg.akt.dev/node/v2/x/market/keeper/keys"
 )
 
 // ValidateGenesis does validation check of the Genesis
-func ValidateGenesis(data *v1beta5.GenesisState) error {
+func ValidateGenesis(data *mtypes.GenesisState) error {
 	if err := data.Params.Validate(); err != nil {
 		return err
 	}
@@ -25,14 +23,14 @@ func ValidateGenesis(data *v1beta5.GenesisState) error {
 
 // DefaultGenesisState returns default genesis state as raw bytes for the market
 // module.
-func DefaultGenesisState() *v1beta5.GenesisState {
-	return &v1beta5.GenesisState{
-		Params: v1beta5.DefaultParams(),
+func DefaultGenesisState() *mtypes.GenesisState {
+	return &mtypes.GenesisState{
+		Params: mtypes.DefaultParams(),
 	}
 }
 
 // InitGenesis initiate genesis state and return updated validator details
-func InitGenesis(ctx sdk.Context, kpr keeper.IKeeper, data *v1beta5.GenesisState) {
+func InitGenesis(ctx sdk.Context, kpr keeper.IKeeper, data *mtypes.GenesisState) {
 	store := ctx.KVStore(kpr.StoreKey())
 	cdc := kpr.Codec()
 
@@ -40,7 +38,7 @@ func InitGenesis(ctx sdk.Context, kpr keeper.IKeeper, data *v1beta5.GenesisState
 		key := keys.MustOrderKey(keys.OrderStateToPrefix(record.State), record.ID)
 
 		if store.Has(key) {
-			panic(fmt.Errorf("market genesis orders init. order id %s: %w", record.ID, v1.ErrOrderExists))
+			panic(fmt.Errorf("market genesis orders init. order id %s: %w", record.ID, mtypes.ErrOrderExists))
 		}
 
 		store.Set(key, cdc.MustMarshal(&record))
@@ -51,10 +49,10 @@ func InitGenesis(ctx sdk.Context, kpr keeper.IKeeper, data *v1beta5.GenesisState
 		revKey := keys.MustBidReverseKey(keys.BidStateToPrefix(record.State), record.ID)
 
 		if store.Has(key) {
-			panic(fmt.Errorf("market genesis bids init. bid id %s: %w", record.ID, v1.ErrBidExists))
+			panic(fmt.Errorf("market genesis bids init. bid id %s: %w", record.ID, mtypes.ErrBidExists))
 		}
 		if store.Has(revKey) {
-			panic(fmt.Errorf("market genesis bids init. reverse key for bid id %s: %w", record.ID, v1.ErrBidExists))
+			panic(fmt.Errorf("market genesis bids init. reverse key for bid id %s: %w", record.ID, mtypes.ErrBidExists))
 		}
 
 		data := cdc.MustMarshal(&record)
@@ -86,29 +84,29 @@ func InitGenesis(ctx sdk.Context, kpr keeper.IKeeper, data *v1beta5.GenesisState
 }
 
 // ExportGenesis returns genesis state as raw bytes for the market module
-func ExportGenesis(ctx sdk.Context, k keeper.IKeeper) *v1beta5.GenesisState {
+func ExportGenesis(ctx sdk.Context, k keeper.IKeeper) *mtypes.GenesisState {
 	params := k.GetParams(ctx)
 
-	var bids v1beta5.Bids
-	var leases v1.Leases
-	var orders v1beta5.Orders
+	var bids mtypes.Bids
+	var leases mtypes.Leases
+	var orders mtypes.Orders
 
-	k.WithLeases(ctx, func(lease v1.Lease) bool {
+	k.WithLeases(ctx, func(lease mtypes.Lease) bool {
 		leases = append(leases, lease)
 		return false
 	})
 
-	k.WithOrders(ctx, func(order v1beta5.Order) bool {
+	k.WithOrders(ctx, func(order mtypes.Order) bool {
 		orders = append(orders, order)
 		return false
 	})
 
-	k.WithBids(ctx, func(bid v1beta5.Bid) bool {
+	k.WithBids(ctx, func(bid mtypes.Bid) bool {
 		bids = append(bids, bid)
 		return false
 	})
 
-	return &v1beta5.GenesisState{
+	return &mtypes.GenesisState{
 		Params: params,
 		Orders: orders,
 		Leases: leases,
@@ -118,8 +116,8 @@ func ExportGenesis(ctx sdk.Context, k keeper.IKeeper) *v1beta5.GenesisState {
 
 // GetGenesisStateFromAppState returns x/market GenesisState given raw application
 // genesis state.
-func GetGenesisStateFromAppState(cdc codec.JSONCodec, appState map[string]json.RawMessage) *v1beta5.GenesisState {
-	var genesisState v1beta5.GenesisState
+func GetGenesisStateFromAppState(cdc codec.JSONCodec, appState map[string]json.RawMessage) *mtypes.GenesisState {
+	var genesisState mtypes.GenesisState
 
 	if appState[ModuleName] != nil {
 		cdc.MustUnmarshalJSON(appState[ModuleName], &genesisState)

@@ -26,8 +26,16 @@ func TestIntegrationCLI(t *testing.T) {
 	pi := &providerIntegrationTestSuite{}
 	pi.NetworkTestSuite = testutil.NewNetworkTestSuite(nil, pi)
 
+	oi := &oracleIntegrationTestSuite{}
+	oi.NetworkTestSuite = testutil.NewNetworkTestSuite(nil, oi)
+
+	bi := &bmeIntegrationTestSuite{}
+	bi.NetworkTestSuite = testutil.NewNetworkTestSuite(nil, bi)
+
 	suite.Run(t, di)
 	suite.Run(t, ci)
 	suite.Run(t, mi)
 	suite.Run(t, pi)
+	suite.Run(t, oi)
+	suite.Run(t, bi)
 }

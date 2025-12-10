@@ -40,7 +40,7 @@ import (
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	govtypesv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	mintkeeper "github.com/cosmos/cosmos-sdk/x/mint/keeper"
-	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
+	mintaketypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	"github.com/cosmos/cosmos-sdk/x/params"
 	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
@@ -53,38 +53,38 @@ import (
 	ibctransferkeeper "github.com/cosmos/ibc-go/v10/modules/apps/transfer/keeper"
 	ibctransfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 	transferv2 "github.com/cosmos/ibc-go/v10/modules/apps/transfer/v2"
-	ibcclienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
+	ibcclientaketypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
 	ibcconnectiontypes "github.com/cosmos/ibc-go/v10/modules/core/03-connection/types"
-	porttypes "github.com/cosmos/ibc-go/v10/modules/core/05-port/types"
+	portaketypes "github.com/cosmos/ibc-go/v10/modules/core/05-port/types"
 	ibcapi "github.com/cosmos/ibc-go/v10/modules/core/api"
 	ibcexported "github.com/cosmos/ibc-go/v10/modules/core/exported"
 	ibckeeper "github.com/cosmos/ibc-go/v10/modules/core/keeper"
 	ibctm "github.com/cosmos/ibc-go/v10/modules/light-clients/07-tendermint"
-	epochstypes "pkg.akt.dev/go/node/epochs/v1beta1"
+	bmetypes "pkg.akt.dev/go/node/bme/v1"
 
-	epochskeeper "pkg.akt.dev/node/v2/x/epochs/keeper"
-
-	atypes "pkg.akt.dev/go/node/audit/v1"
-	ctypes "pkg.akt.dev/go/node/cert/v1"
+	auditaketypes "pkg.akt.dev/go/node/audit/v1"
+	certtypes "pkg.akt.dev/go/node/cert/v1"
 	dtypes "pkg.akt.dev/go/node/deployment/v1"
 	dv1beta "pkg.akt.dev/go/node/deployment/v1beta3"
-	emodule "pkg.akt.dev/go/node/escrow/module"
-	mtypes "pkg.akt.dev/go/node/market/v1beta4"
-	otypes "pkg.akt.dev/go/node/oracle/v1"
-	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
-	ttypes "pkg.akt.dev/go/node/take/v1"
+	epochstypes "pkg.akt.dev/go/node/epochs/v1beta1"
+	escrowtypes "pkg.akt.dev/go/node/escrow/module"
+	mtypes "pkg.akt.dev/go/node/market/v2beta1"
+	oracletypes "pkg.akt.dev/go/node/oracle/v1"
+	providertypes "pkg.akt.dev/go/node/provider/v1beta4"
+	taketypes "pkg.akt.dev/go/node/take/v1"
 	wtypes "pkg.akt.dev/go/node/wasm/v1"
 	"pkg.akt.dev/go/sdkutil"
 
 	akeeper "pkg.akt.dev/node/v2/x/audit/keeper"
+	bmekeeper "pkg.akt.dev/node/v2/x/bme/keeper"
 	ckeeper "pkg.akt.dev/node/v2/x/cert/keeper"
 	dkeeper "pkg.akt.dev/node/v2/x/deployment/keeper"
+	epochskeeper "pkg.akt.dev/node/v2/x/epochs/keeper"
 	ekeeper "pkg.akt.dev/node/v2/x/escrow/keeper"
 	mhooks "pkg.akt.dev/node/v2/x/market/hooks"
 	mkeeper "pkg.akt.dev/node/v2/x/market/keeper"
 	okeeper "pkg.akt.dev/node/v2/x/oracle/keeper"
 	pkeeper "pkg.akt.dev/node/v2/x/provider/keeper"
-	tkeeper "pkg.akt.dev/node/v2/x/take/keeper"
 	awasm "pkg.akt.dev/node/v2/x/wasm"
 	wkeeper "pkg.akt.dev/node/v2/x/wasm/keeper"
 )
@@ -117,15 +117,15 @@ type AppKeepers struct {
 	}
 
 	Akash struct {
-		Epochs     epochskeeper.Keeper
-		Oracle     okeeper.Keeper
-		Escrow     ekeeper.Keeper
-		Deployment dkeeper.IKeeper
-		Take       tkeeper.IKeeper
-		Market     mkeeper.IKeeper
-		Provider   pkeeper.IKeeper
 		Audit      akeeper.Keeper
+		Bme        bmekeeper.Keeper
 		Cert       ckeeper.Keeper
+		Deployment dkeeper.IKeeper
+		Epochs     epochskeeper.Keeper
+		Escrow     ekeeper.Keeper
+		Market     mkeeper.IKeeper
+		Oracle     okeeper.Keeper
+		Provider   pkeeper.IKeeper
 		Wasm       wkeeper.Keeper
 	}
 
@@ -352,7 +352,7 @@ func (app *App) InitNormalKeepers(
 
 	app.Keepers.Cosmos.Mint = mintkeeper.NewKeeper(
 		cdc,
-		runtime.NewKVStoreService(app.keys[minttypes.StoreKey]),
+		runtime.NewKVStoreService(app.keys[mintaketypes.StoreKey]),
 		app.Keepers.Cosmos.Staking,
 		app.Keepers.Cosmos.Acct,
 		app.Keepers.Cosmos.Bank,
@@ -416,19 +416,27 @@ func (app *App) InitNormalKeepers(
 
 	clientKeeper.AddRoute(ibctm.ModuleName, &app.Keepers.Modules.TMLight)
 
-	app.Keepers.Akash.Take = tkeeper.NewKeeper(
+	app.Keepers.Akash.Oracle = okeeper.NewKeeper(
 		cdc,
-		app.keys[ttypes.StoreKey],
+		app.keys[oracletypes.StoreKey],
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+	)
+
+	app.Keepers.Akash.Bme = bmekeeper.NewKeeper(
+		cdc,
+		app.keys[bmetypes.StoreKey],
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		app.Keepers.Cosmos.Acct,
+		app.Keepers.Cosmos.Bank,
+		app.Keepers.Akash.Oracle,
 	)
 
 	app.Keepers.Akash.Escrow = ekeeper.NewKeeper(
 		cdc,
-		app.keys[emodule.StoreKey],
+		app.keys[escrowtypes.StoreKey],
 		app.Keepers.Cosmos.Bank,
-		app.Keepers.Akash.Take,
 		app.Keepers.Cosmos.Authz,
-		app.Keepers.Cosmos.Distr.FeePool,
+		app.Keepers.Akash.Bme,
 	)
 
 	app.Keepers.Akash.Deployment = dkeeper.NewKeeper(
@@ -447,28 +455,22 @@ func (app *App) InitNormalKeepers(
 
 	app.Keepers.Akash.Provider = pkeeper.NewKeeper(
 		cdc,
-		app.keys[ptypes.StoreKey],
+		app.keys[providertypes.StoreKey],
 	)
 
 	app.Keepers.Akash.Audit = akeeper.NewKeeper(
 		cdc,
-		app.keys[atypes.StoreKey],
+		app.keys[auditaketypes.StoreKey],
 	)
 
 	app.Keepers.Akash.Cert = ckeeper.NewKeeper(
 		cdc,
-		app.keys[ctypes.StoreKey],
+		app.keys[certtypes.StoreKey],
 	)
 
 	app.Keepers.Akash.Epochs = epochskeeper.NewKeeper(
 		runtime.NewKVStoreService(app.keys[epochstypes.StoreKey]),
 		cdc,
-	)
-
-	app.Keepers.Akash.Oracle = okeeper.NewKeeper(
-		cdc,
-		app.keys[otypes.StoreKey],
-		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 
 	app.Keepers.Akash.Wasm = wkeeper.NewKeeper(
@@ -518,7 +520,7 @@ func (app *App) InitNormalKeepers(
 	transferIBCModule := transfer.NewIBCModule(app.Keepers.Cosmos.Transfer)
 
 	// Create static IBC router, add transfer route, then set and seal it
-	ibcRouter := porttypes.NewRouter()
+	ibcRouter := portaketypes.NewRouter()
 	ibcRouter.AddRoute(ibctransfertypes.ModuleName, transferIBCModule)
 	ibcRouter.AddRoute(wasmtypes.ModuleName, wasmStackIBCHandler)
 
@@ -561,13 +563,13 @@ func (app *App) SetupHooks() {
 func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino, key, tkey storetypes.StoreKey) paramskeeper.Keeper { // nolint: staticcheck
 	paramsKeeper := paramskeeper.NewKeeper(appCodec, legacyAmino, key, tkey) // nolint: staticcheck
 
-	ibctable := ibcclienttypes.ParamKeyTable()
+	ibctable := ibcclientaketypes.ParamKeyTable()
 	ibctable.RegisterParamSet(&ibcconnectiontypes.Params{})
 
 	paramsKeeper.Subspace(authtypes.ModuleName).WithKeyTable(authtypes.ParamKeyTable())         // nolint: staticcheck
 	paramsKeeper.Subspace(banktypes.ModuleName).WithKeyTable(banktypes.ParamKeyTable())         // nolint: staticcheck // SA1019
 	paramsKeeper.Subspace(stakingtypes.ModuleName).WithKeyTable(stakingtypes.ParamKeyTable())   // nolint: staticcheck // SA1019
-	paramsKeeper.Subspace(minttypes.ModuleName).WithKeyTable(minttypes.ParamKeyTable())         // nolint: staticcheck // SA1019
+	paramsKeeper.Subspace(mintaketypes.ModuleName).WithKeyTable(mintaketypes.ParamKeyTable())   // nolint: staticcheck // SA1019
 	paramsKeeper.Subspace(distrtypes.ModuleName).WithKeyTable(distrtypes.ParamKeyTable())       // nolint: staticcheck // SA1019
 	paramsKeeper.Subspace(slashingtypes.ModuleName).WithKeyTable(slashingtypes.ParamKeyTable()) // nolint: staticcheck // SA1019
 	paramsKeeper.Subspace(govtypes.ModuleName).WithKeyTable(govv1.ParamKeyTable())              // nolint: staticcheck // SA1019
@@ -578,7 +580,7 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 	// akash params subspaces
 	paramsKeeper.Subspace(dtypes.ModuleName).WithKeyTable(dv1beta.ParamKeyTable())
 	paramsKeeper.Subspace(mtypes.ModuleName).WithKeyTable(mtypes.ParamKeyTable())
-	paramsKeeper.Subspace(ttypes.ModuleName).WithKeyTable(ttypes.ParamKeyTable()) // nolint: staticcheck // SA1019
+	paramsKeeper.Subspace(taketypes.ModuleName).WithKeyTable(taketypes.ParamKeyTable()) // nolint: staticcheck // SA1019
 
 	return paramsKeeper
 }
@@ -591,7 +593,7 @@ func kvStoreKeys() []string {
 		authzkeeper.StoreKey,
 		banktypes.StoreKey,
 		stakingtypes.StoreKey,
-		minttypes.StoreKey,
+		mintaketypes.StoreKey,
 		distrtypes.StoreKey,
 		slashingtypes.StoreKey,
 		govtypes.StoreKey,
@@ -603,15 +605,16 @@ func kvStoreKeys() []string {
 		// wasm after ibc transfer
 		wasmtypes.StoreKey,
 		epochstypes.StoreKey,
-		ttypes.StoreKey,
-		emodule.StoreKey,
+		taketypes.StoreKey,
+		escrowtypes.StoreKey,
 		dtypes.StoreKey,
 		mtypes.StoreKey,
-		ptypes.StoreKey,
-		atypes.StoreKey,
-		ctypes.StoreKey,
+		providertypes.StoreKey,
+		auditaketypes.StoreKey,
+		certtypes.StoreKey,
 		awasm.StoreKey,
-		otypes.StoreKey,
+		oracletypes.StoreKey,
+		bmetypes.StoreKey,
 	}
 
 	return keys

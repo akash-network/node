@@ -9,9 +9,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	dtypes "pkg.akt.dev/go/node/deployment/v1beta4"
-	"pkg.akt.dev/go/node/market/v1"
-	types "pkg.akt.dev/go/node/market/v1beta5"
+	dtypes "pkg.akt.dev/go/node/deployment/v1beta5"
+	mtypes "pkg.akt.dev/go/node/market/v2beta1"
 	deposit "pkg.akt.dev/go/node/types/deposit/v1"
 	"pkg.akt.dev/go/testutil"
 
@@ -47,7 +46,7 @@ func Test_WithOrders(t *testing.T) {
 	order, _ := createOrder(t, ctx, keeper)
 
 	count := 0
-	keeper.WithOrders(ctx, func(result types.Order) bool {
+	keeper.WithOrders(ctx, func(result mtypes.Order) bool {
 		if assert.Equal(t, order.ID, result.ID) {
 			count++
 		}
@@ -65,7 +64,7 @@ func Test_WithOrdersForGroup(t *testing.T) {
 	createOrder(t, ctx, keeper)
 
 	count := 0
-	keeper.WithOrdersForGroup(ctx, order.ID.GroupID(), types.OrderOpen, func(result types.Order) bool {
+	keeper.WithOrdersForGroup(ctx, order.ID.GroupID(), mtypes.OrderOpen, func(result mtypes.Order) bool {
 		if assert.Equal(t, order.ID, result.ID) {
 			count++
 		}
@@ -101,7 +100,7 @@ func Test_WithBids(t *testing.T) {
 	ctx, keeper, suite := setupKeeper(t)
 	bid, _ := createBid(t, suite)
 	count := 0
-	keeper.WithBids(ctx, func(result types.Bid) bool {
+	keeper.WithBids(ctx, func(result mtypes.Bid) bool {
 		if assert.Equal(t, bid.ID, result.ID) {
 			count++
 		}
@@ -120,7 +119,7 @@ func Test_WithBidsForOrder(t *testing.T) {
 
 	count := 0
 
-	keeper.WithBidsForOrder(ctx, bid.ID.OrderID(), types.BidOpen, func(result types.Bid) bool {
+	keeper.WithBidsForOrder(ctx, bid.ID.OrderID(), mtypes.BidOpen, func(result mtypes.Bid) bool {
 		if assert.Equal(t, bid.ID, result.ID) {
 			count++
 		}
@@ -149,7 +148,7 @@ func Test_WithLeases(t *testing.T) {
 	id := createLease(t, suite)
 
 	count := 0
-	keeper.WithLeases(ctx, func(result v1.Lease) bool {
+	keeper.WithLeases(ctx, func(result mtypes.Lease) bool {
 		if assert.Equal(t, id, result.ID) {
 			count++
 		}
@@ -166,7 +165,7 @@ func Test_LeaseForOrder(t *testing.T) {
 	createLease(t, suite)
 	createLease(t, suite)
 
-	result, ok := keeper.LeaseForOrder(ctx, types.BidActive, id.OrderID())
+	result, ok := keeper.LeaseForOrder(ctx, mtypes.BidActive, id.OrderID())
 	assert.True(t, ok)
 
 	assert.Equal(t, id, result.ID)
@@ -174,7 +173,7 @@ func Test_LeaseForOrder(t *testing.T) {
 	// no match
 	{
 		bid, _ := createBid(t, suite)
-		_, ok := keeper.LeaseForOrder(ctx, types.BidActive, bid.ID.OrderID())
+		_, ok := keeper.LeaseForOrder(ctx, mtypes.BidActive, bid.ID.OrderID())
 		assert.False(t, ok)
 	}
 }
@@ -185,7 +184,7 @@ func Test_OnOrderMatched(t *testing.T) {
 
 	result, ok := keeper.GetOrder(ctx, id.OrderID())
 	require.True(t, ok)
-	assert.Equal(t, types.OrderActive, result.State)
+	assert.Equal(t, mtypes.OrderActive, result.State)
 }
 
 func Test_OnBidMatched(t *testing.T) {
@@ -194,7 +193,7 @@ func Test_OnBidMatched(t *testing.T) {
 
 	result, ok := keeper.GetBid(ctx, id.BidID())
 	require.True(t, ok)
-	assert.Equal(t, types.BidActive, result.State)
+	assert.Equal(t, mtypes.BidActive, result.State)
 }
 
 func Test_OnBidLost(t *testing.T) {
@@ -204,7 +203,7 @@ func Test_OnBidLost(t *testing.T) {
 	keeper.OnBidLost(ctx, bid)
 	result, ok := keeper.GetBid(ctx, bid.ID)
 	require.True(t, ok)
-	assert.Equal(t, types.BidLost, result.State)
+	assert.Equal(t, mtypes.BidLost, result.State)
 }
 
 func Test_OnOrderClosed(t *testing.T) {
@@ -216,7 +215,7 @@ func Test_OnOrderClosed(t *testing.T) {
 
 	result, ok := keeper.GetOrder(ctx, order.ID)
 	require.True(t, ok)
-	assert.Equal(t, types.OrderClosed, result.State)
+	assert.Equal(t, mtypes.OrderClosed, result.State)
 }
 
 func Test_OnLeaseClosed(t *testing.T) {
@@ -231,13 +230,13 @@ func Test_OnLeaseClosed(t *testing.T) {
 	const testBlockHeight = 1337
 	suite.SetBlockHeight(testBlockHeight)
 
-	require.Equal(t, v1.LeaseActive, lease.State)
-	err := keeper.OnLeaseClosed(suite.Context(), lease, v1.LeaseClosed, v1.LeaseClosedReasonUnspecified)
+	require.Equal(t, mtypes.LeaseActive, lease.State)
+	err := keeper.OnLeaseClosed(suite.Context(), lease, mtypes.LeaseClosed, mtypes.LeaseClosedReasonUnspecified)
 	require.NoError(t, err)
 
 	result, ok := keeper.GetLease(suite.Context(), id)
 	require.True(t, ok)
-	assert.Equal(t, v1.LeaseClosed, result.State)
+	assert.Equal(t, mtypes.LeaseClosed, result.State)
 	assert.Equal(t, int64(testBlockHeight), result.ClosedOn)
 }
 
@@ -252,19 +251,19 @@ func Test_OnGroupClosed(t *testing.T) {
 
 	lease, ok := keeper.GetLease(suite.Context(), id)
 	require.True(t, ok)
-	assert.Equal(t, v1.LeaseClosed, lease.State)
+	assert.Equal(t, mtypes.LeaseClosed, lease.State)
 	assert.Equal(t, int64(testBlockHeight), lease.ClosedOn)
 
 	bid, ok := keeper.GetBid(suite.Context(), id.BidID())
 	require.True(t, ok)
-	assert.Equal(t, types.BidClosed, bid.State)
+	assert.Equal(t, mtypes.BidClosed, bid.State)
 
 	order, ok := keeper.GetOrder(suite.Context(), id.OrderID())
 	require.True(t, ok)
-	assert.Equal(t, types.OrderClosed, order.State)
+	assert.Equal(t, mtypes.OrderClosed, order.State)
 }
 
-func createLease(t testing.TB, suite *state.TestSuite) v1.LeaseID {
+func createLease(t testing.TB, suite *state.TestSuite) mtypes.LeaseID {
 	t.Helper()
 	ctx := suite.Context()
 	bid, order := createBid(t, suite)
@@ -284,9 +283,11 @@ func createLease(t testing.TB, suite *state.TestSuite) v1.LeaseID {
 
 	msg := &dtypes.MsgCreateDeployment{
 		ID: order.ID.GroupID().DeploymentID(),
-		Deposit: deposit.Deposit{
-			Amount:  defaultDeposit,
-			Sources: deposit.Sources{deposit.SourceBalance},
+		Deposits: deposit.Deposits{
+			{
+				Amount:  defaultDeposit,
+				Sources: deposit.Sources{deposit.SourceBalance},
+			},
 		}}
 
 	deposits, err := suite.EscrowKeeper().AuthorizeDeposits(ctx, msg)
@@ -303,37 +304,45 @@ func createLease(t testing.TB, suite *state.TestSuite) v1.LeaseID {
 	provider, err := sdk.AccAddressFromBech32(bid.ID.Provider)
 	require.NoError(t, err)
 
+	// Convert bid price from uakt to uact (account funds are in uact after BME conversion)
+	// Swap rate: 1 uakt = 3 uact (based on oracle prices: AKT=$3, ACT=$1)
+	paymentRate := bid.Prices[0]
+	if paymentRate.Denom == "uakt" {
+		// Convert to uact: multiply amount by 3
+		paymentRate = sdk.NewDecCoinFromDec("uact", paymentRate.Amount.MulInt64(3))
+	}
+
 	err = suite.EscrowKeeper().PaymentCreate(
 		ctx,
 		bid.ID.LeaseID().ToEscrowPaymentID(),
 		provider,
-		bid.Price,
+		paymentRate,
 	)
 	require.NoError(t, err)
 
 	return bid.ID.LeaseID()
 }
 
-func createBid(t testing.TB, suite *state.TestSuite) (types.Bid, types.Order) {
+func createBid(t testing.TB, suite *state.TestSuite) (mtypes.Bid, mtypes.Order) {
 	t.Helper()
 	ctx := suite.Context()
 	order, gspec := createOrder(t, suite.Context(), suite.MarketKeeper())
 	provider := testutil.AccAddress(t)
-	price := testutil.AkashDecCoinRandom(t)
-	roffer := types.ResourceOfferFromRU(gspec.Resources)
+	prices := sdk.DecCoins{testutil.AkashDecCoinRandom(t)}
+	roffer := mtypes.ResourceOfferFromRU(gspec.Resources)
 
-	bidID := v1.MakeBidID(order.ID, provider)
+	bidID := mtypes.MakeBidID(order.ID, provider)
 
-	bid, err := suite.MarketKeeper().CreateBid(ctx, bidID, price, roffer)
+	bid, err := suite.MarketKeeper().CreateBid(ctx, bidID, prices, roffer)
 	require.NoError(t, err)
 	assert.Equal(t, order.ID, bid.ID.OrderID())
-	assert.Equal(t, price, bid.Price)
+	assert.Equal(t, prices, bid.Prices)
 	assert.Equal(t, provider.String(), bid.ID.Provider)
 
-	msg := &types.MsgCreateBid{
+	msg := &mtypes.MsgCreateBid{
 		ID: bidID,
 		Deposit: deposit.Deposit{
-			Amount:  types.DefaultBidMinDeposit,
+			Amount:  mtypes.DefaultBidMinDeposit,
 			Sources: deposit.Sources{deposit.SourceBalance},
 		}}
 
@@ -351,7 +360,7 @@ func createBid(t testing.TB, suite *state.TestSuite) (types.Bid, types.Order) {
 	return bid, order
 }
 
-func createOrder(t testing.TB, ctx sdk.Context, keeper keeper.IKeeper) (types.Order, dtypes.GroupSpec) {
+func createOrder(t testing.TB, ctx sdk.Context, keeper keeper.IKeeper) (mtypes.Order, dtypes.GroupSpec) {
 	t.Helper()
 	group := testutil.DeploymentGroup(t, testutil.DeploymentID(t), 0)
 
@@ -360,7 +369,7 @@ func createOrder(t testing.TB, ctx sdk.Context, keeper keeper.IKeeper) (types.Or
 
 	require.Equal(t, group.ID, order.ID.GroupID())
 	require.Equal(t, uint32(1), order.ID.OSeq)
-	require.Equal(t, types.OrderOpen, order.State)
+	require.Equal(t, mtypes.OrderOpen, order.State)
 	return order, group.GroupSpec
 }
 
@@ -379,6 +388,11 @@ func setupKeeper(t testing.TB) (sdk.Context, keeper.IKeeper, *state.TestSuite) {
 			Return(nil)
 		bkeeper.
 			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+
+		bkeeper.On("BurnCoins", mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.On("MintCoins", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil)
 	})
 

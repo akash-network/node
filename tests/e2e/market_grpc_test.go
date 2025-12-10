@@ -12,9 +12,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdktestutil "github.com/cosmos/cosmos-sdk/testutil"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-
-	"pkg.akt.dev/go/node/market/v1"
+	v1 "pkg.akt.dev/go/node/market/v1"
 	"pkg.akt.dev/go/node/market/v1beta5"
+
+	mvbeta "pkg.akt.dev/go/node/market/v2beta1"
 
 	"pkg.akt.dev/go/cli"
 	clitestutil "pkg.akt.dev/go/cli/testutil"
@@ -26,9 +27,9 @@ type marketGRPCRestTestSuite struct {
 	*testutil.NetworkTestSuite
 
 	cctx  client.Context
-	order v1beta5.Order
-	bid   v1beta5.Bid
-	lease v1.Lease
+	order mvbeta.Order
+	bid   mvbeta.Bid
+	lease mvbeta.Lease
 }
 
 func (s *marketGRPCRestTestSuite) SetupSuite() {

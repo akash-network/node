@@ -5,9 +5,8 @@ import (
 	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-
 	"pkg.akt.dev/go/node/deployment/v1"
-	"pkg.akt.dev/go/node/deployment/v1beta4"
+	"pkg.akt.dev/go/node/deployment/v1beta5"
 )
 
 // DeploymentFilters defines flags for deployment list filter
@@ -34,7 +33,7 @@ func (filters DeploymentFilters) Accept(obj v1.Deployment, isValidState bool) bo
 // Deployment stores deployment and groups details
 type Deployment struct {
 	v1.Deployment `json:"deployment"`
-	Groups        v1beta4.Groups `json:"groups"`
+	Groups        v1beta5.Groups `json:"groups"`
 }
 
 func (d Deployment) String() string {
@@ -68,7 +67,7 @@ func (ds Deployments) String() string {
 }
 
 // Group stores group ID, state and other specifications
-type Group v1beta4.Group
+type Group v1beta5.Group
 
 // GroupFilters defines flags for group list filter
 type GroupFilters struct {
@@ -76,5 +75,5 @@ type GroupFilters struct {
 	// State flag value given
 	StateFlagVal string
 	// Actual state value decoded from GroupStateMap
-	State v1beta4.Group_State
+	State v1beta5.Group_State
 }

@@ -79,6 +79,13 @@ func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, _ client.TxEncodingCo
 		return fmt.Errorf("failed to unmarshal %s genesis state: %v", types.ModuleName, err)
 	}
 
+	// Unpack Any interfaces in FeedContractParams before validation
+	if pc, ok := cdc.(*codec.ProtoCodec); ok {
+		if err := data.Params.UnpackInterfaces(pc.InterfaceRegistry()); err != nil {
+			return fmt.Errorf("failed to unpack %s params interfaces: %v", types.ModuleName, err)
+		}
+	}
+
 	return data.Validate()
 }
 
@@ -137,8 +144,8 @@ func (am AppModule) BeginBlock(ctx context.Context) error {
 
 // EndBlock returns the end blocker for the oracle module. It returns no validator
 // updates.
-func (am AppModule) EndBlock(_ context.Context) error {
-	return nil
+func (am AppModule) EndBlock(ctx context.Context) error {
+	return am.keeper.EndBlocker(ctx)
 }
 
 // InitGenesis performs genesis initialization for the oracle module. It returns
@@ -146,6 +153,14 @@ func (am AppModule) EndBlock(_ context.Context) error {
 func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, data json.RawMessage) {
 	var genesisState types.GenesisState
 	cdc.MustUnmarshalJSON(data, &genesisState)
+
+	// Unpack Any interfaces in FeedContractParams
+	if pc, ok := cdc.(*codec.ProtoCodec); ok {
+		if err := genesisState.Params.UnpackInterfaces(pc.InterfaceRegistry()); err != nil {
+			panic(fmt.Sprintf("failed to unpack %s params interfaces: %v", types.ModuleName, err))
+		}
+	}
+
 	InitGenesis(ctx, am.keeper, &genesisState)
 }
 

@@ -11,7 +11,6 @@ import (
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
-	v1 "pkg.akt.dev/go/node/market/v1"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -19,7 +18,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
-	types "pkg.akt.dev/go/node/market/v1beta5"
+
+	mtypes "pkg.akt.dev/go/node/market/v2beta1"
 
 	akeeper "pkg.akt.dev/node/v2/x/audit/keeper"
 	ekeeper "pkg.akt.dev/node/v2/x/escrow/keeper"
@@ -54,17 +54,17 @@ type AppModule struct {
 
 // Name returns market module's name
 func (AppModuleBasic) Name() string {
-	return v1.ModuleName
+	return mtypes.ModuleName
 }
 
 // RegisterLegacyAminoCodec registers the market module's types for the given codec.
 func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
-	types.RegisterLegacyAminoCodec(cdc) // nolint staticcheck
+	mtypes.RegisterLegacyAminoCodec(cdc) // nolint staticcheck
 }
 
 // RegisterInterfaces registers the module's interface types
 func (b AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
-	types.RegisterInterfaces(registry)
+	mtypes.RegisterInterfaces(registry)
 }
 
 // DefaultGenesis returns default genesis state as raw bytes for the market
@@ -75,17 +75,17 @@ func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
 
 // ValidateGenesis validation check of the Genesis
 func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, _ client.TxEncodingConfig, bz json.RawMessage) error {
-	var data types.GenesisState
+	var data mtypes.GenesisState
 	err := cdc.UnmarshalJSON(bz, &data)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal %s genesis state: %w", v1.ModuleName, err)
+		return fmt.Errorf("failed to unmarshal %s genesis state: %w", mtypes.ModuleName, err)
 	}
 	return ValidateGenesis(&data)
 }
 
 // RegisterGRPCGatewayRoutes registers the gRPC Gateway routes for the market module.
 func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *runtime.ServeMux) {
-	err := types.RegisterQueryHandlerClient(context.Background(), mux, types.NewQueryClient(clientCtx))
+	err := mtypes.RegisterQueryHandlerClient(context.Background(), mux, mtypes.NewQueryClient(clientCtx))
 	if err != nil {
 		panic(fmt.Sprintf("couldn't register market grpc routes: %s", err.Error()))
 	}
@@ -102,8 +102,8 @@ func (AppModuleBasic) GetTxCmd() *cobra.Command {
 }
 
 // GetQueryClient returns a new query client for this module
-func (AppModuleBasic) GetQueryClient(clientCtx client.Context) types.QueryClient {
-	return types.NewQueryClient(clientCtx)
+func (AppModuleBasic) GetQueryClient(clientCtx client.Context) mtypes.QueryClient {
+	return mtypes.NewQueryClient(clientCtx)
 }
 
 // NewAppModule creates a new AppModule object
@@ -135,7 +135,7 @@ func NewAppModule(
 
 // Name returns the market module name
 func (AppModule) Name() string {
-	return v1.ModuleName
+	return mtypes.ModuleName
 }
 
 // IsOnePerModuleType implements the depinject.OnePerModuleType interface.
@@ -146,9 +146,9 @@ func (am AppModule) IsAppModule() {}
 
 // RegisterServices registers the module's services
 func (am AppModule) RegisterServices(cfg module.Configurator) {
-	types.RegisterMsgServer(cfg.MsgServer(), handler.NewServer(am.keepers))
+	mtypes.RegisterMsgServer(cfg.MsgServer(), handler.NewServer(am.keepers))
 	querier := am.keepers.Market.NewQuerier()
-	types.RegisterQueryServer(cfg.QueryServer(), querier)
+	mtypes.RegisterQueryServer(cfg.QueryServer(), querier)
 }
 
 // BeginBlock performs no-op
@@ -165,7 +165,7 @@ func (am AppModule) EndBlock(_ context.Context) error {
 // InitGenesis performs genesis initialization for the market module. It returns
 // no validator updates.
 func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, data json.RawMessage) {
-	var genesisState types.GenesisState
+	var genesisState mtypes.GenesisState
 	cdc.MustUnmarshalJSON(data, &genesisState)
 	InitGenesis(ctx, am.keepers.Market, &genesisState)
 }
