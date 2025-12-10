@@ -32,10 +32,16 @@ func TestEpochsInitGenesis(t *testing.T) {
 
 	// On init genesis, default epochs information is set
 	// To check init genesis again, should make it fresh status
-	epochInfos, err := epochsKeeper.AllEpochInfos(ctx)
+
+	allEpochs := make([]types.EpochInfo, 0)
+	err := epochsKeeper.IterateEpochs(ctx, func(_ string, info types.EpochInfo) (bool, error) {
+		allEpochs = append(allEpochs, info)
+		return false, nil
+	})
+
 	require.NoError(t, err)
-	for _, epochInfo := range epochInfos {
-		err := epochsKeeper.EpochInfo.Remove(ctx, epochInfo.Identifier)
+	for _, epochInfo := range allEpochs {
+		err := epochsKeeper.RemoveEpoch(ctx, epochInfo.ID)
 		require.NoError(t, err)
 	}
 
@@ -46,7 +52,7 @@ func TestEpochsInitGenesis(t *testing.T) {
 	genesisState := types.GenesisState{
 		Epochs: []types.EpochInfo{
 			{
-				Identifier:              "monthly",
+				ID:                      "monthly",
 				StartTime:               time.Time{},
 				Duration:                time.Hour * 24,
 				CurrentEpoch:            0,
@@ -55,7 +61,7 @@ func TestEpochsInitGenesis(t *testing.T) {
 				EpochCountingStarted:    true,
 			},
 			{
-				Identifier:              "monthly",
+				ID:                      "monthly",
 				StartTime:               time.Time{},
 				Duration:                time.Hour * 24,
 				CurrentEpoch:            0,
@@ -70,7 +76,7 @@ func TestEpochsInitGenesis(t *testing.T) {
 	genesisState = types.GenesisState{
 		Epochs: []types.EpochInfo{
 			{
-				Identifier:              "monthly",
+				ID:                      "monthly",
 				StartTime:               time.Time{},
 				Duration:                time.Hour * 24,
 				CurrentEpoch:            0,
@@ -83,9 +89,9 @@ func TestEpochsInitGenesis(t *testing.T) {
 
 	err = epochsKeeper.InitGenesis(ctx, genesisState)
 	require.NoError(t, err)
-	epochInfo, err := epochsKeeper.EpochInfo.Get(ctx, "monthly")
+	epochInfo, err := epochsKeeper.GetEpoch(ctx, "monthly")
 	require.NoError(t, err)
-	require.Equal(t, epochInfo.Identifier, "monthly")
+	require.Equal(t, epochInfo.ID, "monthly")
 	require.Equal(t, epochInfo.StartTime.UTC().String(), ctx.BlockTime().UTC().String())
 	require.Equal(t, epochInfo.Duration, time.Hour*24)
 	require.Equal(t, epochInfo.CurrentEpoch, int64(0))

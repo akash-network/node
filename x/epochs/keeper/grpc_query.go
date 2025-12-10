@@ -26,11 +26,16 @@ func NewQuerier(k Keeper) Querier {
 
 // EpochInfos provide running epochInfos.
 func (q Querier) EpochInfos(ctx context.Context, _ *types.QueryEpochInfosRequest) (*types.QueryEpochInfosResponse, error) {
-	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	sctx := sdk.UnwrapSDKContext(ctx)
 
-	epochs, err := q.AllEpochInfos(sdkCtx)
+	allEpochs := make([]types.EpochInfo, 0)
+	err := q.IterateEpochs(sctx, func(_ string, info types.EpochInfo) (bool, error) {
+		allEpochs = append(allEpochs, info)
+		return false, nil
+	})
+
 	return &types.QueryEpochInfosResponse{
-		Epochs: epochs,
+		Epochs: allEpochs,
 	}, err
 }
 
@@ -43,7 +48,9 @@ func (q Querier) CurrentEpoch(ctx context.Context, req *types.QueryCurrentEpochR
 		return nil, status.Error(codes.InvalidArgument, "identifier is empty")
 	}
 
-	info, err := q.EpochInfo.Get(ctx, req.Identifier)
+	sctx := sdk.UnwrapSDKContext(ctx)
+
+	info, err := q.GetEpoch(sctx, req.Identifier)
 	if err != nil {
 		return nil, errors.New("not available identifier")
 	}

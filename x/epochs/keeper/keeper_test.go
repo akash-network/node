@@ -73,17 +73,22 @@ func TestKeeperTestSuite(t *testing.T) {
 }
 
 func SetEpochStartTime(ctx sdk.Context, epochsKeeper epochskeeper.Keeper) {
-	epochs, err := epochsKeeper.AllEpochInfos(ctx)
+	allEpochs := make([]types.EpochInfo, 0)
+	err := epochsKeeper.IterateEpochs(ctx, func(_ string, info types.EpochInfo) (bool, error) {
+		allEpochs = append(allEpochs, info)
+		return false, nil
+	})
+
 	if err != nil {
 		panic(err)
 	}
-	for _, epoch := range epochs {
+	for _, epoch := range allEpochs {
 		epoch.StartTime = ctx.BlockTime()
-		err := epochsKeeper.EpochInfo.Remove(ctx, epoch.Identifier)
+		err := epochsKeeper.RemoveEpoch(ctx, epoch.ID)
 		if err != nil {
 			panic(err)
 		}
-		err = epochsKeeper.AddEpochInfo(ctx, epoch)
+		err = epochsKeeper.AddEpoch(ctx, epoch)
 		if err != nil {
 			panic(err)
 		}

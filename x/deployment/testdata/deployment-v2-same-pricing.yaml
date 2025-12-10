@@ -1,0 +1,36 @@
+---
+version: "2.0"
+
+services:
+  web:
+    image: ghcr.io/akash-network/demo-app
+    expose:
+      - port: 80
+        to:
+          - global: true
+        accept:
+          - test.localhost
+
+profiles:
+  compute:
+    web:
+      resources:
+        cpu:
+          units: "0.01"
+        memory:
+          size: "128Mi"
+        storage:
+          size: "512Mi"
+
+  placement:
+    global:
+      pricing:
+        web:
+          denom: uact
+          amount: 30
+
+deployment:
+  web:
+    global:
+      profile: web
+      count: 1

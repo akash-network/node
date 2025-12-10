@@ -1,0 +1,108 @@
+# Docker Compose for Akash Local Development with Pyth Oracle
+#
+# This setup includes:
+#   - akash-node: Single-node validator with Wormhole and Pyth contracts
+#   - hermes-client: Price relayer that submits Pyth prices to the oracle
+#
+# Prerequisites:
+#   - Build contracts first: cd contracts && make build
+#   - Hermes repo at ../../hermes (relative to node repo)
+#
+# Usage:
+#   docker-compose -f _build/docker-compose.yml up -d          # Start all services
+#   docker-compose -f _build/docker-compose.yml logs -f        # View all logs
+#   docker-compose -f _build/docker-compose.yml logs -f validator     # View node logs
+#   docker-compose -f _build/docker-compose.yml logs -f hermes-client # View hermes logs
+#   docker-compose -f _build/docker-compose.yml down           # Stop services
+#   docker-compose -f _build/docker-compose.yml down -v        # Stop and clean volumes
+#
+# Verify:
+#   curl http://localhost:26657/status                               # Check node status
+#   curl http://localhost:1317/cosmos/base/tendermint/v1beta1/blocks/latest  # Check latest block
+#
+---
+services:
+  validator:
+    image: ghcr.io/akash-network/node:latest-arm64
+    container_name: validator
+    hostname: validator
+    environment:
+      - AKASH_RPC_LADDR=tcp://0.0.0.0:26657
+    ports:
+      - "26656:26656"  # P2P
+      - "26657:26657"  # RPC
+      - "26658:26658"  # ABCI
+      - "9090:9090"    # gRPC
+      - "1317:1317"    # REST API
+    volumes:
+      - ${AKASH_HOME}/:/root/.akash
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:26657/status"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 5s
+    networks:
+      - akash-local
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+    command:
+      - akash
+      - start
+      - --home=/root/.akash
+
+  # =============================================================================
+  # Hermes Price Relayer
+  # =============================================================================
+  hermes-client:
+    image: ghcr.io/akash-network/hermes:latest
+    container_name: hermes-client
+    hostname: hermes-client
+    environment:
+      # RPC endpoint (internal docker network)
+      - RPC_ENDPOINT=http://validator:26657
+      # Pyth Hermes API
+      - HERMES_ENDPOINT=https://hermes.pyth.network
+      # Update interval (1 minute for testing, use 5+ minutes in production)
+      - UPDATE_INTERVAL_MS=10000
+      # Gas configuration
+      - GAS_PRICE=0.025uakt
+      - DENOM=uakt
+    env_file:
+      - ${AKASH_RUN_DIR}/hermes.env
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "================================================"
+        echo "Hermes Price Relayer - Waiting for configuration"
+        echo "================================================"
+
+        echo "Contract address: $$CONTRACT_ADDRESS"
+        echo "Starting Hermes daemon..."
+        echo ""
+
+        # Run the hermes daemon
+        exec node dist/cli.js daemon
+    depends_on:
+      validator:
+        condition: service_healthy
+    networks:
+      - akash-local
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  akash-local:
+    name: akash-local-network
+    driver: bridge

@@ -23,8 +23,21 @@ func TestIntegrationGRPC(t *testing.T) {
 	pg := &providerGRPCRestTestSuite{}
 	pg.NetworkTestSuite = testutil.NewNetworkTestSuite(nil, pg)
 
+	og := &oracleGRPCRestTestSuite{}
+	og.NetworkTestSuite = testutil.NewNetworkTestSuite(nil, og)
+
+	bg := &bmeGRPCRestTestSuite{}
+	bg.NetworkTestSuite = testutil.NewNetworkTestSuite(nil, bg)
+
+	// Contract deployment test suite with custom config for short governance voting period
+	poc := &priceOracleContractTestSuite{}
+	poc.NetworkTestSuite = testutil.NewNetworkTestSuite(NetworkConfig(), poc)
+
 	suite.Run(t, dg)
 	suite.Run(t, cg)
 	suite.Run(t, mg)
 	suite.Run(t, pg)
+	suite.Run(t, og)
+	suite.Run(t, bg)
+	suite.Run(t, poc)
 }

@@ -8,13 +8,13 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"pkg.akt.dev/go/node/deployment/v1"
-	"pkg.akt.dev/go/node/deployment/v1beta4"
+	dvbeta "pkg.akt.dev/go/node/deployment/v1beta4"
 
 	"pkg.akt.dev/node/v2/x/deployment/keeper"
 )
 
 // ValidateGenesis does validation check of the Genesis and return error in case of failure
-func ValidateGenesis(data *v1beta4.GenesisState) error {
+func ValidateGenesis(data *dvbeta.GenesisState) error {
 	for _, record := range data.Deployments {
 		if err := record.Deployment.ID.Validate(); err != nil {
 			return fmt.Errorf("%w: %s", err, v1.ErrInvalidDeployment.Error())
@@ -25,14 +25,14 @@ func ValidateGenesis(data *v1beta4.GenesisState) error {
 
 // DefaultGenesisState returns default genesis state as raw bytes for the deployment
 // module.
-func DefaultGenesisState() *v1beta4.GenesisState {
-	return &v1beta4.GenesisState{
-		Params: v1beta4.DefaultParams(),
+func DefaultGenesisState() *dvbeta.GenesisState {
+	return &dvbeta.GenesisState{
+		Params: dvbeta.DefaultParams(),
 	}
 }
 
 // InitGenesis initiate genesis state and return updated validator details
-func InitGenesis(ctx sdk.Context, kpr keeper.IKeeper, data *v1beta4.GenesisState) {
+func InitGenesis(ctx sdk.Context, kpr keeper.IKeeper, data *dvbeta.GenesisState) {
 	cdc := kpr.Codec()
 	store := ctx.KVStore(kpr.StoreKey())
 
@@ -60,12 +60,12 @@ func InitGenesis(ctx sdk.Context, kpr keeper.IKeeper, data *v1beta4.GenesisState
 }
 
 // ExportGenesis returns genesis state for the deployment module
-func ExportGenesis(ctx sdk.Context, k keeper.IKeeper) *v1beta4.GenesisState {
-	var records []v1beta4.GenesisDeployment
+func ExportGenesis(ctx sdk.Context, k keeper.IKeeper) *dvbeta.GenesisState {
+	var records []dvbeta.GenesisDeployment
 	k.WithDeployments(ctx, func(deployment v1.Deployment) bool {
 		groups := k.GetGroups(ctx, deployment.ID)
 
-		records = append(records, v1beta4.GenesisDeployment{
+		records = append(records, dvbeta.GenesisDeployment{
 			Deployment: deployment,
 			Groups:     groups,
 		})
@@ -73,7 +73,7 @@ func ExportGenesis(ctx sdk.Context, k keeper.IKeeper) *v1beta4.GenesisState {
 	})
 
 	params := k.GetParams(ctx)
-	return &v1beta4.GenesisState{
+	return &dvbeta.GenesisState{
 		Deployments: records,
 		Params:      params,
 	}
@@ -81,8 +81,8 @@ func ExportGenesis(ctx sdk.Context, k keeper.IKeeper) *v1beta4.GenesisState {
 
 // GetGenesisStateFromAppState returns x/deployment GenesisState given raw application
 // genesis state.
-func GetGenesisStateFromAppState(cdc codec.JSONCodec, appState map[string]json.RawMessage) *v1beta4.GenesisState {
-	var genesisState v1beta4.GenesisState
+func GetGenesisStateFromAppState(cdc codec.JSONCodec, appState map[string]json.RawMessage) *dvbeta.GenesisState {
+	var genesisState dvbeta.GenesisState
 
 	if appState[ModuleName] != nil {
 		cdc.MustUnmarshalJSON(appState[ModuleName], &genesisState)

@@ -8,16 +8,12 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/client"
-
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
-	sdktestutil "github.com/cosmos/cosmos-sdk/testutil/cli"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 
-	dv1 "pkg.akt.dev/go/node/deployment/v1"
-	dv1beta4 "pkg.akt.dev/go/node/deployment/v1beta4"
-	types "pkg.akt.dev/go/node/deployment/v1beta4"
+	dvbeta "pkg.akt.dev/go/node/deployment/v1beta4"
 
 	"pkg.akt.dev/go/cli"
 	clitestutil "pkg.akt.dev/go/cli/testutil"
@@ -63,11 +59,14 @@ func (s *deploymentIntegrationTestSuite) SetupSuite() {
 	s.addrDeployer, err = s.keyDeployer.GetAddress()
 	s.Require().NoError(err)
 
-	s.defaultDeposit, err = dv1beta4.DefaultParams().MinDepositFor(s.Config().BondDenom)
+	s.defaultDeposit, err = dvbeta.DefaultParams().MinDepositFor(s.Config().BondDenom)
 	s.Require().NoError(err)
 
 	ctx := context.Background()
 
+	// Send sufficient funds for deployment tests (50,000,000 uakt per account)
+	// Both TestDeployment and TestGroup create deployments using the same account,
+	// so we need enough for multiple deposits and transaction fees.
 	res, err := clitestutil.ExecSend(
 		ctx,
 		s.cctx,
@@ -75,8 +74,25 @@ func (s *deploymentIntegrationTestSuite) SetupSuite() {
 			With(
 				val.Address.String(),
 				s.addrFunder.String(),
-				sdk.NewCoins(sdk.NewCoin(s.Config().BondDenom, s.defaultDeposit.Amount.MulRaw(4))).String()).
-			WithGasAutoFlags().
+				sdk.NewCoins(sdk.NewInt64Coin(s.Config().BondDenom, 50000000)).String()).
+			WithGasAuto().
+			WithSkipConfirm().
+			WithBroadcastModeBlock()...,
+	)
+	s.Require().NoError(err)
+	s.Require().NoError(s.Network().WaitForNextBlock())
+	clitestutil.ValidateTxSuccessful(ctx, s.T(), s.cctx, res.Bytes())
+
+	// Send uact tokens for deployment deposits (ACT tokens required for deployments)
+	res, err = clitestutil.ExecSend(
+		ctx,
+		s.cctx,
+		cli.TestFlags().
+			With(
+				val.Address.String(),
+				s.addrFunder.String(),
+				sdk.NewCoins(sdk.NewInt64Coin("uact", 50000000)).String()).
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
@@ -91,8 +107,25 @@ func (s *deploymentIntegrationTestSuite) SetupSuite() {
 			With(
 				val.Address.String(),
 				s.addrDeployer.String(),
-				sdk.NewCoins(sdk.NewCoin(s.Config().BondDenom, s.defaultDeposit.Amount.MulRaw(4))).String()).
-			WithGasAutoFlags().
+				sdk.NewCoins(sdk.NewInt64Coin(s.Config().BondDenom, 50000000)).String()).
+			WithGasAuto().
+			WithSkipConfirm().
+			WithBroadcastModeBlock()...,
+	)
+	s.Require().NoError(err)
+	s.Require().NoError(s.Network().WaitForNextBlock())
+	clitestutil.ValidateTxSuccessful(ctx, s.T(), s.cctx, res.Bytes())
+
+	// Send uact tokens for deployment deposits (ACT tokens required for deployments)
+	res, err = clitestutil.ExecSend(
+		ctx,
+		s.cctx,
+		cli.TestFlags().
+			With(
+				val.Address.String(),
+				s.addrDeployer.String(),
+				sdk.NewCoins(sdk.NewInt64Coin("uact", 50000000)).String()).
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
@@ -114,7 +147,7 @@ func (s *deploymentIntegrationTestSuite) SetupSuite() {
 		s.cctx,
 		cli.TestFlags().
 			WithFrom(s.addrDeployer.String()).
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
@@ -126,34 +159,36 @@ func (s *deploymentIntegrationTestSuite) TestDeployment() {
 	deploymentPath, err := filepath.Abs("../../x/deployment/testdata/deployment.yaml")
 	s.Require().NoError(err)
 
-	deploymentPath2, err := filepath.Abs("../../x/deployment/testdata/deployment-v2.yaml")
+	// Use deployment-v2-same-pricing.yaml which only changes the image but keeps the same pricing
+	// (deployment update does not allow changing groups/pricing)
+	deploymentPath2, err := filepath.Abs("../../x/deployment/testdata/deployment-v2-same-pricing.yaml")
 	s.Require().NoError(err)
 
 	ctx := context.Background()
 
 	// create deployment
-	_, err = clitestutil.TxCreateDeploymentExec(
+	_, err = clitestutil.ExecDeploymentCreate(
 		ctx,
 		s.cctx,
-		deploymentPath,
 		cli.TestFlags().
+			With(deploymentPath).
 			WithFrom(s.addrDeployer.String()).
 			WithDeposit(DefaultDeposit).
 			WithSkipConfirm().
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithBroadcastModeBlock()...,
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
 	// test query deployments
-	resp, err := clitestutil.QueryDeploymentsExec(ctx,
+	resp, err := clitestutil.ExecQueryDeployments(ctx,
 		s.cctx,
 		cli.TestFlags().WithOutputJSON()...,
 	)
 	s.Require().NoError(err)
 
-	out := &dv1beta4.QueryDeploymentsResponse{}
+	out := &dvbeta.QueryDeploymentsResponse{}
 	err = s.cctx.Codec.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Deployments, 1, "Deployment Create Failed")
@@ -162,67 +197,67 @@ func (s *deploymentIntegrationTestSuite) TestDeployment() {
 
 	// test query deployment
 	createdDep := deployments[0]
-	resp, err = clitestutil.QueryDeploymentExec(
+	resp, err = clitestutil.ExecQueryDeployment(
 		ctx,
 		s.cctx,
 		cli.TestFlags().WithOutputJSON().
 			WithOwner(createdDep.Deployment.ID.Owner).
-			WithDseq(createdDep.Deployment.ID.DSeq)...,
+			WithDSeq(createdDep.Deployment.ID.DSeq)...,
 	)
 	s.Require().NoError(err)
 
-	var deployment types.QueryDeploymentResponse
+	var deployment dvbeta.QueryDeploymentResponse
 	err = s.cctx.Codec.UnmarshalJSON(resp.Bytes(), &deployment)
 	s.Require().NoError(err)
 	s.Require().Equal(createdDep, deployment)
 
 	// test query deployments with filters
-	resp, err = clitestutil.QueryDeploymentsExec(
+	resp, err = clitestutil.ExecQueryDeployments(
 		ctx,
 		s.cctx,
 		cli.TestFlags().
 			WithOutputJSON().
 			WithOwner(s.addrDeployer.String()).
-			WithDseq(createdDep.Deployment.ID.DSeq)...,
+			WithDSeq(createdDep.Deployment.ID.DSeq)...,
 	)
 	s.Require().NoError(err, "Error when fetching deployments with owner filter")
 
-	out = &dv1beta4.QueryDeploymentsResponse{}
+	out = &dvbeta.QueryDeploymentsResponse{}
 	err = s.cctx.Codec.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Deployments, 1)
 
 	// test updating deployment
-	_, err = clitestutil.TxUpdateDeploymentExec(
+	_, err = clitestutil.ExecDeploymentUpdate(
 		ctx,
 		s.cctx,
-		deploymentPath2,
 		cli.TestFlags().
+			With(deploymentPath2).
 			WithFrom(s.addrDeployer.String()).
-			WithDseq(createdDep.Deployment.ID.DSeq).
+			WithDSeq(createdDep.Deployment.ID.DSeq).
 			WithBroadcastModeBlock().
-			WithGasAutoFlags()...,
+			WithGasAuto()...,
 	)
 	s.Require().NoError(err)
 
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
-	resp, err = clitestutil.QueryDeploymentExec(
+	resp, err = clitestutil.ExecQueryDeployment(
 		ctx,
 		s.cctx,
 		cli.TestFlags().WithOutputJSON().
 			WithOwner(createdDep.Deployment.ID.Owner).
-			WithDseq(createdDep.Deployment.ID.DSeq)...,
+			WithDSeq(createdDep.Deployment.ID.DSeq)...,
 	)
 	s.Require().NoError(err)
 
-	var deploymentV2 types.QueryDeploymentResponse
+	var deploymentV2 dvbeta.QueryDeploymentResponse
 	err = s.cctx.Codec.UnmarshalJSON(resp.Bytes(), &deploymentV2)
 	s.Require().NoError(err)
 	s.Require().NotEqual(deployment.Deployment.Hash, deploymentV2.Deployment.Hash)
 
 	// test query deployments with wrong owner value
-	_, err = clitestutil.QueryDeploymentsExec(
+	_, err = clitestutil.ExecQueryDeployments(
 		ctx,
 		s.cctx,
 		cli.TestFlags().
@@ -232,7 +267,7 @@ func (s *deploymentIntegrationTestSuite) TestDeployment() {
 	s.Require().Error(err)
 
 	// test query deployments with wrong state value
-	_, err = clitestutil.QueryDeploymentsExec(
+	_, err = clitestutil.ExecQueryDeployments(
 		ctx,
 		s.cctx,
 		cli.TestFlags().
@@ -242,21 +277,21 @@ func (s *deploymentIntegrationTestSuite) TestDeployment() {
 	s.Require().Error(err)
 
 	// test close deployment
-	_, err = clitestutil.TxCloseDeploymentExec(
+	_, err = clitestutil.ExecDeploymentClose(
 		ctx,
 		s.cctx,
 		cli.TestFlags().
 			WithFrom(s.addrDeployer.String()).
-			WithDseq(createdDep.Deployment.ID.DSeq).
+			WithDSeq(createdDep.Deployment.ID.DSeq).
 			WithBroadcastModeBlock().
-			WithGasAutoFlags()...,
+			WithGasAuto()...,
 	)
 	s.Require().NoError(err)
 
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
 	// test query deployments with state filter closed
-	resp, err = clitestutil.QueryDeploymentsExec(
+	resp, err = clitestutil.ExecQueryDeployments(
 		ctx,
 		s.cctx,
 		cli.TestFlags().
@@ -265,7 +300,7 @@ func (s *deploymentIntegrationTestSuite) TestDeployment() {
 	)
 	s.Require().NoError(err)
 
-	out = &dv1beta4.QueryDeploymentsResponse{}
+	out = &dvbeta.QueryDeploymentsResponse{}
 	err = s.cctx.Codec.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Deployments, 1, "Deployment Close Failed")
@@ -278,22 +313,22 @@ func (s *deploymentIntegrationTestSuite) TestGroup() {
 	ctx := context.Background()
 
 	// create deployment
-	_, err = clitestutil.TxCreateDeploymentExec(
+	_, err = clitestutil.ExecDeploymentCreate(
 		ctx,
 		s.cctx,
-		deploymentPath,
 		cli.TestFlags().
+			With(deploymentPath).
 			WithFrom(s.addrDeployer.String()).
 			WithSkipConfirm().
 			WithBroadcastModeBlock().
 			WithDeposit(DefaultDeposit).
-			WithGasAutoFlags()...,
+			WithGasAuto()...,
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
 	// test query deployments
-	resp, err := clitestutil.QueryDeploymentsExec(
+	resp, err := clitestutil.ExecQueryDeployments(
 		ctx,
 		s.cctx,
 		cli.TestFlags().
@@ -302,7 +337,7 @@ func (s *deploymentIntegrationTestSuite) TestGroup() {
 	)
 	s.Require().NoError(err)
 
-	out := &dv1beta4.QueryDeploymentsResponse{}
+	out := &dvbeta.QueryDeploymentsResponse{}
 	err = s.cctx.Codec.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Deployments, 1, "Deployment Create Failed")
@@ -314,7 +349,7 @@ func (s *deploymentIntegrationTestSuite) TestGroup() {
 	s.Require().NotEqual(0, len(createdDep.Groups))
 
 	// test close group tx
-	_, err = clitestutil.TxCloseGroupExec(
+	_, err = clitestutil.ExecDeploymentGroupClose(
 		ctx,
 		s.cctx,
 		cli.TestFlags().
@@ -322,7 +357,7 @@ func (s *deploymentIntegrationTestSuite) TestGroup() {
 			WithGroupID(createdDep.Groups[0].ID).
 			WithSkipConfirm().
 			WithBroadcastModeBlock().
-			WithGasAutoFlags()...,
+			WithGasAuto()...,
 	)
 	s.Require().NoError(err)
 
@@ -330,210 +365,214 @@ func (s *deploymentIntegrationTestSuite) TestGroup() {
 
 	grp := createdDep.Groups[0]
 
-	resp, err = clitestutil.QueryGroupExec(
+	resp, err = clitestutil.ExecQueryGroup(
 		ctx,
 		s.cctx,
 		cli.TestFlags().
 			WithOutputJSON().
 			WithOwner(grp.ID.Owner).
-			WithDseq(grp.ID.DSeq).
-			WithGseq(grp.ID.GSeq)...,
+			WithDSeq(grp.ID.DSeq).
+			WithGSeq(grp.ID.GSeq)...,
 	)
 	s.Require().NoError(err)
 
-	var group types.Group
+	var group dvbeta.Group
 	err = s.cctx.Codec.UnmarshalJSON(resp.Bytes(), &group)
 	s.Require().NoError(err)
-	s.Require().Equal(types.GroupClosed, group.State)
+	s.Require().Equal(dvbeta.GroupClosed, group.State)
 }
 
-func (s *deploymentIntegrationTestSuite) TestFundedDeployment() {
-	deploymentPath, err := filepath.Abs("../../x/deployment/testdata/deployment-v2.yaml")
-	s.Require().NoError(err)
-
-	deploymentID := dv1.DeploymentID{
-		Owner: s.addrDeployer.String(),
-		DSeq:  uint64(105),
-	}
-
-	prevFunderBal := s.getAccountBalance(s.addrFunder)
-
-	ctx := context.Background()
-
-	// Creating deployment paid by funder's account without any authorization from funder should fail
-	_, err = clitestutil.TxCreateDeploymentExec(
-		ctx,
-		s.cctx,
-		deploymentPath,
-		cli.TestFlags().
-			WithFrom(s.addrDeployer.String()).
-			WithDepositor(s.addrFunder).
-			WithDseq(deploymentID.DSeq).
-			WithSkipConfirm().
-			WithBroadcastModeBlock().
-			WithGasAutoFlags()...,
-	)
-	s.Require().Error(err)
-
-	// funder's balance shouldn't be deducted
-	s.Require().Equal(prevFunderBal, s.getAccountBalance(s.addrFunder))
-
-	// Grant the tenant authorization to use funds from the funder's account
-	res, err := clitestutil.TxGrantAuthorizationExec(
-		ctx,
-		s.cctx,
-		s.addrDeployer,
-		cli.TestFlags().
-			WithFrom(s.addrFunder.String()).
-			WithSkipConfirm().
-			WithBroadcastModeBlock().
-			WithGasAutoFlags()...,
-	)
-	s.Require().NoError(err)
-	s.Require().NoError(s.Network().WaitForNextBlock())
-	clitestutil.ValidateTxSuccessful(ctx, s.T(), s.cctx, res.Bytes())
-	prevFunderBal = s.getAccountBalance(s.addrFunder)
-
-	ownerBal := s.getAccountBalance(s.addrDeployer)
-
-	// Creating deployment paid by funder's account should work now
-	res, err = clitestutil.TxCreateDeploymentExec(
-		ctx,
-		s.cctx,
-		deploymentPath,
-		cli.TestFlags().
-			WithFrom(s.addrDeployer.String()).
-			WithDseq(deploymentID.DSeq).
-			WithDepositor(s.addrFunder).
-			WithSkipConfirm().
-			WithBroadcastModeBlock().
-			WithGasAutoFlags()...,
-	)
-
-	s.Require().NoError(err)
-	s.Require().NoError(s.Network().WaitForNextBlock())
-	clitestutil.ValidateTxSuccessful(ctx, s.T(), s.cctx, res.Bytes())
-
-	// funder's balance should be deducted correctly
-	curFunderBal := s.getAccountBalance(s.addrFunder)
-	s.Require().Equal(prevFunderBal.Sub(s.defaultDeposit.Amount), curFunderBal)
-	prevFunderBal = curFunderBal
-
-	fees := clitestutil.GetTxFees(ctx, s.T(), s.cctx, res.Bytes())
-
-	// owner's balance should be deducted for fees correctly
-	curOwnerBal := s.getAccountBalance(s.addrDeployer)
-	s.Require().Equal(ownerBal.SubRaw(fees.GetFee().AmountOf("uakt").Int64()), curOwnerBal)
-
-	ownerBal = curOwnerBal
-
-	// depositing additional funds from the owner's account should work
-	res, err = clitestutil.TxDepositDeploymentExec(
-		ctx,
-		s.cctx,
-		s.defaultDeposit,
-		cli.TestFlags().
-			WithFrom(s.addrDeployer.String()).
-			WithDseq(deploymentID.DSeq).
-			WithSkipConfirm().
-			WithBroadcastModeBlock().
-			WithGasAutoFlags()...,
-	)
-	s.Require().NoError(err)
-	s.Require().NoError(s.Network().WaitForNextBlock())
-	clitestutil.ValidateTxSuccessful(ctx, s.T(), s.cctx, res.Bytes())
-
-	fees = clitestutil.GetTxFees(ctx, s.T(), s.cctx, res.Bytes())
-
-	// owner's balance should be deducted correctly
-	curOwnerBal = s.getAccountBalance(s.addrDeployer)
-	s.Require().Equal(ownerBal.Sub(s.defaultDeposit.Amount).SubRaw(fees.GetFee().AmountOf("uakt").Int64()), curOwnerBal)
-	ownerBal = curOwnerBal
-
-	// depositing additional funds from the funder's account should work
-	res, err = clitestutil.TxDepositDeploymentExec(
-		ctx,
-		s.cctx,
-		s.defaultDeposit,
-		cli.TestFlags().
-			WithFrom(s.addrDeployer.String()).
-			WithDseq(deploymentID.DSeq).
-			WithDepositor(s.addrFunder).
-			WithSkipConfirm().
-			WithBroadcastModeBlock().
-			WithGasAutoFlags()...,
-	)
-	s.Require().NoError(err)
-	s.Require().NoError(s.Network().WaitForNextBlock())
-	clitestutil.ValidateTxSuccessful(ctx, s.T(), s.cctx, res.Bytes())
-
-	// funder's balance should be deducted correctly
-	curFunderBal = s.getAccountBalance(s.addrFunder)
-	s.Require().Equal(prevFunderBal.Sub(s.defaultDeposit.Amount), curFunderBal)
-	prevFunderBal = curFunderBal
-
-	// revoke the authorization given to the deployment owner by the funder
-	res, err = clitestutil.TxRevokeAuthorizationExec(
-		ctx,
-		s.cctx,
-		s.addrDeployer,
-		cli.TestFlags().
-			WithFrom(s.addrFunder.String()).
-			WithSkipConfirm().
-			WithBroadcastModeBlock().
-			WithGasAutoFlags()...,
-	)
-
-	s.Require().NoError(err)
-	s.Require().NoError(s.Network().WaitForNextBlock())
-	clitestutil.ValidateTxSuccessful(ctx, s.T(), s.cctx, res.Bytes())
-
-	prevFunderBal = s.getAccountBalance(s.addrFunder)
-
-	// depositing additional funds from the funder's account should fail now
-	_, err = clitestutil.TxDepositDeploymentExec(
-		ctx,
-		s.cctx,
-		s.defaultDeposit,
-		cli.TestFlags().
-			WithFrom(s.addrDeployer.String()).
-			WithDseq(deploymentID.DSeq).
-			WithDepositor(s.addrFunder).
-			WithSkipConfirm().
-			WithBroadcastModeBlock().
-			WithGasAutoFlags()...,
-	)
-	s.Require().Error(err)
-
-	// funder's balance shouldn't be deducted
-	s.Require().Equal(prevFunderBal, s.getAccountBalance(s.addrFunder))
-	ownerBal = s.getAccountBalance(s.addrDeployer)
-
-	// closing the deployment should return the funds and balance in escrow to the funder and
-	// owner's account
-	res, err = clitestutil.TxCloseDeploymentExec(
-		ctx,
-		s.cctx,
-		cli.TestFlags().
-			WithFrom(s.addrDeployer.String()).
-			WithDseq(deploymentID.DSeq).
-			WithSkipConfirm().
-			WithBroadcastModeBlock().
-			WithGasAutoFlags()...,
-	)
-	s.Require().NoError(err)
-	s.Require().NoError(s.Network().WaitForNextBlock())
-	clitestutil.ValidateTxSuccessful(ctx, s.T(), s.cctx, res.Bytes())
-
-	fees = clitestutil.GetTxFees(ctx, s.T(), s.cctx, res.Bytes())
-
-	s.Require().Equal(prevFunderBal.Add(s.defaultDeposit.Amount.MulRaw(2)), s.getAccountBalance(s.addrFunder))
-	s.Require().Equal(ownerBal.Add(s.defaultDeposit.Amount).SubRaw(fees.GetFee().AmountOf("uakt").Int64()), s.getAccountBalance(s.addrDeployer))
-}
+// TODO: Re-enable when chain-sdk adds TxGrantAuthorizationExec, TxDepositDeploymentExec, etc.
+// TODO: Re-enable when clitestutil.TxGrantAuthorizationExec, TxDepositDeploymentExec,
+// TxRevokeAuthorizationExec, and WithDepositor are added to chain-sdk
+// func (s *deploymentIntegrationTestSuite) TestFundedDeployment() {
+// 	deploymentPath, err := filepath.Abs("../../x/deployment/testdata/deployment-v2.yaml")
+// 	s.Require().NoError(err)
+//
+// 	deploymentID := dv1.DeploymentID{
+// 		Owner: s.addrDeployer.String(),
+// 		DSeq:  uint64(105),
+// 	}
+//
+// 	prevFunderBal := s.getAccountBalance(s.addrFunder)
+//
+// 	ctx := context.Background()
+//
+// 	// Creating deployment paid by funder's account without any authorization from funder should fail
+// 	_, err = clitestutil.ExecDeploymentCreate(
+// 		ctx,
+// 		s.cctx,
+// 		cli.TestFlags().
+// 			With(deploymentPath).
+// 			WithFrom(s.addrDeployer.String()).
+// 			WithDepositor(s.addrFunder).
+// 			WithDSeq(deploymentID.DSeq).
+// 			WithSkipConfirm().
+// 			WithBroadcastModeBlock().
+// 			WithGasAuto()...,
+// 	)
+// 	s.Require().Error(err)
+//
+// 	// funder's balance shouldn't be deducted
+// 	s.Require().Equal(prevFunderBal, s.getAccountBalance(s.addrFunder))
+//
+// 	// Grant the tenant authorization to use funds from the funder's account
+// 	res, err := clitestutil.TxGrantAuthorizationExec(
+// 		ctx,
+// 		s.cctx,
+// 		s.addrDeployer,
+// 		cli.TestFlags().
+// 			WithFrom(s.addrFunder.String()).
+// 			WithSkipConfirm().
+// 			WithBroadcastModeBlock().
+// 			WithGasAuto()...,
+// 	)
+// 	s.Require().NoError(err)
+// 	s.Require().NoError(s.Network().WaitForNextBlock())
+// 	clitestutil.ValidateTxSuccessful(ctx, s.T(), s.cctx, res.Bytes())
+// 	prevFunderBal = s.getAccountBalance(s.addrFunder)
+//
+// 	ownerBal := s.getAccountBalance(s.addrDeployer)
+//
+// 	// Creating deployment paid by funder's account should work now
+// 	res, err = clitestutil.ExecDeploymentCreate(
+// 		ctx,
+// 		s.cctx,
+// 		deploymentPath,
+// 		cli.TestFlags().
+// 			WithFrom(s.addrDeployer.String()).
+// 			WithDSeq(deploymentID.DSeq).
+// 			WithDepositor(s.addrFunder).
+// 			WithSkipConfirm().
+// 			WithBroadcastModeBlock().
+// 			WithGasAuto()...,
+// 	)
+//
+// 	s.Require().NoError(err)
+// 	s.Require().NoError(s.Network().WaitForNextBlock())
+// 	clitestutil.ValidateTxSuccessful(ctx, s.T(), s.cctx, res.Bytes())
+//
+// 	// funder's balance should be deducted correctly
+// 	curFunderBal := s.getAccountBalance(s.addrFunder)
+// 	s.Require().Equal(prevFunderBal.Sub(s.defaultDeposit.Amount), curFunderBal)
+// 	prevFunderBal = curFunderBal
+//
+// 	fees := clitestutil.GetTxFees(ctx, s.T(), s.cctx, res.Bytes())
+//
+// 	// owner's balance should be deducted for fees correctly
+// 	curOwnerBal := s.getAccountBalance(s.addrDeployer)
+// 	s.Require().Equal(ownerBal.SubRaw(fees.GetFee().AmountOf("uakt").Int64()), curOwnerBal)
+//
+// 	ownerBal = curOwnerBal
+//
+// 	// depositing additional funds from the owner's account should work
+// 	res, err = clitestutil.TxDepositDeploymentExec(
+// 		ctx,
+// 		s.cctx,
+// 		s.defaultDeposit,
+// 		cli.TestFlags().
+// 			WithFrom(s.addrDeployer.String()).
+// 			WithDseq(deploymentID.DSeq).
+// 			WithSkipConfirm().
+// 			WithBroadcastModeBlock().
+// 			WithGasAuto()...,
+// 	)
+// 	s.Require().NoError(err)
+// 	s.Require().NoError(s.Network().WaitForNextBlock())
+// 	clitestutil.ValidateTxSuccessful(ctx, s.T(), s.cctx, res.Bytes())
+//
+// 	fees = clitestutil.GetTxFees(ctx, s.T(), s.cctx, res.Bytes())
+//
+// 	// owner's balance should be deducted correctly
+// 	curOwnerBal = s.getAccountBalance(s.addrDeployer)
+// 	s.Require().Equal(ownerBal.Sub(s.defaultDeposit.Amount).SubRaw(fees.GetFee().AmountOf("uakt").Int64()), curOwnerBal)
+// 	ownerBal = curOwnerBal
+//
+// 	// depositing additional funds from the funder's account should work
+// 	res, err = clitestutil.TxDepositDeploymentExec(
+// 		ctx,
+// 		s.cctx,
+// 		s.defaultDeposit,
+// 		cli.TestFlags().
+// 			WithFrom(s.addrDeployer.String()).
+// 			WithDseq(deploymentID.DSeq).
+// 			WithDepositor(s.addrFunder).
+// 			WithSkipConfirm().
+// 			WithBroadcastModeBlock().
+// 			WithGasAuto()...,
+// 	)
+// 	s.Require().NoError(err)
+// 	s.Require().NoError(s.Network().WaitForNextBlock())
+// 	clitestutil.ValidateTxSuccessful(ctx, s.T(), s.cctx, res.Bytes())
+//
+// 	// funder's balance should be deducted correctly
+// 	curFunderBal = s.getAccountBalance(s.addrFunder)
+// 	s.Require().Equal(prevFunderBal.Sub(s.defaultDeposit.Amount), curFunderBal)
+// 	prevFunderBal = curFunderBal
+//
+// 	// revoke the authorization given to the deployment owner by the funder
+// 	res, err = clitestutil.TxRevokeAuthorizationExec(
+// 		ctx,
+// 		s.cctx,
+// 		s.addrDeployer,
+// 		cli.TestFlags().
+// 			WithFrom(s.addrFunder.String()).
+// 			WithSkipConfirm().
+// 			WithBroadcastModeBlock().
+// 			WithGasAuto()...,
+// 	)
+//
+// 	s.Require().NoError(err)
+// 	s.Require().NoError(s.Network().WaitForNextBlock())
+// 	clitestutil.ValidateTxSuccessful(ctx, s.T(), s.cctx, res.Bytes())
+//
+// 	prevFunderBal = s.getAccountBalance(s.addrFunder)
+//
+// 	// depositing additional funds from the funder's account should fail now
+// 	_, err = clitestutil.TxDepositDeploymentExec(
+// 		ctx,
+// 		s.cctx,
+// 		s.defaultDeposit,
+// 		cli.TestFlags().
+// 			WithFrom(s.addrDeployer.String()).
+// 			WithDseq(deploymentID.DSeq).
+// 			WithDepositor(s.addrFunder).
+// 			WithSkipConfirm().
+// 			WithBroadcastModeBlock().
+// 			WithGasAuto()...,
+// 	)
+// 	s.Require().Error(err)
+//
+// 	// funder's balance shouldn't be deducted
+// 	s.Require().Equal(prevFunderBal, s.getAccountBalance(s.addrFunder))
+// 	ownerBal = s.getAccountBalance(s.addrDeployer)
+//
+// 	// closing the deployment should return the funds and balance in escrow to the funder and
+// 	// owner's account
+// 	res, err = clitestutil.TxCloseDeploymentExec(
+// 		ctx,
+// 		s.cctx,
+// 		cli.TestFlags().
+// 			WithFrom(s.addrDeployer.String()).
+// 			WithDseq(deploymentID.DSeq).
+// 			WithSkipConfirm().
+// 			WithBroadcastModeBlock().
+// 			WithGasAuto()...,
+// 	)
+// 	s.Require().NoError(err)
+// 	s.Require().NoError(s.Network().WaitForNextBlock())
+// 	clitestutil.ValidateTxSuccessful(ctx, s.T(), s.cctx, res.Bytes())
+//
+// 	fees = clitestutil.GetTxFees(ctx, s.T(), s.cctx, res.Bytes())
+//
+// 	s.Require().Equal(prevFunderBal.Add(s.defaultDeposit.Amount.MulRaw(2)), s.getAccountBalance(s.addrFunder))
+// 	s.Require().Equal(ownerBal.Add(s.defaultDeposit.Amount).SubRaw(fees.GetFee().AmountOf("uakt").Int64()), s.getAccountBalance(s.addrDeployer))
+// }
 
 func (s *deploymentIntegrationTestSuite) getAccountBalance(address sdk.AccAddress) sdkmath.Int {
+	ctx := context.Background()
 	cctxJSON := s.Network().Validators[0].ClientCtx.WithOutputFormat("json")
-	res, err := sdktestutil.QueryBalancesExec(cctxJSON, address)
+	res, err := clitestutil.QueryBalancesExec(ctx, cctxJSON, address.String())
 	s.Require().NoError(err)
 	var balRes banktypes.QueryAllBalancesResponse
 	err = cctxJSON.Codec.UnmarshalJSON(res.Bytes(), &balRes)

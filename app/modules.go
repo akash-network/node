@@ -35,6 +35,7 @@ import (
 	"pkg.akt.dev/go/sdkutil"
 
 	"pkg.akt.dev/node/v2/x/audit"
+	"pkg.akt.dev/node/v2/x/bme"
 	"pkg.akt.dev/node/v2/x/cert"
 	"pkg.akt.dev/node/v2/x/deployment"
 	"pkg.akt.dev/node/v2/x/epochs"
@@ -42,7 +43,6 @@ import (
 	"pkg.akt.dev/node/v2/x/market"
 	"pkg.akt.dev/node/v2/x/oracle"
 	"pkg.akt.dev/node/v2/x/provider"
-	"pkg.akt.dev/node/v2/x/take"
 	awasm "pkg.akt.dev/node/v2/x/wasm"
 )
 
@@ -149,11 +149,6 @@ func appModules(
 			cdc,
 			*app.Keepers.Cosmos.ConsensusParams,
 		),
-		// akash modules
-		take.NewAppModule(
-			app.cdc,
-			app.Keepers.Akash.Take,
-		),
 		escrow.NewAppModule(
 			app.cdc,
 			app.Keepers.Akash.Escrow,
@@ -205,6 +200,10 @@ func appModules(
 		oracle.NewAppModule(
 			app.cdc,
 			app.Keepers.Akash.Oracle,
+		),
+		bme.NewAppModule(
+			app.cdc,
+			app.Keepers.Akash.Bme,
 		),
 		wasm.NewAppModule(
 			app.cdc,
@@ -307,10 +306,6 @@ func appSimModules(
 			app.Keepers.Cosmos.Transfer,
 		),
 		// akash sim modules
-		take.NewAppModule(
-			app.cdc,
-			app.Keepers.Akash.Take,
-		),
 		deployment.NewAppModule(
 			app.cdc,
 			app.Keepers.Akash.Deployment,
@@ -348,6 +343,10 @@ func appSimModules(
 		oracle.NewAppModule(
 			app.cdc,
 			app.Keepers.Akash.Oracle,
+		),
+		bme.NewAppModule(
+			app.cdc,
+			app.Keepers.Akash.Bme,
 		),
 		awasm.NewAppModule(
 			app.cdc,

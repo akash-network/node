@@ -1,5 +1,8 @@
 [workspace]
 members = [
-    "contracts/price-oracle",
+    "contracts/wormhole",
+    "contracts/pyth",
+]
+exclude = [
 ]
 resolver = "2"

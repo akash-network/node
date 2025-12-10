@@ -68,6 +68,7 @@ builds:
       - "{{ .Env.BUILD_LDFLAGS }}"
       - -s -w
       - -linkmode=external
+      # yamllint disable-line rule:line-length
       - -extldflags "-L./.cache/lib -lwasmvm_muslc.x86_64 -Wl,-z,muldefs -lm -lrt -lc"
   - id: akash-linux-arm64
     binary: akash
@@ -87,6 +88,7 @@ builds:
       - "{{ .Env.BUILD_LDFLAGS }}"
       - -s -w
       - -linkmode=external
+      # yamllint disable-line rule:line-length
       - -extldflags "-L./.cache/lib -lwasmvm_muslc.aarch64 -Wl,-z,muldefs -lm -lrt -lc"
 universal_binaries:
   - id: akash-darwin-universal
@@ -118,6 +120,22 @@ archives:
       - zip
     files:
       - none*
+  - id: contracts
+    name_template: "contracts"
+    wrap_in_directory: false
+    formats:
+      - zip
+    files:
+      - .cache/cosmwasm/artifacts/**.*
+  - id: contracts
+    name_template: "contracts"
+    meta: true
+    wrap_in_directory: false
+    formats:
+      - zip
+    files:
+      - src: .cache/cosmwasm/artifacts/**.*
+        strip_parent: true
 
 checksum:
   # You can change the name of the checksums file.
@@ -136,11 +154,13 @@ dockers:
       - --label=org.opencontainers.image.url={{ .GitURL }}
       - --label=org.opencontainers.image.source={{ .GitURL }}
       - --label=org.opencontainers.image.version={{ replace .Version "+" "-" }}
+      # yamllint disable-line rule:line-length
       - --label=org.opencontainers.image.created={{ time "2006-01-02T15:04:05Z07:00" }}
       - --label=org.opencontainers.image.revision={{ .FullCommit }}
     image_templates:
       - '{{ .Env.DOCKER_IMAGE }}:{{ .ShortCommit }}-amd64'
       - '{{ .Env.DOCKER_IMAGE }}:{{ replace .Version "+" "-" }}-amd64'
+      # yamllint disable-line rule:line-length
       - '{{ .Env.DOCKER_IMAGE }}:{{if eq .Env.STABLE "true"}}stable{{else}}latest{{end}}-amd64'
   - dockerfile: _build/akash.Dockerfile
     use: buildx
@@ -153,11 +173,13 @@ dockers:
       - --label=org.opencontainers.image.url={{ .GitURL }}
       - --label=org.opencontainers.image.source={{ .GitURL }}
       - --label=org.opencontainers.image.version={{ replace .Version "+" "-" }}
+      # yamllint disable-line rule:line-length
       - --label=org.opencontainers.image.created={{ time "2006-01-02T15:04:05Z07:00" }}
       - --label=org.opencontainers.image.revision={{ .FullCommit }}
     image_templates:
       - '{{ .Env.DOCKER_IMAGE }}:{{ .ShortCommit }}-arm64'
       - '{{ .Env.DOCKER_IMAGE }}:{{ replace .Version "+" "-" }}-arm64'
+      # yamllint disable-line rule:line-length
       - '{{ .Env.DOCKER_IMAGE }}:{{if eq .Env.STABLE "true"}}stable{{else}}latest{{end}}-arm64'
 docker_manifests:
   - name_template: "{{ .Env.DOCKER_IMAGE }}:{{ .ShortCommit }}"

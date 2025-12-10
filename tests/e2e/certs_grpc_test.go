@@ -44,7 +44,7 @@ func (s *certsGRPCRestTestSuite) TestGenerateParse() {
 			WithFrom(addr.String()).
 			WithSkipConfirm().
 			WithBroadcastModeBlock().
-			WithGasAutoFlags()...,
+			WithGasAuto()...,
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.Network().WaitForNextBlock())

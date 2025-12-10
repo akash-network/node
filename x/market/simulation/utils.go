@@ -2,17 +2,17 @@ package simulation
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"pkg.akt.dev/go/node/market/v1beta5"
+	mtypes "pkg.akt.dev/go/node/market/v1beta5"
 
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 
 	keepers "pkg.akt.dev/node/v2/x/market/handler"
 )
 
-func getOrdersWithState(ctx sdk.Context, ks keepers.Keepers, state v1beta5.Order_State) v1beta5.Orders {
-	var orders v1beta5.Orders
+func getOrdersWithState(ctx sdk.Context, ks keepers.Keepers, state mtypes.Order_State) mtypes.Orders {
+	var orders mtypes.Orders
 
-	ks.Market.WithOrders(ctx, func(order v1beta5.Order) bool {
+	ks.Market.WithOrders(ctx, func(order mtypes.Order) bool {
 		if order.State == state {
 			orders = append(orders, order)
 		}

@@ -68,6 +68,7 @@ builds:
       - "{{ .Env.BUILD_LDFLAGS }}"
       - -s -w
       - -linkmode=external
+      # yamllint disable-line rule:line-length
       - -extldflags "-L./.cache/lib -lwasmvm_muslc.x86_64 -Wl,-z,muldefs -lm -lrt -lc"
   - id: akash-linux-arm64
     binary: akash
@@ -87,6 +88,7 @@ builds:
       - "{{ .Env.BUILD_LDFLAGS }}"
       - -s -w
       - -linkmode=external
+      # yamllint disable-line rule:line-length
       - -extldflags "-L./.cache/lib -lwasmvm_muslc.aarch64 -Wl,-z,muldefs -lm -lrt -lc"
 universal_binaries:
   - id: akash-darwin-universal
@@ -108,3 +110,12 @@ archives:
       - zip
     files:
       - none*
+  - id: contracts
+    name_template: "contracts"
+    meta: true
+    wrap_in_directory: false
+    formats:
+      - zip
+    files:
+      - src: .cache/cosmwasm/artifacts/**.*
+        strip_parent: true

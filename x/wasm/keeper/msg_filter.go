@@ -114,12 +114,9 @@ func (k *keeper) FilterMessage(sctx sdk.Context, contractAddr sdk.AccAddress, ms
 		)
 	}
 
-	// BLOCK Any messages (no Akash bindings)
+	// ALLOW specific Any messages from authorized contracts
 	if msg.Any != nil {
-		return errorsmod.Wrap(
-			sdkerrors.ErrUnauthorized,
-			"Any messages not allowed",
-		)
+		return k.filterAnyMessage(sctx, contractAddr, msg.Any)
 	}
 
 	// ALLOW Wasm messages (contract-to-contract calls)
@@ -161,6 +158,21 @@ func (k *keeper) filterBankMessage(sctx sdk.Context, msg *wasmvmtypes.BankMsg) e
 		return errorsmod.Wrapf(
 			sdkerrors.ErrUnauthorized,
 			"Burn is not allowed",
+		)
+	}
+
+	return nil
+}
+
+// filterAnyMessage applies restrictions to Any (protobuf) messages
+// Only MsgAddPriceEntry from authorized oracle sources is allowed
+func (k *keeper) filterAnyMessage(sctx sdk.Context, contractAddr sdk.AccAddress, msg *wasmvmtypes.AnyMsg) error {
+	// Only allow MsgAddPriceEntry from oracle module
+	if msg.TypeURL != "/akash.oracle.v1.MsgAddPriceEntry" {
+		return errorsmod.Wrapf(
+			sdkerrors.ErrUnauthorized,
+			"Any message type %s not allowed",
+			msg.TypeURL,
 		)
 	}
 
