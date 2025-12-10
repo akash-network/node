@@ -23,9 +23,9 @@ import (
 	ibchost "github.com/cosmos/ibc-go/v10/modules/core/exported"
 
 	audittypes "pkg.akt.dev/go/node/audit/v1"
-	taketypes "pkg.akt.dev/go/node/take/v1"
 
 	"pkg.akt.dev/node/v2/x/audit"
+	"pkg.akt.dev/node/v2/x/bme"
 	"pkg.akt.dev/node/v2/x/cert"
 	"pkg.akt.dev/node/v2/x/deployment"
 	"pkg.akt.dev/node/v2/x/epochs"
@@ -33,14 +33,13 @@ import (
 	"pkg.akt.dev/node/v2/x/market"
 	"pkg.akt.dev/node/v2/x/oracle"
 	"pkg.akt.dev/node/v2/x/provider"
-	"pkg.akt.dev/node/v2/x/take"
 	awasm "pkg.akt.dev/node/v2/x/wasm"
 )
 
 func akashModuleBasics() []module.AppModuleBasic {
 	return []module.AppModuleBasic{
-		take.AppModuleBasic{},
 		epochs.AppModuleBasic{},
+		bme.AppModuleBasic{},
 		escrow.AppModuleBasic{},
 		deployment.AppModuleBasic{},
 		market.AppModuleBasic{},
@@ -58,7 +57,7 @@ func akashModuleBasics() []module.AppModuleBasic {
 // NOTE: Capability module must occur first so that it can initialize any capabilities
 // so that other modules that want to create or claim capabilities afterwards in InitChain
 // can do so safely.
-func OrderInitGenesis(_ []string) []string {
+func orderInitGenesis(_ []string) []string {
 	return []string{
 		authtypes.ModuleName,
 		authz.ModuleName,
@@ -79,13 +78,14 @@ func OrderInitGenesis(_ []string) []string {
 		consensustypes.ModuleName,
 		feegrant.ModuleName,
 		cert.ModuleName,
-		taketypes.ModuleName,
 		escrow.ModuleName,
 		deployment.ModuleName,
 		provider.ModuleName,
 		market.ModuleName,
 		genutiltypes.ModuleName,
 		oracle.ModuleName,
+		epochs.ModuleName,
+		bme.ModuleName,
 		awasm.ModuleName,
 		wasmtypes.ModuleName,
 	}

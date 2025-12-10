@@ -163,8 +163,8 @@ func (am AppModule) BeginBlock(_ context.Context) error {
 
 // EndBlock returns the end blocker for the escrow module. It returns no validator
 // updates.
-func (am AppModule) EndBlock(_ context.Context) error {
-	return nil
+func (am AppModule) EndBlock(ctx context.Context) error {
+	return am.keeper.EndBlocker(ctx)
 }
 
 // InitGenesis performs genesis initialization for the escrow module. It returns

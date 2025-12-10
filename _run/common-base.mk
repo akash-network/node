@@ -23,6 +23,7 @@ endif
 akash:
 ifneq ($(SKIP_BUILD), true)
 	make -C $(AKASH_ROOT) akash
+	make -C $(AKASH_ROOT) docker-image
 endif
 
 .PHONY: bins

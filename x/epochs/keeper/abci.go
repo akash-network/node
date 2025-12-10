@@ -9,7 +9,7 @@ import (
 )
 
 // BeginBlocker of epochs module.
-func (k *Keeper) BeginBlocker(ctx sdk.Context) error {
+func (k *keeper) BeginBlocker(ctx sdk.Context) error {
 	start := telemetry.Now()
 	defer telemetry.ModuleMeasureSince(types.ModuleName, start, telemetry.MetricKeyBeginBlocker)
 
@@ -39,7 +39,7 @@ func (k *Keeper) BeginBlocker(ctx sdk.Context) error {
 				epochInfo.EpochCountingStarted = true
 				epochInfo.CurrentEpoch = 1
 				epochInfo.CurrentEpochStartTime = epochInfo.StartTime
-				ctx.Logger().Debug(fmt.Sprintf("Starting new epoch with identifier %s epoch number %d", epochInfo.Identifier, epochInfo.CurrentEpoch))
+				ctx.Logger().Debug(fmt.Sprintf("Starting new epoch with identifier %s epoch number %d", epochInfo.ID, epochInfo.CurrentEpoch))
 			} else {
 				err := ctx.EventManager().EmitTypedEvent(&types.EventEpochEnd{
 					EpochNumber: epochInfo.CurrentEpoch,
@@ -52,16 +52,16 @@ func (k *Keeper) BeginBlocker(ctx sdk.Context) error {
 				}
 
 				cacheCtx, writeFn := ctx.CacheContext()
-				if err := k.AfterEpochEnd(cacheCtx, epochInfo.Identifier, epochInfo.CurrentEpoch); err != nil {
+				if err := k.AfterEpochEnd(cacheCtx, epochInfo.ID, epochInfo.CurrentEpoch); err != nil {
 					// purposely ignoring the error here not to halt the chain if the hook fails
-					ctx.Logger().Error(fmt.Sprintf("Error after epoch end with identifier %s epoch number %d", epochInfo.Identifier, epochInfo.CurrentEpoch))
+					ctx.Logger().Error(fmt.Sprintf("Error after epoch end with identifier %s epoch number %d", epochInfo.ID, epochInfo.CurrentEpoch))
 				} else {
 					writeFn()
 				}
 
 				epochInfo.CurrentEpoch += 1
 				epochInfo.CurrentEpochStartTime = epochInfo.CurrentEpochStartTime.Add(epochInfo.Duration)
-				ctx.Logger().Debug(fmt.Sprintf("Starting epoch with identifier %s epoch number %d", epochInfo.Identifier, epochInfo.CurrentEpoch))
+				ctx.Logger().Debug(fmt.Sprintf("Starting epoch with identifier %s epoch number %d", epochInfo.ID, epochInfo.CurrentEpoch))
 			}
 
 			// emit new epoch start event, set epoch info, and run BeforeEpochStart hook
@@ -72,16 +72,16 @@ func (k *Keeper) BeginBlocker(ctx sdk.Context) error {
 			if err != nil {
 				return false, err
 			}
-			err = k.EpochInfo.Set(ctx, epochInfo.Identifier, epochInfo)
+			err = k.EpochInfo.Set(ctx, epochInfo.ID, epochInfo)
 			if err != nil {
-				ctx.Logger().Error(fmt.Sprintf("Error set epoch info with identifier %s epoch number %d", epochInfo.Identifier, epochInfo.CurrentEpoch))
+				ctx.Logger().Error(fmt.Sprintf("Error set epoch info with identifier %s epoch number %d", epochInfo.ID, epochInfo.CurrentEpoch))
 				return false, nil
 			}
 
 			cacheCtx, writeFn := ctx.CacheContext()
-			if err := k.BeforeEpochStart(cacheCtx, epochInfo.Identifier, epochInfo.CurrentEpoch); err != nil {
+			if err := k.BeforeEpochStart(cacheCtx, epochInfo.ID, epochInfo.CurrentEpoch); err != nil {
 				// purposely ignoring the error here not to halt the chain if the hook fails
-				ctx.Logger().Error(fmt.Sprintf("Error before epoch start with identifier %s epoch number %d", epochInfo.Identifier, epochInfo.CurrentEpoch))
+				ctx.Logger().Error(fmt.Sprintf("Error before epoch start with identifier %s epoch number %d", epochInfo.ID, epochInfo.CurrentEpoch))
 			} else {
 				writeFn()
 			}
@@ -89,5 +89,6 @@ func (k *Keeper) BeginBlocker(ctx sdk.Context) error {
 			return false, nil
 		},
 	)
+
 	return err
 }

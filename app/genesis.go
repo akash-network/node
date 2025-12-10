@@ -60,8 +60,8 @@ func genesisFilterTokens(from GenesisState) GenesisState {
 
 // NewDefaultGenesisState generates the default state for the application.
 func NewDefaultGenesisState(cdc codec.Codec) GenesisState {
-	genesis := ModuleBasics().DefaultGenesis(cdc)
-	return genesisFilterTokens(genesis)
+	return ModuleBasics().DefaultGenesis(cdc)
+	//return genesisFilterTokens(genesis)
 }
 
 func GenesisStateWithValSet(cdc codec.Codec) GenesisState {

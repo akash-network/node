@@ -5,14 +5,13 @@ import (
 	"testing"
 
 	sdkmath "cosmossdk.io/math"
+	"github.com/cosmos/cosmos-sdk/baseapp"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/cosmos/cosmos-sdk/baseapp"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-
 	dv1 "pkg.akt.dev/go/node/deployment/v1"
-	"pkg.akt.dev/go/node/deployment/v1beta4"
+	dvbeta "pkg.akt.dev/go/node/deployment/v1beta4"
 	eid "pkg.akt.dev/go/node/escrow/id/v1"
 	types "pkg.akt.dev/go/node/escrow/types/v1"
 	"pkg.akt.dev/go/node/escrow/v1"
@@ -72,12 +71,12 @@ func TestGRPCQueryAccounts(t *testing.T) {
 				Owner: did1.Owner,
 				State: types.StateOpen,
 				Transferred: sdk.DecCoins{
-					sdk.NewDecCoin("uakt", sdkmath.ZeroInt()),
+					sdk.NewDecCoin("uact", sdkmath.ZeroInt()),
 				},
 				SettledAt: 0,
 				Funds: []types.Balance{
 					{
-						Denom:  "uakt",
+						Denom:  "uact",
 						Amount: sdkmath.LegacyNewDec(500000),
 					},
 				},
@@ -86,7 +85,7 @@ func TestGRPCQueryAccounts(t *testing.T) {
 						Owner:   did1.Owner,
 						Height:  0,
 						Source:  deposit.SourceBalance,
-						Balance: sdk.NewDecCoin("uakt", sdkmath.NewInt(500000)),
+						Balance: sdk.NewDecCoin("uact", sdkmath.NewInt(500000)),
 					},
 				},
 			},
@@ -175,7 +174,7 @@ func TestGRPCQueryPayments(t *testing.T) {
 	did1 := lid1.DeploymentID()
 
 	_ = suite.createEscrowAccount(did1)
-	pid1 := suite.createEscrowPayment(lid1, sdk.NewDecCoin("uakt", sdkmath.NewInt(1)))
+	pid1 := suite.createEscrowPayment(lid1, sdk.NewDecCoin("uact", sdkmath.NewInt(3)))
 
 	expPayments1 := types.Payments{
 		{
@@ -183,10 +182,10 @@ func TestGRPCQueryPayments(t *testing.T) {
 			State: types.PaymentState{
 				Owner:     lid1.Provider,
 				State:     types.StateOpen,
-				Rate:      sdk.NewDecCoin("uakt", sdkmath.NewInt(1)),
-				Balance:   sdk.NewDecCoin("uakt", sdkmath.NewInt(0)),
-				Unsettled: sdk.NewDecCoin("uakt", sdkmath.ZeroInt()),
-				Withdrawn: sdk.NewCoin("uakt", sdkmath.NewInt(0)),
+				Rate:      sdk.NewDecCoin("uact", sdkmath.NewInt(3)),
+				Balance:   sdk.NewDecCoin("uact", sdkmath.NewInt(0)),
+				Unsettled: sdk.NewDecCoin("uact", sdkmath.ZeroInt()),
+				Withdrawn: sdk.NewCoin("uact", sdkmath.NewInt(0)),
 			},
 		},
 	}
@@ -285,15 +284,16 @@ func (suite *grpcTestSuite) createEscrowAccount(id dv1.DeploymentID) eid.Account
 	require.NoError(suite.t, err)
 
 	aid := id.ToEscrowAccountID()
-	defaultDeposit, err := v1beta4.DefaultParams().MinDepositFor("uakt")
+	defaultDeposit, err := dvbeta.DefaultParams().MinDepositFor("uact")
 	require.NoError(suite.t, err)
 
-	msg := &v1beta4.MsgCreateDeployment{
+	msg := &dvbeta.MsgCreateDeployment{
 		ID: id,
 		Deposit: deposit.Deposit{
 			Amount:  defaultDeposit,
 			Sources: deposit.Sources{deposit.SourceBalance},
-		}}
+		},
+	}
 
 	deposits, err := suite.keeper.AuthorizeDeposits(suite.ctx, msg)
 	require.NoError(suite.t, err)

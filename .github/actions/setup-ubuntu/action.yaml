@@ -16,7 +16,7 @@ runs:
       shell: bash
       run: |
         sudo apt-get update
-        sudo apt install -y make direnv unzip lz4 wget curl npm jq pv coreutils musl-tools libudev-dev
+        sudo apt install -y make direnv unzip lz4 wget curl npm jq pv coreutils musl-tools libudev-dev gcc
     - name: Setup npm
       uses: actions/setup-node@v4
       with:
@@ -38,3 +38,6 @@ runs:
       uses: HatsuneMiku3939/direnv-action@v1
       with:
         masks: ''
+    - name: Clear stale registry cache
+      shell: bash
+      run: docker volume rm registry_cache || true

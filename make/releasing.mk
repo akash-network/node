@@ -61,7 +61,7 @@ image-minikube:
 	eval $$(minikube docker-env) && docker-image
 
 .PHONY: test-bins
-test-bins: wasmvm-libs
+test-bins: wasmvm-libs build-contracts
 	docker run \
 		--rm \
 		-e MOD="$(GOMOD)" \
@@ -84,7 +84,7 @@ test-bins: wasmvm-libs
 		--snapshot
 
 .PHONY: docker-image
-docker-image: wasmvm-libs
+docker-image: wasmvm-libs build-contracts
 	docker run \
 		--rm \
 		-e MOD="$(GOMOD)" \
@@ -112,7 +112,7 @@ gen-changelog: $(GIT_CHGLOG)
 	./script/genchangelog.sh "$(RELEASE_TAG)" .cache/changelog.md
 
 .PHONY: release
-release: wasmvm-libs gen-changelog
+release: wasmvm-libs build-contracts gen-changelog
 	docker run \
 		--rm \
 		-e MOD="$(GOMOD)" \

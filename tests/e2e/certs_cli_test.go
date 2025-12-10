@@ -25,7 +25,7 @@ func (s *certificateIntegrationTestSuite) TestGeneratePublishAndRevokeServer() {
 		cli.TestFlags().
 			With(certTestHost).
 			WithFrom(s.WalletForTest().String()).
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
@@ -37,7 +37,7 @@ func (s *certificateIntegrationTestSuite) TestGeneratePublishAndRevokeServer() {
 		s.ClientContextForTest(),
 		cli.TestFlags().
 			WithFrom(s.WalletForTest().String()).
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
@@ -50,7 +50,7 @@ func (s *certificateIntegrationTestSuite) TestGeneratePublishAndRevokeServer() {
 		s.ClientContextForTest(),
 		cli.TestFlags().
 			WithFrom(s.WalletForTest().String()).
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
@@ -61,13 +61,14 @@ func (s *certificateIntegrationTestSuite) TestGeneratePublishAndRevokeServer() {
 }
 
 func (s *certificateIntegrationTestSuite) TestGenerateServerRequiresArguments() {
+	// Test that the command requires at least one domain argument
+	// Note: We don't call .With() at all to ensure no positional args are provided
 	_, err := clitestutil.TxGenerateServerExec(
 		s.ContextForTest(),
 		s.ClientContextForTest(),
 		cli.TestFlags().
-			With("").
 			WithFrom(s.WalletForTest().String()).
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
@@ -82,7 +83,7 @@ func (s *certificateIntegrationTestSuite) TestGenerateServerAllowsManyArguments(
 		cli.TestFlags().
 			With("a.dev", "b.dev").
 			WithFrom(s.WalletForTest().String()).
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
@@ -96,7 +97,7 @@ func (s *certificateIntegrationTestSuite) TestGenerateClientRejectsArguments() {
 		cli.TestFlags().
 			With("empty").
 			WithFrom(s.WalletForTest().String()).
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
@@ -110,7 +111,7 @@ func (s *certificateIntegrationTestSuite) TestGeneratePublishAndRevokeClient() {
 		s.ClientContextForTest(),
 		cli.TestFlags().
 			WithFrom(s.WalletForTest().String()).
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
@@ -122,7 +123,7 @@ func (s *certificateIntegrationTestSuite) TestGeneratePublishAndRevokeClient() {
 		s.ClientContextForTest(),
 		cli.TestFlags().
 			WithFrom(s.WalletForTest().String()).
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
@@ -135,7 +136,7 @@ func (s *certificateIntegrationTestSuite) TestGeneratePublishAndRevokeClient() {
 		s.ClientContextForTest(),
 		cli.TestFlags().
 			WithFrom(s.WalletForTest().String()).
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
@@ -152,7 +153,7 @@ func (s *certificateIntegrationTestSuite) TestGenerateAndRevokeFailsServer() {
 		cli.TestFlags().
 			With(certTestHost).
 			WithFrom(s.WalletForTest().String()).
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
@@ -164,7 +165,7 @@ func (s *certificateIntegrationTestSuite) TestGenerateAndRevokeFailsServer() {
 		s.ClientContextForTest(),
 		cli.TestFlags().
 			WithFrom(s.WalletForTest().String()).
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
@@ -179,7 +180,7 @@ func (s *certificateIntegrationTestSuite) TestRevokeFailsServer() {
 		cli.TestFlags().
 			WithFrom(s.WalletForTest().String()).
 			WithSerial("1").
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
@@ -194,7 +195,7 @@ func (s *certificateIntegrationTestSuite) TestRevokeFailsClient() {
 		cli.TestFlags().
 			WithFrom(s.WalletForTest().String()).
 			WithSerial("1").
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
@@ -209,7 +210,7 @@ func (s *certificateIntegrationTestSuite) TestGenerateServerNoOverwrite() {
 		cli.TestFlags().
 			With(certTestHost).
 			WithFrom(s.WalletForTest().String()).
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
@@ -222,7 +223,7 @@ func (s *certificateIntegrationTestSuite) TestGenerateServerNoOverwrite() {
 		cli.TestFlags().
 			With(certTestHost).
 			WithFrom(s.WalletForTest().String()).
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
@@ -236,7 +237,7 @@ func (s *certificateIntegrationTestSuite) TestGenerateClientNoOverwrite() {
 		s.ClientContextForTest(),
 		cli.TestFlags().
 			WithFrom(s.WalletForTest().String()).
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
@@ -248,7 +249,7 @@ func (s *certificateIntegrationTestSuite) TestGenerateClientNoOverwrite() {
 		s.ClientContextForTest(),
 		cli.TestFlags().
 			WithFrom(s.WalletForTest().String()).
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)

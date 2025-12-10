@@ -6,9 +6,9 @@ import (
 )
 
 // InitGenesis sets epoch info from genesis
-func (k *Keeper) InitGenesis(ctx sdk.Context, genState types.GenesisState) error {
+func (k *keeper) InitGenesis(ctx sdk.Context, genState types.GenesisState) error {
 	for _, epoch := range genState.Epochs {
-		err := k.AddEpochInfo(ctx, epoch)
+		err := k.AddEpoch(ctx, epoch)
 		if err != nil {
 			return err
 		}
@@ -17,12 +17,19 @@ func (k *Keeper) InitGenesis(ctx sdk.Context, genState types.GenesisState) error
 }
 
 // ExportGenesis returns the capability module's exported genesis.
-func (k *Keeper) ExportGenesis(ctx sdk.Context) (*types.GenesisState, error) {
-	genesis := types.DefaultGenesis()
-	epochs, err := k.AllEpochInfos(ctx)
+func (k *keeper) ExportGenesis(ctx sdk.Context) (*types.GenesisState, error) {
+	epochs := make([]types.EpochInfo, 0)
+	err := k.IterateEpochs(ctx, func(_ string, info types.EpochInfo) (bool, error) {
+		epochs = append(epochs, info)
+		return false, nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	genesis.Epochs = epochs
+
+	genesis := &types.GenesisState{
+		Epochs: epochs,
+	}
+
 	return genesis, nil
 }

@@ -47,6 +47,7 @@ builds:
       - -s -w
       - -linkmode=external
       - -extldflags "-L./.cache/lib -lwasmvm_muslc.aarch64 -Wl,-z,muldefs -lm -lrt -lc"
+
 dockers:
   - dockerfile: _build/akash.Dockerfile
     use: buildx

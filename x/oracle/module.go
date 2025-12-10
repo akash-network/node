@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"cosmossdk.io/collections"
+	"cosmossdk.io/schema"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
 
@@ -79,6 +81,13 @@ func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, _ client.TxEncodingCo
 		return fmt.Errorf("failed to unmarshal %s genesis state: %v", types.ModuleName, err)
 	}
 
+	// Unpack Any interfaces in FeedContractParams before validation
+	if pc, ok := cdc.(*codec.ProtoCodec); ok {
+		if err := data.Params.UnpackInterfaces(pc.InterfaceRegistry()); err != nil {
+			return fmt.Errorf("failed to unpack %s params interfaces: %v", types.ModuleName, err)
+		}
+	}
+
 	return data.Validate()
 }
 
@@ -137,8 +146,8 @@ func (am AppModule) BeginBlock(ctx context.Context) error {
 
 // EndBlock returns the end blocker for the oracle module. It returns no validator
 // updates.
-func (am AppModule) EndBlock(_ context.Context) error {
-	return nil
+func (am AppModule) EndBlock(ctx context.Context) error {
+	return am.keeper.EndBlocker(ctx)
 }
 
 // InitGenesis performs genesis initialization for the oracle module. It returns
@@ -146,13 +155,21 @@ func (am AppModule) EndBlock(_ context.Context) error {
 func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, data json.RawMessage) {
 	var genesisState types.GenesisState
 	cdc.MustUnmarshalJSON(data, &genesisState)
-	InitGenesis(ctx, am.keeper, &genesisState)
+
+	// Unpack Any interfaces in FeedContractParams
+	if pc, ok := cdc.(*codec.ProtoCodec); ok {
+		if err := genesisState.Params.UnpackInterfaces(pc.InterfaceRegistry()); err != nil {
+			panic(fmt.Sprintf("failed to unpack %s params interfaces: %v", types.ModuleName, err))
+		}
+	}
+
+	am.keeper.InitGenesis(ctx, &genesisState)
 }
 
 // ExportGenesis returns the exported genesis state as raw bytes for the oracle
 // module.
 func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.RawMessage {
-	gs := ExportGenesis(ctx, am.keeper)
+	gs := am.keeper.ExportGenesis(ctx)
 	return cdc.MustMarshalJSON(gs)
 }
 
@@ -173,8 +190,16 @@ func (AppModule) ProposalMsgs(_ module.SimulationState) []simtypes.WeightedPropo
 	return simulation.ProposalMsgs()
 }
 
-// RegisterStoreDecoder registers a decoder for take module's types.
-func (am AppModule) RegisterStoreDecoder(_ simtypes.StoreDecoderRegistry) {}
+// RegisterStoreDecoder registers a decoder for epochs module's types
+func (am AppModule) RegisterStoreDecoder(sdr simtypes.StoreDecoderRegistry) {
+	sdr[types.StoreKey] = simtypes.NewStoreDecoderFuncFromCollectionsSchema(am.keeper.Schema())
+}
+
+// ModuleCodec implements schema.HasModuleCodec.
+// It allows the indexer to decode the module's KVPairUpdate.
+func (am AppModule) ModuleCodec() (schema.ModuleCodec, error) {
+	return am.keeper.Schema().ModuleCodec(collections.IndexingOptions{})
+}
 
 // WeightedOperations doesn't return any take module operation.
 func (am AppModule) WeightedOperations(_ module.SimulationState) []simtypes.WeightedOperation {

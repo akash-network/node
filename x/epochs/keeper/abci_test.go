@@ -65,9 +65,9 @@ func (suite *KeeperTestSuite) TestEpochInfoBeginBlockChanges() {
 			expEpochInfo:         types.EpochInfo{StartTime: block1Time, CurrentEpoch: 2, CurrentEpochStartTime: block1Time.Add(time.Hour), CurrentEpochStartHeight: 4},
 		},
 		"Distinct identifier and duration still works": {
-			initialEpochInfo:     types.EpochInfo{Identifier: "hello", Duration: time.Minute, StartTime: block1Time, CurrentEpoch: 0, CurrentEpochStartTime: time.Time{}},
+			initialEpochInfo:     types.EpochInfo{ID: "hello", Duration: time.Minute, StartTime: block1Time, CurrentEpoch: 0, CurrentEpochStartTime: time.Time{}},
 			blockHeightTimePairs: map[int]time.Time{2: block1Time.Add(time.Second), 3: block1Time.Add(time.Minute).Add(eps)},
-			expEpochInfo:         types.EpochInfo{Identifier: "hello", Duration: time.Minute, StartTime: block1Time, CurrentEpoch: 2, CurrentEpochStartTime: block1Time.Add(time.Minute), CurrentEpochStartHeight: 3},
+			expEpochInfo:         types.EpochInfo{ID: "hello", Duration: time.Minute, StartTime: block1Time, CurrentEpoch: 2, CurrentEpochStartTime: block1Time.Add(time.Minute), CurrentEpochStartHeight: 3},
 		},
 		"StartTime in future won't get ticked on first block": {
 			initialEpochInfo: types.EpochInfo{StartTime: block1Time.Add(time.Second), CurrentEpoch: 0, CurrentEpochStartTime: time.Time{}},
@@ -84,7 +84,7 @@ func (suite *KeeperTestSuite) TestEpochInfoBeginBlockChanges() {
 			suite.SetupTest()
 			suite.Ctx = suite.Ctx.WithBlockHeight(1).WithBlockTime(block1Time)
 			initialEpoch := initializeBlankEpochInfoFields(test.initialEpochInfo, defaultIdentifier, defaultDuration)
-			err := suite.EpochsKeeper.AddEpochInfo(suite.Ctx, initialEpoch)
+			err := suite.EpochsKeeper.AddEpoch(suite.Ctx, initialEpoch)
 			suite.Require().NoError(err)
 			err = suite.EpochsKeeper.BeginBlocker(suite.Ctx)
 			suite.Require().NoError(err)
@@ -104,8 +104,8 @@ func (suite *KeeperTestSuite) TestEpochInfoBeginBlockChanges() {
 				err := suite.EpochsKeeper.BeginBlocker(suite.Ctx)
 				suite.Require().NoError(err)
 			}
-			expEpoch := initializeBlankEpochInfoFields(test.expEpochInfo, initialEpoch.Identifier, initialEpoch.Duration)
-			actEpoch, err := suite.EpochsKeeper.EpochInfo.Get(suite.Ctx, initialEpoch.Identifier)
+			expEpoch := initializeBlankEpochInfoFields(test.expEpochInfo, initialEpoch.ID, initialEpoch.Duration)
+			actEpoch, err := suite.EpochsKeeper.GetEpoch(suite.Ctx, initialEpoch.ID)
 			suite.Require().NoError(err)
 			suite.Require().Equal(expEpoch, actEpoch)
 		})
@@ -114,8 +114,8 @@ func (suite *KeeperTestSuite) TestEpochInfoBeginBlockChanges() {
 
 // initializeBlankEpochInfoFields set identifier, duration and epochCountingStarted if blank in epoch
 func initializeBlankEpochInfoFields(epoch types.EpochInfo, identifier string, duration time.Duration) types.EpochInfo {
-	if epoch.Identifier == "" {
-		epoch.Identifier = identifier
+	if epoch.ID == "" {
+		epoch.ID = identifier
 	}
 	if epoch.Duration == time.Duration(0) {
 		epoch.Duration = duration
@@ -128,10 +128,15 @@ func TestEpochStartingOneMonthAfterInitGenesis(t *testing.T) {
 	ctx, epochsKeeper := Setup(t)
 	// On init genesis, default epochs information is set
 	// To check init genesis again, should make it fresh status
-	epochInfos, err := epochsKeeper.AllEpochInfos(ctx)
+
+	allEpochs := make([]types.EpochInfo, 0)
+	err := epochsKeeper.IterateEpochs(ctx, func(_ string, info types.EpochInfo) (bool, error) {
+		allEpochs = append(allEpochs, info)
+		return false, nil
+	})
 	require.NoError(t, err)
-	for _, epochInfo := range epochInfos {
-		err := epochsKeeper.EpochInfo.Remove(ctx, epochInfo.Identifier)
+	for _, epochInfo := range allEpochs {
+		err := epochsKeeper.RemoveEpoch(ctx, epochInfo.ID)
 		require.NoError(t, err)
 	}
 
@@ -144,7 +149,7 @@ func TestEpochStartingOneMonthAfterInitGenesis(t *testing.T) {
 	err = epochsKeeper.InitGenesis(ctx, types.GenesisState{
 		Epochs: []types.EpochInfo{
 			{
-				Identifier:              "monthly",
+				ID:                      "monthly",
 				StartTime:               now.Add(month),
 				Duration:                time.Hour * 24 * 30,
 				CurrentEpoch:            0,
@@ -157,7 +162,7 @@ func TestEpochStartingOneMonthAfterInitGenesis(t *testing.T) {
 	require.NoError(t, err)
 
 	// epoch not started yet
-	epochInfo, err := epochsKeeper.EpochInfo.Get(ctx, "monthly")
+	epochInfo, err := epochsKeeper.GetEpoch(ctx, "monthly")
 	require.NoError(t, err)
 	require.Equal(t, epochInfo.CurrentEpoch, int64(0))
 	require.Equal(t, epochInfo.CurrentEpochStartHeight, initialBlockHeight)
@@ -170,7 +175,7 @@ func TestEpochStartingOneMonthAfterInitGenesis(t *testing.T) {
 	require.NoError(t, err)
 
 	// epoch not started yet
-	epochInfo, err = epochsKeeper.EpochInfo.Get(ctx, "monthly")
+	epochInfo, err = epochsKeeper.GetEpoch(ctx, "monthly")
 	require.NoError(t, err)
 	require.Equal(t, epochInfo.CurrentEpoch, int64(0))
 	require.Equal(t, epochInfo.CurrentEpochStartHeight, initialBlockHeight)
@@ -183,7 +188,7 @@ func TestEpochStartingOneMonthAfterInitGenesis(t *testing.T) {
 	require.NoError(t, err)
 
 	// epoch started
-	epochInfo, err = epochsKeeper.EpochInfo.Get(ctx, "monthly")
+	epochInfo, err = epochsKeeper.GetEpoch(ctx, "monthly")
 	require.NoError(t, err)
 	require.Equal(t, epochInfo.CurrentEpoch, int64(1))
 	require.Equal(t, epochInfo.CurrentEpochStartHeight, ctx.BlockHeight())
