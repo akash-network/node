@@ -7,14 +7,16 @@ import (
 	"fmt"
 	"path/filepath"
 
+	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdktestutil "github.com/cosmos/cosmos-sdk/testutil"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	"pkg.akt.dev/go/node/market/v1"
+	v1 "pkg.akt.dev/go/node/market/v1"
 	"pkg.akt.dev/go/node/market/v1beta5"
+	mvbeta "pkg.akt.dev/go/node/market/v1beta5"
 
 	"pkg.akt.dev/go/cli"
 	clitestutil "pkg.akt.dev/go/cli/testutil"
@@ -26,8 +28,8 @@ type marketGRPCRestTestSuite struct {
 	*testutil.NetworkTestSuite
 
 	cctx  client.Context
-	order v1beta5.Order
-	bid   v1beta5.Bid
+	order mvbeta.Order
+	bid   mvbeta.Bid
 	lease v1.Lease
 }
 
@@ -64,7 +66,7 @@ func (s *marketGRPCRestTestSuite) SetupSuite() {
 			WithFrom(val.Address.String()).
 			WithSkipConfirm().
 			WithBroadcastModeBlock().
-			WithGasAutoFlags()...,
+			WithGasAuto()...,
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.Network().WaitForBlocks(2))
@@ -76,22 +78,22 @@ func (s *marketGRPCRestTestSuite) SetupSuite() {
 	s.Require().NoError(err)
 
 	// create deployment
-	_, err = clitestutil.TxCreateDeploymentExec(
+	_, err = clitestutil.ExecDeploymentCreate(
 		ctx,
 		s.cctx,
-		deploymentPath,
 		cli.TestFlags().
+			With(deploymentPath).
 			WithFrom(val.Address.String()).
 			WithSkipConfirm().
 			WithBroadcastModeBlock().
 			WithDeposit(DefaultDeposit).
-			WithGasAutoFlags()...,
+			WithGasAuto()...,
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.Network().WaitForBlocks(2))
 
 	// test query orders
-	resp, err := clitestutil.QueryOrdersExec(
+	resp, err := clitestutil.ExecQueryOrders(
 		ctx, val.ClientCtx.WithOutputFormat("json"),
 	)
 	s.Require().NoError(err)
@@ -106,8 +108,7 @@ func (s *marketGRPCRestTestSuite) SetupSuite() {
 	// test query order
 	s.order = orders[0]
 
-	// Send coins from validator to keyBar
-	sendTokens := DefaultDeposit.Add(DefaultDeposit)
+	// Send uakt to keyBar for transaction fees
 	_, err = clitestutil.ExecSend(
 		ctx,
 		val.ClientCtx,
@@ -115,23 +116,38 @@ func (s *marketGRPCRestTestSuite) SetupSuite() {
 			With(
 				val.Address.String(),
 				keyAddr.String(),
-				sdk.NewCoins(sendTokens).String()).
-			WithGasAutoFlags().
+				sdk.NewCoins(sdk.NewInt64Coin(s.Config().BondDenom, 50000000)).String()).
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
 	s.Require().NoError(err)
+	s.Require().NoError(s.Network().WaitForNextBlock())
 
+	// Send uact tokens for bid deposits
+	_, err = clitestutil.ExecSend(
+		ctx,
+		val.ClientCtx,
+		cli.TestFlags().
+			With(
+				val.Address.String(),
+				keyAddr.String(),
+				sdk.NewCoins(sdk.NewInt64Coin("uact", 10000000)).String()).
+			WithGasAuto().
+			WithSkipConfirm().
+			WithBroadcastModeBlock()...,
+	)
+	s.Require().NoError(err)
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
 	// create provider
-	_, err = clitestutil.TxCreateProviderExec(
+	_, err = clitestutil.ExecTxCreateProvider(
 		ctx,
 		s.cctx,
-		providerPath,
 		cli.TestFlags().
+			With(providerPath).
 			WithFrom(keyAddr.String()).
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
@@ -139,15 +155,16 @@ func (s *marketGRPCRestTestSuite) SetupSuite() {
 
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
-	_, err = clitestutil.TxCreateBidExec(
+	// Bid price and deposit must both be in uact
+	_, err = clitestutil.ExecCreateBid(
 		ctx,
 		s.cctx,
 		cli.TestFlags().
 			WithFrom(keyAddr.String()).
 			WithOrderID(s.order.ID).
-			WithPrice(sdk.NewDecCoinFromDec(testutil.CoinDenom, sdk.MustNewDecFromStr("1.1"))).
-			WithDeposit(DefaultDeposit).
-			WithGasAutoFlags().
+			WithPrice(sdk.NewDecCoinFromDec("uact", sdkmath.LegacyMustNewDecFromStr("1.1"))).
+			WithDeposit(sdk.NewCoin("uact", sdkmath.NewInt(500000))).
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
@@ -156,7 +173,7 @@ func (s *marketGRPCRestTestSuite) SetupSuite() {
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
 	// get bid
-	resp, err = clitestutil.QueryBidsExec(
+	resp, err = clitestutil.ExecQueryBids(
 		ctx, val.ClientCtx.WithOutputFormat("json"),
 	)
 	s.Require().NoError(err)
@@ -171,13 +188,13 @@ func (s *marketGRPCRestTestSuite) SetupSuite() {
 	s.bid = bids[0].Bid
 
 	// create lease
-	_, err = clitestutil.TxCreateLeaseExec(
+	_, err = clitestutil.ExecCreateLease(
 		ctx,
 		s.cctx,
 		cli.TestFlags().
 			WithFrom(val.Address.String()).
 			WithBidID(s.bid.ID).
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
@@ -186,7 +203,7 @@ func (s *marketGRPCRestTestSuite) SetupSuite() {
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
 	// test query leases
-	resp, err = clitestutil.QueryLeasesExec(
+	resp, err = clitestutil.ExecQueryLeases(
 		ctx,
 		s.cctx,
 		cli.TestFlags().

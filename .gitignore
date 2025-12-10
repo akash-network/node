@@ -34,3 +34,11 @@ coverage.txt
 /.editorconfig
 
 dev.env
+
+*.test
+
+# Added by cargo
+
+/target
+/artifacts
+/Cargo.lock

@@ -15,7 +15,7 @@ import (
 	deposit "pkg.akt.dev/go/node/types/deposit/v1"
 
 	"pkg.akt.dev/go/node/deployment/v1"
-	"pkg.akt.dev/go/node/deployment/v1beta4"
+	dvbeta "pkg.akt.dev/go/node/deployment/v1beta4"
 	eid "pkg.akt.dev/go/node/escrow/id/v1"
 	"pkg.akt.dev/go/testutil"
 
@@ -35,7 +35,7 @@ type grpcTestSuite struct {
 	authzKeeper ekeeper.AuthzKeeper
 	bankKeeper  ekeeper.BankKeeper
 
-	queryClient v1beta4.QueryClient
+	queryClient dvbeta.QueryClient
 }
 
 func setupTest(t *testing.T) *grpcTestSuite {
@@ -54,8 +54,8 @@ func setupTest(t *testing.T) *grpcTestSuite {
 	querier := suite.keeper.NewQuerier()
 
 	queryHelper := baseapp.NewQueryServerTestHelper(suite.ctx, suite.app.InterfaceRegistry())
-	v1beta4.RegisterQueryServer(queryHelper, querier)
-	suite.queryClient = v1beta4.NewQueryClient(queryHelper)
+	dvbeta.RegisterQueryServer(queryHelper, querier)
+	suite.queryClient = dvbeta.NewQueryClient(queryHelper)
 
 	return suite
 }
@@ -75,6 +75,9 @@ func TestGRPCQueryDeployment(t *testing.T) {
 		bkeeper.
 			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Return(nil)
+
+		bkeeper.On("BurnCoins", mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
 	})
 
 	// creating deployment
@@ -84,8 +87,8 @@ func TestGRPCQueryDeployment(t *testing.T) {
 
 	eid := suite.createEscrowAccount(deployment.ID)
 
-	var req *v1beta4.QueryDeploymentRequest
-	var expDeployment v1beta4.QueryDeploymentResponse
+	var req *dvbeta.QueryDeploymentRequest
+	var expDeployment dvbeta.QueryDeploymentResponse
 
 	testCases := []struct {
 		msg      string
@@ -95,21 +98,21 @@ func TestGRPCQueryDeployment(t *testing.T) {
 		{
 			"empty request",
 			func() {
-				req = &v1beta4.QueryDeploymentRequest{}
+				req = &dvbeta.QueryDeploymentRequest{}
 			},
 			false,
 		},
 		{
 			"invalid request",
 			func() {
-				req = &v1beta4.QueryDeploymentRequest{ID: v1.DeploymentID{}}
+				req = &dvbeta.QueryDeploymentRequest{ID: v1.DeploymentID{}}
 			},
 			false,
 		},
 		{
 			"deployment not found",
 			func() {
-				req = &v1beta4.QueryDeploymentRequest{ID: v1.DeploymentID{
+				req = &dvbeta.QueryDeploymentRequest{ID: v1.DeploymentID{
 					Owner: testutil.AccAddress(t).String(),
 					DSeq:  32,
 				}}
@@ -119,8 +122,8 @@ func TestGRPCQueryDeployment(t *testing.T) {
 		{
 			"success",
 			func() {
-				req = &v1beta4.QueryDeploymentRequest{ID: deployment.ID}
-				expDeployment = v1beta4.QueryDeploymentResponse{
+				req = &dvbeta.QueryDeploymentRequest{ID: deployment.ID}
+				expDeployment = dvbeta.QueryDeploymentResponse{
 					Deployment: deployment,
 					Groups:     groups,
 				}
@@ -165,6 +168,9 @@ func TestGRPCQueryDeployments(t *testing.T) {
 		bkeeper.
 			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Return(nil)
+
+		bkeeper.On("BurnCoins", mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
 	})
 
 	// creating deployments with different states
@@ -185,7 +191,7 @@ func TestGRPCQueryDeployments(t *testing.T) {
 	require.NoError(t, err)
 	suite.createEscrowAccount(deployment3.ID)
 
-	var req *v1beta4.QueryDeploymentsRequest
+	var req *dvbeta.QueryDeploymentsRequest
 
 	testCases := []struct {
 		msg      string
@@ -196,7 +202,7 @@ func TestGRPCQueryDeployments(t *testing.T) {
 		{
 			"query deployments without any filters and pagination",
 			func() {
-				req = &v1beta4.QueryDeploymentsRequest{}
+				req = &dvbeta.QueryDeploymentsRequest{}
 			},
 			3,
 			false,
@@ -204,8 +210,8 @@ func TestGRPCQueryDeployments(t *testing.T) {
 		{
 			"query deployments with state filter",
 			func() {
-				req = &v1beta4.QueryDeploymentsRequest{
-					Filters: v1beta4.DeploymentFilters{
+				req = &dvbeta.QueryDeploymentsRequest{
+					Filters: dvbeta.DeploymentFilters{
 						State: v1.DeploymentActive.String(),
 					},
 				}
@@ -216,8 +222,8 @@ func TestGRPCQueryDeployments(t *testing.T) {
 		{
 			"query deployments with filters having non existent data",
 			func() {
-				req = &v1beta4.QueryDeploymentsRequest{
-					Filters: v1beta4.DeploymentFilters{
+				req = &dvbeta.QueryDeploymentsRequest{
+					Filters: dvbeta.DeploymentFilters{
 						DSeq:  37,
 						State: v1.DeploymentClosed.String(),
 					}}
@@ -228,7 +234,7 @@ func TestGRPCQueryDeployments(t *testing.T) {
 		{
 			"query deployments with state filter",
 			func() {
-				req = &v1beta4.QueryDeploymentsRequest{Filters: v1beta4.DeploymentFilters{State: v1.DeploymentClosed.String()}}
+				req = &dvbeta.QueryDeploymentsRequest{Filters: dvbeta.DeploymentFilters{State: v1.DeploymentClosed.String()}}
 			},
 			1,
 			false,
@@ -236,7 +242,7 @@ func TestGRPCQueryDeployments(t *testing.T) {
 		{
 			"query deployments with pagination",
 			func() {
-				req = &v1beta4.QueryDeploymentsRequest{Pagination: &sdkquery.PageRequest{Limit: 1}}
+				req = &dvbeta.QueryDeploymentsRequest{Pagination: &sdkquery.PageRequest{Limit: 1}}
 			},
 			1,
 			false,
@@ -244,8 +250,8 @@ func TestGRPCQueryDeployments(t *testing.T) {
 		{
 			"query deployments with pagination next key",
 			func() {
-				req = &v1beta4.QueryDeploymentsRequest{
-					Filters:    v1beta4.DeploymentFilters{State: v1.DeploymentActive.String()},
+				req = &dvbeta.QueryDeploymentsRequest{
+					Filters:    dvbeta.DeploymentFilters{State: v1.DeploymentActive.String()},
 					Pagination: &sdkquery.PageRequest{Limit: 1},
 				}
 			},
@@ -280,7 +286,7 @@ func TestGRPCQueryDeployments(t *testing.T) {
 
 type deploymentFilterModifier struct {
 	fieldName string
-	f         func(leaseID v1.DeploymentID, filter v1beta4.DeploymentFilters) v1beta4.DeploymentFilters
+	f         func(leaseID v1.DeploymentID, filter dvbeta.DeploymentFilters) dvbeta.DeploymentFilters
 	getField  func(leaseID v1.DeploymentID) interface{}
 }
 
@@ -297,6 +303,9 @@ func TestGRPCQueryDeploymentsWithFilter(t *testing.T) {
 			Return(nil)
 		bkeeper.
 			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+
+		bkeeper.On("BurnCoins", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil)
 	})
 
@@ -318,7 +327,7 @@ func TestGRPCQueryDeploymentsWithFilter(t *testing.T) {
 	modifiers := []deploymentFilterModifier{
 		{
 			"owner",
-			func(depID v1.DeploymentID, filter v1beta4.DeploymentFilters) v1beta4.DeploymentFilters {
+			func(depID v1.DeploymentID, filter dvbeta.DeploymentFilters) dvbeta.DeploymentFilters {
 				filter.Owner = depID.GetOwner()
 				return filter
 			},
@@ -328,7 +337,7 @@ func TestGRPCQueryDeploymentsWithFilter(t *testing.T) {
 		},
 		{
 			"dseq",
-			func(depID v1.DeploymentID, filter v1beta4.DeploymentFilters) v1beta4.DeploymentFilters {
+			func(depID v1.DeploymentID, filter dvbeta.DeploymentFilters) dvbeta.DeploymentFilters {
 				filter.DSeq = depID.DSeq
 				return filter
 			},
@@ -342,8 +351,8 @@ func TestGRPCQueryDeploymentsWithFilter(t *testing.T) {
 
 	for _, depID := range deps {
 		for _, m := range modifiers {
-			req := &v1beta4.QueryDeploymentsRequest{
-				Filters: m.f(depID, v1beta4.DeploymentFilters{}),
+			req := &dvbeta.QueryDeploymentsRequest{
+				Filters: m.f(depID, dvbeta.DeploymentFilters{}),
 			}
 
 			res, err := suite.queryClient.Deployments(ctx, req)
@@ -376,7 +385,7 @@ func TestGRPCQueryDeploymentsWithFilter(t *testing.T) {
 		}
 
 		for _, orderID := range deps {
-			filter := v1beta4.DeploymentFilters{}
+			filter := dvbeta.DeploymentFilters{}
 			msg := strings.Builder{}
 			msg.WriteString("testing filtering on: ")
 			for k, useModifier := range modifiersToUse {
@@ -389,7 +398,7 @@ func TestGRPCQueryDeploymentsWithFilter(t *testing.T) {
 				msg.WriteString(", ")
 			}
 
-			req := &v1beta4.QueryDeploymentsRequest{
+			req := &dvbeta.QueryDeploymentsRequest{
 				Filters: filter,
 			}
 
@@ -411,7 +420,7 @@ func TestGRPCQueryDeploymentsWithFilter(t *testing.T) {
 			}
 		}
 
-		filter := v1beta4.DeploymentFilters{}
+		filter := dvbeta.DeploymentFilters{}
 		msg := strings.Builder{}
 		msg.WriteString("testing filtering on (using non matching ID): ")
 		for k, useModifier := range modifiersToUse {
@@ -424,7 +433,7 @@ func TestGRPCQueryDeploymentsWithFilter(t *testing.T) {
 			msg.WriteString(", ")
 		}
 
-		req := &v1beta4.QueryDeploymentsRequest{
+		req := &dvbeta.QueryDeploymentsRequest{
 			Filters: filter,
 		}
 
@@ -441,8 +450,8 @@ func TestGRPCQueryDeploymentsWithFilter(t *testing.T) {
 
 	for _, depID := range deps {
 		// Query by owner
-		req := &v1beta4.QueryDeploymentsRequest{
-			Filters: v1beta4.DeploymentFilters{
+		req := &dvbeta.QueryDeploymentsRequest{
+			Filters: dvbeta.DeploymentFilters{
 				Owner: depID.Owner,
 			},
 		}
@@ -457,8 +466,8 @@ func TestGRPCQueryDeploymentsWithFilter(t *testing.T) {
 		require.Equal(t, depID, depResult.GetDeployment().ID)
 
 		// Query with valid DSeq
-		req = &v1beta4.QueryDeploymentsRequest{
-			Filters: v1beta4.DeploymentFilters{
+		req = &dvbeta.QueryDeploymentsRequest{
+			Filters: dvbeta.DeploymentFilters{
 				Owner: depID.Owner,
 				DSeq:  depID.DSeq,
 			},
@@ -474,8 +483,8 @@ func TestGRPCQueryDeploymentsWithFilter(t *testing.T) {
 		require.Equal(t, depID, depResult.Deployment.ID)
 
 		// Query with a bogus DSeq
-		req = &v1beta4.QueryDeploymentsRequest{
-			Filters: v1beta4.DeploymentFilters{
+		req = &dvbeta.QueryDeploymentsRequest{
+			Filters: dvbeta.DeploymentFilters{
 				Owner: depID.Owner,
 				DSeq:  depID.DSeq + 1,
 			},
@@ -513,8 +522,8 @@ func TestGRPCQueryGroup(t *testing.T) {
 	require.NoError(t, err)
 
 	var (
-		req           *v1beta4.QueryGroupRequest
-		expDeployment v1beta4.Group
+		req           *dvbeta.QueryGroupRequest
+		expDeployment dvbeta.Group
 	)
 
 	testCases := []struct {
@@ -525,21 +534,21 @@ func TestGRPCQueryGroup(t *testing.T) {
 		{
 			"empty request",
 			func() {
-				req = &v1beta4.QueryGroupRequest{}
+				req = &dvbeta.QueryGroupRequest{}
 			},
 			false,
 		},
 		{
 			"invalid request",
 			func() {
-				req = &v1beta4.QueryGroupRequest{ID: v1.GroupID{}}
+				req = &dvbeta.QueryGroupRequest{ID: v1.GroupID{}}
 			},
 			false,
 		},
 		{
 			"group not found",
 			func() {
-				req = &v1beta4.QueryGroupRequest{ID: v1.GroupID{
+				req = &dvbeta.QueryGroupRequest{ID: v1.GroupID{
 					Owner: testutil.AccAddress(t).String(),
 					DSeq:  32,
 					GSeq:  45,
@@ -550,7 +559,7 @@ func TestGRPCQueryGroup(t *testing.T) {
 		{
 			"success",
 			func() {
-				req = &v1beta4.QueryGroupRequest{ID: groups[0].GetID()}
+				req = &dvbeta.QueryGroupRequest{ID: groups[0].GetID()}
 				expDeployment = groups[0]
 			},
 			true,
@@ -577,7 +586,7 @@ func TestGRPCQueryGroup(t *testing.T) {
 	}
 }
 
-func (suite *grpcTestSuite) createDeployment() (v1.Deployment, v1beta4.Groups) {
+func (suite *grpcTestSuite) createDeployment() (v1.Deployment, dvbeta.Groups) {
 	suite.t.Helper()
 
 	suite.PrepareMocks(func(ts *state.TestSuite) {
@@ -596,19 +605,19 @@ func (suite *grpcTestSuite) createDeployment() (v1.Deployment, v1beta4.Groups) {
 
 	deployment := testutil.Deployment(suite.t)
 	group := testutil.DeploymentGroup(suite.t, deployment.ID, 0)
-	group.GroupSpec.Resources = v1beta4.ResourceUnits{
+	group.GroupSpec.Resources = dvbeta.ResourceUnits{
 		{
 			Resources: testutil.ResourceUnits(suite.t),
 			Count:     1,
 			Price:     testutil.DecCoin(suite.t),
 		},
 	}
-	groups := []v1beta4.Group{
+	groups := []dvbeta.Group{
 		group,
 	}
 
 	for i := range groups {
-		groups[i].State = v1beta4.GroupOpen
+		groups[i].State = dvbeta.GroupOpen
 	}
 
 	return deployment, groups
@@ -619,15 +628,16 @@ func (suite *grpcTestSuite) createEscrowAccount(id v1.DeploymentID) eid.Account 
 	require.NoError(suite.t, err)
 
 	eid := id.ToEscrowAccountID()
-	defaultDeposit, err := v1beta4.DefaultParams().MinDepositFor("uakt")
+	defaultDeposit, err := dvbeta.DefaultParams().MinDepositFor("uact")
 	require.NoError(suite.t, err)
 
-	msg := &v1beta4.MsgCreateDeployment{
+	msg := &dvbeta.MsgCreateDeployment{
 		ID: id,
 		Deposit: deposit.Deposit{
 			Amount:  defaultDeposit,
 			Sources: deposit.Sources{deposit.SourceBalance},
-		}}
+		},
+	}
 
 	deposits, err := suite.ekeeper.AuthorizeDeposits(suite.ctx, msg)
 	require.NoError(suite.t, err)

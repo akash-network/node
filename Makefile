@@ -71,7 +71,7 @@ GORELEASER_LDFLAGS := $(ldflags)
 ldflags += -linkmode=external
 
 ifeq (static-link,$(findstring static-link,$(BUILD_OPTIONS)))
-	ldflags += -extldflags "-L$(AKASH_DEVCACHE_LIB) -lm -Wl,-z,muldefs -static"
+	ldflags += -extldflags "-L$(AKASH_DEVCACHE_LIB) -lm -Wl,-z,muldefs"
 else
 	ldflags += -extldflags "-L$(AKASH_DEVCACHE_LIB)"
 endif
@@ -80,6 +80,10 @@ endif
 ifeq (,$(findstring nostrip,$(BUILD_OPTIONS)))
 	ldflags     += -s -w
 	BUILD_FLAGS += -trimpath
+endif
+
+ifeq (delve,$(findstring delve,$(BUILD_OPTIONS)))
+	BUILD_FLAGS += -gcflags "all=-N -l"
 endif
 
 ldflags += $(LDFLAGS)

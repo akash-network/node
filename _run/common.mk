@@ -25,8 +25,10 @@ export AKASH_NODE               = http://localhost:26657
 
 AKASH_INIT                     := $(AKASH_RUN_DIR)/.akash-init
 
+MNEMONIC=wild random elephant refuse clock effort menu barely broccoli team mind magnet pretty fashion fame category turtle rug exclude card view civil purity powder
+export MNEMONIC
+
 KEY_OPTS     := --keyring-backend=$(AKASH_KEYRING_BACKEND)
-GENESIS_PATH := $(AKASH_HOME)/config/genesis.json
 
 CHAIN_MIN_DEPOSIT        := 10000000000000
 CHAIN_ACCOUNT_DEPOSIT    := $(shell echo $$(($(CHAIN_MIN_DEPOSIT) * 10)))
@@ -52,79 +54,44 @@ $(AP_RUN_DIR):
 $(AKASH_HOME):
 	mkdir -p $@
 
-$(AKASH_INIT): $(AKASH_HOME) client-init node-init
+$(AKASH_INIT): $(AKASH_HOME) node-init
 	touch $@
 
 .INTERMEDIATE: akash-init
 akash-init: $(AKASH_INIT)
 
-.INTERMEDIATE: client-init
-client-init: client-init-keys
-
-.INTERMEDIATE: client-init-keys
-client-init-keys: $(patsubst %,client-init-key-%,$(KEY_NAMES)) client-init-key-multisig
-
-.INTERMEDIATE: $(patsubst %,client-init-key-%,$(KEY_NAMES))
-client-init-key-%:
-	$(AKASH) keys add "$(@:client-init-key-%=%)"
-
-.INTERMEDIATE: client-init-key-multisig
-client-init-key-multisig:
-	$(AKASH) keys add \
-		"$(MULTISIG_KEY)" \
-		--multisig "$(subst $(space),$(comma),$(strip $(MULTISIG_SIGNERS)))" \
-		--multisig-threshold 2
-
 .NOTPARALLEL: node-init
-.INTERMEDIATE: node-init
-node-init: node-init-genesis node-init-genesis-accounts node-init-genesis-certs node-init-gentx node-init-finalize
+node-init: export KEYS=$(KEY_NAMES)
+node-init:
+	../init.sh
 
-.INTERMEDIATE: node-init-genesis
-node-init-genesis:
-	$(AKASH) genesis init node0
-	cp "$(GENESIS_PATH)" "$(GENESIS_PATH).orig"
-	cat "$(GENESIS_PATH).orig" | \
-		jq -M '.app_state.gov.voting_params.voting_period = "30s"' | \
-		jq -rM '(..|objects|select(has("denom"))).denom           |= "$(CHAIN_TOKEN_DENOM)"' | \
-		jq -rM '(..|objects|select(has("bond_denom"))).bond_denom |= "$(CHAIN_TOKEN_DENOM)"' | \
-		jq -rM '(..|objects|select(has("mint_denom"))).mint_denom |= "$(CHAIN_TOKEN_DENOM)"' > \
-		"$(GENESIS_PATH)"
-
-.INTERMEDIATE: node-init-genesis-certs
-node-init-genesis-certs: $(patsubst %,node-init-genesis-client-cert-%,$(CLIENT_CERTS)) $(patsubst %,node-init-genesis-server-cert-%,$(SERVER_CERTS))
-
-.INTERMEDIATE: $(patsubst %,node-init-genesis-client-cert-%,$(CLIENT_CERTS))
-node-init-genesis-client-cert-%:
-	$(AKASH) tx cert generate client --from=$*
-	$(AKASH) tx cert publish client --to-genesis=true --from=$*
-
-.INTERMEDIATE: $(patsubst %,node-init-genesis-server-cert-%,$(SERVER_CERTS))
-node-init-genesis-server-cert-%:
-	$(AKASH) tx cert generate server localhost akash-provider.localhost --from=$*
-	$(AKASH) tx cert publish server --to-genesis=true --from=$*
-
-.INTERMEDIATE: node-init-genesis-accounts
-node-init-genesis-accounts: $(patsubst %,node-init-genesis-account-%,$(GENESIS_ACCOUNTS))
-	$(AKASH) genesis validate
-
-.INTERMEDIATE: $(patsubst %,node-init-genesis-account-%,$(GENESIS_ACCOUNTS))
-node-init-genesis-account-%:
-	$(AKASH) genesis add-account \
-		"$(shell $(AKASH) $(KEY_OPTS) keys show "$(@:node-init-genesis-account-%=%)" -a)" \
-		"$(CHAIN_MIN_DEPOSIT)$(CHAIN_TOKEN_DENOM)"
-
-.INTERMEDIATE: node-init-gentx
-node-init-gentx:
-	$(AKASH) genesis gentx validator "$(CHAIN_VALIDATOR_DELEGATE)$(CHAIN_TOKEN_DENOM)" --min-self-delegation=1 --gas=auto --gas-prices=0.025uakt
-
-.INTERMEDIATE: node-init-finalize
-node-init-finalize:
-	$(AKASH) genesis collect
-	$(AKASH) genesis validate
+#.INTERMEDIATE: node-init-genesis-certs
+#node-init-genesis-certs: $(patsubst %,node-init-genesis-client-cert-%,$(CLIENT_CERTS)) $(patsubst %,node-init-genesis-server-cert-%,$(SERVER_CERTS))
+#
+#.INTERMEDIATE: $(patsubst %,node-init-genesis-client-cert-%,$(CLIENT_CERTS))
+#node-init-genesis-client-cert-%:
+#	$(AKASH) tx cert generate client --from=$*
+#	$(AKASH) tx cert publish client --to-genesis=true --from=$*
+#
+#.INTERMEDIATE: $(patsubst %,node-init-genesis-server-cert-%,$(SERVER_CERTS))
+#node-init-genesis-server-cert-%:
+#	$(AKASH) tx cert generate server localhost akash-provider.localhost --from=$*
+#	$(AKASH) tx cert publish server --to-genesis=true --from=$*
+#
+#.INTERMEDIATE: node-init-genesis-accounts
+#node-init-genesis-accounts: $(patsubst %,node-init-genesis-account-%,$(GENESIS_ACCOUNTS))
+#	$(AKASH) genesis validate
+#
+#.INTERMEDIATE: $(patsubst %,node-init-genesis-account-%,$(GENESIS_ACCOUNTS))
+#node-init-genesis-account-%:
+#	$(AKASH) genesis add-account \
+#		"$(shell $(AKASH) $(KEY_OPTS) keys show "$(@:node-init-genesis-account-%=%)" -a)" \
+#		"$(CHAIN_MIN_DEPOSIT)$(CHAIN_TOKEN_DENOM)"
 
 .PHONY: node-run
 node-run:
-	$(AKASH) start --minimum-gas-prices=$(AKASH_GAS_PRICES)
+	docker compose up
+	#$(AKASH) start --trace=true
 
 .PHONY: node-status
 node-status:

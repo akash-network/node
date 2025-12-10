@@ -25,14 +25,19 @@ func NewMsgServerImpl(k keeper.Keeper) types.MsgServer {
 	}
 }
 
-func (ms msgServer) AddDenomPriceEntry(ctx context.Context, entry *types.MsgAddDenomPriceEntry) (*types.MsgAddDenomPriceEntryResponse, error) {
+func (ms msgServer) AddPriceEntry(ctx context.Context, req *types.MsgAddPriceEntry) (*types.MsgAddPriceEntryResponse, error) {
 	sctx := sdk.UnwrapSDKContext(ctx)
 
-	if err := ms.keeper.A(sctx, req.Params); err != nil {
+	source, err := sdk.AccAddressFromBech32(req.Signer)
+	if err != nil {
 		return nil, err
 	}
 
-	return &types.MsgAddDenomPriceEntryResponse{}, nil
+	if err := ms.keeper.AddPriceEntry(sctx, source, req.ID, req.Price); err != nil {
+		return nil, err
+	}
+
+	return &types.MsgAddPriceEntryResponse{}, nil
 }
 
 func (ms msgServer) UpdateParams(ctx context.Context, req *types.MsgUpdateParams) (*types.MsgUpdateParamsResponse, error) {

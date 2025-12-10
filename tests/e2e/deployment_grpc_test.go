@@ -12,7 +12,7 @@ import (
 	"pkg.akt.dev/go/cli"
 	clitestutil "pkg.akt.dev/go/cli/testutil"
 	v1 "pkg.akt.dev/go/node/deployment/v1"
-	"pkg.akt.dev/go/node/deployment/v1beta4"
+	dvbeta "pkg.akt.dev/go/node/deployment/v1beta4"
 
 	"pkg.akt.dev/node/v2/testutil"
 )
@@ -21,7 +21,7 @@ type deploymentGRPCRestTestSuite struct {
 	*testutil.NetworkTestSuite
 
 	cctx       client.Context
-	deployment v1beta4.QueryDeploymentResponse
+	deployment dvbeta.QueryDeploymentResponse
 }
 
 func (s *deploymentGRPCRestTestSuite) SetupSuite() {
@@ -54,28 +54,28 @@ func (s *deploymentGRPCRestTestSuite) SetupSuite() {
 			WithFrom(val.Address.String()).
 			WithSkipConfirm().
 			WithBroadcastModeBlock().
-			WithGasAutoFlags()...,
+			WithGasAuto()...,
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
 	// create deployment
-	_, err = clitestutil.TxCreateDeploymentExec(
+	_, err = clitestutil.ExecDeploymentCreate(
 		ctx,
 		s.cctx,
-		deploymentPath,
 		cli.TestFlags().
+			With(deploymentPath).
 			WithFrom(val.Address.String()).
 			WithSkipConfirm().
 			WithBroadcastModeBlock().
 			WithDeposit(DefaultDeposit).
-			WithGasAutoFlags()...,
+			WithGasAuto()...,
 	)
 	s.Require().NoError(err)
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
 	// get deployment
-	resp, err := clitestutil.QueryDeploymentsExec(
+	resp, err := clitestutil.ExecQueryDeployments(
 		ctx,
 		s.cctx,
 		cli.TestFlags().
@@ -84,7 +84,7 @@ func (s *deploymentGRPCRestTestSuite) SetupSuite() {
 
 	s.Require().NoError(err)
 
-	out := &v1beta4.QueryDeploymentsResponse{}
+	out := &dvbeta.QueryDeploymentsResponse{}
 	err = val.ClientCtx.Codec.UnmarshalJSON(resp.Bytes(), out)
 	s.Require().NoError(err)
 	s.Require().Len(out.Deployments, 1, "Deployment Create Failed")
@@ -102,12 +102,12 @@ func (s *deploymentGRPCRestTestSuite) TestGetDeployments() {
 		name    string
 		url     string
 		expErr  bool
-		expResp v1beta4.QueryDeploymentResponse
+		expResp dvbeta.QueryDeploymentResponse
 		expLen  int
 	}{
 		{
 			"get deployments without filters",
-			fmt.Sprintf("%s/akash/deployment/%s/deployments/list", val.APIAddress, v1beta4.GatewayVersion),
+			fmt.Sprintf("%s/akash/deployment/%s/deployments/list", val.APIAddress, dvbeta.GatewayVersion),
 			false,
 			deployment,
 			1,
@@ -115,7 +115,7 @@ func (s *deploymentGRPCRestTestSuite) TestGetDeployments() {
 		{
 			"get deployments with filters",
 			fmt.Sprintf("%s/akash/deployment/%s/deployments/list?filters.owner=%s", val.APIAddress,
-				v1beta4.GatewayVersion,
+				dvbeta.GatewayVersion,
 				deployment.Deployment.ID.Owner),
 			false,
 			deployment,
@@ -123,16 +123,16 @@ func (s *deploymentGRPCRestTestSuite) TestGetDeployments() {
 		},
 		{
 			"get deployments with wrong state filter",
-			fmt.Sprintf("%s/akash/deployment/%s/deployments/list?filters.state=%s", val.APIAddress, v1beta4.GatewayVersion,
+			fmt.Sprintf("%s/akash/deployment/%s/deployments/list?filters.state=%s", val.APIAddress, dvbeta.GatewayVersion,
 				v1.DeploymentStateInvalid.String()),
 			true,
-			v1beta4.QueryDeploymentResponse{},
+			dvbeta.QueryDeploymentResponse{},
 			0,
 		},
 		{
 			"get deployments with two filters",
 			fmt.Sprintf("%s/akash/deployment/%s/deployments/list?filters.state=%s&filters.dseq=%d",
-				val.APIAddress, v1beta4.GatewayVersion, deployment.Deployment.State.String(), deployment.Deployment.ID.DSeq),
+				val.APIAddress, dvbeta.GatewayVersion, deployment.Deployment.State.String(), deployment.Deployment.ID.DSeq),
 			false,
 			deployment,
 			1,
@@ -140,12 +140,11 @@ func (s *deploymentGRPCRestTestSuite) TestGetDeployments() {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		s.Run(tc.name, func() {
 			resp, err := sdktestutil.GetRequest(tc.url)
 			s.Require().NoError(err)
 
-			var deployments v1beta4.QueryDeploymentsResponse
+			var deployments dvbeta.QueryDeploymentsResponse
 			err = val.ClientCtx.Codec.UnmarshalJSON(resp, &deployments)
 
 			if tc.expErr {
@@ -168,33 +167,34 @@ func (s *deploymentGRPCRestTestSuite) TestGetDeployment() {
 		name    string
 		url     string
 		expErr  bool
-		expResp v1beta4.QueryDeploymentResponse
+		expResp dvbeta.QueryDeploymentResponse
 	}{
 		{
 			"get deployment with empty input",
-			fmt.Sprintf("%s/akash/deployment/v1beta4/deployments/info", val.APIAddress),
+			fmt.Sprintf("%s/akash/deployment/%s/deployments/info", val.APIAddress, dvbeta.GatewayVersion),
 			true,
-			v1beta4.QueryDeploymentResponse{},
+			dvbeta.QueryDeploymentResponse{},
 		},
 		{
 			"get deployment with invalid input",
-			fmt.Sprintf("%s/akash/deployment/v1beta4/deployments/info?id.owner=%s", val.APIAddress,
+			fmt.Sprintf("%s/akash/deployment/%s/deployments/info?id.owner=%s", val.APIAddress, dvbeta.GatewayVersion,
 				deployment.Deployment.ID.Owner),
 			true,
-			v1beta4.QueryDeploymentResponse{},
+			dvbeta.QueryDeploymentResponse{},
 		},
 		{
 			"deployment not found",
-			fmt.Sprintf("%s/akash/deployment/v1beta4/deployments/info?id.owner=%s&id.dseq=%d", val.APIAddress,
+			fmt.Sprintf("%s/akash/deployment/%s/deployments/info?id.owner=%s&id.dseq=%d", val.APIAddress, dvbeta.GatewayVersion,
 				deployment.Deployment.ID.Owner,
 				249),
 			true,
-			v1beta4.QueryDeploymentResponse{},
+			dvbeta.QueryDeploymentResponse{},
 		},
 		{
 			"valid get deployment request",
-			fmt.Sprintf("%s/akash/deployment/v1beta4/deployments/info?id.owner=%s&id.dseq=%d",
+			fmt.Sprintf("%s/akash/deployment/%s/deployments/info?id.owner=%s&id.dseq=%d",
 				val.APIAddress,
+				dvbeta.GatewayVersion,
 				deployment.Deployment.ID.Owner,
 				deployment.Deployment.ID.DSeq),
 			false,
@@ -208,7 +208,7 @@ func (s *deploymentGRPCRestTestSuite) TestGetDeployment() {
 			resp, err := sdktestutil.GetRequest(tc.url)
 			s.Require().NoError(err)
 
-			var out v1beta4.QueryDeploymentResponse
+			var out dvbeta.QueryDeploymentResponse
 			err = s.cctx.Codec.UnmarshalJSON(resp, &out)
 
 			if tc.expErr {
@@ -231,33 +231,34 @@ func (s *deploymentGRPCRestTestSuite) TestGetGroup() {
 		name    string
 		url     string
 		expErr  bool
-		expResp v1beta4.Group
+		expResp dvbeta.Group
 	}{
 		{
 			"get group with empty input",
-			fmt.Sprintf("%s/akash/deployment/v1beta4/groups/info", val.APIAddress),
+			fmt.Sprintf("%s/akash/deployment/%s/groups/info", val.APIAddress, dvbeta.GatewayVersion),
 			true,
-			v1beta4.Group{},
+			dvbeta.Group{},
 		},
 		{
 			"get group with invalid input",
-			fmt.Sprintf("%s/akash/deployment/v1beta4/groups/info?id.owner=%s", val.APIAddress,
-				group.ID.Owner),
+			fmt.Sprintf("%s/akash/deployment/%s/groups/info?id.owner=%s", val.APIAddress, dvbeta.GatewayVersion, group.ID.Owner),
 			true,
-			v1beta4.Group{},
+			dvbeta.Group{},
 		},
 		{
 			"group not found",
-			fmt.Sprintf("%s/akash/deployment/v1beta4/groups/info?id.owner=%s&id.dseq=%d", val.APIAddress,
+			fmt.Sprintf("%s/akash/deployment/%s/groups/info?id.owner=%s&id.dseq=%d", val.APIAddress,
+				dvbeta.GatewayVersion,
 				group.ID.Owner,
 				249),
 			true,
-			v1beta4.Group{},
+			dvbeta.Group{},
 		},
 		{
 			"valid get group request",
-			fmt.Sprintf("%s/akash/deployment/v1beta4/groups/info?id.owner=%s&id.dseq=%d&id.gseq=%d",
+			fmt.Sprintf("%s/akash/deployment/%s/groups/info?id.owner=%s&id.dseq=%d&id.gseq=%d",
 				val.APIAddress,
+				dvbeta.GatewayVersion,
 				group.ID.Owner,
 				group.ID.DSeq,
 				group.ID.GSeq),
@@ -267,12 +268,11 @@ func (s *deploymentGRPCRestTestSuite) TestGetGroup() {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		s.Run(tc.name, func() {
 			resp, err := sdktestutil.GetRequest(tc.url)
 			s.Require().NoError(err)
 
-			var out v1beta4.QueryGroupResponse
+			var out dvbeta.QueryGroupResponse
 			err = s.cctx.Codec.UnmarshalJSON(resp, &out)
 
 			if tc.expErr {

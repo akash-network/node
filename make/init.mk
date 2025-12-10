@@ -72,7 +72,7 @@ COSMWASM_OPTIMIZER_VERSION   ?= 0.17.0
 WASMVM_MOD                   := $(shell $(GO) list -m -f '{{ .Path }}' all | grep github.com/CosmWasm/wasmvm)
 WASMVM_VERSION               := $(shell $(GO) list -mod=readonly -m -f '{{ .Version }}' $(WASMVM_MOD))
 
-COSMWASM_OPTIMIZER_IMAGE     := cosmwasm/rust-optimizer
+COSMWASM_OPTIMIZER_IMAGE     := cosmwasm/optimizer
 
 ifeq (arm64,$(UNAME_ARCH))
 	COSMWASM_OPTIMIZER_IMAGE := $(COSMWASM_OPTIMIZER_IMAGE)-arm64

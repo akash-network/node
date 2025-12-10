@@ -1,0 +1,28 @@
+[package]
+name = "pyth"
+version = "1.0.0"
+authors = ["Artur Troian"]
+edition = "2021"
+description = "Pyth price feed consumer contract for Akash Network"
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+#backtraces = ["cosmwasm-std/backtraces"]
+library = []
+
+[dependencies]
+cosmwasm-schema = "3.0.2"
+cosmwasm-std = { version = "3.0.2", features = ["cosmwasm_2_0"] }
+cw-storage-plus = "3.0.1"
+hex = "0.4"
+schemars = "0.8"
+serde = { version = "1.0", default-features = false, features = ["derive"] }
+sha3 = "0.10"
+thiserror = "1.0"
+
+[dev-dependencies]
+cw-multi-test = "3.0.1"

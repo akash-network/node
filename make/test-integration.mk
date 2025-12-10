@@ -20,7 +20,7 @@ test-full: wasmvm-libs
 
 .PHONY: test-integration
 test-integration:
-	$(GO_TEST) -v -tags="e2e.integration" -ldflags '$(ldflags)' $(TEST_MODULES)
+	$(GO_TEST) -v -tags="e2e.integration" -ldflags '$(ldflags)' ./tests/e2e/...
 
 .PHONY: test-coverage
 test-coverage: wasmvm-libs

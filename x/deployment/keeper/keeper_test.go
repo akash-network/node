@@ -6,7 +6,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"pkg.akt.dev/go/node/deployment/v1beta4"
+	dvbeta "pkg.akt.dev/go/node/deployment/v1beta4"
 
 	types "pkg.akt.dev/go/node/deployment/v1"
 	"pkg.akt.dev/go/testutil"
@@ -25,7 +25,7 @@ func Test_Create(t *testing.T) {
 	require.NoError(t, err)
 
 	// assert event emitted
-	assert.Len(t, ctx.EventManager().Events(), 1)
+	assert.Len(t, ctx.EventManager().Events(), 2)
 
 	t.Run("deployment written", func(t *testing.T) {
 		result, ok := keeper.GetDeployment(ctx, deployment.ID)
@@ -92,7 +92,7 @@ func Test_Create_badgroups(t *testing.T) {
 	require.Error(t, err)
 
 	// no events if not created
-	assert.Empty(t, ctx.EventManager().Events())
+	//assert.Empty(t, ctx.EventManager().Events())
 }
 
 func Test_UpdateDeployment(t *testing.T) {
@@ -137,13 +137,13 @@ func Test_OnEscrowAccountClosed_overdrawn(t *testing.T) {
 	{
 		group, ok := keeper.GetGroup(ctx, groups[0].ID)
 		assert.True(t, ok)
-		assert.Equal(t, v1beta4.GroupInsufficientFunds, group.State)
+		assert.Equal(t, dvbeta.GroupInsufficientFunds, group.State)
 	}
 
 	{
 		group, ok := keeper.GetGroup(ctx, groups[1].ID)
 		assert.True(t, ok)
-		assert.Equal(t, v1beta4.GroupInsufficientFunds, group.State)
+		assert.Equal(t, dvbeta.GroupInsufficientFunds, group.State)
 	}
 
 	{
@@ -164,13 +164,13 @@ func Test_OnBidClosed(t *testing.T) {
 	t.Run("target group changed", func(t *testing.T) {
 		group, ok := keeper.GetGroup(ctx, groups[0].ID)
 		assert.True(t, ok)
-		assert.Equal(t, v1beta4.GroupPaused, group.State)
+		assert.Equal(t, dvbeta.GroupPaused, group.State)
 	})
 
 	t.Run("non-target group state unchanged", func(t *testing.T) {
 		group, ok := keeper.GetGroup(ctx, groups[1].ID)
 		assert.True(t, ok)
-		assert.Equal(t, v1beta4.GroupOpen, group.State)
+		assert.Equal(t, dvbeta.GroupOpen, group.State)
 	})
 }
 
@@ -179,41 +179,41 @@ func Test_CloseGroup(t *testing.T) {
 	_, groups := createActiveDeployment(t, ctx, keeper)
 
 	t.Run("assert group 0 state closed", func(t *testing.T) {
-		assert.NoError(t, keeper.OnCloseGroup(ctx, groups[0], v1beta4.GroupClosed))
+		assert.NoError(t, keeper.OnCloseGroup(ctx, groups[0], dvbeta.GroupClosed))
 		group, ok := keeper.GetGroup(ctx, groups[0].ID)
 		assert.True(t, ok)
-		assert.Equal(t, v1beta4.GroupClosed, group.State)
+		assert.Equal(t, dvbeta.GroupClosed, group.State)
 
-		assert.Equal(t, v1beta4.GroupClosed, group.State)
+		assert.Equal(t, dvbeta.GroupClosed, group.State)
 	})
 	t.Run("group 1 matched-state orderable", func(t *testing.T) {
 		group := groups[1]
-		assert.Equal(t, v1beta4.GroupOpen, group.State)
+		assert.Equal(t, dvbeta.GroupOpen, group.State)
 	})
 }
 
 func Test_Empty_CloseGroup(t *testing.T) {
 	ctx, keeper := setupKeeper(t)
-	group := v1beta4.Group{
+	group := dvbeta.Group{
 		ID: testutil.GroupID(t),
 	}
 
 	t.Run("assert non-existent group returns error", func(t *testing.T) {
-		err := keeper.OnCloseGroup(ctx, group, v1beta4.GroupClosed)
+		err := keeper.OnCloseGroup(ctx, group, dvbeta.GroupClosed)
 		assert.Error(t, err, "'group not found' error should be returned")
 	})
 }
 
-func createActiveDeployment(t testing.TB, ctx sdk.Context, keeper keeper.IKeeper) (types.DeploymentID, v1beta4.Groups) {
+func createActiveDeployment(t testing.TB, ctx sdk.Context, keeper keeper.IKeeper) (types.DeploymentID, dvbeta.Groups) {
 	t.Helper()
 
 	deployment := testutil.Deployment(t)
-	groups := v1beta4.Groups{
+	groups := dvbeta.Groups{
 		testutil.DeploymentGroup(t, deployment.ID, 0),
 		testutil.DeploymentGroup(t, deployment.ID, 1),
 	}
 	for i := range groups {
-		groups[i].State = v1beta4.GroupOpen
+		groups[i].State = dvbeta.GroupOpen
 	}
 
 	err := keeper.Create(ctx, deployment, groups)

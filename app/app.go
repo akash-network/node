@@ -24,7 +24,6 @@ import (
 	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
 	evidencetypes "cosmossdk.io/x/evidence/types"
-	"cosmossdk.io/x/feegrant"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	"github.com/CosmWasm/wasmd/x/wasm"
 	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
@@ -47,33 +46,21 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	vestingtypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
-	"github.com/cosmos/cosmos-sdk/x/authz"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
-	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
-	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 	ibchost "github.com/cosmos/ibc-go/v10/modules/core/exported"
-	ibctm "github.com/cosmos/ibc-go/v10/modules/light-clients/07-tendermint"
-
 	cflags "pkg.akt.dev/go/cli/flags"
-	audittypes "pkg.akt.dev/go/node/audit/v1"
-	certtypes "pkg.akt.dev/go/node/cert/v1"
-	deploymenttypes "pkg.akt.dev/go/node/deployment/v1"
-	emodule "pkg.akt.dev/go/node/escrow/module"
-	markettypes "pkg.akt.dev/go/node/market/v1"
-	providertypes "pkg.akt.dev/go/node/provider/v1beta4"
-	taketypes "pkg.akt.dev/go/node/take/v1"
 	"pkg.akt.dev/go/sdkutil"
 
 	apptypes "pkg.akt.dev/node/v2/app/types"
 	utypes "pkg.akt.dev/node/v2/upgrades/types"
+	"pkg.akt.dev/node/v2/util/partialord"
+	"pkg.akt.dev/node/v2/x/bme"
+	"pkg.akt.dev/node/v2/x/escrow"
 	"pkg.akt.dev/node/v2/x/oracle"
 	awasm "pkg.akt.dev/node/v2/x/wasm"
 	// unnamed import of statik for swagger UI support
@@ -226,7 +213,8 @@ func NewApp(
 
 	// Tell the app's module manager how to set the order of BeginBlockers, which are run at the beginning of every block.
 	app.MM.SetOrderBeginBlockers(orderBeginBlockers(app.MM.ModuleNames())...)
-	app.MM.SetOrderInitGenesis(OrderInitGenesis(app.MM.ModuleNames())...)
+	app.MM.SetOrderEndBlockers(orderEndBlockers(app.MM.ModuleNames())...)
+	app.MM.SetOrderInitGenesis(orderInitGenesis(app.MM.ModuleNames())...)
 
 	app.Configurator = module.NewConfigurator(app.AppCodec(), app.MsgServiceRouter(), app.GRPCQueryRouter())
 	err = app.MM.RegisterServices(app.Configurator)
@@ -294,75 +282,110 @@ func NewApp(
 }
 
 // orderBeginBlockers returns the order of BeginBlockers, by module name.
-func orderBeginBlockers(_ []string) []string {
-	return []string{
-		upgradetypes.ModuleName,
-		banktypes.ModuleName,
-		paramstypes.ModuleName,
-		deploymenttypes.ModuleName,
-		govtypes.ModuleName,
-		providertypes.ModuleName,
-		certtypes.ModuleName,
-		markettypes.ModuleName,
-		audittypes.ModuleName,
-		genutiltypes.ModuleName,
-		vestingtypes.ModuleName,
-		authtypes.ModuleName,
-		authz.ModuleName,
-		taketypes.ModuleName,
-		emodule.ModuleName,
-		minttypes.ModuleName,
-		distrtypes.ModuleName,
-		slashingtypes.ModuleName,
-		evidencetypes.ModuleName,
-		stakingtypes.ModuleName,
-		transfertypes.ModuleName,
-		consensusparamtypes.ModuleName,
-		ibctm.ModuleName,
-		ibchost.ModuleName,
-		feegrant.ModuleName,
-		epochstypes.ModuleName,
-		oracle.ModuleName,
-		// akash wasm module must be prior wasm
-		awasm.ModuleName,
-		// wasm after ibc transfer
-		wasmtypes.ModuleName,
-	}
+// the original order for reference
+//
+//	upgradetypes.ModuleName,
+//	banktypes.ModuleName,
+//	paramstypes.ModuleName,
+//	deploymenttypes.ModuleName,
+//	govtypes.ModuleName,
+//	providertypes.ModuleName,
+//	certtypes.ModuleName,
+//	markettypes.ModuleName,
+//	audittypes.ModuleName,
+//	genutiltypes.ModuleName,
+//	vestingtypes.ModuleName,
+//	authtypes.ModuleName,
+//	authz.ModuleName,
+//	taketypes.ModuleName,
+//	emodule.ModuleName,
+//	minttypes.ModuleName,
+//	distrtypes.ModuleName,
+//	slashingtypes.ModuleName,
+//	evidencetypes.ModuleName,
+//	stakingtypes.ModuleName,
+//	transfertypes.ModuleName,
+//	consensusparamtypes.ModuleName,
+//	ibctm.ModuleName,
+//	ibchost.ModuleName,
+//	feegrant.ModuleName,
+//	epochstypes.ModuleName,
+//	oracle.ModuleName,
+//	bme.ModuleName,
+//	// akash wasm module must be prior wasm
+//	awasm.ModuleName,
+//	// wasm after ibc transfer
+//	wasmtypes.ModuleName,
+func orderBeginBlockers(modules []string) []string {
+	ord := partialord.NewPartialOrdering(modules)
+	ord.FirstElements(epochstypes.ModuleName)
+
+	// Staking ordering
+	// TODO: Perhaps this can be relaxed, left to future work to analyze.
+	ord.Sequence(distrtypes.ModuleName, slashingtypes.ModuleName, evidencetypes.ModuleName, stakingtypes.ModuleName)
+	// TODO: This can almost certainly be un-constrained, but we keep the constraint to match prior functionality.
+	// IBChost came after staking, before superfluid.
+	// TODO: Come back and delete this line after testing the base change.
+	ord.Sequence(stakingtypes.ModuleName, ibchost.ModuleName)
+
+	// oracle must come up prior bme
+	ord.Before(oracle.ModuleName, bme.ModuleName)
+
+	// escrow must come up after bme
+	ord.Before(bme.ModuleName, escrow.ModuleName)
+
+	// akash wasm module must be prior wasm
+	ord.Before(awasm.ModuleName, wasmtypes.ModuleName)
+	// wasm after ibc transfer
+	ord.Before(transfertypes.ModuleName, wasmtypes.ModuleName)
+
+	// We leave downtime-detector un-constrained.
+	// every remaining module's begin block is a no-op.
+
+	return ord.TotalOrdering()
 }
 
-// OrderEndBlockers returns EndBlockers (crisis, govtypes, staking) with no relative order.
-func OrderEndBlockers(_ []string) []string {
-	return []string{
-		govtypes.ModuleName,
-		stakingtypes.ModuleName,
-		upgradetypes.ModuleName,
-		banktypes.ModuleName,
-		paramstypes.ModuleName,
-		deploymenttypes.ModuleName,
-		providertypes.ModuleName,
-		certtypes.ModuleName,
-		markettypes.ModuleName,
-		audittypes.ModuleName,
-		genutiltypes.ModuleName,
-		vestingtypes.ModuleName,
-		authtypes.ModuleName,
-		authz.ModuleName,
-		taketypes.ModuleName,
-		emodule.ModuleName,
-		minttypes.ModuleName,
-		distrtypes.ModuleName,
-		slashingtypes.ModuleName,
-		evidencetypes.ModuleName,
-		transfertypes.ModuleName,
-		ibchost.ModuleName,
-		feegrant.ModuleName,
-		// akash wasm module must be prior wasm
-		awasm.ModuleName,
-		// wasm after ibc transfer
-		wasmtypes.ModuleName,
-		oracle.ModuleName,
-		epochstypes.ModuleName,
-	}
+// orderEndBlockers returns EndBlockers (crisis, govtypes, staking) with no relative order.
+// original ordering for reference
+//
+//	govtypes.ModuleName,
+//	stakingtypes.ModuleName,
+//	upgradetypes.ModuleName,
+//	banktypes.ModuleName,
+//	paramstypes.ModuleName,
+//	deploymenttypes.ModuleName,
+//	providertypes.ModuleName,
+//	certtypes.ModuleName,
+//	markettypes.ModuleName,
+//	audittypes.ModuleName,
+//	genutiltypes.ModuleName,
+//	vestingtypes.ModuleName,
+//	authtypes.ModuleName,
+//	authz.ModuleName,
+//	taketypes.ModuleName,
+//	emodule.ModuleName,
+//	minttypes.ModuleName,
+//	distrtypes.ModuleName,
+//	slashingtypes.ModuleName,
+//	evidencetypes.ModuleName,
+//	transfertypes.ModuleName,
+//	ibchost.ModuleName,
+//	feegrant.ModuleName,
+//	// akash wasm module must be prior wasm
+//	awasm.ModuleName,
+//	// wasm after ibc transfer
+//	wasmtypes.ModuleName,
+//	oracle.ModuleName,
+//	bme.ModuleName,
+//	epochstypes.ModuleName,
+func orderEndBlockers(modules []string) []string {
+	ord := partialord.NewPartialOrdering(modules)
+
+	// Staking must be after gov.
+	ord.FirstElements(govtypes.ModuleName, stakingtypes.ModuleName)
+	//ord.Before(govtypes.ModuleName, )
+
+	return ord.TotalOrdering()
 }
 
 func getGenesisTime(appOpts servertypes.AppOptions, homePath string) time.Time { // nolint: unused

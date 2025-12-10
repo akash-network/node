@@ -47,6 +47,29 @@ builds:
       - -s -w
       - -linkmode=external
       - -extldflags "-L./.cache/lib -lwasmvm_muslc.aarch64 -Wl,-z,muldefs -lm -lrt -lc"
+
+#dockers_v2:
+#  - id: akash
+#    dockerfile: _build/akash.Dockerfile
+#    images:
+#      - "ghcr.io/akash-network/akash"
+#    ids:
+#      - akash-linux-amd64
+#      - akash-linux-arm64
+#    platforms:
+#      - linux/amd64
+#      - linux/arm64
+#    tags:
+#      - "{{ .Tag }}"
+#      - "latest"
+#    labels:
+#      "org.opencontainers.image.title": "{{ .ProjectName }}"
+#      "org.opencontainers.image.description": "{{ .ProjectName }}"
+#      "org.opencontainers.image.url": "{{.GitURL}}"
+#      "org.opencontainers.image.source": "{{.GitURL}}"
+#      "org.opencontainers.image.version": "{{ .Version }}"
+#      "org.opencontainers.image.created": "{{ time "2006-01-02T15:04:05Z07:00" }}"
+#      "org.opencontainers.image.revision": "{{ .FullCommit }}"
 dockers:
   - dockerfile: _build/akash.Dockerfile
     use: buildx

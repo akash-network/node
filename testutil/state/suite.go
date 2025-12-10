@@ -1,59 +1,63 @@
 package state
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/mock"
-
-	"cosmossdk.io/collections"
+	sdkmath "cosmossdk.io/math"
 	"cosmossdk.io/store"
-	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/cosmos/cosmos-sdk/runtime"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	"github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
+	"github.com/stretchr/testify/mock"
+	bmetypes "pkg.akt.dev/go/node/bme/v1"
+	mv1 "pkg.akt.dev/go/node/market/v1"
+	oracletypes "pkg.akt.dev/go/node/oracle/v1"
+	"pkg.akt.dev/go/sdkutil"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	atypes "pkg.akt.dev/go/node/audit/v1"
 	dtypes "pkg.akt.dev/go/node/deployment/v1"
 	emodule "pkg.akt.dev/go/node/escrow/module"
-	mtypes "pkg.akt.dev/go/node/market/v1"
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
-	ttypes "pkg.akt.dev/go/node/take/v1"
 
 	"pkg.akt.dev/node/v2/app"
 	emocks "pkg.akt.dev/node/v2/testutil/cosmos/mocks"
+	oracletestutil "pkg.akt.dev/node/v2/testutil/oracle"
 	akeeper "pkg.akt.dev/node/v2/x/audit/keeper"
+	bmekeeper "pkg.akt.dev/node/v2/x/bme/keeper"
 	dkeeper "pkg.akt.dev/node/v2/x/deployment/keeper"
 	ekeeper "pkg.akt.dev/node/v2/x/escrow/keeper"
 	mhooks "pkg.akt.dev/node/v2/x/market/hooks"
 	mkeeper "pkg.akt.dev/node/v2/x/market/keeper"
+	oraclekeeper "pkg.akt.dev/node/v2/x/oracle/keeper"
 	pkeeper "pkg.akt.dev/node/v2/x/provider/keeper"
-	tkeeper "pkg.akt.dev/node/v2/x/take/keeper"
 )
 
 // TestSuite encapsulates a functional Akash nodes data stores for
 // ephemeral testing.
 type TestSuite struct {
-	t       testing.TB
-	ms      store.CommitMultiStore
-	ctx     sdk.Context
-	app     *app.AkashApp
-	keepers Keepers
+	t           testing.TB
+	ms          store.CommitMultiStore
+	ctx         sdk.Context
+	app         *app.AkashApp
+	keepers     Keepers
+	priceFeeder *oracletestutil.PriceFeeder
 }
 
 type Keepers struct {
-	Take       tkeeper.IKeeper
+	Oracle     oraclekeeper.Keeper
+	BME        bmekeeper.Keeper
 	Escrow     ekeeper.Keeper
 	Audit      akeeper.IKeeper
 	Market     mkeeper.IKeeper
 	Deployment dkeeper.IKeeper
 	Provider   pkeeper.IKeeper
+	Account    *emocks.AccountKeeper
 	Bank       *emocks.BankKeeper
 	Authz      *emocks.AuthzKeeper
 }
@@ -79,8 +83,43 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 		// do not set bank mock during suite setup, each test must set them manually
 		// to make sure escrow balance values are tracked correctly
 		bkeeper.
-			On("SpendableCoin", mock.Anything, mock.Anything, mock.Anything).
-			Return(sdk.NewInt64Coin("uakt", 10000000))
+			On("SpendableCoin", mock.Anything, mock.Anything, mock.MatchedBy(func(denom string) bool {
+				matched := denom == sdkutil.DenomUakt || denom == sdkutil.DenomUact
+				return matched
+			})).
+			Return(func(_ context.Context, _ sdk.AccAddress, denom string) sdk.Coin {
+				if denom == sdkutil.DenomUakt {
+					return sdk.NewInt64Coin(sdkutil.DenomUakt, 10000000)
+				}
+				return sdk.NewInt64Coin("uact", 1800000)
+			})
+
+		// Mock GetSupply for BME collateral ratio checks
+		bkeeper.
+			On("GetSupply", mock.Anything, mock.MatchedBy(func(denom string) bool {
+				return denom == sdkutil.DenomUakt || denom == sdkutil.DenomUact
+			})).
+			Return(func(ctx context.Context, denom string) sdk.Coin {
+				if denom == sdkutil.DenomUakt {
+					return sdk.NewInt64Coin(sdkutil.DenomUakt, 1000000000000) // 1T uakt total supply
+				}
+				// For CR calculation: CR = (BME_uakt_balance * swap_rate) / total_uact_supply
+				// Target CR > 100% for tests: (600B * 3.0) / 1.8T = 1800B / 1800B = 1.0 = 100%
+				return sdk.NewInt64Coin(sdkutil.DenomUact, 1800000000000) // 1.8T uact total supply
+			})
+
+		// Mock GetBalance for BME module account balance checks
+		bkeeper.
+			On("GetBalance", mock.Anything, mock.Anything, mock.MatchedBy(func(denom string) bool {
+				return denom == sdkutil.DenomUakt || denom == sdkutil.DenomUact
+			})).
+			Return(func(ctx context.Context, addr sdk.AccAddress, denom string) sdk.Coin {
+				if denom == sdkutil.DenomUakt {
+					// BME module should have enough uakt to maintain healthy CR
+					return sdk.NewInt64Coin(sdkutil.DenomUakt, 600000000000) // 600B uakt in BME module
+				}
+				return sdk.NewInt64Coin(sdkutil.DenomUact, 100000000000) // 100B uact in BME module
+			})
 
 		keepers.Bank = bkeeper
 	}
@@ -89,6 +128,20 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 		keeper := &emocks.AuthzKeeper{}
 
 		keepers.Authz = keeper
+	}
+
+	if keepers.Account == nil {
+		akeeper := &emocks.AccountKeeper{}
+
+		// Mock GetModuleAddress to return deterministic addresses for module accounts
+		akeeper.
+			On("GetModuleAddress", mock.Anything).
+			Return(func(moduleName string) sdk.AccAddress {
+				// Generate deterministic module addresses based on module name
+				return authtypes.NewModuleAddress(moduleName)
+			})
+
+		keepers.Account = akeeper
 	}
 
 	app := app.Setup(
@@ -126,19 +179,26 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 		keepers.Audit = akeeper.NewKeeper(cdc, app.GetKey(atypes.StoreKey))
 	}
 
-	if keepers.Take == nil {
-		keepers.Take = tkeeper.NewKeeper(cdc, app.GetKey(ttypes.StoreKey), authtypes.NewModuleAddress(govtypes.ModuleName).String())
+	if keepers.Oracle == nil {
+		keepers.Oracle = oraclekeeper.NewKeeper(cdc, app.GetKey(oracletypes.StoreKey), authtypes.NewModuleAddress(govtypes.ModuleName).String())
+	}
+
+	if keepers.BME == nil {
+		keepers.BME = bmekeeper.NewKeeper(
+			cdc,
+			app.GetKey(bmetypes.StoreKey),
+			app.AC,
+			authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+			keepers.Account,
+			keepers.Bank,
+			keepers.Oracle)
 	}
 
 	if keepers.Escrow == nil {
-		storeService := runtime.NewKVStoreService(app.GetKey(types.StoreKey))
-		sb := collections.NewSchemaBuilder(storeService)
-
-		feepool := collections.NewItem(sb, types.FeePoolKey, "fee_pool", codec.CollValue[types.FeePool](cdc))
-		keepers.Escrow = ekeeper.NewKeeper(cdc, app.GetKey(emodule.StoreKey), keepers.Bank, keepers.Take, keepers.Authz, feepool)
+		keepers.Escrow = ekeeper.NewKeeper(cdc, app.GetKey(emodule.StoreKey), app.AC, keepers.Bank, keepers.Authz)
 	}
 	if keepers.Market == nil {
-		keepers.Market = mkeeper.NewKeeper(cdc, app.GetKey(mtypes.StoreKey), keepers.Escrow, authtypes.NewModuleAddress(govtypes.ModuleName).String())
+		keepers.Market = mkeeper.NewKeeper(cdc, app.GetKey(mv1.StoreKey), keepers.Escrow, authtypes.NewModuleAddress(govtypes.ModuleName).String())
 
 	}
 	if keepers.Deployment == nil {
@@ -153,11 +213,32 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 	keepers.Escrow.AddOnAccountClosedHook(hook.OnEscrowAccountClosed)
 	keepers.Escrow.AddOnPaymentClosedHook(hook.OnEscrowPaymentClosed)
 
+	// Initialize price feeder for oracle testing
+	priceFeeder, err := oracletestutil.SetupPriceFeeder(ctx, keepers.Oracle)
+	if err != nil {
+		t.Fatal("failed to setup price feeder:", err)
+	}
+
+	// Feed initial prices (AKT/USD = $3.00)
+	if err := priceFeeder.FeedPrices(ctx); err != nil {
+		t.Fatal("failed to feed initial prices:", err)
+	}
+
+	// Enable BME with permissive params for tests
+	bmeParams := bmetypes.Params{
+		CircuitBreakerWarnThreshold: 5000, // 50% - very permissive for tests
+		CircuitBreakerHaltThreshold: 1000, // 10% - very permissive for tests
+	}
+	if err := keepers.BME.SetParams(ctx, bmeParams); err != nil {
+		t.Fatal("failed to set BME params:", err)
+	}
+
 	return &TestSuite{
-		t:       t,
-		app:     app,
-		ctx:     ctx,
-		keepers: keepers,
+		t:           t,
+		app:         app,
+		ctx:         ctx,
+		keepers:     keepers,
+		priceFeeder: priceFeeder,
 	}
 }
 
@@ -217,4 +298,56 @@ func (ts *TestSuite) BankKeeper() *emocks.BankKeeper {
 // AuthzKeeper key store
 func (ts *TestSuite) AuthzKeeper() *emocks.AuthzKeeper {
 	return ts.keepers.Authz
+}
+
+// OracleKeeper key store
+func (ts *TestSuite) OracleKeeper() oraclekeeper.Keeper {
+	return ts.keepers.Oracle
+}
+
+// BmeKeeper key store
+func (ts *TestSuite) BmeKeeper() bmekeeper.Keeper {
+	return ts.keepers.BME
+}
+
+// PriceFeeder returns the oracle price feeder for testing
+func (ts *TestSuite) PriceFeeder() *oracletestutil.PriceFeeder {
+	return ts.priceFeeder
+}
+
+// MockBMEForDeposit mocks BME burn/mint operations for a deposit
+// This should be called before operations that deposit funds into escrow
+// When BME is enabled and deposit.Direct=false, the deposit flow is:
+// 1. SendCoinsFromAccountToModule(from, "bme", uakt)
+// 2. MintCoins("bme", uakt)
+// 3. BurnCoins("bme", uakt)
+// 4. SendCoinsFromModuleToModule("bme", "escrow", uact) <- swapped amount
+func (ts *TestSuite) MockBMEForDeposit(from sdk.AccAddress, depositCoin sdk.Coin) {
+	if ts.keepers.Bank == nil {
+		return
+	}
+
+	bkeeper := ts.keepers.Bank
+
+	// Calculate swapped amount: at $3 per AKT and $1 per ACT
+	// swapRate = 3.0, so uakt -> uact is multiplied by 3
+	swappedAmount := depositCoin.Amount.Mul(sdkmath.NewInt(1))
+	swappedCoin := sdk.NewCoin("uact", swappedAmount)
+
+	// BME operations for non-direct deposits
+	bkeeper.
+		On("SendCoinsFromAccountToModule", mock.Anything, from, emodule.ModuleName, sdk.NewCoins(depositCoin)).
+		Return(nil).Once()
+
+	bkeeper.
+		On("MintCoins", mock.Anything, "bme", mock.Anything).
+		Return(nil).Maybe()
+
+	bkeeper.
+		On("BurnCoins", mock.Anything, "bme", mock.Anything).
+		Return(nil).Maybe()
+
+	bkeeper.
+		On("SendCoinsFromModuleToModule", mock.Anything, "bme", emodule.ModuleName, sdk.NewCoins(swappedCoin)).
+		Return(nil).Once()
 }
