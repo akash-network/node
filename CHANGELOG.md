@@ -47,3 +47,5 @@ Ref: https://keepachangelog.com/en/1.0.0/
 ### Bug Fixes
 
 * Fix bug in ditribution and querying rewards
+
+* Replaced sdkerrors.Register with sdkerrors.RegisterWithGRPCCode for the proper error propagation
