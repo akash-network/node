@@ -48,13 +48,13 @@ jobs:
       - name: Free Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@main
         with:
-          tool-cache: false
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: true
+          tool-cache: false # pre-cached tools (Node, Go, Python, Ruby). Saves ~6GB. Total CI impact: +90s (30s cleanup + 60s re-download)
+          docker-images: false # cached Docker images. Saves ~5-10GB. Total CI impact: +110s (20s cleanup + 90s re-pull goreleaser-cross)
+          swap-storage: false # swap storage. Saves ~4GB disk but risks OOM during parallel goreleaser builds. Keep swap for safety.
+          android: true # Android SDK. Saves ~14GB. Total CI impact: +30s (not used in build)
+          dotnet: true # .NET runtime. Saves ~2.7GB. Total CI impact: +10s (not used in build)
+          haskell: true # Haskell (GHC). Saves ~5GB. Total CI impact: +10s (not used in build)
+          large-packages: true # large packages (llvm, php, mysql, etc). Saves ~5.3GB. Total CI impact: +60s (not used in build)
       - name: Setup environment
         uses: ./.github/actions/setup-ubuntu
       - run: make bins
