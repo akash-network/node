@@ -46,8 +46,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with: # bool variable is used to determine if the package should be removed or not
           tool-cache: false # pre-cached tools (Node, Go, Python, Ruby). Saves ~6GB. Total CI impact: +90s (30s cleanup + 60s re-download)
           docker-images: false # cached Docker images. Saves ~5-10GB. Total CI impact: +110s (20s cleanup + 90s re-pull goreleaser-cross)
           swap-storage: false # swap storage. Saves ~4GB disk but risks OOM during parallel goreleaser builds. Keep swap for safety.
