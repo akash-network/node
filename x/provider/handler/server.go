@@ -3,7 +3,8 @@ package handler
 import (
 	"context"
 
-	errorsmod "cosmossdk.io/errors"
+	sdkerrors "cosmossdk.io/errors"
+	"google.golang.org/grpc/codes"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	types "pkg.akt.dev/go/node/provider/v1beta4"
@@ -14,7 +15,7 @@ import (
 
 var (
 	// ErrInternal defines registered error code for internal error
-	ErrInternal = errorsmod.Register(types.ModuleName, 10, "internal error")
+	ErrInternal = sdkerrors.RegisterWithGRPCCode(types.ModuleName, 10, codes.Internal, "internal error")
 )
 
 type msgServer struct {
@@ -65,7 +66,7 @@ func (ms msgServer) UpdateProvider(goCtx context.Context, msg *types.MsgUpdatePr
 	}
 
 	if err := ms.provider.Update(ctx, types.Provider(*msg)); err != nil {
-		return nil, errorsmod.Wrapf(ErrInternal, "err: %v", err)
+		return nil, sdkerrors.Wrapf(ErrInternal, "err: %v", err)
 	}
 
 	return &types.MsgUpdateProviderResponse{}, nil
