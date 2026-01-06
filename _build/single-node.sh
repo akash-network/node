@@ -26,10 +26,11 @@ akash genesis gentx validator 10000000000uakt --keyring-backend="test" --chain-i
 akash genesis collect
 
 # Set proper defaults and change ports
-sed -i '' 's#"tcp://127.0.0.1:26657"#"tcp://0.0.0.0:26657"#g' ~/.akash/config/config.toml
-sed -i '' 's/timeout_commit = "5s"/timeout_commit = "1s"/g' ~/.akash/config/config.toml
-sed -i '' 's/timeout_propose = "3s"/timeout_propose = "1s"/g' ~/.akash/config/config.toml
-sed -i '' 's/index_all_keys = false/index_all_keys = true/g' ~/.akash/config/config.toml
+sed -i.bak 's#"tcp://127.0.0.1:26657"#"tcp://0.0.0.0:26657"#g' ~/.akash/config/config.toml
+sed -i.bak 's/timeout_commit = "5s"/timeout_commit = "1s"/g' ~/.akash/config/config.toml
+sed -i.bak 's/timeout_propose = "3s"/timeout_propose = "1s"/g' ~/.akash/config/config.toml
+sed -i.bak 's/index_all_keys = false/index_all_keys = true/g' ~/.akash/config/config.toml
+rm -f ~/.akash/config/config.toml.bak
 
 # Start the akash
 akash start --pruning=nothing
