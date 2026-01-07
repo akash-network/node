@@ -4,18 +4,12 @@ import (
 	"context"
 
 	sdkerrors "cosmossdk.io/errors"
-	"google.golang.org/grpc/codes"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	types "pkg.akt.dev/go/node/provider/v1beta4"
 
 	mkeeper "pkg.akt.dev/node/x/market/keeper"
 	"pkg.akt.dev/node/x/provider/keeper"
-)
-
-var (
-	// ErrInternal defines registered error code for internal error
-	ErrInternal = sdkerrors.RegisterWithGRPCCode(types.ModuleName, 10, codes.Internal, "internal error")
 )
 
 type msgServer struct {
@@ -45,7 +39,7 @@ func (ms msgServer) CreateProvider(goCtx context.Context, msg *types.MsgCreatePr
 	}
 
 	if err := ms.provider.Create(ctx, types.Provider(*msg)); err != nil {
-		return nil, ErrInternal.Wrapf("err: %v", err)
+		return nil, types.ErrInternal.Wrapf("err: %v", err)
 	}
 
 	return &types.MsgCreateProviderResponse{}, nil
@@ -66,7 +60,7 @@ func (ms msgServer) UpdateProvider(goCtx context.Context, msg *types.MsgUpdatePr
 	}
 
 	if err := ms.provider.Update(ctx, types.Provider(*msg)); err != nil {
-		return nil, sdkerrors.Wrapf(ErrInternal, "err: %v", err)
+		return nil, sdkerrors.Wrapf(types.ErrInternal, "err: %v", err)
 	}
 
 	return &types.MsgUpdateProviderResponse{}, nil
@@ -85,5 +79,5 @@ func (ms msgServer) DeleteProvider(goCtx context.Context, msg *types.MsgDeletePr
 	}
 
 	// TODO: cancel leases
-	return nil, ErrInternal.Wrap("NOTIMPLEMENTED")
+	return nil, types.ErrInternal.Wrap("NOTIMPLEMENTED")
 }

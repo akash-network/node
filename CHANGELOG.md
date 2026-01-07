@@ -48,4 +48,4 @@ Ref: https://keepachangelog.com/en/1.0.0/
 
 * Fix bug in ditribution and querying rewards
 
-* Replaced sdkerrors.Register with sdkerrors.RegisterWithGRPCCode for the proper error propagation
+* Moved x/provider/handler.ErrInternal to the chain-sdk/go/node/provider/v1beta4 package.

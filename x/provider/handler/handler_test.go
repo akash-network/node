@@ -253,8 +253,8 @@ func TestProviderDeleteExisting(t *testing.T) {
 
 	res, err := suite.handler(suite.ctx, deleteMsg)
 	require.Nil(t, res)
-	require.EqualError(t, err, "NOTIMPLEMENTED: "+handler.ErrInternal.Error())
-	require.True(t, errors.Is(err, handler.ErrInternal))
+	require.EqualError(t, err, "NOTIMPLEMENTED: "+types.ErrInternal.Error())
+	require.True(t, errors.Is(err, types.ErrInternal))
 
 	t.Run("ensure event created", func(_ *testing.T) {
 		// TODO: this should emit a ProviderDelete
