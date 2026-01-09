@@ -45,7 +45,7 @@ require (
 	google.golang.org/grpc v1.75.0
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.2
-	pkg.akt.dev/go v0.1.6
+	pkg.akt.dev/go v0.1.9-0.20260109003838-508f70669a8c
 	pkg.akt.dev/go/cli v0.1.4
 	pkg.akt.dev/go/sdl v0.1.1
 )
