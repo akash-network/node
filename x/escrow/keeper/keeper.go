@@ -11,17 +11,17 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
-	bmetypes "pkg.akt.dev/go/node/bme/v1"
-	dv1beta "pkg.akt.dev/go/node/deployment/v1beta5"
-	mtypes "pkg.akt.dev/go/node/market/v2beta1"
-	"pkg.akt.dev/go/sdkutil"
 
+	bmetypes "pkg.akt.dev/go/node/bme/v1"
+	dvbeta "pkg.akt.dev/go/node/deployment/v1beta5"
 	escrowid "pkg.akt.dev/go/node/escrow/id/v1"
 	"pkg.akt.dev/go/node/escrow/module"
 	etypes "pkg.akt.dev/go/node/escrow/types/v1"
 	ev1 "pkg.akt.dev/go/node/escrow/v1"
+	mtypes "pkg.akt.dev/go/node/market/v2beta1"
 	types "pkg.akt.dev/go/node/market/v2beta1"
 	deposit "pkg.akt.dev/go/node/types/deposit/v1"
+	"pkg.akt.dev/go/sdkutil"
 )
 
 type AccountHook func(sdk.Context, etypes.Account) error
@@ -159,19 +159,18 @@ func (k *keeper) AuthorizeDeposits(sctx sdk.Context, msg sdk.Msg) ([]etypes.Depo
 
 	owner := signers[0]
 
-	// Try HasDeposits interface first (new - supports multiple deposits)
 	var deposits deposit.Deposits
-	if hasDepositsMsg, ok := msg.(deposit.HasDeposits); ok {
-		deposits = hasDepositsMsg.GetDeposits()
-	} else if hasDepositMsg, ok := msg.(deposit.HasDeposit); ok {
-		// Fall back to HasDeposit interface (old - single deposit)
-		deposits = deposit.Deposits{hasDepositMsg.GetDeposit()}
-	} else {
+	switch mt := msg.(type) {
+	case deposit.HasDeposit:
+		deposits = deposit.Deposits{mt.GetDeposit()}
+	case deposit.HasDeposits:
+		deposits = mt.GetDeposits()
+	default:
 		return nil, fmt.Errorf("%w: message [%s] does not implement deposit.HasDeposit or deposit.HasDeposits", module.ErrInvalidDeposit, reflect.TypeOf(msg).String())
 	}
 
 	// Process each deposit
-	for depositIdx, dep := range deposits {
+	for _, dep := range deposits {
 		denom := dep.Amount.Denom
 		remainder := sdkmath.NewInt(dep.Amount.Amount.Int64())
 
@@ -214,18 +213,48 @@ func (k *keeper) AuthorizeDeposits(sctx sdk.Context, msg sdk.Msg) ([]etypes.Depo
 
 					requestedSpend := sdk.NewCoin(denom, remainder)
 
+					var authzMsg sdk.Msg
+
 					// bc authz.Accepts take sdk.Msg as an argument, the deposit amount from incoming message
 					// has to be modified in place to correctly calculate what deposits to take from grants
 					switch mt := msg.(type) {
 					case *ev1.MsgAccountDeposit:
-						mt.Deposit.Amount = requestedSpend
-					case *dv1beta.MsgCreateDeployment:
-						mt.Deposits[depositIdx].Amount = requestedSpend
+						authzMsg = &ev1.MsgAccountDeposit{
+							Signer: mt.Signer,
+							ID:     mt.ID,
+							Deposit: deposit.Deposit{
+								Amount:  requestedSpend,
+								Direct:  mt.Deposit.Direct,
+								Sources: mt.Deposit.Sources,
+							},
+						}
+					case *dvbeta.MsgCreateDeployment:
+						authzMsg = &dvbeta.MsgCreateDeployment{
+							ID:     mt.ID,
+							Groups: mt.Groups,
+							Hash:   mt.Hash,
+							Deposits: deposit.Deposits{
+								{
+									Amount:  requestedSpend,
+									Direct:  dep.Direct,
+									Sources: dep.Sources,
+								},
+							},
+						}
 					case *mtypes.MsgCreateBid:
-						mt.Deposit.Amount = requestedSpend
+						authzMsg = &mtypes.MsgCreateBid{
+							ID:     mt.ID,
+							Prices: mt.Prices,
+							Deposit: deposit.Deposit{
+								Amount:  requestedSpend,
+								Direct:  dep.Direct,
+								Sources: dep.Sources,
+							},
+							ResourcesOffer: mt.ResourcesOffer,
+						}
 					}
 
-					resp, err := depositAuthz.TryAccept(ctx, msg, true)
+					resp, err := depositAuthz.TryAccept(ctx, authzMsg, true)
 					if err != nil {
 						return false
 					}

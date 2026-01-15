@@ -82,6 +82,10 @@ ifeq (,$(findstring nostrip,$(BUILD_OPTIONS)))
 	BUILD_FLAGS += -trimpath
 endif
 
+ifeq (delve,$(findstring delve,$(BUILD_OPTIONS)))
+	BUILD_FLAGS += -gcflags "all=-N -l"
+endif
+
 ldflags += $(LDFLAGS)
 ldflags := $(strip $(ldflags))
 
