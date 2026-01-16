@@ -89,6 +89,7 @@ func NewKeeper(cdc codec.BinaryCodec, skey *storetypes.KVStoreKey, authority str
 	if err != nil {
 		panic(err)
 	}
+
 	k.Schema = schema
 
 	return k
@@ -412,7 +413,7 @@ func (k *keeper) getTWAPHistory(ctx sdk.Context, source uint32, denom string, st
 
 // SetParams sets the x/oracle module parameters.
 func (k *keeper) SetParams(ctx sdk.Context, p types.Params) error {
-	if err := p.Validate(); err != nil {
+	if err := p.ValidateBasic(); err != nil {
 		return err
 	}
 

@@ -84,7 +84,10 @@ node-init-genesis:
 	$(AKASH) genesis init node0
 	cp "$(GENESIS_PATH)" "$(GENESIS_PATH).orig"
 	cat "$(GENESIS_PATH).orig" | \
-		jq -M '.app_state.gov.voting_params.voting_period = "30s"' | \
+		jq -M '.app_state.gov.voting_params.voting_period = "60s"' | \
+		jq -M '.app_state.gov.params.voting_period = "60s"' | \
+		jq -M '.app_state.gov.params.expedited_voting_period = "30s"' | \
+		jq -M '.app_state.gov.params.max_deposit_period = "60s"' | \
 		jq -rM '(..|objects|select(has("denom"))).denom           |= "$(CHAIN_TOKEN_DENOM)"' | \
 		jq -rM '(..|objects|select(has("bond_denom"))).bond_denom |= "$(CHAIN_TOKEN_DENOM)"' | \
 		jq -rM '(..|objects|select(has("mint_denom"))).mint_denom |= "$(CHAIN_TOKEN_DENOM)"' > \
