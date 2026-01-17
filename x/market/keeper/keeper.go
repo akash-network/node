@@ -360,10 +360,7 @@ func (k Keeper) OnGroupClosed(ctx sdk.Context, id dtypes.GroupID) error {
 			if err != nil {
 				return err
 			}
-			if err := k.ekeeper.PaymentClose(ctx, lease.ID.ToEscrowPaymentID()); err != nil {
-				ctx.Logger().With("err", err).Info("error closing payment")
-			}
-			if err != nil {
+			if err = k.ekeeper.PaymentClose(ctx, lease.ID.ToEscrowPaymentID()); err != nil {
 				return err
 			}
 		}
