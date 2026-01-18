@@ -554,7 +554,10 @@ func (k *keeper) calculateAggregatedPrices(ctx sdk.Context, latestData []types.P
 // calculateTWABySource calculates TWAP for a specific source over the window
 func (k *keeper) calculateTWAPBySource(ctx sdk.Context, source uint32, denom string, windowBlocks int64) (sdkmath.LegacyDec, error) {
 	currentHeight := ctx.BlockHeight()
-	startHeight := currentHeight - windowBlocks
+	var startHeight int64
+	if windowBlocks <= currentHeight {
+		startHeight = currentHeight - windowBlocks
+	}
 
 	// Get historical data points for this source within the window
 	dataPoints := k.getTWAPHistory(ctx, source, denom, startHeight, currentHeight)
