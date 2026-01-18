@@ -3,6 +3,7 @@ package keeper
 import (
 	"context"
 
+	"github.com/cosmos/cosmos-sdk/types/query"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -16,32 +17,24 @@ type Querier struct {
 	Keeper
 }
 
-func (k Querier) Prices(ctx context.Context, request *types.QueryPricesRequest) (*types.QueryPricesResponse, error) {
-	if request == nil {
+func (k Querier) Prices(ctx context.Context, req *types.QueryPricesRequest) (*types.QueryPricesResponse, error) {
+	if req == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "empty request")
 	}
 
-	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	sctx := sdk.UnwrapSDKContext(ctx)
 	keeper := k.Keeper.(*keeper)
 
+	var err error
 	var prices []types.PriceData
+	var pageRes *query.PageResponse
 
-	// Build range based on filters
-	filters := request.Filters
-
-	// If no specific filters, return aggregated prices
-	if filters.AssetDenom == "" && filters.BaseDenom == "" {
-		// Return empty for now - could implement returning all prices
-		return &types.QueryPricesResponse{
-			Prices:     prices,
-			Pagination: nil,
-		}, nil
-	}
+	filters := req.Filters
 
 	// Query specific price data based on filters
 	if filters.Height > 0 {
 		// Query specific height
-		err := keeper.latestPrices.Walk(sdkCtx, nil, func(key types.PriceDataID, height int64) (bool, error) {
+		err = keeper.latestPrices.Walk(sctx, nil, func(key types.PriceDataID, height int64) (bool, error) {
 			if (filters.AssetDenom == "" || key.Denom == filters.AssetDenom) &&
 				(filters.BaseDenom == "" || key.BaseDenom == filters.BaseDenom) {
 
@@ -52,7 +45,7 @@ func (k Querier) Prices(ctx context.Context, request *types.QueryPricesRequest) 
 					Height:    filters.Height,
 				}
 
-				state, err := keeper.prices.Get(sdkCtx, recordID)
+				state, err := keeper.prices.Get(sctx, recordID)
 				if err == nil {
 					prices = append(prices, types.PriceData{
 						ID:    recordID,
@@ -67,29 +60,32 @@ func (k Querier) Prices(ctx context.Context, request *types.QueryPricesRequest) 
 			return nil, err
 		}
 	} else {
-		// Query latest prices
-		err := keeper.latestPrices.Walk(sdkCtx, nil, func(key types.PriceDataID, height int64) (bool, error) {
-			if (filters.AssetDenom == "" || key.Denom == filters.AssetDenom) &&
-				(filters.BaseDenom == "" || key.BaseDenom == filters.BaseDenom) {
+		pageReq := &query.PageRequest{}
+		if req.Pagination != nil {
+			*pageReq = *req.Pagination
+		}
+		pageReq.Reverse = true
 
-				recordID := types.PriceDataRecordID{
-					Source:    key.Source,
-					Denom:     key.Denom,
-					BaseDenom: key.BaseDenom,
-					Height:    height,
+		prices, pageRes, err = query.CollectionFilteredPaginate(
+			ctx,
+			keeper.prices,
+			pageReq,
+			func(key types.PriceDataRecordID, _ types.PriceDataState) (bool, error) {
+				if filters.AssetDenom != "" && key.Denom != filters.AssetDenom {
+					return false, nil
 				}
-
-				state, err := keeper.prices.Get(sdkCtx, recordID)
-				if err == nil {
-					prices = append(prices, types.PriceData{
-						ID:    recordID,
-						State: state,
-					})
+				if filters.BaseDenom != "" && key.BaseDenom != filters.BaseDenom {
+					return false, nil
 				}
-			}
-			return false, nil
-		})
-
+				return true, nil
+			},
+			func(key types.PriceDataRecordID, val types.PriceDataState) (types.PriceData, error) {
+				return types.PriceData{
+					ID:    key,
+					State: val,
+				}, nil
+			},
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -97,7 +93,7 @@ func (k Querier) Prices(ctx context.Context, request *types.QueryPricesRequest) 
 
 	return &types.QueryPricesResponse{
 		Prices:     prices,
-		Pagination: nil,
+		Pagination: pageRes,
 	}, nil
 }
 

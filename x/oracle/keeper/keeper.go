@@ -35,8 +35,6 @@ type Keeper interface {
 
 	AddPriceEntry(sdk.Context, sdk.Address, types.DataID, types.PriceDataState) error
 	GetAggregatedPrice(ctx sdk.Context, denom string) (sdkmath.LegacyDec, error)
-
-	// Test helpers
 	SetAggregatedPrice(sdk.Context, types.DataID, types.AggregatedPrice) error
 	SetPriceHealth(sdk.Context, types.DataID, types.PriceHealth) error
 }
@@ -167,7 +165,7 @@ func (k *keeper) AddPriceEntry(ctx sdk.Context, source sdk.Address, id types.Dat
 	}
 
 	// timestamp of new datapoint must be newer than existing
-	// if this is first data point, then it should be no older than 2 blocks period
+	// if this is the first data point, then it should be not older than 2 blocks back
 	if err == nil {
 		latest, err := k.prices.Get(ctx, types.PriceDataRecordID{
 			Source:    sourceID,
@@ -175,7 +173,7 @@ func (k *keeper) AddPriceEntry(ctx sdk.Context, source sdk.Address, id types.Dat
 			BaseDenom: id.BaseDenom,
 			Height:    latestHeight,
 		})
-		// record must exist at this point, any error means something went horribly wrong
+		// a record must exist at this point; any error means something went horribly wrong
 		if err != nil {
 			return err
 		}
@@ -489,7 +487,7 @@ func (k *keeper) calculateAggregatedPrices(ctx sdk.Context, latestData []types.P
 
 	if len(latestData) == 0 {
 		return types.AggregatedPrice{}, errorsmod.Wrap(
-			sdkerrors.ErrInvalidRequest,
+			types.ErrPriceStalled,
 			"all price sources are stale",
 		)
 	}
@@ -565,7 +563,7 @@ func (k *keeper) calculateTWAPBySource(ctx sdk.Context, source uint32, denom str
 		// No historical data, use current price
 		return sdkmath.LegacyZeroDec(), errorsmod.Wrap(
 			sdkerrors.ErrNotFound,
-			"no price data for source",
+			"no price data for requested source",
 		)
 	}
 
@@ -590,13 +588,11 @@ func (k *keeper) calculateTWAPBySource(ctx sdk.Context, source uint32, denom str
 	}
 
 	if totalWeight == 0 {
-		return sdkmath.LegacyZeroDec(), errorsmod.Wrap(
-			sdkerrors.ErrInvalidRequest,
-			"invalid TWAP calculation: zero weight",
-		)
+		return sdkmath.LegacyZeroDec(), types.ErrTWAPZeroWeight
 	}
 
 	twap := weightedSum.Quo(sdkmath.LegacyNewDec(totalWeight))
+
 	return twap, nil
 }
 

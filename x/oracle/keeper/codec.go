@@ -1,7 +1,6 @@
 package keeper
 
 import (
-	"bytes"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -29,23 +28,24 @@ var (
 )
 
 func (d priceDataIDCodec) Encode(buffer []byte, key types.PriceDataID) (int, error) {
-	// use bytes.Buffer to not manually deal with offset
-	buf := bytes.NewBuffer(buffer)
-
+	offset := 0
 	// Write source id as big-endian uint64 (for proper ordering)
-	data := make([]byte, 4)
-	binary.BigEndian.PutUint32(data, key.Source)
-	buf.Write(data)
+	binary.BigEndian.PutUint32(buffer, key.Source)
+	offset += 4
 
-	data = conv.UnsafeStrToBytes(key.Denom)
-	buf.WriteByte(byte(len(data)))
-	buf.Write(data)
+	data := conv.UnsafeStrToBytes(key.Denom)
+	buffer[offset] = byte(len(data))
+	offset++
+
+	offset += copy(buffer[offset:], data)
 
 	data = conv.UnsafeStrToBytes(key.BaseDenom)
-	buf.WriteByte(byte(len(data)))
-	buf.Write(data)
+	buffer[offset] = byte(len(data))
+	offset++
 
-	return buf.Len(), nil
+	offset += copy(buffer[offset:], data)
+
+	return offset, nil
 }
 
 func (d priceDataIDCodec) Decode(buffer []byte) (int, types.PriceDataID, error) {
@@ -134,18 +134,21 @@ func (d priceDataIDCodec) SizeNonTerminal(key types.PriceDataID) int {
 }
 
 func (d dataIDCodec) Encode(buffer []byte, key types.DataID) (int, error) {
-	// use bytes.Buffer to not manually deal with offset
-	buf := bytes.NewBuffer(buffer)
+	offset := 0
 
 	data := conv.UnsafeStrToBytes(key.Denom)
-	buf.WriteByte(byte(len(data)))
-	buf.Write(data)
+	buffer[offset] = byte(len(data))
+	offset++
+
+	offset += copy(buffer[offset:], data)
 
 	data = conv.UnsafeStrToBytes(key.BaseDenom)
-	buf.WriteByte(byte(len(data)))
-	buf.Write(data)
+	buffer[offset] = byte(len(data))
+	offset++
 
-	return buf.Len(), nil
+	offset += copy(buffer[offset:], data)
+
+	return offset, nil
 }
 
 func (d dataIDCodec) Decode(buffer []byte) (int, types.DataID, error) {
@@ -230,27 +233,27 @@ func (d dataIDCodec) SizeNonTerminal(key types.DataID) int {
 }
 
 func (d priceDataRecordIDCodec) Encode(buffer []byte, key types.PriceDataRecordID) (int, error) {
-	// use bytes.Buffer to not manually deal with offset
-	buf := bytes.NewBuffer(buffer)
-
+	offset := 0
 	// Write source id as big-endian uint64 (for proper ordering)
-	data := make([]byte, 4)
-	binary.BigEndian.PutUint32(data, key.Source)
-	buf.Write(data)
+	binary.BigEndian.PutUint32(buffer, key.Source)
+	offset += 4
 
-	data = conv.UnsafeStrToBytes(key.Denom)
-	buf.WriteByte(byte(len(data)))
-	buf.Write(data)
+	data := conv.UnsafeStrToBytes(key.Denom)
+	buffer[offset] = byte(len(data))
+	offset++
+
+	offset += copy(buffer[offset:], data)
 
 	data = conv.UnsafeStrToBytes(key.BaseDenom)
-	buf.WriteByte(byte(len(data)))
-	buf.Write(data)
+	buffer[offset] = byte(len(data))
+	offset++
 
-	data = make([]byte, 8)
-	binary.BigEndian.PutUint64(data, uint64(key.Height))
-	buf.Write(data)
+	offset += copy(buffer[offset:], data)
 
-	return buf.Len(), nil
+	binary.BigEndian.PutUint64(buffer[offset:], uint64(key.Height))
+	offset += 8
+
+	return offset, nil
 }
 
 func (d priceDataRecordIDCodec) Decode(buffer []byte) (int, types.PriceDataRecordID, error) {
