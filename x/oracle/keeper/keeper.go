@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"time"
 
@@ -322,10 +323,16 @@ func (k *keeper) EndBlocker(ctx context.Context) error {
 		panic(fmt.Sprintf("failed to walk latest prices: %v", err))
 	}
 
+	cutoffHeight := sctx.BlockHeight() - params.MaxPriceStalenessBlocks
+
 	for id, rid := range rIDs {
 		latestData := make([]types.PriceData, 0, len(rid))
 
 		for _, id := range rid {
+			if id.Height < cutoffHeight {
+				continue
+			}
+
 			state, _ := k.prices.Get(sctx, id)
 
 			latestData = append(latestData, types.PriceData{
@@ -496,16 +503,26 @@ func (k *keeper) calculateAggregatedPrices(ctx sdk.Context, id types.DataID, lat
 		Denom: id.Denom,
 	}
 
+	params, err := k.GetParams(ctx)
+	if err != nil {
+		return aggregated, err
+	}
+
+	// filter out stale sources by time
+	// todo block time is a variable, it should not be hardcoded
+	cutoffTimestamp := ctx.BlockTime().Add(-time.Duration(params.MaxPriceStalenessBlocks) * (time.Second * 6))
+
+	for i := len(latestData) - 1; i >= 0; i-- {
+		if latestData[i].State.Timestamp.Before(cutoffTimestamp) {
+			latestData = slices.Delete(latestData, i, i+1)
+		}
+	}
+
 	if len(latestData) == 0 {
 		return aggregated, errorsmod.Wrap(
 			types.ErrPriceStalled,
 			"all price sources are stale",
 		)
-	}
-
-	params, err := k.GetParams(ctx)
-	if err != nil {
-		return aggregated, err
 	}
 
 	// Calculate TWAP for each source
@@ -624,7 +641,9 @@ func (k *keeper) getAggregatedPrice(ctx sdk.Context, denom string) (types.Aggreg
 // CheckPriceHealth checks if the aggregated price meets health requirements
 func (k *keeper) setPriceHealth(ctx sdk.Context, params types.Params, dataIDs []types.PriceDataRecordID, aggregatedPrice types.AggregatedPrice) types.PriceHealth {
 	health := types.PriceHealth{
-		Denom: aggregatedPrice.Denom,
+		Denom:               aggregatedPrice.Denom,
+		TotalSources:        uint32(len(dataIDs)),
+		TotalHealthySources: aggregatedPrice.NumSources,
 	}
 
 	// Check 1: Minimum number of sources
@@ -647,41 +666,7 @@ func (k *keeper) setPriceHealth(ctx sdk.Context, params types.Params, dataIDs []
 		))
 	}
 
-	// Check 3: All sources are fresh
-	allFresh := true
-	foundSource := false
-	cutoffHeight := ctx.BlockHeight() - params.MaxPriceStalenessBlocks
-
-	for _, did := range dataIDs {
-		foundSource = true
-		allFresh = allFresh && did.Height >= cutoffHeight
-		//return !allFresh, nil
-	}
-
-	//err := k.latestPrices.Walk(ctx, nil, func(key types.PriceDataID, value int64) (bool, error) {
-	//	if key.Denom != aggregatedPrice.Denom || key.BaseDenom != sdkutil.DenomUSD {
-	//		return false, nil
-	//	}
-	//
-	//	foundSource = true
-	//	allFresh = allFresh && value >= cutoffHeight
-	//	return !allFresh, nil
-	//})
-
-	//if err != nil {
-	//	allFresh = false
-	//}
-
-	if !foundSource {
-		allFresh = false
-	}
-
-	if !allFresh {
-		health.FailureReason = append(health.FailureReason, "one or more price sources are stale")
-	}
-
-	health.AllSourcesFresh = allFresh
-	health.IsHealthy = health.HasMinSources && health.DeviationOk && health.AllSourcesFresh
+	health.IsHealthy = health.HasMinSources && health.DeviationOk
 
 	err := k.pricesHealth.Set(ctx, types.DataID{Denom: health.Denom, BaseDenom: sdkutil.DenomUSD}, health)
 	// if there is an error when storing price health, something went horribly wrong

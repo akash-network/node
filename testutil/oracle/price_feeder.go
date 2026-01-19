@@ -7,7 +7,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	oraclev1 "pkg.akt.dev/go/node/oracle/v1"
-	sdkutil "pkg.akt.dev/go/sdkutil"
+	"pkg.akt.dev/go/sdkutil"
 
 	oraclekeeper "pkg.akt.dev/node/v2/x/oracle/keeper"
 )
@@ -99,12 +99,13 @@ func (pf *PriceFeeder) FeedPrice(ctx sdk.Context, denom string) error {
 	}
 
 	priceHealth := oraclev1.PriceHealth{
-		Denom:           denom,
-		IsHealthy:       true,
-		HasMinSources:   true,
-		AllSourcesFresh: true,
-		DeviationOk:     true,
-		FailureReason:   []string{},
+		Denom:               denom,
+		IsHealthy:           true,
+		HasMinSources:       true,
+		TotalSources:        1,
+		TotalHealthySources: 1,
+		DeviationOk:         true,
+		FailureReason:       []string{},
 	}
 
 	if err := pf.keeper.SetAggregatedPrice(ctx, dataID, aggregatedPrice); err != nil {
