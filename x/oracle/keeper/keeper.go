@@ -291,57 +291,69 @@ func (k *keeper) EndBlocker(ctx context.Context) error {
 
 	params, _ := k.GetParams(sctx)
 
-	var rid []types.PriceDataRecordID
+	rIDs := make(map[types.DataID][]types.PriceDataRecordID)
 
-	cutoffHeight := sctx.BlockHeight() - params.MaxPriceStalenessBlocks
-
-	_ = k.latestPrices.Walk(sctx, nil, func(key types.PriceDataID, height int64) (bool, error) {
-		if height >= cutoffHeight {
-			rid = append(rid, types.PriceDataRecordID{
-				Source:    key.Source,
-				Denom:     key.Denom,
-				BaseDenom: key.BaseDenom,
-				Height:    height,
-			})
+	err := k.latestPrices.Walk(sctx, nil, func(key types.PriceDataID, height int64) (bool, error) {
+		dataID := types.DataID{
+			Denom:     key.Denom,
+			BaseDenom: key.BaseDenom,
 		}
+
+		rID := types.PriceDataRecordID{
+			Source:    key.Source,
+			Denom:     key.Denom,
+			BaseDenom: key.BaseDenom,
+			Height:    height,
+		}
+
+		data, exists := rIDs[dataID]
+		if !exists {
+			data = []types.PriceDataRecordID{rID}
+		} else {
+			data = append(data, rID)
+		}
+
+		rIDs[dataID] = data
 
 		return false, nil
 	})
 
-	latestData := make([]types.PriceData, 0, len(rid))
-
-	for _, id := range rid {
-		state, _ := k.prices.Get(sctx, id)
-
-		latestData = append(latestData, types.PriceData{
-			ID:    id,
-			State: state,
-		})
-	}
-	// Aggregate prices from all active sources
-	aggregatedPrice, err := k.calculateAggregatedPrices(sctx, latestData)
 	if err != nil {
-		sctx.Logger().Error(
-			"calculate aggregated price",
-			"reason", err.Error(),
-		)
+		panic(fmt.Sprintf("failed to walk latest prices: %v", err))
 	}
 
-	health := k.setPriceHealth(sctx, params, aggregatedPrice)
+	for id, rid := range rIDs {
+		latestData := make([]types.PriceData, 0, len(rid))
 
-	// If healthy and we have price data, update the final oracle price
-	if health.IsHealthy && len(latestData) > 0 {
-		id := types.DataID{
-			Denom:     latestData[0].ID.Denom,
-			BaseDenom: latestData[0].ID.BaseDenom,
+		for _, id := range rid {
+			state, _ := k.prices.Get(sctx, id)
+
+			latestData = append(latestData, types.PriceData{
+				ID:    id,
+				State: state,
+			})
 		}
 
-		err = k.aggregatedPrices.Set(sctx, id, aggregatedPrice)
+		// Aggregate prices from all active sources
+		aggregatedPrice, err := k.calculateAggregatedPrices(sctx, id, latestData)
 		if err != nil {
 			sctx.Logger().Error(
-				"set aggregated price",
+				"calculate aggregated price",
 				"reason", err.Error(),
 			)
+		}
+
+		health := k.setPriceHealth(sctx, params, rid, aggregatedPrice)
+
+		// If healthy and we have price data, update the final oracle price
+		if health.IsHealthy && len(latestData) > 0 {
+			err = k.aggregatedPrices.Set(sctx, id, aggregatedPrice)
+			if err != nil {
+				sctx.Logger().Error(
+					"set aggregated price",
+					"reason", err.Error(),
+				)
+			}
 		}
 	}
 
@@ -479,17 +491,21 @@ func (k *keeper) AddOnSetParamsHook(hook SetParamsHook) Keeper {
 }
 
 // calculateAggregatedPrices aggregates prices from all active sources for a denom
-func (k *keeper) calculateAggregatedPrices(ctx sdk.Context, latestData []types.PriceData) (types.AggregatedPrice, error) {
-	params, err := k.GetParams(ctx)
-	if err != nil {
-		return types.AggregatedPrice{}, err
+func (k *keeper) calculateAggregatedPrices(ctx sdk.Context, id types.DataID, latestData []types.PriceData) (types.AggregatedPrice, error) {
+	aggregated := types.AggregatedPrice{
+		Denom: id.Denom,
 	}
 
 	if len(latestData) == 0 {
-		return types.AggregatedPrice{}, errorsmod.Wrap(
+		return aggregated, errorsmod.Wrap(
 			types.ErrPriceStalled,
 			"all price sources are stale",
 		)
+	}
+
+	params, err := k.GetParams(ctx)
+	if err != nil {
+		return aggregated, err
 	}
 
 	// Calculate TWAP for each source
@@ -508,7 +524,7 @@ func (k *keeper) calculateAggregatedPrices(ctx sdk.Context, latestData []types.P
 	}
 
 	if len(twaps) == 0 {
-		return types.AggregatedPrice{}, errorsmod.Wrap(
+		return aggregated, errorsmod.Wrap(
 			sdkerrors.ErrInvalidRequest,
 			"no valid TWAP calculations",
 		)
@@ -539,16 +555,15 @@ func (k *keeper) calculateAggregatedPrices(ctx sdk.Context, latestData []types.P
 	// Calculate deviation in basis points
 	deviationBps := calculateDeviationBps(minPrice, maxPrice)
 
-	return types.AggregatedPrice{
-		Denom:        latestData[0].ID.Denom,
-		TWAP:         aggregateTWAP,
-		MedianPrice:  medianPrice,
-		MinPrice:     minPrice,
-		MaxPrice:     maxPrice,
-		Timestamp:    ctx.BlockTime(),
-		NumSources:   uint32(len(latestData)),
-		DeviationBps: deviationBps,
-	}, nil
+	aggregated.TWAP = aggregateTWAP
+	aggregated.MedianPrice = medianPrice
+	aggregated.MinPrice = minPrice
+	aggregated.MaxPrice = maxPrice
+	aggregated.Timestamp = ctx.BlockTime()
+	aggregated.NumSources = uint32(len(latestData))
+	aggregated.DeviationBps = deviationBps
+
+	return aggregated, nil
 }
 
 // calculateTWABySource calculates TWAP for a specific source over the window
@@ -607,41 +622,57 @@ func (k *keeper) getAggregatedPrice(ctx sdk.Context, denom string) (types.Aggreg
 }
 
 // CheckPriceHealth checks if the aggregated price meets health requirements
-func (k *keeper) setPriceHealth(ctx sdk.Context, params types.Params, aggregatedPrice types.AggregatedPrice) types.PriceHealth {
+func (k *keeper) setPriceHealth(ctx sdk.Context, params types.Params, dataIDs []types.PriceDataRecordID, aggregatedPrice types.AggregatedPrice) types.PriceHealth {
 	health := types.PriceHealth{
 		Denom: aggregatedPrice.Denom,
 	}
 
 	// Check 1: Minimum number of sources
-	if aggregatedPrice.NumSources < params.MinPriceSources {
+	health.HasMinSources = aggregatedPrice.NumSources >= params.MinPriceSources
+	if !health.HasMinSources {
 		health.FailureReason = append(health.FailureReason, fmt.Sprintf(
 			"insufficient price sources: %d < %d",
 			aggregatedPrice.NumSources,
 			params.MinPriceSources,
 		))
 	}
-	health.HasMinSources = true
 
 	// Check 2: Deviation within acceptable range
-	if aggregatedPrice.DeviationBps > params.MaxPriceDeviationBps {
+	health.DeviationOk = aggregatedPrice.DeviationBps <= params.MaxPriceDeviationBps
+	if !health.DeviationOk {
 		health.FailureReason = append(health.FailureReason, fmt.Sprintf(
 			"price deviation too high: %dbps > %dbps",
 			aggregatedPrice.DeviationBps,
 			params.MaxPriceDeviationBps,
 		))
 	}
-	health.DeviationOk = true
 
 	// Check 3: All sources are fresh
 	allFresh := true
+	foundSource := false
 	cutoffHeight := ctx.BlockHeight() - params.MaxPriceStalenessBlocks
-	err := k.latestPrices.Walk(ctx, nil, func(_ types.PriceDataID, value int64) (bool, error) {
-		allFresh = value >= cutoffHeight
 
-		return !allFresh, nil
-	})
+	for _, did := range dataIDs {
+		foundSource = true
+		allFresh = allFresh && did.Height >= cutoffHeight
+		//return !allFresh, nil
+	}
 
-	if err != nil {
+	//err := k.latestPrices.Walk(ctx, nil, func(key types.PriceDataID, value int64) (bool, error) {
+	//	if key.Denom != aggregatedPrice.Denom || key.BaseDenom != sdkutil.DenomUSD {
+	//		return false, nil
+	//	}
+	//
+	//	foundSource = true
+	//	allFresh = allFresh && value >= cutoffHeight
+	//	return !allFresh, nil
+	//})
+
+	//if err != nil {
+	//	allFresh = false
+	//}
+
+	if !foundSource {
 		allFresh = false
 	}
 
@@ -649,10 +680,10 @@ func (k *keeper) setPriceHealth(ctx sdk.Context, params types.Params, aggregated
 		health.FailureReason = append(health.FailureReason, "one or more price sources are stale")
 	}
 
-	health.AllSourcesFresh = true
-	health.IsHealthy = true
+	health.AllSourcesFresh = allFresh
+	health.IsHealthy = health.HasMinSources && health.DeviationOk && health.AllSourcesFresh
 
-	err = k.pricesHealth.Set(ctx, types.DataID{Denom: health.Denom, BaseDenom: sdkutil.DenomUSD}, health)
+	err := k.pricesHealth.Set(ctx, types.DataID{Denom: health.Denom, BaseDenom: sdkutil.DenomUSD}, health)
 	// if there is an error when storing price health, something went horribly wrong
 	if err != nil {
 		panic(err)
