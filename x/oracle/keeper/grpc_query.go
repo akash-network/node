@@ -10,6 +10,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	types "pkg.akt.dev/go/node/oracle/v1"
+	"pkg.akt.dev/go/sdkutil"
 )
 
 // Querier is used as Keeper will have duplicate methods if used directly, and gRPC names take precedence over keeper
@@ -108,6 +109,33 @@ func (k Querier) PriceFeedConfig(ctx context.Context, request *types.QueryPriceF
 		PriceFeedId:         "",
 		PythContractAddress: "",
 		Enabled:             false,
+	}, nil
+}
+
+func (k Querier) AggregatedPrice(ctx context.Context, req *types.QueryAggregatedPriceRequest) (*types.QueryAggregatedPriceResponse, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "empty request")
+	}
+
+	sctx := sdk.UnwrapSDKContext(ctx)
+	keeper := k.Keeper.(*keeper)
+
+	aggregatedPrice, err := keeper.getAggregatedPrice(sctx, req.Denom)
+	if err != nil {
+		return nil, err
+	}
+
+	priceHealth, err := keeper.pricesHealth.Get(sctx, types.DataID{
+		Denom:     req.Denom,
+		BaseDenom: sdkutil.DenomUSD,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.QueryAggregatedPriceResponse{
+		AggregatedPrice: aggregatedPrice,
+		PriceHealth:     priceHealth,
 	}, nil
 }
 

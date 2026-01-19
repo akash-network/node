@@ -579,8 +579,8 @@ func (k *keeper) calculateTWAPBySource(ctx sdk.Context, source uint32, denom str
 
 		// Calculate time weight (duration until next point or current time)
 		var timeWeight int64
-		if i < len(dataPoints)-1 {
-			timeWeight = dataPoints[i+1].ID.Height - current.ID.Height
+		if i > 0 {
+			timeWeight = current.ID.Height - dataPoints[i-1].ID.Height
 		} else {
 			timeWeight = currentHeight - current.ID.Height
 		}
