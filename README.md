@@ -1,6 +1,6 @@
 # Akash - Decentralized Serverless Network
 
-[![tests](https://github.com/akash-network/node/workflows/tests/badge.svg)](https://github.com/akash-network/node/actions/workflows/tests.yaml)
+[![tests](https://github.com/akash-network/node/actions/workflows/tests.yaml/badge.svg)](https://github.com/akash-network/node/actions/workflows/tests.yaml)
 [![codecov](https://codecov.io/github/akash-network/node/coverage.svg?branch=main)](https://codecov.io/github/akash-network/node?branch=main)
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/akash-network/node)](https://goreportcard.com/report/github.com/akash-network/node)
