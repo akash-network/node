@@ -1,6 +1,6 @@
 # Akash - Decentralized Serverless Network
 
-![tests](https://github.com/akash-network/node/workflows/tests/badge.svg)
+[![tests](https://github.com/akash-network/node/workflows/tests/badge.svg)](https://github.com/akash-network/node/actions/workflows/tests.yaml)
 [![codecov](https://codecov.io/github/akash-network/node/coverage.svg?branch=main)](https://codecov.io/github/akash-network/node?branch=main)
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/akash-network/node)](https://goreportcard.com/report/github.com/akash-network/node)
@@ -105,6 +105,6 @@ once binary compiled it exempts system-wide installed akash within akash repo
 We use thin integration testing environments to simplify
 the development and testing process.  We currently have three environments:
 
-* [Single node](_run/lite): simple (no workloads) single node running locally.
-* [Single node with workloads](_run/single): single node and provider running locally, running workloads within a virtual machine.
-* [full k8s](_run/kube): same as above but with node and provider running inside Kubernetes.
+* Single node: simple (no workloads) single node running locally.
+* Single node with workloads: single node and provider running locally, running workloads within a virtual machine.
+* full k8s: same as above but with node and provider running inside Kubernetes.
