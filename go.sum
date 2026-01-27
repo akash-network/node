@@ -1285,8 +1285,8 @@ github.com/ajstarks/svgo v0.0.0-20180226025133-644b8db467af/go.mod h1:K08gAheRH3
 github.com/ajstarks/svgo v0.0.0-20211024235047-1546f124cd8b/go.mod h1:1KcenG0jGWcpt8ov532z81sp/kMMUG485J2InIOyADM=
 github.com/akash-network/cometbft v0.38.21-akash.1 h1:li8x87YansHyID6VBTOxe/yBLRcdb6lQnjAeTvnMn/w=
 github.com/akash-network/cometbft v0.38.21-akash.1/go.mod h1:UCu8dlHqvkAsmAFmWDRWNZJPlu6ya2fTWZlDrWsivwo=
-github.com/akash-network/cosmos-sdk v0.53.4-akash.12 h1:IY7eF7DmSvsNa1owJYG2AytDlsV+im2GiuQSVQ6dfEA=
-github.com/akash-network/cosmos-sdk v0.53.4-akash.12/go.mod h1:nUN8XBs1lFpUf2iAB4iizr7gKcX4yQPBm5sOWi3HUYE=
+github.com/akash-network/cosmos-sdk v0.53.4-akash.13 h1:R3RGSw9ERtXHgRAmnS8Hij/zT6bzulDpa7aViPcZzeM=
+github.com/akash-network/cosmos-sdk v0.53.4-akash.13/go.mod h1:nUN8XBs1lFpUf2iAB4iizr7gKcX4yQPBm5sOWi3HUYE=
 github.com/akash-network/gogoproto v1.7.0-akash.2 h1:zY5seM6kBOLMBWn15t8vrY1ao4J1HjrhNaEeO/Soro0=
 github.com/akash-network/gogoproto v1.7.0-akash.2/go.mod h1:yWChEv5IUEYURQasfyBW5ffkMHR/90hiHgbNgrtp4j0=
 github.com/akash-network/ledger-go v0.16.0 h1:75oasauaV0dNGOgMB3jr/rUuxJC0gHDdYYnQW+a4bvg=
