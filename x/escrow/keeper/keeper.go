@@ -6,22 +6,21 @@ import (
 	"reflect"
 	"time"
 
+	"cosmossdk.io/core/address"
 	sdkmath "cosmossdk.io/math"
 	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
 
-	bmetypes "pkg.akt.dev/go/node/bme/v1"
-	dvbeta "pkg.akt.dev/go/node/deployment/v1beta5"
+	dvbeta "pkg.akt.dev/go/node/deployment/v1beta4"
 	escrowid "pkg.akt.dev/go/node/escrow/id/v1"
 	"pkg.akt.dev/go/node/escrow/module"
 	etypes "pkg.akt.dev/go/node/escrow/types/v1"
 	ev1 "pkg.akt.dev/go/node/escrow/v1"
-	mtypes "pkg.akt.dev/go/node/market/v2beta1"
-	types "pkg.akt.dev/go/node/market/v2beta1"
+	mv1 "pkg.akt.dev/go/node/market/v1"
+	mtypes "pkg.akt.dev/go/node/market/v1beta5"
 	deposit "pkg.akt.dev/go/node/types/deposit/v1"
-	"pkg.akt.dev/go/sdkutil"
 )
 
 type AccountHook func(sdk.Context, etypes.Account) error
@@ -54,25 +53,25 @@ type Keeper interface {
 func NewKeeper(
 	cdc codec.BinaryCodec,
 	skey storetypes.StoreKey,
+	ac address.Codec,
 	bkeeper BankKeeper,
 	akeeper AuthzKeeper,
-	bmekeeper BMEKeeper,
 ) Keeper {
 	return &keeper{
 		cdc:         cdc,
 		skey:        skey,
+		ac:          ac,
 		bkeeper:     bkeeper,
 		authzKeeper: akeeper,
-		bmeKeeper:   bmekeeper,
 	}
 }
 
 type keeper struct {
 	cdc         codec.BinaryCodec
 	skey        storetypes.StoreKey
+	ac          address.Codec
 	bkeeper     BankKeeper
 	authzKeeper AuthzKeeper
-	bmeKeeper   BMEKeeper
 	hooks       struct {
 		onAccountClosed []AccountHook
 		onPaymentClosed []PaymentHook
@@ -190,7 +189,6 @@ func (k *keeper) AuthorizeDeposits(sctx sdk.Context, msg sdk.Msg) ([]etypes.Depo
 						Height:  sctx.BlockHeight(),
 						Source:  deposit.SourceBalance,
 						Balance: sdk.NewDecCoinFromCoin(requestedSpend),
-						Direct:  dep.Direct,
 					})
 
 					remainder = remainder.Sub(requestedSpend.Amount)
@@ -224,7 +222,6 @@ func (k *keeper) AuthorizeDeposits(sctx sdk.Context, msg sdk.Msg) ([]etypes.Depo
 							ID:     mt.ID,
 							Deposit: deposit.Deposit{
 								Amount:  requestedSpend,
-								Direct:  mt.Deposit.Direct,
 								Sources: mt.Deposit.Sources,
 							},
 						}
@@ -233,21 +230,17 @@ func (k *keeper) AuthorizeDeposits(sctx sdk.Context, msg sdk.Msg) ([]etypes.Depo
 							ID:     mt.ID,
 							Groups: mt.Groups,
 							Hash:   mt.Hash,
-							Deposits: deposit.Deposits{
-								{
-									Amount:  requestedSpend,
-									Direct:  dep.Direct,
-									Sources: dep.Sources,
-								},
+							Deposit: deposit.Deposit{
+								Amount:  requestedSpend,
+								Sources: dep.Sources,
 							},
 						}
 					case *mtypes.MsgCreateBid:
 						authzMsg = &mtypes.MsgCreateBid{
-							ID:     mt.ID,
-							Prices: mt.Prices,
+							ID:    mt.ID,
+							Price: mt.Price,
 							Deposit: deposit.Deposit{
 								Amount:  requestedSpend,
-								Direct:  dep.Direct,
 								Sources: dep.Sources,
 							},
 							ResourcesOffer: mt.ResourcesOffer,
@@ -279,7 +272,6 @@ func (k *keeper) AuthorizeDeposits(sctx sdk.Context, msg sdk.Msg) ([]etypes.Depo
 						Height:  sctx.BlockHeight(),
 						Source:  deposit.SourceGrant,
 						Balance: sdk.NewDecCoinFromCoin(spendableAmount),
-						Direct:  dep.Direct,
 					})
 					remainder = remainder.Sub(spendableAmount.Amount)
 
@@ -295,9 +287,9 @@ func (k *keeper) AuthorizeDeposits(sctx sdk.Context, msg sdk.Msg) ([]etypes.Depo
 		if !remainder.IsZero() {
 			// the following check is for sanity. if value is negative, math above went horribly wrong
 			if remainder.IsNegative() {
-				return nil, fmt.Errorf("%w: deposit overflow", types.ErrInvalidDeposit)
+				return nil, fmt.Errorf("%w: deposit overflow", mv1.ErrInvalidDeposit)
 			} else {
-				return nil, fmt.Errorf("%w: insufficient balance", types.ErrInvalidDeposit)
+				return nil, fmt.Errorf("%w: insufficient balance", mv1.ErrInvalidDeposit)
 			}
 		}
 	}
@@ -436,55 +428,7 @@ func (k *keeper) fetchDepositsToAccount(ctx sdk.Context, acc *account, deposits 
 
 	processedDeposits := make([]etypes.Depositor, 0, len(deposits))
 
-	// Check circuit breaker status once for all deposits
-	circuitBreakerActive := k.isCircuitBreakerActive(ctx)
-
 	for _, d := range deposits {
-		depositor, err := sdk.AccAddressFromBech32(d.Owner)
-		if err != nil {
-			return err
-		}
-
-		amount := sdk.NewCoin(d.Balance.Denom, d.Balance.Amount.TruncateInt())
-
-		// Process deposit (potentially converting through BME)
-		// When circuit breaker is active, treat all deposits as direct (no BME conversion)
-		shouldUseDirect := d.Direct || circuitBreakerActive
-
-		if !shouldUseDirect {
-			swapedAmount, err := k.bmeKeeper.BurnMintFromAddressToModuleAccount(ctx, depositor, module.ModuleName, amount, sdkutil.DenomUact)
-			if err != nil {
-				return err
-			}
-
-			d = etypes.Depositor{
-				Owner:   depositor.String(),
-				Height:  d.Height,
-				Source:  d.Source,
-				Balance: swapedAmount,
-				Direct:  false,
-			}
-		} else {
-			// Direct deposit - no BME conversion
-			// This path is taken when:
-			// 1. Deposit is explicitly marked as direct
-			// 2. Circuit breaker is active (fallback to direct AKT)
-			if err = k.bkeeper.SendCoinsFromAccountToModule(ctx, depositor, module.ModuleName, sdk.NewCoins(amount)); err != nil {
-				return err
-			}
-
-			// If circuit breaker forced this to be direct, update the deposit to reflect that
-			if circuitBreakerActive && !d.Direct {
-				d = etypes.Depositor{
-					Owner:   depositor.String(),
-					Height:  d.Height,
-					Source:  d.Source,
-					Balance: sdk.NewDecCoinFromCoin(amount),
-					Direct:  true, // Mark as direct since we bypassed BME
-				}
-			}
-		}
-
 		// Now find or create funds entry with the actual denom (after potential BME conversion)
 		var funds *etypes.Balance
 		var transferred *sdk.DecCoin
@@ -520,6 +464,18 @@ func (k *keeper) fetchDepositsToAccount(ctx sdk.Context, acc *account, deposits 
 		}
 
 		processedDeposits = append(processedDeposits, d)
+
+		depositor, err := k.ac.StringToBytes(d.Owner)
+		if err != nil {
+			return err
+		}
+
+		// if balance is negative then reset it to zero and start accumulating fund.
+		// later down in this function it will trigger account settlement and recalculate
+		// the owed balance
+		if err = k.bkeeper.SendCoinsFromAccountToModule(ctx, depositor, module.ModuleName, sdk.NewCoins(sdk.NewCoin(d.Balance.Denom, d.Balance.Amount.TruncateInt()))); err != nil {
+			return err
+		}
 
 		funds.Amount.AddMut(d.Balance.Amount)
 	}
@@ -898,12 +854,9 @@ func (k *keeper) saveAccount(ctx sdk.Context, obj *account) error {
 	key = BuildAccountsKey(obj.State.State, &obj.ID)
 
 	if obj.State.State == etypes.StateClosed || obj.State.State == etypes.StateOverdrawn {
-		// Check circuit breaker status once for all refund operations
-		circuitBreakerActive := k.isCircuitBreakerActive(ctx)
-
 		for _, d := range obj.State.Deposits {
 			if d.Balance.IsPositive() {
-				depositor, err := sdk.AccAddressFromBech32(d.Owner)
+				depositor, err := k.ac.StringToBytes(d.Owner)
 				if err != nil {
 					return err
 				}
@@ -913,36 +866,14 @@ func (k *keeper) saveAccount(ctx sdk.Context, obj *account) error {
 				// fundsToSubtract is always in the funds denom - save before potential BME conversion
 				fundsToSubtract := d.Balance.Amount
 
-				// If deposit was not direct, normally convert through BME: uact -> uakt
-				// However, if circuit breaker is active, send directly without conversion
-				if !d.Direct {
-					if circuitBreakerActive {
-						// Circuit breaker active - send ACT directly without BME conversion
-						// Depositor will receive ACT instead of AKT
-						err = k.bkeeper.SendCoinsFromModuleToAccount(ctx, module.ModuleName, depositor, sdk.NewCoins(withdrawal))
-						if err != nil {
-							return err
-						}
-					} else {
-						// Normal operation - convert ACT to AKT via BME
-						swappedWithdrawal, err := k.bmeKeeper.BurnMintFromModuleAccountToAddress(ctx, module.ModuleName, depositor, withdrawal, sdkutil.DenomUakt)
-						if err != nil {
-							return err
-						}
-						// BME already sent to depositor, update withdrawal to reflect actual amount sent (in uakt)
-						withdrawal = sdk.NewCoin(swappedWithdrawal.Denom, swappedWithdrawal.Amount.TruncateInt())
-					}
-				} else {
-					// Direct deposit - send directly without BME conversion
-					err = k.bkeeper.SendCoinsFromModuleToAccount(ctx, module.ModuleName, depositor, sdk.NewCoins(withdrawal))
-					if err != nil {
-						return err
-					}
+				err = k.bkeeper.SendCoinsFromModuleToAccount(ctx, module.ModuleName, depositor, sdk.NewCoins(withdrawal))
+				if err != nil {
+					return err
 				}
 
 				// if depositor is not an owner then funds came from the grant.
 				if d.Source == deposit.SourceGrant {
-					owner, err := sdk.AccAddressFromBech32(obj.State.Owner)
+					owner, err := k.ac.StringToBytes(obj.State.Owner)
 					if err != nil {
 						return err
 					}
@@ -1070,7 +1001,7 @@ func (k *keeper) accountPayments(ctx sdk.Context, id escrowid.Account, states []
 }
 
 func (k *keeper) paymentWithdraw(ctx sdk.Context, obj *payment) error {
-	owner, err := sdk.AccAddressFromBech32(obj.State.Owner)
+	owner, err := k.ac.StringToBytes(obj.State.Owner)
 	if err != nil {
 		return err
 	}
@@ -1081,30 +1012,9 @@ func (k *keeper) paymentWithdraw(ctx sdk.Context, obj *payment) error {
 		return nil
 	}
 
-	// If earnings are in uact, convert back to uakt via BME
-	// If already in uakt, send directly (no conversion needed)
-	if earnings.Denom == sdkutil.DenomUact {
-		// Check circuit breaker status - if active, send ACT directly without conversion
-		if k.isCircuitBreakerActive(ctx) {
-			// Circuit breaker is active - send ACT directly to provider
-			// Provider will receive ACT instead of AKT
-			err = k.bkeeper.SendCoinsFromModuleToAccount(ctx, module.ModuleName, owner, sdk.NewCoins(earnings))
-			if err != nil {
-				return err
-			}
-		} else {
-			// Normal operation - convert ACT to AKT via BME
-			_, err = k.bmeKeeper.BurnMintFromModuleAccountToAddress(ctx, module.ModuleName, owner, earnings, sdkutil.DenomUakt)
-			if err != nil {
-				return err
-			}
-		}
-	} else {
-		// Already in target denom (uakt or other), send directly
-		err = k.bkeeper.SendCoinsFromModuleToAccount(ctx, module.ModuleName, owner, sdk.NewCoins(earnings))
-		if err != nil {
-			return err
-		}
+	err = k.bkeeper.SendCoinsFromModuleToAccount(ctx, module.ModuleName, owner, sdk.NewCoins(earnings))
+	if err != nil {
+		return err
 	}
 
 	obj.State.Withdrawn = obj.State.Withdrawn.Add(earnings)
@@ -1274,16 +1184,4 @@ func (k *keeper) findPayment(ctx sdk.Context, id escrowid.ID) []byte {
 	}
 
 	return key
-}
-
-// isCircuitBreakerActive checks if the BME circuit breaker is in HALT status.
-// When active, BME operations (ACT<->AKT conversions) are blocked and we should
-// fall back to direct AKT transfers.
-func (k *keeper) isCircuitBreakerActive(ctx sdk.Context) bool {
-	status, err := k.bmeKeeper.GetCircuitBreakerStatus(ctx)
-	if err != nil {
-		// If we can't get status, assume circuit breaker is active for safety
-		return true
-	}
-	return status == bmetypes.CircuitBreakerStatusHalt
 }

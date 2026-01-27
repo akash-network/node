@@ -18,7 +18,7 @@ func (s *KeeperTestSuite) TestAddEpochInfo() {
 	}{
 		"simple_add": {
 			addedEpochInfo: types.EpochInfo{
-				Identifier:              defaultIdentifier,
+				ID:                      defaultIdentifier,
 				StartTime:               time.Time{},
 				Duration:                defaultDuration,
 				CurrentEpoch:            0,
@@ -28,7 +28,7 @@ func (s *KeeperTestSuite) TestAddEpochInfo() {
 			},
 			expErr: false,
 			expEpochInfo: types.EpochInfo{
-				Identifier:              defaultIdentifier,
+				ID:                      defaultIdentifier,
 				StartTime:               startBlockTime,
 				Duration:                defaultDuration,
 				CurrentEpoch:            0,
@@ -39,7 +39,7 @@ func (s *KeeperTestSuite) TestAddEpochInfo() {
 		},
 		"zero_duration": {
 			addedEpochInfo: types.EpochInfo{
-				Identifier:              defaultIdentifier,
+				ID:                      defaultIdentifier,
 				StartTime:               time.Time{},
 				Duration:                time.Duration(0),
 				CurrentEpoch:            0,
@@ -51,7 +51,7 @@ func (s *KeeperTestSuite) TestAddEpochInfo() {
 		},
 		"start in future": {
 			addedEpochInfo: types.EpochInfo{
-				Identifier:              defaultIdentifier,
+				ID:                      defaultIdentifier,
 				StartTime:               startBlockTime.Add(time.Hour),
 				Duration:                defaultDuration,
 				CurrentEpoch:            0,
@@ -60,7 +60,7 @@ func (s *KeeperTestSuite) TestAddEpochInfo() {
 				EpochCountingStarted:    false,
 			},
 			expEpochInfo: types.EpochInfo{
-				Identifier:              defaultIdentifier,
+				ID:                      defaultIdentifier,
 				StartTime:               startBlockTime.Add(time.Hour),
 				Duration:                defaultDuration,
 				CurrentEpoch:            0,
@@ -75,10 +75,10 @@ func (s *KeeperTestSuite) TestAddEpochInfo() {
 		s.Run(name, func() {
 			s.SetupTest()
 			s.Ctx = s.Ctx.WithBlockHeight(startBlockHeight).WithBlockTime(startBlockTime)
-			err := s.EpochsKeeper.AddEpochInfo(s.Ctx, test.addedEpochInfo)
+			err := s.EpochsKeeper.AddEpoch(s.Ctx, test.addedEpochInfo)
 			if !test.expErr {
 				s.Require().NoError(err)
-				actualEpochInfo, err := s.EpochsKeeper.EpochInfo.Get(s.Ctx, test.addedEpochInfo.Identifier)
+				actualEpochInfo, err := s.EpochsKeeper.GetEpoch(s.Ctx, test.addedEpochInfo.ID)
 				s.Require().NoError(err)
 				s.Require().Equal(test.expEpochInfo, actualEpochInfo)
 			} else {
@@ -91,9 +91,9 @@ func (s *KeeperTestSuite) TestAddEpochInfo() {
 func (s *KeeperTestSuite) TestDuplicateAddEpochInfo() {
 	identifier := "duplicate_add_epoch_info"
 	epochInfo := types.NewGenesisEpochInfo(identifier, time.Hour*24*30)
-	err := s.EpochsKeeper.AddEpochInfo(s.Ctx, epochInfo)
+	err := s.EpochsKeeper.AddEpoch(s.Ctx, epochInfo)
 	s.Require().NoError(err)
-	err = s.EpochsKeeper.AddEpochInfo(s.Ctx, epochInfo)
+	err = s.EpochsKeeper.AddEpoch(s.Ctx, epochInfo)
 	s.Require().Error(err)
 }
 
@@ -101,9 +101,9 @@ func (s *KeeperTestSuite) TestEpochLifeCycle() {
 	s.SetupTest()
 
 	epochInfo := types.NewGenesisEpochInfo("monthly", time.Hour*24*30)
-	err := s.EpochsKeeper.AddEpochInfo(s.Ctx, epochInfo)
+	err := s.EpochsKeeper.AddEpoch(s.Ctx, epochInfo)
 	s.Require().NoError(err)
-	epochInfoSaved, err := s.EpochsKeeper.EpochInfo.Get(s.Ctx, "monthly")
+	epochInfoSaved, err := s.EpochsKeeper.GetEpoch(s.Ctx, "monthly")
 	s.Require().NoError(err)
 	// setup expected epoch info
 	expectedEpochInfo := epochInfo
@@ -111,14 +111,18 @@ func (s *KeeperTestSuite) TestEpochLifeCycle() {
 	expectedEpochInfo.CurrentEpochStartHeight = s.Ctx.BlockHeight()
 	s.Require().Equal(expectedEpochInfo, epochInfoSaved)
 
-	allEpochs, err := s.EpochsKeeper.AllEpochInfos(s.Ctx)
+	allEpochs := make([]types.EpochInfo, 0)
+	err = s.EpochsKeeper.IterateEpochs(s.Ctx, func(_ string, info types.EpochInfo) (bool, error) {
+		allEpochs = append(allEpochs, info)
+		return false, nil
+	})
 	s.Require().NoError(err)
 	s.Require().Len(allEpochs, 5)
-	s.Require().Equal(allEpochs[0].Identifier, "day") // alphabetical order
-	s.Require().Equal(allEpochs[1].Identifier, "hour")
-	s.Require().Equal(allEpochs[2].Identifier, "minute")
-	s.Require().Equal(allEpochs[3].Identifier, "monthly")
-	s.Require().Equal(allEpochs[4].Identifier, "week")
+	s.Require().Equal(allEpochs[0].ID, "day") // alphabetical order
+	s.Require().Equal(allEpochs[1].ID, "hour")
+	s.Require().Equal(allEpochs[2].ID, "minute")
+	s.Require().Equal(allEpochs[3].ID, "monthly")
+	s.Require().Equal(allEpochs[4].ID, "week")
 }
 
 func (s *KeeperTestSuite) TestNumBlocksSinceEpochStart() {
@@ -139,7 +143,7 @@ func (s *KeeperTestSuite) TestNumBlocksSinceEpochStart() {
 	}{
 		"same block as start": {
 			setupEpoch: types.EpochInfo{
-				Identifier:              "epoch_same_block",
+				ID:                      "epoch_same_block",
 				StartTime:               startBlockTime,
 				Duration:                duration,
 				CurrentEpoch:            0,
@@ -154,7 +158,7 @@ func (s *KeeperTestSuite) TestNumBlocksSinceEpochStart() {
 		},
 		"after 5 blocks": {
 			setupEpoch: types.EpochInfo{
-				Identifier:              "epoch_after_five",
+				ID:                      "epoch_after_five",
 				StartTime:               startBlockTime,
 				Duration:                duration,
 				CurrentEpoch:            0,
@@ -169,7 +173,7 @@ func (s *KeeperTestSuite) TestNumBlocksSinceEpochStart() {
 		},
 		"epoch not started yet": {
 			setupEpoch: types.EpochInfo{
-				Identifier:              "epoch_future",
+				ID:                      "epoch_future",
 				StartTime:               startBlockTime.Add(time.Hour),
 				Duration:                duration,
 				CurrentEpoch:            0,
@@ -189,14 +193,14 @@ func (s *KeeperTestSuite) TestNumBlocksSinceEpochStart() {
 			s.SetupTest()
 			s.Ctx = s.Ctx.WithBlockHeight(startBlockHeight).WithBlockTime(startBlockTime)
 
-			err := s.EpochsKeeper.AddEpochInfo(s.Ctx, tc.setupEpoch)
+			err := s.EpochsKeeper.AddEpoch(s.Ctx, tc.setupEpoch)
 			s.Require().NoError(err)
 
 			// Advance block height and time if needed
 			s.Ctx = s.Ctx.WithBlockHeight(startBlockHeight + tc.advanceBlockDelta).
 				WithBlockTime(startBlockTime.Add(tc.advanceTimeDelta))
 
-			blocksSince, err := s.EpochsKeeper.NumBlocksSinceEpochStart(s.Ctx, tc.setupEpoch.Identifier)
+			blocksSince, err := s.EpochsKeeper.NumBlocksSinceEpochStart(s.Ctx, tc.setupEpoch.ID)
 			if tc.expErr {
 				s.Require().Error(err)
 			} else {

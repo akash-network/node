@@ -87,11 +87,12 @@ node-init-genesis:
 		jq -M '.app_state.gov.voting_params.voting_period = "60s"' | \
 		jq -M '.app_state.gov.params.voting_period = "60s"' | \
 		jq -M '.app_state.gov.params.expedited_voting_period = "30s"' | \
-		jq -M '.app_state.gov.params.max_deposit_period = "60s"' | \
-		jq -rM '(..|objects|select(has("denom"))).denom           |= "$(CHAIN_TOKEN_DENOM)"' | \
-		jq -rM '(..|objects|select(has("bond_denom"))).bond_denom |= "$(CHAIN_TOKEN_DENOM)"' | \
-		jq -rM '(..|objects|select(has("mint_denom"))).mint_denom |= "$(CHAIN_TOKEN_DENOM)"' > \
-		"$(GENESIS_PATH)"
+		jq -M '.app_state.gov.params.max_deposit_period = "60s"' \
+		> "$(GENESIS_PATH)"
+#		jq -rM '(..|objects|select(has("denom"))).denom           |= "$(CHAIN_TOKEN_DENOM)"' | \
+#		jq -rM '(..|objects|select(has("bond_denom"))).bond_denom |= "$(CHAIN_TOKEN_DENOM)"' | \
+#		jq -rM '(..|objects|select(has("mint_denom"))).mint_denom |= "$(CHAIN_TOKEN_DENOM)"' > \
+#		"$(GENESIS_PATH)"
 
 .INTERMEDIATE: node-init-genesis-certs
 node-init-genesis-certs: $(patsubst %,node-init-genesis-client-cert-%,$(CLIENT_CERTS)) $(patsubst %,node-init-genesis-server-cert-%,$(SERVER_CERTS))

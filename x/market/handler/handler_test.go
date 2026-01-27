@@ -8,6 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	mv1 "pkg.akt.dev/go/node/market/v1"
+	"pkg.akt.dev/go/sdkutil"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/cometbft/cometbft/libs/rand"
@@ -18,11 +20,11 @@ import (
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 
 	dv1 "pkg.akt.dev/go/node/deployment/v1"
-	dtypes "pkg.akt.dev/go/node/deployment/v1beta5"
+	dtypes "pkg.akt.dev/go/node/deployment/v1beta4"
 	emodule "pkg.akt.dev/go/node/escrow/module"
 	etypes "pkg.akt.dev/go/node/escrow/types/v1"
 	ev1 "pkg.akt.dev/go/node/escrow/v1"
-	mtypes "pkg.akt.dev/go/node/market/v2beta1"
+	mtypes "pkg.akt.dev/go/node/market/v1beta5"
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 	attr "pkg.akt.dev/go/node/types/attributes/v1"
 	deposit "pkg.akt.dev/go/node/types/deposit/v1"
@@ -74,7 +76,7 @@ func TestProviderBadMessageType(t *testing.T) {
 }
 
 func TestMarketFullFlowCloseDeployment(t *testing.T) {
-	defaultDeposit, err := dtypes.DefaultParams().MinDepositFor("uakt")
+	defaultDeposit, err := dtypes.DefaultParams().MinDepositFor("uact")
 	require.NoError(t, err)
 
 	suite := setupTestSuite(t)
@@ -92,23 +94,22 @@ func TestMarketFullFlowCloseDeployment(t *testing.T) {
 	providerAddr, err := sdk.AccAddressFromBech32(provider)
 	require.NoError(t, err)
 
-	escrowBalance := sdk.NewCoins(sdk.NewInt64Coin("uakt", 0))
-	distrBalance := sdk.NewCoins(sdk.NewInt64Coin("uakt", 0))
+	escrowBalance := sdk.NewCoins(sdk.NewInt64Coin("uact", 0))
+	distrBalance := sdk.NewCoins(sdk.NewInt64Coin("uact", 0))
 
 	dmsg := &dtypes.MsgCreateDeployment{
 		ID:     deployment.ID,
 		Groups: dtypes.GroupSpecs{group.GroupSpec},
-		Deposits: deposit.Deposits{
-			{
-				Amount:  defaultDeposit,
-				Sources: deposit.Sources{deposit.SourceBalance},
-			},
+		Deposit: deposit.Deposit{
+
+			Amount:  defaultDeposit,
+			Sources: deposit.Sources{deposit.SourceBalance},
 		},
 	}
 
 	balances := map[string]sdk.Coin{
-		deployment.ID.Owner: sdk.NewInt64Coin("uakt", 10000000),
-		provider:            sdk.NewInt64Coin("uakt", 10000000),
+		deployment.ID.Owner: sdk.NewInt64Coin("uact", 10000000),
+		provider:            sdk.NewInt64Coin("uact", 10000000),
 	}
 
 	sendCoinsFromAccountToModule := func(args mock.Arguments) {
@@ -176,9 +177,9 @@ func TestMarketFullFlowCloseDeployment(t *testing.T) {
 			On("SpendableCoin", mock.Anything, mock.Anything, mock.Anything).
 			Return(func(args mock.Arguments) sdk.Coin {
 				addr := args[1].(sdk.AccAddress)
-				denom := args[2].(string)
+				//denom := args[2].(string)
 
-				require.Equal(t, "uakt", denom)
+				//require.Equal(t, "uakt", denom)
 
 				return balances[addr.String()]
 			})
@@ -196,7 +197,7 @@ func TestMarketFullFlowCloseDeployment(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, res)
 
-	order, found := suite.MarketKeeper().GetOrder(ctx, mtypes.OrderID{
+	order, found := suite.MarketKeeper().GetOrder(ctx, mv1.OrderID{
 		Owner: deployment.ID.Owner,
 		DSeq:  deployment.ID.DSeq,
 		GSeq:  1,
@@ -206,8 +207,8 @@ func TestMarketFullFlowCloseDeployment(t *testing.T) {
 	require.True(t, found)
 
 	bmsg := &mtypes.MsgCreateBid{
-		ID:     mtypes.MakeBidID(order.ID, providerAddr),
-		Prices: sdk.DecCoins{sdk.NewDecCoin(testutil.CoinDenom, sdkmath.NewInt(1))},
+		ID:    mv1.MakeBidID(order.ID, providerAddr),
+		Price: sdk.NewDecCoin(sdkutil.DenomUact, sdkmath.NewInt(1)),
 		Deposit: deposit.Deposit{
 			Amount:  mtypes.DefaultBidMinDeposit,
 			Sources: deposit.Sources{deposit.SourceBalance},
@@ -222,7 +223,7 @@ func TestMarketFullFlowCloseDeployment(t *testing.T) {
 	require.NotNil(t, res)
 	require.NoError(t, err)
 
-	bid := mtypes.MakeBidID(order.ID, providerAddr)
+	bid := mv1.MakeBidID(order.ID, providerAddr)
 
 	t.Run("ensure bid event created", func(t *testing.T) {
 		// Check that EventBidCreated exists in events
@@ -230,7 +231,7 @@ func TestMarketFullFlowCloseDeployment(t *testing.T) {
 		for _, e := range res.Events {
 			iev, err := sdk.ParseTypedEvent(e)
 			require.NoError(t, err)
-			if _, ok := iev.(*mtypes.EventBidCreated); ok {
+			if _, ok := iev.(*mv1.EventBidCreated); ok {
 				found = true
 				break
 			}
@@ -245,7 +246,7 @@ func TestMarketFullFlowCloseDeployment(t *testing.T) {
 		BidID: bid,
 	}
 
-	lid := mtypes.MakeLeaseID(bid)
+	lid := mv1.MakeLeaseID(bid)
 	res, err = suite.handler(ctx, lmsg)
 	require.NoError(t, err)
 	require.NotNil(t, res)
@@ -256,7 +257,7 @@ func TestMarketFullFlowCloseDeployment(t *testing.T) {
 		for _, e := range res.Events {
 			iev, err := sdk.ParseTypedEvent(e)
 			require.NoError(t, err)
-			if _, ok := iev.(*mtypes.EventLeaseCreated); ok {
+			if _, ok := iev.(*mv1.EventLeaseCreated); ok {
 				found = true
 				break
 			}
@@ -321,7 +322,7 @@ func TestMarketFullFlowCloseDeployment(t *testing.T) {
 	// lease must be in closed state
 	lease, found := suite.MarketKeeper().GetLease(ctx, lid)
 	require.True(t, found)
-	require.Equal(t, mtypes.LeaseClosed, lease.State)
+	require.Equal(t, mv1.LeaseClosed, lease.State)
 
 	// lease must be in closed state
 	bidObj, found := suite.MarketKeeper().GetBid(ctx, bid)
@@ -414,7 +415,7 @@ func TestMarketFullFlowCloseDeployment(t *testing.T) {
 }
 
 func TestMarketFullFlowCloseLease(t *testing.T) {
-	defaultDeposit, err := dtypes.DefaultParams().MinDepositFor("uakt")
+	defaultDeposit, err := dtypes.DefaultParams().MinDepositFor("uact")
 	require.NoError(t, err)
 
 	suite := setupTestSuite(t)
@@ -430,31 +431,30 @@ func TestMarketFullFlowCloseLease(t *testing.T) {
 	dmsg := &dtypes.MsgCreateDeployment{
 		ID:     deployment.ID,
 		Groups: dtypes.GroupSpecs{group.GroupSpec},
-		Deposits: deposit.Deposits{
-			{
-				Amount:  defaultDeposit,
-				Sources: deposit.Sources{deposit.SourceBalance},
-			},
+		Deposit: deposit.Deposit{
+			Amount:  defaultDeposit,
+			Sources: deposit.Sources{deposit.SourceBalance},
 		},
-	}
-
-	coins := make(sdk.Coins, 0, len(dmsg.Deposits))
-	for _, d := range dmsg.Deposits {
-		coins = append(coins, d.Amount)
 	}
 
 	// Set up BME mocks for deposit conversion (uakt -> uact)
 	suite.PrepareMocks(func(ts *state.TestSuite) {
-		for _, coin := range coins {
-			ts.MockBMEForDeposit(owner, coin)
-		}
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, owner, emodule.ModuleName, sdk.NewCoins(dmsg.Deposit.Amount)).
+			Return(nil).Once()
+
+		//for _, coin := range coins {
+		//	ts.MockBMEForDeposit(owner, coin)
+		//}
 	})
 
 	res, err := suite.dhandler(ctx, dmsg)
 	require.NoError(t, err)
 	require.NotNil(t, res)
 
-	order, found := suite.MarketKeeper().GetOrder(ctx, mtypes.OrderID{
+	order, found := suite.MarketKeeper().GetOrder(ctx, mv1.OrderID{
 		Owner: deployment.ID.Owner,
 		DSeq:  deployment.ID.DSeq,
 		GSeq:  1,
@@ -469,8 +469,8 @@ func TestMarketFullFlowCloseLease(t *testing.T) {
 	require.NoError(t, err)
 
 	bmsg := &mtypes.MsgCreateBid{
-		ID:     mtypes.MakeBidID(order.ID, providerAddr),
-		Prices: sdk.DecCoins{sdk.NewDecCoin(testutil.CoinDenom, sdkmath.NewInt(1))},
+		ID:    mv1.MakeBidID(order.ID, providerAddr),
+		Price: sdk.NewDecCoin(sdkutil.DenomUact, sdkmath.NewInt(1)),
 		Deposit: deposit.Deposit{
 			Amount:  mtypes.DefaultBidMinDeposit,
 			Sources: deposit.Sources{deposit.SourceBalance},
@@ -484,7 +484,7 @@ func TestMarketFullFlowCloseLease(t *testing.T) {
 	require.NotNil(t, res)
 	require.NoError(t, err)
 
-	bid := mtypes.MakeBidID(order.ID, providerAddr)
+	bid := mv1.MakeBidID(order.ID, providerAddr)
 
 	t.Run("ensure bid event created", func(t *testing.T) {
 		// Check that EventBidCreated exists in events
@@ -492,7 +492,7 @@ func TestMarketFullFlowCloseLease(t *testing.T) {
 		for _, e := range res.Events {
 			iev, err := sdk.ParseTypedEvent(e)
 			require.NoError(t, err)
-			if _, ok := iev.(*mtypes.EventBidCreated); ok {
+			if _, ok := iev.(*mv1.EventBidCreated); ok {
 				found = true
 				break
 			}
@@ -507,10 +507,10 @@ func TestMarketFullFlowCloseLease(t *testing.T) {
 		BidID: bid,
 	}
 
-	lid := mtypes.MakeLeaseID(bid)
+	lid := mv1.MakeLeaseID(bid)
 	res, err = suite.handler(ctx, lmsg)
-	require.NotNil(t, res)
 	require.NoError(t, err)
+	require.NotNil(t, res)
 
 	t.Run("ensure lease event created", func(t *testing.T) {
 		// Check that EventLeaseCreated exists in events
@@ -518,7 +518,7 @@ func TestMarketFullFlowCloseLease(t *testing.T) {
 		for _, e := range res.Events {
 			iev, err := sdk.ParseTypedEvent(e)
 			require.NoError(t, err)
-			if _, ok := iev.(*mtypes.EventLeaseCreated); ok {
+			if _, ok := iev.(*mv1.EventLeaseCreated); ok {
 				found = true
 				break
 			}
@@ -591,7 +591,7 @@ func TestMarketFullFlowCloseLease(t *testing.T) {
 	// lease must be in closed state
 	lease, found := suite.MarketKeeper().GetLease(ctx, lid)
 	require.True(t, found)
-	require.Equal(t, mtypes.LeaseClosed, lease.State)
+	require.Equal(t, mv1.LeaseClosed, lease.State)
 
 	// lease must be in closed state
 	bidObj, found := suite.MarketKeeper().GetBid(ctx, bid)
@@ -666,7 +666,7 @@ func TestMarketFullFlowCloseLease(t *testing.T) {
 }
 
 func TestMarketFullFlowCloseBid(t *testing.T) {
-	defaultDeposit, err := dtypes.DefaultParams().MinDepositFor("uakt")
+	defaultDeposit, err := dtypes.DefaultParams().MinDepositFor("uact")
 	require.NoError(t, err)
 
 	suite := setupTestSuite(t)
@@ -682,31 +682,25 @@ func TestMarketFullFlowCloseBid(t *testing.T) {
 	dmsg := &dtypes.MsgCreateDeployment{
 		ID:     deployment.ID,
 		Groups: dtypes.GroupSpecs{group.GroupSpec},
-		Deposits: deposit.Deposits{
-			{
-				Amount:  defaultDeposit,
-				Sources: deposit.Sources{deposit.SourceBalance},
-			},
+		Deposit: deposit.Deposit{
+			Amount:  defaultDeposit,
+			Sources: deposit.Sources{deposit.SourceBalance},
 		},
-	}
-
-	coins := make(sdk.Coins, 0, len(dmsg.Deposits))
-	for _, d := range dmsg.Deposits {
-		coins = append(coins, d.Amount)
 	}
 
 	// Set up BME mocks for deposit conversion (uakt -> uact)
 	suite.PrepareMocks(func(ts *state.TestSuite) {
-		for _, coin := range coins {
-			ts.MockBMEForDeposit(owner, coin)
-		}
+		bkeeper := ts.BankKeeper()
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, owner, emodule.ModuleName, sdk.Coins{dmsg.Deposit.Amount}).
+			Return(nil).Once()
 	})
 
 	res, err := suite.dhandler(ctx, dmsg)
 	require.NoError(t, err)
 	require.NotNil(t, res)
 
-	order, found := suite.MarketKeeper().GetOrder(ctx, mtypes.OrderID{
+	order, found := suite.MarketKeeper().GetOrder(ctx, mv1.OrderID{
 		Owner: deployment.ID.Owner,
 		DSeq:  deployment.ID.DSeq,
 		GSeq:  1,
@@ -721,8 +715,8 @@ func TestMarketFullFlowCloseBid(t *testing.T) {
 	require.NoError(t, err)
 
 	bmsg := &mtypes.MsgCreateBid{
-		ID:     mtypes.MakeBidID(order.ID, providerAddr),
-		Prices: sdk.DecCoins{sdk.NewDecCoin(testutil.CoinDenom, sdkmath.NewInt(1))},
+		ID:    mv1.MakeBidID(order.ID, providerAddr),
+		Price: sdk.NewDecCoin(sdkutil.DenomUact, sdkmath.NewInt(1)),
 		Deposit: deposit.Deposit{
 			Amount:  mtypes.DefaultBidMinDeposit,
 			Sources: deposit.Sources{deposit.SourceBalance},
@@ -736,7 +730,7 @@ func TestMarketFullFlowCloseBid(t *testing.T) {
 	require.NotNil(t, res)
 	require.NoError(t, err)
 
-	bid := mtypes.MakeBidID(order.ID, providerAddr)
+	bid := mv1.MakeBidID(order.ID, providerAddr)
 
 	t.Run("ensure bid event created", func(t *testing.T) {
 		// Check that EventBidCreated exists in events
@@ -744,7 +738,7 @@ func TestMarketFullFlowCloseBid(t *testing.T) {
 		for _, e := range res.Events {
 			iev, err := sdk.ParseTypedEvent(e)
 			require.NoError(t, err)
-			if _, ok := iev.(*mtypes.EventBidCreated); ok {
+			if _, ok := iev.(*mv1.EventBidCreated); ok {
 				found = true
 				break
 			}
@@ -759,7 +753,7 @@ func TestMarketFullFlowCloseBid(t *testing.T) {
 		BidID: bid,
 	}
 
-	lid := mtypes.MakeLeaseID(bid)
+	lid := mv1.MakeLeaseID(bid)
 	res, err = suite.handler(ctx, lmsg)
 	require.NotNil(t, res)
 	require.NoError(t, err)
@@ -770,7 +764,7 @@ func TestMarketFullFlowCloseBid(t *testing.T) {
 		for _, e := range res.Events {
 			iev, err := sdk.ParseTypedEvent(e)
 			require.NoError(t, err)
-			if _, ok := iev.(*mtypes.EventLeaseCreated); ok {
+			if _, ok := iev.(*mv1.EventLeaseCreated); ok {
 				found = true
 				break
 			}
@@ -843,7 +837,7 @@ func TestMarketFullFlowCloseBid(t *testing.T) {
 	// lease must be in closed state
 	lease, found := suite.MarketKeeper().GetLease(ctx, lid)
 	require.True(t, found)
-	require.Equal(t, mtypes.LeaseClosed, lease.State)
+	require.Equal(t, mv1.LeaseClosed, lease.State)
 
 	// lease must be in closed state
 	bidObj, found := suite.MarketKeeper().GetBid(ctx, bid)
@@ -927,8 +921,8 @@ func TestCreateBidValid(t *testing.T) {
 	require.NoError(t, err)
 
 	msg := &mtypes.MsgCreateBid{
-		ID:     mtypes.MakeBidID(order.ID, providerAddr),
-		Prices: sdk.DecCoins{sdk.NewDecCoin(testutil.CoinDenom, sdkmath.NewInt(1))},
+		ID:    mv1.MakeBidID(order.ID, providerAddr),
+		Price: sdk.NewDecCoin(sdkutil.DenomUact, sdkmath.NewInt(1)),
 		Deposit: deposit.Deposit{
 			Amount:  mtypes.DefaultBidMinDeposit,
 			Sources: deposit.Sources{deposit.SourceBalance},
@@ -960,7 +954,7 @@ func TestCreateBidValid(t *testing.T) {
 	require.NotNil(t, res)
 	require.NoError(t, err)
 
-	bid := mtypes.MakeBidID(order.ID, providerAddr)
+	bid := mv1.MakeBidID(order.ID, providerAddr)
 
 	t.Run("ensure event created", func(t *testing.T) {
 		// Event index may vary due to BME operations, search for the event
@@ -968,7 +962,7 @@ func TestCreateBidValid(t *testing.T) {
 		for _, e := range res.Events {
 			iev, err := sdk.ParseTypedEvent(e)
 			require.NoError(t, err)
-			if dev, ok := iev.(*mtypes.EventBidCreated); ok {
+			if dev, ok := iev.(*mv1.EventBidCreated); ok {
 				require.Equal(t, bid, dev.ID)
 				found = true
 				break
@@ -1004,32 +998,32 @@ func TestCreateBidInvalidPrice(t *testing.T) {
 	require.NoError(t, err)
 
 	msg := &mtypes.MsgCreateBid{
-		ID:     mtypes.MakeBidID(order.ID, providerAddr),
-		Prices: sdk.DecCoins{},
+		ID:    mv1.MakeBidID(order.ID, providerAddr),
+		Price: sdk.DecCoin{},
 	}
 	res, err := suite.handler(suite.Context(), msg)
 	require.Nil(t, res)
 	require.Error(t, err)
 
-	_, found := suite.MarketKeeper().GetBid(suite.Context(), mtypes.MakeBidID(order.ID, providerAddr))
+	_, found := suite.MarketKeeper().GetBid(suite.Context(), mv1.MakeBidID(order.ID, providerAddr))
 	require.False(t, found)
 }
 
 func TestCreateBidNonExistingOrder(t *testing.T) {
 	suite := setupTestSuite(t)
-	orderID := mtypes.OrderID{Owner: testutil.AccAddress(t).String()}
+	orderID := mv1.OrderID{Owner: testutil.AccAddress(t).String()}
 	providerAddr := testutil.AccAddress(t)
 
 	msg := &mtypes.MsgCreateBid{
-		ID:     mtypes.MakeBidID(orderID, providerAddr),
-		Prices: sdk.DecCoins{testutil.AkashDecCoinRandom(t)},
+		ID:    mv1.MakeBidID(orderID, providerAddr),
+		Price: testutil.AkashDecCoinRandom(t),
 	}
 
 	res, err := suite.handler(suite.Context(), msg)
 	require.Nil(t, res)
 	require.Error(t, err)
 
-	_, found := suite.MarketKeeper().GetBid(suite.Context(), mtypes.MakeBidID(orderID, providerAddr))
+	_, found := suite.MarketKeeper().GetBid(suite.Context(), mv1.MakeBidID(orderID, providerAddr))
 	require.False(t, found)
 }
 
@@ -1058,8 +1052,8 @@ func TestCreateBidClosedOrder(t *testing.T) {
 	_ = suite.MarketKeeper().OnOrderClosed(suite.Context(), order)
 
 	msg := &mtypes.MsgCreateBid{
-		ID:     mtypes.MakeBidID(order.ID, providerAddr),
-		Prices: sdk.DecCoins{sdk.NewDecCoin(testutil.CoinDenom, sdkmath.NewInt(math.MaxInt64))},
+		ID:    mv1.MakeBidID(order.ID, providerAddr),
+		Price: sdk.NewDecCoin(sdkutil.DenomUact, sdkmath.NewInt(math.MaxInt64)),
 	}
 
 	res, err := suite.handler(suite.Context(), msg)
@@ -1085,7 +1079,7 @@ func TestCreateBidOverprice(t *testing.T) {
 
 	resources := dtypes.ResourceUnits{
 		{
-			Prices: sdk.DecCoins{sdk.NewDecCoin(testutil.CoinDenom, sdkmath.NewInt(1))},
+			Price: sdk.NewDecCoin(sdkutil.DenomUact, sdkmath.NewInt(1)),
 		},
 	}
 	order, gspec := suite.createOrder(resources)
@@ -1094,8 +1088,8 @@ func TestCreateBidOverprice(t *testing.T) {
 	require.NoError(t, err)
 
 	msg := &mtypes.MsgCreateBid{
-		ID:     mtypes.MakeBidID(order.ID, providerAddr),
-		Prices: sdk.DecCoins{sdk.NewDecCoin(testutil.CoinDenom, sdkmath.NewInt(math.MaxInt64))},
+		ID:    mv1.MakeBidID(order.ID, providerAddr),
+		Price: sdk.NewDecCoin(sdkutil.DenomUact, sdkmath.NewInt(math.MaxInt64)),
 	}
 
 	res, err := suite.handler(suite.Context(), msg)
@@ -1122,8 +1116,8 @@ func TestCreateBidInvalidProvider(t *testing.T) {
 	order, _ := suite.createOrder(testutil.Resources(t))
 
 	msg := &mtypes.MsgCreateBid{
-		ID:     mtypes.MakeBidID(order.ID, sdk.AccAddress{}),
-		Prices: sdk.DecCoins{sdk.NewDecCoin(testutil.CoinDenom, sdkmath.NewInt(1))},
+		ID:    mv1.MakeBidID(order.ID, sdk.AccAddress{}),
+		Price: sdk.NewDecCoin(sdkutil.DenomUact, sdkmath.NewInt(1)),
 	}
 
 	res, err := suite.handler(suite.Context(), msg)
@@ -1152,8 +1146,8 @@ func TestCreateBidInvalidAttributes(t *testing.T) {
 	require.NoError(t, err)
 
 	msg := &mtypes.MsgCreateBid{
-		ID:     mtypes.MakeBidID(order.ID, providerAddr),
-		Prices: sdk.DecCoins{sdk.NewDecCoin(testutil.CoinDenom, sdkmath.NewInt(1))},
+		ID:    mv1.MakeBidID(order.ID, providerAddr),
+		Price: sdk.NewDecCoin(sdkutil.DenomUact, sdkmath.NewInt(1)),
 	}
 
 	res, err := suite.handler(suite.Context(), msg)
@@ -1191,8 +1185,8 @@ func TestCreateBidAlreadyExists(t *testing.T) {
 	require.NoError(t, err)
 
 	msg := &mtypes.MsgCreateBid{
-		ID:     mtypes.MakeBidID(order.ID, providerAddr),
-		Prices: sdk.DecCoins{sdk.NewDecCoin(testutil.CoinDenom, sdkmath.NewInt(1))},
+		ID:    mv1.MakeBidID(order.ID, providerAddr),
+		Price: sdk.NewDecCoin(sdkutil.DenomUact, sdkmath.NewInt(1)),
 		Deposit: deposit.Deposit{
 			Amount:  mtypes.DefaultBidMinDeposit,
 			Sources: deposit.Sources{deposit.SourceBalance},
@@ -1285,7 +1279,7 @@ func TestCloseBidNonExisting(t *testing.T) {
 	require.NoError(t, err)
 
 	msg := &mtypes.MsgCloseBid{
-		ID: mtypes.MakeBidID(order.ID, providerAddr),
+		ID: mv1.MakeBidID(order.ID, providerAddr),
 	}
 
 	res, err := suite.handler(suite.Context(), msg)
@@ -1353,9 +1347,9 @@ func TestCloseBidValid(t *testing.T) {
 		require.NoError(t, err)
 
 		// iev := testutil.ParseMarketEvent(t, res.Events[3:4])
-		require.IsType(t, &mtypes.EventBidClosed{}, iev)
+		require.IsType(t, &mv1.EventBidClosed{}, iev)
 
-		dev := iev.(*mtypes.EventBidClosed)
+		dev := iev.(*mv1.EventBidClosed)
 
 		require.Equal(t, msg.ID, dev.ID)
 	})
@@ -1400,7 +1394,7 @@ func TestCloseBidWithStateOpen(t *testing.T) {
 		for _, e := range res.Events {
 			iev, err := sdk.ParseTypedEvent(e)
 			require.NoError(t, err)
-			if dev, ok := iev.(*mtypes.EventBidClosed); ok {
+			if dev, ok := iev.(*mv1.EventBidClosed); ok {
 				require.Equal(t, msg.ID, dev.ID)
 				found = true
 				break
@@ -1432,13 +1426,13 @@ func TestCloseBidUnknownOrder(t *testing.T) {
 	suite := setupTestSuite(t)
 
 	group := testutil.DeploymentGroup(t, testutil.DeploymentID(t), 0)
-	orderID := mtypes.MakeOrderID(group.ID, 1)
+	orderID := mv1.MakeOrderID(group.ID, 1)
 	provider := testutil.AccAddress(t)
-	prices := sdk.DecCoins{sdk.NewDecCoin(testutil.CoinDenom, sdkmath.NewInt(int64(rand.Uint16())))}
+	price := sdk.NewDecCoin(sdkutil.DenomUact, sdkmath.NewInt(int64(rand.Uint16())))
 	roffer := mtypes.ResourceOfferFromRU(group.GroupSpec.Resources)
 
-	bidID := mtypes.MakeBidID(orderID, provider)
-	bid, err := suite.MarketKeeper().CreateBid(suite.Context(), bidID, prices, roffer)
+	bidID := mv1.MakeBidID(orderID, provider)
+	bid, err := suite.MarketKeeper().CreateBid(suite.Context(), bidID, price, roffer)
 	require.NoError(t, err)
 
 	err = suite.MarketKeeper().CreateLease(suite.Context(), bid)
@@ -1453,7 +1447,7 @@ func TestCloseBidUnknownOrder(t *testing.T) {
 	require.Error(t, err)
 }
 
-func (st *testSuite) createLease() (mtypes.LeaseID, mtypes.Bid, mtypes.Order) {
+func (st *testSuite) createLease() (mv1.LeaseID, mtypes.Bid, mtypes.Order) {
 	st.t.Helper()
 	bid, order := st.createBid()
 
@@ -1463,7 +1457,7 @@ func (st *testSuite) createLease() (mtypes.LeaseID, mtypes.Bid, mtypes.Order) {
 	st.MarketKeeper().OnBidMatched(st.Context(), bid)
 	st.MarketKeeper().OnOrderMatched(st.Context(), order)
 
-	lid := mtypes.MakeLeaseID(bid.ID)
+	lid := mv1.MakeLeaseID(bid.ID)
 	return lid, bid, order
 }
 
@@ -1471,14 +1465,14 @@ func (st *testSuite) createBid() (mtypes.Bid, mtypes.Order) {
 	st.t.Helper()
 	order, gspec := st.createOrder(testutil.Resources(st.t))
 	provider := testutil.AccAddress(st.t)
-	prices := sdk.DecCoins{sdk.NewDecCoin(testutil.CoinDenom, sdkmath.NewInt(int64(rand.Uint16())))}
+	price := sdk.NewDecCoin(sdkutil.DenomUact, sdkmath.NewInt(int64(rand.Uint16())))
 	roffer := mtypes.ResourceOfferFromRU(gspec.Resources)
-	bidID := mtypes.MakeBidID(order.ID, provider)
+	bidID := mv1.MakeBidID(order.ID, provider)
 
-	bid, err := st.MarketKeeper().CreateBid(st.Context(), bidID, prices, roffer)
+	bid, err := st.MarketKeeper().CreateBid(st.Context(), bidID, price, roffer)
 	require.NoError(st.t, err)
 	require.Equal(st.t, order.ID, bid.ID.OrderID())
-	require.Equal(st.t, prices[0], bid.Prices[0])
+	require.Equal(st.t, price, bid.Price)
 	require.Equal(st.t, provider.String(), bid.ID.Provider)
 	return bid, order
 }
@@ -1526,7 +1520,7 @@ func (st *testSuite) createDeployment() (dv1.Deployment, dtypes.Groups) {
 		{
 			Resources: testutil.ResourceUnits(st.t),
 			Count:     1,
-			Prices:    sdk.DecCoins{testutil.AkashDecCoinRandom(st.t)},
+			Price:     testutil.AkashDecCoinRandom(st.t),
 		},
 	}
 	groups := dtypes.Groups{

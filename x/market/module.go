@@ -11,6 +11,7 @@ import (
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
+	mv1 "pkg.akt.dev/go/node/market/v1"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -19,7 +20,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
 
-	mtypes "pkg.akt.dev/go/node/market/v2beta1"
+	mtypes "pkg.akt.dev/go/node/market/v1beta5"
 
 	akeeper "pkg.akt.dev/node/v2/x/audit/keeper"
 	ekeeper "pkg.akt.dev/node/v2/x/escrow/keeper"
@@ -54,7 +55,7 @@ type AppModule struct {
 
 // Name returns market module's name
 func (AppModuleBasic) Name() string {
-	return mtypes.ModuleName
+	return mv1.ModuleName
 }
 
 // RegisterLegacyAminoCodec registers the market module's types for the given codec.
@@ -78,7 +79,7 @@ func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, _ client.TxEncodingCo
 	var data mtypes.GenesisState
 	err := cdc.UnmarshalJSON(bz, &data)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal %s genesis state: %w", mtypes.ModuleName, err)
+		return fmt.Errorf("failed to unmarshal %s genesis state: %w", mv1.ModuleName, err)
 	}
 	return ValidateGenesis(&data)
 }
@@ -135,7 +136,7 @@ func NewAppModule(
 
 // Name returns the market module name
 func (AppModule) Name() string {
-	return mtypes.ModuleName
+	return mv1.ModuleName
 }
 
 // IsOnePerModuleType implements the depinject.OnePerModuleType interface.

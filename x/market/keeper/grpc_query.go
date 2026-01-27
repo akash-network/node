@@ -5,12 +5,13 @@ import (
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	mv1 "pkg.akt.dev/go/node/market/v1"
 
 	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 
-	mtypes "pkg.akt.dev/go/node/market/v2beta1"
+	mtypes "pkg.akt.dev/go/node/market/v1beta5"
 
 	"pkg.akt.dev/node/v2/util/query"
 	"pkg.akt.dev/node/v2/x/market/keeper/keys"
@@ -350,16 +351,16 @@ func (k Querier) Leases(c context.Context, req *mtypes.QueryLeasesRequest) (*mty
 	} else if req.Filters.State != "" {
 		reverseSearch = (req.Filters.Owner == "") && (req.Filters.Provider != "")
 
-		stateVal := mtypes.Lease_State(mtypes.Lease_State_value[req.Filters.State])
+		stateVal := mv1.Lease_State(mv1.Lease_State_value[req.Filters.State])
 
-		if req.Filters.State != "" && stateVal == mtypes.LeaseStateInvalid {
+		if req.Filters.State != "" && stateVal == mv1.LeaseStateInvalid {
 			return nil, status.Error(codes.InvalidArgument, "invalid state value")
 		}
 
 		states = append(states, byte(stateVal))
 	} else {
 		// request does not have a pagination set. Start from an open store
-		states = append(states, byte(mtypes.LeaseActive), byte(mtypes.LeaseInsufficientFunds), byte(mtypes.LeaseClosed))
+		states = append(states, byte(mv1.LeaseActive), byte(mv1.LeaseInsufficientFunds), byte(mv1.LeaseClosed))
 	}
 
 	var leases []mtypes.QueryLeaseResponse
@@ -372,7 +373,7 @@ func (k Querier) Leases(c context.Context, req *mtypes.QueryLeasesRequest) (*mty
 	var err error
 
 	for idx = range states {
-		state := mtypes.Lease_State(states[idx])
+		state := mv1.Lease_State(states[idx])
 
 		if idx > 0 {
 			req.Pagination.Key = nil
@@ -397,7 +398,7 @@ func (k Querier) Leases(c context.Context, req *mtypes.QueryLeasesRequest) (*mty
 		count := uint64(0)
 
 		pageRes, err = sdkquery.FilteredPaginate(searchedStore, req.Pagination, func(_ []byte, value []byte, accumulate bool) (bool, error) {
-			var lease mtypes.Lease
+			var lease mv1.Lease
 
 			err := k.cdc.Unmarshal(value, &lease)
 			if err != nil {
@@ -478,7 +479,7 @@ func (k Querier) Order(c context.Context, req *mtypes.QueryOrderRequest) (*mtype
 
 	order, found := k.GetOrder(ctx, req.ID)
 	if !found {
-		return nil, mtypes.ErrOrderNotFound
+		return nil, mv1.ErrOrderNotFound
 	}
 
 	return &mtypes.QueryOrderResponse{Order: order}, nil
@@ -502,7 +503,7 @@ func (k Querier) Bid(c context.Context, req *mtypes.QueryBidRequest) (*mtypes.Qu
 
 	bid, found := k.GetBid(ctx, req.ID)
 	if !found {
-		return nil, mtypes.ErrBidNotFound
+		return nil, mv1.ErrBidNotFound
 	}
 
 	acct, err := k.ekeeper.GetAccount(ctx, bid.ID.ToEscrowAccountID())
@@ -534,7 +535,7 @@ func (k Querier) Lease(c context.Context, req *mtypes.QueryLeaseRequest) (*mtype
 
 	lease, found := k.GetLease(ctx, req.ID)
 	if !found {
-		return nil, mtypes.ErrLeaseNotFound
+		return nil, mv1.ErrLeaseNotFound
 	}
 
 	payment, err := k.ekeeper.GetPayment(ctx, lease.ID.ToEscrowPaymentID())

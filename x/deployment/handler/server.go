@@ -9,7 +9,7 @@ import (
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 
 	v1 "pkg.akt.dev/go/node/deployment/v1"
-	types "pkg.akt.dev/go/node/deployment/v1beta5"
+	types "pkg.akt.dev/go/node/deployment/v1beta4"
 
 	"pkg.akt.dev/node/v2/x/deployment/keeper"
 )
@@ -43,10 +43,8 @@ func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreate
 
 	params := ms.deployment.GetParams(ctx)
 
-	for _, deposit := range msg.Deposits {
-		if err := params.ValidateDeposit(deposit.Amount); err != nil {
-			return nil, err
-		}
+	if err := params.ValidateDeposit(msg.Deposit.Amount); err != nil {
+		return nil, err
 	}
 
 	deployment := v1.Deployment{

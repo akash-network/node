@@ -8,7 +8,7 @@ import (
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/cosmos/cosmos-sdk/x/simulation"
 
-	types "pkg.akt.dev/go/node/market/v2beta1"
+	types "pkg.akt.dev/go/node/market/v1beta5"
 )
 
 // Simulation operation weights constants
@@ -34,7 +34,7 @@ func SimulateMsgUpdateParams(r *rand.Rand, _ sdk.Context, _ []simtypes.Account) 
 	var authority sdk.AccAddress = address.Module("gov")
 
 	params := types.DefaultParams()
-	params.BidMinDeposit = sdk.NewInt64Coin("uakt", int64(simtypes.RandIntBetween(r, 500000, 50000000)))
+	params.BidMinDeposit = sdk.NewInt64Coin("uact", int64(simtypes.RandIntBetween(r, 500000, 50000000)))
 	params.OrderMaxBids = uint32(simtypes.RandIntBetween(r, 20, 500)) // nolint gosec
 
 	return &types.MsgUpdateParams{

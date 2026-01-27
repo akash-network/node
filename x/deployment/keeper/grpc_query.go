@@ -12,7 +12,7 @@ import (
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 
 	"pkg.akt.dev/go/node/deployment/v1"
-	types "pkg.akt.dev/go/node/deployment/v1beta5"
+	types "pkg.akt.dev/go/node/deployment/v1beta4"
 
 	"pkg.akt.dev/node/v2/util/query"
 )

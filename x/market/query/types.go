@@ -2,7 +2,9 @@ package query
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	mtypes "pkg.akt.dev/go/node/market/v2beta1"
+
+	mv1 "pkg.akt.dev/go/node/market/v1"
+	mtypes "pkg.akt.dev/go/node/market/v1beta5"
 )
 
 type (
@@ -17,7 +19,7 @@ type (
 	Bids []Bid
 
 	// Lease type
-	Lease mtypes.Lease
+	Lease mv1.Lease
 	// Leases - Slice of Lease Struct
 	Leases []Lease
 )
@@ -50,7 +52,7 @@ type LeaseFilters struct {
 	// State flag value given
 	StateFlagVal string
 	// Actual state value decoded from Lease_State_value
-	State mtypes.Lease_State
+	State mv1.Lease_State
 }
 
 // Accept returns true if object matches filter requirements
@@ -78,7 +80,7 @@ func (f BidFilters) Accept(obj mtypes.Bid, isValidState bool) bool {
 }
 
 // Accept returns true if object matches filter requirements
-func (f LeaseFilters) Accept(obj mtypes.Lease, isValidState bool) bool {
+func (f LeaseFilters) Accept(obj mv1.Lease, isValidState bool) bool {
 	if (f.Owner.Empty() && !isValidState) ||
 		(f.Owner.Empty() && (obj.State == f.State)) ||
 		(!isValidState && (obj.ID.Owner == f.Owner.String())) ||

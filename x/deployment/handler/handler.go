@@ -5,7 +5,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
-	types "pkg.akt.dev/go/node/deployment/v1beta5"
+	types "pkg.akt.dev/go/node/deployment/v1beta4"
 
 	"pkg.akt.dev/node/v2/x/deployment/keeper"
 )

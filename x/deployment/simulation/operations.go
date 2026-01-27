@@ -17,7 +17,7 @@ import (
 	"pkg.akt.dev/go/sdkutil"
 
 	"pkg.akt.dev/go/node/deployment/v1"
-	dvbeta "pkg.akt.dev/go/node/deployment/v1beta5"
+	dvbeta "pkg.akt.dev/go/node/deployment/v1beta4"
 
 	sdlv1 "pkg.akt.dev/go/sdl"
 
@@ -137,10 +137,10 @@ func SimulateMsgCreateDeployment(ak govtypes.AccountKeeper, bk bankkeeper.Keeper
 			return simtypes.NoOpMsg(v1.ModuleName, (&dvbeta.MsgCreateDeployment{}).Type(), "unable to generate fees"), nil, err
 		}
 
-		msg := dvbeta.NewMsgCreateDeployment(dID, make([]dvbeta.GroupSpec, 0, len(groupSpecs)), sdlSum, deposit.Deposits{{
+		msg := dvbeta.NewMsgCreateDeployment(dID, make([]dvbeta.GroupSpec, 0, len(groupSpecs)), sdlSum, deposit.Deposit{
 			Amount:  depositAmount,
 			Sources: deposit.Sources{deposit.SourceBalance},
-		}})
+		})
 
 		msg.Groups = append(msg.Groups, groupSpecs...)
 

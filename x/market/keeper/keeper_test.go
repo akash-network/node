@@ -6,11 +6,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	mv1 "pkg.akt.dev/go/node/market/v1"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	dtypes "pkg.akt.dev/go/node/deployment/v1beta5"
-	mtypes "pkg.akt.dev/go/node/market/v2beta1"
+	dtypes "pkg.akt.dev/go/node/deployment/v1beta4"
+	mtypes "pkg.akt.dev/go/node/market/v1beta5"
 	deposit "pkg.akt.dev/go/node/types/deposit/v1"
 	"pkg.akt.dev/go/testutil"
 
@@ -148,7 +149,7 @@ func Test_WithLeases(t *testing.T) {
 	id := createLease(t, suite)
 
 	count := 0
-	keeper.WithLeases(ctx, func(result mtypes.Lease) bool {
+	keeper.WithLeases(ctx, func(result mv1.Lease) bool {
 		if assert.Equal(t, id, result.ID) {
 			count++
 		}
@@ -230,13 +231,13 @@ func Test_OnLeaseClosed(t *testing.T) {
 	const testBlockHeight = 1337
 	suite.SetBlockHeight(testBlockHeight)
 
-	require.Equal(t, mtypes.LeaseActive, lease.State)
-	err := keeper.OnLeaseClosed(suite.Context(), lease, mtypes.LeaseClosed, mtypes.LeaseClosedReasonUnspecified)
+	require.Equal(t, mv1.LeaseActive, lease.State)
+	err := keeper.OnLeaseClosed(suite.Context(), lease, mv1.LeaseClosed, mv1.LeaseClosedReasonUnspecified)
 	require.NoError(t, err)
 
 	result, ok := keeper.GetLease(suite.Context(), id)
 	require.True(t, ok)
-	assert.Equal(t, mtypes.LeaseClosed, result.State)
+	assert.Equal(t, mv1.LeaseClosed, result.State)
 	assert.Equal(t, int64(testBlockHeight), result.ClosedOn)
 }
 
@@ -251,7 +252,7 @@ func Test_OnGroupClosed(t *testing.T) {
 
 	lease, ok := keeper.GetLease(suite.Context(), id)
 	require.True(t, ok)
-	assert.Equal(t, mtypes.LeaseClosed, lease.State)
+	assert.Equal(t, mv1.LeaseClosed, lease.State)
 	assert.Equal(t, int64(testBlockHeight), lease.ClosedOn)
 
 	bid, ok := keeper.GetBid(suite.Context(), id.BidID())
@@ -263,7 +264,7 @@ func Test_OnGroupClosed(t *testing.T) {
 	assert.Equal(t, mtypes.OrderClosed, order.State)
 }
 
-func createLease(t testing.TB, suite *state.TestSuite) mtypes.LeaseID {
+func createLease(t testing.TB, suite *state.TestSuite) mv1.LeaseID {
 	t.Helper()
 	ctx := suite.Context()
 	bid, order := createBid(t, suite)
@@ -283,11 +284,9 @@ func createLease(t testing.TB, suite *state.TestSuite) mtypes.LeaseID {
 
 	msg := &dtypes.MsgCreateDeployment{
 		ID: order.ID.GroupID().DeploymentID(),
-		Deposits: deposit.Deposits{
-			{
-				Amount:  defaultDeposit,
-				Sources: deposit.Sources{deposit.SourceBalance},
-			},
+		Deposit: deposit.Deposit{
+			Amount:  defaultDeposit,
+			Sources: deposit.Sources{deposit.SourceBalance},
 		}}
 
 	deposits, err := suite.EscrowKeeper().AuthorizeDeposits(ctx, msg)
@@ -304,19 +303,11 @@ func createLease(t testing.TB, suite *state.TestSuite) mtypes.LeaseID {
 	provider, err := sdk.AccAddressFromBech32(bid.ID.Provider)
 	require.NoError(t, err)
 
-	// Convert bid price from uakt to uact (account funds are in uact after BME conversion)
-	// Swap rate: 1 uakt = 3 uact (based on oracle prices: AKT=$3, ACT=$1)
-	paymentRate := bid.Prices[0]
-	if paymentRate.Denom == "uakt" {
-		// Convert to uact: multiply amount by 3
-		paymentRate = sdk.NewDecCoinFromDec("uact", paymentRate.Amount.MulInt64(3))
-	}
-
 	err = suite.EscrowKeeper().PaymentCreate(
 		ctx,
 		bid.ID.LeaseID().ToEscrowPaymentID(),
 		provider,
-		paymentRate,
+		bid.Price,
 	)
 	require.NoError(t, err)
 
@@ -328,15 +319,15 @@ func createBid(t testing.TB, suite *state.TestSuite) (mtypes.Bid, mtypes.Order) 
 	ctx := suite.Context()
 	order, gspec := createOrder(t, suite.Context(), suite.MarketKeeper())
 	provider := testutil.AccAddress(t)
-	prices := sdk.DecCoins{testutil.AkashDecCoinRandom(t)}
+	price := testutil.AkashDecCoinRandom(t)
 	roffer := mtypes.ResourceOfferFromRU(gspec.Resources)
 
-	bidID := mtypes.MakeBidID(order.ID, provider)
+	bidID := mv1.MakeBidID(order.ID, provider)
 
-	bid, err := suite.MarketKeeper().CreateBid(ctx, bidID, prices, roffer)
+	bid, err := suite.MarketKeeper().CreateBid(ctx, bidID, price, roffer)
 	require.NoError(t, err)
 	assert.Equal(t, order.ID, bid.ID.OrderID())
-	assert.Equal(t, prices, bid.Prices)
+	assert.Equal(t, price, bid.Price)
 	assert.Equal(t, provider.String(), bid.ID.Provider)
 
 	msg := &mtypes.MsgCreateBid{

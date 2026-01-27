@@ -5,6 +5,7 @@ import (
 
 	"cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	epochtypes "pkg.akt.dev/go/node/epochs/v1beta1"
 )
 
 type BankKeeper interface {
@@ -27,4 +28,8 @@ type AccountKeeper interface {
 	GetAccount(ctx context.Context, addr sdk.AccAddress) sdk.AccountI
 	GetModuleAddress(moduleName string) sdk.AccAddress
 	GetModuleAccount(ctx context.Context, moduleName string) sdk.ModuleAccountI
+}
+
+type EpochKeeper interface {
+	GetEpochInfo(ctx sdk.Context, epochIdentifier string) (epochtypes.EpochInfo, bool)
 }

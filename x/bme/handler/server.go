@@ -5,7 +5,9 @@ import (
 
 	"cosmossdk.io/errors"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	"pkg.akt.dev/go/sdkutil"
 
 	types "pkg.akt.dev/go/node/bme/v1"
 
@@ -45,9 +47,64 @@ func (ms msgServer) UpdateParams(ctx context.Context, msg *types.MsgUpdateParams
 }
 
 func (ms msgServer) BurnMint(ctx context.Context, msg *types.MsgBurnMint) (*types.MsgBurnMintResponse, error) {
-	//sctx := sdk.UnwrapSDKContext(ctx)
+	src, err := sdk.AccAddressFromBech32(msg.Owner)
+	if err != nil {
+		return nil, errors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid owner address: %s", err)
+	}
 
-	resp := &types.MsgBurnMintResponse{}
+	dst, err := sdk.AccAddressFromBech32(msg.To)
+	if err != nil {
+		return nil, errors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid to address: %s", err)
+	}
+
+	err = msg.CoinsToBurn.Validate()
+	if err != nil {
+		return nil, errors.Wrapf(sdkerrors.ErrInvalidCoins, "invalid coins: %s", err)
+	}
+
+	id, err := ms.bme.RequestBurnMint(ctx, src, dst, msg.CoinsToBurn, msg.DenomToMint)
+	if err != nil {
+		return nil, err
+	}
+	resp := &types.MsgBurnMintResponse{
+		ID: id,
+	}
+
+	return resp, nil
+}
+
+func (ms msgServer) MintACT(ctx context.Context, msg *types.MsgMintACT) (*types.MsgMintACTResponse, error) {
+	r, err := ms.BurnMint(ctx, &types.MsgBurnMint{
+		Owner:       msg.Owner,
+		To:          msg.To,
+		CoinsToBurn: msg.CoinsToBurn,
+		DenomToMint: sdkutil.DenomUact,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &types.MsgMintACTResponse{
+		ID: r.ID,
+	}
+
+	return resp, nil
+}
+
+func (ms msgServer) BurnACT(ctx context.Context, msg *types.MsgBurnACT) (*types.MsgBurnACTResponse, error) {
+	r, err := ms.BurnMint(ctx, &types.MsgBurnMint{
+		Owner:       msg.Owner,
+		To:          msg.To,
+		CoinsToBurn: msg.CoinsToBurn,
+		DenomToMint: sdkutil.DenomUakt,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &types.MsgBurnACTResponse{
+		ID: r.ID,
+	}
 
 	return resp, nil
 }

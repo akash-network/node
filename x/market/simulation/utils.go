@@ -2,7 +2,7 @@ package simulation
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	mtypes "pkg.akt.dev/go/node/market/v2beta1"
+	mtypes "pkg.akt.dev/go/node/market/v1beta5"
 
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 

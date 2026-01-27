@@ -15,7 +15,7 @@ import (
 	deposit "pkg.akt.dev/go/node/types/deposit/v1"
 
 	"pkg.akt.dev/go/node/deployment/v1"
-	dvbeta "pkg.akt.dev/go/node/deployment/v1beta5"
+	dvbeta "pkg.akt.dev/go/node/deployment/v1beta4"
 	eid "pkg.akt.dev/go/node/escrow/id/v1"
 	"pkg.akt.dev/go/testutil"
 
@@ -609,7 +609,7 @@ func (suite *grpcTestSuite) createDeployment() (v1.Deployment, dvbeta.Groups) {
 		{
 			Resources: testutil.ResourceUnits(suite.t),
 			Count:     1,
-			Prices:    sdk.DecCoins{testutil.DecCoin(suite.t)},
+			Price:     testutil.DecCoin(suite.t),
 		},
 	}
 	groups := []dvbeta.Group{
@@ -628,16 +628,14 @@ func (suite *grpcTestSuite) createEscrowAccount(id v1.DeploymentID) eid.Account 
 	require.NoError(suite.t, err)
 
 	eid := id.ToEscrowAccountID()
-	defaultDeposit, err := dvbeta.DefaultParams().MinDepositFor("uakt")
+	defaultDeposit, err := dvbeta.DefaultParams().MinDepositFor("uact")
 	require.NoError(suite.t, err)
 
 	msg := &dvbeta.MsgCreateDeployment{
 		ID: id,
-		Deposits: deposit.Deposits{
-			{
-				Amount:  defaultDeposit,
-				Sources: deposit.Sources{deposit.SourceBalance},
-			},
+		Deposit: deposit.Deposit{
+			Amount:  defaultDeposit,
+			Sources: deposit.Sources{deposit.SourceBalance},
 		},
 	}
 

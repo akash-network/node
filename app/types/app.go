@@ -61,6 +61,7 @@ import (
 	ibckeeper "github.com/cosmos/ibc-go/v10/modules/core/keeper"
 	ibctm "github.com/cosmos/ibc-go/v10/modules/light-clients/07-tendermint"
 	bmetypes "pkg.akt.dev/go/node/bme/v1"
+	mvbeta "pkg.akt.dev/go/node/market/v1beta5"
 
 	auditaketypes "pkg.akt.dev/go/node/audit/v1"
 	certtypes "pkg.akt.dev/go/node/cert/v1"
@@ -68,7 +69,7 @@ import (
 	dv1beta "pkg.akt.dev/go/node/deployment/v1beta3"
 	epochstypes "pkg.akt.dev/go/node/epochs/v1beta1"
 	escrowtypes "pkg.akt.dev/go/node/escrow/module"
-	mtypes "pkg.akt.dev/go/node/market/v2beta1"
+	mtypes "pkg.akt.dev/go/node/market/v1"
 	oracletypes "pkg.akt.dev/go/node/oracle/v1"
 	providertypes "pkg.akt.dev/go/node/provider/v1beta4"
 	taketypes "pkg.akt.dev/go/node/take/v1"
@@ -425,6 +426,7 @@ func (app *App) InitNormalKeepers(
 	app.Keepers.Akash.Bme = bmekeeper.NewKeeper(
 		cdc,
 		app.keys[bmetypes.StoreKey],
+		app.AC,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 		app.Keepers.Cosmos.Acct,
 		app.Keepers.Cosmos.Bank,
@@ -434,9 +436,9 @@ func (app *App) InitNormalKeepers(
 	app.Keepers.Akash.Escrow = ekeeper.NewKeeper(
 		cdc,
 		app.keys[escrowtypes.StoreKey],
+		app.AC,
 		app.Keepers.Cosmos.Bank,
 		app.Keepers.Cosmos.Authz,
-		app.Keepers.Akash.Bme,
 	)
 
 	app.Keepers.Akash.Deployment = dkeeper.NewKeeper(
@@ -579,7 +581,7 @@ func initParamsKeeper(appCodec codec.BinaryCodec, legacyAmino *codec.LegacyAmino
 
 	// akash params subspaces
 	paramsKeeper.Subspace(dtypes.ModuleName).WithKeyTable(dv1beta.ParamKeyTable())
-	paramsKeeper.Subspace(mtypes.ModuleName).WithKeyTable(mtypes.ParamKeyTable())
+	paramsKeeper.Subspace(mtypes.ModuleName).WithKeyTable(mvbeta.ParamKeyTable())
 	paramsKeeper.Subspace(taketypes.ModuleName).WithKeyTable(taketypes.ParamKeyTable()) // nolint: staticcheck // SA1019
 
 	return paramsKeeper

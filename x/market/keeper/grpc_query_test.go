@@ -8,12 +8,13 @@ import (
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	mv1 "pkg.akt.dev/go/node/market/v1"
 
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 
-	mtypes "pkg.akt.dev/go/node/market/v2beta1"
+	mtypes "pkg.akt.dev/go/node/market/v1beta5"
 	"pkg.akt.dev/go/testutil"
 
 	"pkg.akt.dev/node/v2/testutil/state"
@@ -74,14 +75,14 @@ func TestGRPCQueryOrder(t *testing.T) {
 		{
 			"invalid request",
 			func() {
-				req = &mtypes.QueryOrderRequest{ID: mtypes.OrderID{}}
+				req = &mtypes.QueryOrderRequest{ID: mv1.OrderID{}}
 			},
 			false,
 		},
 		{
 			"order not found",
 			func() {
-				req = &mtypes.QueryOrderRequest{ID: mtypes.OrderID{
+				req = &mtypes.QueryOrderRequest{ID: mv1.OrderID{
 					Owner: testutil.AccAddress(t).String(),
 					DSeq:  32,
 					GSeq:  43,
@@ -185,20 +186,20 @@ func TestGRPCQueryOrders(t *testing.T) {
 
 type orderFilterModifier struct {
 	fieldName string
-	f         func(orderID mtypes.OrderID, filter mtypes.OrderFilters) mtypes.OrderFilters
-	getField  func(orderID mtypes.OrderID) interface{}
+	f         func(orderID mv1.OrderID, filter mtypes.OrderFilters) mtypes.OrderFilters
+	getField  func(orderID mv1.OrderID) interface{}
 }
 
 type bidFilterModifier struct {
 	fieldName string
-	f         func(bidID mtypes.BidID, filter mtypes.BidFilters) mtypes.BidFilters
-	getField  func(bidID mtypes.BidID) interface{}
+	f         func(bidID mv1.BidID, filter mtypes.BidFilters) mtypes.BidFilters
+	getField  func(bidID mv1.BidID) interface{}
 }
 
 type leaseFilterModifier struct {
 	fieldName string
-	f         func(leaseID mtypes.LeaseID, filter mtypes.LeaseFilters) mtypes.LeaseFilters
-	getField  func(leaseID mtypes.LeaseID) interface{}
+	f         func(leaseID mv1.LeaseID, filter mv1.LeaseFilters) mv1.LeaseFilters
+	getField  func(leaseID mv1.LeaseID) interface{}
 }
 
 func TestGRPCQueryOrdersWithFilter(t *testing.T) {
@@ -209,7 +210,7 @@ func TestGRPCQueryOrdersWithFilter(t *testing.T) {
 	orderB, _ := createOrder(t, suite.ctx, suite.keeper)
 	orderC, _ := createOrder(t, suite.ctx, suite.keeper)
 
-	orders := []mtypes.OrderID{
+	orders := []mv1.OrderID{
 		orderA.ID,
 		orderB.ID,
 		orderC.ID,
@@ -218,41 +219,41 @@ func TestGRPCQueryOrdersWithFilter(t *testing.T) {
 	modifiers := []orderFilterModifier{
 		{
 			"owner",
-			func(orderID mtypes.OrderID, filter mtypes.OrderFilters) mtypes.OrderFilters {
+			func(orderID mv1.OrderID, filter mtypes.OrderFilters) mtypes.OrderFilters {
 				filter.Owner = orderID.GetOwner()
 				return filter
 			},
-			func(orderID mtypes.OrderID) interface{} {
+			func(orderID mv1.OrderID) interface{} {
 				return orderID.Owner
 			},
 		},
 		{
 			"dseq",
-			func(orderID mtypes.OrderID, filter mtypes.OrderFilters) mtypes.OrderFilters {
+			func(orderID mv1.OrderID, filter mtypes.OrderFilters) mtypes.OrderFilters {
 				filter.DSeq = orderID.DSeq
 				return filter
 			},
-			func(orderID mtypes.OrderID) interface{} {
+			func(orderID mv1.OrderID) interface{} {
 				return orderID.DSeq
 			},
 		},
 		{
 			"gseq",
-			func(orderID mtypes.OrderID, filter mtypes.OrderFilters) mtypes.OrderFilters {
+			func(orderID mv1.OrderID, filter mtypes.OrderFilters) mtypes.OrderFilters {
 				filter.GSeq = orderID.GSeq
 				return filter
 			},
-			func(orderID mtypes.OrderID) interface{} {
+			func(orderID mv1.OrderID) interface{} {
 				return orderID.GSeq
 			},
 		},
 		{
 			"oseq",
-			func(orderID mtypes.OrderID, filter mtypes.OrderFilters) mtypes.OrderFilters {
+			func(orderID mv1.OrderID, filter mtypes.OrderFilters) mtypes.OrderFilters {
 				filter.OSeq = orderID.OSeq
 				return filter
 			},
-			func(orderID mtypes.OrderID) interface{} {
+			func(orderID mv1.OrderID) interface{} {
 				return orderID.OSeq
 			},
 		},
@@ -283,7 +284,7 @@ func TestGRPCQueryOrdersWithFilter(t *testing.T) {
 	limit := int(math.Pow(2, float64(len(modifiers))))
 
 	// Use an order ID that matches absolutely nothing in any field
-	bogusOrderID := mtypes.OrderID{
+	bogusOrderID := mv1.OrderID{
 		Owner: testutil.AccAddress(t).String(),
 		DSeq:  9999999,
 		GSeq:  8888888,
@@ -438,7 +439,7 @@ func TestGRPCQueryBidsWithFilter(t *testing.T) {
 	bidB, _ := createBid(t, suite.TestSuite)
 	bidC, _ := createBid(t, suite.TestSuite)
 
-	bids := []mtypes.BidID{
+	bids := []mv1.BidID{
 		bidA.ID,
 		bidB.ID,
 		bidC.ID,
@@ -447,51 +448,51 @@ func TestGRPCQueryBidsWithFilter(t *testing.T) {
 	modifiers := []bidFilterModifier{
 		{
 			"owner",
-			func(bidID mtypes.BidID, filter mtypes.BidFilters) mtypes.BidFilters {
+			func(bidID mv1.BidID, filter mtypes.BidFilters) mtypes.BidFilters {
 				filter.Owner = bidID.GetOwner()
 				return filter
 			},
-			func(bidID mtypes.BidID) interface{} {
+			func(bidID mv1.BidID) interface{} {
 				return bidID.Owner
 			},
 		},
 		{
 			"dseq",
-			func(bidID mtypes.BidID, filter mtypes.BidFilters) mtypes.BidFilters {
+			func(bidID mv1.BidID, filter mtypes.BidFilters) mtypes.BidFilters {
 				filter.DSeq = bidID.DSeq
 				return filter
 			},
-			func(bidID mtypes.BidID) interface{} {
+			func(bidID mv1.BidID) interface{} {
 				return bidID.DSeq
 			},
 		},
 		{
 			"gseq",
-			func(bidID mtypes.BidID, filter mtypes.BidFilters) mtypes.BidFilters {
+			func(bidID mv1.BidID, filter mtypes.BidFilters) mtypes.BidFilters {
 				filter.GSeq = bidID.GSeq
 				return filter
 			},
-			func(bidID mtypes.BidID) interface{} {
+			func(bidID mv1.BidID) interface{} {
 				return bidID.GSeq
 			},
 		},
 		{
 			"oseq",
-			func(bidID mtypes.BidID, filter mtypes.BidFilters) mtypes.BidFilters {
+			func(bidID mv1.BidID, filter mtypes.BidFilters) mtypes.BidFilters {
 				filter.OSeq = bidID.OSeq
 				return filter
 			},
-			func(bidID mtypes.BidID) interface{} {
+			func(bidID mv1.BidID) interface{} {
 				return bidID.OSeq
 			},
 		},
 		{
 			"provider",
-			func(bidID mtypes.BidID, filter mtypes.BidFilters) mtypes.BidFilters {
+			func(bidID mv1.BidID, filter mtypes.BidFilters) mtypes.BidFilters {
 				filter.Provider = bidID.Provider
 				return filter
 			},
-			func(bidID mtypes.BidID) interface{} {
+			func(bidID mv1.BidID) interface{} {
 				return bidID.Provider
 			},
 		},
@@ -522,7 +523,7 @@ func TestGRPCQueryBidsWithFilter(t *testing.T) {
 	limit := int(math.Pow(2, float64(len(modifiers))))
 
 	// Use an order ID that matches absolutely nothing in any field
-	bogusBidID := mtypes.BidID{
+	bogusBidID := mv1.BidID{
 		Owner:    testutil.AccAddress(t).String(),
 		DSeq:     9999999,
 		GSeq:     8888888,
@@ -678,7 +679,7 @@ func TestGRPCQueryLeasesWithFilter(t *testing.T) {
 	leaseB := createLease(t, suite.TestSuite)
 	leaseC := createLease(t, suite.TestSuite)
 
-	leases := []mtypes.LeaseID{
+	leases := []mv1.LeaseID{
 		leaseA,
 		leaseB,
 		leaseC,
@@ -687,51 +688,51 @@ func TestGRPCQueryLeasesWithFilter(t *testing.T) {
 	modifiers := []leaseFilterModifier{
 		{
 			"owner",
-			func(leaseID mtypes.LeaseID, filter mtypes.LeaseFilters) mtypes.LeaseFilters {
+			func(leaseID mv1.LeaseID, filter mv1.LeaseFilters) mv1.LeaseFilters {
 				filter.Owner = leaseID.GetOwner()
 				return filter
 			},
-			func(leaseID mtypes.LeaseID) interface{} {
+			func(leaseID mv1.LeaseID) interface{} {
 				return leaseID.Owner
 			},
 		},
 		{
 			"dseq",
-			func(leaseID mtypes.LeaseID, filter mtypes.LeaseFilters) mtypes.LeaseFilters {
+			func(leaseID mv1.LeaseID, filter mv1.LeaseFilters) mv1.LeaseFilters {
 				filter.DSeq = leaseID.DSeq
 				return filter
 			},
-			func(leaseID mtypes.LeaseID) interface{} {
+			func(leaseID mv1.LeaseID) interface{} {
 				return leaseID.DSeq
 			},
 		},
 		{
 			"gseq",
-			func(leaseID mtypes.LeaseID, filter mtypes.LeaseFilters) mtypes.LeaseFilters {
+			func(leaseID mv1.LeaseID, filter mv1.LeaseFilters) mv1.LeaseFilters {
 				filter.GSeq = leaseID.GSeq
 				return filter
 			},
-			func(leaseID mtypes.LeaseID) interface{} {
+			func(leaseID mv1.LeaseID) interface{} {
 				return leaseID.GSeq
 			},
 		},
 		{
 			"oseq",
-			func(leaseID mtypes.LeaseID, filter mtypes.LeaseFilters) mtypes.LeaseFilters {
+			func(leaseID mv1.LeaseID, filter mv1.LeaseFilters) mv1.LeaseFilters {
 				filter.OSeq = leaseID.OSeq
 				return filter
 			},
-			func(leaseID mtypes.LeaseID) interface{} {
+			func(leaseID mv1.LeaseID) interface{} {
 				return leaseID.OSeq
 			},
 		},
 		{
 			"provider",
-			func(leaseID mtypes.LeaseID, filter mtypes.LeaseFilters) mtypes.LeaseFilters {
+			func(leaseID mv1.LeaseID, filter mv1.LeaseFilters) mv1.LeaseFilters {
 				filter.Provider = leaseID.Provider
 				return filter
 			},
-			func(leaseID mtypes.LeaseID) interface{} {
+			func(leaseID mv1.LeaseID) interface{} {
 				return leaseID.Provider
 			},
 		},
@@ -742,7 +743,7 @@ func TestGRPCQueryLeasesWithFilter(t *testing.T) {
 	for _, leaseID := range leases {
 		for _, m := range modifiers {
 			req := &mtypes.QueryLeasesRequest{
-				Filters: m.f(leaseID, mtypes.LeaseFilters{}),
+				Filters: m.f(leaseID, mv1.LeaseFilters{}),
 			}
 
 			res, err := suite.queryClient.Leases(ctx, req)
@@ -762,7 +763,7 @@ func TestGRPCQueryLeasesWithFilter(t *testing.T) {
 	limit := int(math.Pow(2, float64(len(modifiers))))
 
 	// Use an order ID that matches absolutely nothing in any field
-	bogusBidID := mtypes.LeaseID{
+	bogusBidID := mv1.LeaseID{
 		Owner:    testutil.AccAddress(t).String(),
 		DSeq:     9999999,
 		GSeq:     8888888,
@@ -778,7 +779,7 @@ func TestGRPCQueryLeasesWithFilter(t *testing.T) {
 		}
 
 		for _, leaseID := range leases {
-			filter := mtypes.LeaseFilters{}
+			filter := mv1.LeaseFilters{}
 			msg := strings.Builder{}
 			msg.WriteString("testing filtering on: ")
 			for k, useModifier := range modifiersToUse {
@@ -814,7 +815,7 @@ func TestGRPCQueryLeasesWithFilter(t *testing.T) {
 			}
 		}
 
-		filter := mtypes.LeaseFilters{}
+		filter := mv1.LeaseFilters{}
 		msg := strings.Builder{}
 		msg.WriteString("testing filtering on (using non matching ID): ")
 		for k, useModifier := range modifiersToUse {
@@ -845,7 +846,7 @@ func TestGRPCQueryLeasesWithFilter(t *testing.T) {
 	for _, leaseID := range leases {
 		// Query by owner
 		req := &mtypes.QueryLeasesRequest{
-			Filters: mtypes.LeaseFilters{
+			Filters: mv1.LeaseFilters{
 				Owner: leaseID.Owner,
 			},
 		}
@@ -861,7 +862,7 @@ func TestGRPCQueryLeasesWithFilter(t *testing.T) {
 
 		// Query with valid DSeq
 		req = &mtypes.QueryLeasesRequest{
-			Filters: mtypes.LeaseFilters{
+			Filters: mv1.LeaseFilters{
 				Owner: leaseID.Owner,
 				DSeq:  leaseID.DSeq,
 			},
@@ -878,7 +879,7 @@ func TestGRPCQueryLeasesWithFilter(t *testing.T) {
 
 		// Query with a bogus DSeq
 		req = &mtypes.QueryLeasesRequest{
-			Filters: mtypes.LeaseFilters{
+			Filters: mv1.LeaseFilters{
 				Owner: leaseID.Owner,
 				DSeq:  leaseID.DSeq + 1,
 			},
@@ -936,14 +937,14 @@ func TestGRPCQueryBid(t *testing.T) {
 		{
 			"invalid request",
 			func() {
-				req = &mtypes.QueryBidRequest{ID: mtypes.BidID{}}
+				req = &mtypes.QueryBidRequest{ID: mv1.BidID{}}
 			},
 			false,
 		},
 		{
 			"bid not found",
 			func() {
-				req = &mtypes.QueryBidRequest{ID: mtypes.BidID{
+				req = &mtypes.QueryBidRequest{ID: mv1.BidID{
 					Owner:    testutil.AccAddress(t).String(),
 					DSeq:     32,
 					GSeq:     43,
@@ -1089,7 +1090,7 @@ func TestGRPCQueryLease(t *testing.T) {
 
 	var (
 		req      *mtypes.QueryLeaseRequest
-		expLease mtypes.Lease
+		expLease mv1.Lease
 	)
 
 	testCases := []struct {
@@ -1107,14 +1108,14 @@ func TestGRPCQueryLease(t *testing.T) {
 		{
 			"invalid request",
 			func() {
-				req = &mtypes.QueryLeaseRequest{ID: mtypes.LeaseID{}}
+				req = &mtypes.QueryLeaseRequest{ID: mv1.LeaseID{}}
 			},
 			false,
 		},
 		{
 			"lease not found",
 			func() {
-				req = &mtypes.QueryLeaseRequest{ID: mtypes.LeaseID{
+				req = &mtypes.QueryLeaseRequest{ID: mv1.LeaseID{
 					Owner:    testutil.AccAddress(t).String(),
 					DSeq:     32,
 					GSeq:     43,
@@ -1181,7 +1182,7 @@ func TestGRPCQueryLeases(t *testing.T) {
 	leaseID2 := createLease(t, suite.TestSuite)
 	lease2, ok := suite.keeper.GetLease(suite.ctx, leaseID2)
 	require.True(t, ok)
-	err := suite.keeper.OnLeaseClosed(suite.ctx, lease2, mtypes.LeaseClosed, mtypes.LeaseClosedReasonUnspecified)
+	err := suite.keeper.OnLeaseClosed(suite.ctx, lease2, mv1.LeaseClosed, mv1.LeaseClosedReasonUnspecified)
 	require.NoError(t, err)
 
 	var req *mtypes.QueryLeasesRequest
@@ -1202,9 +1203,9 @@ func TestGRPCQueryLeases(t *testing.T) {
 			"query leases with filters having non existent data",
 			func() {
 				req = &mtypes.QueryLeasesRequest{
-					Filters: mtypes.LeaseFilters{
+					Filters: mv1.LeaseFilters{
 						OSeq:     37,
-						State:    mtypes.LeaseClosed.String(),
+						State:    mv1.LeaseClosed.String(),
 						Provider: testutil.AccAddress(t).String(),
 					}}
 			},
@@ -1213,7 +1214,7 @@ func TestGRPCQueryLeases(t *testing.T) {
 		{
 			"query leases with state filter",
 			func() {
-				req = &mtypes.QueryLeasesRequest{Filters: mtypes.LeaseFilters{State: mtypes.LeaseClosed.String()}}
+				req = &mtypes.QueryLeasesRequest{Filters: mv1.LeaseFilters{State: mv1.LeaseClosed.String()}}
 			},
 			1,
 		},

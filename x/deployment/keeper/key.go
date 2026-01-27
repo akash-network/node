@@ -7,7 +7,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/address"
 	"pkg.akt.dev/go/node/deployment/v1"
-	v1beta "pkg.akt.dev/go/node/deployment/v1beta5"
+	v1beta "pkg.akt.dev/go/node/deployment/v1beta4"
 	"pkg.akt.dev/go/sdkutil"
 )
 

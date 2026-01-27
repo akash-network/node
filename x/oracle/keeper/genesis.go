@@ -1,15 +1,13 @@
-package oracle
+package keeper
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	types "pkg.akt.dev/go/node/oracle/v1"
-
-	"pkg.akt.dev/node/v2/x/oracle/keeper"
 )
 
 // InitGenesis initiate genesis state and return updated validator details
-func InitGenesis(ctx sdk.Context, keeper keeper.Keeper, data *types.GenesisState) {
-	err := keeper.SetParams(ctx, data.Params)
+func (k *keeper) InitGenesis(ctx sdk.Context, data *types.GenesisState) {
+	err := k.SetParams(ctx, data.Params)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -24,7 +22,7 @@ func InitGenesis(ctx sdk.Context, keeper keeper.Keeper, data *types.GenesisState
 }
 
 // ExportGenesis returns genesis state for the deployment module
-func ExportGenesis(ctx sdk.Context, k keeper.Keeper) *types.GenesisState {
+func (k *keeper) ExportGenesis(ctx sdk.Context) *types.GenesisState {
 	params, err := k.GetParams(ctx)
 	if err != nil {
 		panic(err)

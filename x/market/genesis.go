@@ -6,7 +6,8 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	mtypes "pkg.akt.dev/go/node/market/v2beta1"
+	mv1 "pkg.akt.dev/go/node/market/v1"
+	mtypes "pkg.akt.dev/go/node/market/v1beta5"
 
 	"pkg.akt.dev/node/v2/x/market/keeper"
 	"pkg.akt.dev/node/v2/x/market/keeper/keys"
@@ -38,7 +39,7 @@ func InitGenesis(ctx sdk.Context, kpr keeper.IKeeper, data *mtypes.GenesisState)
 		key := keys.MustOrderKey(keys.OrderStateToPrefix(record.State), record.ID)
 
 		if store.Has(key) {
-			panic(fmt.Errorf("market genesis orders init. order id %s: %w", record.ID, mtypes.ErrOrderExists))
+			panic(fmt.Errorf("market genesis orders init. order id %s: %w", record.ID, mv1.ErrOrderExists))
 		}
 
 		store.Set(key, cdc.MustMarshal(&record))
@@ -49,10 +50,10 @@ func InitGenesis(ctx sdk.Context, kpr keeper.IKeeper, data *mtypes.GenesisState)
 		revKey := keys.MustBidReverseKey(keys.BidStateToPrefix(record.State), record.ID)
 
 		if store.Has(key) {
-			panic(fmt.Errorf("market genesis bids init. bid id %s: %w", record.ID, mtypes.ErrBidExists))
+			panic(fmt.Errorf("market genesis bids init. bid id %s: %w", record.ID, mv1.ErrBidExists))
 		}
 		if store.Has(revKey) {
-			panic(fmt.Errorf("market genesis bids init. reverse key for bid id %s: %w", record.ID, mtypes.ErrBidExists))
+			panic(fmt.Errorf("market genesis bids init. reverse key for bid id %s: %w", record.ID, mv1.ErrBidExists))
 		}
 
 		data := cdc.MustMarshal(&record)
@@ -88,10 +89,10 @@ func ExportGenesis(ctx sdk.Context, k keeper.IKeeper) *mtypes.GenesisState {
 	params := k.GetParams(ctx)
 
 	var bids mtypes.Bids
-	var leases mtypes.Leases
+	var leases mv1.Leases
 	var orders mtypes.Orders
 
-	k.WithLeases(ctx, func(lease mtypes.Lease) bool {
+	k.WithLeases(ctx, func(lease mv1.Lease) bool {
 		leases = append(leases, lease)
 		return false
 	})

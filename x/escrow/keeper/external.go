@@ -22,7 +22,7 @@ type BMEKeeper interface {
 	BurnMintFromAddressToModuleAccount(sdk.Context, sdk.AccAddress, string, sdk.Coin, string) (sdk.DecCoin, error)
 	BurnMintFromModuleAccountToAddress(sdk.Context, string, sdk.AccAddress, sdk.Coin, string) (sdk.DecCoin, error)
 	BurnMintOnAccount(sdk.Context, sdk.AccAddress, sdk.Coin, string) (sdk.DecCoin, error)
-	GetCircuitBreakerStatus(sdk.Context) (bmetypes.CircuitBreakerStatus, error)
+	GetMintStatus(sdk.Context) (bmetypes.MintStatus, error)
 }
 
 type AuthzKeeper interface {

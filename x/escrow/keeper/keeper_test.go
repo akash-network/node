@@ -36,7 +36,7 @@ func Test_AccountSettlement(t *testing.T) {
 
 	aowner := testutil.AccAddress(t)
 
-	amt := testutil.AkashCoin(t, 1000)
+	amt := testutil.ACTCoin(t, 1000)
 	powner := testutil.AccAddress(t)
 	// Payment rate must be in uact to match account funds (10 uakt/block * 3 = 30 uact/block)
 	rate := sdk.NewCoin("uact", sdkmath.NewInt(30))
@@ -101,8 +101,8 @@ func Test_AccountCreate(t *testing.T) {
 	id := testutil.DeploymentID(t).ToEscrowAccountID()
 
 	owner := testutil.AccAddress(t)
-	amt := testutil.AkashCoinRandom(t)
-	amt2 := testutil.AkashCoinRandom(t)
+	amt := testutil.ACTCoinRandom(t)
+	amt2 := testutil.ACTCoinRandom(t)
 
 	// create account with BME deposit flow
 	// BME will convert uakt -> uact (3x swap rate)
@@ -138,7 +138,7 @@ func Test_AccountCreate(t *testing.T) {
 		On("BurnCoins", mock.Anything, "bme", mock.Anything).
 		Return(nil).Maybe()
 	bkeeper.
-		On("SendCoinsFromModuleToAccount", mock.Anything, "bme", owner, mock.Anything).
+		On("SendCoinsFromModuleToAccount", mock.Anything, "escrow", owner, mock.Anything).
 		Return(nil).Maybe()
 
 	assert.NoError(t, ekeeper.AccountClose(ctx, id))
@@ -173,7 +173,7 @@ func Test_PaymentCreate(t *testing.T) {
 
 	aowner := testutil.AccAddress(t)
 
-	amt := testutil.AkashCoin(t, 1000)
+	amt := testutil.ACTCoin(t, 1000)
 	powner := testutil.AccAddress(t)
 	// Payment rate must match account funds denom, which is uact after BME conversion
 	// 10 uakt/block * 3 (swap rate) = 30 uact/block
@@ -229,7 +229,7 @@ func Test_PaymentCreate(t *testing.T) {
 
 		require.Equal(t, etypes.StateOpen, acct.State.State)
 		// Balance is in uact: 3000 uact initial - (30 uact/block * blocks)
-		expectedBalance := sdk.NewDecCoin("uact", sdkmath.NewInt(amt.Amount.Int64()*3-rate.Amount.Int64()*ctx.BlockHeight()))
+		expectedBalance := sdk.NewDecCoin("uact", sdkmath.NewInt(amt.Amount.Int64()-rate.Amount.Int64()*ctx.BlockHeight()))
 		require.Equal(t, expectedBalance.Denom, acct.State.Funds[0].Denom)
 		require.True(t, expectedBalance.Amount.Sub(acct.State.Funds[0].Amount).Abs().LTE(sdkmath.LegacyNewDec(1)))
 
@@ -286,7 +286,7 @@ func Test_Overdraft(t *testing.T) {
 	pid := lid.ToEscrowPaymentID()
 
 	aowner := testutil.AccAddress(t)
-	amt := testutil.AkashCoin(t, 1000)
+	amt := testutil.ACTCoin(t, 1000)
 	powner := testutil.AccAddress(t)
 	// Payment rate must be in uact to match account funds (10 uakt/block * 3 = 30 uact/block)
 	rate := sdk.NewCoin("uact", sdkmath.NewInt(30))
@@ -384,12 +384,14 @@ func Test_Overdraft(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, etypes.StateOverdrawn, payment.State.State)
 
+	dep := sdk.NewCoin(amt.Denom, acct.State.Funds[0].Amount.Abs().TruncateInt())
+
 	// deposit more funds into account - this will trigger settlement
-	ssuite.MockBMEForDeposit(aowner, amt)
+	ssuite.MockBMEForDeposit(aowner, dep)
 	err = ekeeper.AccountDeposit(ctx, aid, []etypes.Depositor{{
 		Owner:   aowner.String(),
 		Height:  ctx.BlockHeight(),
-		Balance: sdk.NewDecCoinFromCoin(amt),
+		Balance: sdk.NewDecCoinFromCoin(dep),
 	}})
 	assert.NoError(t, err)
 
@@ -416,7 +418,7 @@ func Test_PaymentCreate_later(t *testing.T) {
 
 	aowner := testutil.AccAddress(t)
 
-	amt := testutil.AkashCoin(t, 1000)
+	amt := testutil.ACTCoin(t, 1000)
 	powner := testutil.AccAddress(t)
 	// Payment rate must be in uact to match account funds (10 uakt/block * 3 = 30 uact/block)
 	rate := sdk.NewCoin("uact", sdkmath.NewInt(30))

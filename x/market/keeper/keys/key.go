@@ -8,7 +8,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/address"
 
 	dtypes "pkg.akt.dev/go/node/deployment/v1"
-	mtypes "pkg.akt.dev/go/node/market/v2beta1"
+	mv1 "pkg.akt.dev/go/node/market/v1"
+	mtypes "pkg.akt.dev/go/node/market/v1beta5"
 	"pkg.akt.dev/go/sdkutil"
 )
 
@@ -43,7 +44,7 @@ var (
 	LeaseStateClosedPrefix            = []byte{LeaseStateClosedPrefixID}
 )
 
-func OrderKey(statePrefix []byte, id mtypes.OrderID) ([]byte, error) {
+func OrderKey(statePrefix []byte, id mv1.OrderID) ([]byte, error) {
 	owner, err := sdk.AccAddressFromBech32(id.Owner)
 	if err != nil {
 		return nil, err
@@ -71,7 +72,7 @@ func OrderKey(statePrefix []byte, id mtypes.OrderID) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func MustOrderKey(statePrefix []byte, id mtypes.OrderID) []byte {
+func MustOrderKey(statePrefix []byte, id mv1.OrderID) []byte {
 	key, err := OrderKey(statePrefix, id)
 	if err != nil {
 		panic(err)
@@ -79,7 +80,7 @@ func MustOrderKey(statePrefix []byte, id mtypes.OrderID) []byte {
 	return key
 }
 
-func BidKey(statePrefix []byte, id mtypes.BidID) ([]byte, error) {
+func BidKey(statePrefix []byte, id mv1.BidID) ([]byte, error) {
 	owner, err := sdk.AccAddressFromBech32(id.Owner)
 	if err != nil {
 		return nil, err
@@ -123,7 +124,7 @@ func BidKey(statePrefix []byte, id mtypes.BidID) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func MustBidKey(statePrefix []byte, id mtypes.BidID) []byte {
+func MustBidKey(statePrefix []byte, id mv1.BidID) []byte {
 	key, err := BidKey(statePrefix, id)
 	if err != nil {
 		panic(err)
@@ -131,7 +132,7 @@ func MustBidKey(statePrefix []byte, id mtypes.BidID) []byte {
 	return key
 }
 
-func BidReverseKey(statePrefix []byte, id mtypes.BidID) ([]byte, error) {
+func BidReverseKey(statePrefix []byte, id mv1.BidID) ([]byte, error) {
 	owner, err := sdk.AccAddressFromBech32(id.Owner)
 	if err != nil {
 		return nil, err
@@ -176,7 +177,7 @@ func BidReverseKey(statePrefix []byte, id mtypes.BidID) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func MustBidReverseKey(statePrefix []byte, id mtypes.BidID) []byte {
+func MustBidReverseKey(statePrefix []byte, id mv1.BidID) []byte {
 	key, err := BidReverseKey(statePrefix, id)
 	if err != nil {
 		panic(err)
@@ -184,7 +185,7 @@ func MustBidReverseKey(statePrefix []byte, id mtypes.BidID) []byte {
 	return key
 }
 
-func BidStateReverseKey(state mtypes.Bid_State, id mtypes.BidID) ([]byte, error) {
+func BidStateReverseKey(state mtypes.Bid_State, id mv1.BidID) ([]byte, error) {
 	if state != mtypes.BidActive && state != mtypes.BidOpen {
 		return nil, nil
 	}
@@ -198,7 +199,7 @@ func BidStateReverseKey(state mtypes.Bid_State, id mtypes.BidID) ([]byte, error)
 	return key, nil
 }
 
-func MustBidStateRevereKey(state mtypes.Bid_State, id mtypes.BidID) []byte {
+func MustBidStateRevereKey(state mtypes.Bid_State, id mv1.BidID) []byte {
 	key, err := BidStateReverseKey(state, id)
 	if err != nil {
 		panic(err)
@@ -207,7 +208,7 @@ func MustBidStateRevereKey(state mtypes.Bid_State, id mtypes.BidID) []byte {
 	return key
 }
 
-func LeaseKey(statePrefix []byte, id mtypes.LeaseID) ([]byte, error) {
+func LeaseKey(statePrefix []byte, id mv1.LeaseID) ([]byte, error) {
 	owner, err := sdk.AccAddressFromBech32(id.Owner)
 	if err != nil {
 		return nil, err
@@ -251,7 +252,7 @@ func LeaseKey(statePrefix []byte, id mtypes.LeaseID) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func MustLeaseKey(statePrefix []byte, id mtypes.LeaseID) []byte {
+func MustLeaseKey(statePrefix []byte, id mv1.LeaseID) []byte {
 	key, err := LeaseKey(statePrefix, id)
 	if err != nil {
 		panic(err)
@@ -259,7 +260,7 @@ func MustLeaseKey(statePrefix []byte, id mtypes.LeaseID) []byte {
 	return key
 }
 
-func LeaseReverseKey(statePrefix []byte, id mtypes.LeaseID) ([]byte, error) {
+func LeaseReverseKey(statePrefix []byte, id mv1.LeaseID) ([]byte, error) {
 	owner, err := sdk.AccAddressFromBech32(id.Owner)
 	if err != nil {
 		return nil, err
@@ -302,8 +303,8 @@ func LeaseReverseKey(statePrefix []byte, id mtypes.LeaseID) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func LeaseStateReverseKey(state mtypes.Lease_State, id mtypes.LeaseID) ([]byte, error) {
-	if state != mtypes.LeaseActive {
+func LeaseStateReverseKey(state mv1.Lease_State, id mv1.LeaseID) ([]byte, error) {
+	if state != mv1.LeaseActive {
 		return nil, nil
 	}
 
@@ -316,7 +317,7 @@ func LeaseStateReverseKey(state mtypes.Lease_State, id mtypes.LeaseID) ([]byte, 
 	return key, nil
 }
 
-func MustLeaseStateReverseKey(state mtypes.Lease_State, id mtypes.LeaseID) []byte {
+func MustLeaseStateReverseKey(state mv1.Lease_State, id mv1.LeaseID) []byte {
 	key, err := LeaseStateReverseKey(state, id)
 	if err != nil {
 		panic(err)
@@ -325,7 +326,7 @@ func MustLeaseStateReverseKey(state mtypes.Lease_State, id mtypes.LeaseID) []byt
 	return key
 }
 
-func MustLeaseReverseKey(statePrefix []byte, id mtypes.LeaseID) []byte {
+func MustLeaseReverseKey(statePrefix []byte, id mv1.LeaseID) []byte {
 	key, err := LeaseReverseKey(statePrefix, id)
 	if err != nil {
 		panic(err)
@@ -346,7 +347,7 @@ func OrdersForGroupPrefix(statePrefix []byte, id dtypes.GroupID) []byte {
 	return buf.Bytes()
 }
 
-func BidsForOrderPrefix(statePrefix []byte, id mtypes.OrderID) []byte {
+func BidsForOrderPrefix(statePrefix []byte, id mv1.OrderID) []byte {
 	buf := bytes.NewBuffer(BidPrefix)
 	buf.Write(statePrefix)
 	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
@@ -396,15 +397,15 @@ func BidStateToPrefix(state mtypes.Bid_State) []byte {
 	return res
 }
 
-func LeaseStateToPrefix(state mtypes.Lease_State) []byte {
+func LeaseStateToPrefix(state mv1.Lease_State) []byte {
 	var res []byte
 
 	switch state {
-	case mtypes.LeaseActive:
+	case mv1.LeaseActive:
 		res = LeaseStateActivePrefix
-	case mtypes.LeaseInsufficientFunds:
+	case mv1.LeaseInsufficientFunds:
 		res = LeaseStateInsufficientFundsPrefix
-	case mtypes.LeaseClosed:
+	case mv1.LeaseClosed:
 		res = LeaseStateClosedPrefix
 	}
 
@@ -533,11 +534,11 @@ func OrderPrefixFromFilter(f mtypes.OrderFilters) ([]byte, error) {
 func buildLeasePrefix(prefix []byte, state string) []byte {
 	var idx []byte
 	switch state {
-	case mtypes.LeaseActive.String():
+	case mv1.LeaseActive.String():
 		idx = LeaseStateActivePrefix
-	case mtypes.LeaseInsufficientFunds.String():
+	case mv1.LeaseInsufficientFunds.String():
 		idx = LeaseStateInsufficientFundsPrefix
-	case mtypes.LeaseClosed.String():
+	case mv1.LeaseClosed.String():
 		idx = LeaseStateClosedPrefix
 	}
 
@@ -577,12 +578,12 @@ func BidReversePrefixFromFilter(f mtypes.BidFilters) ([]byte, error) {
 	return prefix, err
 }
 
-func LeasePrefixFromFilter(f mtypes.LeaseFilters) ([]byte, error) {
+func LeasePrefixFromFilter(f mv1.LeaseFilters) ([]byte, error) {
 	prefix, err := filterToPrefix(buildLeasePrefix(LeasePrefix, f.State), f.Owner, f.DSeq, f.GSeq, f.OSeq, f.Provider, f.BSeq)
 	return prefix, err
 }
 
-func LeaseReversePrefixFromFilter(f mtypes.LeaseFilters) ([]byte, error) {
+func LeaseReversePrefixFromFilter(f mv1.LeaseFilters) ([]byte, error) {
 	prefix, err := reverseFilterToPrefix(buildLeasePrefix(LeasePrefixReverse, f.State), f.Provider, f.BSeq, f.DSeq, f.GSeq, f.OSeq, f.Owner)
 	return prefix, err
 }

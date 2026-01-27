@@ -1,7 +1,7 @@
 package query
 
 import (
-	mtypes "pkg.akt.dev/go/node/market/v2beta1"
+	mtypes "pkg.akt.dev/go/node/market/v1"
 )
 
 // Client interface

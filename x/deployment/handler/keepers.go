@@ -9,10 +9,10 @@ import (
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 
 	types "pkg.akt.dev/go/node/deployment/v1"
-	dvbeta "pkg.akt.dev/go/node/deployment/v1beta5"
+	dvbeta "pkg.akt.dev/go/node/deployment/v1beta4"
 	escrowid "pkg.akt.dev/go/node/escrow/id/v1"
 	etypes "pkg.akt.dev/go/node/escrow/types/v1"
-	mtypes "pkg.akt.dev/go/node/market/v2beta1"
+	mtypes "pkg.akt.dev/go/node/market/v1beta5"
 )
 
 // MarketKeeper Interface includes market methods

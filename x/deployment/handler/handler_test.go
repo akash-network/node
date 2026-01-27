@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	mv1 "pkg.akt.dev/go/node/market/v1"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -20,10 +21,9 @@ import (
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 
 	"pkg.akt.dev/go/node/deployment/v1"
-	dvbeta "pkg.akt.dev/go/node/deployment/v1beta5"
+	dvbeta "pkg.akt.dev/go/node/deployment/v1beta4"
 	emodule "pkg.akt.dev/go/node/escrow/module"
 	ev1 "pkg.akt.dev/go/node/escrow/v1"
-	mtypes "pkg.akt.dev/go/node/market/v2beta1"
 	deposit "pkg.akt.dev/go/node/types/deposit/v1"
 	"pkg.akt.dev/go/testutil"
 
@@ -51,7 +51,7 @@ type testSuite struct {
 }
 
 func setupTestSuite(t *testing.T) *testSuite {
-	defaultDeposit, err := dvbeta.DefaultParams().MinDepositFor("uakt")
+	defaultDeposit, err := dvbeta.DefaultParams().MinDepositFor("uact")
 	require.NoError(t, err)
 
 	owner := testutil.AccAddress(t)
@@ -112,8 +112,16 @@ func setupTestSuite(t *testing.T) *testSuite {
 		Return(nil)
 
 	bankKeeper.
-		On("SpendableCoin", mock.Anything, mock.Anything, mock.Anything).
-		Return(sdk.NewInt64Coin("uakt", 10000000))
+		On("SpendableCoin", mock.Anything, mock.Anything, mock.MatchedBy(func(denom string) bool {
+			matched := denom == "uakt" || denom == "uact"
+			return matched
+		})).
+		Return(func(_ context.Context, _ sdk.AccAddress, denom string) sdk.Coin {
+			if denom == "uakt" {
+				return sdk.NewInt64Coin("uakt", 10000000)
+			}
+			return sdk.NewInt64Coin("uact", 1800000)
+		})
 
 	// Mock GetSupply for BME collateral ratio checks
 	bankKeeper.
@@ -145,6 +153,10 @@ func setupTestSuite(t *testing.T) *testSuite {
 	// Mock SendCoinsFromAccountToModule for BME burn/mint operations
 	bankKeeper.
 		On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, "bme", mock.Anything).
+		Return(nil)
+
+	bankKeeper.
+		On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, "escrow", mock.Anything).
 		Return(nil)
 
 	// Mock MintCoins for BME mint operations
@@ -215,11 +227,9 @@ func TestCreateDeployment(t *testing.T) {
 	msg := &dvbeta.MsgCreateDeployment{
 		ID:     deployment.ID,
 		Groups: make(dvbeta.GroupSpecs, 0, len(groups)),
-		Deposits: deposit.Deposits{
-			{
-				Amount:  suite.defaultDeposit,
-				Sources: deposit.Sources{deposit.SourceBalance},
-			},
+		Deposit: deposit.Deposit{
+			Amount:  suite.defaultDeposit,
+			Sources: deposit.Sources{deposit.SourceBalance},
 		},
 	}
 
@@ -231,7 +241,7 @@ func TestCreateDeployment(t *testing.T) {
 		bkeeper := ts.BankKeeper()
 
 		bkeeper.
-			On("SendCoinsFromAccountToModule", mock.Anything, owner, emodule.ModuleName, sdk.Coins{msg.Deposits[0].Amount}).
+			On("SendCoinsFromAccountToModule", mock.Anything, owner, emodule.ModuleName, sdk.Coins{msg.Deposit.Amount}).
 			Return(nil).Once()
 	})
 
@@ -287,11 +297,9 @@ func TestCreateDeploymentEmptyGroups(t *testing.T) {
 
 	msg := &dvbeta.MsgCreateDeployment{
 		ID: deployment.ID,
-		Deposits: deposit.Deposits{
-			{
-				Amount:  suite.defaultDeposit,
-				Sources: deposit.Sources{deposit.SourceBalance},
-			},
+		Deposit: deposit.Deposit{
+			Amount:  suite.defaultDeposit,
+			Sources: deposit.Sources{deposit.SourceBalance},
 		},
 	}
 
@@ -330,11 +338,9 @@ func TestUpdateDeploymentExisting(t *testing.T) {
 		ID:     deployment.ID,
 		Groups: msgGroupSpecs,
 		Hash:   testutil.DefaultDeploymentHash[:],
-		Deposits: deposit.Deposits{
-			{
-				Amount:  suite.defaultDeposit,
-				Sources: deposit.Sources{deposit.SourceBalance},
-			},
+		Deposit: deposit.Deposit{
+			Amount:  suite.defaultDeposit,
+			Sources: deposit.Sources{deposit.SourceBalance},
 		},
 	}
 
@@ -344,7 +350,7 @@ func TestUpdateDeploymentExisting(t *testing.T) {
 		bkeeper := ts.BankKeeper()
 
 		bkeeper.
-			On("SendCoinsFromAccountToModule", mock.Anything, owner, emodule.ModuleName, sdk.Coins{msg.Deposits[0].Amount}).
+			On("SendCoinsFromAccountToModule", mock.Anything, owner, emodule.ModuleName, sdk.Coins{msg.Deposit.Amount}).
 			Return(nil).Once()
 	})
 
@@ -411,11 +417,9 @@ func TestCloseDeploymentExisting(t *testing.T) {
 	msg := &dvbeta.MsgCreateDeployment{
 		ID:     deployment.ID,
 		Groups: make(dvbeta.GroupSpecs, 0, len(groups)),
-		Deposits: deposit.Deposits{
-			{
-				Amount:  suite.defaultDeposit,
-				Sources: deposit.Sources{deposit.SourceBalance},
-			},
+		Deposit: deposit.Deposit{
+			Amount:  suite.defaultDeposit,
+			Sources: deposit.Sources{deposit.SourceBalance},
 		},
 	}
 
@@ -428,7 +432,7 @@ func TestCloseDeploymentExisting(t *testing.T) {
 		bkeeper := ts.BankKeeper()
 
 		bkeeper.
-			On("SendCoinsFromAccountToModule", mock.Anything, owner, emodule.ModuleName, sdk.Coins{msg.Deposits[0].Amount}).
+			On("SendCoinsFromAccountToModule", mock.Anything, owner, emodule.ModuleName, sdk.Coins{msg.Deposit.Amount}).
 			Return(nil).Once()
 	})
 
@@ -478,11 +482,9 @@ func TestFundedDeployment(t *testing.T) {
 	msg := &dvbeta.MsgCreateDeployment{
 		ID:     deployment.ID,
 		Groups: make(dvbeta.GroupSpecs, 0, len(groups)),
-		Deposits: deposit.Deposits{
-			{
-				Amount:  suite.defaultDeposit,
-				Sources: deposit.Sources{deposit.SourceBalance},
-			},
+		Deposit: deposit.Deposit{
+			Amount:  suite.defaultDeposit,
+			Sources: deposit.Sources{deposit.SourceBalance},
 		},
 	}
 
@@ -492,7 +494,7 @@ func TestFundedDeployment(t *testing.T) {
 
 	suite.PrepareMocks(func(ts *state.TestSuite) {
 		owner := sdk.MustAccAddressFromBech32(deployment.ID.Owner)
-		ts.MockBMEForDeposit(owner, msg.Deposits[0].Amount)
+		ts.MockBMEForDeposit(owner, msg.Deposit.Amount)
 	})
 	res, err := suite.dhandler(suite.ctx, msg)
 	require.NoError(t, err)
@@ -505,7 +507,7 @@ func TestFundedDeployment(t *testing.T) {
 	// fundsAmount tracks the actual funds in escrow (in uact, after BME conversion)
 	// BME converts uakt to uact at 3x rate (1 uakt = 3 uact based on oracle prices)
 	fundsAmount := sdkmath.LegacyZeroDec()
-	fundsAmount.AddMut(sdkmath.LegacyNewDecFromInt(msg.Deposits[0].Amount.Amount).MulInt64(3))
+	fundsAmount.AddMut(sdkmath.LegacyNewDecFromInt(msg.Deposit.Amount.Amount))
 
 	// ensure that the escrow account has the correct state
 	accID := deployment.ID.ToEscrowAccountID()
@@ -541,7 +543,7 @@ func TestFundedDeployment(t *testing.T) {
 	require.NotNil(t, res)
 
 	// BME converts uakt to uact at 3x rate, so funds increase by 3x the deposit amount
-	fundsAmount.AddMut(sdkmath.LegacyNewDecFromInt(depositMsg.Deposit.Amount.Amount).MulInt64(3))
+	fundsAmount.AddMut(sdkmath.LegacyNewDecFromInt(depositMsg.Deposit.Amount.Amount))
 
 	// ensure that the escrow account's state gets updated correctly
 	acc, err = suite.EscrowKeeper().GetAccount(suite.ctx, accID)
@@ -551,7 +553,7 @@ func TestFundedDeployment(t *testing.T) {
 	require.Len(t, acc.State.Funds, 1)
 	require.Equal(t, suite.owner.String(), acc.State.Deposits[1].Owner)
 	// Deposit balance is recorded in converted denom (uact) at 3x rate
-	expectedDepositBalance := sdk.NewDecCoinFromCoin(depositMsg.Deposit.Amount).Amount.MulInt64(3)
+	expectedDepositBalance := sdk.NewDecCoinFromCoin(depositMsg.Deposit.Amount).Amount
 	require.Equal(t, expectedDepositBalance, acc.State.Deposits[1].Balance.Amount)
 	require.Equal(t, fundsAmount, acc.State.Funds[0].Amount)
 
@@ -574,7 +576,7 @@ func TestFundedDeployment(t *testing.T) {
 	require.NotNil(t, res)
 
 	// BME converts uakt to uact at 3x rate
-	fundsAmount.AddMut(sdkmath.LegacyNewDecFromInt(depositMsg1.Deposit.Amount.Amount).MulInt64(3))
+	fundsAmount.AddMut(sdkmath.LegacyNewDecFromInt(depositMsg1.Deposit.Amount.Amount))
 
 	// ensure that the escrow account's state gets updated correctly
 	acc, err = suite.EscrowKeeper().GetAccount(suite.ctx, accID)
@@ -584,7 +586,7 @@ func TestFundedDeployment(t *testing.T) {
 	require.Len(t, acc.State.Funds, 1)
 	require.Equal(t, suite.granter.String(), acc.State.Deposits[2].Owner)
 	// Deposit balance is recorded in converted denom (uact) at 3x rate
-	require.Equal(t, sdk.NewDecCoinFromCoin(depositMsg1.Deposit.Amount).Amount.MulInt64(3), acc.State.Deposits[2].Balance.Amount)
+	require.Equal(t, sdk.NewDecCoinFromCoin(depositMsg1.Deposit.Amount).Amount, acc.State.Deposits[2].Balance.Amount)
 	require.Equal(t, fundsAmount, acc.State.Funds[0].Amount)
 
 	// depositing additional amount from a random depositor should pass
@@ -608,7 +610,7 @@ func TestFundedDeployment(t *testing.T) {
 	require.NotNil(t, res)
 
 	// BME converts uakt to uact at 3x rate
-	fundsAmount.AddMut(sdkmath.LegacyNewDecFromInt(depositMsg2.Deposit.Amount.Amount).MulInt64(3))
+	fundsAmount.AddMut(sdkmath.LegacyNewDecFromInt(depositMsg2.Deposit.Amount.Amount))
 
 	// ensure that the escrow account's state gets updated correctly
 	acc, err = suite.EscrowKeeper().GetAccount(suite.ctx, accID)
@@ -618,13 +620,13 @@ func TestFundedDeployment(t *testing.T) {
 	require.Len(t, acc.State.Funds, 1)
 	require.Equal(t, depositMsg2.Signer, acc.State.Deposits[3].Owner)
 	// Deposit balance is recorded in converted denom (uact) at 3x rate
-	require.Equal(t, sdk.NewDecCoinFromCoin(depositMsg2.Deposit.Amount).Amount.MulInt64(3), acc.State.Deposits[3].Balance.Amount)
+	require.Equal(t, sdk.NewDecCoinFromCoin(depositMsg2.Deposit.Amount).Amount, acc.State.Deposits[3].Balance.Amount)
 	require.Equal(t, fundsAmount, acc.State.Funds[0].Amount)
 
 	// make some payment from the escrow account
 	providerAddr := testutil.AccAddress(t)
 
-	lid := mtypes.LeaseID{
+	lid := mv1.LeaseID{
 		Owner:    deployment.ID.Owner,
 		DSeq:     deployment.ID.DSeq,
 		GSeq:     0,
@@ -636,7 +638,7 @@ func TestFundedDeployment(t *testing.T) {
 
 	// Payment rate must be in uact to match the funds denom (after BME conversion)
 	// Rate is also 3x since prices are in uact terms
-	rate := sdk.NewDecCoin("uact", suite.defaultDeposit.Amount.MulRaw(3))
+	rate := sdk.NewDecCoin("uact", suite.defaultDeposit.Amount)
 	err = suite.EscrowKeeper().PaymentCreate(suite.ctx, pid, providerAddr, rate)
 	require.NoError(t, err)
 
@@ -655,7 +657,7 @@ func TestFundedDeployment(t *testing.T) {
 	require.NoError(t, err)
 
 	// Payment rate is 3x the deposit amount in uact, so subtract 3x
-	fundsAmount.SubMut(sdkmath.LegacyNewDecFromInt(suite.defaultDeposit.Amount).MulInt64(3))
+	fundsAmount.SubMut(sdkmath.LegacyNewDecFromInt(suite.defaultDeposit.Amount))
 
 	// ensure that the escrow account's state gets updated correctly
 	acc, err = suite.EscrowKeeper().GetAccount(ctx, accID)
@@ -665,7 +667,7 @@ func TestFundedDeployment(t *testing.T) {
 	require.Len(t, acc.State.Funds, 1)
 	require.Equal(t, fundsAmount, acc.State.Funds[0].Amount)
 	// Transferred amount is also in uact (3x)
-	require.Equal(t, sdkmath.LegacyNewDecFromInt(suite.defaultDeposit.Amount).MulInt64(3), acc.State.Transferred[0].Amount)
+	require.Equal(t, sdkmath.LegacyNewDecFromInt(suite.defaultDeposit.Amount), acc.State.Transferred[0].Amount)
 
 	// close the deployment
 	closeMsg := &dvbeta.MsgCloseDeployment{ID: deployment.ID}
@@ -692,7 +694,7 @@ func (st *testSuite) createDeployment() (v1.Deployment, dvbeta.Groups) {
 		{
 			Resources: testutil.ResourceUnits(st.t),
 			Count:     1,
-			Prices:    sdk.DecCoins{testutil.AkashDecCoinRandom(st.t)},
+			Price:     testutil.AkashDecCoinRandom(st.t),
 		},
 	}
 	groups := dvbeta.Groups{

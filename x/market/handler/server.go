@@ -8,8 +8,9 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	atypes "pkg.akt.dev/go/node/audit/v1"
-	dbeta "pkg.akt.dev/go/node/deployment/v1beta5"
-	mtypes "pkg.akt.dev/go/node/market/v2beta1"
+	dbeta "pkg.akt.dev/go/node/deployment/v1beta4"
+	mv1 "pkg.akt.dev/go/node/market/v1"
+	mtypes "pkg.akt.dev/go/node/market/v1beta5"
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 )
 
@@ -32,53 +33,49 @@ func (ms msgServer) CreateBid(goCtx context.Context, msg *mtypes.MsgCreateBid) (
 
 	minDeposit := params.BidMinDeposit
 	if msg.Deposit.Amount.Denom != minDeposit.Denom {
-		return nil, fmt.Errorf("%w: mininum:%v received:%v", mtypes.ErrInvalidDeposit, minDeposit, msg.Deposit)
+		return nil, fmt.Errorf("%w: mininum:%v received:%v", mv1.ErrInvalidDeposit, minDeposit, msg.Deposit)
 	}
 	if minDeposit.Amount.GT(msg.Deposit.Amount.Amount) {
-		return nil, fmt.Errorf("%w: mininum:%v received:%v", mtypes.ErrInvalidDeposit, minDeposit, msg.Deposit)
+		return nil, fmt.Errorf("%w: mininum:%v received:%v", mv1.ErrInvalidDeposit, minDeposit, msg.Deposit)
 	}
 
 	if ms.keepers.Market.BidCountForOrder(ctx, msg.ID.OrderID()) > params.OrderMaxBids {
-		return nil, fmt.Errorf("%w: too many existing bids (%v)", mtypes.ErrInvalidBid, params.OrderMaxBids)
+		return nil, fmt.Errorf("%w: too many existing bids (%v)", mv1.ErrInvalidBid, params.OrderMaxBids)
 	}
 
 	if msg.ID.BSeq != 0 {
-		return nil, mtypes.ErrInvalidBid
+		return nil, mv1.ErrInvalidBid
 	}
 
 	order, found := ms.keepers.Market.GetOrder(ctx, msg.ID.OrderID())
 	if !found {
-		return nil, mtypes.ErrOrderNotFound
+		return nil, mv1.ErrOrderNotFound
 	}
 
 	if err := order.ValidateCanBid(); err != nil {
 		return nil, err
 	}
 
-	if len(msg.Prices) != len(order.Prices()) {
-		return nil, mtypes.ErrBidInvalidPrice
-	}
-	if !msg.Prices.IsValid() {
-		return nil, mtypes.ErrBidInvalidPrice
+	if !msg.Price.IsValid() {
+		return nil, mv1.ErrBidInvalidPrice
 	}
 
-	// fixme
-	//if order.Prices().IsLT(msg.Prices) {
-	//	return nil, v1.ErrBidOverOrder
-	//}
+	if order.Price().IsLT(msg.Price) {
+		return nil, mv1.ErrBidInvalidPrice
+	}
 
 	if !msg.ResourcesOffer.MatchGSpec(order.Spec) {
-		return nil, mtypes.ErrCapabilitiesMismatch
+		return nil, mv1.ErrCapabilitiesMismatch
 	}
 
 	provider, err := sdk.AccAddressFromBech32(msg.ID.Provider)
 	if err != nil {
-		return nil, mtypes.ErrEmptyProvider
+		return nil, mv1.ErrEmptyProvider
 	}
 
 	var prov ptypes.Provider
 	if prov, found = ms.keepers.Provider.Get(ctx, provider); !found {
-		return nil, mtypes.ErrUnknownProvider
+		return nil, mv1.ErrUnknownProvider
 	}
 
 	provAttr, _ := ms.keepers.Audit.GetProviderAttributes(ctx, provider)
@@ -89,11 +86,11 @@ func (ms msgServer) CreateBid(goCtx context.Context, msg *mtypes.MsgCreateBid) (
 	}}, provAttr...)
 
 	if !order.MatchRequirements(provAttr) {
-		return nil, mtypes.ErrAttributeMismatch
+		return nil, mv1.ErrAttributeMismatch
 	}
 
 	if !order.MatchResourcesRequirements(prov.Attributes) {
-		return nil, mtypes.ErrCapabilitiesMismatch
+		return nil, mv1.ErrCapabilitiesMismatch
 	}
 
 	deposits, err := ms.keepers.Escrow.AuthorizeDeposits(ctx, msg)
@@ -101,7 +98,7 @@ func (ms msgServer) CreateBid(goCtx context.Context, msg *mtypes.MsgCreateBid) (
 		return nil, err
 	}
 
-	bid, err := ms.keepers.Market.CreateBid(ctx, msg.ID, msg.Prices, msg.ResourcesOffer)
+	bid, err := ms.keepers.Market.CreateBid(ctx, msg.ID, msg.Price, msg.ResourcesOffer)
 	if err != nil {
 		return nil, err
 	}
@@ -121,12 +118,12 @@ func (ms msgServer) CloseBid(goCtx context.Context, msg *mtypes.MsgCloseBid) (*m
 
 	bid, found := ms.keepers.Market.GetBid(ctx, msg.ID)
 	if !found {
-		return nil, mtypes.ErrUnknownBid
+		return nil, mv1.ErrUnknownBid
 	}
 
 	order, found := ms.keepers.Market.GetOrder(ctx, msg.ID.OrderID())
 	if !found {
-		return nil, mtypes.ErrUnknownOrderForBid
+		return nil, mv1.ErrUnknownOrderForBid
 	}
 
 	if bid.State == mtypes.BidOpen {
@@ -134,24 +131,24 @@ func (ms msgServer) CloseBid(goCtx context.Context, msg *mtypes.MsgCloseBid) (*m
 		return &mtypes.MsgCloseBidResponse{}, nil
 	}
 
-	lease, found := ms.keepers.Market.GetLease(ctx, mtypes.LeaseID(msg.ID))
+	lease, found := ms.keepers.Market.GetLease(ctx, mv1.LeaseID(msg.ID))
 	if !found {
-		return nil, mtypes.ErrUnknownLeaseForBid
+		return nil, mv1.ErrUnknownLeaseForBid
 	}
 
-	if lease.State != mtypes.LeaseActive {
-		return nil, mtypes.ErrLeaseNotActive
+	if lease.State != mv1.LeaseActive {
+		return nil, mv1.ErrLeaseNotActive
 	}
 
 	if bid.State != mtypes.BidActive {
-		return nil, mtypes.ErrBidNotActive
+		return nil, mv1.ErrBidNotActive
 	}
 
 	if err := ms.keepers.Deployment.OnBidClosed(ctx, order.ID.GroupID()); err != nil {
 		return nil, err
 	}
 
-	_ = ms.keepers.Market.OnLeaseClosed(ctx, lease, mtypes.LeaseClosed, msg.Reason)
+	_ = ms.keepers.Market.OnLeaseClosed(ctx, lease, mv1.LeaseClosed, msg.Reason)
 	_ = ms.keepers.Market.OnBidClosed(ctx, bid)
 	_ = ms.keepers.Market.OnOrderClosed(ctx, order)
 
@@ -167,7 +164,7 @@ func (ms msgServer) WithdrawLease(goCtx context.Context, msg *mtypes.MsgWithdraw
 
 	_, found := ms.keepers.Market.GetLease(ctx, msg.ID)
 	if !found {
-		return nil, mtypes.ErrUnknownLease
+		return nil, mv1.ErrUnknownLease
 	}
 
 	if err := ms.keepers.Escrow.PaymentWithdraw(ctx, msg.ID.ToEscrowPaymentID()); err != nil {
@@ -182,29 +179,29 @@ func (ms msgServer) CreateLease(goCtx context.Context, msg *mtypes.MsgCreateLeas
 
 	bid, found := ms.keepers.Market.GetBid(ctx, msg.BidID)
 	if !found {
-		return &mtypes.MsgCreateLeaseResponse{}, mtypes.ErrBidNotFound
+		return &mtypes.MsgCreateLeaseResponse{}, mv1.ErrBidNotFound
 	}
 
 	if bid.State != mtypes.BidOpen {
-		return &mtypes.MsgCreateLeaseResponse{}, mtypes.ErrBidNotOpen
+		return &mtypes.MsgCreateLeaseResponse{}, mv1.ErrBidNotOpen
 	}
 
 	order, found := ms.keepers.Market.GetOrder(ctx, msg.BidID.OrderID())
 	if !found {
-		return &mtypes.MsgCreateLeaseResponse{}, mtypes.ErrOrderNotFound
+		return &mtypes.MsgCreateLeaseResponse{}, mv1.ErrOrderNotFound
 	}
 
 	if order.State != mtypes.OrderOpen {
-		return &mtypes.MsgCreateLeaseResponse{}, mtypes.ErrOrderNotOpen
+		return &mtypes.MsgCreateLeaseResponse{}, mv1.ErrOrderNotOpen
 	}
 
 	group, found := ms.keepers.Deployment.GetGroup(ctx, order.ID.GroupID())
 	if !found {
-		return &mtypes.MsgCreateLeaseResponse{}, mtypes.ErrGroupNotFound
+		return &mtypes.MsgCreateLeaseResponse{}, mv1.ErrGroupNotFound
 	}
 
 	if group.State != dbeta.GroupOpen {
-		return &mtypes.MsgCreateLeaseResponse{}, mtypes.ErrGroupNotOpen
+		return &mtypes.MsgCreateLeaseResponse{}, mv1.ErrGroupNotOpen
 	}
 
 	provider, err := sdk.AccAddressFromBech32(msg.BidID.Provider)
@@ -214,11 +211,7 @@ func (ms msgServer) CreateLease(goCtx context.Context, msg *mtypes.MsgCreateLeas
 
 	// Convert bid price from uakt to uact if needed (account funds are in uact after BME conversion)
 	// Swap rate: 1 uakt = 3 uact (based on oracle prices: AKT=$3, ACT=$1)
-	paymentRate := bid.Prices[0]
-	if paymentRate.Denom == "uakt" {
-		// Convert to uact: multiply amount by 3
-		paymentRate = sdk.NewDecCoinFromDec("uact", paymentRate.Amount.MulInt64(3))
-	}
+	paymentRate := bid.Price
 
 	err = ms.keepers.Escrow.PaymentCreate(ctx, msg.BidID.LeaseID().ToEscrowPaymentID(), provider, paymentRate)
 	if err != nil {
@@ -251,30 +244,30 @@ func (ms msgServer) CloseLease(goCtx context.Context, msg *mtypes.MsgCloseLease)
 
 	order, found := ms.keepers.Market.GetOrder(ctx, msg.ID.OrderID())
 	if !found {
-		return nil, mtypes.ErrOrderNotFound
+		return nil, mv1.ErrOrderNotFound
 	}
 
 	if order.State != mtypes.OrderActive {
-		return &mtypes.MsgCloseLeaseResponse{}, mtypes.ErrOrderClosed
+		return &mtypes.MsgCloseLeaseResponse{}, mv1.ErrOrderClosed
 	}
 
 	bid, found := ms.keepers.Market.GetBid(ctx, msg.ID.BidID())
 	if !found {
-		return &mtypes.MsgCloseLeaseResponse{}, mtypes.ErrBidNotFound
+		return &mtypes.MsgCloseLeaseResponse{}, mv1.ErrBidNotFound
 	}
 	if bid.State != mtypes.BidActive {
-		return &mtypes.MsgCloseLeaseResponse{}, mtypes.ErrBidNotActive
+		return &mtypes.MsgCloseLeaseResponse{}, mv1.ErrBidNotActive
 	}
 
 	lease, found := ms.keepers.Market.GetLease(ctx, msg.ID)
 	if !found {
-		return &mtypes.MsgCloseLeaseResponse{}, mtypes.ErrLeaseNotFound
+		return &mtypes.MsgCloseLeaseResponse{}, mv1.ErrLeaseNotFound
 	}
-	if lease.State != mtypes.LeaseActive {
-		return &mtypes.MsgCloseLeaseResponse{}, mtypes.ErrOrderClosed
+	if lease.State != mv1.LeaseActive {
+		return &mtypes.MsgCloseLeaseResponse{}, mv1.ErrOrderClosed
 	}
 
-	_ = ms.keepers.Market.OnLeaseClosed(ctx, lease, mtypes.LeaseClosed, mtypes.LeaseClosedReasonOwner)
+	_ = ms.keepers.Market.OnLeaseClosed(ctx, lease, mv1.LeaseClosed, mv1.LeaseClosedReasonOwner)
 	_ = ms.keepers.Market.OnBidClosed(ctx, bid)
 	_ = ms.keepers.Market.OnOrderClosed(ctx, order)
 

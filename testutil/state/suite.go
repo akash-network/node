@@ -14,6 +14,7 @@ import (
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	"github.com/stretchr/testify/mock"
 	bmetypes "pkg.akt.dev/go/node/bme/v1"
+	mv1 "pkg.akt.dev/go/node/market/v1"
 	oracletypes "pkg.akt.dev/go/node/oracle/v1"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -21,7 +22,6 @@ import (
 	atypes "pkg.akt.dev/go/node/audit/v1"
 	dtypes "pkg.akt.dev/go/node/deployment/v1"
 	emodule "pkg.akt.dev/go/node/escrow/module"
-	mtypes "pkg.akt.dev/go/node/market/v2beta1"
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 
 	"pkg.akt.dev/node/v2/app"
@@ -82,8 +82,16 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 		// do not set bank mock during suite setup, each test must set them manually
 		// to make sure escrow balance values are tracked correctly
 		bkeeper.
-			On("SpendableCoin", mock.Anything, mock.Anything, mock.Anything).
-			Return(sdk.NewInt64Coin("uakt", 10000000))
+			On("SpendableCoin", mock.Anything, mock.Anything, mock.MatchedBy(func(denom string) bool {
+				matched := denom == "uakt" || denom == "uact"
+				return matched
+			})).
+			Return(func(_ context.Context, _ sdk.AccAddress, denom string) sdk.Coin {
+				if denom == "uakt" {
+					return sdk.NewInt64Coin("uakt", 10000000)
+				}
+				return sdk.NewInt64Coin("uact", 1800000)
+			})
 
 		// Mock GetSupply for BME collateral ratio checks
 		bkeeper.
@@ -178,6 +186,7 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 		keepers.BME = bmekeeper.NewKeeper(
 			cdc,
 			app.GetKey(bmetypes.StoreKey),
+			app.AC,
 			authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 			keepers.Account,
 			keepers.Bank,
@@ -185,10 +194,10 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 	}
 
 	if keepers.Escrow == nil {
-		keepers.Escrow = ekeeper.NewKeeper(cdc, app.GetKey(emodule.StoreKey), keepers.Bank, keepers.Authz, keepers.BME)
+		keepers.Escrow = ekeeper.NewKeeper(cdc, app.GetKey(emodule.StoreKey), app.AC, keepers.Bank, keepers.Authz)
 	}
 	if keepers.Market == nil {
-		keepers.Market = mkeeper.NewKeeper(cdc, app.GetKey(mtypes.StoreKey), keepers.Escrow, authtypes.NewModuleAddress(govtypes.ModuleName).String())
+		keepers.Market = mkeeper.NewKeeper(cdc, app.GetKey(mv1.StoreKey), keepers.Escrow, authtypes.NewModuleAddress(govtypes.ModuleName).String())
 
 	}
 	if keepers.Deployment == nil {
@@ -216,7 +225,6 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 
 	// Enable BME with permissive params for tests
 	bmeParams := bmetypes.Params{
-		Enabled:                     true,
 		CircuitBreakerWarnThreshold: 5000, // 50% - very permissive for tests
 		CircuitBreakerHaltThreshold: 1000, // 10% - very permissive for tests
 	}
@@ -322,12 +330,12 @@ func (ts *TestSuite) MockBMEForDeposit(from sdk.AccAddress, depositCoin sdk.Coin
 
 	// Calculate swapped amount: at $3 per AKT and $1 per ACT
 	// swapRate = 3.0, so uakt -> uact is multiplied by 3
-	swappedAmount := depositCoin.Amount.Mul(sdkmath.NewInt(3))
+	swappedAmount := depositCoin.Amount.Mul(sdkmath.NewInt(1))
 	swappedCoin := sdk.NewCoin("uact", swappedAmount)
 
 	// BME operations for non-direct deposits
 	bkeeper.
-		On("SendCoinsFromAccountToModule", mock.Anything, from, "bme", sdk.NewCoins(depositCoin)).
+		On("SendCoinsFromAccountToModule", mock.Anything, from, emodule.ModuleName, sdk.NewCoins(depositCoin)).
 		Return(nil).Once()
 
 	bkeeper.
