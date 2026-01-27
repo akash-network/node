@@ -90,10 +90,10 @@ func (d ledgerRecordIDCodec) Encode(buffer []byte, key types.LedgerRecordID) (in
 
 	offset += copy(buffer[offset:], data)
 
-	binary.BigEndian.PutUint64(buffer[offset:], uint64(key.Height))
+	binary.BigEndian.PutUint64(buffer[offset:], uint64(key.Height)) //nolint: gosec
 	offset += 8
 
-	binary.BigEndian.PutUint64(buffer[offset:], uint64(key.Sequence))
+	binary.BigEndian.PutUint64(buffer[offset:], uint64(key.Sequence)) //nolint: gosec
 	offset += 8
 
 	return offset, nil

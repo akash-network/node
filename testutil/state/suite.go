@@ -16,6 +16,7 @@ import (
 	bmetypes "pkg.akt.dev/go/node/bme/v1"
 	mv1 "pkg.akt.dev/go/node/market/v1"
 	oracletypes "pkg.akt.dev/go/node/oracle/v1"
+	"pkg.akt.dev/go/sdkutil"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -83,12 +84,12 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 		// to make sure escrow balance values are tracked correctly
 		bkeeper.
 			On("SpendableCoin", mock.Anything, mock.Anything, mock.MatchedBy(func(denom string) bool {
-				matched := denom == "uakt" || denom == "uact"
+				matched := denom == sdkutil.DenomUakt || denom == sdkutil.DenomUact
 				return matched
 			})).
 			Return(func(_ context.Context, _ sdk.AccAddress, denom string) sdk.Coin {
-				if denom == "uakt" {
-					return sdk.NewInt64Coin("uakt", 10000000)
+				if denom == sdkutil.DenomUakt {
+					return sdk.NewInt64Coin(sdkutil.DenomUakt, 10000000)
 				}
 				return sdk.NewInt64Coin("uact", 1800000)
 			})
@@ -96,28 +97,28 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 		// Mock GetSupply for BME collateral ratio checks
 		bkeeper.
 			On("GetSupply", mock.Anything, mock.MatchedBy(func(denom string) bool {
-				return denom == "uakt" || denom == "uact"
+				return denom == sdkutil.DenomUakt || denom == sdkutil.DenomUact
 			})).
 			Return(func(ctx context.Context, denom string) sdk.Coin {
-				if denom == "uakt" {
-					return sdk.NewInt64Coin("uakt", 1000000000000) // 1T uakt total supply
+				if denom == sdkutil.DenomUakt {
+					return sdk.NewInt64Coin(sdkutil.DenomUakt, 1000000000000) // 1T uakt total supply
 				}
 				// For CR calculation: CR = (BME_uakt_balance * swap_rate) / total_uact_supply
 				// Target CR > 100% for tests: (600B * 3.0) / 1.8T = 1800B / 1800B = 1.0 = 100%
-				return sdk.NewInt64Coin("uact", 1800000000000) // 1.8T uact total supply
+				return sdk.NewInt64Coin(sdkutil.DenomUact, 1800000000000) // 1.8T uact total supply
 			})
 
 		// Mock GetBalance for BME module account balance checks
 		bkeeper.
 			On("GetBalance", mock.Anything, mock.Anything, mock.MatchedBy(func(denom string) bool {
-				return denom == "uakt" || denom == "uact"
+				return denom == sdkutil.DenomUakt || denom == sdkutil.DenomUact
 			})).
 			Return(func(ctx context.Context, addr sdk.AccAddress, denom string) sdk.Coin {
-				if denom == "uakt" {
+				if denom == sdkutil.DenomUakt {
 					// BME module should have enough uakt to maintain healthy CR
-					return sdk.NewInt64Coin("uakt", 600000000000) // 600B uakt in BME module
+					return sdk.NewInt64Coin(sdkutil.DenomUakt, 600000000000) // 600B uakt in BME module
 				}
-				return sdk.NewInt64Coin("uact", 100000000000) // 100B uact in BME module
+				return sdk.NewInt64Coin(sdkutil.DenomUact, 100000000000) // 100B uact in BME module
 			})
 
 		keepers.Bank = bkeeper

@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	mv1 "pkg.akt.dev/go/node/market/v1"
+	"pkg.akt.dev/go/sdkutil"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/baseapp"
@@ -29,6 +30,7 @@ import (
 
 	cmocks "pkg.akt.dev/node/v2/testutil/cosmos/mocks"
 	"pkg.akt.dev/node/v2/testutil/state"
+	bmemodule "pkg.akt.dev/node/v2/x/bme"
 	"pkg.akt.dev/node/v2/x/deployment/handler"
 	"pkg.akt.dev/node/v2/x/deployment/keeper"
 	ehandler "pkg.akt.dev/node/v2/x/escrow/handler"
@@ -51,7 +53,7 @@ type testSuite struct {
 }
 
 func setupTestSuite(t *testing.T) *testSuite {
-	defaultDeposit, err := dvbeta.DefaultParams().MinDepositFor("uact")
+	defaultDeposit, err := dvbeta.DefaultParams().MinDepositFor(sdkutil.DenomUact)
 	require.NoError(t, err)
 
 	owner := testutil.AccAddress(t)
@@ -113,60 +115,60 @@ func setupTestSuite(t *testing.T) *testSuite {
 
 	bankKeeper.
 		On("SpendableCoin", mock.Anything, mock.Anything, mock.MatchedBy(func(denom string) bool {
-			matched := denom == "uakt" || denom == "uact"
+			matched := denom == sdkutil.DenomUakt || denom == sdkutil.DenomUact
 			return matched
 		})).
 		Return(func(_ context.Context, _ sdk.AccAddress, denom string) sdk.Coin {
-			if denom == "uakt" {
-				return sdk.NewInt64Coin("uakt", 10000000)
+			if denom == sdkutil.DenomUakt {
+				return sdk.NewInt64Coin(sdkutil.DenomUakt, 10000000)
 			}
-			return sdk.NewInt64Coin("uact", 1800000)
+			return sdk.NewInt64Coin(sdkutil.DenomUact, 1800000)
 		})
 
 	// Mock GetSupply for BME collateral ratio checks
 	bankKeeper.
 		On("GetSupply", mock.Anything, mock.MatchedBy(func(denom string) bool {
-			return denom == "uakt" || denom == "uact"
+			return denom == sdkutil.DenomUakt || denom == sdkutil.DenomUact
 		})).
 		Return(func(ctx context.Context, denom string) sdk.Coin {
-			if denom == "uakt" {
-				return sdk.NewInt64Coin("uakt", 1000000000000) // 1T uakt total supply
+			if denom == sdkutil.DenomUakt {
+				return sdk.NewInt64Coin(sdkutil.DenomUakt, 1000000000000) // 1T uakt total supply
 			}
 			// For CR calculation: CR = (BME_uakt_balance * swap_rate) / total_uact_supply
 			// Target CR > 100% for tests: (600B * 3.0) / 1.8T = 1800B / 1800B = 1.0 = 100%
-			return sdk.NewInt64Coin("uact", 1800000000000) // 1.8T uact total supply
+			return sdk.NewInt64Coin(sdkutil.DenomUact, 1800000000000) // 1.8T uact total supply
 		})
 
 	// Mock GetBalance for BME module account balance checks
 	bankKeeper.
 		On("GetBalance", mock.Anything, mock.Anything, mock.MatchedBy(func(denom string) bool {
-			return denom == "uakt" || denom == "uact"
+			return denom == sdkutil.DenomUakt || denom == sdkutil.DenomUact
 		})).
 		Return(func(ctx context.Context, addr sdk.AccAddress, denom string) sdk.Coin {
-			if denom == "uakt" {
+			if denom == sdkutil.DenomUakt {
 				// BME module should have enough uakt to maintain healthy CR
-				return sdk.NewInt64Coin("uakt", 600000000000) // 600B uakt in BME module
+				return sdk.NewInt64Coin(sdkutil.DenomUakt, 600000000000) // 600B uakt in BME module
 			}
-			return sdk.NewInt64Coin("uact", 100000000000) // 100B uact in BME module
+			return sdk.NewInt64Coin(sdkutil.DenomUact, 100000000000) // 100B uact in BME module
 		})
 
 	// Mock SendCoinsFromAccountToModule for BME burn/mint operations
 	bankKeeper.
-		On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, "bme", mock.Anything).
+		On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, bmemodule.ModuleName, mock.Anything).
 		Return(nil)
 
 	bankKeeper.
-		On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, "escrow", mock.Anything).
+		On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, emodule.ModuleName, mock.Anything).
 		Return(nil)
 
 	// Mock MintCoins for BME mint operations
 	bankKeeper.
-		On("MintCoins", mock.Anything, "bme", mock.Anything).
+		On("MintCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
 		Return(nil)
 
 	// Mock BurnCoins for BME burn operations
 	bankKeeper.
-		On("BurnCoins", mock.Anything, "bme", mock.Anything).
+		On("BurnCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
 		Return(nil)
 
 	// Mock SendCoinsFromModuleToAccount for both BME and escrow operations

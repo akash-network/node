@@ -15,6 +15,7 @@ import (
 	"pkg.akt.dev/go/testutil"
 
 	"pkg.akt.dev/node/v2/testutil/state"
+	bmemodule "pkg.akt.dev/node/v2/x/bme"
 )
 
 type kTestSuite struct {
@@ -69,13 +70,13 @@ func Test_AccountSettlement(t *testing.T) {
 		}), mock.Anything).
 		Return(nil).Maybe()
 	bkeeper.
-		On("SendCoinsFromModuleToModule", mock.Anything, "bme", mock.Anything, mock.Anything).
+		On("SendCoinsFromModuleToModule", mock.Anything, bmemodule.ModuleName, mock.Anything, mock.Anything).
 		Return(nil).Maybe()
 	bkeeper.
-		On("MintCoins", mock.Anything, "bme", mock.Anything).
+		On("MintCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
 		Return(nil).Maybe()
 	bkeeper.
-		On("BurnCoins", mock.Anything, "bme", mock.Anything).
+		On("BurnCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
 		Return(nil).Maybe()
 	bkeeper.
 		On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -129,16 +130,16 @@ func Test_AccountCreate(t *testing.T) {
 	// Mock BME withdrawal flow for each deposit
 	// BME handles the conversion, use flexible matchers since decimal rounding may occur
 	bkeeper.
-		On("SendCoinsFromModuleToModule", mock.Anything, module.ModuleName, "bme", mock.Anything).
+		On("SendCoinsFromModuleToModule", mock.Anything, module.ModuleName, bmemodule.ModuleName, mock.Anything).
 		Return(nil).Maybe()
 	bkeeper.
-		On("MintCoins", mock.Anything, "bme", mock.Anything).
+		On("MintCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
 		Return(nil).Maybe()
 	bkeeper.
-		On("BurnCoins", mock.Anything, "bme", mock.Anything).
+		On("BurnCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
 		Return(nil).Maybe()
 	bkeeper.
-		On("SendCoinsFromModuleToAccount", mock.Anything, "escrow", owner, mock.Anything).
+		On("SendCoinsFromModuleToAccount", mock.Anything, module.ModuleName, owner, mock.Anything).
 		Return(nil).Maybe()
 
 	assert.NoError(t, ekeeper.AccountClose(ctx, id))
@@ -202,16 +203,16 @@ func Test_PaymentCreate(t *testing.T) {
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + blkdelta)
 	// Mock BME operations for payment withdrawal
 	bkeeper.
-		On("SendCoinsFromModuleToModule", mock.Anything, module.ModuleName, "bme", mock.Anything).
+		On("SendCoinsFromModuleToModule", mock.Anything, module.ModuleName, bmemodule.ModuleName, mock.Anything).
 		Return(nil).Maybe()
 	bkeeper.
-		On("SendCoinsFromModuleToModule", mock.Anything, "bme", mock.Anything, mock.Anything).
+		On("SendCoinsFromModuleToModule", mock.Anything, bmemodule.ModuleName, mock.Anything, mock.Anything).
 		Return(nil).Maybe()
 	bkeeper.
-		On("MintCoins", mock.Anything, "bme", mock.Anything).
+		On("MintCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
 		Return(nil).Maybe()
 	bkeeper.
-		On("BurnCoins", mock.Anything, "bme", mock.Anything).
+		On("BurnCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
 		Return(nil).Maybe()
 	bkeeper.
 		On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, powner, mock.Anything).
@@ -243,7 +244,7 @@ func Test_PaymentCreate(t *testing.T) {
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + blkdelta)
 	bkeeper.
 		On("SendCoinsFromModuleToModule", mock.Anything, module.ModuleName, mock.MatchedBy(func(dest string) bool {
-			return dest == "bme" || dest == distrtypes.ModuleName
+			return dest == bmemodule.ModuleName || dest == distrtypes.ModuleName
 		}), mock.Anything).
 		Return(nil).Maybe()
 	assert.NoError(t, ekeeper.PaymentClose(ctx, pid))
@@ -294,17 +295,17 @@ func Test_Overdraft(t *testing.T) {
 	// Setup BME mocks for withdrawal and settlement operations BEFORE AccountCreate
 	bkeeper.
 		On("SendCoinsFromModuleToModule", mock.Anything, module.ModuleName, mock.MatchedBy(func(dest string) bool {
-			return dest == "bme" || dest == distrtypes.ModuleName
+			return dest == bmemodule.ModuleName || dest == distrtypes.ModuleName
 		}), mock.Anything).
 		Return(nil).Maybe()
 	bkeeper.
-		On("SendCoinsFromModuleToModule", mock.Anything, "bme", mock.Anything, mock.Anything).
+		On("SendCoinsFromModuleToModule", mock.Anything, bmemodule.ModuleName, mock.Anything, mock.Anything).
 		Return(nil).Maybe()
 	bkeeper.
-		On("MintCoins", mock.Anything, "bme", mock.Anything).
+		On("MintCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
 		Return(nil).Maybe()
 	bkeeper.
-		On("BurnCoins", mock.Anything, "bme", mock.Anything).
+		On("BurnCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
 		Return(nil).Maybe()
 	bkeeper.
 		On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -332,17 +333,17 @@ func Test_Overdraft(t *testing.T) {
 	// Mock BME operations for withdrawal
 	bkeeper.
 		On("SendCoinsFromModuleToModule", mock.Anything, module.ModuleName, mock.MatchedBy(func(dest string) bool {
-			return dest == "bme" || dest == distrtypes.ModuleName
+			return dest == bmemodule.ModuleName || dest == distrtypes.ModuleName
 		}), mock.Anything).
 		Return(nil).Maybe()
 	bkeeper.
-		On("SendCoinsFromModuleToModule", mock.Anything, "bme", mock.Anything, mock.Anything).
+		On("SendCoinsFromModuleToModule", mock.Anything, bmemodule.ModuleName, mock.Anything, mock.Anything).
 		Return(nil).Maybe()
 	bkeeper.
-		On("MintCoins", mock.Anything, "bme", mock.Anything).
+		On("MintCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
 		Return(nil).Maybe()
 	bkeeper.
-		On("BurnCoins", mock.Anything, "bme", mock.Anything).
+		On("BurnCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
 		Return(nil).Maybe()
 	bkeeper.
 		On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
