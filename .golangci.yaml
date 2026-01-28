@@ -1,40 +1,60 @@
 ---
 version: "2"
+issues:
+  max-issues-per-linter: 1000
+  max-same-issues: 1000
 linters:
   default: none
   enable:
+    - bodyclose
     - copyloopvar
+    - cyclop
     - errcheck
     - errchkjson
+    - errorlint
     - goconst
     - gocritic
     - gosec
     - govet
     - ineffassign
     - misspell
+    - nilerr
+    - nilnil
+    - noctx
+    # - nolintlint # very good linter, but there are 109 issues to solve
     - prealloc
+    - revive
     - staticcheck
+    - unconvert
     - unparam
     - unused
-settings:
-  gocritic:
-    disabled-checks:
-      - ifElseChain
-      - singleCaseSwitch
-exclusions:
-  generated: lax
-  presets:
-    - comments
-    - common-false-positives
-    - legacy
-    - std-error-handling
-  rules:
-    - path: (.+)\.go$
-      text: comment on exported (method|function|type|const|var)
-  paths:
-    - third_party$
-    - builtin$
-    - examples$
+    - wastedassign
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - path: (.+)\.go$
+        text: comment on exported (method|function|type|const|var)
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+  settings:
+    cyclop:
+      max-complexity: 40
+    gocritic:
+      disabled-checks:
+        - ifElseChain
+        - singleCaseSwitch
+    revive:
+      rules:
+        - name: context-as-argument
+        - name: error-return
+        - name: error-naming
 formatters:
   enable:
     - gofmt

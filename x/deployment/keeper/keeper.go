@@ -7,7 +7,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"pkg.akt.dev/go/node/deployment/v1"
+	v1 "pkg.akt.dev/go/node/deployment/v1"
 	types "pkg.akt.dev/go/node/deployment/v1beta4"
 )
 
@@ -283,7 +283,7 @@ func (k Keeper) OnCloseGroup(ctx sdk.Context, group types.Group, state types.Gro
 
 	key, err := GroupKey(GroupStateToPrefix(group.State), group.ID)
 	if err != nil {
-		return fmt.Errorf("%s: failed to encode group key", err)
+		return fmt.Errorf("%w: failed to encode group key", err)
 	}
 
 	store.Set(key, k.cdc.MustMarshal(&group))

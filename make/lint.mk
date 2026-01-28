@@ -1,17 +1,3 @@
-SUBLINTERS = unused \
-			misspell \
-			gofmt \
-			gocritic \
-			goconst \
-			ineffassign \
-			unparam \
-			staticcheck \
-			revive \
-			gosec \
-			exportloopref \
-			prealloc
-# TODO: ^ gochecknoglobals
-
 .PHONY: lint-go
 lint-go: $(GOLANGCI_LINT)
 	$(GOLANGCI_LINT) run ./... --timeout=10m

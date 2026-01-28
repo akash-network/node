@@ -64,7 +64,7 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 
 				info, err := kb.Key(args[0])
 				if err != nil {
-					return fmt.Errorf("failed to get address from Keybase: %v", err)
+					return fmt.Errorf("failed to get address from Keybase: %w", err)
 				}
 
 				addr, err = info.GetAddress()
@@ -75,7 +75,7 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 
 			coins, err := sdk.ParseCoinsNormalized(args[1])
 			if err != nil {
-				return fmt.Errorf("failed to parse coins: %v", err)
+				return fmt.Errorf("failed to parse coins: %w", err)
 			}
 
 			vestingStart, _ := cmd.Flags().GetInt64(flagVestingStart)
@@ -84,7 +84,7 @@ contain valid denominations. Accounts may optionally be supplied with vesting pa
 
 			vestingAmt, err := sdk.ParseCoinsNormalized(vestingAmtStr)
 			if err != nil {
-				return fmt.Errorf("failed to parse vesting amount: %v", err)
+				return fmt.Errorf("failed to parse vesting amount: %w", err)
 			}
 
 			// create concrete account type based on input parameters

@@ -360,6 +360,9 @@ func (up *upgrade) OnGroupClosed(ctx sdk.Context, id dv1.GroupID) error {
 func (up *upgrade) OnEscrowPaymentClosed(ctx sdk.Context, obj etypes.Payment) error {
 	id, err := mv1.LeaseIDFromPaymentID(obj.ID)
 	if err != nil {
+		// Escrow payments can belong to different scopes (e.g., bid-scoped, deployment-scoped).
+		// This upgrade hook only processes lease payments (deployment-scoped).
+		// Silently ignore non-lease payment closures.
 		return nil
 	}
 
