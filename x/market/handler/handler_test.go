@@ -1427,26 +1427,3 @@ func (st *testSuite) createProvider(attr attr.Attributes) ptypes.Provider {
 
 	return prov
 }
-
-func (st *testSuite) createDeployment() (dv1.Deployment, dtypes.Groups) {
-	st.t.Helper()
-
-	deployment := testutil.Deployment(st.t)
-	group := testutil.DeploymentGroup(st.t, deployment.ID, 0)
-	group.GroupSpec.Resources = dtypes.ResourceUnits{
-		{
-			Resources: testutil.ResourceUnits(st.t),
-			Count:     1,
-			Price:     testutil.AkashDecCoinRandom(st.t),
-		},
-	}
-	groups := dtypes.Groups{
-		group,
-	}
-
-	for i := range groups {
-		groups[i].State = dtypes.GroupOpen
-	}
-
-	return deployment, groups
-}

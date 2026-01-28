@@ -19,7 +19,7 @@ import (
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 
-	"pkg.akt.dev/go/node/deployment/v1"
+	v1 "pkg.akt.dev/go/node/deployment/v1"
 	"pkg.akt.dev/go/node/deployment/v1beta4"
 	emodule "pkg.akt.dev/go/node/escrow/module"
 	ev1 "pkg.akt.dev/go/node/escrow/v1"
@@ -440,7 +440,7 @@ func TestFundedDeployment(t *testing.T) {
 		msg.Groups = append(msg.Groups, group.GroupSpec)
 	}
 
-	//owner := sdk.MustAccAddressFromBech32(deployment.ID.Owner)
+	// owner := sdk.MustAccAddressFromBech32(deployment.ID.Owner)
 	suite.PrepareMocks(func(ts *state.TestSuite) {
 		bkeeper := ts.BankKeeper()
 		bkeeper.
