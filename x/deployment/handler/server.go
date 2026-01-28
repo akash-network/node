@@ -158,7 +158,7 @@ func (ms msgServer) CloseGroup(goCtx context.Context, msg *types.MsgCloseGroup) 
 	if err != nil {
 		return nil, err
 	}
-	_ = ms.market.OnGroupClosed(ctx, group.ID)
+	_ = ms.market.OnGroupClosed(ctx, group.ID, types.GroupClosed)
 
 	return &types.MsgCloseGroupResponse{}, nil
 }
@@ -182,7 +182,7 @@ func (ms msgServer) PauseGroup(goCtx context.Context, msg *types.MsgPauseGroup) 
 	if err != nil {
 		return nil, err
 	}
-	_ = ms.market.OnGroupClosed(ctx, group.ID)
+	_ = ms.market.OnGroupClosed(ctx, group.ID, types.GroupPaused)
 
 	return &types.MsgPauseGroupResponse{}, nil
 }

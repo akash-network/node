@@ -28,7 +28,7 @@ type IKeeper interface {
 	OnBidClosed(ctx sdk.Context, bid types.Bid) error
 	OnOrderClosed(ctx sdk.Context, order types.Order) error
 	OnLeaseClosed(ctx sdk.Context, lease mv1.Lease, state mv1.Lease_State, reason mv1.LeaseClosedReason) error
-	OnGroupClosed(ctx sdk.Context, id dtypes.GroupID) error
+	OnGroupClosed(ctx sdk.Context, id dtypes.GroupID, state dtypesBeta.Group_State) error
 	GetOrder(ctx sdk.Context, id mv1.OrderID) (types.Order, bool)
 	GetBid(ctx sdk.Context, id mv1.BidID) (types.Bid, bool)
 	GetLease(ctx sdk.Context, id mv1.LeaseID) (mv1.Lease, bool)
@@ -319,6 +319,7 @@ func (k Keeper) OnLeaseClosed(ctx sdk.Context, lease mv1.Lease, state mv1.Lease_
 
 	lease.State = state
 	lease.ClosedOn = ctx.BlockHeight()
+	lease.Reason = reason
 
 	store := ctx.KVStore(k.skey)
 
@@ -347,7 +348,15 @@ func (k Keeper) OnLeaseClosed(ctx sdk.Context, lease mv1.Lease, state mv1.Lease_
 }
 
 // OnGroupClosed updates state of all orders, bids and leases in group to closed
-func (k Keeper) OnGroupClosed(ctx sdk.Context, id dtypes.GroupID) error {
+func (k Keeper) OnGroupClosed(ctx sdk.Context, id dtypes.GroupID, state dtypesBeta.Group_State) error {
+	leaseState := mv1.LeaseClosed
+	leaseReason := mv1.LeaseClosedReasonOwner
+
+	if state == dtypesBeta.GroupInsufficientFunds {
+		leaseState = mv1.LeaseInsufficientFunds
+		leaseReason = mv1.LeaseClosedReasonInsufficientFunds
+	}
+
 	processClose := func(ctx sdk.Context, bid types.Bid) error {
 		err := k.OnBidClosed(ctx, bid)
 		if err != nil {
@@ -355,8 +364,7 @@ func (k Keeper) OnGroupClosed(ctx sdk.Context, id dtypes.GroupID) error {
 		}
 
 		if lease, ok := k.GetLease(ctx, bid.ID.LeaseID()); ok {
-			// OnGroupClosed is callable by x/deployment only so only reason is owner
-			err = k.OnLeaseClosed(ctx, lease, mv1.LeaseClosed, mv1.LeaseClosedReasonOwner)
+			err = k.OnLeaseClosed(ctx, lease, leaseState, leaseReason)
 			if err != nil {
 				return err
 			}

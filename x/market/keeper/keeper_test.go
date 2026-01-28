@@ -10,7 +10,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	dtypes "pkg.akt.dev/go/node/deployment/v1beta4"
-	"pkg.akt.dev/go/node/market/v1"
+	market "pkg.akt.dev/go/node/market/v1"
 	types "pkg.akt.dev/go/node/market/v1beta5"
 	deposit "pkg.akt.dev/go/node/types/deposit/v1"
 	"pkg.akt.dev/go/testutil"
@@ -149,7 +149,7 @@ func Test_WithLeases(t *testing.T) {
 	id := createLease(t, suite)
 
 	count := 0
-	keeper.WithLeases(ctx, func(result v1.Lease) bool {
+	keeper.WithLeases(ctx, func(result market.Lease) bool {
 		if assert.Equal(t, id, result.ID) {
 			count++
 		}
@@ -220,51 +220,198 @@ func Test_OnOrderClosed(t *testing.T) {
 }
 
 func Test_OnLeaseClosed(t *testing.T) {
-	_, keeper, suite := setupKeeper(t)
-	suite.SetBlockHeight(1)
-	id := createLease(t, suite)
+	tests := []struct {
+		name          string
+		state         market.Lease_State
+		reason        market.LeaseClosedReason
+		expectedState market.Lease_State
+	}{
+		{
+			name:          "closed_with_unspecified_reason",
+			state:         market.LeaseClosed,
+			reason:        market.LeaseClosedReasonUnspecified,
+			expectedState: market.LeaseClosed,
+		},
+		{
+			name:          "closed_by_owner",
+			state:         market.LeaseClosed,
+			reason:        market.LeaseClosedReasonOwner,
+			expectedState: market.LeaseClosed,
+		},
+		{
+			name:          "insufficient_funds",
+			state:         market.LeaseInsufficientFunds,
+			reason:        market.LeaseClosedReasonInsufficientFunds,
+			expectedState: market.LeaseInsufficientFunds,
+		},
+	}
 
-	lease, ok := keeper.GetLease(suite.Context(), id)
-	require.True(t, ok)
-	require.Equal(t, int64(0), lease.ClosedOn)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, keeper, suite := setupKeeper(t)
+			suite.SetBlockHeight(1)
+			id := createLease(t, suite)
 
-	const testBlockHeight = 1337
-	suite.SetBlockHeight(testBlockHeight)
+			lease, ok := keeper.GetLease(suite.Context(), id)
+			require.True(t, ok)
+			require.Equal(t, int64(0), lease.ClosedOn)
 
-	require.Equal(t, v1.LeaseActive, lease.State)
-	err := keeper.OnLeaseClosed(suite.Context(), lease, v1.LeaseClosed, v1.LeaseClosedReasonUnspecified)
-	require.NoError(t, err)
+			const testBlockHeight = 1337
+			suite.SetBlockHeight(testBlockHeight)
 
-	result, ok := keeper.GetLease(suite.Context(), id)
-	require.True(t, ok)
-	assert.Equal(t, v1.LeaseClosed, result.State)
-	assert.Equal(t, int64(testBlockHeight), result.ClosedOn)
+			require.Equal(t, market.LeaseActive, lease.State)
+			err := keeper.OnLeaseClosed(suite.Context(), lease, tt.state, tt.reason)
+			require.NoError(t, err)
+
+			result, ok := keeper.GetLease(suite.Context(), id)
+			require.True(t, ok)
+			assert.Equal(t, tt.expectedState, result.State)
+			assert.Equal(t, int64(testBlockHeight), result.ClosedOn)
+			assert.Equal(t, tt.reason, result.Reason)
+		})
+	}
+}
+
+func Test_OnLeaseClosed_Idempotency(t *testing.T) {
+	tests := []struct {
+		name          string
+		firstState    market.Lease_State
+		firstReason   market.LeaseClosedReason
+		secondState   market.Lease_State
+		secondReason  market.LeaseClosedReason
+		expectedState market.Lease_State
+	}{
+		{
+			name:          "same_state_same_reason",
+			firstState:    market.LeaseClosed,
+			firstReason:   market.LeaseClosedReasonOwner,
+			secondState:   market.LeaseClosed,
+			secondReason:  market.LeaseClosedReasonOwner,
+			expectedState: market.LeaseClosed,
+		},
+		{
+			name:          "same_state_different_reason",
+			firstState:    market.LeaseClosed,
+			firstReason:   market.LeaseClosedReasonOwner,
+			secondState:   market.LeaseClosed,
+			secondReason:  market.LeaseClosedReasonUnspecified,
+			expectedState: market.LeaseClosed,
+		},
+		{
+			name:          "closed_to_insufficient_funds_blocked",
+			firstState:    market.LeaseClosed,
+			firstReason:   market.LeaseClosedReasonOwner,
+			secondState:   market.LeaseInsufficientFunds,
+			secondReason:  market.LeaseClosedReasonInsufficientFunds,
+			expectedState: market.LeaseClosed,
+		},
+		{
+			name:          "insufficient_funds_to_closed_blocked",
+			firstState:    market.LeaseInsufficientFunds,
+			firstReason:   market.LeaseClosedReasonInsufficientFunds,
+			secondState:   market.LeaseClosed,
+			secondReason:  market.LeaseClosedReasonOwner,
+			expectedState: market.LeaseInsufficientFunds,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, keeper, suite := setupKeeper(t)
+			suite.SetBlockHeight(1)
+			id := createLease(t, suite)
+
+			lease, ok := keeper.GetLease(suite.Context(), id)
+			require.True(t, ok)
+
+			const firstBlockHeight = 100
+			suite.SetBlockHeight(firstBlockHeight)
+			err := keeper.OnLeaseClosed(suite.Context(), lease, tt.firstState, tt.firstReason)
+			require.NoError(t, err)
+
+			result, ok := keeper.GetLease(suite.Context(), id)
+			require.True(t, ok)
+			assert.Equal(t, tt.firstState, result.State)
+			assert.Equal(t, int64(firstBlockHeight), result.ClosedOn)
+			assert.Equal(t, tt.firstReason, result.Reason)
+
+			const secondBlockHeight = 200
+			suite.SetBlockHeight(secondBlockHeight)
+			err = keeper.OnLeaseClosed(suite.Context(), result, tt.secondState, tt.secondReason)
+			require.NoError(t, err)
+
+			result2, ok := keeper.GetLease(suite.Context(), id)
+			require.True(t, ok)
+			assert.Equal(t, tt.expectedState, result2.State)
+			assert.Equal(t, int64(firstBlockHeight), result2.ClosedOn)
+			assert.Equal(t, tt.firstReason, result2.Reason)
+		})
+	}
 }
 
 func Test_OnGroupClosed(t *testing.T) {
-	_, keeper, suite := setupKeeper(t)
-	id := createLease(t, suite)
+	tests := []struct {
+		name               string
+		groupState         dtypes.Group_State
+		expectedLeaseState market.Lease_State
+		expectedReason     market.LeaseClosedReason
+	}{
+		{
+			name:               "group_closed",
+			groupState:         dtypes.GroupClosed,
+			expectedLeaseState: market.LeaseClosed,
+			expectedReason:     market.LeaseClosedReasonOwner,
+		},
+		{
+			name:               "group_insufficient_funds",
+			groupState:         dtypes.GroupInsufficientFunds,
+			expectedLeaseState: market.LeaseInsufficientFunds,
+			expectedReason:     market.LeaseClosedReasonInsufficientFunds,
+		},
+		{
+			name:               "group_paused",
+			groupState:         dtypes.GroupPaused,
+			expectedLeaseState: market.LeaseClosed,
+			expectedReason:     market.LeaseClosedReasonOwner,
+		},
+	}
 
-	const testBlockHeight = 133
-	suite.SetBlockHeight(testBlockHeight)
-	err := keeper.OnGroupClosed(suite.Context(), id.BidID().GroupID())
-	require.NoError(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, keeper, suite := setupKeeper(t)
+			id := createLease(t, suite)
 
-	lease, ok := keeper.GetLease(suite.Context(), id)
-	require.True(t, ok)
-	assert.Equal(t, v1.LeaseClosed, lease.State)
-	assert.Equal(t, int64(testBlockHeight), lease.ClosedOn)
+			gid := id.BidID().GroupID()
+			deployment := testutil.Deployment(t)
+			deployment.ID = gid.DeploymentID()
+			group := testutil.DeploymentGroup(t, deployment.ID, gid.GSeq)
 
-	bid, ok := keeper.GetBid(suite.Context(), id.BidID())
-	require.True(t, ok)
-	assert.Equal(t, types.BidClosed, bid.State)
+			err := suite.DeploymentKeeper().Create(suite.Context(), deployment, []dtypes.Group{group})
+			require.NoError(t, err)
 
-	order, ok := keeper.GetOrder(suite.Context(), id.OrderID())
-	require.True(t, ok)
-	assert.Equal(t, types.OrderClosed, order.State)
+			const testBlockHeight = 133
+			suite.SetBlockHeight(testBlockHeight)
+			err = keeper.OnGroupClosed(suite.Context(), gid, tt.groupState)
+			require.NoError(t, err)
+
+			lease, ok := keeper.GetLease(suite.Context(), id)
+			require.True(t, ok)
+			assert.Equal(t, tt.expectedLeaseState, lease.State)
+			assert.Equal(t, tt.expectedReason, lease.Reason)
+			assert.Equal(t, int64(testBlockHeight), lease.ClosedOn)
+
+			bid, ok := keeper.GetBid(suite.Context(), id.BidID())
+			require.True(t, ok)
+			assert.Equal(t, types.BidClosed, bid.State)
+
+			order, ok := keeper.GetOrder(suite.Context(), id.OrderID())
+			require.True(t, ok)
+			assert.Equal(t, types.OrderClosed, order.State)
+		})
+	}
 }
 
-func createLease(t testing.TB, suite *state.TestSuite) v1.LeaseID {
+func createLease(t testing.TB, suite *state.TestSuite) market.LeaseID {
 	t.Helper()
 	ctx := suite.Context()
 	bid, order := createBid(t, suite)
@@ -322,7 +469,7 @@ func createBid(t testing.TB, suite *state.TestSuite) (types.Bid, types.Order) {
 	price := testutil.AkashDecCoinRandom(t)
 	roffer := types.ResourceOfferFromRU(gspec.Resources)
 
-	bidID := v1.MakeBidID(order.ID, provider)
+	bidID := market.MakeBidID(order.ID, provider)
 
 	bid, err := suite.MarketKeeper().CreateBid(ctx, bidID, price, roffer)
 	require.NoError(t, err)
