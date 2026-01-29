@@ -19,7 +19,7 @@ import (
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 
-	v1 "pkg.akt.dev/go/node/deployment/v1"
+	"pkg.akt.dev/go/node/deployment/v1"
 	"pkg.akt.dev/go/node/deployment/v1beta4"
 	emodule "pkg.akt.dev/go/node/escrow/module"
 	ev1 "pkg.akt.dev/go/node/escrow/v1"
