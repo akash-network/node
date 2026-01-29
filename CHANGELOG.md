@@ -47,4 +47,3 @@ Ref: https://keepachangelog.com/en/1.0.0/
 ### Bug Fixes
 
 * Fix bug in ditribution and querying rewards
-* Fixe bug in Lease close reason
