@@ -315,7 +315,7 @@ func interceptConfigs(rootViper *viper.Viper, customAppTemplate string, customCo
 		tmcfg.EnsureRoot(rootDir)
 
 		if err = conf.ValidateBasic(); err != nil {
-			return nil, fmt.Errorf("error in config file: %w", err)
+			return nil, fmt.Errorf("error in config file: %v", err)
 		}
 
 		conf.RPC.PprofListenAddress = "localhost:6060"

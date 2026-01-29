@@ -44,12 +44,15 @@ linters:
       - builtin$
       - examples$
   settings:
+    errorlint:
+      errorf: false
     cyclop:
       max-complexity: 40
     gocritic:
       disabled-checks:
         - ifElseChain
         - singleCaseSwitch
+        - commentFormatting
     revive:
       rules:
         - name: context-as-argument

@@ -440,7 +440,7 @@ func TestFundedDeployment(t *testing.T) {
 		msg.Groups = append(msg.Groups, group.GroupSpec)
 	}
 
-	// owner := sdk.MustAccAddressFromBech32(deployment.ID.Owner)
+	//owner := sdk.MustAccAddressFromBech32(deployment.ID.Owner)
 	suite.PrepareMocks(func(ts *state.TestSuite) {
 		bkeeper := ts.BankKeeper()
 		bkeeper.

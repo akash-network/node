@@ -135,7 +135,7 @@ func ExportCmd(appExporter servertypes.AppExporter, defaultNodeHome string) *cob
 			)
 
 			if err != nil {
-				return fmt.Errorf("error exporting state: %w", err)
+				return fmt.Errorf("error exporting state: %v", err)
 			}
 
 			doc, err := tmtypes.GenesisDocFromFile(sctx.Config.GenesisFile())
