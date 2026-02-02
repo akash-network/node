@@ -18,7 +18,7 @@ import (
 // MarketKeeper Interface includes market methods
 type MarketKeeper interface {
 	CreateOrder(ctx sdk.Context, id types.GroupID, spec v1beta4.GroupSpec) (mtypes.Order, error)
-	OnGroupClosed(ctx sdk.Context, id types.GroupID) error
+	OnGroupClosed(ctx sdk.Context, id types.GroupID, state v1beta4.Group_State) error
 }
 
 type EscrowKeeper interface {

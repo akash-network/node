@@ -20,7 +20,7 @@ type MarketKeeper interface {
 	GetOrder(ctx sdk.Context, id mv1.OrderID) (mtypes.Order, bool)
 	GetBid(ctx sdk.Context, id mv1.BidID) (mtypes.Bid, bool)
 	GetLease(ctx sdk.Context, id mv1.LeaseID) (mv1.Lease, bool)
-	OnGroupClosed(ctx sdk.Context, id dv1.GroupID) error
+	OnGroupClosed(ctx sdk.Context, id dv1.GroupID, state dtypes.Group_State) error
 	OnOrderClosed(ctx sdk.Context, order mtypes.Order) error
 	OnBidClosed(ctx sdk.Context, bid mtypes.Bid) error
 	OnLeaseClosed(ctx sdk.Context, lease mv1.Lease, state mv1.Lease_State, reason mv1.LeaseClosedReason) error

@@ -292,12 +292,13 @@ func TestMarketFullFlowCloseDeployment(t *testing.T) {
 	require.Equal(t, expectedOverdraft, eacc.State.Funds[0].Amount.Abs())
 	require.Equal(t, expectedOverdraft, epmnt.State.Unsettled.Amount)
 
-	// lease must be in closed state
+	// lease must be in insufficient funds state due to overdrawn escrow
 	lease, found := suite.MarketKeeper().GetLease(ctx, lid)
 	require.True(t, found)
-	require.Equal(t, v1.LeaseClosed, lease.State)
+	require.Equal(t, v1.LeaseInsufficientFunds, lease.State)
+	require.Equal(t, v1.LeaseClosedReasonInsufficientFunds, lease.Reason)
 
-	// lease must be in closed state
+	// bid must be in closed state
 	bidObj, found := suite.MarketKeeper().GetBid(ctx, bid)
 	require.True(t, found)
 	require.Equal(t, types.BidClosed, bidObj.State)
@@ -544,7 +545,7 @@ func TestMarketFullFlowCloseLease(t *testing.T) {
 	require.True(t, found)
 	require.Equal(t, v1.LeaseClosed, lease.State)
 
-	// lease must be in closed state
+	// bid must be in closed state
 	bidObj, found := suite.MarketKeeper().GetBid(ctx, bid)
 	require.True(t, found)
 	require.Equal(t, types.BidClosed, bidObj.State)
@@ -782,7 +783,7 @@ func TestMarketFullFlowCloseBid(t *testing.T) {
 	require.True(t, found)
 	require.Equal(t, v1.LeaseClosed, lease.State)
 
-	// lease must be in closed state
+	// bid must be in closed state
 	bidObj, found := suite.MarketKeeper().GetBid(ctx, bid)
 	require.True(t, found)
 	require.Equal(t, types.BidClosed, bidObj.State)
@@ -1426,27 +1427,4 @@ func (st *testSuite) createProvider(attr attr.Attributes) ptypes.Provider {
 	require.NoError(st.t, err)
 
 	return prov
-}
-
-func (st *testSuite) createDeployment() (dv1.Deployment, dtypes.Groups) {
-	st.t.Helper()
-
-	deployment := testutil.Deployment(st.t)
-	group := testutil.DeploymentGroup(st.t, deployment.ID, 0)
-	group.GroupSpec.Resources = dtypes.ResourceUnits{
-		{
-			Resources: testutil.ResourceUnits(st.t),
-			Count:     1,
-			Price:     testutil.AkashDecCoinRandom(st.t),
-		},
-	}
-	groups := dtypes.Groups{
-		group,
-	}
-
-	for i := range groups {
-		groups[i].State = dtypes.GroupOpen
-	}
-
-	return deployment, groups
 }
