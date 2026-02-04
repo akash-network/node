@@ -70,7 +70,10 @@ func (h *hooks) OnEscrowAccountClosed(ctx sdk.Context, obj etypes.Account) error
 func (h *hooks) OnEscrowPaymentClosed(ctx sdk.Context, obj etypes.Payment) error {
 	id, err := mv1.LeaseIDFromPaymentID(obj.ID)
 	if err != nil {
-		return nil
+		// Escrow payments can belong to different scopes (e.g., bid-scoped, deployment-scoped).
+		// Market module only handles lease payments (deployment-scoped).
+		// Silently ignore non-lease payment closures.
+		return nil //nolint:nilerr // non-lease payment, not an error for this hook
 	}
 
 	bid, ok := h.mkeeper.GetBid(ctx, id.BidID())
