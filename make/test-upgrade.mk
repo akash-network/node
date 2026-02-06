@@ -21,7 +21,7 @@ UPGRADE_FROM            := $(shell cat $(ROOT_DIR)/meta.json | jq -r --arg name 
 GENESIS_BINARY_VERSION  := $(shell cat $(ROOT_DIR)/meta.json | jq -r --arg name $(UPGRADE_TO) '.upgrades[$$name].from_binary' | tr -d '\n')
 UPGRADE_BINARY_VERSION  ?= local
 
-SNAPSHOT_SOURCE         ?= sandbox-2
+SNAPSHOT_SOURCE         ?= sandbox
 
 ifeq ($(SNAPSHOT_SOURCE),mainnet)
 	SNAPSHOT_NETWORK    := akashnet-2
@@ -29,9 +29,6 @@ ifeq ($(SNAPSHOT_SOURCE),mainnet)
 else ifeq ($(SNAPSHOT_SOURCE),sandbox)
 	SNAPSHOT_NETWORK    := sandbox-2
 	CHAIN_METADATA_URL  := https://raw.githubusercontent.com/akash-network/net/master/sandbox-2/meta.json
-else ifeq ($(SNAPSHOT_SOURCE),sandbox1)
-	SNAPSHOT_NETWORK    := sandbox-01
-	CHAIN_METADATA_URL  := https://raw.githubusercontent.com/akash-network/net/master/sandbox/meta.json
 else
 $(error "invalid snapshot source $(SNAPSHOT_SOURCE)")
 endif

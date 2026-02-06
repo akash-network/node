@@ -20,11 +20,10 @@ import (
 
 	v1 "pkg.akt.dev/go/node/deployment/v1"
 	types "pkg.akt.dev/go/node/deployment/v1beta4"
-	"pkg.akt.dev/go/node/migrate"
 
-	"pkg.akt.dev/node/x/deployment/handler"
-	"pkg.akt.dev/node/x/deployment/keeper"
-	"pkg.akt.dev/node/x/deployment/simulation"
+	"pkg.akt.dev/node/v2/x/deployment/handler"
+	"pkg.akt.dev/node/v2/x/deployment/keeper"
+	"pkg.akt.dev/node/v2/x/deployment/simulation"
 )
 
 // type check to ensure the interface is properly implemented
@@ -70,7 +69,7 @@ func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 func (b AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 	types.RegisterInterfaces(registry)
 
-	migrate.RegisterDeploymentInterfaces(registry)
+	//migrate.RegisterDeploymentInterfaces(registry)
 }
 
 // DefaultGenesis returns default genesis state as raw bytes for the deployment

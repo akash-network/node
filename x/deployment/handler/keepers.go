@@ -9,7 +9,7 @@ import (
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
 
 	types "pkg.akt.dev/go/node/deployment/v1"
-	"pkg.akt.dev/go/node/deployment/v1beta4"
+	dvbeta "pkg.akt.dev/go/node/deployment/v1beta4"
 	escrowid "pkg.akt.dev/go/node/escrow/id/v1"
 	etypes "pkg.akt.dev/go/node/escrow/types/v1"
 	mtypes "pkg.akt.dev/go/node/market/v1beta5"
@@ -17,8 +17,8 @@ import (
 
 // MarketKeeper Interface includes market methods
 type MarketKeeper interface {
-	CreateOrder(ctx sdk.Context, id types.GroupID, spec v1beta4.GroupSpec) (mtypes.Order, error)
-	OnGroupClosed(ctx sdk.Context, id types.GroupID, state v1beta4.Group_State) error
+	CreateOrder(ctx sdk.Context, id types.GroupID, spec dvbeta.GroupSpec) (mtypes.Order, error)
+	OnGroupClosed(ctx sdk.Context, id types.GroupID, state dvbeta.Group_State) error
 }
 
 type EscrowKeeper interface {
