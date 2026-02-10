@@ -57,7 +57,7 @@ func (h *hooks) OnEscrowAccountClosed(ctx sdk.Context, obj etypes.Account) error
 			if err != nil {
 				return err
 			}
-			err = h.mkeeper.OnGroupClosed(ctx, group.ID)
+			err = h.mkeeper.OnGroupClosed(ctx, group.ID, gstate)
 			if err != nil {
 				return err
 			}

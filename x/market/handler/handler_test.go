@@ -292,12 +292,13 @@ func TestMarketFullFlowCloseDeployment(t *testing.T) {
 	require.Equal(t, expectedOverdraft, eacc.State.Funds[0].Amount.Abs())
 	require.Equal(t, expectedOverdraft, epmnt.State.Unsettled.Amount)
 
-	// lease must be in closed state
+	// lease must be in insufficient funds state due to overdrawn escrow
 	lease, found := suite.MarketKeeper().GetLease(ctx, lid)
 	require.True(t, found)
-	require.Equal(t, v1.LeaseClosed, lease.State)
+	require.Equal(t, v1.LeaseInsufficientFunds, lease.State)
+	require.Equal(t, v1.LeaseClosedReasonInsufficientFunds, lease.Reason)
 
-	// lease must be in closed state
+	// bid must be in closed state
 	bidObj, found := suite.MarketKeeper().GetBid(ctx, bid)
 	require.True(t, found)
 	require.Equal(t, types.BidClosed, bidObj.State)
@@ -544,7 +545,7 @@ func TestMarketFullFlowCloseLease(t *testing.T) {
 	require.True(t, found)
 	require.Equal(t, v1.LeaseClosed, lease.State)
 
-	// lease must be in closed state
+	// bid must be in closed state
 	bidObj, found := suite.MarketKeeper().GetBid(ctx, bid)
 	require.True(t, found)
 	require.Equal(t, types.BidClosed, bidObj.State)
@@ -782,7 +783,7 @@ func TestMarketFullFlowCloseBid(t *testing.T) {
 	require.True(t, found)
 	require.Equal(t, v1.LeaseClosed, lease.State)
 
-	// lease must be in closed state
+	// bid must be in closed state
 	bidObj, found := suite.MarketKeeper().GetBid(ctx, bid)
 	require.True(t, found)
 	require.Equal(t, types.BidClosed, bidObj.State)

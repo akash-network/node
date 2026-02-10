@@ -15,7 +15,7 @@ require (
 	cosmossdk.io/x/feegrant v0.2.0
 	cosmossdk.io/x/upgrade v0.2.0
 	github.com/boz/go-lifecycle v0.1.1
-	github.com/cometbft/cometbft v0.38.17
+	github.com/cometbft/cometbft v0.38.21
 	github.com/cosmos/cosmos-db v1.1.1
 	github.com/cosmos/cosmos-sdk v0.53.3
 	github.com/cosmos/gogoproto v1.7.0
@@ -57,9 +57,9 @@ replace (
 	github.com/bytedance/sonic => github.com/bytedance/sonic v1.14.1
 
 	// use akash fork of cometbft
-	github.com/cometbft/cometbft => github.com/akash-network/cometbft v0.38.19-akash.1
+	github.com/cometbft/cometbft => github.com/akash-network/cometbft v0.38.21-akash.1
 	// use akash fork of cosmos sdk
-	github.com/cosmos/cosmos-sdk => github.com/akash-network/cosmos-sdk v0.53.4-akash.b.10
+	github.com/cosmos/cosmos-sdk => github.com/akash-network/cosmos-sdk v0.53.4-akash.14
 
 	github.com/cosmos/gogoproto => github.com/akash-network/gogoproto v1.7.0-akash.2
 
