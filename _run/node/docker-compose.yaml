@@ -72,6 +72,7 @@ services:
       # Gas configuration
       - GAS_PRICE=0.025uakt
       - DENOM=uakt
+      - NODE_ENV=development
     env_file:
       - ${AKASH_RUN_DIR}/hermes.env
     entrypoint: ["/bin/sh", "-c"]
