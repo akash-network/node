@@ -5,6 +5,9 @@ import (
 
 	"cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	types "pkg.akt.dev/go/node/bme/v1"
 )
@@ -61,5 +64,115 @@ func (qs Querier) Status(ctx context.Context, _ *types.QueryStatusRequest) (*typ
 		HaltThreshold:   haltThreshold,
 		MintsAllowed:    status < types.MintStatusHaltCR,
 		RefundsAllowed:  status < types.MintStatusHaltOracle,
+	}, nil
+}
+
+func (qs Querier) LedgerRecords(ctx context.Context, req *types.QueryLedgerRecordsRequest) (*types.QueryLedgerRecordsResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "empty request")
+	}
+
+	sctx := sdk.UnwrapSDKContext(ctx)
+
+	limit := req.Pagination.GetLimit()
+	if limit == 0 {
+		limit = sdkquery.DefaultLimit
+	}
+	offset := req.Pagination.GetOffset()
+
+	scanPending := true
+	scanExecuted := true
+
+	if req.Filters.Status != "" {
+		statusVal := types.LedgerRecordStatus(types.LedgerRecordStatus_value[req.Filters.Status])
+		switch statusVal {
+		case types.LedgerRecordSatusPending:
+			scanExecuted = false
+		case types.LedgerRecordSatusExecuted:
+			scanPending = false
+		default:
+			return nil, status.Error(codes.InvalidArgument, "invalid status filter value")
+		}
+	}
+
+	var records []types.QueryLedgerRecordEntry
+	total := uint64(0)
+	skipped := uint64(0)
+
+	if scanPending {
+		err := qs.IterateLedgerPendingRecords(sctx, func(id types.LedgerRecordID, record types.LedgerPendingRecord) (bool, error) {
+			if !req.Filters.AcceptPending(id, record) {
+				return false, nil
+			}
+
+			total++
+
+			if skipped < offset {
+				skipped++
+				return false, nil
+			}
+
+			if uint64(len(records)) >= limit {
+				return true, nil
+			}
+
+			records = append(records, types.QueryLedgerRecordEntry{
+				ID:     id,
+				Status: types.LedgerRecordSatusPending,
+				Record: &types.QueryLedgerRecordEntry_PendingRecord{
+					PendingRecord: &record,
+				},
+			})
+
+			return false, nil
+		})
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
+	if scanExecuted {
+		remainingOffset := uint64(0)
+		if offset > skipped {
+			remainingOffset = offset - skipped
+		}
+		execSkipped := uint64(0)
+
+		err := qs.IterateLedgerRecords(sctx, func(id types.LedgerRecordID, record types.LedgerRecord) (bool, error) {
+			if !req.Filters.AcceptExecuted(id, record) {
+				return false, nil
+			}
+
+			total++
+
+			if execSkipped < remainingOffset {
+				execSkipped++
+				return false, nil
+			}
+
+			if uint64(len(records)) >= limit {
+				return true, nil
+			}
+
+			records = append(records, types.QueryLedgerRecordEntry{
+				ID:     id,
+				Status: types.LedgerRecordSatusExecuted,
+				Record: &types.QueryLedgerRecordEntry_ExecutedRecord{
+					ExecutedRecord: &record,
+				},
+			})
+
+			return false, nil
+		})
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+	}
+
+	return &types.QueryLedgerRecordsResponse{
+		Records: records,
+		Pagination: &sdkquery.PageResponse{
+			Total: total,
+		},
 	}, nil
 }

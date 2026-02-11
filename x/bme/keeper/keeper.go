@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"cosmossdk.io/collections"
@@ -232,6 +233,12 @@ func (k *keeper) executeBurnMint(
 	burnCoin sdk.Coin,
 	toDenom string,
 ) error {
+	// sanity check
+	if burnCoin.Amount.Equal(sdkmath.ZeroInt()) {
+		return bmetypes.ErrInvalidAmount.Wrapf("zero burn amount")
+	}
+
+	sctx.Logger().Info(fmt.Sprintf("burn %v, to denom %v", burnCoin, toDenom))
 	burn, mint, err := k.prepareToBM(sctx, burnCoin, toDenom)
 	if err != nil {
 		return err
@@ -244,6 +251,7 @@ func (k *keeper) executeBurnMint(
 	if burn.Coin.Denom == sdkutil.DenomUakt {
 		err = k.mintACT(sctx, id, burn, mint, srcAddr, dstAddr, postRun)
 		if err != nil {
+
 			return err
 		}
 	} else {
@@ -257,8 +265,8 @@ func (k *keeper) executeBurnMint(
 }
 
 // prepareToBM validate fetch prices and calculate the amount to be minted
-// check if there is enough balance to burn happens in burnMint function after preRun call
-// which sends funds from source account/module to the bme module
+// check if there are enough balances to burn happens in burnMint function after preRun call
+// which sends funds from the source account / module to the bme module
 func (k *keeper) prepareToBM(sctx sdk.Context, burnCoin sdk.Coin, toDenom string) (bmetypes.CoinPrice, bmetypes.CoinPrice, error) {
 	priceFrom, err := k.oracleKeeper.GetAggregatedPrice(sctx, burnCoin.Denom)
 	if err != nil {
@@ -269,11 +277,6 @@ func (k *keeper) prepareToBM(sctx sdk.Context, burnCoin sdk.Coin, toDenom string
 	if err != nil {
 		return bmetypes.CoinPrice{}, bmetypes.CoinPrice{}, err
 	}
-
-	//if !((burnCoin.Denom == sdkutil.DenomUakt) && (toDenom == sdkutil.DenomUact)) &&
-	//	!((burnCoin.Denom == sdkutil.DenomUact) && (toDenom == sdkutil.DenomUakt)) {
-	//	return bmetypes.CoinPrice{}, bmetypes.CoinPrice{}, bmetypes.ErrInvalidDenom.Wrapf("invalid swap route %s -> %s", burnCoin.Denom, toDenom)
-	//}
 
 	// calculate a swap ratio
 	// 1. ACT price is always $1.00
@@ -295,6 +298,8 @@ func (k *keeper) prepareToBM(sctx sdk.Context, burnCoin sdk.Coin, toDenom string
 
 	mintAmount := sdkmath.LegacyNewDecFromInt(burnCoin.Amount).Mul(swapRate).TruncateInt()
 	mintCoin := sdk.NewCoin(toDenom, mintAmount)
+
+	sctx.Logger().Info(fmt.Sprintf("swap rate %v, mint coin %v", swapRate, mintCoin))
 
 	toBurn := bmetypes.CoinPrice{
 		Coin:  burnCoin,
@@ -602,10 +607,24 @@ func (k *keeper) RequestBurnMint(ctx context.Context, srcAddr sdk.AccAddress, ds
 		return bmetypes.LedgerRecordID{}, bmetypes.ErrInvalidDenom.Wrapf("invalid swap route %s -> %s", burnCoin.Denom, toDenom)
 	}
 
-	// do not queue request if circuit breaker is tripper
-	_, _, err := k.prepareToBM(sctx, burnCoin, toDenom)
+	// do not queue request if oracle price is not healthy or circuit breaker is tripped
+	_, err := k.oracleKeeper.GetAggregatedPrice(sctx, burnCoin.Denom)
 	if err != nil {
 		return bmetypes.LedgerRecordID{}, err
+	}
+
+	_, err = k.oracleKeeper.GetAggregatedPrice(sctx, toDenom)
+	if err != nil {
+		return bmetypes.LedgerRecordID{}, err
+	}
+
+	status, err := k.status.Get(sctx)
+	if err != nil {
+		return bmetypes.LedgerRecordID{}, err
+	}
+
+	if status.Status >= bmetypes.MintStatusHaltCR {
+		return bmetypes.LedgerRecordID{}, bmetypes.ErrCircuitBreakerActive
 	}
 
 	id := bmetypes.LedgerRecordID{
@@ -616,7 +635,7 @@ func (k *keeper) RequestBurnMint(ctx context.Context, srcAddr sdk.AccAddress, ds
 		Sequence: k.ledgerSequence,
 	}
 
-	err = k.bankKeeper.SendCoinsFromAccountToModule(sctx, srcAddr, bmetypes.ModuleName, sdk.NewCoins(burnCoin))
+	err = k.bankKeeper.SendCoinsFromAccountToModule(sctx, srcAddr, bmetypes.ModuleName, sdk.Coins{burnCoin})
 	if err != nil {
 		return id, err
 	}
