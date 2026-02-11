@@ -145,7 +145,6 @@ func NewApp(
 		invCheckPeriod:    invCheckPeriod,
 	}
 
-	wasmDir := filepath.Join(homePath, "wasm")
 	wasmConfig, err := wasm.ReadNodeConfig(appOpts)
 	if err != nil {
 		panic(fmt.Sprintf("error while reading wasm config: %s", err))
@@ -166,6 +165,9 @@ func NewApp(
 		skipUpgradeHeights,
 		homePath,
 	)
+
+	// do not add "wasm" to home path. wasm keeper Init does it
+	wasmDir := homePath
 
 	app.InitNormalKeepers(
 		app.cdc,

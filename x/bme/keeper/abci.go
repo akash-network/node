@@ -2,13 +2,17 @@ package keeper
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	"cosmossdk.io/store/prefix"
 	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	types "pkg.akt.dev/go/node/bme/v1"
+	otypes "pkg.akt.dev/go/node/oracle/v1"
 	"pkg.akt.dev/go/sdkutil"
 )
 
@@ -46,7 +50,7 @@ func (k *keeper) EndBlocker(ctx context.Context) error {
 		return time.Now().After(stopTm), err
 	}
 
-	iteratePending := func(p []byte) error {
+	iteratePending := func(p []byte, postCondition func() error) error {
 		ss := prefix.NewStore(sctx.KVStore(k.skey), k.ledgerPending.GetPrefix())
 
 		iter := storetypes.KVStorePrefixIterator(ss, p)
@@ -67,30 +71,37 @@ func (k *keeper) EndBlocker(ctx context.Context) error {
 			var val types.LedgerPendingRecord
 			k.cdc.MustUnmarshal(iter.Value(), &val)
 
+			sctx.Logger().Info(fmt.Sprintf("record: %v", val))
 			stop, err = executeMint(id, val)
 			if err != nil {
-				sctx.Logger().Error("walking ledger pending records", "err", err)
-				return err
+				sctx.Logger().Error("processing ledger pending records ", "id", id, "err", err)
+				if errors.Is(err, otypes.ErrPriceStalled) {
+					return err
+				}
 			}
 		}
 
-		return nil
+		return postCondition()
 	}
 
-	// fixme? ACT burn is settled on every block for now
 	stopTm = time.Now().Add(40 * time.Millisecond)
 
-	startPrefix, err := ledgerRecordIDCodec{}.ToPrefix(types.LedgerRecordID{
+	pid := types.LedgerRecordID{
 		Denom:   sdkutil.DenomUact,
 		ToDenom: sdkutil.DenomUakt,
-	})
+	}
+
+	startPrefix, err := ledgerRecordIDCodec{}.ToPrefix(pid)
 	if err != nil {
 		panic(err)
 	}
 
-	err = iteratePending(startPrefix)
+	// settle act -> akt on every block
+	err = iteratePending(startPrefix, func() error {
+		return nil
+	})
 	if err != nil {
-		sctx.Logger().Error("walking ledger pending records", "err", err)
+		sctx.Logger().Error("walking ledger pending records", "prefix", pid, "err", err)
 	}
 
 	cr, crUpdated := k.mintStatusUpdate(sctx)
@@ -108,17 +119,25 @@ func (k *keeper) EndBlocker(ctx context.Context) error {
 	} else if (cr.Status <= types.MintStatusWarning) && (me.NextEpoch == sctx.BlockHeight()) {
 		me.NextEpoch = sctx.BlockHeight() + cr.EpochHeightDiff
 
-		startPrefix, err = ledgerRecordIDCodec{}.ToPrefix(types.LedgerRecordID{
+		pid = types.LedgerRecordID{
 			Denom:   sdkutil.DenomUakt,
 			ToDenom: sdkutil.DenomUact,
-		})
+		}
+
+		startPrefix, err = ledgerRecordIDCodec{}.ToPrefix(pid)
 		if err != nil {
 			panic(err)
 		}
 
-		err = iteratePending(startPrefix)
+		err = iteratePending(startPrefix, func() error {
+			cr, _ := k.mintStatusUpdate(sctx)
+			if cr.Status >= types.MintStatusHaltCR {
+				return types.ErrCircuitBreakerActive
+			}
+			return nil
+		})
 		if err != nil {
-			sctx.Logger().Error("walking ledger records", "err", err)
+			sctx.Logger().Error("walking ledger records", "prefix", pid, "err", err)
 		}
 	}
 
