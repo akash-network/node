@@ -6,9 +6,8 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/address"
-
 	"pkg.akt.dev/go/node/deployment/v1"
-	"pkg.akt.dev/go/node/deployment/v1beta4"
+	v1beta "pkg.akt.dev/go/node/deployment/v1beta4"
 	"pkg.akt.dev/go/sdkutil"
 )
 
@@ -141,16 +140,16 @@ func DeploymentStateToPrefix(state v1.Deployment_State) []byte {
 	return idx
 }
 
-func GroupStateToPrefix(state v1beta4.Group_State) []byte {
+func GroupStateToPrefix(state v1beta.Group_State) []byte {
 	var idx []byte
 	switch state {
-	case v1beta4.GroupOpen:
+	case v1beta.GroupOpen:
 		idx = GroupStateOpenPrefix
-	case v1beta4.GroupPaused:
+	case v1beta.GroupPaused:
 		idx = GroupStatePausedPrefix
-	case v1beta4.GroupInsufficientFunds:
+	case v1beta.GroupInsufficientFunds:
 		idx = GroupStateInsufficientFundsPrefix
-	case v1beta4.GroupClosed:
+	case v1beta.GroupClosed:
 		idx = GroupStateClosedPrefix
 	}
 
@@ -168,7 +167,7 @@ func buildDeploymentPrefix(state v1.Deployment_State) []byte {
 }
 
 // nolint: unused
-func buildGroupPrefix(state v1beta4.Group_State) []byte {
+func buildGroupPrefix(state v1beta.Group_State) []byte {
 	idx := GroupStateToPrefix(state)
 
 	res := make([]byte, 0, len(GroupPrefix)+len(idx))
@@ -218,7 +217,7 @@ func filterToPrefix(prefix []byte, owner string, dseq uint64, gseq uint32) ([]by
 	return buf.Bytes(), nil
 }
 
-func deploymentPrefixFromFilter(f v1beta4.DeploymentFilters) ([]byte, error) {
+func deploymentPrefixFromFilter(f v1beta.DeploymentFilters) ([]byte, error) {
 	return filterToPrefix(buildDeploymentPrefix(v1.Deployment_State(v1.Deployment_State_value[f.State])), f.Owner, f.DSeq, 0)
 }
 
@@ -257,6 +256,6 @@ func GroupsKeyLegacy(id v1.DeploymentID) []byte {
 }
 
 // nolint: unused
-func deploymentPrefixFromFilterLegacy(f v1beta4.DeploymentFilters) ([]byte, error) {
+func deploymentPrefixFromFilterLegacy(f v1beta.DeploymentFilters) ([]byte, error) {
 	return filterToPrefix(v1.DeploymentPrefix(), f.Owner, f.DSeq, 0)
 }

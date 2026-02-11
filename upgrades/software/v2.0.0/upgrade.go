@@ -1,0 +1,90 @@
+// Package v2_0_0
+// nolint revive
+package v2_0_0
+
+import (
+	"context"
+	"fmt"
+
+	"cosmossdk.io/log"
+	storetypes "cosmossdk.io/store/types"
+	upgradetypes "cosmossdk.io/x/upgrade/types"
+	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
+	"github.com/cosmos/cosmos-sdk/types/module"
+	epochstypes "pkg.akt.dev/go/node/epochs/v1beta1"
+
+	apptypes "pkg.akt.dev/node/v2/app/types"
+	utypes "pkg.akt.dev/node/v2/upgrades/types"
+	"pkg.akt.dev/node/v2/x/oracle"
+	awasm "pkg.akt.dev/node/v2/x/wasm"
+)
+
+const (
+	UpgradeName = "v2.0.0"
+)
+
+type upgrade struct {
+	*apptypes.App
+	log log.Logger
+}
+
+var _ utypes.IUpgrade = (*upgrade)(nil)
+
+func initUpgrade(log log.Logger, app *apptypes.App) (utypes.IUpgrade, error) {
+	up := &upgrade{
+		App: app,
+		log: log.With("module", fmt.Sprintf("upgrade/%s", UpgradeName)),
+	}
+
+	return up, nil
+}
+
+func (up *upgrade) StoreLoader() *storetypes.StoreUpgrades {
+	return &storetypes.StoreUpgrades{
+		Added: []string{
+			epochstypes.StoreKey,
+			oracle.StoreKey,
+			awasm.StoreKey,
+			wasmtypes.StoreKey,
+		},
+		Deleted: []string{},
+	}
+}
+
+func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
+	return func(ctx context.Context, plan upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
+		// Set wasm old version to 1 if we want to call wasm's InitGenesis ourselves
+		// in this upgrade logic ourselves.
+		//
+		// vm[wasm.ModuleName] = wasm.ConsensusVersion
+		//
+		// Otherwise we run this, which will run wasm.InitGenesis(wasm.DefaultGenesis())
+		// and then override it after.
+
+		// Set the initial wasm module version
+		//fromVM[wasmtypes.ModuleName] = wasm.AppModule{}.ConsensusVersion()
+
+		toVM, err := up.MM.RunMigrations(ctx, up.Configurator, fromVM)
+		if err != nil {
+			return toVM, err
+		}
+
+		params := up.Keepers.Cosmos.Wasm.GetParams(ctx)
+		// Configure code upload access - RESTRICTED TO GOVERNANCE ONLY
+		// Only governance proposals can upload contract code
+		// This provides maximum security for mainnet deployment
+		params.CodeUploadAccess = wasmtypes.AccessConfig{
+			Permission: wasmtypes.AccessTypeNobody,
+		}
+
+		// Configure instantiate default permission
+		params.InstantiateDefaultPermission = wasmtypes.AccessTypeEverybody
+
+		err = up.Keepers.Cosmos.Wasm.SetParams(ctx, params)
+		if err != nil {
+			return toVM, err
+		}
+
+		return toVM, err
+	}
+}

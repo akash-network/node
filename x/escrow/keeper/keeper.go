@@ -6,21 +6,20 @@ import (
 	"reflect"
 	"time"
 
-	"cosmossdk.io/collections"
+	"cosmossdk.io/core/address"
 	sdkmath "cosmossdk.io/math"
 	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
-	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
-	dv1beta "pkg.akt.dev/go/node/deployment/v1beta4"
-	mv1beta "pkg.akt.dev/go/node/market/v1beta5"
 
+	dvbeta "pkg.akt.dev/go/node/deployment/v1beta4"
 	escrowid "pkg.akt.dev/go/node/escrow/id/v1"
 	"pkg.akt.dev/go/node/escrow/module"
 	etypes "pkg.akt.dev/go/node/escrow/types/v1"
 	ev1 "pkg.akt.dev/go/node/escrow/v1"
-	types "pkg.akt.dev/go/node/market/v1"
+	mv1 "pkg.akt.dev/go/node/market/v1"
+	mtypes "pkg.akt.dev/go/node/market/v1beta5"
 	deposit "pkg.akt.dev/go/node/types/deposit/v1"
 )
 
@@ -30,6 +29,8 @@ type PaymentHook func(sdk.Context, etypes.Payment) error
 type Keeper interface {
 	Codec() codec.BinaryCodec
 	StoreKey() storetypes.StoreKey
+	EndBlocker(_ context.Context) error
+
 	AuthorizeDeposits(sctx sdk.Context, msg sdk.Msg) ([]etypes.Depositor, error)
 	AccountCreate(ctx sdk.Context, id escrowid.Account, owner sdk.AccAddress, deposits []etypes.Depositor) error
 	AccountDeposit(ctx sdk.Context, id escrowid.Account, deposits []etypes.Depositor) error
@@ -52,28 +53,25 @@ type Keeper interface {
 func NewKeeper(
 	cdc codec.BinaryCodec,
 	skey storetypes.StoreKey,
+	ac address.Codec,
 	bkeeper BankKeeper,
-	tkeeper TakeKeeper,
 	akeeper AuthzKeeper,
-	feepool collections.Item[distrtypes.FeePool],
 ) Keeper {
 	return &keeper{
 		cdc:         cdc,
 		skey:        skey,
+		ac:          ac,
 		bkeeper:     bkeeper,
-		tkeeper:     tkeeper,
 		authzKeeper: akeeper,
-		feepool:     feepool,
 	}
 }
 
 type keeper struct {
 	cdc         codec.BinaryCodec
 	skey        storetypes.StoreKey
+	ac          address.Codec
 	bkeeper     BankKeeper
-	tkeeper     TakeKeeper
 	authzKeeper AuthzKeeper
-	feepool     collections.Item[distrtypes.FeePool]
 	hooks       struct {
 		onAccountClosed []AccountHook
 		onPaymentClosed []PaymentHook
@@ -113,32 +111,16 @@ func (k *keeper) AccountCreate(ctx sdk.Context, id escrowid.Account, owner sdk.A
 		return module.ErrAccountExists
 	}
 
-	denoms := make(map[string]int)
-
-	for _, d := range deposits {
-		denoms[d.Balance.Denom] = 1
-	}
-
-	transferred := make(sdk.DecCoins, 0, len(denoms))
-	funds := make([]etypes.Balance, 0, len(denoms))
-
-	for denom := range denoms {
-		transferred = append(transferred, sdk.NewDecCoin(denom, sdkmath.ZeroInt()))
-		funds = append(funds, etypes.Balance{
-			Denom:  denom,
-			Amount: sdkmath.LegacyZeroDec(),
-		})
-	}
-
+	// Create account object with empty funds/transferred - will be populated based on actual deposit denoms
 	obj := &account{
 		Account: etypes.Account{
 			ID: id,
 			State: etypes.AccountState{
 				Owner:       owner.String(),
 				State:       etypes.StateOpen,
-				Transferred: transferred,
+				Transferred: make(sdk.DecCoins, 0),
 				SettledAt:   ctx.BlockHeight(),
-				Funds:       funds,
+				Funds:       make([]etypes.Balance, 0),
 				Deposits:    make([]etypes.Depositor, 0),
 			},
 		},
@@ -146,11 +128,12 @@ func (k *keeper) AccountCreate(ctx sdk.Context, id escrowid.Account, owner sdk.A
 		prevState: etypes.StateOpen,
 	}
 
-	if err := obj.ValidateBasic(); err != nil {
+	// Process deposits first to determine actual denoms (after BME conversion)
+	if err := k.fetchDepositsToAccount(ctx, obj, deposits); err != nil {
 		return err
 	}
 
-	if err := k.fetchDepositsToAccount(ctx, obj, deposits); err != nil {
+	if err := obj.ValidateBasic(); err != nil {
 		return err
 	}
 
@@ -162,11 +145,6 @@ func (k *keeper) AccountCreate(ctx sdk.Context, id escrowid.Account, owner sdk.A
 
 func (k *keeper) AuthorizeDeposits(sctx sdk.Context, msg sdk.Msg) ([]etypes.Depositor, error) {
 	depositors := make([]etypes.Depositor, 0, 1)
-
-	hasDeposit, valid := msg.(deposit.HasDeposit)
-	if !valid {
-		return nil, fmt.Errorf("%w: message [%s] does not implement deposit.HasDeposit", module.ErrInvalidDeposit, reflect.TypeOf(msg).String())
-	}
 
 	lMsg, valid := msg.(sdk.LegacyMsg)
 	if !valid {
@@ -180,103 +158,139 @@ func (k *keeper) AuthorizeDeposits(sctx sdk.Context, msg sdk.Msg) ([]etypes.Depo
 
 	owner := signers[0]
 
-	dep := hasDeposit.GetDeposit()
-	denom := dep.Amount.Denom
-
-	remainder := sdkmath.NewInt(dep.Amount.Amount.Int64())
-
-	for _, source := range dep.Sources {
-		switch source {
-		case deposit.SourceBalance:
-			spendableAmount := k.bkeeper.SpendableCoin(sctx, owner, denom)
-
-			if spendableAmount.Amount.IsPositive() {
-				requestedSpend := sdk.NewCoin(denom, remainder)
-
-				if spendableAmount.IsLT(requestedSpend) {
-					requestedSpend = spendableAmount
-				}
-				depositors = append(depositors, etypes.Depositor{
-					Owner:   owner.String(),
-					Height:  sctx.BlockHeight(),
-					Source:  deposit.SourceBalance,
-					Balance: sdk.NewDecCoinFromCoin(requestedSpend),
-				})
-
-				remainder = remainder.Sub(requestedSpend.Amount)
-			}
-		case deposit.SourceGrant:
-			// find the DepositDeploymentAuthorization given to the owner by the depositor and check
-			// acceptance
-			msgTypeUrl := (&ev1.DepositAuthorization{}).MsgTypeURL()
-
-			k.authzKeeper.GetGranteeGrantsByMsgType(sctx, owner, msgTypeUrl, func(ctx context.Context, granter sdk.AccAddress, authorization authz.Authorization, expiration *time.Time) bool {
-				depositAuthz, valid := authorization.(ev1.Authorization)
-				if !valid {
-					return false
-				}
-
-				spendableAmount := depositAuthz.GetSpendLimit()
-				if spendableAmount.IsZero() {
-					return false
-				}
-
-				requestedSpend := sdk.NewCoin(denom, remainder)
-
-				// bc authz.Accepts take sdk.Msg as an argument, the deposit amount from incoming message
-				// has to be modified in place to correctly calculate what deposits to take from grants
-				switch mt := msg.(type) {
-				case *ev1.MsgAccountDeposit:
-					mt.Deposit.Amount = requestedSpend
-				case *dv1beta.MsgCreateDeployment:
-					mt.Deposit.Amount = requestedSpend
-				case *mv1beta.MsgCreateBid:
-					mt.Deposit.Amount = requestedSpend
-				}
-
-				resp, err := depositAuthz.TryAccept(ctx, msg, true)
-				if err != nil {
-					return false
-				}
-
-				if !resp.Accept {
-					return false
-				}
-
-				// Delete is ignored here as not all funds may be used during deployment lifetime.
-				// also, there can be another deployment using same authorization and may return funds before deposit is fully used
-				err = k.authzKeeper.SaveGrant(ctx, owner, granter, resp.Updated, expiration)
-				if err != nil {
-					return false
-				}
-
-				depositAuthz = resp.Updated.(ev1.Authorization)
-
-				spendableAmount = spendableAmount.Sub(depositAuthz.GetSpendLimit())
-
-				depositors = append(depositors, etypes.Depositor{
-					Owner:   granter.String(),
-					Height:  sctx.BlockHeight(),
-					Source:  deposit.SourceGrant,
-					Balance: sdk.NewDecCoinFromCoin(spendableAmount),
-				})
-				remainder = remainder.Sub(spendableAmount.Amount)
-
-				return remainder.IsZero()
-			})
-		}
-
-		if remainder.IsZero() {
-			break
-		}
+	var deposits deposit.Deposits
+	switch mt := msg.(type) {
+	case deposit.HasDeposit:
+		deposits = deposit.Deposits{mt.GetDeposit()}
+	case deposit.HasDeposits:
+		deposits = mt.GetDeposits()
+	default:
+		return nil, fmt.Errorf("%w: message [%s] does not implement deposit.HasDeposit or deposit.HasDeposits", module.ErrInvalidDeposit, reflect.TypeOf(msg).String())
 	}
 
-	if !remainder.IsZero() {
-		// the following check is for sanity. if value is negative, math above went horribly wrong
-		if remainder.IsNegative() {
-			return nil, fmt.Errorf("%w: deposit overflow", types.ErrInvalidDeposit)
-		} else {
-			return nil, fmt.Errorf("%w: insufficient balance", types.ErrInvalidDeposit)
+	// Process each deposit
+	for _, dep := range deposits {
+		denom := dep.Amount.Denom
+		remainder := sdkmath.NewInt(dep.Amount.Amount.Int64())
+
+		for _, source := range dep.Sources {
+			switch source {
+			case deposit.SourceBalance:
+				spendableAmount := k.bkeeper.SpendableCoin(sctx, owner, denom)
+
+				if spendableAmount.Amount.IsPositive() {
+					requestedSpend := sdk.NewCoin(denom, remainder)
+
+					if spendableAmount.IsLT(requestedSpend) {
+						requestedSpend = spendableAmount
+					}
+					depositors = append(depositors, etypes.Depositor{
+						Owner:   owner.String(),
+						Height:  sctx.BlockHeight(),
+						Source:  deposit.SourceBalance,
+						Balance: sdk.NewDecCoinFromCoin(requestedSpend),
+					})
+
+					remainder = remainder.Sub(requestedSpend.Amount)
+				}
+			case deposit.SourceGrant:
+				// find the DepositDeploymentAuthorization given to the owner by the depositor and check
+				// acceptance
+				msgTypeUrl := (&ev1.DepositAuthorization{}).MsgTypeURL()
+
+				k.authzKeeper.GetGranteeGrantsByMsgType(sctx, owner, msgTypeUrl, func(ctx context.Context, granter sdk.AccAddress, authorization authz.Authorization, expiration *time.Time) bool {
+					depositAuthz, valid := authorization.(ev1.Authorization)
+					if !valid {
+						return false
+					}
+
+					spendableAmount := depositAuthz.GetSpendLimit()
+					if spendableAmount.IsZero() {
+						return false
+					}
+
+					requestedSpend := sdk.NewCoin(denom, remainder)
+
+					var authzMsg sdk.Msg
+
+					// bc authz.Accepts take sdk.Msg as an argument, the deposit amount from incoming message
+					// has to be modified in place to correctly calculate what deposits to take from grants
+					switch mt := msg.(type) {
+					case *ev1.MsgAccountDeposit:
+						authzMsg = &ev1.MsgAccountDeposit{
+							Signer: mt.Signer,
+							ID:     mt.ID,
+							Deposit: deposit.Deposit{
+								Amount:  requestedSpend,
+								Sources: mt.Deposit.Sources,
+							},
+						}
+					case *dvbeta.MsgCreateDeployment:
+						authzMsg = &dvbeta.MsgCreateDeployment{
+							ID:     mt.ID,
+							Groups: mt.Groups,
+							Hash:   mt.Hash,
+							Deposit: deposit.Deposit{
+								Amount:  requestedSpend,
+								Sources: dep.Sources,
+							},
+						}
+					case *mtypes.MsgCreateBid:
+						authzMsg = &mtypes.MsgCreateBid{
+							ID:    mt.ID,
+							Price: mt.Price,
+							Deposit: deposit.Deposit{
+								Amount:  requestedSpend,
+								Sources: dep.Sources,
+							},
+							ResourcesOffer: mt.ResourcesOffer,
+						}
+					}
+
+					resp, err := depositAuthz.TryAccept(ctx, authzMsg, true)
+					if err != nil {
+						return false
+					}
+
+					if !resp.Accept {
+						return false
+					}
+
+					// Delete is ignored here as not all funds may be used during deployment lifetime.
+					// also, there can be another deployment using same authorization and may return funds before deposit is fully used
+					err = k.authzKeeper.SaveGrant(ctx, owner, granter, resp.Updated, expiration)
+					if err != nil {
+						return false
+					}
+
+					depositAuthz = resp.Updated.(ev1.Authorization)
+
+					spendableAmount = spendableAmount.Sub(depositAuthz.GetSpendLimit())
+
+					depositors = append(depositors, etypes.Depositor{
+						Owner:   granter.String(),
+						Height:  sctx.BlockHeight(),
+						Source:  deposit.SourceGrant,
+						Balance: sdk.NewDecCoinFromCoin(spendableAmount),
+					})
+					remainder = remainder.Sub(spendableAmount.Amount)
+
+					return remainder.IsZero()
+				})
+			}
+
+			if remainder.IsZero() {
+				break
+			}
+		}
+
+		if !remainder.IsZero() {
+			// the following check is for sanity. if value is negative, math above went horribly wrong
+			if remainder.IsNegative() {
+				return nil, fmt.Errorf("%w: deposit overflow", mv1.ErrInvalidDeposit)
+			} else {
+				return nil, fmt.Errorf("%w: insufficient balance", mv1.ErrInvalidDeposit)
+			}
 		}
 	}
 
@@ -292,7 +306,7 @@ func (k *keeper) AccountClose(ctx sdk.Context, id escrowid.Account) error {
 	switch acc.State.State {
 	case etypes.StateOpen:
 	case etypes.StateOverdrawn:
-		// if account is overdrawn try to settle it
+		// if the account is overdrawn try to settle it
 		// if settling fails it s still triggers deployment close
 	case etypes.StateClosed:
 		fallthrough
@@ -405,18 +419,19 @@ func (k *keeper) AccountSettle(ctx sdk.Context, id escrowid.Account) (bool, erro
 
 // fetchDepositToAccount fetches the deposit amount from the depositor's account to the escrow
 // account and accordingly updates the balance or funds.
+// When circuit breaker is active, deposits are processed directly without BME conversion,
+// keeping funds in their original denomination (AKT).
 func (k *keeper) fetchDepositsToAccount(ctx sdk.Context, acc *account, deposits []etypes.Depositor) error {
 	if len(deposits) > 0 {
 		acc.dirty = true
 	}
 
-	for _, d := range deposits {
-		depositor, err := sdk.AccAddressFromBech32(d.Owner)
-		if err != nil {
-			return err
-		}
+	processedDeposits := make([]etypes.Depositor, 0, len(deposits))
 
+	for _, d := range deposits {
+		// Now find or create funds entry with the actual denom (after potential BME conversion)
 		var funds *etypes.Balance
+		var transferred *sdk.DecCoin
 
 		for i := range acc.State.Funds {
 			if acc.State.Funds[i].Denom == d.Balance.Denom {
@@ -424,17 +439,40 @@ func (k *keeper) fetchDepositsToAccount(ctx sdk.Context, acc *account, deposits 
 			}
 		}
 
+		for i := range acc.State.Transferred {
+			if acc.State.Transferred[i].Denom == d.Balance.Denom {
+				transferred = &acc.State.Transferred[i]
+			}
+		}
+
+		// If this is a new denom, initialize funds and transferred entries
 		if funds == nil {
-			return module.ErrInvalidDenomination
+			acc.State.Funds = append(acc.State.Funds, etypes.Balance{
+				Denom:  d.Balance.Denom,
+				Amount: sdkmath.LegacyZeroDec(),
+			})
+			funds = &acc.State.Funds[len(acc.State.Funds)-1]
+		}
+
+		if transferred == nil {
+			acc.State.Transferred = append(acc.State.Transferred, sdk.NewDecCoin(d.Balance.Denom, sdkmath.ZeroInt()))
+			transferred = &acc.State.Transferred[len(acc.State.Transferred)-1]
 		}
 
 		if funds.Amount.IsNegative() {
 			funds.Amount = sdkmath.LegacyZeroDec()
 		}
 
+		processedDeposits = append(processedDeposits, d)
+
+		depositor, err := k.ac.StringToBytes(d.Owner)
+		if err != nil {
+			return err
+		}
+
 		// if balance is negative then reset it to zero and start accumulating fund.
 		// later down in this function it will trigger account settlement and recalculate
-		//  the owed balance
+		// the owed balance
 		if err = k.bkeeper.SendCoinsFromAccountToModule(ctx, depositor, module.ModuleName, sdk.NewCoins(sdk.NewCoin(d.Balance.Denom, d.Balance.Amount.TruncateInt()))); err != nil {
 			return err
 		}
@@ -442,7 +480,7 @@ func (k *keeper) fetchDepositsToAccount(ctx sdk.Context, acc *account, deposits 
 		funds.Amount.AddMut(d.Balance.Amount)
 	}
 
-	acc.State.Deposits = append(acc.State.Deposits, deposits...)
+	acc.State.Deposits = append(acc.State.Deposits, processedDeposits...)
 
 	return nil
 }
@@ -685,6 +723,11 @@ func (k *keeper) GetAccount(ctx sdk.Context, id escrowid.Account) (etypes.Accoun
 	return obj.Account, nil
 }
 
+// EndBlocker is called at the end of each block to manage settlement on regular intervals
+func (k *keeper) EndBlocker(_ context.Context) error {
+	return nil
+}
+
 func (k *keeper) getAccount(ctx sdk.Context, id escrowid.Account) (*account, error) {
 	store := ctx.KVStore(k.skey)
 
@@ -813,12 +856,15 @@ func (k *keeper) saveAccount(ctx sdk.Context, obj *account) error {
 	if obj.State.State == etypes.StateClosed || obj.State.State == etypes.StateOverdrawn {
 		for _, d := range obj.State.Deposits {
 			if d.Balance.IsPositive() {
-				depositor, err := sdk.AccAddressFromBech32(d.Owner)
+				depositor, err := k.ac.StringToBytes(d.Owner)
 				if err != nil {
 					return err
 				}
 
+				// withdrawal is the amount to withdraw in the current denom (uact for BME deposits)
 				withdrawal := sdk.NewCoin(d.Balance.Denom, d.Balance.Amount.TruncateInt())
+				// fundsToSubtract is always in the funds denom - save before potential BME conversion
+				fundsToSubtract := d.Balance.Amount
 
 				err = k.bkeeper.SendCoinsFromModuleToAccount(ctx, module.ModuleName, depositor, sdk.NewCoins(withdrawal))
 				if err != nil {
@@ -827,7 +873,7 @@ func (k *keeper) saveAccount(ctx sdk.Context, obj *account) error {
 
 				// if depositor is not an owner then funds came from the grant.
 				if d.Source == deposit.SourceGrant {
-					owner, err := sdk.AccAddressFromBech32(obj.State.Owner)
+					owner, err := k.ac.StringToBytes(obj.State.Owner)
 					if err != nil {
 						return err
 					}
@@ -847,7 +893,14 @@ func (k *keeper) saveAccount(ctx sdk.Context, obj *account) error {
 					}
 				}
 
-				obj.State.Funds[0].Amount.SubMut(sdkmath.LegacyNewDecFromInt(withdrawal.Amount))
+				// Subtract from funds using the original balance amount (in funds denom)
+				// Find the correct funds entry by denom
+				for i := range obj.State.Funds {
+					if obj.State.Funds[i].Denom == d.Balance.Denom {
+						obj.State.Funds[i].Amount.SubMut(fundsToSubtract)
+						break
+					}
+				}
 			}
 		}
 
@@ -948,64 +1001,25 @@ func (k *keeper) accountPayments(ctx sdk.Context, id escrowid.Account, states []
 }
 
 func (k *keeper) paymentWithdraw(ctx sdk.Context, obj *payment) error {
-	owner, err := sdk.AccAddressFromBech32(obj.State.Owner)
+	owner, err := k.ac.StringToBytes(obj.State.Owner)
 	if err != nil {
 		return err
 	}
 
-	rawEarnings := sdk.NewCoin(obj.State.Balance.Denom, obj.State.Balance.Amount.TruncateInt())
+	earnings := sdk.NewCoin(obj.State.Balance.Denom, obj.State.Balance.Amount.TruncateInt())
 
-	if rawEarnings.Amount.IsZero() {
+	if earnings.Amount.IsZero() {
 		return nil
 	}
 
-	earnings, fee, err := k.tkeeper.SubtractFees(ctx, rawEarnings)
+	err = k.bkeeper.SendCoinsFromModuleToAccount(ctx, module.ModuleName, owner, sdk.NewCoins(earnings))
 	if err != nil {
 		return err
 	}
 
-	if err = k.sendFeeToCommunityPool(ctx, fee); err != nil {
-		ctx.Logger().Error("payment withdraw - fees", "err", err, "id", obj.ID.Key())
-		return err
-	}
-
-	if !earnings.IsZero() {
-		if err = k.bkeeper.SendCoinsFromModuleToAccount(ctx, module.ModuleName, owner, sdk.NewCoins(earnings)); err != nil {
-			ctx.Logger().Error("payment withdraw - earnings", "err", err, "is", obj.ID.Key())
-			return err
-		}
-	}
-
-	total := earnings.Add(fee)
-
-	obj.State.Withdrawn = obj.State.Withdrawn.Add(total)
-	obj.State.Balance = obj.State.Balance.Sub(sdk.NewDecCoinFromCoin(total))
+	obj.State.Withdrawn = obj.State.Withdrawn.Add(earnings)
+	obj.State.Balance = obj.State.Balance.Sub(sdk.NewDecCoinFromCoin(earnings))
 	obj.dirty = true
-
-	return nil
-}
-
-func (k *keeper) sendFeeToCommunityPool(ctx sdk.Context, fee sdk.Coin) error {
-	if fee.IsZero() {
-		return nil
-	}
-
-	// see https://github.com/cosmos/cosmos-sdk/blob/c2a07cea272a7878b5bc2ec160eb58ca83794214/x/distribution/keeper/keeper.go#L251-L263
-	if err := k.bkeeper.SendCoinsFromModuleToModule(ctx, module.ModuleName, distrtypes.ModuleName, sdk.NewCoins(fee)); err != nil {
-		return err
-	}
-
-	pool, err := k.feepool.Get(ctx)
-	if err != nil {
-		return err
-	}
-
-	pool.CommunityPool = pool.CommunityPool.Add(sdk.NewDecCoinFromCoin(fee))
-
-	err = k.feepool.Set(ctx, pool)
-	if err != nil {
-		return err
-	}
 
 	return nil
 }
