@@ -3,8 +3,11 @@ package keeper
 import (
 	"fmt"
 
+	"cosmossdk.io/collections"
+	"cosmossdk.io/collections/indexes"
 	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	dtypes "pkg.akt.dev/go/node/deployment/v1"
@@ -52,16 +55,43 @@ type Keeper struct {
 	// The address capable of executing a MsgUpdateParams message.
 	// This should be the x/gov module account.
 	authority string
+
+	schema collections.Schema
+	bids   *collections.IndexedMap[keys.BidPrimaryKey, types.Bid, BidIndexes]
+	orders *collections.IndexedMap[keys.OrderPrimaryKey, types.Order, OrderIndexes]
+	leases *collections.IndexedMap[keys.LeasePrimaryKey, mv1.Lease, LeaseIndexes]
 }
 
 // NewKeeper creates and returns an instance for Market keeper
-func NewKeeper(cdc codec.BinaryCodec, skey storetypes.StoreKey, ekeeper EscrowKeeper, authority string) IKeeper {
-	return Keeper{
+func NewKeeper(cdc codec.BinaryCodec, skey *storetypes.KVStoreKey, ekeeper EscrowKeeper, authority string) IKeeper {
+	ssvc := runtime.NewKVStoreService(skey)
+	sb := collections.NewSchemaBuilder(ssvc)
+
+	bidIndexes := NewBidIndexes(sb)
+	orderIndexes := NewOrderIndexes(sb)
+	leaseIndexes := NewLeaseIndexes(sb)
+
+	bids := collections.NewIndexedMap(sb, collections.NewPrefix(keys.BidPrefixNew), "bids", keys.BidPrimaryKeyCodec, codec.CollValue[types.Bid](cdc), bidIndexes)
+	orders := collections.NewIndexedMap(sb, collections.NewPrefix(keys.OrderPrefixNew), "orders", keys.OrderPrimaryKeyCodec, codec.CollValue[types.Order](cdc), orderIndexes)
+	leases := collections.NewIndexedMap(sb, collections.NewPrefix(keys.LeasePrefixNew), "leases", keys.LeasePrimaryKeyCodec, codec.CollValue[mv1.Lease](cdc), leaseIndexes)
+
+	schema, err := sb.Build()
+	if err != nil {
+		panic(err)
+	}
+
+	res := &Keeper{
 		skey:      skey,
 		cdc:       cdc,
 		ekeeper:   ekeeper,
 		authority: authority,
+		schema:    schema,
+		bids:      bids,
+		orders:    orders,
+		leases:    leases,
 	}
+
+	return res
 }
 
 func (k Keeper) NewQuerier() Querier {
@@ -81,6 +111,21 @@ func (k Keeper) StoreKey() storetypes.StoreKey {
 // GetAuthority returns the x/mint module's authority.
 func (k Keeper) GetAuthority() string {
 	return k.authority
+}
+
+// Bids returns the bid IndexedMap for direct access (used by genesis and migration)
+func (k Keeper) Bids() *collections.IndexedMap[keys.BidPrimaryKey, types.Bid, BidIndexes] {
+	return k.bids
+}
+
+// Orders returns the order IndexedMap for direct access (used by genesis and migration)
+func (k Keeper) Orders() *collections.IndexedMap[keys.OrderPrimaryKey, types.Order, OrderIndexes] {
+	return k.orders
+}
+
+// Leases returns the lease IndexedMap for direct access (used by genesis and migration)
+func (k Keeper) Leases() *collections.IndexedMap[keys.LeasePrimaryKey, mv1.Lease, LeaseIndexes] {
+	return k.leases
 }
 
 // SetParams sets the x/market module parameters.
@@ -110,8 +155,6 @@ func (k Keeper) GetParams(ctx sdk.Context) (p types.Params) {
 
 // CreateOrder creates a new order with given group id and specifications. It returns created order
 func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypesBeta.GroupSpec) (types.Order, error) {
-	store := ctx.KVStore(k.skey)
-
 	oseq := uint32(1)
 	var err error
 
@@ -136,19 +179,25 @@ func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypesBeta
 
 	orderID := mv1.MakeOrderID(gid, oseq)
 
-	if res := k.findOrder(ctx, orderID); len(res) > 0 {
+	pk := keys.OrderIDToKey(orderID)
+	has, err := k.orders.Has(ctx, pk)
+	if err != nil {
+		return types.Order{}, err
+	}
+	if has {
 		return types.Order{}, mv1.ErrOrderExists
 	}
 
 	order := types.Order{
-		ID:        mv1.MakeOrderID(gid, oseq),
+		ID:        orderID,
 		Spec:      spec,
 		State:     types.OrderOpen,
 		CreatedAt: ctx.BlockHeight(),
 	}
 
-	key := keys.MustOrderKey(keys.OrderStateOpenPrefix, order.ID)
-	store.Set(key, k.cdc.MustMarshal(&order))
+	if err := k.orders.Set(ctx, pk, order); err != nil {
+		return types.Order{}, fmt.Errorf("failed to create order: %w", err)
+	}
 
 	ctx.Logger().Info("created order", "order", order.ID)
 
@@ -164,9 +213,13 @@ func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dtypesBeta
 
 // CreateBid creates a bid for a order with given orderID, price for bid and provider
 func (k Keeper) CreateBid(ctx sdk.Context, id mv1.BidID, price sdk.DecCoin, roffer types.ResourcesOffer) (types.Bid, error) {
-	store := ctx.KVStore(k.skey)
+	pk := keys.BidIDToKey(id)
 
-	if key := k.findBid(ctx, id); len(key) > 0 {
+	has, err := k.bids.Has(ctx, pk)
+	if err != nil {
+		return types.Bid{}, err
+	}
+	if has {
 		return types.Bid{}, mv1.ErrBidExists
 	}
 
@@ -178,18 +231,11 @@ func (k Keeper) CreateBid(ctx sdk.Context, id mv1.BidID, price sdk.DecCoin, roff
 		ResourcesOffer: roffer,
 	}
 
-	data := k.cdc.MustMarshal(&bid)
-
-	key := keys.MustBidKey(keys.BidStateToPrefix(bid.State), id)
-	revKey := keys.MustBidStateRevereKey(bid.State, id)
-
-	store.Set(key, data)
-
-	if len(revKey) > 0 {
-		store.Set(revKey, data)
+	if err := k.bids.Set(ctx, pk, bid); err != nil {
+		return types.Bid{}, err
 	}
 
-	err := ctx.EventManager().EmitTypedEvent(
+	err = ctx.EventManager().EmitTypedEvent(
 		&mv1.EventBidCreated{
 			ID:    bid.ID,
 			Price: price,
@@ -205,8 +251,6 @@ func (k Keeper) CreateBid(ctx sdk.Context, id mv1.BidID, price sdk.DecCoin, roff
 // CreateLease creates lease for bid with given bidID.
 // Should only be called by the EndBlock handler or unit tests.
 func (k Keeper) CreateLease(ctx sdk.Context, bid types.Bid) error {
-	store := ctx.KVStore(k.skey)
-
 	lease := mv1.Lease{
 		ID:        mv1.LeaseID(bid.ID),
 		State:     mv1.LeaseActive,
@@ -214,15 +258,9 @@ func (k Keeper) CreateLease(ctx sdk.Context, bid types.Bid) error {
 		CreatedAt: ctx.BlockHeight(),
 	}
 
-	data := k.cdc.MustMarshal(&lease)
-
-	// create (active) lease in store
-	key := keys.MustLeaseKey(keys.LeaseStateToPrefix(lease.State), lease.ID)
-	revKey := keys.MustLeaseStateReverseKey(lease.State, lease.ID)
-
-	store.Set(key, data)
-	if len(revKey) > 0 {
-		store.Set(revKey, data)
+	pk := keys.LeaseIDToKey(lease.ID)
+	if err := k.leases.Set(ctx, pk, lease); err != nil {
+		return fmt.Errorf("failed to create lease: %w", err)
 	}
 
 	err := ctx.EventManager().EmitTypedEvent(
@@ -315,24 +353,14 @@ func (k Keeper) OnLeaseClosed(ctx sdk.Context, lease mv1.Lease, state mv1.Lease_
 		return nil
 	}
 
-	currState := lease.State
-
 	lease.State = state
 	lease.ClosedOn = ctx.BlockHeight()
 	lease.Reason = reason
 
-	store := ctx.KVStore(k.skey)
-
-	key := keys.MustLeaseKey(keys.LeaseStateToPrefix(currState), lease.ID)
-	revKey := keys.MustLeaseStateReverseKey(currState, lease.ID)
-
-	store.Delete(key)
-	if len(revKey) > 0 {
-		store.Delete(revKey)
+	// IndexedMap.Set automatically updates all indexes
+	if err := k.leases.Set(ctx, keys.LeaseIDToKey(lease.ID), lease); err != nil {
+		return fmt.Errorf("failed to update lease: %w", err)
 	}
-
-	key = keys.MustLeaseKey(keys.LeaseStateToPrefix(lease.State), lease.ID)
-	store.Set(key, k.cdc.MustMarshal(&lease))
 
 	err := ctx.EventManager().EmitTypedEvent(
 		&mv1.EventLeaseClosed{
@@ -410,123 +438,31 @@ func (k Keeper) OnGroupClosed(ctx sdk.Context, id dtypes.GroupID, state dtypesBe
 	return nil
 }
 
-func (k Keeper) findOrder(ctx sdk.Context, id mv1.OrderID) []byte {
-	store := ctx.KVStore(k.skey)
-
-	aKey := keys.MustOrderKey(keys.OrderStateActivePrefix, id)
-	oKey := keys.MustOrderKey(keys.OrderStateOpenPrefix, id)
-	cKey := keys.MustOrderKey(keys.OrderStateClosedPrefix, id)
-
-	var key []byte
-
-	// nolint: gocritic
-	if store.Has(aKey) {
-		key = aKey
-	} else if store.Has(oKey) {
-		key = oKey
-	} else if store.Has(cKey) {
-		key = cKey
-	}
-
-	return key
-}
-
 // GetOrder returns order with given orderID from market store
 func (k Keeper) GetOrder(ctx sdk.Context, id mv1.OrderID) (types.Order, bool) {
-	key := k.findOrder(ctx, id)
-
-	if len(key) == 0 {
+	order, err := k.orders.Get(ctx, keys.OrderIDToKey(id))
+	if err != nil {
 		return types.Order{}, false
 	}
-
-	store := ctx.KVStore(k.skey)
-
-	buf := store.Get(key)
-
-	var val types.Order
-	k.cdc.MustUnmarshal(buf, &val)
-
-	return val, true
-}
-
-func (k Keeper) findBid(ctx sdk.Context, id mv1.BidID) []byte {
-	store := ctx.KVStore(k.skey)
-
-	aKey := keys.MustBidKey(keys.BidStateActivePrefix, id)
-	oKey := keys.MustBidKey(keys.BidStateOpenPrefix, id)
-	lKey := keys.MustBidKey(keys.BidStateLostPrefix, id)
-	cKey := keys.MustBidKey(keys.BidStateClosedPrefix, id)
-
-	var key []byte
-
-	// nolint: gocritic
-	if store.Has(aKey) {
-		key = aKey
-	} else if store.Has(oKey) {
-		key = oKey
-	} else if store.Has(lKey) {
-		key = lKey
-	} else if store.Has(cKey) {
-		key = cKey
-	}
-
-	return key
+	return order, true
 }
 
 // GetBid returns bid with given bidID from market store
 func (k Keeper) GetBid(ctx sdk.Context, id mv1.BidID) (types.Bid, bool) {
-	store := ctx.KVStore(k.skey)
-
-	key := k.findBid(ctx, id)
-
-	if len(key) == 0 {
+	bid, err := k.bids.Get(ctx, keys.BidIDToKey(id))
+	if err != nil {
 		return types.Bid{}, false
 	}
-
-	buf := store.Get(key)
-
-	var val types.Bid
-	k.cdc.MustUnmarshal(buf, &val)
-
-	return val, true
-}
-
-func (k Keeper) findLease(ctx sdk.Context, id mv1.LeaseID) []byte {
-	store := ctx.KVStore(k.skey)
-
-	aKey := keys.MustLeaseKey(keys.LeaseStateActivePrefix, id)
-	iKey := keys.MustLeaseKey(keys.LeaseStateInsufficientFundsPrefix, id)
-	cKey := keys.MustLeaseKey(keys.LeaseStateClosedPrefix, id)
-
-	var key []byte
-
-	// nolint: gocritic
-	if store.Has(aKey) {
-		key = aKey
-	} else if store.Has(iKey) {
-		key = iKey
-	} else if store.Has(cKey) {
-		key = cKey
-	}
-
-	return key
+	return bid, true
 }
 
 // GetLease returns lease with given leaseID from market store
 func (k Keeper) GetLease(ctx sdk.Context, id mv1.LeaseID) (mv1.Lease, bool) {
-	store := ctx.KVStore(k.skey)
-	key := k.findLease(ctx, id)
-
-	if len(key) == 0 {
+	lease, err := k.leases.Get(ctx, keys.LeaseIDToKey(id))
+	if err != nil {
 		return mv1.Lease{}, false
 	}
-
-	buf := store.Get(key)
-
-	var val mv1.Lease
-	k.cdc.MustUnmarshal(buf, &val)
-
-	return val, true
+	return lease, true
 }
 
 // LeaseForOrder returns lease for order with given ID and lease found status
@@ -544,183 +480,103 @@ func (k Keeper) LeaseForOrder(ctx sdk.Context, bs types.Bid_State, oid mv1.Order
 
 // WithOrders iterates all orders in market
 func (k Keeper) WithOrders(ctx sdk.Context, fn func(types.Order) bool) {
-	store := ctx.KVStore(k.skey)
-	iter := storetypes.KVStorePrefixIterator(store, keys.OrderPrefix)
-	defer func() {
-		_ = iter.Close()
-	}()
-
-	for ; iter.Valid(); iter.Next() {
-		var val types.Order
-		k.cdc.MustUnmarshal(iter.Value(), &val)
-		if stop := fn(val); stop {
-			break
-		}
+	err := k.orders.Walk(ctx, nil, func(_ keys.OrderPrimaryKey, order types.Order) (bool, error) {
+		return fn(order), nil
+	})
+	if err != nil {
+		panic(fmt.Sprintf("WithOrders iteration failed: %v", err))
 	}
 }
 
 // WithBids iterates all bids in market
 func (k Keeper) WithBids(ctx sdk.Context, fn func(types.Bid) bool) {
-	store := ctx.KVStore(k.skey)
-	iter := storetypes.KVStorePrefixIterator(store, keys.BidPrefix)
-
-	defer func() {
-		_ = iter.Close()
-	}()
-
-	defer func() {
-		_ = iter.Close()
-	}()
-
-	for ; iter.Valid(); iter.Next() {
-		var val types.Bid
-		k.cdc.MustUnmarshal(iter.Value(), &val)
-		if stop := fn(val); stop {
-			break
-		}
+	err := k.bids.Walk(ctx, nil, func(_ keys.BidPrimaryKey, bid types.Bid) (bool, error) {
+		return fn(bid), nil
+	})
+	if err != nil {
+		panic(fmt.Sprintf("WithBids iteration failed: %v", err))
 	}
 }
 
 // WithLeases iterates all leases in market
 func (k Keeper) WithLeases(ctx sdk.Context, fn func(mv1.Lease) bool) {
-	store := ctx.KVStore(k.skey)
-	iter := storetypes.KVStorePrefixIterator(store, keys.LeasePrefix)
-
-	defer func() {
-		_ = iter.Close()
-	}()
-
-	for ; iter.Valid(); iter.Next() {
-		var val mv1.Lease
-		k.cdc.MustUnmarshal(iter.Value(), &val)
-		if stop := fn(val); stop {
-			break
-		}
+	err := k.leases.Walk(ctx, nil, func(_ keys.LeasePrimaryKey, lease mv1.Lease) (bool, error) {
+		return fn(lease), nil
+	})
+	if err != nil {
+		panic(fmt.Sprintf("WithLeases iteration failed: %v", err))
 	}
 }
 
 // WithOrdersForGroup iterates all orders of a group in market with given GroupID
 func (k Keeper) WithOrdersForGroup(ctx sdk.Context, id dtypes.GroupID, state types.Order_State, fn func(types.Order) bool) {
-	store := ctx.KVStore(k.skey)
-	iter := storetypes.KVStorePrefixIterator(store, keys.OrdersForGroupPrefix(keys.OrderStateToPrefix(state), id))
+	groupPart := collections.Join3(id.Owner, id.DSeq, id.GSeq)
+	refKey := collections.Join(groupPart, int32(state))
 
-	defer func() {
-		_ = iter.Close()
-	}()
+	iter, err := k.orders.Indexes.GroupState.MatchExact(ctx, refKey)
+	if err != nil {
+		panic(fmt.Sprintf("WithOrdersForGroup iteration failed: %v", err))
+	}
 
-	for ; iter.Valid(); iter.Next() {
-		var val types.Order
-		k.cdc.MustUnmarshal(iter.Value(), &val)
-		if stop := fn(val); stop {
-			break
-		}
+	err = indexes.ScanValues(ctx, k.orders, iter, func(order types.Order) bool {
+		return fn(order)
+	})
+	if err != nil {
+		panic(fmt.Sprintf("WithOrdersForGroup scan failed: %v", err))
 	}
 }
 
 // WithBidsForOrder iterates all bids of an order in market with given OrderID
 func (k Keeper) WithBidsForOrder(ctx sdk.Context, id mv1.OrderID, state types.Bid_State, fn func(types.Bid) bool) {
-	store := ctx.KVStore(k.skey)
-	iter := storetypes.KVStorePrefixIterator(store, keys.BidsForOrderPrefix(keys.BidStateToPrefix(state), id))
+	orderPart := collections.Join4(id.Owner, id.DSeq, id.GSeq, id.OSeq)
+	refKey := collections.Join(orderPart, int32(state))
 
-	defer func() {
-		_ = iter.Close()
-	}()
+	iter, err := k.bids.Indexes.OrderState.MatchExact(ctx, refKey)
+	if err != nil {
+		panic(fmt.Sprintf("WithBidsForOrder iteration failed: %v", err))
+	}
 
-	for ; iter.Valid(); iter.Next() {
-		var val types.Bid
-		k.cdc.MustUnmarshal(iter.Value(), &val)
-		if stop := fn(val); stop {
-			break
-		}
+	err = indexes.ScanValues(ctx, k.bids, iter, func(bid types.Bid) bool {
+		return fn(bid)
+	})
+	if err != nil {
+		panic(fmt.Sprintf("WithBidsForOrder scan failed: %v", err))
 	}
 }
 
 func (k Keeper) BidCountForOrder(ctx sdk.Context, id mv1.OrderID) uint32 {
-	store := ctx.KVStore(k.skey)
-	oiter := storetypes.KVStorePrefixIterator(store, keys.BidsForOrderPrefix(keys.BidStateOpenPrefix, id))
-	aiter := storetypes.KVStorePrefixIterator(store, keys.BidsForOrderPrefix(keys.BidStateActivePrefix, id))
-	citer := storetypes.KVStorePrefixIterator(store, keys.BidsForOrderPrefix(keys.BidStateClosedPrefix, id))
-
-	defer func() {
-		_ = oiter.Close()
-		_ = aiter.Close()
-		_ = citer.Close()
-	}()
-
+	orderPart := collections.Join4(id.Owner, id.DSeq, id.GSeq, id.OSeq)
 	count := uint32(0)
-	for ; oiter.Valid(); oiter.Next() {
-		count++
-	}
 
-	for ; aiter.Valid(); aiter.Next() {
-		count++
-	}
-
-	for ; citer.Valid(); citer.Next() {
-		count++
+	for _, state := range []types.Bid_State{types.BidOpen, types.BidActive, types.BidClosed} {
+		refKey := collections.Join(orderPart, int32(state))
+		iter, err := k.bids.Indexes.OrderState.MatchExact(ctx, refKey)
+		if err != nil {
+			panic(fmt.Sprintf("BidCountForOrder failed: %v", err))
+		}
+		for ; iter.Valid(); iter.Next() {
+			count++
+		}
+		_ = iter.Close()
 	}
 
 	return count
 }
 
-func (k Keeper) updateOrder(ctx sdk.Context, order types.Order, currState types.Order_State) {
-	store := ctx.KVStore(k.skey)
-
-	switch currState {
-	case types.OrderOpen:
-	case types.OrderActive:
-	default:
-		panic(fmt.Sprintf("unexpected current state of the order: %d", currState))
+func (k Keeper) updateOrder(ctx sdk.Context, order types.Order, _ types.Order_State) {
+	// IndexedMap.Set automatically updates all indexes:
+	// - removes old index references via lazyOldValue
+	// - creates new index references for the updated order
+	if err := k.orders.Set(ctx, keys.OrderIDToKey(order.ID), order); err != nil {
+		panic(fmt.Sprintf("failed to update order: %v", err))
 	}
-
-	key := keys.MustOrderKey(keys.OrderStateToPrefix(currState), order.ID)
-	store.Delete(key)
-
-	switch order.State {
-	case types.OrderActive:
-	case types.OrderClosed:
-	default:
-		panic(fmt.Sprintf("unexpected new state of the order: %d", order.State))
-	}
-
-	data := k.cdc.MustMarshal(&order)
-
-	key = keys.MustOrderKey(keys.OrderStateToPrefix(order.State), order.ID)
-	store.Set(key, data)
 }
 
-func (k Keeper) updateBid(ctx sdk.Context, bid types.Bid, currState types.Bid_State) {
-	store := ctx.KVStore(k.skey)
-
-	switch currState {
-	case types.BidOpen:
-	case types.BidActive:
-	default:
-		panic(fmt.Sprintf("unexpected current state of the bid: %d", currState))
-	}
-
-	key := keys.MustBidKey(keys.BidStateToPrefix(currState), bid.ID)
-	revKey := keys.MustBidStateRevereKey(currState, bid.ID)
-	store.Delete(key)
-	if revKey != nil {
-		store.Delete(revKey)
-	}
-
-	switch bid.State {
-	case types.BidActive:
-	case types.BidLost:
-	case types.BidClosed:
-	default:
-		panic(fmt.Sprintf("unexpected new state of the bid: %d", bid.State))
-	}
-
-	data := k.cdc.MustMarshal(&bid)
-
-	key = keys.MustBidKey(keys.BidStateToPrefix(bid.State), bid.ID)
-	revKey = keys.MustBidStateRevereKey(bid.State, bid.ID)
-
-	store.Set(key, data)
-	if len(revKey) > 0 {
-		store.Set(revKey, data)
+func (k Keeper) updateBid(ctx sdk.Context, bid types.Bid, _ types.Bid_State) {
+	// IndexedMap.Set automatically updates all indexes:
+	// - removes old index references via lazyOldValue
+	// - creates new index references for the updated bid
+	if err := k.bids.Set(ctx, keys.BidIDToKey(bid.ID), bid); err != nil {
+		panic(fmt.Sprintf("failed to update bid: %v", err))
 	}
 }

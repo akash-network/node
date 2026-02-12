@@ -29,17 +29,27 @@ const (
 
 var (
 	OrderPrefix                       = []byte{0x11, 0x00}
+	OrderPrefixNew                    = []byte{0x11, 0x01}
+	OrderIndexStatePrefix             = []byte{0x11, 0x02}
+	OrderIndexGroupStatePrefix        = []byte{0x11, 0x03}
 	OrderStateOpenPrefix              = []byte{OrderStateOpenPrefixID}
 	OrderStateActivePrefix            = []byte{OrderStateActivePrefixID}
 	OrderStateClosedPrefix            = []byte{OrderStateClosedPrefixID}
 	BidPrefix                         = []byte{0x12, 0x00}
 	BidPrefixReverse                  = []byte{0x12, 0x01}
+	BidPrefixNew                      = []byte{0x12, 0x02}
+	BidIndexStatePrefix               = []byte{0x12, 0x03}
+	BidIndexProviderPrefix            = []byte{0x12, 0x04}
+	BidIndexOrderStatePrefix          = []byte{0x12, 0x05}
 	BidStateOpenPrefix                = []byte{BidStateOpenPrefixID}
 	BidStateActivePrefix              = []byte{BidStateActivePrefixID}
 	BidStateLostPrefix                = []byte{BidStateLostPrefixID}
 	BidStateClosedPrefix              = []byte{BidStateClosedPrefixID}
 	LeasePrefix                       = []byte{0x13, 0x00}
 	LeasePrefixReverse                = []byte{0x13, 0x01}
+	LeasePrefixNew                    = []byte{0x13, 0x02}
+	LeaseIndexStatePrefix             = []byte{0x13, 0x03}
+	LeaseIndexProviderPrefix          = []byte{0x13, 0x04}
 	LeaseStateActivePrefix            = []byte{LeaseStateActivePrefixID}
 	LeaseStateInsufficientFundsPrefix = []byte{LeaseStateInsufficientFundsPrefixID}
 	LeaseStateClosedPrefix            = []byte{LeaseStateClosedPrefixID}
