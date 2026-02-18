@@ -1,6 +1,6 @@
 module pkg.akt.dev/node
 
-go 1.25.4
+go 1.25.5
 
 require (
 	cosmossdk.io/api v0.9.2
@@ -54,7 +54,7 @@ replace (
 	// use cosmos fork of keyring
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
 
-	github.com/bytedance/sonic => github.com/bytedance/sonic v1.14.1
+	github.com/bytedance/sonic => github.com/bytedance/sonic v1.14.2
 
 	// use akash fork of cometbft
 	github.com/cometbft/cometbft => github.com/akash-network/cometbft v0.38.21-akash.1
@@ -113,7 +113,7 @@ require (
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/bytedance/gopkg v0.1.3 // indirect
 	github.com/bytedance/sonic v1.13.2 // indirect
-	github.com/bytedance/sonic/loader v0.3.0 // indirect
+	github.com/bytedance/sonic/loader v0.4.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chzyer/readline v1.5.1 // indirect

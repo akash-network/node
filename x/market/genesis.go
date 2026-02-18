@@ -33,50 +33,48 @@ func DefaultGenesisState() *v1beta5.GenesisState {
 
 // InitGenesis initiate genesis state and return updated validator details
 func InitGenesis(ctx sdk.Context, kpr keeper.IKeeper, data *v1beta5.GenesisState) {
-	store := ctx.KVStore(kpr.StoreKey())
-	cdc := kpr.Codec()
+	k := kpr.(*keeper.Keeper)
 
 	for _, record := range data.Orders {
-		key := keys.MustOrderKey(keys.OrderStateToPrefix(record.State), record.ID)
-
-		if store.Has(key) {
+		pk := keys.OrderIDToKey(record.ID)
+		has, err := k.Orders().Has(ctx, pk)
+		if err != nil {
+			panic(fmt.Errorf("market genesis orders init. order id %s: %w", record.ID, err))
+		}
+		if has {
 			panic(fmt.Errorf("market genesis orders init. order id %s: %w", record.ID, v1.ErrOrderExists))
 		}
-
-		store.Set(key, cdc.MustMarshal(&record))
+		if err := k.Orders().Set(ctx, pk, record); err != nil {
+			panic(fmt.Errorf("market genesis orders init. order id %s: %w", record.ID, err))
+		}
 	}
 
 	for _, record := range data.Bids {
-		key := keys.MustBidKey(keys.BidStateToPrefix(record.State), record.ID)
-		revKey := keys.MustBidReverseKey(keys.BidStateToPrefix(record.State), record.ID)
-
-		if store.Has(key) {
+		pk := keys.BidIDToKey(record.ID)
+		has, err := k.Bids().Has(ctx, pk)
+		if err != nil {
+			panic(fmt.Errorf("market genesis bids init. bid id %s: %w", record.ID, err))
+		}
+		if has {
 			panic(fmt.Errorf("market genesis bids init. bid id %s: %w", record.ID, v1.ErrBidExists))
 		}
-		if store.Has(revKey) {
-			panic(fmt.Errorf("market genesis bids init. reverse key for bid id %s: %w", record.ID, v1.ErrBidExists))
+		if err := k.Bids().Set(ctx, pk, record); err != nil {
+			panic(fmt.Errorf("market genesis bids init. bid id %s: %w", record.ID, err))
 		}
-
-		data := cdc.MustMarshal(&record)
-		store.Set(key, data)
-		store.Set(revKey, data)
 	}
 
 	for _, record := range data.Leases {
-		key := keys.MustLeaseKey(keys.LeaseStateToPrefix(record.State), record.ID)
-		revKey := keys.MustLeaseReverseKey(keys.LeaseStateToPrefix(record.State), record.ID)
-
-		if store.Has(key) {
+		pk := keys.LeaseIDToKey(record.ID)
+		has, err := k.Leases().Has(ctx, pk)
+		if err != nil {
+			panic(fmt.Errorf("market genesis leases init. lease id %s: %w", record.ID, err))
+		}
+		if has {
 			panic(fmt.Errorf("market genesis leases init. lease id %s: lease exists", record.ID))
 		}
-
-		if store.Has(revKey) {
-			panic(fmt.Errorf("market genesis leases init. reverse key for lease id %s: lease exists", record.ID))
+		if err := k.Leases().Set(ctx, pk, record); err != nil {
+			panic(fmt.Errorf("market genesis leases init. lease id %s: %w", record.ID, err))
 		}
-
-		data := cdc.MustMarshal(&record)
-		store.Set(key, data)
-		store.Set(revKey, data)
 	}
 
 	err := kpr.SetParams(ctx, data.Params)

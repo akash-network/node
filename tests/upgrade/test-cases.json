@@ -1,4 +1,16 @@
 {
+    "v1.2.0": {
+        "modules": {
+        },
+        "migrations": {
+            "market": [
+                {
+                    "from": "7",
+                    "to": "8"
+                }
+            ]
+        }
+    },
     "v1.1.0": {
         "modules": {
         },

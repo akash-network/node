@@ -6,15 +6,12 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"cosmossdk.io/store/prefix"
+	"cosmossdk.io/collections/indexes"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 
 	"pkg.akt.dev/go/node/market/v1"
 	types "pkg.akt.dev/go/node/market/v1beta5"
-
-	"pkg.akt.dev/node/util/query"
-	"pkg.akt.dev/node/x/market/keeper/keys"
 )
 
 // Querier is used as Keeper will have duplicate methods if used directly, and gRPC names take precedence over keeper
@@ -32,125 +29,83 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 
 	if req.Pagination == nil {
 		req.Pagination = &sdkquery.PageRequest{}
-	} else if req.Pagination != nil && req.Pagination.Offset > 0 && req.Filters.State == "" {
-		return nil, status.Error(codes.InvalidArgument, "invalid request parameters. if offset is set, filter.state must be provided")
 	}
 
 	if req.Pagination.Limit == 0 {
 		req.Pagination.Limit = sdkquery.DefaultLimit
 	}
 
-	// case 1: no filters set, iterating over entire store
-	// case 2: state only or state plus underlying filters like owner, iterating over state store
-	// case 3: state not set, underlying filters like owner are set, most complex case
+	if len(req.Pagination.Key) > 0 || req.Pagination.Reverse {
+		return nil, status.Error(codes.InvalidArgument, "key-based and reverse pagination are not supported")
+	}
 
-	states := make([]byte, 0, 3)
-	var searchPrefix []byte
+	ctx := sdk.UnwrapSDKContext(c)
 
-	// setup for case 3 - cross-index search
-	// nolint: gocritic
-	if len(req.Pagination.Key) > 0 {
-		var key []byte
-		var err error
-		states, searchPrefix, key, _, err = query.DecodePaginationKey(req.Pagination.Key)
+	// Determine which states to iterate
+	states := []types.Order_State{types.OrderOpen, types.OrderActive, types.OrderClosed}
+	if req.Filters.State != "" {
+		stateVal := types.Order_State(types.Order_State_value[req.Filters.State])
+		if stateVal == types.OrderStateInvalid {
+			return nil, status.Error(codes.InvalidArgument, "invalid state value")
+		}
+		states = []types.Order_State{stateVal}
+	}
+
+	var orders types.Orders
+	limit := req.Pagination.Limit
+	offset := req.Pagination.Offset
+	skipped := uint64(0)
+	countTotal := req.Pagination.CountTotal
+	var total uint64
+
+	for _, state := range states {
+		if limit == 0 && !countTotal {
+			break
+		}
+
+		iter, err := k.orders.Indexes.State.MatchExact(ctx, int32(state))
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		req.Pagination.Key = key
-	} else if req.Filters.State != "" {
-		stateVal := types.Order_State(types.Order_State_value[req.Filters.State])
-
-		if req.Filters.State != "" && stateVal == types.OrderStateInvalid {
-			return nil, status.Error(codes.InvalidArgument, "invalid state value")
-		}
-
-		states = append(states, byte(stateVal))
-	} else {
-		// request does not have a pagination set. Start from an open store
-		states = append(states, []byte{byte(types.OrderOpen), byte(types.OrderActive), byte(types.OrderClosed)}...)
-	}
-
-	var orders types.Orders
-	var pageRes *sdkquery.PageResponse
-
-	ctx := sdk.UnwrapSDKContext(c)
-
-	total := uint64(0)
-
-	var idx int
-	var err error
-
-	for idx = range states {
-		state := types.Order_State(states[idx])
-		if idx > 0 {
-			req.Pagination.Key = nil
-		}
-
-		if len(req.Pagination.Key) == 0 {
-			req.Filters.State = state.String()
-
-			searchPrefix, err = keys.OrderPrefixFromFilter(req.Filters)
-			if err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-		}
-
-		searchStore := prefix.NewStore(ctx.KVStore(k.skey), searchPrefix)
-
-		count := uint64(0)
-
-		pageRes, err = sdkquery.FilteredPaginate(searchStore, req.Pagination, func(_ []byte, value []byte, accumulate bool) (bool, error) {
-			var order types.Order
-
-			err := k.cdc.Unmarshal(value, &order)
-			if err != nil {
-				return false, err
+		err = indexes.ScanValues(ctx, k.orders, iter, func(order types.Order) bool {
+			if !req.Filters.Accept(order, state) {
+				return false
 			}
 
-			// filter orders with provided filters
-			if req.Filters.Accept(order, state) {
-				if accumulate {
-					orders = append(orders, order)
-					count++
-				}
-
-				return true, nil
+			if countTotal {
+				total++
 			}
 
-			return false, nil
+			if limit == 0 {
+				return !countTotal
+			}
+
+			if skipped < offset {
+				skipped++
+				return false
+			}
+
+			orders = append(orders, order)
+			limit--
+
+			return false
 		})
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
-
-		req.Pagination.Limit -= count
-		total += count
-
-		if req.Pagination.Limit == 0 {
-			break
-		}
 	}
 
-	if pageRes != nil {
-		pageRes.Total = total
-
-		if len(pageRes.NextKey) > 0 {
-			pageRes.NextKey, err = query.EncodePaginationKey(states[idx:], searchPrefix, pageRes.NextKey, nil)
-			if err != nil {
-				pageRes.Total = total
-				return &types.QueryOrdersResponse{
-					Orders:     orders,
-					Pagination: pageRes,
-				}, status.Error(codes.Internal, err.Error())
-			}
-		}
-	}
-
-	return &types.QueryOrdersResponse{
+	resp := &types.QueryOrdersResponse{
 		Orders:     orders,
-		Pagination: pageRes,
-	}, nil
+		Pagination: &sdkquery.PageResponse{},
+	}
+
+	if countTotal {
+		resp.Pagination.Total = total
+	}
+
+	return resp, nil
 }
 
 // Bids returns bids based on filters
@@ -161,151 +116,154 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 
 	if req.Pagination == nil {
 		req.Pagination = &sdkquery.PageRequest{}
-	} else if req.Pagination != nil && req.Pagination.Offset > 0 && req.Filters.State == "" {
-		return nil, status.Error(codes.InvalidArgument, "invalid request parameters. if offset is set, filter.state must be provided")
 	}
 
 	if req.Pagination.Limit == 0 {
 		req.Pagination.Limit = sdkquery.DefaultLimit
 	}
 
-	reverseSearch := false
-	states := make([]byte, 0, 4)
-	var searchPrefix []byte
+	if len(req.Pagination.Key) > 0 || req.Pagination.Reverse {
+		return nil, status.Error(codes.InvalidArgument, "key-based and reverse pagination are not supported")
+	}
 
-	// setup for case 3 - cross-index search
-	// nolint: gocritic
-	if len(req.Pagination.Key) > 0 {
-		var key []byte
-		var unsolicited []byte
-		var err error
-		states, searchPrefix, key, unsolicited, err = query.DecodePaginationKey(req.Pagination.Key)
+	ctx := sdk.UnwrapSDKContext(c)
+
+	// Determine which states to iterate
+	states := []types.Bid_State{types.BidOpen, types.BidActive, types.BidLost, types.BidClosed}
+	if req.Filters.State != "" {
+		stateVal := types.Bid_State(types.Bid_State_value[req.Filters.State])
+		if stateVal == types.BidStateInvalid {
+			return nil, status.Error(codes.InvalidArgument, "invalid state value")
+		}
+		states = []types.Bid_State{stateVal}
+	}
+
+	var bids []types.QueryBidResponse
+	limit := req.Pagination.Limit
+	offset := req.Pagination.Offset
+	skipped := uint64(0)
+	countTotal := req.Pagination.CountTotal
+	var total uint64
+
+	// Use Provider index when filtering by provider without owner
+	providerSearch := req.Filters.Owner == "" && req.Filters.Provider != ""
+	var acctErr error
+
+	if providerSearch {
+		stateSet := make(map[types.Bid_State]bool)
+		for _, s := range states {
+			stateSet[s] = true
+		}
+
+		iter, err := k.bids.Indexes.Provider.MatchExact(ctx, req.Filters.Provider)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		if len(unsolicited) != 1 {
-			return nil, status.Error(codes.InvalidArgument, "invalid pagination key")
-		}
-		req.Pagination.Key = key
-
-		if unsolicited[0] == 1 {
-			reverseSearch = true
-		}
-	} else if req.Filters.State != "" {
-		reverseSearch = (req.Filters.Owner == "") && (req.Filters.Provider != "")
-
-		stateVal := types.Bid_State(types.Bid_State_value[req.Filters.State])
-
-		if req.Filters.State != "" && stateVal == types.BidStateInvalid {
-			return nil, status.Error(codes.InvalidArgument, "invalid state value")
-		}
-
-		states = append(states, byte(stateVal))
-	} else {
-		// request does not have a pagination set. Start from an open store
-		states = append(states, byte(types.BidOpen), byte(types.BidActive), byte(types.BidLost), byte(types.BidClosed))
-	}
-
-	var bids []types.QueryBidResponse
-	var pageRes *sdkquery.PageResponse
-	ctx := sdk.UnwrapSDKContext(c)
-
-	total := uint64(0)
-
-	var idx int
-	var err error
-
-	for idx = range states {
-		state := types.Bid_State(states[idx])
-
-		if idx > 0 {
-			req.Pagination.Key = nil
-		}
-
-		if len(req.Pagination.Key) == 0 {
-			req.Filters.State = state.String()
-
-			if reverseSearch {
-				searchPrefix, err = keys.BidReversePrefixFromFilter(req.Filters)
-			} else {
-				searchPrefix, err = keys.BidPrefixFromFilter(req.Filters)
+		err = indexes.ScanValues(ctx, k.bids, iter, func(bid types.Bid) bool {
+			if !stateSet[bid.State] {
+				return false
 			}
 
-			if err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-		}
-
-		count := uint64(0)
-		searchStore := prefix.NewStore(ctx.KVStore(k.skey), searchPrefix)
-
-		pageRes, err = sdkquery.FilteredPaginate(searchStore, req.Pagination, func(_ []byte, value []byte, accumulate bool) (bool, error) {
-			var bid types.Bid
-
-			err := k.cdc.Unmarshal(value, &bid)
-			if err != nil {
-				return false, err
+			if !req.Filters.Accept(bid, bid.State) {
+				return false
 			}
 
-			// filter bids with provided filters
-			if req.Filters.Accept(bid, state) {
-				if accumulate {
-					acct, err := k.ekeeper.GetAccount(ctx, bid.ID.ToEscrowAccountID())
-					if err != nil {
-						return true, err
-					}
-
-					bids = append(bids, types.QueryBidResponse{
-						Bid:           bid,
-						EscrowAccount: acct,
-					})
-
-					count++
-				}
-
-				return true, nil
+			if countTotal {
+				total++
 			}
 
-			return false, nil
+			if limit == 0 {
+				return !countTotal
+			}
+
+			if skipped < offset {
+				skipped++
+				return false
+			}
+
+			acct, acctE := k.ekeeper.GetAccount(ctx, bid.ID.ToEscrowAccountID())
+			if acctE != nil {
+				acctErr = acctE
+				return true
+			}
+
+			bids = append(bids, types.QueryBidResponse{
+				Bid:           bid,
+				EscrowAccount: acct,
+			})
+			limit--
+
+			return false
 		})
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
-
-		req.Pagination.Limit -= count
-		total += count
-
-		if req.Pagination.Limit == 0 {
-			break
+		if acctErr != nil {
+			return nil, status.Error(codes.Internal, acctErr.Error())
 		}
-	}
-
-	if pageRes != nil {
-		pageRes.Total = total
-
-		if len(pageRes.NextKey) > 0 {
-			unsolicited := make([]byte, 1)
-			unsolicited[0] = 0
-			if reverseSearch {
-				unsolicited[0] = 1
+	} else {
+		for _, state := range states {
+			if limit == 0 && !countTotal {
+				break
 			}
 
-			pageRes.NextKey, err = query.EncodePaginationKey(states[idx:], searchPrefix, pageRes.NextKey, unsolicited)
+			iter, err := k.bids.Indexes.State.MatchExact(ctx, int32(state))
 			if err != nil {
-				pageRes.Total = total
-				return &types.QueryBidsResponse{
-					Bids:       bids,
-					Pagination: pageRes,
-				}, status.Error(codes.Internal, err.Error())
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+
+			err = indexes.ScanValues(ctx, k.bids, iter, func(bid types.Bid) bool {
+				if !req.Filters.Accept(bid, state) {
+					return false
+				}
+
+				if countTotal {
+					total++
+				}
+
+				if limit == 0 {
+					return !countTotal
+				}
+
+				if skipped < offset {
+					skipped++
+					return false
+				}
+
+				acct, acctE := k.ekeeper.GetAccount(ctx, bid.ID.ToEscrowAccountID())
+				if acctE != nil {
+					acctErr = acctE
+					return true
+				}
+
+				bids = append(bids, types.QueryBidResponse{
+					Bid:           bid,
+					EscrowAccount: acct,
+				})
+				limit--
+
+				return false
+			})
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+			if acctErr != nil {
+				return nil, status.Error(codes.Internal, acctErr.Error())
 			}
 		}
 	}
 
-	return &types.QueryBidsResponse{
+	resp := &types.QueryBidsResponse{
 		Bids:       bids,
-		Pagination: pageRes,
-	}, nil
+		Pagination: &sdkquery.PageResponse{},
+	}
+
+	if countTotal {
+		resp.Pagination.Total = total
+	}
+
+	return resp, nil
 }
 
 // Leases returns leases based on filters
@@ -316,153 +274,154 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 
 	if req.Pagination == nil {
 		req.Pagination = &sdkquery.PageRequest{}
-	} else if req.Pagination != nil && req.Pagination.Offset > 0 && req.Filters.State == "" {
-		return nil, status.Error(codes.InvalidArgument, "invalid request parameters. if offset is set, filter.state must be provided")
 	}
 
 	if req.Pagination.Limit == 0 {
 		req.Pagination.Limit = sdkquery.DefaultLimit
 	}
 
-	// setup for case 3 - cross-index search
-	reverseSearch := false
-	states := make([]byte, 0, 3)
-	var searchPrefix []byte
+	if len(req.Pagination.Key) > 0 || req.Pagination.Reverse {
+		return nil, status.Error(codes.InvalidArgument, "key-based and reverse pagination are not supported")
+	}
 
-	// setup for case 3 - cross-index search
-	// nolint: gocritic
-	if len(req.Pagination.Key) > 0 {
-		var key []byte
-		var unsolicited []byte
-		var err error
-		states, searchPrefix, key, unsolicited, err = query.DecodePaginationKey(req.Pagination.Key)
+	ctx := sdk.UnwrapSDKContext(c)
+
+	// Determine which states to iterate
+	states := []v1.Lease_State{v1.LeaseActive, v1.LeaseInsufficientFunds, v1.LeaseClosed}
+	if req.Filters.State != "" {
+		stateVal := v1.Lease_State(v1.Lease_State_value[req.Filters.State])
+		if stateVal == v1.LeaseStateInvalid {
+			return nil, status.Error(codes.InvalidArgument, "invalid state value")
+		}
+		states = []v1.Lease_State{stateVal}
+	}
+
+	var leases []types.QueryLeaseResponse
+	limit := req.Pagination.Limit
+	offset := req.Pagination.Offset
+	skipped := uint64(0)
+	countTotal := req.Pagination.CountTotal
+	var total uint64
+
+	// Use Provider index when filtering by provider without owner
+	providerSearch := req.Filters.Owner == "" && req.Filters.Provider != ""
+	var pmntErr error
+
+	if providerSearch {
+		stateSet := make(map[v1.Lease_State]bool)
+		for _, s := range states {
+			stateSet[s] = true
+		}
+
+		iter, err := k.leases.Indexes.Provider.MatchExact(ctx, req.Filters.Provider)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		if len(unsolicited) != 1 {
-			return nil, status.Error(codes.InvalidArgument, "invalid pagination key")
-		}
-		req.Pagination.Key = key
-
-		if unsolicited[0] == 1 {
-			reverseSearch = true
-		}
-	} else if req.Filters.State != "" {
-		reverseSearch = (req.Filters.Owner == "") && (req.Filters.Provider != "")
-
-		stateVal := v1.Lease_State(v1.Lease_State_value[req.Filters.State])
-
-		if req.Filters.State != "" && stateVal == v1.LeaseStateInvalid {
-			return nil, status.Error(codes.InvalidArgument, "invalid state value")
-		}
-
-		states = append(states, byte(stateVal))
-	} else {
-		// request does not have a pagination set. Start from an open store
-		states = append(states, byte(v1.LeaseActive), byte(v1.LeaseInsufficientFunds), byte(v1.LeaseClosed))
-	}
-
-	var leases []types.QueryLeaseResponse
-	var pageRes *sdkquery.PageResponse
-	ctx := sdk.UnwrapSDKContext(c)
-
-	total := uint64(0)
-
-	var idx int
-	var err error
-
-	for idx = range states {
-		state := v1.Lease_State(states[idx])
-
-		if idx > 0 {
-			req.Pagination.Key = nil
-		}
-
-		if len(req.Pagination.Key) == 0 {
-			req.Filters.State = state.String()
-
-			if reverseSearch {
-				searchPrefix, err = keys.LeaseReversePrefixFromFilter(req.Filters)
-			} else {
-				searchPrefix, err = keys.LeasePrefixFromFilter(req.Filters)
+		err = indexes.ScanValues(ctx, k.leases, iter, func(lease v1.Lease) bool {
+			if !stateSet[lease.State] {
+				return false
 			}
 
-			if err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-		}
-
-		searchedStore := prefix.NewStore(ctx.KVStore(k.skey), searchPrefix)
-
-		count := uint64(0)
-
-		pageRes, err = sdkquery.FilteredPaginate(searchedStore, req.Pagination, func(_ []byte, value []byte, accumulate bool) (bool, error) {
-			var lease v1.Lease
-
-			err := k.cdc.Unmarshal(value, &lease)
-			if err != nil {
-				return false, err
+			if !req.Filters.Accept(lease, lease.State) {
+				return false
 			}
 
-			// filter leases with provided filters
-			if req.Filters.Accept(lease, state) {
-				if accumulate {
-					payment, err := k.ekeeper.GetPayment(ctx, lease.ID.ToEscrowPaymentID())
-					if err != nil {
-						return true, err
-					}
-
-					leases = append(leases, types.QueryLeaseResponse{
-						Lease:         lease,
-						EscrowPayment: payment,
-					})
-
-					count++
-				}
-
-				return true, nil
+			if countTotal {
+				total++
 			}
 
-			return false, nil
+			if limit == 0 {
+				return !countTotal
+			}
+
+			if skipped < offset {
+				skipped++
+				return false
+			}
+
+			payment, pmntE := k.ekeeper.GetPayment(ctx, lease.ID.ToEscrowPaymentID())
+			if pmntE != nil {
+				pmntErr = pmntE
+				return true
+			}
+
+			leases = append(leases, types.QueryLeaseResponse{
+				Lease:         lease,
+				EscrowPayment: payment,
+			})
+			limit--
+
+			return false
 		})
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
-
-		req.Pagination.Limit -= count
-		total += count
-
-		if req.Pagination.Limit == 0 {
-			break
+		if pmntErr != nil {
+			return nil, status.Error(codes.Internal, pmntErr.Error())
 		}
-	}
-
-	if pageRes != nil {
-		pageRes.Total = total
-
-		if len(pageRes.NextKey) > 0 {
-			unsolicited := make([]byte, 1)
-			unsolicited[0] = 0
-			if reverseSearch {
-				unsolicited[0] = 1
+	} else {
+		for _, state := range states {
+			if limit == 0 && !countTotal {
+				break
 			}
 
-			pageRes.NextKey, err = query.EncodePaginationKey(states[idx:], searchPrefix, pageRes.NextKey, unsolicited)
+			iter, err := k.leases.Indexes.State.MatchExact(ctx, int32(state))
 			if err != nil {
-				pageRes.Total = total
-				return &types.QueryLeasesResponse{
-					Leases:     leases,
-					Pagination: pageRes,
-				}, status.Error(codes.Internal, err.Error())
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+
+			err = indexes.ScanValues(ctx, k.leases, iter, func(lease v1.Lease) bool {
+				if !req.Filters.Accept(lease, state) {
+					return false
+				}
+
+				if countTotal {
+					total++
+				}
+
+				if limit == 0 {
+					return !countTotal
+				}
+
+				if skipped < offset {
+					skipped++
+					return false
+				}
+
+				payment, pmntE := k.ekeeper.GetPayment(ctx, lease.ID.ToEscrowPaymentID())
+				if pmntE != nil {
+					pmntErr = pmntE
+					return true
+				}
+
+				leases = append(leases, types.QueryLeaseResponse{
+					Lease:         lease,
+					EscrowPayment: payment,
+				})
+				limit--
+
+				return false
+			})
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+			if pmntErr != nil {
+				return nil, status.Error(codes.Internal, pmntErr.Error())
 			}
 		}
 	}
 
-	return &types.QueryLeasesResponse{
+	resp := &types.QueryLeasesResponse{
 		Leases:     leases,
-		Pagination: pageRes,
-	}, nil
+		Pagination: &sdkquery.PageResponse{},
+	}
+
+	if countTotal {
+		resp.Pagination.Total = total
+	}
+
+	return resp, nil
 }
 
 // Order returns order details based on OrderID

@@ -35,41 +35,6 @@ func (m marketMigrations) handler(ctx sdk.Context) error {
 
 	cdc := m.Codec()
 
-	// order prefix does not change in this upgrade
-	oiter := storetypes.KVStorePrefixIterator(store, mkeys.OrderPrefix)
-	defer func() {
-		_ = oiter.Close()
-	}()
-
-	var ordersTotal uint64
-	var ordersOpen uint64
-	var ordersActive uint64
-	var ordersClosed uint64
-
-	for ; oiter.Valid(); oiter.Next() {
-		nVal := migrate.OrderFromV1beta4(cdc, oiter.Value())
-
-		switch nVal.State {
-		case mv1beta.OrderOpen:
-			ordersOpen++
-		case mv1beta.OrderActive:
-			ordersActive++
-		case mv1beta.OrderClosed:
-			ordersClosed++
-		default:
-			return fmt.Errorf("unknown order state %d", nVal.State)
-		}
-
-		ordersTotal++
-
-		bz := cdc.MustMarshal(&nVal)
-
-		store.Delete(oiter.Key())
-
-		key := mkeys.MustOrderKey(mkeys.OrderStateToPrefix(nVal.State), nVal.ID)
-		store.Set(key, bz)
-	}
-
 	// bid prefixes do not change in this upgrade
 	store.Delete(mkeys.BidPrefixReverse)
 	biter := storetypes.KVStorePrefixIterator(store, mkeys.BidPrefix)
@@ -175,24 +140,6 @@ func (m marketMigrations) handler(ctx sdk.Context) error {
 			store.Set(revKey, data)
 		}
 	}
-	ctx.Logger().Info(fmt.Sprintf("[upgrade %s]: updated x/market store keys:"+
-		"\n\torders total:              %d"+
-		"\n\torders open:               %d"+
-		"\n\torders active:             %d"+
-		"\n\torders closed:             %d"+
-		"\n\tbids total:                %d"+
-		"\n\tbids open:                 %d"+
-		"\n\tbids active:               %d"+
-		"\n\tbids lost:                 %d"+
-		"\n\tbids closed:               %d"+
-		"\n\tleases total:              %d"+
-		"\n\tleases active:             %d"+
-		"\n\tleases insufficient funds: %d"+
-		"\n\tleases closed:             %d",
-		UpgradeName,
-		ordersTotal, ordersOpen, ordersActive, ordersClosed,
-		bidsTotal, bidsOpen, bidsActive, bidsLost, bidsClosed,
-		leasesTotal, leasesActive, leasesInsufficientFunds, leasesClosed))
 
 	return nil
 }
