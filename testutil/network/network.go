@@ -632,6 +632,8 @@ func DefaultConfig(factory TestFixtureFactory, opts ...ConfigOption) Config {
 	fixture.GenesisState = genesisState
 
 	const coinDenom = "uakt"
+	const actDenom = "uact"
+
 	return Config{
 		Codec:             fixture.EncodingConfig.Codec,
 		TxConfig:          fixture.EncodingConfig.TxConfig,
@@ -646,6 +648,7 @@ func DefaultConfig(factory TestFixtureFactory, opts ...ConfigOption) Config {
 		BondDenom:         coinDenom,
 		Denoms: []string{
 			coinDenom,
+			actDenom,
 			"ibc/12C6A0C374171B595A0A9E18B83FA09D295FB1F2D8C6DAA3AC28683471752D84",
 		},
 		MinGasPrices:    fmt.Sprintf("0.000006%s", coinDenom),

@@ -7,6 +7,7 @@ import (
 
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
+	"pkg.akt.dev/go/node/migrate"
 
 	"cosmossdk.io/core/appmodule"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -20,7 +21,6 @@ import (
 
 	v1 "pkg.akt.dev/go/node/deployment/v1"
 	types "pkg.akt.dev/go/node/deployment/v1beta4"
-	"pkg.akt.dev/go/node/migrate"
 
 	"pkg.akt.dev/node/v2/x/deployment/handler"
 	"pkg.akt.dev/node/v2/x/deployment/keeper"
