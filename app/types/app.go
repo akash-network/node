@@ -62,6 +62,7 @@ import (
 	ibctm "github.com/cosmos/ibc-go/v10/modules/light-clients/07-tendermint"
 
 	atypes "pkg.akt.dev/go/node/audit/v1"
+	bmetypes "pkg.akt.dev/go/node/bme/v1"
 	ctypes "pkg.akt.dev/go/node/cert/v1"
 	dtypes "pkg.akt.dev/go/node/deployment/v1"
 	dvbeta "pkg.akt.dev/go/node/deployment/v1beta3"
@@ -76,6 +77,7 @@ import (
 	"pkg.akt.dev/go/sdkutil"
 
 	akeeper "pkg.akt.dev/node/v2/x/audit/keeper"
+	bmekeeper "pkg.akt.dev/node/v2/x/bme/keeper"
 	ckeeper "pkg.akt.dev/node/v2/x/cert/keeper"
 	dkeeper "pkg.akt.dev/node/v2/x/deployment/keeper"
 	epochskeeper "pkg.akt.dev/node/v2/x/epochs/keeper"
@@ -84,7 +86,6 @@ import (
 	mkeeper "pkg.akt.dev/node/v2/x/market/keeper"
 	okeeper "pkg.akt.dev/node/v2/x/oracle/keeper"
 	pkeeper "pkg.akt.dev/node/v2/x/provider/keeper"
-	tkeeper "pkg.akt.dev/node/v2/x/take/keeper"
 	awasm "pkg.akt.dev/node/v2/x/wasm"
 	wasmbindings "pkg.akt.dev/node/v2/x/wasm/bindings"
 	wkeeper "pkg.akt.dev/node/v2/x/wasm/keeper"
@@ -119,6 +120,7 @@ type AppKeepers struct {
 
 	Akash struct {
 		Audit      akeeper.Keeper
+		Bme        bmekeeper.Keeper
 		Cert       ckeeper.Keeper
 		Deployment dkeeper.IKeeper
 		Epochs     epochskeeper.Keeper
@@ -126,7 +128,6 @@ type AppKeepers struct {
 		Market     mkeeper.IKeeper
 		Oracle     okeeper.Keeper
 		Provider   pkeeper.IKeeper
-		Take       tkeeper.IKeeper
 		Wasm       wkeeper.Keeper
 	}
 
@@ -423,19 +424,22 @@ func (app *App) InitNormalKeepers(
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 
-	app.Keepers.Akash.Take = tkeeper.NewKeeper(
+	app.Keepers.Akash.Bme = bmekeeper.NewKeeper(
 		cdc,
-		app.keys[ttypes.StoreKey],
+		app.keys[bmetypes.StoreKey],
+		app.AC,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		app.Keepers.Cosmos.Acct,
+		app.Keepers.Cosmos.Bank,
+		app.Keepers.Akash.Oracle,
 	)
 
 	app.Keepers.Akash.Escrow = ekeeper.NewKeeper(
 		cdc,
 		app.keys[etypes.StoreKey],
+		app.AC,
 		app.Keepers.Cosmos.Bank,
-		app.Keepers.Akash.Take,
 		app.Keepers.Cosmos.Authz,
-		app.Keepers.Cosmos.Distr.FeePool,
 	)
 
 	app.Keepers.Akash.Deployment = dkeeper.NewKeeper(
@@ -618,6 +622,7 @@ func kvStoreKeys() []string {
 		ctypes.StoreKey,
 		awasm.StoreKey,
 		otypes.StoreKey,
+		bmetypes.StoreKey,
 	}
 
 	return keys

@@ -30,10 +30,14 @@ func TestIntegrationGRPC(t *testing.T) {
 	poc := &priceOracleContractTestSuite{}
 	poc.NetworkTestSuite = testutil.NewNetworkTestSuite(NetworkConfig(), poc)
 
+	bg := &bmeGRPCRestTestSuite{}
+	bg.NetworkTestSuite = testutil.NewNetworkTestSuite(nil, bg)
+
 	suite.Run(t, dg)
 	suite.Run(t, cg)
 	suite.Run(t, mg)
 	suite.Run(t, pg)
 	suite.Run(t, og)
 	suite.Run(t, poc)
+	suite.Run(t, bg)
 }

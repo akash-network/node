@@ -1,42 +1,17 @@
 package simulation
 
 import (
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	"pkg.akt.dev/go/node/deployment/v1"
 	types "pkg.akt.dev/go/node/deployment/v1beta4"
 )
-
-var (
-	minDepositAKT sdk.Coin
-	minDepositACT sdk.Coin
-)
-
-func init() {
-	var err error
-
-	minDepositAKT, err = types.DefaultParams().MinDepositFor("uakt")
-	if err != nil {
-		panic(err)
-	}
-
-	minDepositACT, err = types.DefaultParams().MinDepositFor("uact")
-	if err != nil {
-		panic(err)
-	}
-}
 
 // RandomizedGenState generates a random GenesisState for supply
 func RandomizedGenState(simState *module.SimulationState) {
 	// numDeployments := simulation.RandIntBetween(simState.Rand, 0, len(simState.Accounts))
 
 	deploymentGenesis := &types.GenesisState{
-		Params: types.Params{
-			MinDeposits: sdk.Coins{
-				minDepositAKT,
-				minDepositACT,
-			},
-		},
+		Params: types.DefaultParams(),
 		// Deployments: make([]types.GenesisDeployment, 0, numDeployments),
 	}
 
