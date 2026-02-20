@@ -5,7 +5,7 @@ package rest
 // 	"strconv"
 //
 // 	sdk "github.com/cosmos/cosmos-sdk/types"
-// 	"pkg.akt.dev/go/node/market/v1"
+// 	"pkg.akt.dev/go/node/market/v1beta5"
 // 	"pkg.akt.dev/go/node/market/v1beta5"
 //
 // 	drest "pkg.akt.dev/node/v2/x/deployment/client/rest"

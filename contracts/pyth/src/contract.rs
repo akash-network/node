@@ -30,8 +30,8 @@ fn fetch_oracle_params_from_chain(
 ) -> Result<OracleParams, ContractError> {
     let response = querier
         .query_oracle_params()
-        .map_err(|e| ContractError::InvalidPriceData {
-            reason: format!("Failed to query oracle params from chain: {}", e),
+        .map_err(|_| ContractError::InvalidPriceData {
+            reason: "failed to query oracle params".to_string(),
         })?;
 
     Ok(response.params)
@@ -61,7 +61,7 @@ pub fn instantiate(
     let wormhole_contract = deps.api.addr_validate(&msg.wormhole_contract)?;
 
     // Fetch full oracle params from chain
-    let oracle_params = fetch_oracle_params_from_chain(&deps.querier.into())?;
+    let oracle_params = fetch_oracle_params_from_chain(&deps.querier)?;
 
     // Get price feed ID - use provided value or fetch from chain params
     let price_feed_id = if msg.price_feed_id.is_empty() {
@@ -136,6 +136,18 @@ pub fn execute(
     }
 }
 
+/// Validate that a Pyth price is non-negative and convert to Uint128.
+/// Rejects negative prices that would otherwise be silently converted
+/// to their absolute value by unsigned_abs().
+fn validate_pyth_price(raw_price: i64) -> Result<Uint128, ContractError> {
+    if raw_price < 0 {
+        return Err(ContractError::InvalidPriceData {
+            reason: "negative price".to_string(),
+        });
+    }
+    Ok(Uint128::new(raw_price as u128))
+}
+
 /// Execute price feed update with VAA verification
 /// Accepts either:
 /// - PNAU accumulator format (from Pyth Hermes v2 API)
@@ -170,8 +182,8 @@ pub fn execute_update_price_feed(
     let (actual_vaa, price_message_data) = if data_bytes.len() >= 4 && &data_bytes[0..4] == PNAU_MAGIC {
         // Parse PNAU accumulator format from Hermes v2 API
         let accumulator = parse_accumulator_update(data_bytes)
-            .map_err(|e| ContractError::InvalidPriceData {
-                reason: format!("Failed to parse PNAU accumulator: {}", e),
+            .map_err(|_| ContractError::InvalidPriceData {
+                reason: "failed to parse accumulator update".to_string(),
             })?;
 
         // Must have at least one price update
@@ -241,29 +253,26 @@ pub fn execute_update_price_feed(
     let pyth_price = if let Some(ref message_data) = price_message_data {
         // Parse from PNAU price message (Merkle-proven)
         parse_price_feed_message(message_data)
-            .map_err(|e| ContractError::InvalidPriceData {
-                reason: format!("Failed to parse price feed message: {}", e),
+            .map_err(|_| ContractError::InvalidPriceData {
+                reason: "failed to parse price feed message".to_string(),
             })?
     } else {
         // Parse from raw VAA payload (legacy)
         parse_pyth_payload(&verified_vaa.payload)
-            .map_err(|e| ContractError::InvalidPriceData {
-                reason: format!("Failed to parse Pyth payload: {}", e),
+            .map_err(|_| ContractError::InvalidPriceData {
+                reason: "failed to parse price payload".to_string(),
             })?
     };
 
     // Step 4: Validate price feed ID matches expected
     if pyth_price.id != config.price_feed_id {
         return Err(ContractError::InvalidPriceData {
-            reason: format!(
-                "Price feed ID mismatch: expected {}, got {}",
-                config.price_feed_id, pyth_price.id
-            ),
+            reason: "price feed ID mismatch".to_string(),
         });
     }
 
     // Convert Pyth price types
-    let price = Uint128::new(pyth_price.price.unsigned_abs() as u128);
+    let price = validate_pyth_price(pyth_price.price)?;
     let conf = Uint128::new(pyth_price.conf as u128);
     let expo = pyth_price.expo;
     let publish_time = pyth_price.publish_time;
@@ -282,10 +291,7 @@ pub fn execute_update_price_feed(
     let current_time = env.block.time.seconds() as i64;
     let max_staleness_seconds = cached_params.max_price_staleness_blocks * SECONDS_PER_BLOCK;
     if current_time - publish_time > max_staleness_seconds {
-        return Err(ContractError::StalePriceData {
-            current_time,
-            publish_time,
-        });
+        return Err(ContractError::StalePriceData {});
     }
 
     // Validate confidence interval using chain's max_price_deviation_bps
@@ -303,10 +309,7 @@ pub fn execute_update_price_feed(
     // Ensure new price is not older than current price
     if publish_time <= price_feed.publish_time {
         return Err(ContractError::InvalidPriceData {
-            reason: format!(
-                "New publish time {} is not newer than current publish time {}",
-                publish_time, price_feed.publish_time
-            ),
+            reason: "price data is not newer than current data".to_string(),
         });
     }
 
@@ -409,7 +412,7 @@ pub fn execute_refresh_oracle_params(
     }
 
     // Fetch fresh params from chain
-    let oracle_params = fetch_oracle_params_from_chain(&deps.querier.into())?;
+    let oracle_params = fetch_oracle_params_from_chain(&deps.querier)?;
 
     // Update cached params
     let cached_params = CachedOracleParams {
@@ -550,7 +553,7 @@ pub fn migrate(deps: DepsMut<AkashQuery>, env: Env, _msg: MigrateMsg) -> Result<
     // Check if cached oracle params exist, if not initialize them
     if CACHED_ORACLE_PARAMS.may_load(deps.storage)?.is_none() {
         // Fetch params from chain during migration
-        let oracle_params = fetch_oracle_params_from_chain(&deps.querier.into())?;
+        let oracle_params = fetch_oracle_params_from_chain(&deps.querier)?;
 
         let cached_params = CachedOracleParams {
             max_price_deviation_bps: oracle_params.max_price_deviation_bps,
@@ -686,5 +689,33 @@ mod tests {
         assert!(!response.wormhole_contract.is_empty());
         assert_eq!(1, response.data_sources.len());
         assert_eq!(26, response.data_sources[0].emitter_chain);
+    }
+
+    #[test]
+    fn test_negative_price_rejected() {
+        let result = validate_pyth_price(-500);
+        assert!(result.is_err(), "negative price should be rejected");
+        let err = result.unwrap_err();
+        match err {
+            ContractError::InvalidPriceData { reason } => {
+                assert_eq!(reason, "negative price");
+            }
+            _ => panic!("expected InvalidPriceData, got {:?}", err),
+        }
+    }
+
+    #[test]
+    fn test_positive_price_accepted() {
+        let result = validate_pyth_price(123456789);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Uint128::new(123456789));
+    }
+
+    #[test]
+    fn test_zero_price_accepted_by_converter() {
+        // validate_pyth_price allows zero; the ZeroPrice check is separate
+        let result = validate_pyth_price(0);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Uint128::zero());
     }
 }
