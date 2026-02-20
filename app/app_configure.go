@@ -25,6 +25,7 @@ import (
 	audittypes "pkg.akt.dev/go/node/audit/v1"
 
 	"pkg.akt.dev/node/v2/x/audit"
+	"pkg.akt.dev/node/v2/x/bme"
 	"pkg.akt.dev/node/v2/x/cert"
 	"pkg.akt.dev/node/v2/x/deployment"
 	"pkg.akt.dev/node/v2/x/epochs"
@@ -48,6 +49,7 @@ func akashModuleBasics() []module.AppModuleBasic {
 		oracle.AppModuleBasic{},
 		take.AppModuleBasic{},
 		awasm.AppModuleBasic{},
+		bme.AppModuleBasic{},
 	}
 }
 
@@ -86,6 +88,7 @@ func orderInitGenesis(_ []string) []string {
 		genutiltypes.ModuleName,
 		oracle.ModuleName,
 		epochs.ModuleName,
+		bme.ModuleName,
 		awasm.ModuleName,
 		wasmtypes.ModuleName,
 	}

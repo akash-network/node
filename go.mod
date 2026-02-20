@@ -48,10 +48,9 @@ require (
 	google.golang.org/grpc v1.76.0
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.2
-	pkg.akt.dev/go v0.2.0-b13
+	pkg.akt.dev/go v0.2.0-b14
 	pkg.akt.dev/go/cli v0.2.0-b10
 	pkg.akt.dev/go/sdl v0.2.0-b2
-	pkg.akt.dev/node v1.1.1
 )
 
 replace (

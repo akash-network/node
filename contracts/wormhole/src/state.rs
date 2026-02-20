@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Binary, Coin, StdResult, Uint256};
+use cosmwasm_std::{Binary, Coin, StdError, StdResult, Uint256};
 use cw_storage_plus::{Item, Map};
 
 use crate::byte_utils::ByteUtils;
@@ -147,6 +147,9 @@ pub struct GovernancePacket {
 
 impl GovernancePacket {
     pub fn deserialize(data: &[u8]) -> StdResult<Self> {
+        if data.len() < 35 {
+            return ContractError::InvalidVAA.std_err();
+        }
         let data_ref: &[u8] = data;
         let module = data_ref.get_bytes32(0).to_vec();
         let action = data_ref.get_u8(32);
@@ -169,6 +172,9 @@ pub struct ContractUpgrade {
 
 impl ContractUpgrade {
     pub fn deserialize(data: &[u8]) -> StdResult<Self> {
+        if data.len() < 32 {
+            return ContractError::InvalidVAA.std_err();
+        }
         let data_ref: &[u8] = data;
         let new_contract = data_ref.get_u64(24);
         Ok(ContractUpgrade { new_contract })
@@ -185,6 +191,9 @@ impl GuardianSetUpgrade {
     pub fn deserialize(data: &[u8]) -> StdResult<Self> {
         const ADDRESS_LEN: usize = 20;
 
+        if data.len() < 5 {
+            return ContractError::InvalidVAA.std_err();
+        }
         let data_ref: &[u8] = data;
         let new_guardian_set_index = data_ref.get_u32(0);
         let n_guardians = data_ref.get_u8(4);
@@ -219,8 +228,14 @@ pub struct SetFee {
 
 impl SetFee {
     pub fn deserialize(data: &[u8], fee_denom: String) -> StdResult<Self> {
+        if data.len() < 32 {
+            return ContractError::InvalidVAA.std_err();
+        }
         let data_ref: &[u8] = data;
-        let (_, amount) = data_ref.get_u256(0);
+        let (upper, amount) = data_ref.get_u256(0);
+        if upper != 0 {
+            return Err(StdError::msg("fee overflow: upper 128 bits are non-zero"));
+        }
         let fee = Coin {
             denom: fee_denom,
             amount: Uint256::from(amount),
@@ -233,3 +248,103 @@ impl SetFee {
 pub const CONFIG: Item<ConfigInfo> = Item::new("config");
 pub const SEQUENCES: Map<&[u8], u64> = Map::new("sequences");
 pub const VAA_ARCHIVE: Map<&[u8], bool> = Map::new("vaa_archive");
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_governance_packet_short_input() {
+        // 10 bytes is far below the 35-byte minimum
+        let data = vec![0u8; 10];
+        let result = GovernancePacket::deserialize(&data);
+        assert!(result.is_err(), "should reject input shorter than 35 bytes");
+    }
+
+    #[test]
+    fn test_governance_packet_exact_minimum() {
+        // Exactly 35 bytes — minimum valid governance packet (empty payload)
+        let data = vec![0u8; 35];
+        let result = GovernancePacket::deserialize(&data);
+        assert!(result.is_ok(), "35 bytes should be accepted");
+        let packet = result.unwrap();
+        assert_eq!(packet.module.len(), 32);
+        assert_eq!(packet.action, 0);
+        assert_eq!(packet.chain, 0);
+        assert!(packet.payload.is_empty());
+    }
+
+    #[test]
+    fn test_contract_upgrade_short_input() {
+        // 20 bytes is below the 32-byte minimum
+        let data = vec![0u8; 20];
+        let result = ContractUpgrade::deserialize(&data);
+        assert!(result.is_err(), "should reject input shorter than 32 bytes");
+    }
+
+    #[test]
+    fn test_contract_upgrade_valid() {
+        let mut data = vec![0u8; 32];
+        // Place value 42 at offset 24 (big-endian u64)
+        data[31] = 42;
+        let result = ContractUpgrade::deserialize(&data);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().new_contract, 42);
+    }
+
+    #[test]
+    fn test_guardian_set_upgrade_short_input() {
+        // 3 bytes is below the 5-byte minimum
+        let data = vec![0u8; 3];
+        let result = GuardianSetUpgrade::deserialize(&data);
+        assert!(result.is_err(), "should reject input shorter than 5 bytes");
+    }
+
+    #[test]
+    fn test_guardian_set_upgrade_zero_guardians() {
+        // 5 bytes: 4-byte index + 1-byte count (0 guardians)
+        let data = vec![0u8; 5];
+        let result = GuardianSetUpgrade::deserialize(&data);
+        assert!(result.is_ok());
+        let upgrade = result.unwrap();
+        assert_eq!(upgrade.new_guardian_set_index, 0);
+        assert!(upgrade.new_guardian_set.addresses.is_empty());
+    }
+
+    #[test]
+    fn test_set_fee_short_input() {
+        // 16 bytes is below the 32-byte minimum
+        let data = vec![0u8; 16];
+        let result = SetFee::deserialize(&data, "uakt".to_string());
+        assert!(result.is_err(), "should reject input shorter than 32 bytes");
+    }
+
+    #[test]
+    fn test_set_fee_u256_overflow() {
+        // Upper 128 bits are non-zero — must be rejected
+        let mut data = vec![0u8; 32];
+        data[0] = 1; // sets upper 128-bit portion to non-zero
+        let result = SetFee::deserialize(&data, "uakt".to_string());
+        assert!(result.is_err(), "should reject fee with non-zero upper 128 bits");
+        let err_msg = format!("{}", result.err().unwrap());
+        assert!(
+            err_msg.contains("fee overflow"),
+            "error should mention fee overflow, got: {}",
+            err_msg
+        );
+    }
+
+    #[test]
+    fn test_set_fee_valid() {
+        // Valid 32-byte input with upper 128 bits = 0, lower = 1000
+        let mut data = vec![0u8; 32];
+        // Place 1000 (0x3E8) in the lower 128 bits at offset 16..32
+        data[30] = 0x03;
+        data[31] = 0xE8;
+        let result = SetFee::deserialize(&data, "uakt".to_string());
+        assert!(result.is_ok());
+        let fee = result.unwrap().fee;
+        assert_eq!(fee.denom, "uakt");
+        assert_eq!(fee.amount, Uint256::from(1000u128));
+    }
+}
