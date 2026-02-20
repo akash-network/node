@@ -88,7 +88,8 @@ fn handle_governance_payload(deps: DepsMut, env: Env, data: &[u8]) -> StdResult<
     let gov_packet = GovernancePacket::deserialize(data)?;
     let state = CONFIG.load(deps.storage)?;
 
-    let module = String::from_utf8(gov_packet.module).unwrap();
+    let module = String::from_utf8(gov_packet.module)
+        .map_err(|_| StdError::msg("invalid governance module encoding"))?;
     let module: String = module.chars().filter(|c| c != &'\0').collect();
 
     if module != "Core" {
@@ -129,7 +130,7 @@ fn parse_and_verify_vaa(
 
     // Get guardian set from x/oracle params (only source)
     let guardian_set = querier.query_guardian_set()
-        .map_err(|e| StdError::msg(format!("failed to query guardian set from oracle: {}", e)))?
+        .map_err(|_| StdError::msg("failed to query guardian set from oracle"))?
         .to_guardian_set_info();
 
     if guardian_set.addresses.is_empty() {
@@ -278,7 +279,7 @@ pub fn query_guardian_set_info(deps: Deps) -> StdResult<GuardianSetInfoResponse>
     // Always get guardian set from x/oracle params
     let querier: QuerierWrapper<AkashQuery> = QuerierWrapper::new(deps.querier.deref());
     let response = querier.query_guardian_set()
-        .map_err(|e| StdError::msg(format!("failed to query guardian set: {}", e)))?;
+        .map_err(|_| StdError::msg("failed to query guardian set"))?;
 
     let guardian_set = response.to_guardian_set_info();
     Ok(GuardianSetInfoResponse {

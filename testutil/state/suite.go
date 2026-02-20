@@ -9,36 +9,33 @@ import (
 
 	"github.com/stretchr/testify/mock"
 
-	"cosmossdk.io/collections"
+	sdkmath "cosmossdk.io/math"
 	"cosmossdk.io/store"
-	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 
 	atypes "pkg.akt.dev/go/node/audit/v1"
+	bmetypes "pkg.akt.dev/go/node/bme/v1"
 	dtypes "pkg.akt.dev/go/node/deployment/v1"
 	emodule "pkg.akt.dev/go/node/escrow/module"
 	mv1 "pkg.akt.dev/go/node/market/v1"
 	oracletypes "pkg.akt.dev/go/node/oracle/v1"
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
-	ttypes "pkg.akt.dev/go/node/take/v1"
 	"pkg.akt.dev/go/sdkutil"
 
 	"pkg.akt.dev/node/v2/app"
 	emocks "pkg.akt.dev/node/v2/testutil/cosmos/mocks"
 	oracletestutil "pkg.akt.dev/node/v2/testutil/oracle"
 	akeeper "pkg.akt.dev/node/v2/x/audit/keeper"
+	bmekeeper "pkg.akt.dev/node/v2/x/bme/keeper"
 	dkeeper "pkg.akt.dev/node/v2/x/deployment/keeper"
 	ekeeper "pkg.akt.dev/node/v2/x/escrow/keeper"
 	mhooks "pkg.akt.dev/node/v2/x/market/hooks"
 	mkeeper "pkg.akt.dev/node/v2/x/market/keeper"
 	oraclekeeper "pkg.akt.dev/node/v2/x/oracle/keeper"
 	pkeeper "pkg.akt.dev/node/v2/x/provider/keeper"
-	tkeeper "pkg.akt.dev/node/v2/x/take/keeper"
 )
 
 // TestSuite encapsulates a functional Akash nodes data stores for
@@ -57,12 +54,12 @@ type Keepers struct {
 	Audit      akeeper.IKeeper
 	Authz      *emocks.AuthzKeeper
 	Bank       *emocks.BankKeeper
+	BME        bmekeeper.Keeper
 	Deployment dkeeper.IKeeper
 	Escrow     ekeeper.Keeper
 	Market     mkeeper.IKeeper
 	Oracle     oraclekeeper.Keeper
 	Provider   pkeeper.IKeeper
-	Take       tkeeper.IKeeper
 }
 
 // SetupTestSuite provides toolkit for accessing stores and keepers
@@ -85,6 +82,7 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 		bkeeper := &emocks.BankKeeper{}
 		// do not set bank mock during suite setup, each test must set them manually
 		// to make sure escrow balance values are tracked correctly
+
 		bkeeper.
 			On("SpendableCoin", mock.Anything, mock.Anything, mock.MatchedBy(func(denom string) bool {
 				matched := denom == sdkutil.DenomUakt || denom == sdkutil.DenomUact
@@ -186,19 +184,25 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 		keepers.Oracle = oraclekeeper.NewKeeper(cdc, app.GetKey(oracletypes.StoreKey), authtypes.NewModuleAddress(govtypes.ModuleName).String())
 	}
 
-	if keepers.Take == nil {
-		keepers.Take = tkeeper.NewKeeper(cdc, app.GetKey(ttypes.StoreKey), authtypes.NewModuleAddress(govtypes.ModuleName).String())
-	}
 	if keepers.Escrow == nil {
-		storeService := runtime.NewKVStoreService(app.GetKey(distrtypes.StoreKey))
-		sb := collections.NewSchemaBuilder(storeService)
-		feepool := collections.NewItem(sb, distrtypes.FeePoolKey, "fee_pool", codec.CollValue[distrtypes.FeePool](cdc))
-		keepers.Escrow = ekeeper.NewKeeper(cdc, app.GetKey(emodule.StoreKey), keepers.Bank, keepers.Take, keepers.Authz, feepool)
+		keepers.Escrow = ekeeper.NewKeeper(cdc, app.GetKey(emodule.StoreKey), app.AC, keepers.Bank, keepers.Authz)
 	}
+
+	if keepers.BME == nil {
+		keepers.BME = bmekeeper.NewKeeper(
+			cdc,
+			app.GetKey(bmetypes.StoreKey),
+			app.AC,
+			authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+			keepers.Account,
+			keepers.Bank,
+			keepers.Oracle)
+	}
+
 	if keepers.Market == nil {
 		keepers.Market = mkeeper.NewKeeper(cdc, app.GetKey(mv1.StoreKey), keepers.Escrow, authtypes.NewModuleAddress(govtypes.ModuleName).String())
-
 	}
+
 	if keepers.Deployment == nil {
 		keepers.Deployment = dkeeper.NewKeeper(cdc, app.GetKey(dtypes.StoreKey), keepers.Escrow, authtypes.NewModuleAddress(govtypes.ModuleName).String())
 	}
@@ -297,4 +301,46 @@ func (ts *TestSuite) OracleKeeper() oraclekeeper.Keeper {
 // PriceFeeder returns the oracle price feeder for testing
 func (ts *TestSuite) PriceFeeder() *oracletestutil.PriceFeeder {
 	return ts.priceFeeder
+}
+
+// BmeKeeper key store
+func (ts *TestSuite) BmeKeeper() bmekeeper.Keeper {
+	return ts.keepers.BME
+}
+
+// MockBMEForDeposit mocks BME burn/mint operations for a deposit
+// This should be called before operations that deposit funds into escrow
+// When BME is enabled and deposit.Direct=false, the deposit flow is:
+// 1. SendCoinsFromAccountToModule(from, "bme", uakt)
+// 2. MintCoins("bme", uakt)
+// 3. BurnCoins("bme", uakt)
+// 4. SendCoinsFromModuleToModule("bme", "escrow", uact) <- swapped amount
+func (ts *TestSuite) MockBMEForDeposit(from sdk.AccAddress, depositCoin sdk.Coin) {
+	if ts.keepers.Bank == nil {
+		return
+	}
+
+	bkeeper := ts.keepers.Bank
+
+	// Calculate swapped amount: at $3 per AKT and $1 per ACT
+	// swapRate = 3.0, so uakt -> uact is multiplied by 3
+	swappedAmount := depositCoin.Amount.Mul(sdkmath.NewInt(1))
+	swappedCoin := sdk.NewCoin("uact", swappedAmount)
+
+	// BME operations for non-direct deposits
+	bkeeper.
+		On("SendCoinsFromAccountToModule", mock.Anything, from, emodule.ModuleName, sdk.NewCoins(depositCoin)).
+		Return(nil).Once()
+
+	bkeeper.
+		On("MintCoins", mock.Anything, "bme", mock.Anything).
+		Return(nil).Maybe()
+
+	bkeeper.
+		On("BurnCoins", mock.Anything, "bme", mock.Anything).
+		Return(nil).Maybe()
+
+	bkeeper.
+		On("SendCoinsFromModuleToModule", mock.Anything, "bme", emodule.ModuleName, sdk.NewCoins(swappedCoin)).
+		Return(nil).Once()
 }

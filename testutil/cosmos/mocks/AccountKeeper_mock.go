@@ -7,6 +7,7 @@ package keeper
 import (
 	"context"
 
+	"cosmossdk.io/core/address"
 	"github.com/cosmos/cosmos-sdk/types"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -36,6 +37,52 @@ type AccountKeeper_Expecter struct {
 
 func (_m *AccountKeeper) EXPECT() *AccountKeeper_Expecter {
 	return &AccountKeeper_Expecter{mock: &_m.Mock}
+}
+
+// AddressCodec provides a mock function for the type AccountKeeper
+func (_mock *AccountKeeper) AddressCodec() address.Codec {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for AddressCodec")
+	}
+
+	var r0 address.Codec
+	if returnFunc, ok := ret.Get(0).(func() address.Codec); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(address.Codec)
+		}
+	}
+	return r0
+}
+
+// AccountKeeper_AddressCodec_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddressCodec'
+type AccountKeeper_AddressCodec_Call struct {
+	*mock.Call
+}
+
+// AddressCodec is a helper method to define mock.On call
+func (_e *AccountKeeper_Expecter) AddressCodec() *AccountKeeper_AddressCodec_Call {
+	return &AccountKeeper_AddressCodec_Call{Call: _e.mock.On("AddressCodec")}
+}
+
+func (_c *AccountKeeper_AddressCodec_Call) Run(run func()) *AccountKeeper_AddressCodec_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *AccountKeeper_AddressCodec_Call) Return(codec address.Codec) *AccountKeeper_AddressCodec_Call {
+	_c.Call.Return(codec)
+	return _c
+}
+
+func (_c *AccountKeeper_AddressCodec_Call) RunAndReturn(run func() address.Codec) *AccountKeeper_AddressCodec_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // GetAccount provides a mock function for the type AccountKeeper

@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"cosmossdk.io/core/address"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/authz"
 	authzkeeper "github.com/cosmos/cosmos-sdk/x/authz/keeper"
@@ -36,6 +37,7 @@ type AuthzKeeper interface {
 }
 
 type AccountKeeper interface {
+	AddressCodec() address.Codec
 	GetAccount(ctx context.Context, addr sdk.AccAddress) sdk.AccountI
 	GetModuleAddress(moduleName string) sdk.AccAddress
 	GetModuleAccount(ctx context.Context, moduleName string) sdk.ModuleAccountI
