@@ -191,7 +191,6 @@ func TestGRPCQueryDeployments(t *testing.T) {
 		msg      string
 		malleate func()
 		expLen   int
-		nextKey  bool
 	}{
 		{
 			"query deployments without any filters and pagination",
@@ -199,7 +198,6 @@ func TestGRPCQueryDeployments(t *testing.T) {
 				req = &v1beta4.QueryDeploymentsRequest{}
 			},
 			3,
-			false,
 		},
 		{
 			"query deployments with state filter",
@@ -211,7 +209,6 @@ func TestGRPCQueryDeployments(t *testing.T) {
 				}
 			},
 			2,
-			false,
 		},
 		{
 			"query deployments with filters having non existent data",
@@ -223,7 +220,6 @@ func TestGRPCQueryDeployments(t *testing.T) {
 					}}
 			},
 			0,
-			false,
 		},
 		{
 			"query deployments with state filter",
@@ -231,7 +227,6 @@ func TestGRPCQueryDeployments(t *testing.T) {
 				req = &v1beta4.QueryDeploymentsRequest{Filters: v1beta4.DeploymentFilters{State: v1.DeploymentClosed.String()}}
 			},
 			1,
-			false,
 		},
 		{
 			"query deployments with pagination",
@@ -239,18 +234,6 @@ func TestGRPCQueryDeployments(t *testing.T) {
 				req = &v1beta4.QueryDeploymentsRequest{Pagination: &sdkquery.PageRequest{Limit: 1}}
 			},
 			1,
-			false,
-		},
-		{
-			"query deployments with pagination next key",
-			func() {
-				req = &v1beta4.QueryDeploymentsRequest{
-					Filters:    v1beta4.DeploymentFilters{State: v1.DeploymentActive.String()},
-					Pagination: &sdkquery.PageRequest{Limit: 1},
-				}
-			},
-			1,
-			true,
 		},
 	}
 
@@ -264,18 +247,29 @@ func TestGRPCQueryDeployments(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, res)
 			assert.Equal(t, tc.expLen, len(res.Deployments))
-
-			if tc.nextKey {
-				require.NotNil(t, res.Pagination.NextKey)
-				req.Pagination.Key = res.Pagination.NextKey
-				res, err = suite.queryClient.Deployments(ctx, req)
-				require.NoError(t, err)
-				require.NotNil(t, res)
-				assert.Nil(t, res.Pagination.NextKey)
-				assert.Equal(t, tc.expLen, len(res.Deployments))
-			}
 		})
 	}
+
+	// Validate offset pagination returns different records
+	t.Run("offset pagination returns distinct deployments", func(t *testing.T) {
+		page0, err := suite.queryClient.Deployments(suite.ctx, &v1beta4.QueryDeploymentsRequest{
+			Filters:    v1beta4.DeploymentFilters{State: v1.DeploymentActive.String()},
+			Pagination: &sdkquery.PageRequest{Offset: 0, Limit: 1},
+		})
+		require.NoError(t, err)
+		require.Len(t, page0.Deployments, 1)
+
+		page1, err := suite.queryClient.Deployments(suite.ctx, &v1beta4.QueryDeploymentsRequest{
+			Filters:    v1beta4.DeploymentFilters{State: v1.DeploymentActive.String()},
+			Pagination: &sdkquery.PageRequest{Offset: 1, Limit: 1},
+		})
+		require.NoError(t, err)
+		require.Len(t, page1.Deployments, 1)
+
+		require.NotEqual(t, page0.Deployments[0].Deployment.ID,
+			page1.Deployments[0].Deployment.ID,
+			"offset pagination must return different deployments")
+	})
 }
 
 type deploymentFilterModifier struct {

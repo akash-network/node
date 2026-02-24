@@ -3,6 +3,12 @@
         "modules": {
         },
         "migrations": {
+            "deployment": [
+                {
+                    "from": "5",
+                    "to": "6"
+                }
+            ],
             "market": [
                 {
                     "from": "7",

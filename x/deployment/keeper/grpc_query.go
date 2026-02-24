@@ -7,14 +7,15 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"cosmossdk.io/store/prefix"
+	"cosmossdk.io/collections"
+	"cosmossdk.io/collections/indexes"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 
 	"pkg.akt.dev/go/node/deployment/v1"
 	types "pkg.akt.dev/go/node/deployment/v1beta4"
 
-	"pkg.akt.dev/node/util/query"
+	"pkg.akt.dev/node/x/deployment/keeper/keys"
 )
 
 // Querier is used as Keeper will have duplicate methods if used directly, and gRPC names take precedence over keeper
@@ -26,137 +27,122 @@ var _ types.QueryServer = Querier{}
 
 // Deployments returns deployments based on filters
 func (k Querier) Deployments(c context.Context, req *types.QueryDeploymentsRequest) (*types.QueryDeploymentsResponse, error) {
-	ctx := sdk.UnwrapSDKContext(c)
-
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
 
 	if req.Pagination == nil {
 		req.Pagination = &sdkquery.PageRequest{}
-	} else if req.Pagination != nil && req.Pagination.Offset > 0 && req.Filters.State == "" {
-		return nil, status.Error(codes.InvalidArgument, "invalid request parameters. if offset is set, filter.state must be provided")
 	}
 
 	if req.Pagination.Limit == 0 {
 		req.Pagination.Limit = sdkquery.DefaultLimit
 	}
 
-	states := make([]byte, 0, 2)
-
-	var searchPrefix []byte
-
-	// setup for case 3 - cross-index search
-	// nolint: gocritic
 	if len(req.Pagination.Key) > 0 {
-		var key []byte
+		return nil, status.Error(codes.InvalidArgument, "key-based pagination is not supported")
+	}
+
+	ctx := sdk.UnwrapSDKContext(c)
+
+	// Determine which states to iterate
+	states := []v1.Deployment_State{v1.DeploymentActive, v1.DeploymentClosed}
+	if req.Filters.State != "" {
+		stateVal := v1.Deployment_State(v1.Deployment_State_value[req.Filters.State])
+		if stateVal == v1.DeploymentStateInvalid {
+			return nil, status.Error(codes.InvalidArgument, "invalid state value")
+		}
+		states = []v1.Deployment_State{stateVal}
+	}
+
+	if req.Pagination.Reverse {
+		for i, j := 0, len(states)-1; i < j; i, j = i+1, j-1 {
+			states[i], states[j] = states[j], states[i]
+		}
+	}
+
+	var deployments types.DeploymentResponses
+	limit := req.Pagination.Limit
+	offset := req.Pagination.Offset
+	skipped := uint64(0)
+	countTotal := req.Pagination.CountTotal
+	var total uint64
+	var acctErr error
+
+	for _, state := range states {
+		if limit == 0 && !countTotal {
+			break
+		}
+
+		var iter indexes.MultiIterator[int32, keys.DeploymentPrimaryKey]
 		var err error
-		states, searchPrefix, key, _, err = query.DecodePaginationKey(req.Pagination.Key)
+		if req.Pagination.Reverse {
+			iter, err = k.deployments.Indexes.State.Iterate(ctx,
+				collections.NewPrefixedPairRange[int32, keys.DeploymentPrimaryKey](int32(state)).Descending())
+		} else {
+			iter, err = k.deployments.Indexes.State.MatchExact(ctx, int32(state))
+		}
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		req.Pagination.Key = key
-	} else if req.Filters.State != "" {
-		stateVal := v1.Deployment_State(v1.Deployment_State_value[req.Filters.State])
-
-		if req.Filters.State != "" && stateVal == v1.DeploymentStateInvalid {
-			return nil, status.Error(codes.InvalidArgument, "invalid state value")
-		}
-
-		states = append(states, byte(stateVal))
-	} else {
-		// request does not have a pagination set. Start from active store
-		states = append(states, byte(v1.DeploymentActive))
-		states = append(states, byte(v1.DeploymentClosed))
-	}
-
-	var deployments types.DeploymentResponses
-	var pageRes *sdkquery.PageResponse
-
-	total := uint64(0)
-
-	for idx := range states {
-		state := v1.Deployment_State(states[idx])
-
-		var err error
-		if idx > 0 {
-			req.Pagination.Key = nil
-		}
-
-		if len(req.Pagination.Key) == 0 {
-			req.Filters.State = state.String()
-
-			searchPrefix, err = deploymentPrefixFromFilter(req.Filters)
-			if err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-		}
-
-		searchStore := prefix.NewStore(ctx.KVStore(k.skey), searchPrefix)
-
-		count := uint64(0)
-
-		pageRes, err = sdkquery.FilteredPaginate(searchStore, req.Pagination, func(_ []byte, value []byte, accumulate bool) (bool, error) {
-			var deployment v1.Deployment
-
-			err := k.cdc.Unmarshal(value, &deployment)
-			if err != nil {
-				return false, err
+		err = indexes.ScanValues(ctx, k.deployments, iter, func(deployment v1.Deployment) bool {
+			if !req.Filters.Accept(deployment, state) {
+				return false
 			}
 
-			// filter deployments with provided filters
-			if req.Filters.Accept(deployment, state) {
-				if accumulate {
-					account, err := k.ekeeper.GetAccount(ctx, deployment.ID.ToEscrowAccountID())
-					if err != nil {
-						return true, fmt.Errorf("%w: fetching escrow account for DeploymentID=%s", err, deployment.ID)
-					}
-
-					value := types.QueryDeploymentResponse{
-						Deployment:    deployment,
-						Groups:        k.GetGroups(ctx, deployment.ID),
-						EscrowAccount: account,
-					}
-
-					deployments = append(deployments, value)
-					count++
-				}
-
-				return true, nil
+			if countTotal {
+				total++
 			}
 
-			return false, nil
+			if limit == 0 {
+				return !countTotal
+			}
+
+			if skipped < offset {
+				skipped++
+				return false
+			}
+
+			account, acctE := k.ekeeper.GetAccount(ctx, deployment.ID.ToEscrowAccountID())
+			if acctE != nil {
+				acctErr = fmt.Errorf("%w: fetching escrow account for DeploymentID=%s", acctE, deployment.ID)
+				return true
+			}
+
+			groups, grpErr := k.GetGroups(ctx, deployment.ID)
+			if grpErr != nil {
+				acctErr = fmt.Errorf("%w: fetching groups for DeploymentID=%s", grpErr, deployment.ID)
+				return true
+			}
+
+			deployments = append(deployments, types.QueryDeploymentResponse{
+				Deployment:    deployment,
+				Groups:        groups,
+				EscrowAccount: account,
+			})
+			limit--
+
+			return false
 		})
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
-
-		req.Pagination.Limit -= count
-		total += count
-
-		if req.Pagination.Limit == 0 {
-			if len(pageRes.NextKey) > 0 {
-				pageRes.NextKey, err = query.EncodePaginationKey(states[idx:], searchPrefix, pageRes.NextKey, nil)
-				if err != nil {
-					pageRes.Total = total
-					return &types.QueryDeploymentsResponse{
-						Deployments: deployments,
-						Pagination:  pageRes,
-					}, status.Error(codes.Internal, err.Error())
-				}
-			}
-
-			break
+		if acctErr != nil {
+			return nil, status.Error(codes.Internal, acctErr.Error())
 		}
 	}
 
-	pageRes.Total = total
-
-	return &types.QueryDeploymentsResponse{
+	resp := &types.QueryDeploymentsResponse{
 		Deployments: deployments,
-		Pagination:  pageRes,
-	}, nil
+		Pagination:  &sdkquery.PageResponse{},
+	}
+
+	if countTotal {
+		resp.Pagination.Total = total
+	}
+
+	return resp, nil
 }
 
 // Deployment returns deployment details based on DeploymentID
@@ -181,13 +167,16 @@ func (k Querier) Deployment(c context.Context, req *types.QueryDeploymentRequest
 		return &types.QueryDeploymentResponse{}, err
 	}
 
-	value := &types.QueryDeploymentResponse{
-		Deployment:    deployment,
-		Groups:        k.GetGroups(ctx, req.ID),
-		EscrowAccount: account,
+	groups, err := k.GetGroups(ctx, req.ID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	return value, nil
+	return &types.QueryDeploymentResponse{
+		Deployment:    deployment,
+		Groups:        groups,
+		EscrowAccount: account,
+	}, nil
 }
 
 // Group returns group details based on GroupID

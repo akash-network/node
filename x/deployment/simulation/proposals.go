@@ -44,7 +44,7 @@ func SimulateMsgUpdateParams(r *rand.Rand, _ sdk.Context, _ []simtypes.Account) 
 		sdk.NewInt64Coin("ibc/12C6A0C374171B595A0A9E18B83FA09D295FB1F2D8C6DAA3AC28683471752D8B", int64(simtypes.RandIntBetween(r, 500000, 50000000))),
 	})
 
-	// uakt must always be present
+	// uakt and uact must always be present
 	coins = append(coins, sdk.NewInt64Coin("uakt", int64(simtypes.RandIntBetween(r, 500000, 50000000))))
 
 	params := types.DefaultParams()

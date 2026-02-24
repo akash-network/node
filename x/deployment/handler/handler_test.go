@@ -195,7 +195,8 @@ func TestCreateDeployment(t *testing.T) {
 	require.True(t, exists)
 	require.Equal(t, deploymentResult.Hash, msg.Hash)
 
-	groupsResult := suite.dkeeper.GetGroups(suite.ctx, deployment.ID)
+	groupsResult, err := suite.dkeeper.GetGroups(suite.ctx, deployment.ID)
+	require.NoError(t, err)
 	require.NotEmpty(t, groupsResult)
 	require.Equal(t, len(groupsResult), len(groups))
 

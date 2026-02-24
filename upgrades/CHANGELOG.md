@@ -44,6 +44,21 @@ Goal of the upgrade here
 Add new upgrades after this line based on the template above
 -----
 
+##### v1.2.0
+
+1. Migrate deployment and market module stores from manual KVStore keys to collections.IndexedMap.
+
+- Migrations
+    - deployment `5 -> 6`
+    - market     `7 -> 8`
+
+- Breaking changes
+    - Query endpoints for orders, bids, leases, and deployments no longer support key-based (`PageRequest.Key`) pagination. Clients must use offset-based pagination.
+
+##### v1.1.0
+
+1. Fix overdrawn escrow accounts that prevent deployment from being closed by resolving account state and it’s associated objects into correct overdrawn state and close related deployments
+
 ##### v1.0.0
 
 1. Migrate to cosmos-sdk v0.47.x
@@ -56,9 +71,9 @@ Add new upgrades after this line based on the template above
 - Migrations
     - audit      `2 -> 3`
     - cert       `2 -> 3`
-    - deployment `3 -> 4`
+    - deployment `4 -> 5`
     - escrow     `2 -> 3`
-    - market     `5 -> 6`
+    - market     `6 -> 7`
     - provider   `2 -> 3`
     - take       `2 -> 3`
     - astaking   `1 -> 2`

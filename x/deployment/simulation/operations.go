@@ -186,14 +186,16 @@ func SimulateMsgUpdateDeployment(ak govtypes.AccountKeeper, bk bankkeeper.Keeper
 				nil, err
 		}
 
-		k.WithDeployments(ctx, func(deployment v1.Deployment) bool {
+		if err = k.WithDeployments(ctx, func(deployment v1.Deployment) bool {
 			// skip deployments that already have been updated
 			if !bytes.Equal(deployment.Hash, sdlSum) {
 				deployments = append(deployments, deployment)
 			}
 
 			return false
-		})
+		}); err != nil {
+			return simtypes.NoOpMsg(v1.ModuleName, (&v1beta4.MsgUpdateDeployment{}).Type(), err.Error()), nil, err
+		}
 
 		if len(deployments) == 0 {
 			return simtypes.NoOpMsg(v1.ModuleName, (&v1beta4.MsgUpdateDeployment{}).Type(), "no deployments found"), nil, nil
@@ -258,13 +260,15 @@ func SimulateMsgCloseDeployment(ak govtypes.AccountKeeper, bk bankkeeper.Keeper,
 		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		var deployments []v1.Deployment
 
-		k.WithDeployments(ctx, func(deployment v1.Deployment) bool {
+		if err := k.WithDeployments(ctx, func(deployment v1.Deployment) bool {
 			if deployment.State == v1.DeploymentActive {
 				deployments = append(deployments, deployment)
 			}
 
 			return false
-		})
+		}); err != nil {
+			return simtypes.NoOpMsg(v1.ModuleName, (&v1beta4.MsgCloseDeployment{}).Type(), err.Error()), nil, err
+		}
 
 		if len(deployments) == 0 {
 			return simtypes.NoOpMsg(v1.ModuleName, (&v1beta4.MsgCloseDeployment{}).Type(), "no deployments found"), nil, nil
@@ -325,13 +329,15 @@ func SimulateMsgCloseGroup(ak govtypes.AccountKeeper, bk bankkeeper.Keeper, k ke
 		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		var deployments []v1.Deployment
 
-		k.WithDeployments(ctx, func(deployment v1.Deployment) bool {
+		if err := k.WithDeployments(ctx, func(deployment v1.Deployment) bool {
 			if deployment.State == v1.DeploymentActive {
 				deployments = append(deployments, deployment)
 			}
 
 			return false
-		})
+		}); err != nil {
+			return simtypes.NoOpMsg(v1.ModuleName, (&v1beta4.MsgCloseGroup{}).Type(), err.Error()), nil, err
+		}
 
 		if len(deployments) == 0 {
 			return simtypes.NoOpMsg(v1.ModuleName, (&v1beta4.MsgCloseGroup{}).Type(), "no deployments found"), nil, nil
@@ -360,7 +366,10 @@ func SimulateMsgCloseGroup(ak govtypes.AccountKeeper, bk bankkeeper.Keeper, k ke
 		}
 
 		// Select Group to close
-		groups := k.GetGroups(ctx, deployment.ID)
+		groups, err := k.GetGroups(ctx, deployment.ID)
+		if err != nil {
+			return simtypes.NoOpMsg(v1.ModuleName, (&v1beta4.MsgCloseGroup{}).Type(), err.Error()), nil, err
+		}
 		if len(groups) < 1 {
 			// No groups to close
 			err := fmt.Errorf("no groups for deployment ID: %v", deployment.ID)

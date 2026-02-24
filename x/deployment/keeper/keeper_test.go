@@ -35,12 +35,13 @@ func Test_Create(t *testing.T) {
 
 	t.Run("one deployment exists", func(t *testing.T) {
 		count := 0
-		keeper.WithDeployments(ctx, func(d types.Deployment) bool {
+		err := keeper.WithDeployments(ctx, func(d types.Deployment) bool {
 			if assert.Equal(t, deployment.ID, d.ID) {
 				count++
 			}
 			return false
 		})
+		assert.NoError(t, err)
 		assert.Equal(t, 1, count)
 	})
 
@@ -52,7 +53,8 @@ func Test_Create(t *testing.T) {
 	}
 
 	t.Run("groups written - read all", func(t *testing.T) {
-		result := keeper.GetGroups(ctx, deployment.ID)
+		result, err := keeper.GetGroups(ctx, deployment.ID)
+		assert.NoError(t, err)
 		assert.Equal(t, groups, result)
 	})
 
