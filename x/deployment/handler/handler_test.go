@@ -27,12 +27,12 @@ import (
 	deposit "pkg.akt.dev/go/node/types/deposit/v1"
 	"pkg.akt.dev/go/testutil"
 
-	cmocks "pkg.akt.dev/node/testutil/cosmos/mocks"
-	"pkg.akt.dev/node/testutil/state"
-	"pkg.akt.dev/node/x/deployment/handler"
-	"pkg.akt.dev/node/x/deployment/keeper"
-	ehandler "pkg.akt.dev/node/x/escrow/handler"
-	mkeeper "pkg.akt.dev/node/x/market/keeper"
+	cmocks "pkg.akt.dev/node/v2/testutil/cosmos/mocks"
+	"pkg.akt.dev/node/v2/testutil/state"
+	"pkg.akt.dev/node/v2/x/deployment/handler"
+	"pkg.akt.dev/node/v2/x/deployment/keeper"
+	ehandler "pkg.akt.dev/node/v2/x/escrow/handler"
+	mkeeper "pkg.akt.dev/node/v2/x/market/keeper"
 )
 
 type testSuite struct {
@@ -182,13 +182,7 @@ func TestCreateDeployment(t *testing.T) {
 	require.NotNil(t, res)
 
 	t.Run("ensure event created", func(t *testing.T) {
-		iev, err := sdk.ParseTypedEvent(res.Events[0])
-		require.NoError(t, err)
-		require.IsType(t, &v1.EventDeploymentCreated{}, iev)
-
-		dev := iev.(*v1.EventDeploymentCreated)
-
-		require.Equal(t, msg.ID, dev.ID)
+		testutil.EnsureEvent(t, res.Events, &v1.EventDeploymentCreated{ID: msg.ID})
 	})
 
 	deploymentResult, exists := suite.dkeeper.GetDeployment(suite.ctx, deployment.ID)
@@ -310,13 +304,7 @@ func TestUpdateDeploymentExisting(t *testing.T) {
 	require.NotNil(t, res)
 
 	t.Run("ensure event created", func(t *testing.T) {
-		iev, err := sdk.ParseTypedEvent(res.Events[2])
-		require.NoError(t, err)
-		require.IsType(t, &v1.EventDeploymentUpdated{}, iev)
-
-		dev := iev.(*v1.EventDeploymentUpdated)
-
-		require.Equal(t, msg.ID, dev.ID)
+		testutil.EnsureEvent(t, res.Events, &v1.EventDeploymentUpdated{ID: msgUpdate.ID, Hash: msgUpdate.Hash})
 	})
 
 	t.Run("assert version updated", func(t *testing.T) {
@@ -378,14 +366,7 @@ func TestCloseDeploymentExisting(t *testing.T) {
 	require.NotNil(t, res)
 
 	t.Run("ensure event created", func(t *testing.T) {
-		iev, err := sdk.ParseTypedEvent(res.Events[0])
-		require.NoError(t, err)
-
-		require.IsType(t, &v1.EventDeploymentCreated{}, iev)
-
-		dev := iev.(*v1.EventDeploymentCreated)
-
-		require.Equal(t, msg.ID, dev.ID)
+		testutil.EnsureEvent(t, res.Events, &v1.EventDeploymentCreated{ID: msg.ID})
 	})
 
 	msgClose := &v1beta4.MsgCloseDeployment{
@@ -405,14 +386,7 @@ func TestCloseDeploymentExisting(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("ensure event close", func(t *testing.T) {
-		iev, err := sdk.ParseTypedEvent(res.Events[2])
-		require.NoError(t, err)
-
-		require.IsType(t, &v1.EventDeploymentClosed{}, iev)
-
-		dev := iev.(*v1.EventDeploymentClosed)
-
-		require.Equal(t, msg.ID, dev.ID)
+		testutil.EnsureEvent(t, res.Events, &v1.EventDeploymentClosed{ID: msg.ID})
 	})
 
 	res, err = suite.dhandler(suite.ctx, msgClose)

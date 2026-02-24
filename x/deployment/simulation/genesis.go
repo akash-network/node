@@ -8,8 +8,23 @@ import (
 )
 
 var (
-	minDeposit, _ = types.DefaultParams().MinDepositFor("uakt")
+	minDepositAKT sdk.Coin
+	minDepositACT sdk.Coin
 )
+
+func init() {
+	var err error
+
+	minDepositAKT, err = types.DefaultParams().MinDepositFor("uakt")
+	if err != nil {
+		panic(err)
+	}
+
+	minDepositACT, err = types.DefaultParams().MinDepositFor("uact")
+	if err != nil {
+		panic(err)
+	}
+}
 
 // RandomizedGenState generates a random GenesisState for supply
 func RandomizedGenState(simState *module.SimulationState) {
@@ -18,7 +33,8 @@ func RandomizedGenState(simState *module.SimulationState) {
 	deploymentGenesis := &types.GenesisState{
 		Params: types.Params{
 			MinDeposits: sdk.Coins{
-				minDeposit,
+				minDepositAKT,
+				minDepositACT,
 			},
 		},
 		// Deployments: make([]types.GenesisDeployment, 0, numDeployments),

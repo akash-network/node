@@ -1,4 +1,14 @@
 {
+    "v2.0.0": {
+        "modules": {
+            "added": [
+                "oracle",
+                "epochs",
+                "wasm",
+                "awasm"
+            ]
+        }
+    },
     "v1.2.0": {
         "modules": {
         },

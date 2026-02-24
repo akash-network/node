@@ -9,7 +9,7 @@ import (
 
 	types "pkg.akt.dev/go/node/audit/v1"
 
-	"pkg.akt.dev/node/x/audit/keeper"
+	"pkg.akt.dev/node/v2/x/audit/keeper"
 )
 
 // NewHandler returns a handler for "provider" type messages.

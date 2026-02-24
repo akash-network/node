@@ -5,7 +5,7 @@ import (
 
 	types "pkg.akt.dev/go/node/take/v1"
 
-	"pkg.akt.dev/node/x/take/keeper"
+	"pkg.akt.dev/node/v2/x/take/keeper"
 )
 
 // ValidateGenesis does validation check of the Genesis and return error incase of failure

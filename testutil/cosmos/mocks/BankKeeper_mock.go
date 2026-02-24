@@ -38,6 +38,380 @@ func (_m *BankKeeper) EXPECT() *BankKeeper_Expecter {
 	return &BankKeeper_Expecter{mock: &_m.Mock}
 }
 
+// BurnCoins provides a mock function for the type BankKeeper
+func (_mock *BankKeeper) BurnCoins(ctx context.Context, moduleName string, amt types.Coins) error {
+	ret := _mock.Called(ctx, moduleName, amt)
+
+	if len(ret) == 0 {
+		panic("no return value specified for BurnCoins")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, types.Coins) error); ok {
+		r0 = returnFunc(ctx, moduleName, amt)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// BankKeeper_BurnCoins_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'BurnCoins'
+type BankKeeper_BurnCoins_Call struct {
+	*mock.Call
+}
+
+// BurnCoins is a helper method to define mock.On call
+//   - ctx context.Context
+//   - moduleName string
+//   - amt types.Coins
+func (_e *BankKeeper_Expecter) BurnCoins(ctx interface{}, moduleName interface{}, amt interface{}) *BankKeeper_BurnCoins_Call {
+	return &BankKeeper_BurnCoins_Call{Call: _e.mock.On("BurnCoins", ctx, moduleName, amt)}
+}
+
+func (_c *BankKeeper_BurnCoins_Call) Run(run func(ctx context.Context, moduleName string, amt types.Coins)) *BankKeeper_BurnCoins_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 types.Coins
+		if args[2] != nil {
+			arg2 = args[2].(types.Coins)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *BankKeeper_BurnCoins_Call) Return(err error) *BankKeeper_BurnCoins_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *BankKeeper_BurnCoins_Call) RunAndReturn(run func(ctx context.Context, moduleName string, amt types.Coins) error) *BankKeeper_BurnCoins_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetAllBalances provides a mock function for the type BankKeeper
+func (_mock *BankKeeper) GetAllBalances(ctx context.Context, addr types.AccAddress) types.Coins {
+	ret := _mock.Called(ctx, addr)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAllBalances")
+	}
+
+	var r0 types.Coins
+	if returnFunc, ok := ret.Get(0).(func(context.Context, types.AccAddress) types.Coins); ok {
+		r0 = returnFunc(ctx, addr)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(types.Coins)
+		}
+	}
+	return r0
+}
+
+// BankKeeper_GetAllBalances_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetAllBalances'
+type BankKeeper_GetAllBalances_Call struct {
+	*mock.Call
+}
+
+// GetAllBalances is a helper method to define mock.On call
+//   - ctx context.Context
+//   - addr types.AccAddress
+func (_e *BankKeeper_Expecter) GetAllBalances(ctx interface{}, addr interface{}) *BankKeeper_GetAllBalances_Call {
+	return &BankKeeper_GetAllBalances_Call{Call: _e.mock.On("GetAllBalances", ctx, addr)}
+}
+
+func (_c *BankKeeper_GetAllBalances_Call) Run(run func(ctx context.Context, addr types.AccAddress)) *BankKeeper_GetAllBalances_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 types.AccAddress
+		if args[1] != nil {
+			arg1 = args[1].(types.AccAddress)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *BankKeeper_GetAllBalances_Call) Return(coins types.Coins) *BankKeeper_GetAllBalances_Call {
+	_c.Call.Return(coins)
+	return _c
+}
+
+func (_c *BankKeeper_GetAllBalances_Call) RunAndReturn(run func(ctx context.Context, addr types.AccAddress) types.Coins) *BankKeeper_GetAllBalances_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetBalance provides a mock function for the type BankKeeper
+func (_mock *BankKeeper) GetBalance(ctx context.Context, addr types.AccAddress, denom string) types.Coin {
+	ret := _mock.Called(ctx, addr, denom)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetBalance")
+	}
+
+	var r0 types.Coin
+	if returnFunc, ok := ret.Get(0).(func(context.Context, types.AccAddress, string) types.Coin); ok {
+		r0 = returnFunc(ctx, addr, denom)
+	} else {
+		r0 = ret.Get(0).(types.Coin)
+	}
+	return r0
+}
+
+// BankKeeper_GetBalance_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetBalance'
+type BankKeeper_GetBalance_Call struct {
+	*mock.Call
+}
+
+// GetBalance is a helper method to define mock.On call
+//   - ctx context.Context
+//   - addr types.AccAddress
+//   - denom string
+func (_e *BankKeeper_Expecter) GetBalance(ctx interface{}, addr interface{}, denom interface{}) *BankKeeper_GetBalance_Call {
+	return &BankKeeper_GetBalance_Call{Call: _e.mock.On("GetBalance", ctx, addr, denom)}
+}
+
+func (_c *BankKeeper_GetBalance_Call) Run(run func(ctx context.Context, addr types.AccAddress, denom string)) *BankKeeper_GetBalance_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 types.AccAddress
+		if args[1] != nil {
+			arg1 = args[1].(types.AccAddress)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *BankKeeper_GetBalance_Call) Return(coin types.Coin) *BankKeeper_GetBalance_Call {
+	_c.Call.Return(coin)
+	return _c
+}
+
+func (_c *BankKeeper_GetBalance_Call) RunAndReturn(run func(ctx context.Context, addr types.AccAddress, denom string) types.Coin) *BankKeeper_GetBalance_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetSupply provides a mock function for the type BankKeeper
+func (_mock *BankKeeper) GetSupply(ctx context.Context, denom string) types.Coin {
+	ret := _mock.Called(ctx, denom)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetSupply")
+	}
+
+	var r0 types.Coin
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) types.Coin); ok {
+		r0 = returnFunc(ctx, denom)
+	} else {
+		r0 = ret.Get(0).(types.Coin)
+	}
+	return r0
+}
+
+// BankKeeper_GetSupply_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetSupply'
+type BankKeeper_GetSupply_Call struct {
+	*mock.Call
+}
+
+// GetSupply is a helper method to define mock.On call
+//   - ctx context.Context
+//   - denom string
+func (_e *BankKeeper_Expecter) GetSupply(ctx interface{}, denom interface{}) *BankKeeper_GetSupply_Call {
+	return &BankKeeper_GetSupply_Call{Call: _e.mock.On("GetSupply", ctx, denom)}
+}
+
+func (_c *BankKeeper_GetSupply_Call) Run(run func(ctx context.Context, denom string)) *BankKeeper_GetSupply_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *BankKeeper_GetSupply_Call) Return(coin types.Coin) *BankKeeper_GetSupply_Call {
+	_c.Call.Return(coin)
+	return _c
+}
+
+func (_c *BankKeeper_GetSupply_Call) RunAndReturn(run func(ctx context.Context, denom string) types.Coin) *BankKeeper_GetSupply_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// MintCoins provides a mock function for the type BankKeeper
+func (_mock *BankKeeper) MintCoins(ctx context.Context, moduleName string, amt types.Coins) error {
+	ret := _mock.Called(ctx, moduleName, amt)
+
+	if len(ret) == 0 {
+		panic("no return value specified for MintCoins")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, types.Coins) error); ok {
+		r0 = returnFunc(ctx, moduleName, amt)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// BankKeeper_MintCoins_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MintCoins'
+type BankKeeper_MintCoins_Call struct {
+	*mock.Call
+}
+
+// MintCoins is a helper method to define mock.On call
+//   - ctx context.Context
+//   - moduleName string
+//   - amt types.Coins
+func (_e *BankKeeper_Expecter) MintCoins(ctx interface{}, moduleName interface{}, amt interface{}) *BankKeeper_MintCoins_Call {
+	return &BankKeeper_MintCoins_Call{Call: _e.mock.On("MintCoins", ctx, moduleName, amt)}
+}
+
+func (_c *BankKeeper_MintCoins_Call) Run(run func(ctx context.Context, moduleName string, amt types.Coins)) *BankKeeper_MintCoins_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 types.Coins
+		if args[2] != nil {
+			arg2 = args[2].(types.Coins)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *BankKeeper_MintCoins_Call) Return(err error) *BankKeeper_MintCoins_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *BankKeeper_MintCoins_Call) RunAndReturn(run func(ctx context.Context, moduleName string, amt types.Coins) error) *BankKeeper_MintCoins_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SendCoins provides a mock function for the type BankKeeper
+func (_mock *BankKeeper) SendCoins(ctx context.Context, fromAddr types.AccAddress, toAddr types.AccAddress, amt types.Coins) error {
+	ret := _mock.Called(ctx, fromAddr, toAddr, amt)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SendCoins")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, types.AccAddress, types.AccAddress, types.Coins) error); ok {
+		r0 = returnFunc(ctx, fromAddr, toAddr, amt)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// BankKeeper_SendCoins_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SendCoins'
+type BankKeeper_SendCoins_Call struct {
+	*mock.Call
+}
+
+// SendCoins is a helper method to define mock.On call
+//   - ctx context.Context
+//   - fromAddr types.AccAddress
+//   - toAddr types.AccAddress
+//   - amt types.Coins
+func (_e *BankKeeper_Expecter) SendCoins(ctx interface{}, fromAddr interface{}, toAddr interface{}, amt interface{}) *BankKeeper_SendCoins_Call {
+	return &BankKeeper_SendCoins_Call{Call: _e.mock.On("SendCoins", ctx, fromAddr, toAddr, amt)}
+}
+
+func (_c *BankKeeper_SendCoins_Call) Run(run func(ctx context.Context, fromAddr types.AccAddress, toAddr types.AccAddress, amt types.Coins)) *BankKeeper_SendCoins_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 types.AccAddress
+		if args[1] != nil {
+			arg1 = args[1].(types.AccAddress)
+		}
+		var arg2 types.AccAddress
+		if args[2] != nil {
+			arg2 = args[2].(types.AccAddress)
+		}
+		var arg3 types.Coins
+		if args[3] != nil {
+			arg3 = args[3].(types.Coins)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *BankKeeper_SendCoins_Call) Return(err error) *BankKeeper_SendCoins_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *BankKeeper_SendCoins_Call) RunAndReturn(run func(ctx context.Context, fromAddr types.AccAddress, toAddr types.AccAddress, amt types.Coins) error) *BankKeeper_SendCoins_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SendCoinsFromAccountToModule provides a mock function for the type BankKeeper
 func (_mock *BankKeeper) SendCoinsFromAccountToModule(ctx context.Context, senderAddr types.AccAddress, recipientModule string, amt types.Coins) error {
 	ret := _mock.Called(ctx, senderAddr, recipientModule, amt)
