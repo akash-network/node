@@ -9,7 +9,6 @@ import (
 
 	"pkg.akt.dev/go/node/deployment/v1"
 	"pkg.akt.dev/go/node/deployment/v1beta4"
-	"pkg.akt.dev/go/sdkutil"
 )
 
 const (
@@ -97,37 +96,6 @@ func MustGroupKey(statePrefix []byte, id v1.GroupID) []byte {
 	return key
 }
 
-// GroupsKey provides default store Key for Group data.
-func GroupsKey(statePrefix []byte, id v1.DeploymentID) ([]byte, error) {
-	owner, err := sdk.AccAddressFromBech32(id.Owner)
-	if err != nil {
-		return nil, err
-	}
-
-	lenPrefixedOwner, err := address.LengthPrefix(owner)
-	if err != nil {
-		return nil, err
-	}
-
-	buf := bytes.NewBuffer(GroupPrefix)
-	buf.Write(statePrefix)
-
-	buf.Write(lenPrefixedOwner)
-	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
-}
-
-func MustGroupsKey(statePrefix []byte, id v1.DeploymentID) []byte {
-	key, err := GroupsKey(statePrefix, id)
-	if err != nil {
-		panic(err)
-	}
-	return key
-}
-
 func DeploymentStateToPrefix(state v1.Deployment_State) []byte {
 	var idx []byte
 
@@ -155,108 +123,4 @@ func GroupStateToPrefix(state v1beta4.Group_State) []byte {
 	}
 
 	return idx
-}
-
-func buildDeploymentPrefix(state v1.Deployment_State) []byte {
-	idx := DeploymentStateToPrefix(state)
-
-	res := make([]byte, 0, len(DeploymentPrefix)+len(idx))
-	res = append(res, DeploymentPrefix...)
-	res = append(res, idx...)
-
-	return res
-}
-
-// nolint: unused
-func buildGroupPrefix(state v1beta4.Group_State) []byte {
-	idx := GroupStateToPrefix(state)
-
-	res := make([]byte, 0, len(GroupPrefix)+len(idx))
-	res = append(res, GroupPrefix...)
-	res = append(res, idx...)
-
-	return res
-}
-
-func filterToPrefix(prefix []byte, owner string, dseq uint64, gseq uint32) ([]byte, error) {
-	buf := bytes.NewBuffer(prefix)
-
-	if len(owner) == 0 {
-		return buf.Bytes(), nil
-	}
-
-	ownerAddr, err := sdk.AccAddressFromBech32(owner)
-	if err != nil {
-		return nil, err
-	}
-
-	lenPrefixedOwner, err := address.LengthPrefix(ownerAddr)
-	if err != nil {
-		return nil, err
-	}
-
-	if _, err := buf.Write(lenPrefixedOwner); err != nil {
-		return nil, err
-	}
-
-	if dseq == 0 {
-		return buf.Bytes(), nil
-	}
-
-	if err := binary.Write(buf, binary.BigEndian, dseq); err != nil {
-		return nil, err
-	}
-
-	if gseq == 0 {
-		return buf.Bytes(), nil
-	}
-
-	if err := binary.Write(buf, binary.BigEndian, gseq); err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
-}
-
-func deploymentPrefixFromFilter(f v1beta4.DeploymentFilters) ([]byte, error) {
-	return filterToPrefix(buildDeploymentPrefix(v1.Deployment_State(v1.Deployment_State_value[f.State])), f.Owner, f.DSeq, 0)
-}
-
-func DeploymentKeyLegacy(id v1.DeploymentID) []byte {
-	buf := bytes.NewBuffer(v1.DeploymentPrefix())
-	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
-
-	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
-		panic(err)
-	}
-
-	return buf.Bytes()
-}
-
-// GroupKeyLegacy provides prefixed key for a Group's marshalled data.
-func GroupKeyLegacy(id v1.GroupID) []byte {
-	buf := bytes.NewBuffer(v1.GroupPrefix())
-	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
-	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
-		panic(err)
-	}
-	if err := binary.Write(buf, binary.BigEndian, id.GSeq); err != nil {
-		panic(err)
-	}
-	return buf.Bytes()
-}
-
-// GroupsKeyLegacy provides default store Key for Group data.
-func GroupsKeyLegacy(id v1.DeploymentID) []byte {
-	buf := bytes.NewBuffer(v1.GroupPrefix())
-	buf.Write(address.MustLengthPrefix(sdkutil.MustAccAddressFromBech32(id.Owner)))
-	if err := binary.Write(buf, binary.BigEndian, id.DSeq); err != nil {
-		panic(err)
-	}
-	return buf.Bytes()
-}
-
-// nolint: unused
-func deploymentPrefixFromFilterLegacy(f v1beta4.DeploymentFilters) ([]byte, error) {
-	return filterToPrefix(v1.DeploymentPrefix(), f.Owner, f.DSeq, 0)
 }

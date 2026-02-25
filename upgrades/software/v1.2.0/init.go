@@ -3,6 +3,7 @@
 package v1_2_0
 
 import (
+	dv1 "pkg.akt.dev/go/node/deployment/v1"
 	mv1 "pkg.akt.dev/go/node/market/v1"
 
 	utypes "pkg.akt.dev/node/upgrades/types"
@@ -12,4 +13,5 @@ func init() {
 	utypes.RegisterUpgrade(UpgradeName, initUpgrade)
 
 	utypes.RegisterMigration(mv1.ModuleName, 7, newMarketMigration)
+	utypes.RegisterMigration(dv1.ModuleName, 5, newDeploymentMigration)
 }

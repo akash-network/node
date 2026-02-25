@@ -11,7 +11,7 @@ import (
 
 type DeploymentKeeper interface {
 	GetDeployment(ctx sdk.Context, id dv1.DeploymentID) (dv1.Deployment, bool)
-	GetGroups(ctx sdk.Context, id dv1.DeploymentID) dtypes.Groups
+	GetGroups(ctx sdk.Context, id dv1.DeploymentID) (dtypes.Groups, error)
 	CloseDeployment(ctx sdk.Context, deployment dv1.Deployment) error
 	OnCloseGroup(ctx sdk.Context, group dtypes.Group, state dtypes.Group_State) error
 }

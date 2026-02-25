@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"pkg.akt.dev/go/sdkutil"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/cometbft/cometbft/libs/rand"
@@ -188,7 +189,7 @@ func TestMarketFullFlowCloseDeployment(t *testing.T) {
 
 	bmsg := &types.MsgCreateBid{
 		ID:    v1.MakeBidID(order.ID, providerAddr),
-		Price: sdk.NewDecCoin(testutil.CoinDenom, sdkmath.NewInt(1)),
+		Price: sdk.NewDecCoin(sdkutil.DenomUakt, sdkmath.NewInt(1)),
 		Deposit: deposit.Deposit{
 			Amount:  types.DefaultBidMinDeposit,
 			Sources: deposit.Sources{deposit.SourceBalance},
@@ -430,7 +431,7 @@ func TestMarketFullFlowCloseLease(t *testing.T) {
 
 	bmsg := &types.MsgCreateBid{
 		ID:    v1.MakeBidID(order.ID, providerAddr),
-		Price: sdk.NewDecCoin(testutil.CoinDenom, sdkmath.NewInt(1)),
+		Price: sdk.NewDecCoin(sdkutil.DenomUakt, sdkmath.NewInt(1)),
 		Deposit: deposit.Deposit{
 			Amount:  types.DefaultBidMinDeposit,
 			Sources: deposit.Sources{deposit.SourceBalance},
@@ -668,7 +669,7 @@ func TestMarketFullFlowCloseBid(t *testing.T) {
 
 	bmsg := &types.MsgCreateBid{
 		ID:    v1.MakeBidID(order.ID, providerAddr),
-		Price: sdk.NewDecCoin(testutil.CoinDenom, sdkmath.NewInt(1)),
+		Price: sdk.NewDecCoin(sdkutil.DenomUakt, sdkmath.NewInt(1)),
 		Deposit: deposit.Deposit{
 			Amount:  types.DefaultBidMinDeposit,
 			Sources: deposit.Sources{deposit.SourceBalance},
@@ -867,7 +868,7 @@ func TestCreateBidValid(t *testing.T) {
 
 	msg := &types.MsgCreateBid{
 		ID:    v1.MakeBidID(order.ID, providerAddr),
-		Price: sdk.NewDecCoin(testutil.CoinDenom, sdkmath.NewInt(1)),
+		Price: sdk.NewDecCoin(sdkutil.DenomUakt, sdkmath.NewInt(1)),
 		Deposit: deposit.Deposit{
 			Amount:  types.DefaultBidMinDeposit,
 			Sources: deposit.Sources{deposit.SourceBalance},
@@ -987,7 +988,7 @@ func TestCreateBidClosedOrder(t *testing.T) {
 
 	msg := &types.MsgCreateBid{
 		ID:    v1.MakeBidID(order.ID, providerAddr),
-		Price: sdk.NewDecCoin(testutil.CoinDenom, sdkmath.NewInt(math.MaxInt64)),
+		Price: sdk.NewDecCoin(sdkutil.DenomUakt, sdkmath.NewInt(math.MaxInt64)),
 	}
 
 	res, err := suite.handler(suite.Context(), msg)
@@ -1013,7 +1014,7 @@ func TestCreateBidOverprice(t *testing.T) {
 
 	resources := dtypes.ResourceUnits{
 		{
-			Price: sdk.NewDecCoin(testutil.CoinDenom, sdkmath.NewInt(1)),
+			Price: sdk.NewDecCoin(sdkutil.DenomUakt, sdkmath.NewInt(1)),
 		},
 	}
 	order, gspec := suite.createOrder(resources)
@@ -1023,7 +1024,7 @@ func TestCreateBidOverprice(t *testing.T) {
 
 	msg := &types.MsgCreateBid{
 		ID:    v1.MakeBidID(order.ID, providerAddr),
-		Price: sdk.NewDecCoin(testutil.CoinDenom, sdkmath.NewInt(math.MaxInt64)),
+		Price: sdk.NewDecCoin(sdkutil.DenomUakt, sdkmath.NewInt(math.MaxInt64)),
 	}
 
 	res, err := suite.handler(suite.Context(), msg)
@@ -1051,7 +1052,7 @@ func TestCreateBidInvalidProvider(t *testing.T) {
 
 	msg := &types.MsgCreateBid{
 		ID:    v1.MakeBidID(order.ID, sdk.AccAddress{}),
-		Price: sdk.NewDecCoin(testutil.CoinDenom, sdkmath.NewInt(1)),
+		Price: sdk.NewDecCoin(sdkutil.DenomUakt, sdkmath.NewInt(1)),
 	}
 
 	res, err := suite.handler(suite.Context(), msg)
@@ -1081,7 +1082,7 @@ func TestCreateBidInvalidAttributes(t *testing.T) {
 
 	msg := &types.MsgCreateBid{
 		ID:    v1.MakeBidID(order.ID, providerAddr),
-		Price: sdk.NewDecCoin(testutil.CoinDenom, sdkmath.NewInt(1)),
+		Price: sdk.NewDecCoin(sdkutil.DenomUakt, sdkmath.NewInt(1)),
 	}
 
 	res, err := suite.handler(suite.Context(), msg)
@@ -1113,7 +1114,7 @@ func TestCreateBidAlreadyExists(t *testing.T) {
 
 	msg := &types.MsgCreateBid{
 		ID:    v1.MakeBidID(order.ID, providerAddr),
-		Price: sdk.NewDecCoin(testutil.CoinDenom, sdkmath.NewInt(1)),
+		Price: sdk.NewDecCoin(sdkutil.DenomUakt, sdkmath.NewInt(1)),
 		Deposit: deposit.Deposit{
 			Amount:  types.DefaultBidMinDeposit,
 			Sources: deposit.Sources{deposit.SourceBalance},
@@ -1345,7 +1346,7 @@ func TestCloseBidUnknownOrder(t *testing.T) {
 	group := testutil.DeploymentGroup(t, testutil.DeploymentID(t), 0)
 	orderID := v1.MakeOrderID(group.ID, 1)
 	provider := testutil.AccAddress(t)
-	price := sdk.NewDecCoin(testutil.CoinDenom, sdkmath.NewInt(int64(rand.Uint16())))
+	price := sdk.NewDecCoin(sdkutil.DenomUakt, sdkmath.NewInt(int64(rand.Uint16())))
 	roffer := types.ResourceOfferFromRU(group.GroupSpec.Resources)
 
 	bidID := v1.MakeBidID(orderID, provider)
@@ -1382,7 +1383,7 @@ func (st *testSuite) createBid() (types.Bid, types.Order) {
 	st.t.Helper()
 	order, gspec := st.createOrder(testutil.Resources(st.t))
 	provider := testutil.AccAddress(st.t)
-	price := sdk.NewDecCoin(testutil.CoinDenom, sdkmath.NewInt(int64(rand.Uint16())))
+	price := sdk.NewDecCoin(sdkutil.DenomUakt, sdkmath.NewInt(int64(rand.Uint16())))
 	roffer := types.ResourceOfferFromRU(gspec.Resources)
 
 	bidID := v1.MakeBidID(order.ID, provider)

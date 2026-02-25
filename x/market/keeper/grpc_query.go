@@ -6,12 +6,15 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"cosmossdk.io/collections"
 	"cosmossdk.io/collections/indexes"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 
 	"pkg.akt.dev/go/node/market/v1"
 	types "pkg.akt.dev/go/node/market/v1beta5"
+
+	"pkg.akt.dev/node/x/market/keeper/keys"
 )
 
 // Querier is used as Keeper will have duplicate methods if used directly, and gRPC names take precedence over keeper
@@ -35,8 +38,8 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 		req.Pagination.Limit = sdkquery.DefaultLimit
 	}
 
-	if len(req.Pagination.Key) > 0 || req.Pagination.Reverse {
-		return nil, status.Error(codes.InvalidArgument, "key-based and reverse pagination are not supported")
+	if len(req.Pagination.Key) > 0 {
+		return nil, status.Error(codes.InvalidArgument, "key-based pagination is not supported")
 	}
 
 	ctx := sdk.UnwrapSDKContext(c)
@@ -51,6 +54,12 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 		states = []types.Order_State{stateVal}
 	}
 
+	if req.Pagination.Reverse {
+		for i, j := 0, len(states)-1; i < j; i, j = i+1, j-1 {
+			states[i], states[j] = states[j], states[i]
+		}
+	}
+
 	var orders types.Orders
 	limit := req.Pagination.Limit
 	offset := req.Pagination.Offset
@@ -63,7 +72,14 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 			break
 		}
 
-		iter, err := k.orders.Indexes.State.MatchExact(ctx, int32(state))
+		var iter indexes.MultiIterator[int32, keys.OrderPrimaryKey]
+		var err error
+		if req.Pagination.Reverse {
+			iter, err = k.orders.Indexes.State.Iterate(ctx,
+				collections.NewPrefixedPairRange[int32, keys.OrderPrimaryKey](int32(state)).Descending())
+		} else {
+			iter, err = k.orders.Indexes.State.MatchExact(ctx, int32(state))
+		}
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -122,8 +138,8 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 		req.Pagination.Limit = sdkquery.DefaultLimit
 	}
 
-	if len(req.Pagination.Key) > 0 || req.Pagination.Reverse {
-		return nil, status.Error(codes.InvalidArgument, "key-based and reverse pagination are not supported")
+	if len(req.Pagination.Key) > 0 {
+		return nil, status.Error(codes.InvalidArgument, "key-based pagination is not supported")
 	}
 
 	ctx := sdk.UnwrapSDKContext(c)
@@ -136,6 +152,12 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 			return nil, status.Error(codes.InvalidArgument, "invalid state value")
 		}
 		states = []types.Bid_State{stateVal}
+	}
+
+	if req.Pagination.Reverse {
+		for i, j := 0, len(states)-1; i < j; i, j = i+1, j-1 {
+			states[i], states[j] = states[j], states[i]
+		}
 	}
 
 	var bids []types.QueryBidResponse
@@ -155,7 +177,14 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 			stateSet[s] = true
 		}
 
-		iter, err := k.bids.Indexes.Provider.MatchExact(ctx, req.Filters.Provider)
+		var iter indexes.MultiIterator[string, keys.BidPrimaryKey]
+		var err error
+		if req.Pagination.Reverse {
+			iter, err = k.bids.Indexes.Provider.Iterate(ctx,
+				collections.NewPrefixedPairRange[string, keys.BidPrimaryKey](req.Filters.Provider).Descending())
+		} else {
+			iter, err = k.bids.Indexes.Provider.MatchExact(ctx, req.Filters.Provider)
+		}
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -208,7 +237,14 @@ func (k Querier) Bids(c context.Context, req *types.QueryBidsRequest) (*types.Qu
 				break
 			}
 
-			iter, err := k.bids.Indexes.State.MatchExact(ctx, int32(state))
+			var iter indexes.MultiIterator[int32, keys.BidPrimaryKey]
+			var err error
+			if req.Pagination.Reverse {
+				iter, err = k.bids.Indexes.State.Iterate(ctx,
+					collections.NewPrefixedPairRange[int32, keys.BidPrimaryKey](int32(state)).Descending())
+			} else {
+				iter, err = k.bids.Indexes.State.MatchExact(ctx, int32(state))
+			}
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
@@ -280,8 +316,8 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 		req.Pagination.Limit = sdkquery.DefaultLimit
 	}
 
-	if len(req.Pagination.Key) > 0 || req.Pagination.Reverse {
-		return nil, status.Error(codes.InvalidArgument, "key-based and reverse pagination are not supported")
+	if len(req.Pagination.Key) > 0 {
+		return nil, status.Error(codes.InvalidArgument, "key-based pagination is not supported")
 	}
 
 	ctx := sdk.UnwrapSDKContext(c)
@@ -294,6 +330,12 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 			return nil, status.Error(codes.InvalidArgument, "invalid state value")
 		}
 		states = []v1.Lease_State{stateVal}
+	}
+
+	if req.Pagination.Reverse {
+		for i, j := 0, len(states)-1; i < j; i, j = i+1, j-1 {
+			states[i], states[j] = states[j], states[i]
+		}
 	}
 
 	var leases []types.QueryLeaseResponse
@@ -313,7 +355,14 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 			stateSet[s] = true
 		}
 
-		iter, err := k.leases.Indexes.Provider.MatchExact(ctx, req.Filters.Provider)
+		var iter indexes.MultiIterator[string, keys.LeasePrimaryKey]
+		var err error
+		if req.Pagination.Reverse {
+			iter, err = k.leases.Indexes.Provider.Iterate(ctx,
+				collections.NewPrefixedPairRange[string, keys.LeasePrimaryKey](req.Filters.Provider).Descending())
+		} else {
+			iter, err = k.leases.Indexes.Provider.MatchExact(ctx, req.Filters.Provider)
+		}
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -366,7 +415,14 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 				break
 			}
 
-			iter, err := k.leases.Indexes.State.MatchExact(ctx, int32(state))
+			var iter indexes.MultiIterator[int32, keys.LeasePrimaryKey]
+			var err error
+			if req.Pagination.Reverse {
+				iter, err = k.leases.Indexes.State.Iterate(ctx,
+					collections.NewPrefixedPairRange[int32, keys.LeasePrimaryKey](int32(state)).Descending())
+			} else {
+				iter, err = k.leases.Indexes.State.MatchExact(ctx, int32(state))
+			}
 			if err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
 			}

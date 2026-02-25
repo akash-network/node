@@ -51,7 +51,12 @@ func (h *hooks) OnEscrowAccountClosed(ctx sdk.Context, obj etypes.Account) error
 		gstate = dtypes.GroupInsufficientFunds
 	}
 
-	for _, group := range h.dkeeper.GetGroups(ctx, deployment.ID) {
+	groups, err := h.dkeeper.GetGroups(ctx, deployment.ID)
+	if err != nil {
+		return err
+	}
+
+	for _, group := range groups {
 		if group.ValidateClosable() == nil {
 			err = h.dkeeper.OnCloseGroup(ctx, group, gstate)
 			if err != nil {
