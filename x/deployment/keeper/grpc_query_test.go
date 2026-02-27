@@ -270,6 +270,93 @@ func TestGRPCQueryDeployments(t *testing.T) {
 			page1.Deployments[0].Deployment.ID,
 			"offset pagination must return different deployments")
 	})
+
+	// Validate offset without state filter is rejected
+	t.Run("offset without state filter returns error", func(t *testing.T) {
+		_, err := suite.queryClient.Deployments(suite.ctx, &v1beta4.QueryDeploymentsRequest{
+			Pagination: &sdkquery.PageRequest{Offset: 1, Limit: 1},
+		})
+		require.Error(t, err)
+	})
+
+	// Validate NextKey is set when there are more results
+	t.Run("NextKey set when more results exist", func(t *testing.T) {
+		res, err := suite.queryClient.Deployments(suite.ctx, &v1beta4.QueryDeploymentsRequest{
+			Pagination: &sdkquery.PageRequest{Limit: 1},
+		})
+		require.NoError(t, err)
+		require.Len(t, res.Deployments, 1)
+		require.NotNil(t, res.Pagination.NextKey, "NextKey must be set when more results exist")
+		assert.Equal(t, uint64(1), res.Pagination.Total, "Total should equal count of returned items")
+	})
+
+	// Validate NextKey is nil when all results fit
+	t.Run("NextKey nil when all results returned", func(t *testing.T) {
+		res, err := suite.queryClient.Deployments(suite.ctx, &v1beta4.QueryDeploymentsRequest{
+			Pagination: &sdkquery.PageRequest{Limit: 100},
+		})
+		require.NoError(t, err)
+		require.Len(t, res.Deployments, 3)
+		require.Nil(t, res.Pagination.NextKey, "NextKey must be nil when all results returned")
+		assert.Equal(t, uint64(3), res.Pagination.Total)
+	})
+
+	// Validate key-based pagination returns correct next page
+	t.Run("key-based pagination returns next page", func(t *testing.T) {
+		// Get first page
+		page1, err := suite.queryClient.Deployments(suite.ctx, &v1beta4.QueryDeploymentsRequest{
+			Pagination: &sdkquery.PageRequest{Limit: 1},
+		})
+		require.NoError(t, err)
+		require.Len(t, page1.Deployments, 1)
+		require.NotNil(t, page1.Pagination.NextKey)
+
+		// Get second page using NextKey
+		page2, err := suite.queryClient.Deployments(suite.ctx, &v1beta4.QueryDeploymentsRequest{
+			Pagination: &sdkquery.PageRequest{Key: page1.Pagination.NextKey, Limit: 1},
+		})
+		require.NoError(t, err)
+		require.Len(t, page2.Deployments, 1)
+		require.NotNil(t, page2.Pagination.NextKey, "second page should have NextKey (3 items total)")
+
+		// Get third page using NextKey
+		page3, err := suite.queryClient.Deployments(suite.ctx, &v1beta4.QueryDeploymentsRequest{
+			Pagination: &sdkquery.PageRequest{Key: page2.Pagination.NextKey, Limit: 1},
+		})
+		require.NoError(t, err)
+		require.Len(t, page3.Deployments, 1)
+		require.Nil(t, page3.Pagination.NextKey, "last page should not have NextKey")
+
+		// All three pages should have different deployments
+		ids := map[string]bool{
+			page1.Deployments[0].Deployment.ID.String(): true,
+			page2.Deployments[0].Deployment.ID.String(): true,
+			page3.Deployments[0].Deployment.ID.String(): true,
+		}
+		assert.Len(t, ids, 3, "all pages should return distinct deployments")
+	})
+
+	// Validate key-based pagination with state filter
+	t.Run("key-based pagination with state filter", func(t *testing.T) {
+		page1, err := suite.queryClient.Deployments(suite.ctx, &v1beta4.QueryDeploymentsRequest{
+			Filters:    v1beta4.DeploymentFilters{State: v1.DeploymentActive.String()},
+			Pagination: &sdkquery.PageRequest{Limit: 1},
+		})
+		require.NoError(t, err)
+		require.Len(t, page1.Deployments, 1)
+		require.NotNil(t, page1.Pagination.NextKey, "should have next key for active deployments")
+
+		page2, err := suite.queryClient.Deployments(suite.ctx, &v1beta4.QueryDeploymentsRequest{
+			Pagination: &sdkquery.PageRequest{Key: page1.Pagination.NextKey, Limit: 10},
+		})
+		require.NoError(t, err)
+		require.Len(t, page2.Deployments, 1, "should return remaining active deployment")
+		require.Nil(t, page2.Pagination.NextKey, "no more active deployments")
+
+		require.NotEqual(t, page1.Deployments[0].Deployment.ID,
+			page2.Deployments[0].Deployment.ID,
+			"pages must return different deployments")
+	})
 }
 
 type deploymentFilterModifier struct {
