@@ -11,8 +11,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/rakyll/statik/fs"
 	"github.com/spf13/cast"
-	emodule "pkg.akt.dev/go/node/escrow/module"
-	"pkg.akt.dev/go/sdkutil"
 
 	abci "github.com/cometbft/cometbft/abci/types"
 	tmjson "github.com/cometbft/cometbft/libs/json"
@@ -25,8 +23,10 @@ import (
 	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
 	evidencetypes "cosmossdk.io/x/evidence/types"
-	"cosmossdk.io/x/feegrant"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
+	"github.com/CosmWasm/wasmd/x/wasm"
+	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
+	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	"github.com/cosmos/cosmos-sdk/client"
@@ -45,33 +45,24 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/auth/ante"
 	authtx "github.com/cosmos/cosmos-sdk/x/auth/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	vestingtypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
-	"github.com/cosmos/cosmos-sdk/x/authz"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	consensusparamtypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
-	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
-	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 	ibchost "github.com/cosmos/ibc-go/v10/modules/core/exported"
-	ibctm "github.com/cosmos/ibc-go/v10/modules/light-clients/07-tendermint"
 
 	cflags "pkg.akt.dev/go/cli/flags"
-	audittypes "pkg.akt.dev/go/node/audit/v1"
-	certtypes "pkg.akt.dev/go/node/cert/v1"
-	deploymenttypes "pkg.akt.dev/go/node/deployment/v1"
-	markettypes "pkg.akt.dev/go/node/market/v1"
-	providertypes "pkg.akt.dev/go/node/provider/v1beta4"
-	taketypes "pkg.akt.dev/go/node/take/v1"
+	epochstypes "pkg.akt.dev/go/node/epochs/v1beta1"
+	"pkg.akt.dev/go/sdkutil"
 
-	apptypes "pkg.akt.dev/node/app/types"
-	utypes "pkg.akt.dev/node/upgrades/types"
+	apptypes "pkg.akt.dev/node/v2/app/types"
+	utypes "pkg.akt.dev/node/v2/upgrades/types"
+	"pkg.akt.dev/node/v2/util/partialord"
+	awasm "pkg.akt.dev/node/v2/x/wasm"
 	// unnamed import of statik for swagger UI support
-	_ "pkg.akt.dev/node/client/docs/statik"
+	_ "pkg.akt.dev/node/v2/client/docs/statik"
 )
 
 const (
@@ -130,10 +121,19 @@ func NewApp(
 		homePath = DefaultHome
 	}
 
+	var wasmOpts []wasmkeeper.Option
+
+	if val := appOpts.Get("wasm"); val != nil {
+		if vl, valid := val.([]wasmkeeper.Option); valid {
+			wasmOpts = append(wasmOpts, vl...)
+		}
+	}
+
 	app := &AkashApp{
 		BaseApp: bapp,
 		App: &apptypes.App{
 			Cdc: appCodec,
+			AC:  encodingConfig.SigningOptions.AddressCodec,
 			Log: logger,
 		},
 		aminoCdc:          aminoCdc,
@@ -143,6 +143,19 @@ func NewApp(
 		invCheckPeriod:    invCheckPeriod,
 	}
 
+	wasmConfig, err := wasm.ReadNodeConfig(appOpts)
+	if err != nil {
+		panic(fmt.Sprintf("error while reading wasm config: %s", err))
+	}
+
+	// Memory limits - prevent DoS
+	wasmConfig.MemoryCacheSize = 100 // 100 MB max
+	// Query gas limit - prevent expensive queries
+	wasmConfig.SmartQueryGasLimit = 3_000_000
+	// Debug mode - MUST be false in production
+	// Uncomment this for debugging contracts. In the future this could be made into a param passed by the tests
+	//wasmConfig.ContractDebugMode = false
+
 	app.InitSpecialKeepers(
 		app.cdc,
 		aminoCdc,
@@ -151,11 +164,17 @@ func NewApp(
 		homePath,
 	)
 
+	// do not add "wasm" to home path. wasm keeper Init does it
+	wasmDir := homePath
+
 	app.InitNormalKeepers(
 		app.cdc,
 		encodingConfig,
 		app.BaseApp,
 		ModuleAccountPerms(),
+		wasmDir,
+		wasmConfig,
+		wasmOpts,
 		app.BlockedAddrs(),
 		invCheckPeriod,
 	)
@@ -194,10 +213,11 @@ func NewApp(
 
 	// Tell the app's module manager how to set the order of BeginBlockers, which are run at the beginning of every block.
 	app.MM.SetOrderBeginBlockers(orderBeginBlockers(app.MM.ModuleNames())...)
-	app.MM.SetOrderInitGenesis(OrderInitGenesis(app.MM.ModuleNames())...)
+	app.MM.SetOrderEndBlockers(orderEndBlockers(app.MM.ModuleNames())...)
+	app.MM.SetOrderInitGenesis(orderInitGenesis(app.MM.ModuleNames())...)
 
 	app.Configurator = module.NewConfigurator(app.AppCodec(), app.MsgServiceRouter(), app.GRPCQueryRouter())
-	err := app.MM.RegisterServices(app.Configurator)
+	err = app.MM.RegisterServices(app.Configurator)
 	if err != nil {
 		panic(err)
 	}
@@ -262,63 +282,110 @@ func NewApp(
 }
 
 // orderBeginBlockers returns the order of BeginBlockers, by module name.
-func orderBeginBlockers(_ []string) []string {
-	return []string{
-		upgradetypes.ModuleName,
-		banktypes.ModuleName,
-		paramstypes.ModuleName,
-		deploymenttypes.ModuleName,
-		govtypes.ModuleName,
-		providertypes.ModuleName,
-		certtypes.ModuleName,
-		markettypes.ModuleName,
-		audittypes.ModuleName,
-		genutiltypes.ModuleName,
-		vestingtypes.ModuleName,
-		authtypes.ModuleName,
-		authz.ModuleName,
-		taketypes.ModuleName,
-		emodule.ModuleName,
-		minttypes.ModuleName,
-		distrtypes.ModuleName,
-		slashingtypes.ModuleName,
-		evidencetypes.ModuleName,
-		stakingtypes.ModuleName,
-		transfertypes.ModuleName,
-		consensusparamtypes.ModuleName,
-		ibctm.ModuleName,
-		ibchost.ModuleName,
-		feegrant.ModuleName,
-	}
+// the original order for reference
+//
+//	upgradetypes.ModuleName,
+//	banktypes.ModuleName,
+//	paramstypes.ModuleName,
+//	deploymenttypes.ModuleName,
+//	govtypes.ModuleName,
+//	providertypes.ModuleName,
+//	certtypes.ModuleName,
+//	markettypes.ModuleName,
+//	audittypes.ModuleName,
+//	genutiltypes.ModuleName,
+//	vestingtypes.ModuleName,
+//	authtypes.ModuleName,
+//	authz.ModuleName,
+//	taketypes.ModuleName,
+//	emodule.ModuleName,
+//	minttypes.ModuleName,
+//	distrtypes.ModuleName,
+//	slashingtypes.ModuleName,
+//	evidencetypes.ModuleName,
+//	stakingtypes.ModuleName,
+//	transfertypes.ModuleName,
+//	consensusparamtypes.ModuleName,
+//	ibctm.ModuleName,
+//	ibchost.ModuleName,
+//	feegrant.ModuleName,
+//	epochstypes.ModuleName,
+//	oracle.ModuleName,
+//	bme.ModuleName,
+//	// akash wasm module must be prior wasm
+//	awasm.ModuleName,
+//	// wasm after ibc transfer
+//	wasmtypes.ModuleName,
+func orderBeginBlockers(modules []string) []string {
+	ord := partialord.NewPartialOrdering(modules)
+	ord.FirstElements(epochstypes.ModuleName)
+
+	// Staking ordering
+	// TODO: Perhaps this can be relaxed, left to future work to analyze.
+	ord.Sequence(distrtypes.ModuleName, slashingtypes.ModuleName, evidencetypes.ModuleName, stakingtypes.ModuleName)
+	// TODO: This can almost certainly be un-constrained, but we keep the constraint to match prior functionality.
+	// IBChost came after staking, before superfluid.
+	// TODO: Come back and delete this line after testing the base change.
+	ord.Sequence(stakingtypes.ModuleName, ibchost.ModuleName)
+
+	// oracle must come up prior bme
+	//ord.Before(oracle.ModuleName, bme.ModuleName)
+
+	// escrow must come up after bme
+	//ord.Before(bme.ModuleName, escrow.ModuleName)
+
+	// akash wasm module must be prior wasm
+	ord.Before(awasm.ModuleName, wasmtypes.ModuleName)
+	// wasm after ibc transfer
+	ord.Before(transfertypes.ModuleName, wasmtypes.ModuleName)
+
+	// We leave downtime-detector un-constrained.
+	// every remaining module's begin block is a no-op.
+
+	return ord.TotalOrdering()
 }
 
-// OrderEndBlockers returns EndBlockers (crisis, govtypes, staking) with no relative order.
-func OrderEndBlockers(_ []string) []string {
-	return []string{
-		govtypes.ModuleName,
-		stakingtypes.ModuleName,
-		upgradetypes.ModuleName,
-		banktypes.ModuleName,
-		paramstypes.ModuleName,
-		deploymenttypes.ModuleName,
-		providertypes.ModuleName,
-		certtypes.ModuleName,
-		markettypes.ModuleName,
-		audittypes.ModuleName,
-		genutiltypes.ModuleName,
-		vestingtypes.ModuleName,
-		authtypes.ModuleName,
-		authz.ModuleName,
-		taketypes.ModuleName,
-		emodule.ModuleName,
-		minttypes.ModuleName,
-		distrtypes.ModuleName,
-		slashingtypes.ModuleName,
-		evidencetypes.ModuleName,
-		transfertypes.ModuleName,
-		ibchost.ModuleName,
-		feegrant.ModuleName,
-	}
+// orderEndBlockers returns EndBlockers (crisis, govtypes, staking) with no relative order.
+// original ordering for reference
+//
+//	govtypes.ModuleName,
+//	stakingtypes.ModuleName,
+//	upgradetypes.ModuleName,
+//	banktypes.ModuleName,
+//	paramstypes.ModuleName,
+//	deploymenttypes.ModuleName,
+//	providertypes.ModuleName,
+//	certtypes.ModuleName,
+//	markettypes.ModuleName,
+//	audittypes.ModuleName,
+//	genutiltypes.ModuleName,
+//	vestingtypes.ModuleName,
+//	authtypes.ModuleName,
+//	authz.ModuleName,
+//	taketypes.ModuleName,
+//	emodule.ModuleName,
+//	minttypes.ModuleName,
+//	distrtypes.ModuleName,
+//	slashingtypes.ModuleName,
+//	evidencetypes.ModuleName,
+//	transfertypes.ModuleName,
+//	ibchost.ModuleName,
+//	feegrant.ModuleName,
+//	// akash wasm module must be prior wasm
+//	awasm.ModuleName,
+//	// wasm after ibc transfer
+//	wasmtypes.ModuleName,
+//	oracle.ModuleName,
+//	bme.ModuleName,
+//	epochstypes.ModuleName,
+func orderEndBlockers(modules []string) []string {
+	ord := partialord.NewPartialOrdering(modules)
+
+	// Staking must be after gov.
+	ord.FirstElements(govtypes.ModuleName, stakingtypes.ModuleName)
+	//ord.Before(govtypes.ModuleName, )
+
+	return ord.TotalOrdering()
 }
 
 func getGenesisTime(appOpts servertypes.AppOptions, homePath string) time.Time { // nolint: unused
@@ -380,12 +447,12 @@ func (app *AkashApp) BeginBlocker(ctx sdk.Context) (sdk.BeginBlock, error) {
 	return app.MM.BeginBlock(ctx)
 }
 
-// EndBlocker is a function in which application updates every end block
+// EndBlocker is a function in which an application updates every end block
 func (app *AkashApp) EndBlocker(ctx sdk.Context) (sdk.EndBlock, error) {
 	return app.MM.EndBlock(ctx)
 }
 
-// Precommitter application updates before the commital of a block after all transactions have been delivered.
+// Precommitter application updates before the committal of a block after all transactions have been delivered.
 func (app *AkashApp) Precommitter(ctx sdk.Context) {
 	if err := app.MM.Precommit(ctx); err != nil {
 		panic(err)

@@ -3,14 +3,12 @@ package cmd
 import (
 	"context"
 
+	"github.com/CosmWasm/wasmd/x/wasm"
 	"github.com/cosmos/cosmos-sdk/x/crisis"
-	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
-	cmtcfg "github.com/cometbft/cometbft/config"
 	cmtcli "github.com/cometbft/cometbft/libs/cli"
 
-	sdkclient "github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/debug"
 	"github.com/cosmos/cosmos-sdk/client/pruning"
 	"github.com/cosmos/cosmos-sdk/client/snapshot"
@@ -19,11 +17,10 @@ import (
 	rosettaCmd "github.com/cosmos/rosetta/cmd"
 
 	"pkg.akt.dev/go/cli"
-	cflags "pkg.akt.dev/go/cli/flags"
 	"pkg.akt.dev/go/sdkutil"
 
-	"pkg.akt.dev/node/app"
-	"pkg.akt.dev/node/cmd/akash/cmd/testnetify"
+	"pkg.akt.dev/node/v2/app"
+	"pkg.akt.dev/node/v2/cmd/akash/cmd/testnetify"
 )
 
 // NewRootCmd creates a new root command for akash. It is called once in the
@@ -33,11 +30,15 @@ func NewRootCmd() (*cobra.Command, sdkutil.EncodingConfig) {
 	app.ModuleBasics().RegisterInterfaces(encodingConfig.InterfaceRegistry)
 
 	rootCmd := &cobra.Command{
-		Use:               "akash",
-		Short:             "Akash Blockchain Application",
-		Long:              "Akash CLI Utility.\n\nAkash is a peer-to-peer marketplace for computing resources and \na deployment platform for heavily distributed applications. \nFind out more at https://akash.network",
+		Use:   "akash",
+		Short: "Akash Blockchain Application",
+		Long: `Akash CLI Utility.
+
+Akash is a peer-to-peer marketplace for computing resources and
+a deployment platform for heavily distributed applications.
+Find out more at https://akash.network`,
 		SilenceUsage:      true,
-		PersistentPreRunE: cli.GetPersistentPreRunE(encodingConfig, []string{"AKASH"}, cli.DefaultHome),
+		PersistentPreRunE: cli.GetPersistentPreRunE(encodingConfig, []string{"AKASH"}, cli.DefaultHome, cli.WithPreRunAppConfig(InitAppConfig())),
 	}
 
 	initRootCmd(rootCmd, encodingConfig)
@@ -54,29 +55,7 @@ func Execute(rootCmd *cobra.Command, envPrefix string) error {
 	// getting and setting the client.Context. Ideally, we utilize
 	// https://github.com/spf13/cobra/pull/1118.
 
-	return ExecuteWithCtx(context.Background(), rootCmd, envPrefix)
-}
-
-// ExecuteWithCtx executes the root command.
-func ExecuteWithCtx(ctx context.Context, rootCmd *cobra.Command, envPrefix string) error {
-	// Create and set a client.Context on the command's Context. During the pre-run
-	// of the root command, a default initialized client.Context is provided to
-	// seed child command execution with values such as AccountRetriver, Keyring,
-	// and a Tendermint RPC. This requires the use of a pointer reference when
-	// getting and setting the client.Context. Ideally, we utilize
-	// https://github.com/spf13/cobra/pull/1118.
-	srvCtx := sdkserver.NewDefaultContext()
-
-	ctx = context.WithValue(ctx, sdkclient.ClientContextKey, &sdkclient.Context{})
-	ctx = context.WithValue(ctx, sdkserver.ServerContextKey, srvCtx)
-
-	rootCmd.PersistentFlags().String(cflags.FlagLogLevel, zerolog.InfoLevel.String(), "The logging level (trace|debug|info|warn|error|fatal|panic)")
-	rootCmd.PersistentFlags().String(cflags.FlagLogFormat, cmtcfg.LogFormatPlain, "The logging format (json|plain)")
-	rootCmd.PersistentFlags().Bool(cflags.FlagLogColor, false, "Pretty logging output. Applied only when log_format=plain")
-	rootCmd.PersistentFlags().String(cflags.FlagLogTimestamp, "", "Add timestamp prefix to the logs (rfc3339|rfc3339nano|kitchen)")
-
-	executor := cmtcli.PrepareBaseCmd(rootCmd, envPrefix, app.DefaultHome)
-	return executor.ExecuteContext(ctx)
+	return cli.ExecuteWithCtx(context.Background(), rootCmd, envPrefix)
 }
 
 func initRootCmd(rootCmd *cobra.Command, encodingConfig sdkutil.EncodingConfig) {
@@ -113,6 +92,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig sdkutil.EncodingConfig) 
 
 func addModuleInitFlags(startCmd *cobra.Command) {
 	crisis.AddModuleInitFlags(startCmd) //nolint: staticcheck
+	wasm.AddModuleInitFlags(startCmd)
 }
 
 // genesisCommand builds genesis-related `simd genesis` command. Users may provide application specific commands as a parameter

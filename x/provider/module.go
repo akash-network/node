@@ -20,10 +20,10 @@ import (
 
 	types "pkg.akt.dev/go/node/provider/v1beta4"
 
-	mkeeper "pkg.akt.dev/node/x/market/keeper"
-	"pkg.akt.dev/node/x/provider/handler"
-	"pkg.akt.dev/node/x/provider/keeper"
-	"pkg.akt.dev/node/x/provider/simulation"
+	mkeeper "pkg.akt.dev/node/v2/x/market/keeper"
+	"pkg.akt.dev/node/v2/x/provider/handler"
+	"pkg.akt.dev/node/v2/x/provider/keeper"
+	"pkg.akt.dev/node/v2/x/provider/simulation"
 )
 
 // type check to ensure the interface is properly implemented
@@ -69,8 +69,7 @@ func (b AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) 
 	types.RegisterInterfaces(registry)
 }
 
-// DefaultGenesis returns default genesis state as raw bytes for the provider
-// module.
+// DefaultGenesis returns default genesis state as raw bytes for the provider module.
 func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
 	return cdc.MustMarshalJSON(DefaultGenesisState())
 }
@@ -143,7 +142,7 @@ func (am AppModule) BeginBlock(_ context.Context) error {
 	return nil
 }
 
-// EndBlock returns the end blocker for the deployment module. It returns no validator
+// EndBlock returns the end blocker for the provider module. It returns no validator
 // updates.
 func (am AppModule) EndBlock(_ context.Context) error {
 	return nil

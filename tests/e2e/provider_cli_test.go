@@ -11,7 +11,7 @@ import (
 
 	types "pkg.akt.dev/go/node/provider/v1beta4"
 
-	"pkg.akt.dev/node/testutil"
+	"pkg.akt.dev/node/v2/testutil"
 )
 
 type providerIntegrationTestSuite struct {
@@ -31,13 +31,13 @@ func (s *providerIntegrationTestSuite) TestProvider() {
 	ctx := context.Background()
 
 	// create provider
-	_, err = clitestutil.TxCreateProviderExec(
+	_, err = clitestutil.ExecTxCreateProvider(
 		ctx,
 		cctx,
-		providerPath,
 		cli.TestFlags().
+			With(providerPath).
 			WithFrom(addr.String()).
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
@@ -45,7 +45,7 @@ func (s *providerIntegrationTestSuite) TestProvider() {
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
 	// test query providers
-	resp, err := clitestutil.QueryProvidersExec(
+	resp, err := clitestutil.ExecQueryProviders(
 		ctx,
 		cctx,
 		cli.TestFlags().
@@ -62,7 +62,7 @@ func (s *providerIntegrationTestSuite) TestProvider() {
 
 	// test query provider
 	createdProvider := providers[0]
-	resp, err = clitestutil.QueryProviderExec(
+	resp, err = clitestutil.ExecQueryProvider(
 		ctx,
 		cctx,
 		cli.TestFlags().
@@ -77,13 +77,13 @@ func (s *providerIntegrationTestSuite) TestProvider() {
 	s.Require().Equal(createdProvider, provider)
 
 	// test updating provider
-	_, err = clitestutil.TxUpdateProviderExec(
+	_, err = clitestutil.ExecTxUpdateProvider(
 		ctx,
 		cctx,
-		providerPath2,
 		cli.TestFlags().
+			With(providerPath2).
 			WithFrom(addr.String()).
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
@@ -91,7 +91,7 @@ func (s *providerIntegrationTestSuite) TestProvider() {
 
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
-	resp, err = clitestutil.QueryProviderExec(
+	resp, err = clitestutil.ExecQueryProvider(
 		ctx,
 		cctx,
 		cli.TestFlags().

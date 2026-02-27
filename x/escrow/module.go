@@ -20,9 +20,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 	v1 "pkg.akt.dev/go/node/escrow/v1"
 
-	"pkg.akt.dev/node/x/escrow/client/rest"
-	"pkg.akt.dev/node/x/escrow/handler"
-	"pkg.akt.dev/node/x/escrow/keeper"
+	"pkg.akt.dev/node/v2/x/escrow/client/rest"
+	"pkg.akt.dev/node/v2/x/escrow/handler"
+	"pkg.akt.dev/node/v2/x/escrow/keeper"
 )
 
 var (
@@ -37,17 +37,17 @@ var (
 	_ module.AppModuleSimulation = AppModule{}
 )
 
-// AppModuleBasic defines the basic application module used by the provider module.
+// AppModuleBasic defines the basic application module used by the escrow module.
 type AppModuleBasic struct {
 	cdc codec.Codec
 }
 
-// Name returns provider module's name
+// Name returns escrow module's name
 func (AppModuleBasic) Name() string {
 	return emodule.ModuleName
 }
 
-// RegisterLegacyAminoCodec registers the provider module's types for the given codec.
+// RegisterLegacyAminoCodec registers the escrow module's types for the given codec.
 func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 	v1.RegisterLegacyAminoCodec(cdc)
 }
@@ -57,8 +57,7 @@ func (b AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) 
 	v1.RegisterInterfaces(registry)
 }
 
-// DefaultGenesis returns default genesis state as raw bytes for the provider
-// module.
+// DefaultGenesis returns default genesis state as raw bytes for the escrow module.
 func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
 	return cdc.MustMarshalJSON(DefaultGenesisState())
 }
@@ -84,7 +83,7 @@ func (AppModuleBasic) RegisterRESTRoutes(clientCtx client.Context, rtr *mux.Rout
 	rest.RegisterRoutes(clientCtx, rtr, emodule.StoreKey)
 }
 
-// RegisterGRPCGatewayRoutes registers the gRPC Gateway routes for the provider module.
+// RegisterGRPCGatewayRoutes registers the gRPC Gateway routes for the escrow module.
 func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *runtime.ServeMux) {
 	err := v1.RegisterQueryHandlerClient(context.Background(), mux, v1.NewQueryClient(clientCtx))
 	if err != nil {
@@ -162,10 +161,10 @@ func (am AppModule) BeginBlock(_ context.Context) error {
 	return nil
 }
 
-// EndBlock returns the end blocker for the deployment module. It returns no validator
+// EndBlock returns the end blocker for the escrow module. It returns no validator
 // updates.
-func (am AppModule) EndBlock(_ context.Context) error {
-	return nil
+func (am AppModule) EndBlock(ctx context.Context) error {
+	return am.keeper.EndBlocker(ctx)
 }
 
 // InitGenesis performs genesis initialization for the escrow module. It returns

@@ -27,7 +27,7 @@ import (
 
 	types "pkg.akt.dev/go/node/cert/v1"
 
-	certerrors "pkg.akt.dev/node/x/cert/errors"
+	certerrors "pkg.akt.dev/node/v2/x/cert/errors"
 )
 
 var (

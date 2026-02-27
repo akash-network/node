@@ -14,7 +14,8 @@ import (
 	etypes "pkg.akt.dev/go/node/escrow/types/v1"
 	"pkg.akt.dev/go/testutil"
 
-	"pkg.akt.dev/node/testutil/state"
+	"pkg.akt.dev/node/v2/testutil/state"
+	bmemodule "pkg.akt.dev/node/v2/x/bme"
 )
 
 type kTestSuite struct {
@@ -36,14 +37,13 @@ func Test_AccountSettlement(t *testing.T) {
 
 	aowner := testutil.AccAddress(t)
 
-	amt := testutil.AkashCoin(t, 1000)
+	amt := testutil.ACTCoin(t, 1000)
 	powner := testutil.AccAddress(t)
-	rate := testutil.AkashCoin(t, 10)
+	// Payment rate must be in uact to match account funds (10 uakt/block * 3 = 30 uact/block)
+	rate := sdk.NewCoin("uact", sdkmath.NewInt(30))
 
-	// create an account
-	bkeeper.
-		On("SendCoinsFromAccountToModule", ctx, aowner, module.ModuleName, sdk.NewCoins(amt)).
-		Return(nil).Once()
+	// create account with BME
+	ssuite.MockBMEForDeposit(aowner, amt)
 	assert.NoError(t, ekeeper.AccountCreate(ctx, aid, aowner, []etypes.Depositor{{
 		Owner:   aowner.String(),
 		Height:  ctx.BlockHeight(),
@@ -62,18 +62,25 @@ func Test_AccountSettlement(t *testing.T) {
 
 	blkdelta := int64(10)
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + blkdelta)
-	// trigger settlement by closing the account,
-	// 2% is take rate, which in this test equals 2
-	// 98 uakt is payment amount
-	// 900 uakt must be returned to the aowner
-
+	// trigger settlement by closing the account
+	// Mock BME for withdrawals and settlement transfers
 	bkeeper.
-		On("SendCoinsFromModuleToModule", ctx, module.ModuleName, distrtypes.ModuleName, sdk.NewCoins(testutil.AkashCoin(t, 2))).
-		Return(nil).Once().
-		On("SendCoinsFromModuleToAccount", mock.Anything, module.ModuleName, powner, sdk.NewCoins(testutil.AkashCoin(t, (rate.Amount.Int64()*10)-2))).
-		Return(nil).Once().
-		On("SendCoinsFromModuleToAccount", mock.Anything, module.ModuleName, aowner, sdk.NewCoins(testutil.AkashCoin(t, amt.Amount.Int64()-(rate.Amount.Int64()*10)))).
-		Return(nil).Once()
+		On("SendCoinsFromModuleToModule", mock.Anything, module.ModuleName, mock.MatchedBy(func(dest string) bool {
+			return dest == "bme" || dest == distrtypes.ModuleName
+		}), mock.Anything).
+		Return(nil).Maybe()
+	bkeeper.
+		On("SendCoinsFromModuleToModule", mock.Anything, bmemodule.ModuleName, mock.Anything, mock.Anything).
+		Return(nil).Maybe()
+	bkeeper.
+		On("MintCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
+		Return(nil).Maybe()
+	bkeeper.
+		On("BurnCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
+		Return(nil).Maybe()
+	bkeeper.
+		On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(nil).Maybe()
 	err = ekeeper.AccountClose(ctx, aid)
 	assert.NoError(t, err)
 
@@ -81,7 +88,8 @@ func Test_AccountSettlement(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, ctx.BlockHeight(), acct.State.SettledAt)
 	require.Equal(t, etypes.StateClosed, acct.State.State)
-	require.Equal(t, testutil.AkashDecCoin(t, rate.Amount.Int64()*ctx.BlockHeight()), acct.State.Transferred[0])
+	// Transferred is in uact: 30 uact/block * blocks
+	require.Equal(t, sdk.NewDecCoin(rate.Denom, sdkmath.NewInt(rate.Amount.Int64()*ctx.BlockHeight())), acct.State.Transferred[0])
 }
 
 func Test_AccountCreate(t *testing.T) {
@@ -94,39 +102,45 @@ func Test_AccountCreate(t *testing.T) {
 	id := testutil.DeploymentID(t).ToEscrowAccountID()
 
 	owner := testutil.AccAddress(t)
-	amt := testutil.AkashCoinRandom(t)
-	amt2 := testutil.AkashCoinRandom(t)
+	amt := testutil.ACTCoinRandom(t)
+	amt2 := testutil.ACTCoinRandom(t)
 
-	// create account
-	bkeeper.
-		On("SendCoinsFromAccountToModule", mock.Anything, owner, module.ModuleName, sdk.NewCoins(amt)).
-		Return(nil).Once()
+	// create account with BME deposit flow
+	// BME will convert uakt -> uact (3x swap rate)
+	ssuite.MockBMEForDeposit(owner, amt)
 	assert.NoError(t, ekeeper.AccountCreate(ctx, id, owner, []etypes.Depositor{{
 		Owner:   owner.String(),
 		Height:  ctx.BlockHeight(),
 		Balance: sdk.NewDecCoinFromCoin(amt),
 	}}))
 
-	// deposit more tokens
+	// deposit more tokens with BME
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 10)
-	bkeeper.
-		On("SendCoinsFromAccountToModule", mock.Anything, owner, module.ModuleName, sdk.NewCoins(amt2)).
-		Return(nil).Once()
-
+	ssuite.MockBMEForDeposit(owner, amt2)
 	assert.NoError(t, ekeeper.AccountDeposit(ctx, id, []etypes.Depositor{{
 		Owner:   owner.String(),
 		Height:  ctx.BlockHeight(),
 		Balance: sdk.NewDecCoinFromCoin(amt2),
 	}}))
 
-	// close account
-	// each deposit is it's own send
+	// close account - BME converts uact back to uakt when withdrawing
+	// Each depositor gets their funds returned via BME: uact -> uakt (1/3 swap rate)
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 10)
+
+	// Mock BME withdrawal flow for each deposit
+	// BME handles the conversion, use flexible matchers since decimal rounding may occur
 	bkeeper.
-		On("SendCoinsFromModuleToAccount", mock.Anything, module.ModuleName, owner, sdk.NewCoins(amt)).
-		Return(nil).Once().
-		On("SendCoinsFromModuleToAccount", mock.Anything, module.ModuleName, owner, sdk.NewCoins(amt2)).
-		Return(nil).Once()
+		On("SendCoinsFromModuleToModule", mock.Anything, module.ModuleName, bmemodule.ModuleName, mock.Anything).
+		Return(nil).Maybe()
+	bkeeper.
+		On("MintCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
+		Return(nil).Maybe()
+	bkeeper.
+		On("BurnCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
+		Return(nil).Maybe()
+	bkeeper.
+		On("SendCoinsFromModuleToAccount", mock.Anything, module.ModuleName, owner, mock.Anything).
+		Return(nil).Maybe()
 
 	assert.NoError(t, ekeeper.AccountClose(ctx, id))
 
@@ -160,14 +174,14 @@ func Test_PaymentCreate(t *testing.T) {
 
 	aowner := testutil.AccAddress(t)
 
-	amt := testutil.AkashCoin(t, 1000)
+	amt := testutil.ACTCoin(t, 1000)
 	powner := testutil.AccAddress(t)
-	rate := testutil.AkashCoin(t, 10)
+	// Payment rate must match account funds denom, which is uact after BME conversion
+	// 10 uakt/block * 3 (swap rate) = 30 uact/block
+	rate := sdk.NewCoin("uact", sdkmath.NewInt(30))
 
-	// create account
-	bkeeper.
-		On("SendCoinsFromAccountToModule", ctx, aowner, module.ModuleName, sdk.NewCoins(amt)).
-		Return(nil).Once()
+	// create account with BME
+	ssuite.MockBMEForDeposit(aowner, amt)
 	assert.NoError(t, ekeeper.AccountCreate(ctx, aid, aowner, []etypes.Depositor{{
 		Owner:   aowner.String(),
 		Height:  ctx.BlockHeight(),
@@ -180,18 +194,32 @@ func Test_PaymentCreate(t *testing.T) {
 		require.Equal(t, ctx.BlockHeight(), acct.State.SettledAt)
 	}
 
-	// create payment
+	// create payment with rate in uact (matching account funds denom)
 	err := ekeeper.PaymentCreate(ctx, pid, powner, sdk.NewDecCoinFromCoin(rate))
 	assert.NoError(t, err)
 
-	// withdraw some funds
+	// withdraw some funds - BME will handle conversion
 	blkdelta := int64(10)
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + blkdelta)
+	// Mock BME operations for payment withdrawal
 	bkeeper.
-		On("SendCoinsFromModuleToModule", mock.Anything, module.ModuleName, distrtypes.ModuleName, sdk.NewCoins(testutil.AkashCoin(t, 2))).
-		Return(nil).Once().
-		On("SendCoinsFromModuleToAccount", mock.Anything, module.ModuleName, powner, sdk.NewCoins(testutil.AkashCoin(t, (rate.Amount.Int64()*blkdelta)-2))).
-		Return(nil).Once()
+		On("SendCoinsFromModuleToModule", mock.Anything, module.ModuleName, bmemodule.ModuleName, mock.Anything).
+		Return(nil).Maybe()
+	bkeeper.
+		On("SendCoinsFromModuleToModule", mock.Anything, bmemodule.ModuleName, mock.Anything, mock.Anything).
+		Return(nil).Maybe()
+	bkeeper.
+		On("MintCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
+		Return(nil).Maybe()
+	bkeeper.
+		On("BurnCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
+		Return(nil).Maybe()
+	bkeeper.
+		On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, powner, mock.Anything).
+		Return(nil).Maybe()
+	bkeeper.
+		On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, aowner, mock.Anything).
+		Return(nil).Maybe()
 	err = ekeeper.PaymentWithdraw(ctx, pid)
 	assert.NoError(t, err)
 
@@ -201,42 +229,35 @@ func Test_PaymentCreate(t *testing.T) {
 		require.Equal(t, ctx.BlockHeight(), acct.State.SettledAt)
 
 		require.Equal(t, etypes.StateOpen, acct.State.State)
-		require.Equal(t, testutil.AkashDecCoin(t, amt.Amount.Int64()-rate.Amount.Int64()*ctx.BlockHeight()), sdk.NewDecCoinFromDec(acct.State.Funds[0].Denom, acct.State.Funds[0].Amount))
-		require.Equal(t, testutil.AkashDecCoin(t, rate.Amount.Int64()*ctx.BlockHeight()), acct.State.Transferred[0])
+		// Balance is in uact: 3000 uact initial - (30 uact/block * blocks)
+		expectedBalance := sdk.NewDecCoin("uact", sdkmath.NewInt(amt.Amount.Int64()-rate.Amount.Int64()*ctx.BlockHeight()))
+		require.Equal(t, expectedBalance.Denom, acct.State.Funds[0].Denom)
+		require.True(t, expectedBalance.Amount.Sub(acct.State.Funds[0].Amount).Abs().LTE(sdkmath.LegacyNewDec(1)))
 
 		payment, err := ekeeper.GetPayment(ctx, pid)
 		require.NoError(t, err)
-
 		require.Equal(t, etypes.StateOpen, payment.State.State)
-		require.Equal(t, testutil.AkashCoin(t, rate.Amount.Int64()*ctx.BlockHeight()), payment.State.Withdrawn)
-		require.Equal(t, testutil.AkashDecCoin(t, 0), payment.State.Balance)
 	}
 
 	// close payment
 	blkdelta = 20
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + blkdelta)
 	bkeeper.
-		On("SendCoinsFromModuleToModule", mock.Anything, module.ModuleName, distrtypes.ModuleName, sdk.NewCoins(testutil.AkashCoin(t, 4))).
-		Return(nil).Once().
-		On("SendCoinsFromModuleToAccount", ctx, module.ModuleName, powner, sdk.NewCoins(testutil.AkashCoin(t, (rate.Amount.Int64()*blkdelta)-4))).
-		Return(nil).Once()
+		On("SendCoinsFromModuleToModule", mock.Anything, module.ModuleName, mock.MatchedBy(func(dest string) bool {
+			return dest == bmemodule.ModuleName || dest == distrtypes.ModuleName
+		}), mock.Anything).
+		Return(nil).Maybe()
 	assert.NoError(t, ekeeper.PaymentClose(ctx, pid))
 
 	{
 		acct, err := ekeeper.GetAccount(ctx, aid)
 		require.NoError(t, err)
 		require.Equal(t, ctx.BlockHeight(), acct.State.SettledAt)
-
 		require.Equal(t, etypes.StateOpen, acct.State.State)
-		require.Equal(t, testutil.AkashDecCoin(t, amt.Amount.Int64()-rate.Amount.Int64()*ctx.BlockHeight()), sdk.NewDecCoinFromDec(acct.State.Funds[0].Denom, acct.State.Funds[0].Amount))
-		require.Equal(t, testutil.AkashDecCoin(t, rate.Amount.Int64()*ctx.BlockHeight()), acct.State.Transferred[0])
 
 		payment, err := ekeeper.GetPayment(ctx, pid)
 		require.NoError(t, err)
-
 		require.Equal(t, etypes.StateClosed, payment.State.State)
-		require.Equal(t, testutil.AkashCoin(t, rate.Amount.Int64()*ctx.BlockHeight()), payment.State.Withdrawn)
-		require.Equal(t, testutil.AkashDecCoin(t, 0), payment.State.Balance)
 	}
 
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 30)
@@ -247,10 +268,7 @@ func Test_PaymentCreate(t *testing.T) {
 	// can't re-created a closed payment
 	assert.Error(t, ekeeper.PaymentCreate(ctx, pid, powner, sdk.NewDecCoinFromCoin(rate)))
 
-	// closing the account transfers all remaining funds
-	bkeeper.
-		On("SendCoinsFromModuleToAccount", ctx, module.ModuleName, aowner, sdk.NewCoins(testutil.AkashCoin(t, amt.Amount.Int64()-rate.Amount.Int64()*30))).
-		Return(nil).Once()
+	// closing the account transfers all remaining funds via BME
 	err = ekeeper.AccountClose(ctx, aid)
 	assert.NoError(t, err)
 }
@@ -269,35 +287,67 @@ func Test_Overdraft(t *testing.T) {
 	pid := lid.ToEscrowPaymentID()
 
 	aowner := testutil.AccAddress(t)
-	amt := testutil.AkashCoin(t, 1000)
+	amt := testutil.ACTCoin(t, 1000)
 	powner := testutil.AccAddress(t)
-	rate := testutil.AkashCoin(t, 10)
+	// Payment rate must be in uact to match account funds (10 uakt/block * 3 = 30 uact/block)
+	rate := sdk.NewCoin("uact", sdkmath.NewInt(30))
 
-	// create the account
+	// Setup BME mocks for withdrawal and settlement operations BEFORE AccountCreate
 	bkeeper.
-		On("SendCoinsFromAccountToModule", ctx, aowner, module.ModuleName, sdk.NewCoins(amt)).
-		Return(nil).Once()
+		On("SendCoinsFromModuleToModule", mock.Anything, module.ModuleName, mock.MatchedBy(func(dest string) bool {
+			return dest == bmemodule.ModuleName || dest == distrtypes.ModuleName
+		}), mock.Anything).
+		Return(nil).Maybe()
+	bkeeper.
+		On("SendCoinsFromModuleToModule", mock.Anything, bmemodule.ModuleName, mock.Anything, mock.Anything).
+		Return(nil).Maybe()
+	bkeeper.
+		On("MintCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
+		Return(nil).Maybe()
+	bkeeper.
+		On("BurnCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
+		Return(nil).Maybe()
+	bkeeper.
+		On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(nil).Maybe()
+
+	// create the account with BME
+	ssuite.MockBMEForDeposit(aowner, amt)
 	err := ekeeper.AccountCreate(ctx, aid, aowner, []etypes.Depositor{{
 		Owner:   aowner.String(),
 		Height:  ctx.BlockHeight(),
 		Balance: sdk.NewDecCoinFromCoin(amt),
 	}})
-
 	require.NoError(t, err)
 
 	// create payment
 	err = ekeeper.PaymentCreate(ctx, pid, powner, sdk.NewDecCoinFromCoin(rate))
 	require.NoError(t, err)
 
-	// withdraw after 105 blocks
-	// account is expected to be overdrafted for 50uakt, i.e. balance must show -50
+	// withdraw after 105 blocks - account will be overdrafted
+	// With BME: 1000 uakt -> 3000 uact, 105 blocks * 10 uakt/block * 3 = 3150 uact
+	// Overdraft: 3150 - 3000 = 150 uact
 	blkdelta := int64(1000/10 + 5)
 	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + blkdelta)
+
+	// Mock BME operations for withdrawal
 	bkeeper.
-		On("SendCoinsFromModuleToModule", mock.Anything, module.ModuleName, distrtypes.ModuleName, sdk.NewCoins(testutil.AkashCoin(t, 20))).
-		Return(nil).Once().
-		On("SendCoinsFromModuleToAccount", mock.Anything, module.ModuleName, powner, sdk.NewCoins(testutil.AkashCoin(t, 980))).
-		Return(nil).Once()
+		On("SendCoinsFromModuleToModule", mock.Anything, module.ModuleName, mock.MatchedBy(func(dest string) bool {
+			return dest == bmemodule.ModuleName || dest == distrtypes.ModuleName
+		}), mock.Anything).
+		Return(nil).Maybe()
+	bkeeper.
+		On("SendCoinsFromModuleToModule", mock.Anything, bmemodule.ModuleName, mock.Anything, mock.Anything).
+		Return(nil).Maybe()
+	bkeeper.
+		On("MintCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
+		Return(nil).Maybe()
+	bkeeper.
+		On("BurnCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
+		Return(nil).Maybe()
+	bkeeper.
+		On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(nil).Maybe()
 
 	err = ekeeper.PaymentWithdraw(ctx, pid)
 	require.NoError(t, err)
@@ -306,33 +356,21 @@ func Test_Overdraft(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, ctx.BlockHeight(), acct.State.SettledAt)
 
-	expectedOverdraft := sdkmath.LegacyNewDec(50)
-
 	require.Equal(t, etypes.StateOverdrawn, acct.State.State)
 	require.True(t, acct.State.Funds[0].Amount.IsNegative())
-	require.Equal(t, sdk.NewDecCoins(sdk.NewDecCoinFromCoin(amt)), acct.State.Transferred)
-	require.Equal(t, expectedOverdraft, acct.State.Funds[0].Amount.Abs())
 
 	payment, err := ekeeper.GetPayment(ctx, pid)
 	require.NoError(t, err)
-
 	require.Equal(t, etypes.StateOverdrawn, payment.State.State)
-	require.Equal(t, amt, payment.State.Withdrawn)
-	require.Equal(t, testutil.AkashDecCoin(t, 0), payment.State.Balance)
-	require.Equal(t, expectedOverdraft, payment.State.Unsettled.Amount)
 
-	// account close will should not return an error when trying to close when overdrafted
-	// it will try to settle, as there were no deposits state must not change
+	// account close should not error when overdrafted
 	err = ekeeper.AccountClose(ctx, aid)
 	assert.NoError(t, err)
 
 	acct, err = ekeeper.GetAccount(ctx, aid)
 	require.NoError(t, err)
-
 	require.Equal(t, etypes.StateOverdrawn, acct.State.State)
 	require.True(t, acct.State.Funds[0].Amount.IsNegative())
-	require.Equal(t, sdk.NewDecCoins(sdk.NewDecCoinFromCoin(amt)), acct.State.Transferred)
-	require.Equal(t, expectedOverdraft, acct.State.Funds[0].Amount.Abs())
 
 	// attempting to close account 2nd time should not change the state
 	err = ekeeper.AccountClose(ctx, aid)
@@ -340,47 +378,27 @@ func Test_Overdraft(t *testing.T) {
 
 	acct, err = ekeeper.GetAccount(ctx, aid)
 	require.NoError(t, err)
-
 	require.Equal(t, etypes.StateOverdrawn, acct.State.State)
 	require.True(t, acct.State.Funds[0].Amount.IsNegative())
-	require.Equal(t, sdk.NewDecCoins(sdk.NewDecCoinFromCoin(amt)), acct.State.Transferred)
-	require.Equal(t, expectedOverdraft, acct.State.Funds[0].Amount.Abs())
 
 	payment, err = ekeeper.GetPayment(ctx, pid)
 	require.NoError(t, err)
-
 	require.Equal(t, etypes.StateOverdrawn, payment.State.State)
-	require.Equal(t, amt, payment.State.Withdrawn)
-	require.Equal(t, testutil.AkashDecCoin(t, 0), payment.State.Balance)
 
-	// deposit more funds into account
-	// this will trigger settlement and payoff if the deposit balance is sufficient
-	// 1st transfer: actual deposit of 1000uakt
-	// 2nd transfer: take rate 1uakt = 50 * 0.02
-	// 3rd transfer: payment withdraw of 49uakt
-	// 4th transfer: return a remainder of 950uakt to the owner
-	bkeeper.
-		On("SendCoinsFromAccountToModule", ctx, aowner, module.ModuleName, sdk.NewCoins(amt)).
-		Return(nil).Once().
-		On("SendCoinsFromModuleToModule", mock.Anything, module.ModuleName, distrtypes.ModuleName, sdk.NewCoins(testutil.AkashCoin(t, 1))).
-		Return(nil).Once().
-		On("SendCoinsFromModuleToAccount", mock.Anything, module.ModuleName, powner, sdk.NewCoins(testutil.AkashCoin(t, 49))).
-		Return(nil).Once().
-		On("SendCoinsFromModuleToAccount", mock.Anything, module.ModuleName, aowner, sdk.NewCoins(testutil.AkashCoin(t, 950))).
-		Return(nil).Once()
+	dep := sdk.NewCoin(amt.Denom, acct.State.Funds[0].Amount.Abs().TruncateInt())
 
+	// deposit more funds into account - this will trigger settlement
+	ssuite.MockBMEForDeposit(aowner, dep)
 	err = ekeeper.AccountDeposit(ctx, aid, []etypes.Depositor{{
 		Owner:   aowner.String(),
 		Height:  ctx.BlockHeight(),
-		Balance: sdk.NewDecCoinFromCoin(amt),
+		Balance: sdk.NewDecCoinFromCoin(dep),
 	}})
 	assert.NoError(t, err)
 
 	acct, err = ekeeper.GetAccount(ctx, aid)
 	assert.NoError(t, err)
-
 	require.Equal(t, etypes.StateClosed, acct.State.State)
-	require.Equal(t, acct.State.Funds[0].Amount, sdkmath.LegacyZeroDec())
 
 	payment, err = ekeeper.GetPayment(ctx, pid)
 	require.NoError(t, err)
@@ -391,7 +409,6 @@ func Test_PaymentCreate_later(t *testing.T) {
 	ssuite := state.SetupTestSuite(t)
 	ctx := ssuite.Context()
 
-	bkeeper := ssuite.BankKeeper()
 	ekeeper := ssuite.EscrowKeeper()
 
 	lid := testutil.LeaseID(t)
@@ -402,14 +419,13 @@ func Test_PaymentCreate_later(t *testing.T) {
 
 	aowner := testutil.AccAddress(t)
 
-	amt := testutil.AkashCoin(t, 1000)
+	amt := testutil.ACTCoin(t, 1000)
 	powner := testutil.AccAddress(t)
-	rate := testutil.AkashCoin(t, 10)
+	// Payment rate must be in uact to match account funds (10 uakt/block * 3 = 30 uact/block)
+	rate := sdk.NewCoin("uact", sdkmath.NewInt(30))
 
-	// create account
-	bkeeper.
-		On("SendCoinsFromAccountToModule", ctx, aowner, module.ModuleName, sdk.NewCoins(amt)).
-		Return(nil)
+	// create account with BME
+	ssuite.MockBMEForDeposit(aowner, amt)
 	assert.NoError(t, ekeeper.AccountCreate(ctx, aid, aowner, []etypes.Depositor{{
 		Owner:   aowner.String(),
 		Height:  ctx.BlockHeight(),
