@@ -421,10 +421,10 @@ func (app *AkashApp) ModuleAccountAddrs() map[string]bool {
 // BlockedAddrs returns all the app's module account addresses that are not
 // allowed to receive external tokens.
 func (app *AkashApp) BlockedAddrs() map[string]bool {
-	perms := ModuleAccountAddrs()
+	perms := ModuleAccountPerms()
 	blockedAddrs := make(map[string]bool)
-	for acc := range perms {
-		blockedAddrs[authtypes.NewModuleAddress(acc).String()] = !allowedReceivingModAcc[acc]
+	for macc := range perms {
+		blockedAddrs[authtypes.NewModuleAddress(macc).String()] = !allowedReceivingModAcc[macc]
 	}
 
 	return blockedAddrs
