@@ -42,7 +42,7 @@ jobs:
           # using PAT as homebrew is located in different repo
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   test-network-upgrade-on-release:
-    runs-on: gh-runner-test
+    runs-on: upgrade-tester
     needs:
       - publish
     steps:
