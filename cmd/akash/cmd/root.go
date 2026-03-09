@@ -16,8 +16,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/snapshot"
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	rosettaCmd "github.com/cosmos/rosetta/cmd"
 	ibctransfer "github.com/cosmos/ibc-go/v10/modules/apps/transfer"
+	ibccore "github.com/cosmos/ibc-go/v10/modules/core"
+	rosettaCmd "github.com/cosmos/rosetta/cmd"
 
 	"pkg.akt.dev/go/cli"
 	cflags "pkg.akt.dev/go/cli/flags"
@@ -108,21 +109,24 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig sdkutil.EncodingConfig) 
 
 	cli.ServerCmds(rootCmd, home, ac.newApp, ac.appExport, addModuleInitFlags)
 
-	addIBCTransferCommands(rootCmd)
+	addIBCCommands(rootCmd)
 
 	rootCmd.SetOut(rootCmd.OutOrStdout())
 	rootCmd.SetErr(rootCmd.ErrOrStderr())
 }
 
-// addIBCTransferCommands adds IBC transfer tx and query subcommands to the CLI.
-// The chain supports IBC transfers; the pkg.akt.dev/go/cli package does not wire them in.
-func addIBCTransferCommands(rootCmd *cobra.Command) {
+// addIBCCommands adds IBC core (client, channel) and transfer tx/query subcommands to the CLI.
+// The chain supports IBC; the pkg.akt.dev/go/cli package does not wire these in.
+func addIBCCommands(rootCmd *cobra.Command) {
+	coreBasic := ibccore.AppModuleBasic{}
 	transferBasic := ibctransfer.AppModuleBasic{}
 	for _, c := range rootCmd.Commands() {
 		switch c.Name() {
 		case "tx":
+			c.AddCommand(coreBasic.GetTxCmd())
 			c.AddCommand(transferBasic.GetTxCmd())
 		case "query", "q":
+			c.AddCommand(coreBasic.GetQueryCmd())
 			c.AddCommand(transferBasic.GetQueryCmd())
 		}
 	}
