@@ -81,9 +81,9 @@ func authJWTCmd() *cobra.Command {
 						return err
 					}
 
-					exp = time.Unix(nbfInt, 0)
+					nbf = time.Unix(nbfInt, 0)
 				} else {
-					exp = now.Add(dur)
+					nbf = now.Add(dur)
 				}
 			}
 
@@ -100,12 +100,12 @@ func authJWTCmd() *cobra.Command {
 			var scope ajwt.PermissionScopes
 
 			if cmd.Flags().Changed(FlagJWTScope) {
-				scopeString, err := cmd.Flags().GetString(FlagJWTAccess)
+				scopeStrings, err := cmd.Flags().GetStringSlice(FlagJWTScope)
 				if err != nil {
 					return err
 				}
 
-				if err = scope.UnmarshalCSV(scopeString); err != nil {
+				if err = scope.UnmarshalCSV(strings.Join(scopeStrings, ",")); err != nil {
 					return err
 				}
 			}
