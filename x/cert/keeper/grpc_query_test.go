@@ -14,8 +14,8 @@ import (
 	types "pkg.akt.dev/go/node/cert/v1"
 	"pkg.akt.dev/go/testutil"
 
-	"pkg.akt.dev/node/app"
-	"pkg.akt.dev/node/x/cert/keeper"
+	"pkg.akt.dev/node/v2/app"
+	"pkg.akt.dev/node/v2/x/cert/keeper"
 )
 
 type grpcTestSuite struct {

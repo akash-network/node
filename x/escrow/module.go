@@ -6,23 +6,23 @@ import (
 	"fmt"
 
 	"cosmossdk.io/core/appmodule"
+	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/codec"
+	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/module"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/cosmos/gogoproto/grpc"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
 	emodule "pkg.akt.dev/go/node/escrow/module"
-
-	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/codec"
-	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/module"
 	v1 "pkg.akt.dev/go/node/escrow/v1"
 
-	"pkg.akt.dev/node/x/escrow/client/rest"
-	"pkg.akt.dev/node/x/escrow/handler"
-	"pkg.akt.dev/node/x/escrow/keeper"
+	"pkg.akt.dev/node/v2/x/escrow/client/rest"
+	"pkg.akt.dev/node/v2/x/escrow/handler"
+	"pkg.akt.dev/node/v2/x/escrow/imports"
+	"pkg.akt.dev/node/v2/x/escrow/keeper"
 )
 
 var (
@@ -37,17 +37,17 @@ var (
 	_ module.AppModuleSimulation = AppModule{}
 )
 
-// AppModuleBasic defines the basic application module used by the provider module.
+// AppModuleBasic defines the basic application module used by the escrow module.
 type AppModuleBasic struct {
 	cdc codec.Codec
 }
 
-// Name returns provider module's name
+// Name returns escrow module's name
 func (AppModuleBasic) Name() string {
 	return emodule.ModuleName
 }
 
-// RegisterLegacyAminoCodec registers the provider module's types for the given codec.
+// RegisterLegacyAminoCodec registers the escrow module's types for the given codec.
 func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
 	v1.RegisterLegacyAminoCodec(cdc)
 }
@@ -57,8 +57,7 @@ func (b AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) 
 	v1.RegisterInterfaces(registry)
 }
 
-// DefaultGenesis returns default genesis state as raw bytes for the provider
-// module.
+// DefaultGenesis returns default genesis state as raw bytes for the escrow module.
 func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
 	return cdc.MustMarshalJSON(DefaultGenesisState())
 }
@@ -84,7 +83,7 @@ func (AppModuleBasic) RegisterRESTRoutes(clientCtx client.Context, rtr *mux.Rout
 	rest.RegisterRoutes(clientCtx, rtr, emodule.StoreKey)
 }
 
-// RegisterGRPCGatewayRoutes registers the gRPC Gateway routes for the provider module.
+// RegisterGRPCGatewayRoutes registers the gRPC Gateway routes for the escrow module.
 func (AppModuleBasic) RegisterGRPCGatewayRoutes(clientCtx client.Context, mux *runtime.ServeMux) {
 	err := v1.RegisterQueryHandlerClient(context.Background(), mux, v1.NewQueryClient(clientCtx))
 	if err != nil {
@@ -110,18 +109,20 @@ func (AppModuleBasic) GetQueryClient(clientCtx client.Context) v1.QueryClient {
 // AppModule implements an application module for the audit module.
 type AppModule struct {
 	AppModuleBasic
-	keeper      keeper.Keeper
-	authzKeeper keeper.AuthzKeeper
-	bankKeeper  keeper.BankKeeper
+	keeper       keeper.Keeper
+	authzKeeper  imports.AuthzKeeper
+	bankKeeper   imports.BankKeeper
+	oracleKeeper imports.OracleKeeper
 }
 
 // NewAppModule creates a new AppModule object
-func NewAppModule(cdc codec.Codec, k keeper.Keeper, authzKeeper keeper.AuthzKeeper, bankKeeper keeper.BankKeeper) AppModule {
+func NewAppModule(cdc codec.Codec, k keeper.Keeper, authzKeeper imports.AuthzKeeper, bankKeeper imports.BankKeeper, oracleKeeper imports.OracleKeeper) AppModule {
 	return AppModule{
 		AppModuleBasic: AppModuleBasic{cdc: cdc},
 		keeper:         k,
 		authzKeeper:    authzKeeper,
 		bankKeeper:     bankKeeper,
+		oracleKeeper:   oracleKeeper,
 	}
 }
 
@@ -153,8 +154,7 @@ func (am AppModule) RegisterServices(cfg module.Configurator) {
 // RegisterQueryService registers a GRPC query service to respond to the
 // module-specific GRPC queries.
 func (am AppModule) RegisterQueryService(server grpc.Server) {
-	querier := keeper.NewQuerier(am.keeper)
-	v1.RegisterQueryServer(server, querier)
+	v1.RegisterQueryServer(server, am.keeper.NewQuerier())
 }
 
 // BeginBlock performs no-op
@@ -162,10 +162,10 @@ func (am AppModule) BeginBlock(_ context.Context) error {
 	return nil
 }
 
-// EndBlock returns the end blocker for the deployment module. It returns no validator
+// EndBlock returns the end blocker for the escrow module. It returns no validator
 // updates.
-func (am AppModule) EndBlock(_ context.Context) error {
-	return nil
+func (am AppModule) EndBlock(ctx context.Context) error {
+	return am.keeper.EndBlocker(ctx)
 }
 
 // InitGenesis performs genesis initialization for the escrow module. It returns
@@ -213,29 +213,3 @@ func NewAppModuleSimulation(k keeper.Keeper) AppModuleSimulation {
 		keeper: k,
 	}
 }
-
-// // AppModuleSimulation functions
-// // GenerateGenesisState creates a randomized GenState of the staking module.
-// func (AppModuleSimulation) GenerateGenesisState(simState *module.SimulationState) {
-// 	// simulation.RandomizedGenState(simState)
-// }
-//
-// // ProposalContents doesn't return any content functions for governance proposals.
-// func (AppModuleSimulation) ProposalContents(_ module.SimulationState) []sim.WeightedProposalContent {
-// 	return nil
-// }
-//
-// // RandomizedParams creates randomized staking param changes for the simulator.
-// func (AppModuleSimulation) RandomizedParams(r *rand.Rand) []sim.ParamChange {
-// 	return nil
-// }
-//
-// // RegisterStoreDecoder registers a decoder for staking module's types
-// func (AppModuleSimulation) RegisterStoreDecoder(sdr sdk.StoreDecoderRegistry) {
-//
-// }
-//
-// // WeightedOperations returns the all the staking module operations with their respective weights.
-// func (am AppModuleSimulation) WeightedOperations(simState module.SimulationState) []sim.WeightedOperation {
-// 	return nil
-// }

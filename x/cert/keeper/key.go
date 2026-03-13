@@ -13,7 +13,7 @@ import (
 
 	types "pkg.akt.dev/go/node/cert/v1"
 
-	"pkg.akt.dev/node/util/validation"
+	"pkg.akt.dev/node/v2/util/validation"
 )
 
 const (
