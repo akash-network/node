@@ -15,31 +15,6 @@ on:
       - v*
 
 jobs:
-  build-macos:
-    runs-on: macos-latest
-    steps:
-      - name: Install dependencies
-        run: |
-          brew install bash direnv pv lz4
-          sudo chsh -s "$(brew --prefix)/bin/bash"
-      - name: Hook direnv to bash
-        run: echo 'eval "$(direnv hook bash)"' >> $HOME/.bashrc
-      - uses: actions/checkout@v4
-      - run: git fetch --prune --unshallow
-      - name: Detect required Go version
-        run: |
-          toolchain=$(./script/tools.sh gotoolchain | sed 's/go*//')
-          echo "GOVERSION=${toolchain}" >> $GITHUB_ENV
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "${{ env.GOVERSION }}"
-          check-latest: true
-      - name: Setup direnv
-        run: |
-          direnv allow
-          direnv export gha >> "$GITHUB_ENV"
-      - run: make bins
-
   build-bins:
     runs-on: ubuntu-latest
     steps:
@@ -55,9 +30,13 @@ jobs:
           dotnet: true # .NET runtime. Saves ~2.7GB. Total CI impact: +10s (not used in build)
           haskell: true # Haskell (GHC). Saves ~5GB. Total CI impact: +10s (not used in build)
           large-packages: true # large packages (llvm, php, mysql, etc). Saves ~5.3GB. Total CI impact: +60s (not used in build)
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
       - name: Setup environment
         uses: ./.github/actions/setup-ubuntu
-      - run: make bins
+      - run: make build-contracts bins
       - run: make docker-image
 
   tests:
@@ -67,14 +46,14 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup environment
         uses: ./.github/actions/setup-ubuntu
-      - run: make test-full
+      - run: make build-contracts test-full
 
   coverage:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-ubuntu
-      - run: make test-coverage
+      - run: make build-contracts test-coverage
       - uses: codecov/codecov-action@v4
 
   lint-go:
@@ -106,6 +85,8 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup environment
         uses: ./.github/actions/setup-ubuntu
+      - name: build contracts
+        run: make build-contracts
       - name: test-sim-nondeterminism
         run: make test-sim-nondeterminism
       - name: test-sim-import-export
@@ -136,8 +117,7 @@ jobs:
       - name: git tag
         run: git tag -a ${{ env.RELEASE_TAG }} -m ${{ env.RELEASE_TAG }}
       - name: release dry-run
-        run: |
-          make release
+        run: make release
 
   network-upgrade-names:
     runs-on: ubuntu-latest
@@ -211,7 +191,6 @@ jobs:
     runs-on: ubuntu-latest
     if: startsWith(github.event.ref, 'refs/tags/v')
     needs:
-      - build-macos
       - build-bins
       - tests
       - coverage

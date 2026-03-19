@@ -5,10 +5,11 @@ template: testify
 template-data:
   unroll-variadic: true
 packages:
-  pkg.akt.dev/node/testutil/cosmos:
+  pkg.akt.dev/node/v2/testutil/cosmos:
     config:
       dir: testutil/cosmos/mocks
     interfaces:
       AuthzKeeper: {}
+      AccountKeeper: {}
       BankKeeper: {}
       TakeKeeper: {}

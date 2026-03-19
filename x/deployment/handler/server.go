@@ -7,28 +7,34 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	"pkg.akt.dev/go/sdkutil"
 
 	v1 "pkg.akt.dev/go/node/deployment/v1"
 	types "pkg.akt.dev/go/node/deployment/v1beta4"
 
-	"pkg.akt.dev/node/x/deployment/keeper"
+	dimports "pkg.akt.dev/node/v2/x/deployment/imports"
+	"pkg.akt.dev/node/v2/x/deployment/keeper"
 )
 
 var _ types.MsgServer = msgServer{}
 
 type msgServer struct {
 	deployment keeper.IKeeper
-	market     MarketKeeper
-	escrow     EscrowKeeper
+	market     dimports.MarketKeeper
+	escrow     dimports.EscrowKeeper
+	bme        dimports.BMEKeeper
+	bank       dimports.BankKeeper
 }
 
 // NewServer returns an implementation of the deployment MsgServer interface
 // for the provided Keeper.
-func NewServer(k keeper.IKeeper, mkeeper MarketKeeper, ekeeper EscrowKeeper) types.MsgServer {
+func NewServer(k keeper.IKeeper, mkeeper dimports.MarketKeeper, ekeeper dimports.EscrowKeeper, bme dimports.BMEKeeper, bankKeeper dimports.BankKeeper) types.MsgServer {
 	return &msgServer{
 		deployment: k,
 		market:     mkeeper,
 		escrow:     ekeeper,
+		bme:        bme,
+		bank:       bankKeeper,
 	}
 }
 
@@ -42,8 +48,14 @@ func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreate
 	}
 
 	params := ms.deployment.GetParams(ctx)
+
 	if err := params.ValidateDeposit(msg.Deposit.Amount); err != nil {
 		return nil, err
+	}
+
+	// AKT deposits are only allowed via AccountDeposit (existing deployment)
+	if msg.Deposit.Amount.Denom == sdkutil.DenomUakt {
+		return nil, v1.ErrInvalidDeposit
 	}
 
 	deployment := v1.Deployment{
@@ -54,7 +66,11 @@ func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreate
 	}
 
 	if err := types.ValidateDeploymentGroups(msg.Groups); err != nil {
-		return nil, fmt.Errorf("%w: %s", v1.ErrInvalidGroups, err.Error())
+		return nil, v1.ErrInvalidGroups.Wrap(err.Error())
+	}
+
+	if msg.Groups[0].Price().Denom != sdkutil.DenomUact {
+		return nil, v1.ErrInvalidPrice.Wrapf("unsupported denomination %s", msg.Groups[0].Price().Denom)
 	}
 
 	deposits, err := ms.escrow.AuthorizeDeposits(ctx, msg)

@@ -9,11 +9,10 @@ import (
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
 	types "pkg.akt.dev/go/node/escrow/types/v1"
-	"pkg.akt.dev/go/node/escrow/v1"
+	etypes "pkg.akt.dev/go/node/escrow/v1"
 
-	"pkg.akt.dev/node/util/query"
+	"pkg.akt.dev/node/v2/util/query"
 )
 
 // Querier is used as Keeper will have duplicate methods if used directly, and gRPC names take precedence over keeper
@@ -21,9 +20,9 @@ type Querier struct {
 	*keeper
 }
 
-var _ v1.QueryServer = Querier{}
+var _ etypes.QueryServer = Querier{}
 
-func (k Querier) Accounts(c context.Context, req *v1.QueryAccountsRequest) (*v1.QueryAccountsResponse, error) {
+func (k Querier) Accounts(c context.Context, req *etypes.QueryAccountsRequest) (*etypes.QueryAccountsResponse, error) {
 	ctx := sdk.UnwrapSDKContext(c)
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
@@ -89,7 +88,10 @@ func (k Querier) Accounts(c context.Context, req *v1.QueryAccountsRequest) (*v1.
 		count := uint64(0)
 
 		pageRes, err = sdkquery.FilteredPaginate(searchStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
-			id, _ := ParseAccountKey(append(searchPrefix, key...))
+			id, _, err := ParseAccountKey(append(searchPrefix, key...))
+			if err != nil {
+				return true, err
+			}
 			acc := types.Account{
 				ID: id,
 			}
@@ -116,7 +118,7 @@ func (k Querier) Accounts(c context.Context, req *v1.QueryAccountsRequest) (*v1.
 				pageRes.NextKey, err = query.EncodePaginationKey(states[idx:], searchPrefix, pageRes.NextKey, nil)
 				if err != nil {
 					pageRes.Total = total
-					return &v1.QueryAccountsResponse{
+					return &etypes.QueryAccountsResponse{
 						Accounts:   accounts,
 						Pagination: pageRes,
 					}, status.Error(codes.Internal, err.Error())
@@ -129,13 +131,13 @@ func (k Querier) Accounts(c context.Context, req *v1.QueryAccountsRequest) (*v1.
 
 	pageRes.Total = total
 
-	return &v1.QueryAccountsResponse{
+	return &etypes.QueryAccountsResponse{
 		Accounts:   accounts,
 		Pagination: pageRes,
 	}, nil
 }
 
-func (k Querier) Payments(c context.Context, req *v1.QueryPaymentsRequest) (*v1.QueryPaymentsResponse, error) {
+func (k Querier) Payments(c context.Context, req *etypes.QueryPaymentsRequest) (*etypes.QueryPaymentsResponse, error) {
 	ctx := sdk.UnwrapSDKContext(c)
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
@@ -201,7 +203,10 @@ func (k Querier) Payments(c context.Context, req *v1.QueryPaymentsRequest) (*v1.
 		count := uint64(0)
 
 		pageRes, err = sdkquery.FilteredPaginate(searchStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
-			id, _ := ParsePaymentKey(append(searchPrefix, key...))
+			id, _, err := ParsePaymentKey(append(searchPrefix, key...))
+			if err != nil {
+				return true, err
+			}
 			pmnt := types.Payment{
 				ID: id,
 			}
@@ -228,7 +233,7 @@ func (k Querier) Payments(c context.Context, req *v1.QueryPaymentsRequest) (*v1.
 				pageRes.NextKey, err = query.EncodePaginationKey(states[idx:], searchPrefix, pageRes.NextKey, nil)
 				if err != nil {
 					pageRes.Total = total
-					return &v1.QueryPaymentsResponse{
+					return &etypes.QueryPaymentsResponse{
 						Payments:   payments,
 						Pagination: pageRes,
 					}, status.Error(codes.Internal, err.Error())
@@ -241,7 +246,7 @@ func (k Querier) Payments(c context.Context, req *v1.QueryPaymentsRequest) (*v1.
 
 	pageRes.Total = total
 
-	return &v1.QueryPaymentsResponse{
+	return &etypes.QueryPaymentsResponse{
 		Payments:   payments,
 		Pagination: pageRes,
 	}, nil

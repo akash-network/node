@@ -13,7 +13,7 @@ import (
 	sdktestutil "github.com/cosmos/cosmos-sdk/testutil"
 	types "pkg.akt.dev/go/node/provider/v1beta4"
 
-	"pkg.akt.dev/node/testutil"
+	"pkg.akt.dev/node/v2/testutil"
 )
 
 type providerGRPCRestTestSuite struct {
@@ -33,14 +33,14 @@ func (s *providerGRPCRestTestSuite) SetupSuite() {
 	val := s.Network().Validators[0]
 	cctx := val.ClientCtx
 
-	// create deployment
-	_, err = clitestutil.TxCreateProviderExec(
+	// create provider
+	_, err = clitestutil.ExecTxCreateProvider(
 		ctx,
 		cctx,
-		providerPath,
 		cli.TestFlags().
+			With(providerPath).
 			WithFrom(val.Address.String()).
-			WithGasAutoFlags().
+			WithGasAuto().
 			WithSkipConfirm().
 			WithBroadcastModeBlock()...,
 	)
@@ -49,7 +49,7 @@ func (s *providerGRPCRestTestSuite) SetupSuite() {
 	s.Require().NoError(s.Network().WaitForNextBlock())
 
 	// get provider
-	resp, err := clitestutil.QueryProvidersExec(
+	resp, err := clitestutil.ExecQueryProviders(
 		ctx,
 		cctx,
 		cli.TestFlags().

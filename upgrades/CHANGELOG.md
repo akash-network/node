@@ -6,17 +6,13 @@
 
 |   Module   | Version |
 |:----------:|--------:|
-|   audit    |       2 |
-|    cert    |       2 |
-| deployment |       4 |
-|   escrow   |       2 |
-|    agov    |       1 |
-| inflation  |       1 |
-|   market   |       6 |
-|  provider  |       2 |
-|  astaking  |       1 |
-|    take    |       2 |
-|   authz    |       2 |
+|   audit    |       3 |
+|    cert    |       4 |
+| deployment |       7 |
+|   escrow   |       3 |
+|   market   |       8 |
+|  provider  |       3 |
+|    take    |       3 |
 
 #### Upgrades
 
@@ -46,14 +42,13 @@ Add new upgrades after this line based on the template above
 
 ##### v1.2.0
 
-1. Migrate deployment and market module stores from manual KVStore keys to collections.IndexedMap.
+1. Migrate deployment and market module stores from manual KVStore key encoding to cosmossdk.io/collections.IndexedMap,
+replacing hand-rolled prefix keys with type-safe, indexed collections. This improves maintainability, eliminates key-encoding bugs, and enables efficient secondary index lookups.
 
 - Migrations
     - deployment `5 -> 6`
     - market     `7 -> 8`
 
-- Breaking changes
-    - Query endpoints for orders, bids, leases, and deployments no longer support key-based (`PageRequest.Key`) pagination. Clients must use offset-based pagination.
 
 ##### v1.1.0
 
