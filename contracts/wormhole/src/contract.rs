@@ -123,7 +123,8 @@ fn handle_governance_payload(deps: DepsMut, env: Env, data: &[u8]) -> StdResult<
     let gov_packet = GovernancePacket::deserialize(data)?;
     let state = CONFIG.load(deps.storage)?;
 
-    let module = String::from_utf8(gov_packet.module).unwrap();
+    let module = String::from_utf8(gov_packet.module)
+        .map_err(|_| StdError::msg("invalid module encoding"))?;
     let module: String = module.chars().filter(|c| c != &'\0').collect();
 
     if module != "Core" {
@@ -234,6 +235,10 @@ fn vaa_update_guardian_set(deps: DepsMut, env: Env, data: &[u8]) -> StdResult<Re
         new_guardian_set_index,
         new_guardian_set,
     } = GuardianSetUpgrade::deserialize(data)?;
+
+    if new_guardian_set.addresses.is_empty() {
+        return Err(StdError::msg("guardian set must not be empty"));
+    }
 
     if new_guardian_set_index != state.guardian_set_index + 1 {
         return ContractError::GuardianSetIndexIncreaseError.std_err();
