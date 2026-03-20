@@ -127,6 +127,10 @@ impl ParsedVAA {
     pub const SIG_RECOVERY_POS: usize = Self::SIG_DATA_POS + Self::SIG_DATA_LEN;
 
     pub fn deserialize(data: &[u8]) -> StdResult<Self> {
+        if data.len() < Self::HEADER_LEN {
+            return ContractError::InvalidVAA.std_err();
+        }
+
         let version = data.get_u8(0);
 
         // Load 4 bytes starting from index 1
@@ -207,9 +211,8 @@ pub struct GuardianSetInfo {
 
 impl GuardianSetInfo {
     pub fn quorum(&self) -> usize {
-        // allow quorum of 0 for testing purposes...
         if self.addresses.is_empty() {
-            return 0;
+            return 1;
         }
         ((self.addresses.len() * 10 / 3) * 2) / 10 + 1
     }
@@ -250,6 +253,7 @@ pub fn vaa_archive_check(storage: &dyn Storage, hash: &[u8]) -> bool {
     VAA_ARCHIVE.may_load(storage, hash).unwrap_or(Some(false)).unwrap_or(false)
 }
 
+#[derive(Debug)]
 pub struct GovernancePacket {
     pub module: Vec<u8>,
     pub action: u8,
@@ -258,7 +262,13 @@ pub struct GovernancePacket {
 }
 
 impl GovernancePacket {
+    const MIN_LEN: usize = 35; // 32-byte module + 1-byte action + 2-byte chain
+
     pub fn deserialize(data: &[u8]) -> StdResult<Self> {
+        if data.len() < Self::MIN_LEN {
+            return ContractError::InvalidVAA.std_err();
+        }
+
         let module = data.get_bytes32(0).to_vec();
         let action = data.get_u8(32);
         let chain = data.get_u16(33);
