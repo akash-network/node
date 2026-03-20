@@ -50,15 +50,13 @@ func (ms msgServer) UpdateParams(ctx context.Context, msg *types.MsgUpdateParams
 }
 
 func (ms msgServer) BurnMint(ctx context.Context, msg *types.MsgBurnMint) (*types.MsgBurnMintResponse, error) {
-	src, err := sdk.AccAddressFromBech32(msg.Owner)
+	err := msg.ValidateBasic()
 	if err != nil {
-		return nil, errors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid owner address: %s", err)
+		return nil, err
 	}
 
-	dst, err := sdk.AccAddressFromBech32(msg.To)
-	if err != nil {
-		return nil, errors.Wrapf(sdkerrors.ErrInvalidAddress, "invalid to address: %s", err)
-	}
+	src, _ := sdk.AccAddressFromBech32(msg.Owner)
+	dst, _ := sdk.AccAddressFromBech32(msg.To)
 
 	err = msg.CoinsToBurn.Validate()
 	if err != nil {
@@ -77,6 +75,11 @@ func (ms msgServer) BurnMint(ctx context.Context, msg *types.MsgBurnMint) (*type
 }
 
 func (ms msgServer) MintACT(ctx context.Context, msg *types.MsgMintACT) (*types.MsgMintACTResponse, error) {
+	err := msg.ValidateBasic()
+	if err != nil {
+		return nil, err
+	}
+
 	r, err := ms.BurnMint(ctx, &types.MsgBurnMint{
 		Owner:       msg.Owner,
 		To:          msg.To,
@@ -95,6 +98,11 @@ func (ms msgServer) MintACT(ctx context.Context, msg *types.MsgMintACT) (*types.
 }
 
 func (ms msgServer) BurnACT(ctx context.Context, msg *types.MsgBurnACT) (*types.MsgBurnACTResponse, error) {
+	err := msg.ValidateBasic()
+	if err != nil {
+		return nil, err
+	}
+
 	r, err := ms.BurnMint(ctx, &types.MsgBurnMint{
 		Owner:       msg.Owner,
 		To:          msg.To,
@@ -113,6 +121,8 @@ func (ms msgServer) BurnACT(ctx context.Context, msg *types.MsgBurnACT) (*types.
 }
 
 func (ms msgServer) FundVault(ctx context.Context, msg *types.MsgFundVault) (*types.MsgFundVaultResponse, error) {
+	sctx := sdk.UnwrapSDKContext(ctx)
+
 	if ms.bme.GetAuthority() != msg.Authority {
 		return nil, errors.Wrapf(govtypes.ErrInvalidSigner, "invalid authority; expected %s, got %s", ms.bme.GetAuthority(), msg.Authority)
 	}
@@ -134,7 +144,22 @@ func (ms msgServer) FundVault(ctx context.Context, msg *types.MsgFundVault) (*ty
 		return nil, errors.Wrapf(types.ErrInvalidAddress, "source address %s must not be module account", msg.Source)
 	}
 
-	if err := ms.bank.SendCoinsFromAccountToModule(ctx, sourceAddr, types.ModuleName, coins); err != nil {
+	if err = ms.bank.SendCoinsFromAccountToModule(ctx, sourceAddr, types.ModuleName, coins); err != nil {
+		return nil, err
+	}
+
+	maddr := ms.acc.GetModuleAddress(types.ModuleName)
+
+	balance := ms.bank.GetBalance(sctx, maddr, msg.Amount.Denom)
+	err = sctx.EventManager().EmitTypedEvent(
+		&types.EventVaultFunded{
+			Amount:          msg.Amount,
+			Source:          msg.Source,
+			NewVaultBalance: balance,
+		},
+	)
+
+	if err != nil {
 		return nil, err
 	}
 

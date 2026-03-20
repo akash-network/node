@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"cosmossdk.io/collections"
 	"cosmossdk.io/store/prefix"
 	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/telemetry"
@@ -106,28 +107,44 @@ func (k *keeper) EndBlocker(ctx context.Context) error {
 		panic(err)
 	}
 
-	// settle act -> akt on every block
-	err = iteratePending(startPrefix, func() error {
-		return nil
-	})
-	if err != nil {
-		sctx.Logger().Error("walking ledger pending records", "prefix", pid, "err", err)
+	be, err := k.epochs.Get(sctx, epochBurn)
+	if err != nil && !errors.Is(err, collections.ErrNotFound) {
+		panic(err)
+	}
+
+	nextBEpoch := be
+
+	if (be == 0) || (be == sctx.BlockHeight()) {
+		be = sctx.BlockHeight() + params.MinEpochBlocks
+
+		err = iteratePending(startPrefix, func() error {
+			return nil
+		})
+		if err != nil {
+			sctx.Logger().Error("walking ledger pending records", "prefix", pid, "err", err)
+		}
+	}
+
+	if nextBEpoch != be {
+		if err = k.epochs.Set(sctx, epochBurn, be); err != nil {
+			panic(err)
+		}
 	}
 
 	cr, crUpdated := k.mintStatusUpdate(sctx)
 
-	me, err := k.mintEpoch.Get(sctx)
-	if err != nil {
+	me, err := k.epochs.Get(sctx, epochMint)
+	if err != nil && !errors.Is(err, collections.ErrNotFound) {
 		panic(err)
 	}
 
-	nextEpoch := me.NextEpoch
+	nextMEpoch := me
 
 	// if circuit breaker was just reset then calculate next epoch
 	if crUpdated && (cr.PreviousStatus >= types.MintStatusHaltCR) && (cr.Status <= types.MintStatusWarning) {
-		me.NextEpoch = sctx.BlockHeight() + cr.EpochHeightDiff
-	} else if (cr.Status <= types.MintStatusWarning) && (me.NextEpoch == sctx.BlockHeight()) {
-		me.NextEpoch = sctx.BlockHeight() + cr.EpochHeightDiff
+		me = sctx.BlockHeight() + cr.EpochHeightDiff
+	} else if (cr.Status <= types.MintStatusWarning) && (me == sctx.BlockHeight()) {
+		me = sctx.BlockHeight() + cr.EpochHeightDiff
 
 		pid = types.LedgerRecordID{
 			Denom:   sdkutil.DenomUakt,
@@ -151,8 +168,8 @@ func (k *keeper) EndBlocker(ctx context.Context) error {
 		}
 	}
 
-	if nextEpoch != me.NextEpoch {
-		if err = k.mintEpoch.Set(sctx, me); err != nil {
+	if nextMEpoch != me {
+		if err = k.epochs.Set(sctx, epochMint, me); err != nil {
 			panic(err)
 		}
 	}

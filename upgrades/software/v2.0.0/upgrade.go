@@ -178,6 +178,23 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 			return toVM, fmt.Errorf("failed to set updated fee pool balance: %w", err)
 		}
 
+		daddr := up.Keepers.Cosmos.Acct.GetModuleAddress(distrtypes.ModuleName)
+		baddr := up.Keepers.Cosmos.Acct.GetModuleAddress(bmetypes.ModuleName)
+
+		balance := up.Keepers.Cosmos.Bank.GetBalance(sctx, baddr, bmeDepositAmount.Denom)
+
+		err = sctx.EventManager().EmitTypedEvent(
+			&bmetypes.EventVaultFunded{
+				Amount:          bmeDepositAmount,
+				Source:          daddr.String(),
+				NewVaultBalance: balance,
+			},
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
 		return toVM, err
 	}
 }

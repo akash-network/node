@@ -209,8 +209,6 @@ func (ms msgServer) CreateLease(goCtx context.Context, msg *mvbeta.MsgCreateLeas
 		return &mvbeta.MsgCreateLeaseResponse{}, err
 	}
 
-	// Convert bid price from uakt to uact if needed (account funds are in uact after BME conversion)
-	// Swap rate: 1 uakt = 3 uact (based on oracle prices: AKT=$3, ACT=$1)
 	paymentRate := bid.Price
 
 	err = ms.keepers.Escrow.PaymentCreate(ctx, msg.BidID.LeaseID().ToEscrowPaymentID(), provider, paymentRate)

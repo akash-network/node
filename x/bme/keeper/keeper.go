@@ -75,7 +75,7 @@ type keeper struct {
 	schema                collections.Schema
 	Params                collections.Item[bmetypes.Params]
 	status                collections.Item[bmetypes.Status]
-	mintEpoch             collections.Item[bmetypes.MintEpoch]
+	epochs                collections.Map[string, int64]
 	totalBurned           collections.Map[string, sdkmath.Int]
 	totalMinted           collections.Map[string, sdkmath.Int]
 	remintCredits         collections.Map[string, sdkmath.Int]
@@ -113,7 +113,7 @@ func NewKeeper(
 		oracleKeeper:          oracleKeeper,
 		Params:                collections.NewItem(sb, ParamsKey, "params", codec.CollValue[bmetypes.Params](cdc)),
 		status:                collections.NewItem(sb, MintStatusKey, "mint_status", codec.CollValue[bmetypes.Status](cdc)),
-		mintEpoch:             collections.NewItem(sb, MintEpochKey, "mint_epoch", codec.CollValue[bmetypes.MintEpoch](cdc)),
+		epochs:                collections.NewMap(sb, MintEpochKey, "epochs", collections.StringKey, collections.Int64Value),
 		remintCredits:         collections.NewMap(sb, RemintCreditsKey, "remint_credits", collections.StringKey, sdk.IntValue),
 		totalBurned:           collections.NewMap(sb, TotalBurnedKey, "total_burned", collections.StringKey, sdk.IntValue),
 		totalMinted:           collections.NewMap(sb, TotalMintedKey, "total_minted", collections.StringKey, sdk.IntValue),
