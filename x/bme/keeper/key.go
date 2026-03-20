@@ -4,6 +4,11 @@ import (
 	"cosmossdk.io/collections"
 )
 
+const (
+	epochMint = "mint"
+	epochBurn = "burn"
+)
+
 var (
 	RemintCreditsKey         = collections.NewPrefix([]byte{0x01, 0x00})
 	TotalBurnedKey           = collections.NewPrefix([]byte{0x02, 0x01})
