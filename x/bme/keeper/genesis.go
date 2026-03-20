@@ -41,9 +41,12 @@ func (k *keeper) InitGenesis(ctx sdk.Context, data *types.GenesisState) {
 		panic(err)
 	}
 
-	err = k.mintEpoch.Set(ctx, types.MintEpoch{
-		NextEpoch: data.Params.MinEpochBlocks,
-	})
+	err = k.epochs.Set(ctx, epochMint, data.Params.MinEpochBlocks)
+	if err != nil {
+		panic(err)
+	}
+
+	err = k.epochs.Set(ctx, epochBurn, data.Params.MinEpochBlocks)
 	if err != nil {
 		panic(err)
 	}

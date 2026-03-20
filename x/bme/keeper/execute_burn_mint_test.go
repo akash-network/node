@@ -32,7 +32,7 @@ func setupBMETest(t *testing.T) *bmeSuite {
 
 	// Block height must be > 0 for LedgerRecordID codec to allocate
 	// buffer space for Height/Sequence fields
-	ssuite.SetBlockHeight(1)
+	ssuite.SetBlockHeight(types.DefaultMinEpochBlocks)
 	ctx := ssuite.Context()
 
 	k := ssuite.BmeKeeper()
