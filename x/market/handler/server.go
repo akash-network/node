@@ -224,23 +224,22 @@ func (ms msgServer) CreateLease(goCtx context.Context, msg *mvbeta.MsgCreateLeas
 	ms.keepers.Market.OnOrderMatched(ctx, order)
 	ms.keepers.Market.OnBidMatched(ctx, bid)
 
-	// close losing bids
-	//
-	// Every other BID_OPEN on this order must run OnBidLost. Do not stop the loop when
-	// AccountClose fails: returning true from the callback skips remaining bids, leaving them
-	// BID_OPEN while the winning lease is already committed (mainnet-visible bug).
+	// Close every other open bid's escrow, then mark the bid lost. If AccountClose fails,
+	// abort the whole message so we never commit BID_LOST with bid escrow still open (and
+	// the lease / payment / matched state rolls back with the tx).
+	var loserCloseErr error
 	ms.keepers.Market.WithBidsForOrder(ctx, msg.BidID.OrderID(), mvbeta.BidOpen, func(cbid mvbeta.Bid) bool {
-		ms.keepers.Market.OnBidLost(ctx, cbid)
-
-		if closeErr := ms.keepers.Escrow.AccountClose(ctx, cbid.ID.ToEscrowAccountID()); closeErr != nil {
-			ctx.Logger().Error(
-				"escrow AccountClose failed for losing bid after lease created; bid already marked lost",
-				"bid", cbid.ID.String(),
-				"error", closeErr,
-			)
+		if err := ms.keepers.Escrow.AccountClose(ctx, cbid.ID.ToEscrowAccountID()); err != nil {
+			loserCloseErr = err
+			return true
 		}
+		ms.keepers.Market.OnBidLost(ctx, cbid)
 		return false
 	})
+	if loserCloseErr != nil {
+		return &mvbeta.MsgCreateLeaseResponse{}, fmt.Errorf(
+			"escrow AccountClose for losing bid: %w", loserCloseErr)
+	}
 
 	return &mvbeta.MsgCreateLeaseResponse{}, nil
 }
