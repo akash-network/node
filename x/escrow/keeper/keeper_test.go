@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	escrowid "pkg.akt.dev/go/node/escrow/id/v1"
 	"pkg.akt.dev/go/node/escrow/module"
 	etypes "pkg.akt.dev/go/node/escrow/types/v1"
 	"pkg.akt.dev/go/testutil"
@@ -445,4 +446,81 @@ func Test_PaymentCreate_later(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, ctx.BlockHeight()-1, acct.State.SettledAt)
 	}
+}
+
+// Test_AccountCloseHooksRunOnlyForDeploymentEscrow guards the regression where bid escrow
+// AccountClose invoked the same onAccountClosed hooks as deployment escrows. The market
+// hook parses obj.ID as a deployment escrow id; ScopeBid ids made AccountClose fail and
+// broke CreateLease's loser loop. Hooks must run only for deployment-scoped accounts.
+func Test_AccountCloseHooksRunOnlyForDeploymentEscrow(t *testing.T) {
+	ssuite := state.SetupTestSuite(t)
+	ctx := ssuite.Context()
+	ekeeper := ssuite.EscrowKeeper()
+	bkeeper := ssuite.BankKeeper()
+
+	var hookScopes []escrowid.Scope
+	ekeeper.AddOnAccountClosedHook(func(_ sdk.Context, acc etypes.Account) error {
+		hookScopes = append(hookScopes, acc.ID.Scope)
+		return nil
+	})
+
+	mockBMEWithdrawals := func() {
+		bkeeper.
+			On("SendCoinsFromModuleToModule", mock.Anything, module.ModuleName, bmemodule.ModuleName, mock.Anything).
+			Return(nil).Maybe()
+		bkeeper.
+			On("MintCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
+			Return(nil).Maybe()
+		bkeeper.
+			On("BurnCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
+			Return(nil).Maybe()
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil).Maybe()
+	}
+
+	bidID := testutil.BidID(t)
+	bidAid := bidID.ToEscrowAccountID()
+	require.Equal(t, escrowid.ScopeBid, bidAid.Scope)
+
+	bidOwner := testutil.AccAddress(t)
+	bidAmt := testutil.ACTCoin(t, 800)
+	ssuite.MockBMEForDeposit(bidOwner, bidAmt)
+	require.NoError(t, ekeeper.AccountCreate(ctx, bidAid, bidOwner, []etypes.Depositor{{
+		Owner:   bidOwner.String(),
+		Height:  ctx.BlockHeight(),
+		Balance: sdk.NewDecCoinFromCoin(bidAmt),
+	}}))
+
+	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 5)
+	mockBMEWithdrawals()
+	require.NoError(t, ekeeper.AccountClose(ctx, bidAid))
+	require.Empty(t, hookScopes, "no onAccountClosed hook should run for bid escrows")
+
+	bidAcct, err := ekeeper.GetAccount(ctx, bidAid)
+	require.NoError(t, err)
+	require.Equal(t, etypes.StateClosed, bidAcct.State.State)
+
+	hookScopes = nil
+	depAid := testutil.DeploymentID(t).ToEscrowAccountID()
+	require.Equal(t, escrowid.ScopeDeployment, depAid.Scope)
+
+	depOwner := testutil.AccAddress(t)
+	depAmt := testutil.ACTCoinRandom(t)
+	ssuite.MockBMEForDeposit(depOwner, depAmt)
+	require.NoError(t, ekeeper.AccountCreate(ctx, depAid, depOwner, []etypes.Depositor{{
+		Owner:   depOwner.String(),
+		Height:  ctx.BlockHeight(),
+		Balance: sdk.NewDecCoinFromCoin(depAmt),
+	}}))
+
+	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 5)
+	mockBMEWithdrawals()
+	require.NoError(t, ekeeper.AccountClose(ctx, depAid))
+	require.Equal(t, []escrowid.Scope{escrowid.ScopeDeployment}, hookScopes,
+		"registered hooks must run for deployment escrow closes")
+
+	depAcct, err := ekeeper.GetAccount(ctx, depAid)
+	require.NoError(t, err)
+	require.Equal(t, etypes.StateClosed, depAcct.State.State)
 }

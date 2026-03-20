@@ -1091,11 +1091,15 @@ func (k *keeper) saveAccount(ctx sdk.Context, obj *account) error {
 	store.Set(key, k.cdc.MustMarshal(&obj.State))
 
 	if obj.State.State == etypes.StateClosed || obj.State.State == etypes.StateOverdrawn {
-		// call hooks
-		for _, hook := range k.hooks.onAccountClosed {
-			err := hook(ctx, obj.Account)
-			if err != nil {
-				return err
+		// OnEscrowAccountClosed is deployment-only (deployment teardown). Bid and other scopes
+		// must not invoke it — DeploymentIDFromEscrowID rejects non-deployment IDs and would
+		// fail AccountClose during e.g. CreateLease loser processing.
+		if obj.ID.Scope == escrowid.ScopeDeployment {
+			for _, hook := range k.hooks.onAccountClosed {
+				err := hook(ctx, obj.Account)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}

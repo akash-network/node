@@ -225,11 +225,19 @@ func (ms msgServer) CreateLease(goCtx context.Context, msg *mvbeta.MsgCreateLeas
 	ms.keepers.Market.OnBidMatched(ctx, bid)
 
 	// close losing bids
+	//
+	// Every other BID_OPEN on this order must run OnBidLost. Do not stop the loop when
+	// AccountClose fails: returning true from the callback skips remaining bids, leaving them
+	// BID_OPEN while the winning lease is already committed (mainnet-visible bug).
 	ms.keepers.Market.WithBidsForOrder(ctx, msg.BidID.OrderID(), mvbeta.BidOpen, func(cbid mvbeta.Bid) bool {
 		ms.keepers.Market.OnBidLost(ctx, cbid)
 
-		if err = ms.keepers.Escrow.AccountClose(ctx, cbid.ID.ToEscrowAccountID()); err != nil {
-			return true
+		if closeErr := ms.keepers.Escrow.AccountClose(ctx, cbid.ID.ToEscrowAccountID()); closeErr != nil {
+			ctx.Logger().Error(
+				"escrow AccountClose failed for losing bid after lease created; bid already marked lost",
+				"bid", cbid.ID.String(),
+				"error", closeErr,
+			)
 		}
 		return false
 	})

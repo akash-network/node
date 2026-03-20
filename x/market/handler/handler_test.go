@@ -1369,6 +1369,132 @@ func TestCloseBidUnknownOrder(t *testing.T) {
 	require.Error(t, err)
 }
 
+// Regression: CreateLease must mark every other open bid on the order lost, close each
+// loser's bid escrow, and never stop the loser loop early. Mainnet had BID_OPEN + open
+// bid escrow when deployment-only onAccountClosed hooks ran against ScopeBid accounts.
+func TestCreateLease_AllOtherBidsOnOrderMarkedLost(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		numLosers int
+	}{
+		{name: "one_loser", numLosers: 1},
+		{name: "two_losers", numLosers: 2},
+		{name: "three_losers", numLosers: 3},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			defaultDeposit, err := dtypes.DefaultParams().MinDepositFor("uact")
+			require.NoError(t, err)
+
+			suite := setupTestSuite(t)
+			ctx := suite.Context()
+
+			deployment := testutil.Deployment(t)
+			group := testutil.DeploymentGroup(t, deployment.ID, 0)
+			group.GroupSpec.Resources = testutil.Resources(t, testutil.WithDenom("uact"))
+
+			owner := sdk.MustAccAddressFromBech32(deployment.ID.Owner)
+
+			dmsg := &dtypes.MsgCreateDeployment{
+				ID:     deployment.ID,
+				Groups: dtypes.GroupSpecs{group.GroupSpec},
+				Deposit: deposit.Deposit{
+					Amount:  defaultDeposit,
+					Sources: deposit.Sources{deposit.SourceBalance},
+				},
+			}
+
+			suite.PrepareMocks(func(ts *state.TestSuite) {
+				ts.BankKeeper().
+					On("SendCoinsFromAccountToModule", mock.Anything, owner, emodule.ModuleName, sdk.NewCoins(dmsg.Deposit.Amount)).
+					Return(nil).Once()
+			})
+
+			res, err := suite.dhandler(ctx, dmsg)
+			require.NoError(t, err)
+			require.NotNil(t, res)
+
+			order, found := suite.MarketKeeper().GetOrder(ctx, mv1.OrderID{
+				Owner: deployment.ID.Owner,
+				DSeq:  deployment.ID.DSeq,
+				GSeq:  1,
+				OSeq:  1,
+			})
+			require.True(t, found)
+
+			attr := group.GroupSpec.Requirements.Attributes
+			totalBids := tc.numLosers + 1
+			addrs := make([]sdk.AccAddress, totalBids)
+			bmsgs := make([]*mvbeta.MsgCreateBid, totalBids)
+			for i := 0; i < totalBids; i++ {
+				prov := suite.createProvider(attr)
+				addr, err := sdk.AccAddressFromBech32(prov.Owner)
+				require.NoError(t, err)
+				addrs[i] = addr
+				bmsgs[i] = &mvbeta.MsgCreateBid{
+					ID:    mv1.MakeBidID(order.ID, addr),
+					Price: sdk.NewDecCoin(sdkutil.DenomUact, sdkmath.NewInt(int64(i+1))),
+					Deposit: deposit.Deposit{
+						Amount:  mvbeta.DefaultBidMinDepositACT,
+						Sources: deposit.Sources{deposit.SourceBalance},
+					},
+				}
+			}
+
+			suite.PrepareMocks(func(ts *state.TestSuite) {
+				for i := range bmsgs {
+					ts.MockBMEForDeposit(addrs[i], bmsgs[i].Deposit.Amount)
+				}
+			})
+
+			for _, bm := range bmsgs {
+				res, err := suite.handler(ctx, bm)
+				require.NoError(t, err)
+				require.NotNil(t, res)
+			}
+
+			winnerID := mv1.MakeBidID(order.ID, addrs[0])
+			loserIDs := make([]mv1.BidID, tc.numLosers)
+			for i := 0; i < tc.numLosers; i++ {
+				loserIDs[i] = mv1.MakeBidID(order.ID, addrs[i+1])
+			}
+
+			// Loser bid AccountClose settles deposit back to provider; bank hooks must be allowed.
+			suite.PrepareMocks(func(ts *state.TestSuite) {
+				ts.BankKeeper().
+					On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil).Maybe().
+					On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+					Return(nil).Maybe()
+			})
+
+			lmsg := &mvbeta.MsgCreateLease{BidID: winnerID}
+			leaseRes, err := suite.handler(ctx, lmsg)
+			require.NoError(t, err)
+			require.NotNil(t, leaseRes)
+
+			gotW, ok := suite.MarketKeeper().GetBid(ctx, winnerID)
+			require.True(t, ok)
+			require.Equal(t, mvbeta.BidActive, gotW.State)
+
+			winEscrow, err := suite.EscrowKeeper().GetAccount(ctx, winnerID.ToEscrowAccountID())
+			require.NoError(t, err)
+			require.Equal(t, etypes.StateOpen, winEscrow.State.State,
+				"winning bid escrow stays open for the lease")
+
+			for _, lid := range loserIDs {
+				got, ok := suite.MarketKeeper().GetBid(ctx, lid)
+				require.True(t, ok, "bid %v", lid)
+				require.Equal(t, mvbeta.BidLost, got.State, "bid %v", lid)
+
+				eacc, err := suite.EscrowKeeper().GetAccount(ctx, lid.ToEscrowAccountID())
+				require.NoError(t, err)
+				require.Equal(t, etypes.StateClosed, eacc.State.State,
+					"loser bid escrow must close (no deployment hook on ScopeBid)")
+			}
+		})
+	}
+}
+
 func (st *testSuite) createLease() (mv1.LeaseID, mvbeta.Bid, mvbeta.Order) {
 	st.t.Helper()
 	bid, order := st.createBid()
