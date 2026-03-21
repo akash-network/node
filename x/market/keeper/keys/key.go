@@ -52,6 +52,7 @@ var (
 	LeaseStateActivePrefix            = []byte{LeaseStateActivePrefixID}
 	LeaseStateInsufficientFundsPrefix = []byte{LeaseStateInsufficientFundsPrefixID}
 	LeaseStateClosedPrefix            = []byte{LeaseStateClosedPrefixID}
+	ParamsPrefix                      = []byte{0x14, 0x00}
 )
 
 func OrderKey(statePrefix []byte, id mv1.OrderID) ([]byte, error) {

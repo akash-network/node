@@ -16,7 +16,9 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	bmetypes "pkg.akt.dev/go/node/bme/v1"
+	dvbeta "pkg.akt.dev/go/node/deployment/v1beta4"
 	epochstypes "pkg.akt.dev/go/node/epochs/v1beta1"
+	mvbeta "pkg.akt.dev/go/node/market/v1beta5"
 	otypes "pkg.akt.dev/go/node/oracle/v1"
 	ttypes "pkg.akt.dev/go/node/take/v1"
 	"pkg.akt.dev/go/sdkutil"
@@ -112,30 +114,6 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 			return toVM, err
 		}
 
-		dparams := up.Keepers.Akash.Deployment.GetParams(sctx)
-
-		var uakt sdk.Coin
-		for _, coin := range dparams.MinDeposits {
-			if coin.Denom == sdkutil.DenomUakt {
-				uakt = coin
-				break
-			}
-		}
-
-		if uakt.IsNil() {
-			panic("uakt coin not found in deployment MinDeposit params")
-		}
-
-		dparams.MinDeposits = sdk.Coins{
-			sdk.NewInt64Coin(sdkutil.DenomUact, 5000000),
-			uakt,
-		}
-
-		err = up.Keepers.Akash.Deployment.SetParams(sctx, dparams)
-		if err != nil {
-			return toVM, err
-		}
-
 		oparams := otypes.DefaultParams()
 
 		// Instantiate oracle contracts via wasm message server.
@@ -190,9 +168,34 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 				NewVaultBalance: balance,
 			},
 		)
-
 		if err != nil {
 			return nil, err
+		}
+
+		dparams := dvbeta.Params{
+			MinDeposits: sdk.Coins{
+				sdk.NewInt64Coin(sdkutil.DenomUact, 500000),
+				sdk.NewInt64Coin(sdkutil.DenomUakt, 500000),
+			},
+		}
+
+		err = up.Keepers.Akash.Deployment.SetParams(sctx, dparams)
+		if err != nil {
+			return nil, fmt.Errorf("failed to set deployment params: %w", err)
+		}
+
+		mparams := mvbeta.Params{
+			BidMinDeposit: sdk.NewInt64Coin(sdkutil.DenomUakt, 500000),
+			OrderMaxBids:  20,
+			BidMinDeposits: sdk.Coins{
+				sdk.NewInt64Coin(sdkutil.DenomUact, 500000),
+				sdk.NewInt64Coin(sdkutil.DenomUakt, 500000),
+			},
+		}
+
+		err = up.Keepers.Akash.Market.SetParams(sctx, mparams)
+		if err != nil {
+			return nil, fmt.Errorf("failed to set deployment params: %w", err)
 		}
 
 		return toVM, err

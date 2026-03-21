@@ -86,7 +86,10 @@ func InitGenesis(ctx sdk.Context, kpr keeper.IKeeper, data *mvbeta.GenesisState)
 
 // ExportGenesis returns genesis state as raw bytes for the market module
 func ExportGenesis(ctx sdk.Context, k keeper.IKeeper) *mvbeta.GenesisState {
-	params := k.GetParams(ctx)
+	params, err := k.GetParams(ctx)
+	if err != nil {
+		panic(err)
+	}
 
 	var bids mvbeta.Bids
 	var leases mv1.Leases

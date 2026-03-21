@@ -92,7 +92,11 @@ func ExportGenesis(ctx sdk.Context, k keeper.IKeeper) (*dvbeta.GenesisState, err
 		records[i].Groups = groups
 	}
 
-	params := k.GetParams(ctx)
+	params, err := k.GetParams(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	return &dvbeta.GenesisState{
 		Deployments: records,
 		Params:      params,

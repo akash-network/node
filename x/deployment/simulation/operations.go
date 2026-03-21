@@ -94,7 +94,10 @@ func SimulateMsgCreateDeployment(ak govtypes.AccountKeeper, bk bankkeeper.Keeper
 		chainID string) (simtypes.OperationMsg, []simtypes.FutureOperation, error) {
 		simAccount, _ := simtypes.RandomAcc(r, accounts)
 
-		params := k.GetParams(ctx)
+		params, err := k.GetParams(ctx)
+		if err != nil {
+			return simtypes.NoOpMsg(v1.ModuleName, (&dvbeta.MsgCreateDeployment{}).Type(), "unable to get params"), nil, err
+		}
 
 		dID := v1.DeploymentID{
 			Owner: simAccount.Address.String(),

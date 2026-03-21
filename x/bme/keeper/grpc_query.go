@@ -93,9 +93,9 @@ func (qs Querier) LedgerRecords(ctx context.Context, req *types.QueryLedgerRecor
 	var resumeID *types.LedgerRecordID
 
 	if len(req.Pagination.Key) > 0 {
-		var pkBytes []byte
+		var pkBytes, unsolicited []byte
 		var err error
-		states, _, pkBytes, _, err = query.DecodePaginationKey(req.Pagination.Key)
+		states, _, pkBytes, unsolicited, err = query.DecodePaginationKey(req.Pagination.Key)
 		if err != nil {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
@@ -105,6 +105,9 @@ func (qs Querier) LedgerRecords(ctx context.Context, req *types.QueryLedgerRecor
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 		resumeID = &id
+
+		// Restore reverse flag from key — ignore req.Pagination.Reverse on resume
+		req.Pagination.Reverse = len(unsolicited) > 0 && unsolicited[0] == 1
 	} else {
 		if req.Filters.Status != "" {
 			statusVal := types.LedgerRecordStatus(types.LedgerRecordStatus_value[req.Filters.Status])
@@ -122,6 +125,13 @@ func (qs Querier) LedgerRecords(ctx context.Context, req *types.QueryLedgerRecor
 				byte(types.LedgerRecordSatusExecuted),
 				byte(types.LedgerRecordSatusCanceled),
 			)
+		}
+	}
+
+	// Reverse states order when paginating in reverse without a resume key
+	if len(req.Pagination.Key) == 0 && req.Pagination.Reverse {
+		for i, j := 0, len(states)-1; i < j; i, j = i+1, j-1 {
+			states[i], states[j] = states[j], states[i]
 		}
 	}
 
@@ -143,7 +153,7 @@ func (qs Querier) LedgerRecords(ctx context.Context, req *types.QueryLedgerRecor
 		}
 
 		if req.Pagination.Limit == 0 {
-			nk, err := qs.encodeLedgerNextKey(states[idx:], states[idx], id)
+			nk, err := qs.encodeLedgerNextKey(states[idx:], states[idx], id, req.Pagination.Reverse)
 			if err != nil {
 				return true, err
 			}
@@ -167,7 +177,13 @@ func (qs Querier) LedgerRecords(ctx context.Context, req *types.QueryLedgerRecor
 
 		var r collections.Ranger[types.LedgerRecordID]
 		if idx == 0 && resumeID != nil {
-			r = new(collections.Range[types.LedgerRecordID]).StartInclusive(*resumeID)
+			if req.Pagination.Reverse {
+				r = new(collections.Range[types.LedgerRecordID]).EndInclusive(*resumeID).Descending()
+			} else {
+				r = new(collections.Range[types.LedgerRecordID]).StartInclusive(*resumeID)
+			}
+		} else if req.Pagination.Reverse {
+			r = new(collections.Range[types.LedgerRecordID]).Descending()
 		}
 
 		switch state {
@@ -219,10 +235,14 @@ func (qs Querier) LedgerRecords(ctx context.Context, req *types.QueryLedgerRecor
 	}, nil
 }
 
-func (qs Querier) encodeLedgerNextKey(remainingStates []byte, currentState byte, id types.LedgerRecordID) ([]byte, error) {
+func (qs Querier) encodeLedgerNextKey(remainingStates []byte, currentState byte, id types.LedgerRecordID, reverse bool) ([]byte, error) {
 	pkBuf := make([]byte, LedgerRecordIDKey.Size(id))
 	if _, err := LedgerRecordIDKey.Encode(pkBuf, id); err != nil {
 		return nil, err
 	}
-	return query.EncodePaginationKey(remainingStates, []byte{currentState}, pkBuf, nil)
+	var unsolicited []byte
+	if reverse {
+		unsolicited = []byte{1}
+	}
+	return query.EncodePaginationKey(remainingStates, []byte{currentState}, pkBuf, unsolicited)
 }

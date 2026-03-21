@@ -47,7 +47,10 @@ func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreate
 		return nil, v1.ErrDeploymentExists
 	}
 
-	params := ms.deployment.GetParams(ctx)
+	params, err := ms.deployment.GetParams(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	if err := params.ValidateDeposit(msg.Deposit.Amount); err != nil {
 		return nil, err

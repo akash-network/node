@@ -97,16 +97,6 @@ func (k *keeper) EndBlocker(ctx context.Context) error {
 		return postCondition()
 	}
 
-	pid := types.LedgerRecordID{
-		Denom:   sdkutil.DenomUact,
-		ToDenom: sdkutil.DenomUakt,
-	}
-
-	startPrefix, err := ledgerRecordIDCodec{}.ToPrefix(pid)
-	if err != nil {
-		panic(err)
-	}
-
 	be, err := k.epochs.Get(sctx, epochBurn)
 	if err != nil && !errors.Is(err, collections.ErrNotFound) {
 		panic(err)
@@ -114,8 +104,18 @@ func (k *keeper) EndBlocker(ctx context.Context) error {
 
 	nextBEpoch := be
 
-	if (be == 0) || (be == sctx.BlockHeight()) {
+	if be <= sctx.BlockHeight() {
 		be = sctx.BlockHeight() + params.MinEpochBlocks
+
+		pid := types.LedgerRecordID{
+			Denom:   sdkutil.DenomUact,
+			ToDenom: sdkutil.DenomUakt,
+		}
+
+		startPrefix, err := ledgerRecordIDCodec{}.ToPrefix(pid)
+		if err != nil {
+			panic(err)
+		}
 
 		err = iteratePending(startPrefix, func() error {
 			return nil
@@ -146,12 +146,12 @@ func (k *keeper) EndBlocker(ctx context.Context) error {
 	} else if (cr.Status <= types.MintStatusWarning) && (me == sctx.BlockHeight()) {
 		me = sctx.BlockHeight() + cr.EpochHeightDiff
 
-		pid = types.LedgerRecordID{
+		pid := types.LedgerRecordID{
 			Denom:   sdkutil.DenomUakt,
 			ToDenom: sdkutil.DenomUact,
 		}
 
-		startPrefix, err = ledgerRecordIDCodec{}.ToPrefix(pid)
+		startPrefix, err := ledgerRecordIDCodec{}.ToPrefix(pid)
 		if err != nil {
 			panic(err)
 		}

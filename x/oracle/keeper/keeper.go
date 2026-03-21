@@ -18,6 +18,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	"github.com/cosmos/gogoproto/proto"
+
 	types "pkg.akt.dev/go/node/oracle/v1"
 	"pkg.akt.dev/go/sdkutil"
 )
@@ -157,13 +159,6 @@ func (k *keeper) AddPriceEntry(ctx sdk.Context, source sdk.Address, id types.Dat
 		)
 	}
 
-	//if price.Timestamp.After(ctx.BlockTime()) {
-	//	return errorsmod.Wrap(
-	//		sdkerrors.ErrInvalidRequest,
-	//		"price timestamp is from future",
-	//	)
-	//}
-
 	latestHeight, err := k.latestPrices.Get(ctx, types.PriceDataID{
 		Source:    sourceID,
 		Denom:     id.Denom,
@@ -219,9 +214,6 @@ func (k *keeper) AddPriceEntry(ctx sdk.Context, source sdk.Address, id types.Dat
 	if err != nil {
 		return err
 	}
-
-	// todo price aggregation and health check is done within end blocker
-	// it should be updated here as well
 
 	err = ctx.EventManager().EmitTypedEvent(
 		&types.EventPriceData{
@@ -566,7 +558,7 @@ func (k *keeper) setPriceHealth(ctx sdk.Context, params types.Params, dataIDs []
 		))
 	}
 
-	// Check 2: Deviation within acceptable range
+	// Check 2: Deviation within the acceptable range
 	health.DeviationOk = aggregatedPrice.DeviationBps <= params.MaxPriceDeviationBps
 	if !health.DeviationOk {
 		health.FailureReason = append(health.FailureReason, fmt.Sprintf(
@@ -578,10 +570,46 @@ func (k *keeper) setPriceHealth(ctx sdk.Context, params types.Params, dataIDs []
 
 	health.IsHealthy = health.HasMinSources && health.DeviationOk
 
-	err := k.pricesHealth.Set(ctx, types.DataID{Denom: health.Denom, BaseDenom: sdkutil.DenomUSD}, health)
+	id := types.DataID{Denom: health.Denom, BaseDenom: sdkutil.DenomUSD}
+
+	var evt proto.Message
+
+	phealth, err := k.pricesHealth.Get(ctx, id)
+	if err != nil {
+		if !errors.Is(err, collections.ErrNotFound) {
+			// if there is an error other than not found, something went horribly wrong
+			panic(err)
+		}
+
+		// this is the very first record so set event to the health status calculated above
+		phealth.IsHealthy = !health.IsHealthy
+	}
+
+	if health.IsHealthy != phealth.IsHealthy {
+		if health.IsHealthy {
+			evt = &types.EventPriceRecovered{
+				Id:     id,
+				Height: ctx.BlockHeight(),
+			}
+		} else {
+			evt = &types.EventPriceStaled{
+				Id:         id,
+				LastHeight: 0, // 0 is here intentional, at launch there was no point at which price was healthy
+			}
+		}
+	}
+
+	err = k.pricesHealth.Set(ctx, id, health)
 	// if there is an error when storing price health, something went horribly wrong
 	if err != nil {
 		panic(err)
+	}
+
+	if evt != nil {
+		err = ctx.EventManager().EmitTypedEvent(evt)
+		if err != nil {
+			ctx.Logger().Error("failed to emit oracle price status change event", "error", err)
+		}
 	}
 
 	return health
