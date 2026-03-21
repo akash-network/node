@@ -18,7 +18,7 @@ func init() {
 	utypes.RegisterMigration(dv1.ModuleName, 6, newDeploymentMigration)
 
 	const pythChecksum = "91dc2aada6e94f102013cb7bf799892b137b033561430941475a3e355e7eef4d"
-	const wormholeChecksum = "4f8366678c6947bd6765e2bdd3d5650245835eff4f7b9defb032f844ab9c770f"
+	const wormholeChecksum = "b97763a6116d2eaad99d96de83b5ffabf4cc5dd927ca3e426ac02c767902162a"
 
 	pythActual := sha256.Sum256(pythContract)
 	wormholeActual := sha256.Sum256(wormholeContract)
