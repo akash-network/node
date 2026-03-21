@@ -36,7 +36,7 @@ type IKeeper interface {
 	WithDeployments(ctx sdk.Context, fn func(v1.Deployment) bool) error
 	OnBidClosed(ctx sdk.Context, id v1.GroupID) error
 	OnLeaseClosed(ctx sdk.Context, id v1.GroupID) (types.Group, error)
-	GetParams(ctx sdk.Context) (params types.Params)
+	GetParams(ctx sdk.Context) (types.Params, error)
 	SetParams(ctx sdk.Context, params types.Params) error
 	GetAuthority() string
 	NewQuerier() Querier
@@ -64,6 +64,7 @@ type Keeper struct {
 	deployments            *collections.IndexedMap[keys.DeploymentPrimaryKey, v1.Deployment, DeploymentIndexes]
 	groups                 *collections.IndexedMap[keys.GroupPrimaryKey, types.Group, GroupIndexes]
 	pendingDenomMigrations collections.Map[keys.DeploymentPrimaryKey, sdkmath.Int]
+	Params                 collections.Item[types.Params]
 }
 
 // NewKeeper creates and returns an instance for deployment keeper
@@ -86,6 +87,7 @@ func NewKeeper(
 	deployments := collections.NewIndexedMap(sb, collections.NewPrefix(keys.DeploymentPrefix), "deployments", keys.DeploymentPrimaryKeyCodec, codec.CollValue[v1.Deployment](cdc), deploymentIndexes)
 	groups := collections.NewIndexedMap(sb, collections.NewPrefix(keys.GroupPrefix), "groups", keys.GroupPrimaryKeyCodec, codec.CollValue[types.Group](cdc), groupIndexes)
 	pendingDenomMigrations := collections.NewMap(sb, collections.NewPrefix(keys.PendingDenomMigrationPrefix), "pending_denom_migrations", keys.DeploymentPrimaryKeyCodec, sdk.IntValue)
+	params := collections.NewItem(sb, keys.ParamsKey, "params", codec.CollValue[types.Params](cdc))
 
 	schema, err := sb.Build()
 	if err != nil {
@@ -105,6 +107,7 @@ func NewKeeper(
 		deployments:            deployments,
 		groups:                 groups,
 		pendingDenomMigrations: pendingDenomMigrations,
+		Params:                 params,
 	}
 }
 
@@ -143,24 +146,12 @@ func (k Keeper) SetParams(ctx sdk.Context, p types.Params) error {
 		return err
 	}
 
-	store := ctx.KVStore(k.skey)
-	bz := k.cdc.MustMarshal(&p)
-	store.Set(v1.ParamsPrefix(), bz)
-
-	return nil
+	return k.Params.Set(ctx, p)
 }
 
 // GetParams returns the current x/deployment module parameters.
-func (k Keeper) GetParams(ctx sdk.Context) (p types.Params) {
-	store := ctx.KVStore(k.skey)
-	bz := store.Get(v1.ParamsPrefix())
-	if bz == nil {
-		return p
-	}
-
-	k.cdc.MustUnmarshal(bz, &p)
-
-	return p
+func (k Keeper) GetParams(ctx sdk.Context) (types.Params, error) {
+	return k.Params.Get(ctx)
 }
 
 // GetDeployment returns deployment details with provided DeploymentID

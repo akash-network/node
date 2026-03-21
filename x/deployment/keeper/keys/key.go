@@ -14,4 +14,6 @@ var (
 
 	// Pending denom migration prefix
 	PendingDenomMigrationPrefix = []byte{0x13, 0x01}
+
+	ParamsKey = []byte{0x14, 0x00} // key for deployment module params
 )

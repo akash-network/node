@@ -6,22 +6,16 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/gogoproto/proto"
+
 	types "pkg.akt.dev/go/node/oracle/v1"
 )
 
 // BeginBlocker checks if prices are being updated and sources do not deviate from each other
 // price for requested denom halts if any of the following conditions occur
-// - the price have not been updated within UpdatePeriod
+// - the price has not been updated within UpdatePeriod
 // - price deviation between multiple sources is more than TBD
-func (k *keeper) BeginBlocker(ctx context.Context) error {
-	sctx := sdk.UnwrapSDKContext(ctx)
-
-	// at this stage oracle is testnet only
-	// so we panic here to prevent any use on mainnet
-	if sctx.ChainID() == "akashnet-2" {
-		panic(fmt.Sprint("x/oracle cannot be used on mainnet just yet"))
-	}
-
+func (k *keeper) BeginBlocker(_ context.Context) error {
 	return nil
 }
 
@@ -68,6 +62,8 @@ func (k *keeper) EndBlocker(ctx context.Context) error {
 
 	cutoffHeight := sctx.BlockHeight() - params.MaxPriceStalenessBlocks
 
+	var evts []proto.Message
+
 	for id, rid := range rIDs {
 		latestData := make([]types.PriceData, 0, len(rid))
 
@@ -104,7 +100,14 @@ func (k *keeper) EndBlocker(ctx context.Context) error {
 					"reason", err.Error(),
 				)
 			}
+
+			evts = append(evts, &types.EventAggregatedPrice{Price: aggregatedPrice})
 		}
+	}
+
+	err = sctx.EventManager().EmitTypedEvents(evts...)
+	if err != nil {
+		sctx.Logger().Error("failed to emit oracle price status change event", "error", err)
 	}
 
 	return nil

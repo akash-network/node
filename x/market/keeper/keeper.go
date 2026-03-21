@@ -43,7 +43,7 @@ type IKeeper interface {
 	WithLeases(ctx sdk.Context, fn func(mv1.Lease) bool)
 	WithOrdersForGroup(ctx sdk.Context, id dtypes.GroupID, state types.Order_State, fn func(types.Order) bool)
 	BidCountForOrder(ctx sdk.Context, id mv1.OrderID) uint32
-	GetParams(ctx sdk.Context) (params types.Params)
+	GetParams(ctx sdk.Context) (types.Params, error)
 	SetParams(ctx sdk.Context, params types.Params) error
 	GetAuthority() string
 	SaveOrder(ctx sdk.Context, order types.Order) error
@@ -64,6 +64,7 @@ type Keeper struct {
 	bids   *collections.IndexedMap[keys.BidPrimaryKey, types.Bid, BidIndexes]
 	orders *collections.IndexedMap[keys.OrderPrimaryKey, types.Order, OrderIndexes]
 	leases *collections.IndexedMap[keys.LeasePrimaryKey, mv1.Lease, LeaseIndexes]
+	Params collections.Item[types.Params]
 }
 
 // NewKeeper creates and returns an instance for Market keeper
@@ -78,6 +79,7 @@ func NewKeeper(cdc codec.BinaryCodec, skey *storetypes.KVStoreKey, ekeeper Escro
 	bids := collections.NewIndexedMap(sb, collections.NewPrefix(keys.BidPrefixNew), "bids", keys.BidPrimaryKeyCodec, codec.CollValue[types.Bid](cdc), bidIndexes)
 	orders := collections.NewIndexedMap(sb, collections.NewPrefix(keys.OrderPrefixNew), "orders", keys.OrderPrimaryKeyCodec, codec.CollValue[types.Order](cdc), orderIndexes)
 	leases := collections.NewIndexedMap(sb, collections.NewPrefix(keys.LeasePrefixNew), "leases", keys.LeasePrimaryKeyCodec, codec.CollValue[mv1.Lease](cdc), leaseIndexes)
+	params := collections.NewItem(sb, keys.ParamsPrefix, "params", codec.CollValue[types.Params](cdc))
 
 	schema, err := sb.Build()
 	if err != nil {
@@ -93,6 +95,7 @@ func NewKeeper(cdc codec.BinaryCodec, skey *storetypes.KVStoreKey, ekeeper Escro
 		bids:      bids,
 		orders:    orders,
 		leases:    leases,
+		Params:    params,
 	}
 
 	return res
@@ -138,23 +141,12 @@ func (k Keeper) SetParams(ctx sdk.Context, p types.Params) error {
 		return err
 	}
 
-	store := ctx.KVStore(k.skey)
-	bz := k.cdc.MustMarshal(&p)
-	store.Set(mv1.ParamsPrefix(), bz)
-
-	return nil
+	return k.Params.Set(ctx, p)
 }
 
 // GetParams returns the current x/market module parameters.
-func (k Keeper) GetParams(ctx sdk.Context) (p types.Params) {
-	store := ctx.KVStore(k.skey)
-	bz := store.Get(mv1.ParamsPrefix())
-	if bz == nil {
-		return p
-	}
-
-	k.cdc.MustUnmarshal(bz, &p)
-	return p
+func (k Keeper) GetParams(ctx sdk.Context) (types.Params, error) {
+	return k.Params.Get(ctx)
 }
 
 // CreateOrder creates a new order with given group id and specifications. It returns created order

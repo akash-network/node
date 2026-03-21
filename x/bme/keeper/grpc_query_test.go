@@ -302,6 +302,90 @@ func TestGRPCQueryLedgerRecords(t *testing.T) {
 	}
 }
 
+func TestGRPCQueryLedgerRecordsReverse(t *testing.T) {
+	suite := setupTest(t)
+	_ = seedLedgerRecords(t, suite.ctx, suite.keeper)
+
+	ctx := suite.ctx
+
+	t.Run("reverse returns records in opposite order of forward", func(t *testing.T) {
+		// Get forward order
+		fwd, err := suite.queryClient.LedgerRecords(ctx, &types.QueryLedgerRecordsRequest{})
+		require.NoError(t, err)
+
+		// Get reverse order
+		rev, err := suite.queryClient.LedgerRecords(ctx, &types.QueryLedgerRecordsRequest{
+			Pagination: &sdkquery.PageRequest{Reverse: true},
+		})
+		require.NoError(t, err)
+		require.Len(t, rev.Records, len(fwd.Records))
+
+		// Reverse should be the exact opposite of forward
+		for i := range fwd.Records {
+			j := len(fwd.Records) - 1 - i
+			require.Equal(t, fwd.Records[i].ID, rev.Records[j].ID,
+				"reverse[%d] should equal forward[%d]", j, i)
+		}
+	})
+
+	t.Run("reverse with pagination key (multi-page)", func(t *testing.T) {
+		// Get all records in reverse for reference
+		allRev, err := suite.queryClient.LedgerRecords(ctx, &types.QueryLedgerRecordsRequest{
+			Pagination: &sdkquery.PageRequest{Reverse: true},
+		})
+		require.NoError(t, err)
+
+		// First page: 2 records
+		res1, err := suite.queryClient.LedgerRecords(ctx, &types.QueryLedgerRecordsRequest{
+			Pagination: &sdkquery.PageRequest{Limit: 2, Reverse: true},
+		})
+		require.NoError(t, err)
+		require.Len(t, res1.Records, 2)
+		require.NotEmpty(t, res1.Pagination.NextKey)
+
+		// Second page — Reverse is NOT set; it's encoded in the NextKey
+		res2, err := suite.queryClient.LedgerRecords(ctx, &types.QueryLedgerRecordsRequest{
+			Pagination: &sdkquery.PageRequest{Key: res1.Pagination.NextKey, Limit: 10},
+		})
+		require.NoError(t, err)
+		require.Len(t, res2.Records, 2)
+
+		// Paginated results should match full reverse query
+		paginated := append(res1.Records, res2.Records...)
+		require.Len(t, paginated, len(allRev.Records))
+		for i := range paginated {
+			require.Equal(t, allRev.Records[i].ID, paginated[i].ID,
+				"paginated[%d] should match full reverse[%d]", i, i)
+		}
+	})
+
+	t.Run("reverse with status filter", func(t *testing.T) {
+		// Get forward with status filter
+		fwd, err := suite.queryClient.LedgerRecords(ctx, &types.QueryLedgerRecordsRequest{
+			Filters: types.LedgerRecordFilters{
+				Status: "ledger_record_status_pending",
+			},
+			Pagination: &sdkquery.PageRequest{},
+		})
+		require.NoError(t, err)
+		require.Len(t, fwd.Records, 2)
+
+		// Get reverse with same status filter
+		rev, err := suite.queryClient.LedgerRecords(ctx, &types.QueryLedgerRecordsRequest{
+			Filters: types.LedgerRecordFilters{
+				Status: "ledger_record_status_pending",
+			},
+			Pagination: &sdkquery.PageRequest{Reverse: true},
+		})
+		require.NoError(t, err)
+		require.Len(t, rev.Records, 2)
+
+		// Should be opposite order
+		require.Equal(t, fwd.Records[0].ID, rev.Records[1].ID)
+		require.Equal(t, fwd.Records[1].ID, rev.Records[0].ID)
+	})
+}
+
 type ledgerFilterModifier struct {
 	fieldName string
 	f         func(id types.LedgerRecordID, filter types.LedgerRecordFilters) types.LedgerRecordFilters

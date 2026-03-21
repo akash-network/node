@@ -29,7 +29,10 @@ var _ mvbeta.MsgServer = msgServer{}
 func (ms msgServer) CreateBid(goCtx context.Context, msg *mvbeta.MsgCreateBid) (*mvbeta.MsgCreateBidResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	params := ms.keepers.Market.GetParams(ctx)
+	params, err := ms.keepers.Market.GetParams(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	minDeposit := params.BidMinDeposits.AmountOf(msg.Deposit.Amount.Denom)
 	if minDeposit.IsZero() {
