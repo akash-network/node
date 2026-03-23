@@ -58,6 +58,10 @@ func (k Keeper) EndBlocker(ctx context.Context) error {
 			return true, err
 		}
 
+		if srcCoin.Denom != burnCoin.Denom {
+			return false, nil
+		}
+
 		burnCoin = burnCoin.Add(srcCoin)
 		mintCoin = mintCoin.Add(dstCoin)
 
