@@ -1,6 +1,6 @@
 [package]
 name = "pyth"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["Artur Troian <troian.ap@gmail.com"]
 edition = "2021"
 description = "Pyth price feed consumer contract for Akash Network"
