@@ -247,21 +247,26 @@ pub fn execute_update_price_feed(
     // Load existing price feed to get previous publish time
     let mut price_feed = PRICE_FEED.load(deps.storage)?;
 
-    // Ensure new price is not older than current price
-    if publish_time <= price_feed.publish_time {
+    // Reject truly older prices
+    if publish_time < price_feed.publish_time {
         return Err(ContractError::InvalidPriceData {
-            reason: "price data is not newer than current data".to_string(),
+            reason: "price data is older than current data".to_string(),
         });
     }
 
-    // Update price feed in contract storage
-    price_feed.prev_publish_time = price_feed.publish_time;
-    price_feed.price = price;
-    price_feed.conf = conf;
-    price_feed.expo = expo;
-    price_feed.publish_time = publish_time;
+    // Update contract storage only if price is actually newer.
+    // When publish_time == stored, skip the storage write but still
+    // forward to x/oracle below to refresh the block height and
+    // prevent the oracle price from going stale.
+    if publish_time > price_feed.publish_time {
+        price_feed.prev_publish_time = price_feed.publish_time;
+        price_feed.price = price;
+        price_feed.conf = conf;
+        price_feed.expo = expo;
+        price_feed.publish_time = publish_time;
 
-    PRICE_FEED.save(deps.storage, &price_feed)?;
+        PRICE_FEED.save(deps.storage, &price_feed)?;
+    }
 
     // Convert Pyth price to decimal string for x/oracle module
     let price_decimal = pyth_price_to_decimal(pyth_price.price, expo);

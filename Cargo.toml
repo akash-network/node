@@ -9,7 +9,7 @@ members = [
 version = "0.0.1"
 authors = ["Artur Troian <troian.ap@gmail.com>"]
 edition = "2021"
-rust-version  = "1.93.0"
+rust-version  = "1.86.0"
 
 [profile.release]
 opt-level = 3
