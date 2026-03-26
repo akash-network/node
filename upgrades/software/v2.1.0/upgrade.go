@@ -1,0 +1,86 @@
+// Package v2_1_0
+// nolint revive
+package v2_1_0
+
+import (
+	"context"
+	"fmt"
+
+	"cosmossdk.io/log"
+	storetypes "cosmossdk.io/store/types"
+	upgradetypes "cosmossdk.io/x/upgrade/types"
+	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
+	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/types/module"
+	otypes "pkg.akt.dev/go/node/oracle/v2"
+
+	apptypes "pkg.akt.dev/node/v2/app/types"
+	utypes "pkg.akt.dev/node/v2/upgrades/types"
+)
+
+const (
+	UpgradeName = "v2.1.0"
+)
+
+type upgrade struct {
+	*apptypes.App
+	log log.Logger
+}
+
+var _ utypes.IUpgrade = (*upgrade)(nil)
+
+func initUpgrade(log log.Logger, app *apptypes.App) (utypes.IUpgrade, error) {
+	up := &upgrade{
+		App: app,
+		log: log.With("module", fmt.Sprintf("upgrade/%s", UpgradeName)),
+	}
+
+	return up, nil
+}
+
+func (up *upgrade) StoreLoader() *storetypes.StoreUpgrades {
+	return &storetypes.StoreUpgrades{
+		Added:   []string{},
+		Deleted: []string{},
+	}
+}
+
+func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
+	return func(ctx context.Context, plan upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
+		sctx := sdk.UnwrapSDKContext(ctx)
+
+		toVM, err := up.MM.RunMigrations(ctx, up.Configurator, fromVM)
+		if err != nil {
+			return toVM, err
+		}
+
+		msgServer := wasmkeeper.NewMsgServerImpl(up.Keepers.Cosmos.Wasm)
+		govAddr := up.Keepers.Cosmos.Wasm.GetAuthority()
+
+		contractAddr := "akash1nc5tatafv6eyq7llkr2gv50ff9e22mnf70qgjlv737ktmt4eswrqyagled"
+
+		_, err = msgServer.StoreAndMigrateContract(ctx, &wasmtypes.MsgStoreAndMigrateContract{
+			Authority:             govAddr,
+			WASMByteCode:          pythContract,
+			Contract:              contractAddr,
+			InstantiatePermission: &wasmtypes.AllowNobody,
+			Msg:                   []byte("{}"),
+		})
+		if err != nil {
+			return toVM, err
+		}
+
+		oparams := otypes.DefaultParams()
+		oparams.MinPriceSources = 1
+
+		// Set the pyth contract as an authorized oracle price source
+		oparams.Sources = []string{contractAddr}
+		err = up.Keepers.Akash.Oracle.SetParams(sctx, oparams)
+		if err != nil {
+			return toVM, err
+		}
+
+		return toVM, err
+	}
+}

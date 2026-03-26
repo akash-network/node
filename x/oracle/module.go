@@ -18,7 +18,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 
-	types "pkg.akt.dev/go/node/oracle/v1"
+	types "pkg.akt.dev/go/node/oracle/v2"
 
 	"pkg.akt.dev/node/v2/x/oracle/handler"
 	"pkg.akt.dev/node/v2/x/oracle/keeper"
@@ -177,7 +177,7 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 
 // ConsensusVersion implements module.AppModule#ConsensusVersion
 func (am AppModule) ConsensusVersion() uint64 {
-	return 1
+	return 2
 }
 
 // AppModuleSimulation functions

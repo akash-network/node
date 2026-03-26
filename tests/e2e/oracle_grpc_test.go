@@ -11,7 +11,7 @@ import (
 
 	"pkg.akt.dev/go/cli"
 	clitestutil "pkg.akt.dev/go/cli/testutil"
-	types "pkg.akt.dev/go/node/oracle/v1"
+	types "pkg.akt.dev/go/node/oracle/v2"
 
 	"pkg.akt.dev/node/v2/testutil"
 )

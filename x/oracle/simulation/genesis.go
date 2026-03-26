@@ -3,7 +3,7 @@ package simulation
 import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 
-	types "pkg.akt.dev/go/node/oracle/v1"
+	types "pkg.akt.dev/go/node/oracle/v2"
 )
 
 // RandomizedGenState generates a random GenesisState for supply

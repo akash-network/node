@@ -254,11 +254,10 @@ pub fn execute_update_price_feed(
         });
     }
 
-    // Update contract storage only if price is actually newer.
-    // When publish_time == stored, skip the storage write but still
-    // forward to x/oracle below to refresh the block height and
-    // prevent the oracle price from going stale.
-    if publish_time > price_feed.publish_time {
+    // Update contract storage for same or newer timestamps.
+    // Pyth may submit multiple prices within the same timestamp
+    // but from different slots — all should be accepted.
+    if publish_time >= price_feed.publish_time {
         price_feed.prev_publish_time = price_feed.publish_time;
         price_feed.price = price;
         price_feed.conf = conf;
@@ -286,7 +285,7 @@ pub fn execute_update_price_feed(
 
     // Create Any message to submit price to x/oracle module
     let oracle_cosmos_msg: CosmosMsg = CosmosMsg::Any(AnyMsg {
-        type_url: "/akash.oracle.v1.MsgAddPriceEntry".to_string(),
+        type_url: "/akash.oracle.v2.MsgAddPriceEntry".to_string(),
         value: oracle_data.clone(),
     });
 

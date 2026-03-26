@@ -11,15 +11,15 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	types "pkg.akt.dev/go/node/bme/v1"
-	otypes "pkg.akt.dev/go/node/oracle/v1"
+	otypes "pkg.akt.dev/go/node/oracle/v2"
 	"pkg.akt.dev/go/sdkutil"
 )
 
 // BeginBlocker is called at the beginning of each block
-func (k *keeper) BeginBlocker(_ context.Context) error {
+func (k *keeper) BeginBlocker(ctx context.Context) error {
 	// reset the ledger sequence on each new block
 	// sequence must start from 1 for ledger record id range to work correctly
-	k.ledgerSequence = 1
+	_ = k.ledgerSequence.Set(ctx, 0)
 
 	return nil
 }

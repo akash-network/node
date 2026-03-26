@@ -6,7 +6,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 
-	types "pkg.akt.dev/go/node/oracle/v1"
+	types "pkg.akt.dev/go/node/oracle/v2"
 
 	"pkg.akt.dev/node/v2/x/oracle/keeper"
 )
@@ -33,7 +33,7 @@ func (ms msgServer) AddPriceEntry(ctx context.Context, req *types.MsgAddPriceEnt
 		return nil, err
 	}
 
-	if err := ms.keeper.AddPriceEntry(sctx, source, req.ID, req.Price); err != nil {
+	if err := ms.keeper.AddPriceEntry(sctx, source, req.ID, req.Price, req.Timestamp); err != nil {
 		return nil, err
 	}
 

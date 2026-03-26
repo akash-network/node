@@ -70,7 +70,7 @@ import (
 	etypes "pkg.akt.dev/go/node/escrow/module"
 	mtypes "pkg.akt.dev/go/node/market/v1"
 	mvbeta "pkg.akt.dev/go/node/market/v1beta5"
-	otypes "pkg.akt.dev/go/node/oracle/v1"
+	otypes "pkg.akt.dev/go/node/oracle/v2"
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 	wtypes "pkg.akt.dev/go/node/wasm/v1"
 	"pkg.akt.dev/go/sdkutil"
@@ -420,12 +420,14 @@ func (app *App) InitNormalKeepers(
 	app.Keepers.Akash.Oracle = okeeper.NewKeeper(
 		cdc,
 		app.keys[otypes.StoreKey],
+		app.tkeys[otypes.TStoreKey],
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 
 	app.Keepers.Akash.Bme = bmekeeper.NewKeeper(
 		cdc,
 		app.keys[bmetypes.StoreKey],
+		app.tkeys[bmetypes.TStoreKey],
 		app.AC,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 		app.Keepers.Cosmos.Acct,
@@ -570,7 +572,9 @@ func (app *App) SetupHooks() {
 	app.Keepers.Akash.Escrow.AddOnAccountClosedHook(hook.OnEscrowAccountClosed)
 	app.Keepers.Akash.Escrow.AddOnPaymentClosedHook(hook.OnEscrowPaymentClosed)
 
-	app.Keepers.Akash.Epochs.SetHooks(epochstypes.NewMultiEpochHooks())
+	app.Keepers.Akash.Epochs.SetHooks(epochstypes.NewMultiEpochHooks(
+		okeeper.EpochHooksFor(app.Keepers.Akash.Oracle),
+	))
 }
 
 // initParamsKeeper init params keeper and its subspaces
@@ -634,6 +638,8 @@ func kvStoreKeys() []string {
 func transientStoreKeys() []string {
 	return []string{
 		paramstypes.TStoreKey,
+		bmetypes.TStoreKey,
+		otypes.TStoreKey,
 	}
 }
 

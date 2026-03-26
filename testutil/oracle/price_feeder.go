@@ -6,7 +6,7 @@ import (
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	oraclev1 "pkg.akt.dev/go/node/oracle/v1"
+	oraclev1 "pkg.akt.dev/go/node/oracle/v2"
 	"pkg.akt.dev/go/sdkutil"
 
 	oraclekeeper "pkg.akt.dev/node/v2/x/oracle/keeper"
@@ -42,13 +42,12 @@ func SetupPriceFeeder(ctx sdk.Context, keeper oraclekeeper.Keeper, t ...interfac
 	sourceAddress := sdk.AccAddress([]byte("oracle_test_source_address_0001"))
 
 	// Set oracle params with authorized source (source ID will be auto-assigned)
-	params := oraclev1.Params{
-		Sources:                 []string{sourceAddress.String()},
-		MinPriceSources:         1, // Only require 1 source for tests
-		MaxPriceStalenessBlocks: 1000,
-		TwapWindow:              10,
-		MaxPriceDeviationBps:    1000, // 10% max deviation (1000 basis points)
-	}
+	params := oraclev1.DefaultParams()
+	params.Sources = []string{sourceAddress.String()}
+	params.MinPriceSources = 1
+	params.MaxPriceStalenessPeriod = 1000
+	params.TwapWindow = 10
+	params.MaxPriceDeviationBps = 1000
 
 	if err := keeper.SetParams(ctx, params); err != nil {
 		return nil, err
@@ -71,18 +70,12 @@ func (pf *PriceFeeder) FeedPrice(ctx sdk.Context, denom string) error {
 		price = sdkmath.LegacyOneDec() // default to $1.00 if not set
 	}
 
-	// Add price entry
-	priceData := oraclev1.PriceDataState{
-		Price:     price,
-		Timestamp: ctx.BlockTime(),
-	}
-
 	dataID := oraclev1.DataID{
 		Denom:     denom,
 		BaseDenom: sdkutil.DenomUSD,
 	}
 
-	if err := pf.keeper.AddPriceEntry(ctx, pf.sourceAddress, dataID, priceData); err != nil {
+	if err := pf.keeper.AddPriceEntry(ctx, pf.sourceAddress, dataID, price, ctx.BlockTime()); err != nil {
 		return err
 	}
 

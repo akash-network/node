@@ -20,7 +20,7 @@ import (
 	dtypes "pkg.akt.dev/go/node/deployment/v1"
 	emodule "pkg.akt.dev/go/node/escrow/module"
 	mv1 "pkg.akt.dev/go/node/market/v1"
-	oracletypes "pkg.akt.dev/go/node/oracle/v1"
+	oracletypes "pkg.akt.dev/go/node/oracle/v2"
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 	"pkg.akt.dev/go/sdkutil"
 
@@ -180,13 +180,14 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 	}
 
 	if keepers.Oracle == nil {
-		keepers.Oracle = oraclekeeper.NewKeeper(cdc, app.GetKey(oracletypes.StoreKey), authtypes.NewModuleAddress(govtypes.ModuleName).String())
+		keepers.Oracle = oraclekeeper.NewKeeper(cdc, app.GetKey(oracletypes.StoreKey), app.GetTKey(oracletypes.TStoreKey), authtypes.NewModuleAddress(govtypes.ModuleName).String())
 	}
 
 	if keepers.BME == nil {
 		keepers.BME = bmekeeper.NewKeeper(
 			cdc,
 			app.GetKey(bmetypes.StoreKey),
+			app.GetTKey(bmetypes.TStoreKey),
 			app.AC,
 			authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 			keepers.Account,
