@@ -59,6 +59,11 @@
             "skipped": false,
             "from_binary": "v1.2.2",
             "from_version": "v1.2.0"
+        },
+        "v2.1.0": {
+            "skipped": false,
+            "from_binary": "v2.0.1",
+            "from_version": "v2.0.0"
         }
     }
 }

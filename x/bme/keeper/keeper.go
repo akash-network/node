@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"cosmossdk.io/collections"
+	"cosmossdk.io/collections/corecompat"
 	"cosmossdk.io/core/address"
 	"cosmossdk.io/core/store"
 	"cosmossdk.io/log"
@@ -16,6 +17,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	bmetypes "pkg.akt.dev/go/node/bme/v1"
+	otypes "pkg.akt.dev/go/node/oracle/v2"
 	"pkg.akt.dev/go/sdkutil"
 
 	bmeimports "pkg.akt.dev/node/v2/x/bme/imports"
@@ -72,7 +74,9 @@ type keeper struct {
 	ac        address.Codec
 	authority string
 
-	schema                collections.Schema
+	schema  collections.Schema
+	tschema collections.Schema
+
 	Params                collections.Item[bmetypes.Params]
 	status                collections.Item[bmetypes.Status]
 	epochs                collections.Map[string, int64]
@@ -83,16 +87,16 @@ type keeper struct {
 	ledgerPending         collections.Map[bmetypes.LedgerRecordID, bmetypes.LedgerPendingRecord]
 	ledgerCanceled        collections.Map[bmetypes.LedgerRecordID, bmetypes.LedgerCanceledRecord]
 	ledger                collections.Map[bmetypes.LedgerRecordID, bmetypes.LedgerRecord]
-	ledgerSequence        int64
-
-	accKeeper    bmeimports.AccountKeeper
-	bankKeeper   bmeimports.BankKeeper
-	oracleKeeper bmeimports.OracleKeeper
+	ledgerSequence        collections.Item[int64]
+	accKeeper             bmeimports.AccountKeeper
+	bankKeeper            bmeimports.BankKeeper
+	oracleKeeper          bmeimports.OracleKeeper
 }
 
 func NewKeeper(
 	cdc codec.BinaryCodec,
 	skey *storetypes.KVStoreKey,
+	tkey *storetypes.TransientStoreKey,
 	ac address.Codec,
 	authority string,
 	accKeeper bmeimports.AccountKeeper,
@@ -100,8 +104,12 @@ func NewKeeper(
 	oracleKeeper bmeimports.OracleKeeper,
 ) Keeper {
 	ssvc := runtime.NewKVStoreService(skey)
-	sb := collections.NewSchemaBuilder(ssvc)
+	tsvc := runtime.NewTransientStoreService(tkey)
 
+	sb := collections.NewSchemaBuilder(ssvc)
+	tsb := collections.NewSchemaBuilderFromAccessor(func(ctx context.Context) corecompat.KVStore {
+		return tsvc.OpenTransientStore(ctx)
+	})
 	k := &keeper{
 		cdc:                   cdc,
 		skey:                  skey,
@@ -121,13 +129,20 @@ func NewKeeper(
 		ledgerCanceled:        collections.NewMap(sb, LedgerFailedKey, "ledger_canceled", ledgerRecordIDCodec{}, codec.CollValue[bmetypes.LedgerCanceledRecord](cdc)),
 		ledgerPendingBalances: collections.NewMap(sb, LedgerPendingBalancesKey, "ledger_pending_balances", collections.StringKey, sdk.IntValue),
 		ledger:                collections.NewMap(sb, LedgerKey, "ledger", ledgerRecordIDCodec{}, codec.CollValue[bmetypes.LedgerRecord](cdc)),
+		ledgerSequence:        collections.NewItem(sb, LedgerSequenceKey, "ledger_sequence", collections.Int64Value),
 	}
 
 	schema, err := sb.Build()
 	if err != nil {
 		panic(err)
 	}
+
+	tschema, err := tsb.Build()
+	if err != nil {
+		panic(err)
+	}
 	k.schema = schema
+	k.tschema = tschema
 
 	return k
 }
@@ -686,8 +701,6 @@ func (k *keeper) recordState(
 		return err
 	}
 
-	k.ledgerSequence++
-
 	return nil
 }
 
@@ -782,12 +795,17 @@ func (k *keeper) RequestBurnMint(ctx context.Context, srcAddr sdk.AccAddress, ds
 		}
 	}
 
+	seq, err := k.nextLedgerSeq(sctx)
+	if err != nil {
+		return bmetypes.LedgerRecordID{}, err
+	}
+
 	id := bmetypes.LedgerRecordID{
 		Denom:    burnCoin.Denom,
 		ToDenom:  toDenom,
 		Source:   srcAddr.String(),
 		Height:   sctx.BlockHeight(),
-		Sequence: k.ledgerSequence,
+		Sequence: seq,
 	}
 
 	pendingAmount, err := k.ledgerPendingBalances.Get(ctx, burnCoin.Denom)
@@ -821,9 +839,22 @@ func (k *keeper) RequestBurnMint(ctx context.Context, srcAddr sdk.AccAddress, ds
 		return id, err
 	}
 
-	k.ledgerSequence++
-
 	return id, nil
+}
+
+func (k *keeper) nextLedgerSeq(ctx sdk.Context) (int64, error) {
+	seq, err := k.ledgerSequence.Get(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	seq++
+	err = k.ledgerSequence.Set(ctx, seq)
+	if err != nil {
+		return 0, err
+	}
+
+	return seq, nil
 }
 
 func (k *keeper) mintStatusUpdate(sctx sdk.Context) (bmetypes.Status, bool) {
@@ -842,7 +873,8 @@ func (k *keeper) mintStatusUpdate(sctx sdk.Context) (bmetypes.Status, bool) {
 
 	cr, err := k.calculateCR(sctx)
 	if err != nil {
-		if cb.Status != bmetypes.MintStatusHaltCR {
+		cb.Status = bmetypes.MintStatusHaltCR
+		if errors.Is(err, otypes.ErrPriceStalled) || errors.Is(err, bmetypes.ErrZeroPrice) {
 			cb.Status = bmetypes.MintStatusHaltOracle
 		}
 	} else {

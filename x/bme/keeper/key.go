@@ -20,5 +20,7 @@ var (
 	MintStatusKey            = collections.NewPrefix([]byte{0x04, 0x00})
 	MintEpochKey             = collections.NewPrefix([]byte{0x04, 0x01})
 	MintStatusRecordsKey     = collections.NewPrefix([]byte{0x04, 0x02})
-	ParamsKey                = collections.NewPrefix([]byte{0x09, 0x00}) // key for bme module params
+	ParamsKey                = collections.NewPrefix([]byte{0x09, 0x00})
+
+	LedgerSequenceKey = collections.NewPrefix([]byte{0x03, 0x05})
 )

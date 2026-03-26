@@ -488,20 +488,12 @@ function prepare_state() {
 			tar_cmd=$(tar_by_content_type "$snap_file")
 
 			pushd "$(pwd)"
-			mkdir -p "${valdir}/data"
-			cd "${valdir}/data"
+			cd "${valdir}"
 
 			echo "Unpacking snapshot from $snap_file..."
 
 			# shellcheck disable=SC2086
 			(pv -petrafb -i 5 "$snap_file" | eval "$tar_cmd") 2>&1 | stdbuf -o0 tr '\r' '\n'
-
-			# if snapshot provides data dir then move all things up
-			if [[ -d data ]]; then
-				echo "snapshot has data dir. moving content..."
-				mv data/* ./
-				rm -rf data
-			fi
 
 			rm -f upgrade-info.json
 
@@ -604,7 +596,9 @@ function prepare_state() {
 				state=$(cat data/priv_validator_state.json)
 
 				rm -rf "data"
+				rm -rf "wasm"
 				cp -r "$srcval/data" ./
+				cp -r "$srcval/wasm" ./
 
 				echo "$state" > data/priv_validator_state.json
 				popd

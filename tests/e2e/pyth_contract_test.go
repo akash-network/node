@@ -25,7 +25,7 @@ import (
 	aclient "pkg.akt.dev/go/node/client/discovery"
 	cltypes "pkg.akt.dev/go/node/client/types"
 	cclient "pkg.akt.dev/go/node/client/v1beta3"
-	oracletypes "pkg.akt.dev/go/node/oracle/v1"
+	oracletypes "pkg.akt.dev/go/node/oracle/v2"
 
 	"pkg.akt.dev/node/v2/testutil"
 	"pkg.akt.dev/node/v2/testutil/network"
@@ -231,7 +231,7 @@ type PriceResponse struct {
 type OracleParamsResponse struct {
 	MaxPriceDeviationBps    uint64 `json:"max_price_deviation_bps"`
 	MinPriceSources         uint32 `json:"min_price_sources"`
-	MaxPriceStalenessBlocks int64  `json:"max_price_staleness_blocks"`
+	MaxPriceStalenessPeriod int64  `json:"max_price_staleness_period"`
 	TwapWindow              int64  `json:"twap_window"`
 	LastUpdatedHeight       uint64 `json:"last_updated_height"`
 }
@@ -449,7 +449,7 @@ func (s *priceOracleContractTestSuite) TestQueryOracleModuleParams() {
 	// Validate expected fields exist
 	s.T().Logf("Oracle params: min_price_sources=%d, max_staleness=%d, max_deviation_bps=%d, twap_window=%d",
 		oracleParams.Params.MinPriceSources,
-		oracleParams.Params.MaxPriceStalenessBlocks,
+		oracleParams.Params.MaxPriceStalenessPeriod,
 		oracleParams.Params.MaxPriceDeviationBps,
 		oracleParams.Params.TwapWindow,
 	)
@@ -560,7 +560,7 @@ func (s *priceOracleContractTestSuite) TestContractResponseParsing() {
 	paramsJSON := `{
 		"max_price_deviation_bps": 150,
 		"min_price_sources": 2,
-		"max_price_staleness_blocks": 50,
+		"max_price_staleness_period": 50,
 		"twap_window": 50,
 		"last_updated_height": 100
 	}`
@@ -570,7 +570,7 @@ func (s *priceOracleContractTestSuite) TestContractResponseParsing() {
 	s.Require().NoError(err)
 	s.Require().Equal(uint64(150), params.MaxPriceDeviationBps)
 	s.Require().Equal(uint32(2), params.MinPriceSources)
-	s.Require().Equal(int64(50), params.MaxPriceStalenessBlocks)
+	s.Require().Equal(int64(50), params.MaxPriceStalenessPeriod)
 	s.Require().Equal(int64(50), params.TwapWindow)
 	s.Require().Equal(uint64(100), params.LastUpdatedHeight)
 }

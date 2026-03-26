@@ -252,9 +252,9 @@ fn e2e_oracle_message_encoding() {
 
     assert_eq!(msg.id.denom, "akt");
     assert_eq!(msg.id.base_denom, "usd");
-    assert_eq!(msg.price.price, "1234567890000000000");
-    assert_eq!(msg.price.timestamp_seconds, 1700000000);
-    assert_eq!(msg.price.timestamp_nanos, 0);
+    assert_eq!(msg.price, "1234567890000000000");
+    assert_eq!(msg.timestamp_seconds, 1700000000);
+    assert_eq!(msg.timestamp_nanos, 0);
 
     let binary = msg.encode_to_protobuf();
     assert!(!binary.is_empty());
@@ -366,7 +366,8 @@ fn e2e_protobuf_encoding_verification() {
     // Verify structure:
     // Field 1 (signer): tag 0x0a, length, "akash1test"
     // Field 2 (id): tag 0x12, length, DataID submessage
-    // Field 3 (price): tag 0x1a, length, PriceDataState submessage
+    // Field 3 (price): tag 0x1a, length, cosmos.Dec string
+    // Field 4 (timestamp): tag 0x22, length, google.protobuf.Timestamp
 
     assert_eq!(binary[0], 0x0a); // Field 1 tag
 

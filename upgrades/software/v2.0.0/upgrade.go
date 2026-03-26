@@ -19,7 +19,7 @@ import (
 	dvbeta "pkg.akt.dev/go/node/deployment/v1beta4"
 	epochstypes "pkg.akt.dev/go/node/epochs/v1beta1"
 	mvbeta "pkg.akt.dev/go/node/market/v1beta5"
-	otypes "pkg.akt.dev/go/node/oracle/v1"
+	otypes "pkg.akt.dev/go/node/oracle/v2"
 	ttypes "pkg.akt.dev/go/node/take/v1"
 	"pkg.akt.dev/go/sdkutil"
 

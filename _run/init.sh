@@ -109,9 +109,12 @@ configure_genesis() {
 		| jq -M '.app_state.wasm.params.instantiate_default_permission = "Everybody"' \
 		| jq -M --argjson guardians "$guardian_json" --arg feed_id "$AKT_PRICE_FEED_ID" '
 			.app_state.oracle.params.min_price_sources = 1 |
-			.app_state.oracle.params.max_price_staleness_blocks = 100 |
+			.app_state.oracle.params.max_price_staleness_period = 30 |
 			.app_state.oracle.params.twap_window = 50 |
-			.app_state.oracle.params.max_price_deviation_bps = 1000' \
+			.app_state.oracle.params.max_price_deviation_bps = 1000 |
+			.app_state.oracle.params.price_retention = "86400s" |
+			.app_state.oracle.params.prune_epoch = "hour" |
+			.app_state.oracle.params.max_prune_per_epoch = 1000' \
 	> "${GENESIS_PATH}"
 
 	log "Genesis configuration complete"
@@ -236,7 +239,7 @@ EOF
 {
 	"admin": "$admin_addr",
 	"wormhole_contract": "$wormhole_addr",
-	"update_fee": "1000000",
+	"update_fee": "1000",
 	"price_feed_id": "$AKT_PRICE_FEED_ID",
 	"data_sources": [
 		{
@@ -258,8 +261,8 @@ EOF
 	pyth_addr=$(akash query wasm list-contract-by-code "$pyth_code_id" -o json | jq -r '.contracts[-1]')
 	log "Pyth contract address: $pyth_addr"
 
-	# Register Pyth as authorized oracle source
-	register_oracle_source "$pyth_addr"
+	# Register Pyth as authorized oracle source and fund BME vault via gov proposal
+	register_oracle_source "$pyth_addr" "$admin_addr"
 
 	# Write configuration for Hermes
 	write_hermes_config "$pyth_addr"
@@ -271,37 +274,37 @@ EOF
 
 register_oracle_source() {
 	local pyth_addr=$1
-	log "Registering Pyth contract as authorized oracle source..."
+	local admin_addr=$2
+	log "Registering Pyth contract as authorized oracle source and funding BME vault..."
 
-	# Build guardian addresses JSON array for the proposal
-	local guardian_json="["
-	for i in "${!GUARDIAN_ADDRESSES[@]}"; do
-		if [ "$i" -gt 0 ]; then
-			guardian_json+=","
-		fi
-		guardian_json+="\"${GUARDIAN_ADDRESSES[$i]}\""
-	done
-	guardian_json+="]"
-
-	# Create proposal JSON
+	# Create proposal JSON with both oracle params and BME vault funding
 	cat > /tmp/oracle-params.json <<EOF
 {
 	"messages": [
 		{
-			"@type": "/akash.oracle.v1.MsgUpdateParams",
+			"@type": "/akash.oracle.v2.MsgUpdateParams",
 			"authority": "akash10d07y265gmmuvt4z0w9aw880jnsr700jhe7z0f",
 			"params": {
 				"sources": ["$pyth_addr"],
 				"min_price_sources": 1,
-				"max_price_staleness_blocks": 100,
+				"max_price_staleness_period": 30,
 				"twap_window": 50,
-				"max_price_deviation_bps": 1000
+				"max_price_deviation_bps": 1000,
+				"price_retention": "86400s",
+				"prune_epoch": "hour",
+				"max_prune_per_epoch": 1000
 			}
+		},
+		{
+			"@type": "/akash.bme.v1.MsgFundVault",
+			"authority": "akash10d07y265gmmuvt4z0w9aw880jnsr700jhe7z0f",
+			"amount": {"denom": "${CHAIN_TOKEN_DENOM}", "amount": "1000000000000"},
+			"source": "$admin_addr"
 		}
 	],
 	"deposit": "10000000uakt",
-	"title": "Register Pyth Contract",
-	"summary": "Authorize pyth contract as oracle source"
+	"title": "Register Pyth Contract and Fund BME Vault",
+	"summary": "Authorize pyth contract as oracle source and seed BME vault with initial AKT"
 }
 EOF
 

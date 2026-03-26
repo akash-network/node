@@ -1,4 +1,17 @@
 {
+    "v2.1.0": {
+        "modules": {
+
+        },
+        "migrations": {
+            "oracle": [
+                {
+                    "from": "1",
+                    "to": "2"
+                }
+            ]
+        }
+    },
     "v2.0.0": {
         "modules": {
             "added": [

@@ -49,8 +49,8 @@ type OracleParams struct {
 	Sources []string `json:"sources"`
 	// MinPriceSources is the minimum number of price sources required
 	MinPriceSources uint32 `json:"min_price_sources"`
-	// MaxPriceStalenessBlocks is the maximum price staleness in blocks
-	MaxPriceStalenessBlocks int64 `json:"max_price_staleness_blocks"`
+	// MaxPriceStalenessPeriod is the maximum price staleness period in seconds
+	MaxPriceStalenessPeriod int64 `json:"max_price_staleness_period"`
 	// TwapWindow is the TWAP window in blocks
 	TwapWindow int64 `json:"twap_window"`
 	// MaxPriceDeviationBps is the maximum price deviation in basis points
