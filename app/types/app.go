@@ -276,6 +276,7 @@ func (app *App) InitNormalKeepers(
 		addresscodec.NewBech32Codec(sdk.GetConfig().GetBech32AccountAddrPrefix()),
 		AccountAddressPrefix,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		authkeeper.WithUnorderedTransactions(true),
 	)
 
 	app.Keepers.Cosmos.Bank = bankkeeper.NewBaseKeeper(
