@@ -53,6 +53,8 @@ require (
 	pkg.akt.dev/go/sdl v0.2.0
 )
 
+retract v2.0.0
+
 replace (
 	// use cosmos fork of keyring
 	github.com/99designs/keyring => github.com/cosmos/keyring v1.2.0
