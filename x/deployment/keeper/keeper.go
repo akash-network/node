@@ -42,8 +42,6 @@ type IKeeper interface {
 	NewQuerier() Querier
 
 	EndBlocker(context.Context) error
-
-	AddPendingDenomMigration(ctx sdk.Context, did v1.DeploymentID) error
 }
 
 // Keeper of the deployment store
@@ -441,9 +439,4 @@ func (k Keeper) OnLeaseClosed(ctx sdk.Context, id v1.GroupID) (types.Group, erro
 func (k Keeper) SaveGroup(ctx sdk.Context, group types.Group) error {
 	pk := keys.GroupIDToKey(group.ID)
 	return k.groups.Set(ctx, pk, group)
-}
-
-// AddPendingDenomMigration marks a deployment for deferred denom migration.
-func (k Keeper) AddPendingDenomMigration(ctx sdk.Context, did v1.DeploymentID) error {
-	return k.pendingDenomMigrations.Set(ctx, keys.DeploymentIDToKey(did), sdkmath.OneInt())
 }

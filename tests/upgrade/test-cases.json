@@ -4,6 +4,12 @@
 
         },
         "migrations": {
+            "deployment": [
+                {
+                    "from": "7",
+                    "to": "8"
+                }
+            ],
             "oracle": [
                 {
                     "from": "1",

@@ -73,7 +73,7 @@ func (k *keeper) prunePrices(ctx sdk.Context, cutoff time.Time, maxDelete int64)
 
 // pruneSourcePrices deletes price records for a single (source, denom, baseDenom)
 // prefix that are older than cutoff. Returns number of records deleted.
-func (k *keeper) pruneSourcePrices(ctx sdk.Context, source uint32, denom, baseDenom string, cutoff time.Time, maxDelete int64) int64 {
+func (k *keeper) pruneSourcePrices(ctx sdk.Context, source uint32, denom, baseDenom string, cutoff time.Time, maxDelete int64) (int64, error) {
 	start := types.PriceDataRecordID{
 		Source:    source,
 		Denom:     denom,
@@ -95,17 +95,21 @@ func (k *keeper) pruneSourcePrices(ctx sdk.Context, source uint32, denom, baseDe
 	var toDelete []types.PriceDataRecordID
 	var count int64
 
-	_ = k.prices.Walk(ctx, rng, func(key types.PriceDataRecordID, _ types.PriceDataState) (bool, error) {
+	if err := k.prices.Walk(ctx, rng, func(key types.PriceDataRecordID, _ types.PriceDataState) (bool, error) {
 		toDelete = append(toDelete, key)
 		count++
 		return count >= maxDelete, nil
-	})
-
-	for _, key := range toDelete {
-		_ = k.prices.Remove(ctx, key)
+	}); err != nil {
+		return count, err
 	}
 
-	return count
+	for _, key := range toDelete {
+		if err := k.prices.Remove(ctx, key); err != nil {
+			return count, err
+		}
+	}
+
+	return count, nil
 }
 
 // EpochHooks returns the oracle keeper as an EpochHooks implementation for
