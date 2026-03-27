@@ -48,7 +48,7 @@ require (
 	google.golang.org/grpc v1.76.0
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.2
-	pkg.akt.dev/go v0.2.3
+	pkg.akt.dev/go v0.2.4
 	pkg.akt.dev/go/cli v0.2.2
 	pkg.akt.dev/go/sdl v0.2.0
 )
@@ -84,6 +84,7 @@ replace (
 
 	// stick with compatible version or x/exp in v0.47.x line
 	golang.org/x/exp => golang.org/x/exp v0.0.0-20230711153332-06a737ee72cb
+
 	// stick with compatible version of rapid in v0.47.x line
 	pgregory.net/rapid => pgregory.net/rapid v0.5.5
 )
