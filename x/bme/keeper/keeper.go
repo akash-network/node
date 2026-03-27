@@ -129,7 +129,7 @@ func NewKeeper(
 		ledgerCanceled:        collections.NewMap(sb, LedgerFailedKey, "ledger_canceled", ledgerRecordIDCodec{}, codec.CollValue[bmetypes.LedgerCanceledRecord](cdc)),
 		ledgerPendingBalances: collections.NewMap(sb, LedgerPendingBalancesKey, "ledger_pending_balances", collections.StringKey, sdk.IntValue),
 		ledger:                collections.NewMap(sb, LedgerKey, "ledger", ledgerRecordIDCodec{}, codec.CollValue[bmetypes.LedgerRecord](cdc)),
-		ledgerSequence:        collections.NewItem(sb, LedgerSequenceKey, "ledger_sequence", collections.Int64Value),
+		ledgerSequence:        collections.NewItem(tsb, LedgerSequenceKey, "ledger_sequence", collections.Int64Value),
 	}
 
 	schema, err := sb.Build()
@@ -842,6 +842,8 @@ func (k *keeper) RequestBurnMint(ctx context.Context, srcAddr sdk.AccAddress, ds
 	return id, nil
 }
 
+// nextLedgerSeq returns the next ledger sequence number and increments it
+// on each block sequence starts from 1
 func (k *keeper) nextLedgerSeq(ctx sdk.Context) (int64, error) {
 	seq, err := k.ledgerSequence.Get(ctx)
 	if err != nil {

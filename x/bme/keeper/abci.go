@@ -17,9 +17,13 @@ import (
 
 // BeginBlocker is called at the beginning of each block
 func (k *keeper) BeginBlocker(ctx context.Context) error {
+	sctx := sdk.UnwrapSDKContext(ctx)
 	// reset the ledger sequence on each new block
 	// sequence must start from 1 for ledger record id range to work correctly
-	_ = k.ledgerSequence.Set(ctx, 0)
+	err := k.ledgerSequence.Set(ctx, 0)
+	if err != nil {
+		sctx.Logger().Error("failed to reset ledger sequence", "err", err)
+	}
 
 	return nil
 }
