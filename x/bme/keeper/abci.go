@@ -17,6 +17,9 @@ import (
 
 // BeginBlocker is called at the beginning of each block
 func (k *keeper) BeginBlocker(ctx context.Context) error {
+	startTm := telemetry.Now()
+	defer telemetry.ModuleMeasureSince(types.ModuleName, startTm, telemetry.MetricKeyBeginBlocker)
+
 	sctx := sdk.UnwrapSDKContext(ctx)
 	// reset the ledger sequence on each new block
 	// sequence must start from 1 for ledger record id range to work correctly
