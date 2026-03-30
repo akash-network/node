@@ -40,6 +40,23 @@ Goal of the upgrade here
 Add new upgrades after this line based on the template above
 -----
 
+##### v2.0.0
+
+###### Description
+
+- Stores
+    - added
+        - `epochs`
+        - `oracle`
+        - `awasm`
+        - `wasm`
+        - `bme`
+    - deleted
+        - `take`
+
+- Migrations
+    - deployment `6 -> 7`
+
 ##### v1.2.0
 
 1. Migrate deployment and market module stores from manual KVStore key encoding to cosmossdk.io/collections.IndexedMap,
