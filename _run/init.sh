@@ -100,6 +100,7 @@ configure_genesis() {
 	done
 	guardian_json+="]"
 
+	# shellcheck disable=SC2002
 	cat "${GENESIS_PATH}.orig" | \
 		jq -M '.app_state.gov.voting_params.voting_period = "60s"' \
 		| jq -M '.app_state.gov.params.voting_period = "60s"' \
@@ -109,8 +110,8 @@ configure_genesis() {
 		| jq -M '.app_state.wasm.params.instantiate_default_permission = "Everybody"' \
 		| jq -M --argjson guardians "$guardian_json" --arg feed_id "$AKT_PRICE_FEED_ID" '
 			.app_state.oracle.params.min_price_sources = 1 |
-			.app_state.oracle.params.max_price_staleness_period = 30 |
-			.app_state.oracle.params.twap_window = 50 |
+			.app_state.oracle.params.max_price_staleness_period = "60s" |
+			.app_state.oracle.params.twap_window = "30s" |
 			.app_state.oracle.params.max_price_deviation_bps = 1000 |
 			.app_state.oracle.params.price_retention = "86400s" |
 			.app_state.oracle.params.prune_epoch = "hour" |
@@ -287,8 +288,8 @@ register_oracle_source() {
 			"params": {
 				"sources": ["$pyth_addr"],
 				"min_price_sources": 1,
-				"max_price_staleness_period": 30,
-				"twap_window": 50,
+				"max_price_staleness_period": "60s",
+				"twap_window": "30s",
 				"max_price_deviation_bps": 1000,
 				"price_retention": "86400s",
 				"prune_epoch": "hour",
@@ -299,7 +300,7 @@ register_oracle_source() {
 			"@type": "/akash.bme.v1.MsgFundVault",
 			"authority": "akash10d07y265gmmuvt4z0w9aw880jnsr700jhe7z0f",
 			"amount": {"denom": "${CHAIN_TOKEN_DENOM}", "amount": "1000000000000"},
-			"source": "$admin_addr"
+			"source": "$(akash keys show main -a)"
 		}
 	],
 	"deposit": "10000000uakt",

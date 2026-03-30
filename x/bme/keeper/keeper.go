@@ -846,7 +846,7 @@ func (k *keeper) RequestBurnMint(ctx context.Context, srcAddr sdk.AccAddress, ds
 // on each block sequence starts from 1
 func (k *keeper) nextLedgerSeq(ctx sdk.Context) (int64, error) {
 	seq, err := k.ledgerSequence.Get(ctx)
-	if err != nil {
+	if err != nil && !errors.Is(err, collections.ErrNotFound) {
 		return 0, err
 	}
 

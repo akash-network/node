@@ -40,6 +40,14 @@ Goal of the upgrade here
 Add new upgrades after this line based on the template above
 -----
 
+##### v2.1.0
+
+###### Description
+
+- Migrations
+    - oracle     `1 -> 2`
+    - deployment `7 -> 8`
+
 ##### v2.0.0
 
 ###### Description

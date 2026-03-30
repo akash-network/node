@@ -7,13 +7,17 @@ import (
 	"fmt"
 
 	"cosmossdk.io/log"
+	sdkmath "cosmossdk.io/math"
 	storetypes "cosmossdk.io/store/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
+	etypes "pkg.akt.dev/go/node/escrow/module"
 	otypes "pkg.akt.dev/go/node/oracle/v2"
+	"pkg.akt.dev/go/sdkutil"
 
 	apptypes "pkg.akt.dev/node/v2/app/types"
 	utypes "pkg.akt.dev/node/v2/upgrades/types"
@@ -81,6 +85,27 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 			return toVM, err
 		}
 
+		if sctx.ChainID() == "akashnet-2" {
+			feePool, err := up.Keepers.Cosmos.Distr.FeePool.Get(ctx)
+			if err != nil {
+				return toVM, fmt.Errorf("failed to get fee pool: %w", err)
+			}
+
+			// deposit 427,414,453uAKT to escrow as stated in the upgrade proposal
+			escrowDepositAmount := sdk.NewCoin(sdkutil.DenomUakt, sdkmath.NewInt(427414453))
+
+			err = up.Keepers.Cosmos.Bank.SendCoinsFromModuleToModule(ctx, distrtypes.ModuleName, etypes.ModuleName, sdk.Coins{escrowDepositAmount})
+			if err != nil {
+				return toVM, fmt.Errorf("failed to transfer funds to escrow: %w", err)
+			}
+
+			feePool.CommunityPool = feePool.CommunityPool.Sub(sdk.DecCoins{sdk.NewDecCoinFromCoin(escrowDepositAmount)})
+
+			err = up.Keepers.Cosmos.Distr.FeePool.Set(ctx, feePool)
+			if err != nil {
+				return toVM, fmt.Errorf("failed to set updated fee pool balance: %w", err)
+			}
+		}
 		return toVM, err
 	}
 }

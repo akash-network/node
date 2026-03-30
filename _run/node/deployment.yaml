@@ -40,8 +40,8 @@ profiles:
       attributes:
         region: us-west
       pricing:
-        web: 
-          denom: uakt
+        web:
+          denom: uact
           amount: 1000
 
 deployment:
