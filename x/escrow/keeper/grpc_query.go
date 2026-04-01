@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"context"
 
-	"cosmossdk.io/store/prefix"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"cosmossdk.io/store/prefix"
+	storetypes "cosmossdk.io/store/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
+
 	types "pkg.akt.dev/go/node/escrow/types/v1"
 	etypes "pkg.akt.dev/go/node/escrow/v1"
 
@@ -37,20 +40,26 @@ func (k Querier) Accounts(c context.Context, req *etypes.QueryAccountsRequest) (
 	}
 
 	states := make([]byte, 0, 3)
-
 	var searchPrefix []byte
+	var startKey []byte
 
-	// setup for case 3 - cross-index search
 	// nolint: gocritic
 	if len(req.Pagination.Key) > 0 {
-		var key []byte
+		var innerKey []byte
 		var err error
-		states, searchPrefix, key, _, err = query.DecodePaginationKey(req.Pagination.Key)
+		states, searchPrefix, innerKey, _, err = query.DecodePaginationKey(req.Pagination.Key)
 		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
+			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
 
-		req.Pagination.Key = key
+		// Validate the inner key by parsing the reconstructed full store key
+		if _, _, err = ParseAccountKey(append(bytes.Clone(searchPrefix), innerKey...)); err != nil {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+
+		// Safe copy -- iterator may hold a reference to the start key
+		startKey = make([]byte, len(innerKey))
+		copy(startKey, innerKey)
 	} else if req.State != "" {
 		stateVal := types.State(types.State_value[req.State])
 
@@ -60,80 +69,77 @@ func (k Querier) Accounts(c context.Context, req *etypes.QueryAccountsRequest) (
 
 		states = append(states, byte(stateVal))
 	} else {
-		// request does not have a pagination set. Start from active store
-		states = append(states, []byte{byte(types.StateOpen), byte(types.StateClosed), byte(types.StateOverdrawn)}...)
+		states = append(states, byte(types.StateOpen), byte(types.StateClosed), byte(types.StateOverdrawn))
 	}
 
 	var accounts types.Accounts
-	var pageRes *sdkquery.PageResponse
-
+	var nextKey []byte
 	total := uint64(0)
 
-	for idx := range states {
+	iters := make([]storetypes.Iterator, 0, len(states))
+	defer func() {
+		for _, it := range iters {
+			_ = it.Close()
+		}
+	}()
+
+	var idx int
+
+	for idx = range states {
 		state := types.State(states[idx])
 
-		var err error
 		if idx > 0 {
-			req.Pagination.Key = nil
+			startKey = nil
 		}
 
-		if len(req.Pagination.Key) == 0 {
+		if startKey == nil {
 			req.State = state.String()
-
 			searchPrefix = BuildSearchPrefix(AccountPrefix, req.State, req.XID)
 		}
 
 		searchStore := prefix.NewStore(ctx.KVStore(k.skey), searchPrefix)
+		iter := searchStore.Iterator(startKey, nil)
+		iters = append(iters, iter)
 
 		count := uint64(0)
 
-		pageRes, err = sdkquery.FilteredPaginate(searchStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
-			id, _, err := ParseAccountKey(append(searchPrefix, key...))
+		for ; iter.Valid() && req.Pagination.Limit > 0; iter.Next() {
+			id, _, err := ParseAccountKey(append(searchPrefix, iter.Key()...))
 			if err != nil {
-				return true, err
-			}
-			acc := types.Account{
-				ID: id,
+				return nil, status.Error(codes.Internal, err.Error())
 			}
 
-			er := k.cdc.Unmarshal(value, &acc.State)
-			if er != nil {
-				return false, er
+			acc := types.Account{ID: id}
+
+			if err := k.cdc.Unmarshal(iter.Value(), &acc.State); err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
 			}
 
 			accounts = append(accounts, acc)
+			req.Pagination.Limit--
 			count++
-
-			return false, nil
-		})
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		req.Pagination.Limit -= count
 		total += count
 
-		if req.Pagination.Limit == 0 {
-			if len(pageRes.NextKey) > 0 {
-				pageRes.NextKey, err = query.EncodePaginationKey(states[idx:], searchPrefix, pageRes.NextKey, nil)
-				if err != nil {
-					pageRes.Total = total
-					return &etypes.QueryAccountsResponse{
-						Accounts:   accounts,
-						Pagination: pageRes,
-					}, status.Error(codes.Internal, err.Error())
-				}
+		// Page full and more items exist -- encode NextKey for continuation
+		if iter.Valid() && req.Pagination.Limit == 0 {
+			var err error
+			nextKey, err = query.EncodePaginationKey(states[idx:], searchPrefix, iter.Key(), nil)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
 			}
 
 			break
 		}
 	}
 
-	pageRes.Total = total
-
 	return &etypes.QueryAccountsResponse{
-		Accounts:   accounts,
-		Pagination: pageRes,
+		Accounts: accounts,
+		Pagination: &sdkquery.PageResponse{
+			Total:   total,
+			NextKey: nextKey,
+		},
 	}, nil
 }
 
@@ -152,20 +158,26 @@ func (k Querier) Payments(c context.Context, req *etypes.QueryPaymentsRequest) (
 	}
 
 	states := make([]byte, 0, 3)
-
 	var searchPrefix []byte
+	var startKey []byte
 
-	// setup for case 3 - cross-index search
 	// nolint: gocritic
 	if len(req.Pagination.Key) > 0 {
-		var key []byte
+		var innerKey []byte
 		var err error
-		states, searchPrefix, key, _, err = query.DecodePaginationKey(req.Pagination.Key)
+		states, searchPrefix, innerKey, _, err = query.DecodePaginationKey(req.Pagination.Key)
 		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
+			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
 
-		req.Pagination.Key = key
+		// Validate the inner key by parsing the reconstructed full store key
+		if _, _, err = ParsePaymentKey(append(bytes.Clone(searchPrefix), innerKey...)); err != nil {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+
+		// Safe copy -- iterator may hold a reference to the start key
+		startKey = make([]byte, len(innerKey))
+		copy(startKey, innerKey)
 	} else if req.State != "" {
 		stateVal := types.State(types.State_value[req.State])
 
@@ -175,80 +187,77 @@ func (k Querier) Payments(c context.Context, req *etypes.QueryPaymentsRequest) (
 
 		states = append(states, byte(stateVal))
 	} else {
-		// request does not have a pagination set. Start from active store
-		states = append(states, []byte{byte(types.StateOpen), byte(types.StateClosed), byte(types.StateOverdrawn)}...)
+		states = append(states, byte(types.StateOpen), byte(types.StateClosed), byte(types.StateOverdrawn))
 	}
 
 	var payments types.Payments
-	var pageRes *sdkquery.PageResponse
-
+	var nextKey []byte
 	total := uint64(0)
 
-	for idx := range states {
+	iters := make([]storetypes.Iterator, 0, len(states))
+	defer func() {
+		for _, it := range iters {
+			_ = it.Close()
+		}
+	}()
+
+	var idx int
+
+	for idx = range states {
 		state := types.State(states[idx])
 
-		var err error
 		if idx > 0 {
-			req.Pagination.Key = nil
+			startKey = nil
 		}
 
-		if len(req.Pagination.Key) == 0 {
+		if startKey == nil {
 			req.State = state.String()
-
 			searchPrefix = BuildSearchPrefix(PaymentPrefix, req.State, req.XID)
 		}
 
 		searchStore := prefix.NewStore(ctx.KVStore(k.skey), searchPrefix)
+		iter := searchStore.Iterator(startKey, nil)
+		iters = append(iters, iter)
 
 		count := uint64(0)
 
-		pageRes, err = sdkquery.FilteredPaginate(searchStore, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
-			id, _, err := ParsePaymentKey(append(searchPrefix, key...))
+		for ; iter.Valid() && req.Pagination.Limit > 0; iter.Next() {
+			id, _, err := ParsePaymentKey(append(searchPrefix, iter.Key()...))
 			if err != nil {
-				return true, err
-			}
-			pmnt := types.Payment{
-				ID: id,
+				return nil, status.Error(codes.Internal, err.Error())
 			}
 
-			er := k.cdc.Unmarshal(value, &pmnt.State)
-			if er != nil {
-				return false, er
+			pmnt := types.Payment{ID: id}
+
+			if err := k.cdc.Unmarshal(iter.Value(), &pmnt.State); err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
 			}
 
 			payments = append(payments, pmnt)
+			req.Pagination.Limit--
 			count++
-
-			return false, nil
-		})
-		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		req.Pagination.Limit -= count
 		total += count
 
-		if req.Pagination.Limit == 0 {
-			if len(pageRes.NextKey) > 0 {
-				pageRes.NextKey, err = query.EncodePaginationKey(states[idx:], searchPrefix, pageRes.NextKey, nil)
-				if err != nil {
-					pageRes.Total = total
-					return &etypes.QueryPaymentsResponse{
-						Payments:   payments,
-						Pagination: pageRes,
-					}, status.Error(codes.Internal, err.Error())
-				}
+		// Page full and more items exist -- encode NextKey for continuation
+		if iter.Valid() && req.Pagination.Limit == 0 {
+			var err error
+			nextKey, err = query.EncodePaginationKey(states[idx:], searchPrefix, iter.Key(), nil)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
 			}
 
 			break
 		}
 	}
 
-	pageRes.Total = total
-
 	return &etypes.QueryPaymentsResponse{
-		Payments:   payments,
-		Pagination: pageRes,
+		Payments: payments,
+		Pagination: &sdkquery.PageResponse{
+			Total:   total,
+			NextKey: nextKey,
+		},
 	}, nil
 }
 
