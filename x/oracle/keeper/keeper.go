@@ -389,6 +389,13 @@ func (k *keeper) SetParams(ctx sdk.Context, p types.Params) error {
 		return err
 	}
 
+	// Determine which sources are being removed so we can clean up their
+	// latestPriceID entries. Without this cleanup the EndBlocker would
+	// continue to discover (and skip) stale entries every block, and — more
+	// critically — the orphaned latestPriceID state prevents the aggregator
+	// from recovering after a remove-then-re-add cycle.
+	oldParams, oldErr := k.Params.Get(ctx)
+
 	if err := k.Params.Set(ctx, p); err != nil {
 		return err
 	}
@@ -423,9 +430,62 @@ func (k *keeper) SetParams(ctx sdk.Context, p types.Params) error {
 			}
 		}
 	}
+
+	// Clean up latestPriceID entries for sources that were removed.
+	// This prevents orphaned state from polluting the EndBlocker walk
+	// and ensures a re-added source starts fresh.
+	if oldErr == nil {
+		newSourceSet := make(map[string]struct{}, len(p.Sources))
+		for _, s := range p.Sources {
+			newSourceSet[s] = struct{}{}
+		}
+
+		for _, s := range oldParams.Sources {
+			if _, ok := newSourceSet[s]; ok {
+				continue
+			}
+
+			// Source was removed — resolve its ID and delete latestPriceID entries.
+			sID, err := k.sourceID.Get(ctx, s)
+			if err != nil {
+				// No sourceID mapping means no latestPriceID to clean up.
+				continue
+			}
+
+			if err := k.removeSourceLatestPriceIDs(ctx, sID); err != nil {
+				return err
+			}
+		}
+	}
+
 	// call hooks
 	for _, hook := range k.hooks.onSetParams {
 		hook(ctx, p)
+	}
+
+	return nil
+}
+
+// removeSourceLatestPriceIDs deletes all latestPriceID entries for the given
+// source ID. This is called when a source is removed from params.Sources so
+// that the EndBlocker no longer discovers stale entries
+func (k *keeper) removeSourceLatestPriceIDs(ctx sdk.Context, sourceID uint32) error {
+	var toDelete []types.PriceDataID
+
+	err := k.latestPriceID.Walk(ctx, nil, func(key types.PriceDataID, _ types.PriceLatestDataState) (bool, error) {
+		if key.Source == sourceID {
+			toDelete = append(toDelete, key)
+		}
+		return false, nil
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, key := range toDelete {
+		if err := k.latestPriceID.Remove(ctx, key); err != nil {
+			return err
+		}
 	}
 
 	return nil

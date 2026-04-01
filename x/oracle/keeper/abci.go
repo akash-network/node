@@ -42,6 +42,16 @@ func (k *keeper) EndBlocker(ctx context.Context) error {
 	twapDuration := params.TwapWindow
 	twapStart := now.Add(-twapDuration)
 
+	// Build a set of currently-authorized source IDs from params.Sources.
+	// Only these sources should participate in aggregation; latestPriceID
+	// entries for removed sources are ignored.
+	activeSourceIDs := make(map[uint32]bool, len(params.Sources))
+	for _, source := range params.Sources {
+		if id, err := k.sourceID.Get(sctx, source); err == nil {
+			activeSourceIDs[id] = true
+		}
+	}
+
 	// Phase 1: walk latestPriceID to discover sources per denom and their latest timestamps.
 	// latestByDenom maps DataID → list of (source, latestTimestamp) pairs.
 	type sourceInfo struct {
@@ -52,6 +62,11 @@ func (k *keeper) EndBlocker(ctx context.Context) error {
 	latestByDenom := make(map[types.DataID][]sourceInfo)
 
 	err = k.latestPriceID.Walk(sctx, nil, func(key types.PriceDataID, state types.PriceLatestDataState) (bool, error) {
+		// Skip sources that are no longer in params.Sources.
+		if !activeSourceIDs[key.Source] {
+			return false, nil
+		}
+
 		did := types.DataID{
 			Denom:     key.Denom,
 			BaseDenom: key.BaseDenom,
