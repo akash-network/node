@@ -106,6 +106,7 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 				return toVM, fmt.Errorf("failed to set updated fee pool balance: %w", err)
 			}
 		}
+
 		return toVM, err
 	}
 }

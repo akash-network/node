@@ -31,6 +31,11 @@ func (k Querier) Prices(ctx context.Context, req *types.QueryPricesRequest) (*ty
 		*pageReq = *req.Pagination
 	}
 
+	// Keys are stored in ascending chronological order.
+	// Invert Reverse so the default returns latest prices first
+	// and Reverse=true returns oldest first.
+	pageReq.Reverse = !pageReq.Reverse
+
 	prices, pageRes, err := query.CollectionFilteredPaginate(
 		ctx,
 		keeper.prices,
