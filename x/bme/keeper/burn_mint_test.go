@@ -1,6 +1,7 @@
 package keeper_test
 
 import (
+	"fmt"
 	"testing"
 
 	sdkmath "cosmossdk.io/math"
@@ -422,6 +423,7 @@ func TestExecuteBurnMint_MinMint_RejectsSmallSettle(t *testing.T) {
 	err = suite.keeper.IterateLedgerCanceledRecords(suite.ctx, func(_ types.LedgerRecordID, record types.LedgerCanceledRecord) (bool, error) {
 		canceledCount++
 		require.Equal(t, srcAddr.String(), record.Owner)
+		require.Equal(t, types.BMCancelReasonMinimumMint, record.CancelReason)
 		return false, nil
 	})
 	require.NoError(t, err)
@@ -500,4 +502,129 @@ func TestExecuteBurnMint_SmallAmountWithSpread_SpreadTruncatesToZero(t *testing.
 	suite.assertPendingCount(0)
 	suite.assertFailedCount(0)
 	suite.assertExecutedCount(1)
+}
+
+// TestExecuteBurnMint_RetriableError_StaysPending verifies that a retriable error
+// (e.g., MintCoins failure) increments the attempts counter and keeps the record
+// pending instead of immediately canceling it.
+func TestExecuteBurnMint_RetriableError_StaysPending(t *testing.T) {
+	suite := setupBMETest(t)
+
+	srcAddr := testutil.AccAddress(t)
+	dstAddr := testutil.AccAddress(t)
+	burnCoin := sdk.NewInt64Coin(sdkutil.DenomUact, 1000000)
+
+	suite.requestBurnMint(srcAddr, dstAddr, burnCoin, sdkutil.DenomUakt)
+
+	mintCoin := sdk.NewInt64Coin(sdkutil.DenomUakt, 333333)
+
+	// Mock BurnCoins succeeds, but MintCoins fails with a retriable error
+	suite.BankKeeper().
+		On("BurnCoins", mock.Anything, types.ModuleName, sdk.NewCoins(burnCoin)).
+		Return(nil).Once()
+	suite.BankKeeper().
+		On("MintCoins", mock.Anything, types.ModuleName, sdk.NewCoins(mintCoin)).
+		Return(fmt.Errorf("temporary bank error")).Once()
+
+	require.NoError(t, suite.keeper.EndBlocker(suite.ctx))
+
+	// Record stays pending (not canceled), attempts incremented
+	suite.assertPendingCount(1)
+	suite.assertFailedCount(0)
+	suite.assertExecutedCount(0)
+
+	// Verify attempts was incremented
+	err := suite.keeper.IterateLedgerPendingRecords(suite.ctx, func(_ types.LedgerRecordID, record types.LedgerPendingRecord) (bool, error) {
+		require.Equal(t, uint32(1), record.Attempts)
+		return false, nil
+	})
+	require.NoError(t, err)
+}
+
+// TestExecuteBurnMint_MaxAttempts_CancelsAfterRetries verifies that a pending
+// record is canceled with BMCancelReasonMaxAttempts after exhausting all retry
+// attempts (default: 3).
+func TestExecuteBurnMint_MaxAttempts_CancelsAfterRetries(t *testing.T) {
+	suite := setupBMETest(t)
+
+	srcAddr := testutil.AccAddress(t)
+	dstAddr := testutil.AccAddress(t)
+	burnCoin := sdk.NewInt64Coin(sdkutil.DenomUact, 1000000)
+
+	suite.requestBurnMint(srcAddr, dstAddr, burnCoin, sdkutil.DenomUakt)
+
+	mintCoin := sdk.NewInt64Coin(sdkutil.DenomUakt, 333333)
+
+	// Run EndBlocker DefaultMaxPendingAttempts times, each time MintCoins fails.
+	// Advance block height past the burn epoch each iteration so the record is reprocessed.
+	for i := 0; i < int(types.DefaultMaxPendingAttempts); i++ {
+		suite.BankKeeper().
+			On("BurnCoins", mock.Anything, types.ModuleName, sdk.NewCoins(burnCoin)).
+			Return(nil).Once()
+		suite.BankKeeper().
+			On("MintCoins", mock.Anything, types.ModuleName, sdk.NewCoins(mintCoin)).
+			Return(fmt.Errorf("persistent bank error")).Once()
+
+		if i == int(types.DefaultMaxPendingAttempts)-1 {
+			// On the last attempt, mock the refund for cancellation
+			suite.BankKeeper().
+				On("SendCoinsFromModuleToAccount", mock.Anything, types.ModuleName, srcAddr, sdk.NewCoins(burnCoin)).
+				Return(nil).Once()
+		}
+
+		// Each iteration must advance past the burn epoch (MinEpochBlocks apart)
+		suite.SetBlockHeight(int64(types.DefaultMinEpochBlocks) * int64(i+2))
+		suite.ctx = suite.Context()
+		require.NoError(t, suite.keeper.BeginBlocker(suite.ctx))
+		require.NoError(t, suite.keeper.EndBlocker(suite.ctx))
+
+		if i < int(types.DefaultMaxPendingAttempts)-1 {
+			// Still pending before max attempts
+			suite.assertPendingCount(1)
+			suite.assertFailedCount(0)
+		}
+	}
+
+	// After max attempts: canceled with MaxAttempts reason
+	suite.assertPendingCount(0)
+	suite.assertFailedCount(1)
+	suite.assertExecutedCount(0)
+
+	err := suite.keeper.IterateLedgerCanceledRecords(suite.ctx, func(_ types.LedgerRecordID, record types.LedgerCanceledRecord) (bool, error) {
+		require.Equal(t, types.BMCancelReasonMaxAttempts, record.CancelReason)
+		require.Equal(t, srcAddr.String(), record.Owner)
+		return false, nil
+	})
+	require.NoError(t, err)
+}
+
+// TestExecuteBurnMint_FatalError_ImmediateCancel verifies that a fatal error
+// (ErrEpsilon) causes immediate cancellation regardless of attempts remaining.
+func TestExecuteBurnMint_FatalError_ImmediateCancel(t *testing.T) {
+	suite := setupBMETest(t)
+
+	srcAddr := testutil.AccAddress(t)
+	dstAddr := testutil.AccAddress(t)
+	// 1 uact at $3 AKT → epsilon (truncates to zero)
+	burnCoin := sdk.NewInt64Coin(sdkutil.DenomUact, 1)
+
+	suite.requestBurnMint(srcAddr, dstAddr, burnCoin, sdkutil.DenomUakt)
+
+	// Mock refund
+	suite.BankKeeper().
+		On("SendCoinsFromModuleToAccount", mock.Anything, types.ModuleName, srcAddr, sdk.NewCoins(burnCoin)).
+		Return(nil).Once()
+
+	require.NoError(t, suite.keeper.EndBlocker(suite.ctx))
+
+	// Immediately canceled on first attempt — no retries for fatal errors
+	suite.assertPendingCount(0)
+	suite.assertFailedCount(1)
+	suite.assertExecutedCount(0)
+
+	err := suite.keeper.IterateLedgerCanceledRecords(suite.ctx, func(_ types.LedgerRecordID, record types.LedgerCanceledRecord) (bool, error) {
+		require.Equal(t, types.BMCancelReasonEpsilon, record.CancelReason)
+		return false, nil
+	})
+	require.NoError(t, err)
 }

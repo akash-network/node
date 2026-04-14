@@ -215,3 +215,11 @@ release:
   prerelease: auto
   mode: replace
   draft: false
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"

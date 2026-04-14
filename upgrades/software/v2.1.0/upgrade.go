@@ -107,6 +107,19 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 			}
 		}
 
+		bparams, err := up.Keepers.Akash.Bme.GetParams(sctx)
+		if err != nil {
+			return toVM, fmt.Errorf("failed to get bme params: %w", err)
+		}
+
+		if bparams.MaxPendingAttempts == 0 {
+			bparams.MaxPendingAttempts = 3
+			err = up.Keepers.Akash.Bme.SetParams(sctx, bparams)
+			if err != nil {
+				return toVM, fmt.Errorf("failed to set bme params: %w", err)
+			}
+		}
+
 		return toVM, err
 	}
 }
