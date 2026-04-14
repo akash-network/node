@@ -18,6 +18,10 @@ jobs:
   build-bins:
     runs-on: core-runner
     steps:
+      - name: Cleanup build folder
+        run: |
+          sudo rm -rf ./* || true
+          sudo rm -rf ./.??* || true
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Free Disk Space (Ubuntu)
