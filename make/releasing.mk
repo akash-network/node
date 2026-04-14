@@ -17,14 +17,6 @@ ifneq ($(GOWORK), off)
 	GORELEASER_GOWORK    := /go/src/$(GORELEASER_MOD_MOUNT)/go.work
 endif
 
-ifneq ($(GORELEASER_RELEASE),true)
-	ifeq (,$(findstring publish,$(GORELEASER_SKIP)))
-		GORELEASER_SKIP += publish
-	endif
-
-	GITHUB_TOKEN=
-endif
-
 ifneq (,$(GORELEASER_SKIP))
 	GORELEASER_SKIP := --skip=$(subst $(SPACE),$(COMMA),$(strip $(GORELEASER_SKIP)))
 endif
@@ -64,6 +56,7 @@ GORELEASER_ARGS := --clean
 
 ifeq (,$(findstring release,$(BUILDOPTS)))
 	GORELEASER_ARGS += --skip=publish,validate --snapshot
+	GITHUB_TOKEN=
 endif
 
 ifneq (,$(findstring verbose,$(BUILDOPTS)))
