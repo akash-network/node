@@ -83,6 +83,7 @@ goreleaser: wasmvm-libs build-contracts
 		-e DOCKER_IMAGE=$(RELEASE_DOCKER_IMAGE) \
 		-e GOTOOLCHAIN="$(GOTOOLCHAIN)" \
 		-e GOWORK="$(GORELEASER_GOWORK)" \
+		-e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
 		-e GOPATH=/go \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v $(GOPATH):/go \
