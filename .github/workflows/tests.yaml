@@ -16,7 +16,7 @@ on:
 
 jobs:
   build-bins:
-    runs-on: ubuntu-latest
+    runs-on: core-runner
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -40,7 +40,7 @@ jobs:
       - run: make docker-image
 
   tests:
-    runs-on: ubuntu-latest
+    runs-on: core-runner
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -97,7 +97,7 @@ jobs:
         run: make test-sim-fullapp
 
   release-dry-run:
-    runs-on: core-e2e
+    runs-on: core-runner
     steps:
       - name: Cleanup build folder
         run: |

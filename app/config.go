@@ -29,7 +29,7 @@ import (
 
 var mbasics = module.NewBasicManager(
 	append([]module.AppModuleBasic{
-		// accounts, fees.
+		//  accounts, fees.
 		auth.AppModuleBasic{},
 		// authorizations
 		authzmodule.AppModuleBasic{},
