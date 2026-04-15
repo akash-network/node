@@ -518,7 +518,6 @@ func (k *keeper) AddOnSetParamsHook(hook SetParamsHook) Keeper {
 func (k *keeper) calculateAggregatedPricesFromHistory(
 	ctx sdk.Context,
 	id types.DataID,
-	params types.Params,
 	latestPrices []types.PriceData,
 	sourcePrices map[uint32][]types.PriceData,
 ) (types.AggregatedPrice, error) {

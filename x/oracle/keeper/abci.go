@@ -38,7 +38,7 @@ func (k *keeper) EndBlocker(ctx context.Context) error {
 	}
 
 	now := sctx.BlockTime()
-	cutoffTime := now.Add(-time.Duration(params.MaxPriceStalenessPeriod) * time.Second)
+	cutoffTime := now.Add(-params.MaxPriceStalenessPeriod)
 	twapDuration := params.TwapWindow
 	twapStart := now.Add(-twapDuration)
 
@@ -131,7 +131,7 @@ func (k *keeper) EndBlocker(ctx context.Context) error {
 		}
 
 		// Phase 3: aggregate from in-memory data
-		aggregatedPrice, err := k.calculateAggregatedPricesFromHistory(sctx, did, params, latestPrices, sourcePrices)
+		aggregatedPrice, err := k.calculateAggregatedPricesFromHistory(sctx, did, latestPrices, sourcePrices)
 		if err != nil {
 			sctx.Logger().Error(
 				"calculate aggregated price",
