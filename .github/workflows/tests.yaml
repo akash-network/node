@@ -113,6 +113,11 @@ jobs:
           sudo rm -rf ./.??* || true
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: Cache wasmvm libs
+        uses: actions/cache@v4
+        with:
+          path: .cache/lib
+          key: wasmvm-${{ hashFiles('go.sum') }}
       - name: Setup environment
         uses: ./.github/actions/setup-ubuntu
       - name: Set up QEMU
