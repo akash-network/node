@@ -1,5 +1,10 @@
 ---
 name: setup-ubuntu
+inputs:
+  go-cache:
+    description: 'Enable actions/setup-go module cache restore/save. Disable on self-hosted runners where the module cache persists on disk.'
+    required: false
+    default: 'false'
 runs:
   using: 'composite'
   steps:
@@ -33,7 +38,7 @@ runs:
     - uses: actions/setup-go@v5
       with:
         go-version: "${{ env.GOVERSION }}"
-        check-latest: true
+        cache: "${{ inputs.go-cache }}"
     - name: set environment
       uses: HatsuneMiku3939/direnv-action@v1
       with:
