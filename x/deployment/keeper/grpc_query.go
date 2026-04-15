@@ -430,7 +430,7 @@ func (k Querier) Params(ctx context.Context, req *types.QueryParamsRequest) (*ty
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	params, err := k.GetParams(sdkCtx)
 	if err != nil {
-		return nil, status.Errorf(codes.NotFound, err.Error())
+		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
 	return &types.QueryParamsResponse{Params: params}, nil
