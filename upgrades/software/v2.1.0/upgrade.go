@@ -77,7 +77,6 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 
 		oparams := otypes.DefaultParams()
 		oparams.MinPriceSources = 1
-
 		// Set the pyth contract as an authorized oracle price source
 		oparams.Sources = []string{contractAddr}
 		err = up.Keepers.Akash.Oracle.SetParams(sctx, oparams)

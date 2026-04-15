@@ -53,10 +53,11 @@ func (k *keeper) EndBlocker(ctx context.Context) error {
 	}
 
 	// Phase 1: walk latestPriceID to discover sources per denom and their latest timestamps.
-	// latestByDenom maps DataID → list of (source, latestTimestamp) pairs.
+	// latestByDenom maps DataID → list of (source, latestTimestamp, sequence) tuples.
 	type sourceInfo struct {
 		source          uint32
 		latestTimestamp time.Time
+		sequence        uint64
 	}
 
 	latestByDenom := make(map[types.DataID][]sourceInfo)
@@ -75,6 +76,7 @@ func (k *keeper) EndBlocker(ctx context.Context) error {
 		latestByDenom[did] = append(latestByDenom[did], sourceInfo{
 			source:          key.Source,
 			latestTimestamp: state.Timestamp,
+			sequence:        state.Sequence,
 		})
 
 		return false, nil
@@ -99,9 +101,9 @@ func (k *keeper) EndBlocker(ctx context.Context) error {
 
 	for _, did := range sortedDIDs {
 		sources := latestByDenom[did]
-		// Phase 2: for each source, do a single walk over [twapStart, now] to get all
-		// data points. This serves both the staleness filter and TWAP computation.
-		// sourcePrices[sourceID] → sorted price data points (descending by timestamp from walk)
+		// Phase 2: check staleness using each source's actual latest price
+		// (from latestPriceID) against MaxPriceStalenessPeriod.  Separately,
+		// fetch the TWAP-window history for TWAP calculation.
 		sourcePrices := make(map[uint32][]types.PriceData, len(sources))
 		var latestPrices []types.PriceData
 		allSourceIDs := make([]types.PriceDataRecordID, 0, len(sources))
@@ -112,21 +114,39 @@ func (k *keeper) EndBlocker(ctx context.Context) error {
 				Denom:     did.Denom,
 				BaseDenom: did.BaseDenom,
 				Timestamp: si.latestTimestamp,
+				Sequence:  si.sequence,
 			}
 			allSourceIDs = append(allSourceIDs, rID)
 
-			// single range walk for this source over the TWAP window
-			history := k.getTWAPHistory(sctx, si.source, did.Denom, did.BaseDenom, twapStart, now)
-			if len(history) == 0 {
+			// Staleness: skip sources whose actual latest price is older than cutoffTime.
+			if si.latestTimestamp.Before(cutoffTime) {
 				continue
 			}
 
-			sourcePrices[si.source] = history
+			// Look up the actual latest price for spot aggregation (median, min/max).
+			latestState, err := k.prices.Get(sctx, rID)
+			if err != nil {
+				sctx.Logger().Error("failed to get latest price for source", "source", si.source, "error", err)
+				continue
+			}
+			latestPrices = append(latestPrices, types.PriceData{
+				ID:    rID,
+				State: latestState,
+			})
 
-			// latest price is first element (descending order)
-			latest := history[0]
-			if !latest.ID.Timestamp.Before(cutoffTime) {
-				latestPrices = append(latestPrices, latest)
+			// Fetch TWAP history within [twapStart, now] for TWAP calculation.
+			history := k.getTWAPHistory(sctx, si.source, did.Denom, did.BaseDenom, twapStart, now)
+
+			// Include the price active at the TWAP window boundary: fetch the
+			// most recent price before twapStart and clamp it to twapStart so
+			// the full window is covered.
+			if bp := k.getLastPriceBefore(sctx, si.source, did.Denom, did.BaseDenom, twapStart); bp != nil {
+				bp.ID.Timestamp = twapStart
+				history = append(history, *bp)
+			}
+
+			if len(history) > 0 {
+				sourcePrices[si.source] = history
 			}
 		}
 

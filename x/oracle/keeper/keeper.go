@@ -383,6 +383,37 @@ func (k *keeper) getTWAPHistory(ctx sdk.Context, source uint32, denom string, ba
 	return res
 }
 
+// getLastPriceBefore returns the most recent price for a source that was
+// recorded strictly before the given timestamp. Returns nil if no such price
+// exists.  This is used to find the price that was "active" at a TWAP window
+// boundary so the full window can be covered.
+func (k *keeper) getLastPriceBefore(ctx sdk.Context, source uint32, denom, baseDenom string, before time.Time) *types.PriceData {
+	end := types.PriceDataRecordID{
+		Source:    source,
+		Denom:     denom,
+		BaseDenom: baseDenom,
+		Timestamp: before.Add(-time.Nanosecond),
+		Sequence:  math.MaxUint64,
+	}
+
+	rng := new(collections.Range[types.PriceDataRecordID]).
+		EndInclusive(end).
+		Descending()
+
+	var result *types.PriceData
+
+	_ = k.prices.Walk(ctx, rng, func(key types.PriceDataRecordID, val types.PriceDataState) (stop bool, err error) {
+		// Only match the same source/denom/baseDenom.
+		if key.Source != source || key.Denom != denom || key.BaseDenom != baseDenom {
+			return true, nil
+		}
+		result = &types.PriceData{ID: key, State: val}
+		return true, nil // stop after first match
+	})
+
+	return result
+}
+
 // SetParams sets the x/oracle module parameters.
 func (k *keeper) SetParams(ctx sdk.Context, p types.Params) error {
 	if err := p.ValidateBasic(); err != nil {
@@ -622,7 +653,14 @@ func calculateTWAP(now time.Time, dataPoints []types.PriceData) (sdkmath.LegacyD
 	}
 
 	if totalWeight == 0 {
-		return sdkmath.LegacyZeroDec(), types.ErrTWAPZeroWeight
+		// All data points share the same timestamp (or there is exactly one
+		// point at 'now').  Fall back to a simple average so these sources
+		// still contribute to the TWAP rather than being silently dropped.
+		sum := sdkmath.LegacyZeroDec()
+		for _, dp := range dataPoints {
+			sum = sum.Add(dp.State.Price)
+		}
+		return sum.Quo(sdkmath.LegacyNewDec(int64(len(dataPoints)))), nil
 	}
 
 	return weightedSum.Quo(sdkmath.LegacyNewDec(totalWeight)), nil
