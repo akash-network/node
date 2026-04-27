@@ -1,7 +1,7 @@
 package oracle
 
 import (
-	types "pkg.akt.dev/go/node/oracle/v1"
+	types "pkg.akt.dev/go/node/oracle/v2"
 )
 
 const (

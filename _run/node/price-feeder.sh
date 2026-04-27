@@ -10,10 +10,10 @@
 set -euo pipefail
 
 # Configuration
-AKASH_CHAIN_ID="${AKASH_CHAIN_ID:=testnet-8}"
-AKASH_NODE="${AKASH_NODE:=https://testnetrpc.akashnet.net:443}"
+AKASH_CHAIN_ID="${AKASH_CHAIN_ID:=local}"
+#AKASH_NODE="${AKASH_NODE:=https://testnetrpc.akashnet.net:443}"
 AKASH_KEYRING_BACKEND="${AKASH_KEYRING_BACKEND:=test}"
-AKASH_FROM="${AKASH_FROM:=price-feeder}"
+AKASH_FROM="${AKASH_FROM:=hermes}"
 UPDATE_INTERVAL=10  # seconds between updates
 
 # Pyth configuration
@@ -77,7 +77,7 @@ check_balance() {
 	local balance
 
 	address=$(akash keys show "$AKASH_FROM" -a )
-	balance=$(akash query bank balances "$address" -o json 2>/dev/null | jq -r '.balances[] | select(.denom=="uakt") | .amount // "0"')
+	balance=$(akash query bank balances "$address" -o json 2>/dev/null | jq -r '.balances[] | select(.denom=="akt") | .amount // "0"')
 
 	if [ -z "$balance" ] || [ "$balance" -lt 100000 ]; then
 		log "WARN" "Low balance: ${balance:-0}uakt (recommend >100000uakt for gas)"
@@ -143,6 +143,7 @@ submit_price_to_oracle() {
 		--gas-adjustment 1.5 \
 		--gas-prices 0.025uakt \
 		--yes \
+		--from="${AKASH_FROM}" \
 		-o json 2>&1)
 
 	local exit_code=$?

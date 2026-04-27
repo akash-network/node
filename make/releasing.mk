@@ -17,14 +17,6 @@ ifneq ($(GOWORK), off)
 	GORELEASER_GOWORK    := /go/src/$(GORELEASER_MOD_MOUNT)/go.work
 endif
 
-ifneq ($(GORELEASER_RELEASE),true)
-	ifeq (,$(findstring publish,$(GORELEASER_SKIP)))
-		GORELEASER_SKIP += publish
-	endif
-
-	GITHUB_TOKEN=
-endif
-
 ifneq (,$(GORELEASER_SKIP))
 	GORELEASER_SKIP := --skip=$(subst $(SPACE),$(COMMA),$(strip $(GORELEASER_SKIP)))
 endif
@@ -60,59 +52,19 @@ install: wasmvm-libs
 image-minikube:
 	eval $$(minikube docker-env) && docker-image
 
-.PHONY: test-bins
-test-bins: wasmvm-libs build-contracts
-	docker run \
-		--rm \
-		-e MOD="$(GOMOD)" \
-		-e STABLE=$(IS_STABLE) \
-		-e BUILD_TAGS="$(GORELEASER_TAGS)" \
-		-e BUILD_LDFLAGS="$(GORELEASER_LDFLAGS)" \
-		-e DOCKER_IMAGE=$(RELEASE_DOCKER_IMAGE) \
-		-e GOPATH=/go \
-		-e GOTOOLCHAIN="$(GOTOOLCHAIN)" \
-		-e GOWORK="$(GORELEASER_GOWORK)" \
-		-v /var/run/docker.sock:/var/run/docker.sock \
-		-v $(GOPATH):/go \
-		-v $(AKASH_ROOT):/go/src/$(GORELEASER_MOD_MOUNT) \
-		-w /go/src/$(GORELEASER_MOD_MOUNT) \
-		$(GORELEASER_IMAGE) \
-		-f .goreleaser-test-bins.yaml \
-		--verbose=$(GORELEASER_VERBOSE) \
-		--clean \
-		--skip=publish,validate \
-		--snapshot
+GORELEASER_ARGS := --clean
 
-.PHONY: docker-image
-docker-image: wasmvm-libs build-contracts
-	docker run \
-		--rm \
-		-e MOD="$(GOMOD)" \
-		-e STABLE=$(IS_STABLE) \
-		-e BUILD_TAGS="$(GORELEASER_TAGS)" \
-		-e BUILD_LDFLAGS="$(GORELEASER_LDFLAGS)" \
-		-e DOCKER_IMAGE=$(RELEASE_DOCKER_IMAGE) \
-		-e GOPATH=/go \
-		-e GOTOOLCHAIN="$(GOTOOLCHAIN)" \
-		-e GOWORK="$(GORELEASER_GOWORK)" \
-		-v /var/run/docker.sock:/var/run/docker.sock \
-		-v $(GOPATH):/go \
-		-v $(AKASH_ROOT):/go/src/$(GORELEASER_MOD_MOUNT) \
-		-w /go/src/$(GORELEASER_MOD_MOUNT) \
-		$(GORELEASER_IMAGE) \
-		-f .goreleaser-docker.yaml \
-		--verbose=$(GORELEASER_VERBOSE) \
-		--clean \
-		--skip=publish,validate \
-		--snapshot
+ifeq (,$(findstring release,$(BUILDOPTS)))
+	GORELEASER_ARGS += --skip=publish,validate --snapshot
+	GITHUB_TOKEN=
+endif
 
-.PHONY: gen-changelog
-gen-changelog: $(GIT_CHGLOG)
-	@echo "generating changelog to .cache/changelog"
-	./script/genchangelog.sh "$(RELEASE_TAG)" .cache/changelog.md
+ifneq (,$(findstring verbose,$(BUILDOPTS)))
+	GORELEASER_ARGS += --verbose
+endif
 
-.PHONY: release
-release: wasmvm-libs build-contracts gen-changelog
+.PHONY: goreleaser
+goreleaser: wasmvm-libs build-contracts
 	docker run \
 		--rm \
 		-e MOD="$(GOMOD)" \
@@ -124,6 +76,7 @@ release: wasmvm-libs build-contracts gen-changelog
 		-e DOCKER_IMAGE=$(RELEASE_DOCKER_IMAGE) \
 		-e GOTOOLCHAIN="$(GOTOOLCHAIN)" \
 		-e GOWORK="$(GORELEASER_GOWORK)" \
+		-e GITHUB_TOKEN="$(GITHUB_TOKEN)" \
 		-e GOPATH=/go \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v $(GOPATH):/go \
@@ -132,7 +85,22 @@ release: wasmvm-libs build-contracts gen-changelog
 		$(GORELEASER_IMAGE) \
 		-f "$(GORELEASER_CONFIG)" \
 		release \
-		$(GORELEASER_SKIP) \
-		--verbose=$(GORELEASER_VERBOSE) \
-		--clean \
-		--release-notes=/go/src/$(GORELEASER_MOD_MOUNT)/.cache/changelog.md
+		$(GORELEASER_ARGS)
+
+.PHONY: test-bins
+test-bins: GORELEASER_CONFIG=.goreleaser-test-bins.yaml
+test-bins: goreleaser
+
+.PHONY: docker-image
+docker-image: GORELEASER_CONFIG=.goreleaser-docker.yaml
+docker-image: goreleaser
+
+.PHONY: gen-changelog
+gen-changelog: $(GIT_CHGLOG)
+	@echo "generating changelog to .cache/changelog"
+	./script/genchangelog.sh "$(RELEASE_TAG)" .cache/changelog.md
+
+.PHONY: release
+release: GORELEASER_CONFIG=.goreleaser.yaml
+release: GORELEASER_ARGS:=$(GORELEASER_ARGS) --release-notes=.cache/changelog.md
+release: gen-changelog goreleaser

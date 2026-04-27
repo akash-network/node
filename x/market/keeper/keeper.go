@@ -403,11 +403,10 @@ func (k Keeper) OnGroupClosed(ctx sdk.Context, id dtypes.GroupID, state dvbeta.G
 		return nil
 	}
 
-	var err error
-	k.WithOrdersForGroup(ctx, id, types.OrderActive, func(order types.Order) bool {
-		err = k.OnOrderClosed(ctx, order)
+	orderCb := func(ctx sdk.Context, order types.Order) error {
+		err := k.OnOrderClosed(ctx, order)
 		if err != nil {
-			return true
+			return err
 		}
 
 		k.WithBidsForOrder(ctx, order.ID, types.BidOpen, func(bid types.Bid) bool {
@@ -416,14 +415,31 @@ func (k Keeper) OnGroupClosed(ctx sdk.Context, id dtypes.GroupID, state dvbeta.G
 		})
 
 		if err != nil {
-			return true
+			return err
 		}
 
-		k.WithBidsForOrder(ctx, order.ID, types.BidActive, func(bid types.Bid) bool {
-			err = processClose(ctx, bid)
-			return err != nil
-		})
+		if order.State == types.OrderActive {
+			k.WithBidsForOrder(ctx, order.ID, types.BidActive, func(bid types.Bid) bool {
+				err = processClose(ctx, bid)
+				return err != nil
+			})
+		}
 
+		return err
+	}
+
+	var err error
+
+	k.WithOrdersForGroup(ctx, id, types.OrderActive, func(order types.Order) bool {
+		err = orderCb(ctx, order)
+		return err != nil
+	})
+	if err != nil {
+		return err
+	}
+
+	k.WithOrdersForGroup(ctx, id, types.OrderOpen, func(order types.Order) bool {
+		err = orderCb(ctx, order)
 		return err != nil
 	})
 

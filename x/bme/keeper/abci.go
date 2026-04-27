@@ -11,15 +11,21 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	types "pkg.akt.dev/go/node/bme/v1"
-	otypes "pkg.akt.dev/go/node/oracle/v1"
 	"pkg.akt.dev/go/sdkutil"
 )
 
 // BeginBlocker is called at the beginning of each block
-func (k *keeper) BeginBlocker(_ context.Context) error {
+func (k *keeper) BeginBlocker(ctx context.Context) error {
+	startTm := telemetry.Now()
+	defer telemetry.ModuleMeasureSince(types.ModuleName, startTm, telemetry.MetricKeyBeginBlocker)
+
+	sctx := sdk.UnwrapSDKContext(ctx)
 	// reset the ledger sequence on each new block
 	// sequence must start from 1 for ledger record id range to work correctly
-	k.ledgerSequence = 1
+	err := k.ledgerSequence.Set(ctx, 0)
+	if err != nil {
+		sctx.Logger().Error("failed to reset ledger sequence", "err", err)
+	}
 
 	return nil
 }
@@ -50,7 +56,7 @@ func (k *keeper) EndBlocker(ctx context.Context) error {
 			return false, err
 		}
 
-		// Use CacheContext so that a partial failure (e.g. MintCoins succeeds
+		// Use CacheContext so that a partial failure (e.g., MintCoins succeeds
 		// but SendCoinsFromModuleToAccount fails) does not leave a corrupted
 		// state. Only commit on success; on error the pending record stays
 		// unmodified and will be retried next block.
@@ -58,10 +64,42 @@ func (k *keeper) EndBlocker(ctx context.Context) error {
 		err = k.executeBurnMint(cacheCtx, params, id, ownerAddr, dstAddr, value.CoinsToBurn, value.DenomToMint)
 		if err == nil {
 			writeCache()
+			processed++
+			return processed >= int64(params.MaxEndblockerRecords), nil
+		}
+
+		// Error path: classify and handle
+		if isFatalBurnMintError(err) {
+			// Fatal error: cancel immediately with specific reason
+			cancelCtx, writeCancel := sctx.CacheContext()
+			reason := errorToCancelReason(err)
+			if cancelErr := k.cancelBurnMint(cancelCtx, id, ownerAddr, dstAddr, value.CoinsToBurn, value.DenomToMint, reason); cancelErr != nil {
+				sctx.Logger().Error("failed to cancel burn/mint record", "id", id, "reason", reason, "err", cancelErr)
+				return false, cancelErr
+			}
+			writeCancel()
+		} else {
+			// Retriable error: increment attempts
+			value.Attempts++
+			if value.Attempts >= params.MaxPendingAttempts {
+				// Max attempts exceeded: cancel
+				cancelCtx, writeCancel := sctx.CacheContext()
+				if cancelErr := k.cancelBurnMint(cancelCtx, id, ownerAddr, dstAddr, value.CoinsToBurn, value.DenomToMint, types.BMCancelReasonMaxAttempts); cancelErr != nil {
+					sctx.Logger().Error("failed to cancel burn/mint record after max attempts", "id", id, "attempts", value.Attempts, "err", cancelErr)
+					return false, cancelErr
+				}
+				writeCancel()
+			} else {
+				// Still has attempts: update pending record in-place
+				if updErr := k.ledgerPending.Set(sctx, id, value); updErr != nil {
+					sctx.Logger().Error("failed to update pending record attempts", "id", id, "err", updErr)
+					return false, updErr
+				}
+			}
 		}
 
 		processed++
-		return processed >= int64(params.MaxEndblockerRecords), err
+		return processed >= int64(params.MaxEndblockerRecords), nil
 	}
 
 	iteratePending := func(p []byte, postCondition func() error) error {
@@ -87,10 +125,7 @@ func (k *keeper) EndBlocker(ctx context.Context) error {
 
 			stop, err = executeMint(id, val)
 			if err != nil {
-				sctx.Logger().Error("processing ledger pending records ", "id", id, "err", err)
-				if errors.Is(err, otypes.ErrPriceStalled) {
-					return err
-				}
+				sctx.Logger().Error("processing ledger pending records", "id", id, "err", err)
 			}
 		}
 

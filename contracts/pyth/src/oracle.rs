@@ -5,7 +5,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// DataID uniquely identifies a price pair by asset and base denomination
-/// Matches proto: akash.oracle.v1.DataID
+/// Matches proto: akash.oracle.v2.DataID
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct DataID {
     /// Asset denomination (e.g., "akt")
@@ -30,39 +30,27 @@ impl DataID {
     }
 }
 
-/// PriceDataState represents the price value and timestamp
-/// Matches proto: akash.oracle.v1.PriceDataState
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct PriceDataState {
-    /// Decimal price value (cosmos.Dec format string)
-    pub price: String,
-    /// Timestamp seconds (for google.protobuf.Timestamp)
-    pub timestamp_seconds: i64,
-    /// Timestamp nanoseconds (for google.protobuf.Timestamp)
-    pub timestamp_nanos: i32,
-}
-
-impl PriceDataState {
-    pub fn new(price: String, timestamp_seconds: i64, timestamp_nanos: i32) -> Self {
-        Self {
-            price,
-            timestamp_seconds,
-            timestamp_nanos,
-        }
-    }
-}
-
 /// MsgAddPriceEntry defines an SDK message to add oracle price entry
-/// Matches proto: akash.oracle.v1.MsgAddPriceEntry
+/// Matches proto: akash.oracle.v2.MsgAddPriceEntry
+///
+/// Proto layout:
+///   Field 1: signer (string)
+///   Field 2: id (DataID message)
+///   Field 3: price (string, cosmos.Dec)
+///   Field 4: timestamp (google.protobuf.Timestamp)
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename = "akash/oracle/v1/MsgAddPriceEntry")]
+#[serde(rename = "akash/oracle/v2/MsgAddPriceEntry")]
 pub struct MsgAddPriceEntry {
     /// Signer is the bech32 address of the account
     pub signer: String,
     /// ID uniquely identifies the price data
     pub id: DataID,
-    /// Price contains the price value and timestamp
-    pub price: PriceDataState,
+    /// Price value in cosmos.Dec string format
+    pub price: String,
+    /// Timestamp seconds (for google.protobuf.Timestamp)
+    pub timestamp_seconds: i64,
+    /// Timestamp nanoseconds (for google.protobuf.Timestamp)
+    pub timestamp_nanos: i32,
 }
 
 impl MsgAddPriceEntry {
@@ -78,7 +66,9 @@ impl MsgAddPriceEntry {
         Self {
             signer,
             id: DataID::new(denom, base_denom),
-            price: PriceDataState::new(price, timestamp_seconds, timestamp_nanos),
+            price,
+            timestamp_seconds,
+            timestamp_nanos,
         }
     }
 
@@ -104,7 +94,8 @@ impl MsgAddPriceEntry {
     /// Matches proto field numbers:
     /// - Field 1: signer (string)
     /// - Field 2: id (DataID message)
-    /// - Field 3: price (PriceDataState message)
+    /// - Field 3: price (string, cosmos.Dec)
+    /// - Field 4: timestamp (google.protobuf.Timestamp message)
     fn encode_to_binary(&self) -> Binary {
         let mut buf = Vec::new();
 
@@ -119,11 +110,18 @@ impl MsgAddPriceEntry {
         encode_varint(&mut buf, id_bytes.len() as u64);
         buf.extend(id_bytes);
 
-        // Field 3: price (tag = 0x1a = (3 << 3) | 2)
-        let price_bytes = self.encode_price_data_state();
+        // Field 3: price (tag = 0x1a = (3 << 3) | 2, length-delimited string)
         buf.push(0x1a);
-        encode_varint(&mut buf, price_bytes.len() as u64);
-        buf.extend(price_bytes);
+        encode_varint(&mut buf, self.price.len() as u64);
+        buf.extend_from_slice(self.price.as_bytes());
+
+        // Field 4: timestamp (tag = 0x22 = (4 << 3) | 2, length-delimited message)
+        let timestamp_bytes = self.encode_timestamp();
+        if !timestamp_bytes.is_empty() {
+            buf.push(0x22);
+            encode_varint(&mut buf, timestamp_bytes.len() as u64);
+            buf.extend(timestamp_bytes);
+        }
 
         Binary::from(buf)
     }
@@ -146,42 +144,21 @@ impl MsgAddPriceEntry {
         buf
     }
 
-    /// Encode PriceDataState submessage
-    /// Fields: 1=price (string), 2=timestamp (google.protobuf.Timestamp)
-    fn encode_price_data_state(&self) -> Vec<u8> {
-        let mut buf = Vec::new();
-
-        // Field 1: price (string, cosmos.Dec format)
-        buf.push(0x0a);
-        encode_varint(&mut buf, self.price.price.len() as u64);
-        buf.extend_from_slice(self.price.price.as_bytes());
-
-        // Field 2: timestamp (google.protobuf.Timestamp message)
-        let timestamp_bytes = self.encode_timestamp();
-        if !timestamp_bytes.is_empty() {
-            buf.push(0x12);
-            encode_varint(&mut buf, timestamp_bytes.len() as u64);
-            buf.extend(timestamp_bytes);
-        }
-
-        buf
-    }
-
     /// Encode google.protobuf.Timestamp
     /// Fields: 1=seconds (int64), 2=nanos (int32)
     fn encode_timestamp(&self) -> Vec<u8> {
         let mut buf = Vec::new();
 
         // Field 1: seconds (tag = 0x08 = (1 << 3) | 0 for varint)
-        if self.price.timestamp_seconds != 0 {
+        if self.timestamp_seconds != 0 {
             buf.push(0x08);
-            encode_varint(&mut buf, self.price.timestamp_seconds as u64);
+            encode_varint(&mut buf, self.timestamp_seconds as u64);
         }
 
         // Field 2: nanos (tag = 0x10 = (2 << 3) | 0 for varint)
-        if self.price.timestamp_nanos != 0 {
+        if self.timestamp_nanos != 0 {
             buf.push(0x10);
-            encode_varint(&mut buf, self.price.timestamp_nanos as u64);
+            encode_varint(&mut buf, self.timestamp_nanos as u64);
         }
 
         buf
@@ -283,14 +260,6 @@ mod tests {
     }
 
     #[test]
-    fn test_price_data_state_creation() {
-        let state = PriceDataState::new("0.52468300".to_string(), 1234567890, 0);
-        assert_eq!(state.price, "0.52468300");
-        assert_eq!(state.timestamp_seconds, 1234567890);
-        assert_eq!(state.timestamp_nanos, 0);
-    }
-
-    #[test]
     fn test_msg_add_price_entry_creation() {
         let msg = MsgAddPriceEntry::new(
             "akash1abc123".to_string(),
@@ -304,8 +273,8 @@ mod tests {
         assert_eq!(msg.signer, "akash1abc123");
         assert_eq!(msg.id.denom, "akt");
         assert_eq!(msg.id.base_denom, "usd");
-        assert_eq!(msg.price.price, "524683000000000000");
-        assert_eq!(msg.price.timestamp_seconds, 1234567890);
+        assert_eq!(msg.price, "524683000000000000");
+        assert_eq!(msg.timestamp_seconds, 1234567890);
 
         // Test protobuf encoding
         let binary = msg.encode_to_protobuf();
@@ -323,7 +292,7 @@ mod tests {
         assert_eq!(msg.signer, "akash1test");
         assert_eq!(msg.id.denom, "akt");
         assert_eq!(msg.id.base_denom, "usd");
-        assert_eq!(msg.price.price, "1234567890000000000");
+        assert_eq!(msg.price, "1234567890000000000");
     }
 
     #[test]

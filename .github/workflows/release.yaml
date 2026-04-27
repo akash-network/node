@@ -37,7 +37,7 @@ jobs:
           sudo rm -rf .cache/goreleaser
           make release
         env:
-          GORELEASER_RELEASE: true
+          BUILDOPTS: release
           GORELEASER_MOUNT_CONFIG: true
           # using PAT as homebrew is located in different repo
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

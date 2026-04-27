@@ -693,12 +693,12 @@ cat > oracle-params-proposal.json << 'EOF'
   "summary": "Add the pyth contract address to authorized sources and configure oracle parameters for Pyth integration.",
   "messages": [
     {
-      "@type": "/akash.oracle.v1.MsgUpdateParams",
+      "@type": "/akash.oracle.v2.MsgUpdateParams",
       "authority": "akash10d07y265gmmuvt4z0w9aw880jnsr700jhe7z0f",
       "params": {
         "sources": ["<pyth-contract-address>"],
         "min_price_sources": 1,
-        "max_price_staleness_blocks": 60,
+        "max_price_staleness_period": 60,
         "twap_window": 180,
         "max_price_deviation_bps": 150,
         "feed_contracts_params": [
@@ -734,7 +734,7 @@ akash tx gov submit-proposal oracle-params-proposal.json \
 |------------------------------|----------|----------------------------------|-----------------|
 | `sources`                    | []String | Authorized contract addresses    | `[]`            |
 | `min_price_sources`          | u32      | Minimum sources for valid price  | `1`             |
-| `max_price_staleness_blocks` | i64      | Max age in blocks (~6s/block)    | `60` (~6 min)   |
+| `max_price_staleness_period` | i64      | Max age in seconds (~6s/block)   | `60`            |
 | `twap_window`                | i64      | TWAP calculation window (blocks) | `180` (~18 min) |
 | `max_price_deviation_bps`    | u64      | Max deviation in basis points    | `150` (1.5%)    |
 
@@ -757,7 +757,7 @@ cat > guardian-update-proposal.json << 'EOF'
   "summary": "Update guardian addresses to Wormhole Guardian Set 5",
   "messages": [
     {
-      "@type": "/akash.oracle.v1.MsgUpdateParams",
+      "@type": "/akash.oracle.v2.MsgUpdateParams",
       "authority": "akash10d07y265gmmuvt4z0w9aw880jnsr700jhe7z0f",
       "params": {
         "feed_contracts_params": [
@@ -885,7 +885,7 @@ journalctl -u hermes-client -f
 |----------------------------------|-----------------------------------|---------------------------------------------------------------|
 | `Unsupported query type: custom` | Node missing custom Akash querier | Upgrade to node v2.x+ with custom querier support             |
 | `unauthorized oracle provider`   | Contract not in `sources` param   | Add contract address via governance proposal                  |
-| `price timestamp is too old`     | Stale price data                  | Submit fresher price update or increase `staleness_threshold` |
+| `price timestamp is too old`     | Stale price data                  | Submit fresher price update or increase `max_price_staleness_period` |
 | `VAA verification failed`        | Invalid guardian signatures       | Verify guardian set matches current Wormhole mainnet          |
 | `source not authorized`          | Missing from oracle sources       | Update oracle params via governance                           |
 | `price timestamp is from future` | Clock skew                        | Check publisher/relayer clock synchronization                 |

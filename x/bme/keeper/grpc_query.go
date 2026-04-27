@@ -56,7 +56,10 @@ func (qs Querier) Status(ctx context.Context, _ *types.QueryStatusRequest) (*typ
 		return nil, err
 	}
 
-	cr, _ := qs.GetCollateralRatio(sctx)
+	cr, err := qs.GetCollateralRatio(sctx)
+	if err != nil {
+		return nil, err
+	}
 
 	warnThreshold := math.LegacyNewDec(int64(params.CircuitBreakerWarnThreshold)).Quo(math.LegacyNewDec(10000))
 	haltThreshold := math.LegacyNewDec(int64(params.CircuitBreakerHaltThreshold)).Quo(math.LegacyNewDec(10000))

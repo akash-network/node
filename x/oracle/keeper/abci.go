@@ -3,12 +3,14 @@ package keeper
 import (
 	"context"
 	"fmt"
+	"sort"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/gogoproto/proto"
 
-	types "pkg.akt.dev/go/node/oracle/v1"
+	types "pkg.akt.dev/go/node/oracle/v2"
 )
 
 // BeginBlocker checks if prices are being updated and sources do not deviate from each other
@@ -19,69 +21,137 @@ func (k *keeper) BeginBlocker(_ context.Context) error {
 	return nil
 }
 
-// EndBlocker is called at the end of each block to manage snapshots.
-// It records periodic snapshots and prunes old ones.
+// EndBlocker is called at the end of each block to aggregate oracle prices.
+// It reads each source's latest price ID, then does a single price-history walk
+// per denom to collect all data points within the TWAP window. Aggregation,
+// TWAP, median, and health checks are computed from that in-memory data.
 func (k *keeper) EndBlocker(ctx context.Context) error {
 	start := telemetry.Now()
-	defer telemetry.ModuleMeasureSince(types.ModuleName, start, telemetry.MetricKeyBeginBlocker)
+	defer telemetry.ModuleMeasureSince(types.ModuleName, start, telemetry.MetricKeyEndBlocker)
 
 	sctx := sdk.UnwrapSDKContext(ctx)
 
-	params, _ := k.GetParams(sctx)
+	params, err := k.GetParams(sctx)
+	if err != nil {
+		sctx.Logger().Error("failed to get oracle params", "error", err)
+		return nil
+	}
 
-	rIDs := make(map[types.DataID][]types.PriceDataRecordID)
+	now := sctx.BlockTime()
+	cutoffTime := now.Add(-params.MaxPriceStalenessPeriod)
+	twapDuration := params.TwapWindow
+	twapStart := now.Add(-twapDuration)
 
-	err := k.latestPrices.Walk(sctx, nil, func(key types.PriceDataID, height int64) (bool, error) {
-		dataID := types.DataID{
+	// Build a set of currently-authorized source IDs from params.Sources.
+	// Only these sources should participate in aggregation; latestPriceID
+	// entries for removed sources are ignored.
+	activeSourceIDs := make(map[uint32]bool, len(params.Sources))
+	for _, source := range params.Sources {
+		if id, err := k.sourceID.Get(sctx, source); err == nil {
+			activeSourceIDs[id] = true
+		}
+	}
+
+	// Phase 1: walk latestPriceID to discover sources per denom and their latest timestamps.
+	// latestByDenom maps DataID → list of (source, latestTimestamp, sequence) tuples.
+	type sourceInfo struct {
+		source          uint32
+		latestTimestamp time.Time
+		sequence        uint64
+	}
+
+	latestByDenom := make(map[types.DataID][]sourceInfo)
+
+	err = k.latestPriceID.Walk(sctx, nil, func(key types.PriceDataID, state types.PriceLatestDataState) (bool, error) {
+		// Skip sources that are no longer in params.Sources.
+		if !activeSourceIDs[key.Source] {
+			return false, nil
+		}
+
+		did := types.DataID{
 			Denom:     key.Denom,
 			BaseDenom: key.BaseDenom,
 		}
 
-		rID := types.PriceDataRecordID{
-			Source:    key.Source,
-			Denom:     key.Denom,
-			BaseDenom: key.BaseDenom,
-			Height:    height,
-		}
-
-		data, exists := rIDs[dataID]
-		if !exists {
-			data = []types.PriceDataRecordID{rID}
-		} else {
-			data = append(data, rID)
-		}
-
-		rIDs[dataID] = data
+		latestByDenom[did] = append(latestByDenom[did], sourceInfo{
+			source:          key.Source,
+			latestTimestamp: state.Timestamp,
+			sequence:        state.Sequence,
+		})
 
 		return false, nil
 	})
-
 	if err != nil {
 		panic(fmt.Sprintf("failed to walk latest prices: %v", err))
 	}
 
-	cutoffHeight := sctx.BlockHeight() - params.MaxPriceStalenessBlocks
-
 	var evts []proto.Message
 
-	for id, rid := range rIDs {
-		latestData := make([]types.PriceData, 0, len(rid))
+	// Sort DataID keys for deterministic iteration order.
+	sortedDIDs := make([]types.DataID, 0, len(latestByDenom))
+	for did := range latestByDenom {
+		sortedDIDs = append(sortedDIDs, did)
+	}
+	sort.Slice(sortedDIDs, func(i, j int) bool {
+		if sortedDIDs[i].Denom != sortedDIDs[j].Denom {
+			return sortedDIDs[i].Denom < sortedDIDs[j].Denom
+		}
+		return sortedDIDs[i].BaseDenom < sortedDIDs[j].BaseDenom
+	})
 
-		for _, id := range rid {
-			if id.Height < cutoffHeight {
+	for _, did := range sortedDIDs {
+		sources := latestByDenom[did]
+		// Phase 2: check staleness using each source's actual latest price
+		// (from latestPriceID) against MaxPriceStalenessPeriod.  Separately,
+		// fetch the TWAP-window history for TWAP calculation.
+		sourcePrices := make(map[uint32][]types.PriceData, len(sources))
+		var latestPrices []types.PriceData
+		allSourceIDs := make([]types.PriceDataRecordID, 0, len(sources))
+
+		for _, si := range sources {
+			rID := types.PriceDataRecordID{
+				Source:    si.source,
+				Denom:     did.Denom,
+				BaseDenom: did.BaseDenom,
+				Timestamp: si.latestTimestamp,
+				Sequence:  si.sequence,
+			}
+			allSourceIDs = append(allSourceIDs, rID)
+
+			// Staleness: skip sources whose actual latest price is older than cutoffTime.
+			if si.latestTimestamp.Before(cutoffTime) {
 				continue
 			}
 
-			state, _ := k.prices.Get(sctx, id)
-
-			latestData = append(latestData, types.PriceData{
-				ID:    id,
-				State: state,
+			// Look up the actual latest price for spot aggregation (median, min/max).
+			latestState, err := k.prices.Get(sctx, rID)
+			if err != nil {
+				sctx.Logger().Error("failed to get latest price for source", "source", si.source, "error", err)
+				continue
+			}
+			latestPrices = append(latestPrices, types.PriceData{
+				ID:    rID,
+				State: latestState,
 			})
+
+			// Fetch TWAP history within [twapStart, now] for TWAP calculation.
+			history := k.getTWAPHistory(sctx, si.source, did.Denom, did.BaseDenom, twapStart, now)
+
+			// Include the price active at the TWAP window boundary: fetch the
+			// most recent price before twapStart and clamp it to twapStart so
+			// the full window is covered.
+			if bp := k.getLastPriceBefore(sctx, si.source, did.Denom, did.BaseDenom, twapStart); bp != nil {
+				bp.ID.Timestamp = twapStart
+				history = append(history, *bp)
+			}
+
+			if len(history) > 0 {
+				sourcePrices[si.source] = history
+			}
 		}
 
-		// Aggregate prices from all active sources
-		aggregatedPrice, err := k.calculateAggregatedPrices(sctx, id, latestData)
+		// Phase 3: aggregate from in-memory data
+		aggregatedPrice, err := k.calculateAggregatedPricesFromHistory(sctx, did, latestPrices, sourcePrices)
 		if err != nil {
 			sctx.Logger().Error(
 				"calculate aggregated price",
@@ -89,11 +159,10 @@ func (k *keeper) EndBlocker(ctx context.Context) error {
 			)
 		}
 
-		health := k.setPriceHealth(sctx, params, rid, aggregatedPrice)
+		health := k.setPriceHealth(sctx, params, allSourceIDs, aggregatedPrice)
 
-		// If healthy and we have price data, update the final oracle price
-		if health.IsHealthy && len(latestData) > 0 {
-			err = k.aggregatedPrices.Set(sctx, id, aggregatedPrice)
+		if health.IsHealthy && len(latestPrices) > 0 {
+			err = k.aggregatedPrices.Set(sctx, did, aggregatedPrice)
 			if err != nil {
 				sctx.Logger().Error(
 					"set aggregated price",

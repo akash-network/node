@@ -3,13 +3,12 @@ package keeper
 import (
 	"context"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/query"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
-
-	types "pkg.akt.dev/go/node/oracle/v1"
+	types "pkg.akt.dev/go/node/oracle/v2"
 	"pkg.akt.dev/go/sdkutil"
 )
 
@@ -23,73 +22,48 @@ func (k Querier) Prices(ctx context.Context, req *types.QueryPricesRequest) (*ty
 		return nil, status.Errorf(codes.InvalidArgument, "empty request")
 	}
 
-	sctx := sdk.UnwrapSDKContext(ctx)
 	keeper := k.Keeper.(*keeper)
-
-	var err error
-	var prices []types.PriceData
-	var pageRes *query.PageResponse
 
 	filters := req.Filters
 
-	// Query specific price data based on filters
-	if filters.Height > 0 {
-		// Query specific height
-		err = keeper.latestPrices.Walk(sctx, nil, func(key types.PriceDataID, height int64) (bool, error) {
-			if (filters.AssetDenom == "" || key.Denom == filters.AssetDenom) &&
-				(filters.BaseDenom == "" || key.BaseDenom == filters.BaseDenom) {
+	pageReq := &query.PageRequest{}
+	if req.Pagination != nil {
+		*pageReq = *req.Pagination
+	}
 
-				recordID := types.PriceDataRecordID{
-					Source:    key.Source,
-					Denom:     key.Denom,
-					BaseDenom: key.BaseDenom,
-					Height:    filters.Height,
-				}
+	// Keys are stored in ascending chronological order.
+	// Invert Reverse so the default returns latest prices first
+	// and Reverse=true returns oldest first.
+	pageReq.Reverse = !pageReq.Reverse
 
-				state, err := keeper.prices.Get(sctx, recordID)
-				if err == nil {
-					prices = append(prices, types.PriceData{
-						ID:    recordID,
-						State: state,
-					})
-				}
+	prices, pageRes, err := query.CollectionFilteredPaginate(
+		ctx,
+		keeper.prices,
+		pageReq,
+		func(key types.PriceDataRecordID, _ types.PriceDataState) (bool, error) {
+			if filters.AssetDenom != "" && key.Denom != filters.AssetDenom {
+				return false, nil
 			}
-			return false, nil
-		})
-
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		pageReq := &query.PageRequest{}
-		if req.Pagination != nil {
-			*pageReq = *req.Pagination
-		}
-		pageReq.Reverse = true
-
-		prices, pageRes, err = query.CollectionFilteredPaginate(
-			ctx,
-			keeper.prices,
-			pageReq,
-			func(key types.PriceDataRecordID, _ types.PriceDataState) (bool, error) {
-				if filters.AssetDenom != "" && key.Denom != filters.AssetDenom {
-					return false, nil
-				}
-				if filters.BaseDenom != "" && key.BaseDenom != filters.BaseDenom {
-					return false, nil
-				}
-				return true, nil
-			},
-			func(key types.PriceDataRecordID, val types.PriceDataState) (types.PriceData, error) {
-				return types.PriceData{
-					ID:    key,
-					State: val,
-				}, nil
-			},
-		)
-		if err != nil {
-			return nil, err
-		}
+			if filters.BaseDenom != "" && key.BaseDenom != filters.BaseDenom {
+				return false, nil
+			}
+			if !filters.StartTime.IsZero() && key.Timestamp.Before(filters.StartTime) {
+				return false, nil
+			}
+			if !filters.EndTime.IsZero() && key.Timestamp.After(filters.EndTime) {
+				return false, nil
+			}
+			return true, nil
+		},
+		func(key types.PriceDataRecordID, val types.PriceDataState) (types.PriceData, error) {
+			return types.PriceData{
+				ID:    key,
+				State: val,
+			}, nil
+		},
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	return &types.QueryPricesResponse{
