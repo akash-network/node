@@ -1354,7 +1354,7 @@ func TestCloseBidUnknownOrder(t *testing.T) {
 	roffer := mvbeta.ResourceOfferFromRU(group.GroupSpec.Resources)
 
 	bidID := mv1.MakeBidID(orderID, provider)
-	bid, err := suite.MarketKeeper().CreateBid(suite.Context(), bidID, price, roffer)
+	bid, err := suite.MarketKeeper().CreateBid(suite.Context(), bidID, price, roffer, nil)
 	require.NoError(t, err)
 
 	err = suite.MarketKeeper().CreateLease(suite.Context(), bid)
@@ -1393,7 +1393,7 @@ func (st *testSuite) createBid() (mvbeta.Bid, mvbeta.Order) {
 
 	bidID := mv1.MakeBidID(order.ID, provider)
 
-	bid, err := st.MarketKeeper().CreateBid(st.Context(), bidID, price, roffer)
+	bid, err := st.MarketKeeper().CreateBid(st.Context(), bidID, price, roffer, nil)
 	require.NoError(st.t, err)
 	require.Equal(st.t, order.ID, bid.ID.OrderID())
 	require.Equal(st.t, price, bid.Price)
@@ -1411,7 +1411,7 @@ func (st *testSuite) createOrder(resources dtypes.ResourceUnits) (mvbeta.Order, 
 	err := st.DeploymentKeeper().Create(st.Context(), deployment, []dtypes.Group{group})
 	require.NoError(st.t, err)
 
-	order, err := st.MarketKeeper().CreateOrder(st.Context(), group.ID, group.GroupSpec)
+	order, err := st.MarketKeeper().CreateOrder(st.Context(), group.ID, group.GroupSpec, nil)
 	require.NoError(st.t, err)
 	require.Equal(st.t, group.ID, order.ID.GroupID())
 	require.Equal(st.t, uint32(1), order.ID.OSeq)

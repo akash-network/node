@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"fmt"
+	"time"
 
 	"cosmossdk.io/collections"
 	"cosmossdk.io/collections/indexes"
@@ -23,8 +24,8 @@ type IKeeper interface {
 	NewQuerier() Querier
 	Codec() codec.BinaryCodec
 	StoreKey() storetypes.StoreKey
-	CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dvbeta.GroupSpec) (types.Order, error)
-	CreateBid(ctx sdk.Context, id mv1.BidID, price sdk.DecCoin, roffer types.ResourcesOffer) (types.Bid, error)
+	CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dvbeta.GroupSpec, reclamation *dtypes.DeploymentReclamation) (types.Order, error)
+	CreateBid(ctx sdk.Context, id mv1.BidID, price sdk.DecCoin, roffer types.ResourcesOffer, reclaimWindow *time.Duration) (types.Bid, error)
 	CreateLease(ctx sdk.Context, bid types.Bid) error
 	OnOrderMatched(ctx sdk.Context, order types.Order)
 	OnBidMatched(ctx sdk.Context, bid types.Bid)
@@ -150,7 +151,7 @@ func (k Keeper) GetParams(ctx sdk.Context) (types.Params, error) {
 }
 
 // CreateOrder creates a new order with given group id and specifications. It returns created order
-func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dvbeta.GroupSpec) (types.Order, error) {
+func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dvbeta.GroupSpec, reclamation *dtypes.DeploymentReclamation) (types.Order, error) {
 	oseq := uint32(1)
 	var err error
 
@@ -185,10 +186,11 @@ func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dvbeta.Gro
 	}
 
 	order := types.Order{
-		ID:        orderID,
-		Spec:      spec,
-		State:     types.OrderOpen,
-		CreatedAt: ctx.BlockHeight(),
+		ID:          orderID,
+		Spec:        spec,
+		State:       types.OrderOpen,
+		CreatedAt:   ctx.BlockHeight(),
+		Reclamation: reclamation,
 	}
 
 	if err := k.orders.Set(ctx, pk, order); err != nil {
@@ -208,7 +210,7 @@ func (k Keeper) CreateOrder(ctx sdk.Context, gid dtypes.GroupID, spec dvbeta.Gro
 }
 
 // CreateBid creates a bid for a order with given orderID, price for bid and provider
-func (k Keeper) CreateBid(ctx sdk.Context, id mv1.BidID, price sdk.DecCoin, roffer types.ResourcesOffer) (types.Bid, error) {
+func (k Keeper) CreateBid(ctx sdk.Context, id mv1.BidID, price sdk.DecCoin, roffer types.ResourcesOffer, reclaimWindow *time.Duration) (types.Bid, error) {
 	pk := keys.BidIDToKey(id)
 
 	has, err := k.bids.Has(ctx, pk)
@@ -220,11 +222,12 @@ func (k Keeper) CreateBid(ctx sdk.Context, id mv1.BidID, price sdk.DecCoin, roff
 	}
 
 	bid := types.Bid{
-		ID:             id,
-		State:          types.BidOpen,
-		Price:          price,
-		CreatedAt:      ctx.BlockHeight(),
-		ResourcesOffer: roffer,
+		ID:                id,
+		State:             types.BidOpen,
+		Price:             price,
+		CreatedAt:         ctx.BlockHeight(),
+		ResourcesOffer:    roffer,
+		ReclamationWindow: reclaimWindow,
 	}
 
 	if err := k.bids.Set(ctx, pk, bid); err != nil {

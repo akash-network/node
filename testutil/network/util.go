@@ -27,6 +27,8 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
+
+	aclient "pkg.akt.dev/go/node/client"
 )
 
 func startInProcess(cfg Config, val *Validator) error {
@@ -45,6 +47,10 @@ func startInProcess(cfg Config, val *Validator) error {
 
 	app := cfg.AppConstructor(*val)
 	val.app = app
+
+	aclient.SetRegistry(aclient.DefaultRegistry(
+		aclient.WithChainID(cfg.ChainID),
+	))
 
 	appGenesisProvider := func() (node.ChecksummedGenesisDoc, error) {
 		appGenesis, err := genutiltypes.AppGenesisFromFile(cmtCfg.GenesisFile())

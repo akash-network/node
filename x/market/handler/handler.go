@@ -29,6 +29,9 @@ func NewHandler(keepers Keepers) baseapp.MsgServiceHandler {
 		case *mvbeta.MsgCloseLease:
 			res, err := ms.CloseLease(ctx, msg)
 			return sdk.WrapServiceResult(ctx, res, err)
+		case *mvbeta.MsgLeaseStartReclaim:
+			res, err := ms.LeaseStartReclaim(ctx, msg)
+			return sdk.WrapServiceResult(ctx, res, err)
 		default:
 			return nil, sdkerrors.ErrUnknownRequest
 		}

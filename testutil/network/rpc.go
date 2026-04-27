@@ -22,11 +22,7 @@ func NewLocalRPCClient(lc *local.Local) *LocalRPCClient {
 }
 
 // Akash implements the RPCClient interface required by chain-sdk.
-// Returns client info with the current API version.
+// Returns version discovery info from the global registry.
 func (c *LocalRPCClient) Akash(_ context.Context) (*aclient.Akash, error) {
-	return &aclient.Akash{
-		ClientInfo: aclient.ClientInfo{
-			ApiVersion: "v1beta3",
-		},
-	}, nil
+	return aclient.GetRegistry().ToAkash(), nil
 }

@@ -153,10 +153,7 @@ func (k *keeper) EndBlocker(ctx context.Context) error {
 		// Phase 3: aggregate from in-memory data
 		aggregatedPrice, err := k.calculateAggregatedPricesFromHistory(sctx, did, latestPrices, sourcePrices)
 		if err != nil {
-			sctx.Logger().Error(
-				"calculate aggregated price",
-				"reason", err.Error(),
-			)
+			sctx.Logger().Error("calculate aggregated price", "error", err.Error())
 		}
 
 		health := k.setPriceHealth(sctx, params, allSourceIDs, aggregatedPrice)
@@ -164,10 +161,7 @@ func (k *keeper) EndBlocker(ctx context.Context) error {
 		if health.IsHealthy && len(latestPrices) > 0 {
 			err = k.aggregatedPrices.Set(sctx, did, aggregatedPrice)
 			if err != nil {
-				sctx.Logger().Error(
-					"set aggregated price",
-					"reason", err.Error(),
-				)
+				sctx.Logger().Error("set aggregated price", "reason", err.Error())
 			}
 
 			evts = append(evts, &types.EventAggregatedPrice{Price: aggregatedPrice})
