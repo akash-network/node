@@ -50,7 +50,7 @@ $(STATIK): $(STATIK_VERSION_FILE)
 $(COSMOVISOR_VERSION_FILE): $(AKASH_DEVCACHE)
 	@echo "installing cosmovisor $(COSMOVISOR_VERSION) ..."
 	rm -f $(COSMOVISOR)
-	GOBIN=$(AKASH_DEVCACHE_BIN) $(GO) install cosmossdk.io/tools/cosmovisor/cmd/cosmovisor@$(COSMOVISOR_VERSION)
+	GOTOOLCHAIN=go1.25.9 GOBIN=$(AKASH_DEVCACHE_BIN) $(GO) install cosmossdk.io/tools/cosmovisor/cmd/cosmovisor@$(COSMOVISOR_VERSION)
 	rm -rf "$(dir $@)"
 	mkdir -p "$(dir $@)"
 	touch $@

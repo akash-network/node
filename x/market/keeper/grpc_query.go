@@ -758,7 +758,7 @@ func (k Querier) Leases(c context.Context, req *types.QueryLeasesRequest) (*type
 			}
 			states = append(states, byte(stateVal))
 		} else {
-			states = append(states, byte(v1.LeaseActive), byte(v1.LeaseInsufficientFunds), byte(v1.LeaseClosed))
+			states = append(states, byte(v1.LeaseActive), byte(v1.LeaseInsufficientFunds), byte(v1.LeaseClosed), byte(v1.LeaseReclaiming))
 		}
 
 		// Resolve iteration path from filters

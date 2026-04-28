@@ -16,6 +16,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	etypes "pkg.akt.dev/go/node/escrow/module"
+	mvbeta "pkg.akt.dev/go/node/market/v1beta5"
 	otypes "pkg.akt.dev/go/node/oracle/v2"
 	"pkg.akt.dev/go/sdkutil"
 
@@ -116,6 +117,20 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 			err = up.Keepers.Akash.Bme.SetParams(sctx, bparams)
 			if err != nil {
 				return toVM, fmt.Errorf("failed to set bme params: %w", err)
+			}
+		}
+
+		// Set default reclamation params for market module
+		mparams, err := up.Keepers.Akash.Market.GetParams(sctx)
+		if err != nil {
+			return toVM, fmt.Errorf("failed to get market params: %w", err)
+		}
+
+		if mparams.MinReclamationWindow == 0 {
+			mparams.MinReclamationWindow = mvbeta.DefaultMinReclamationWindow
+			mparams.MaxReclamationWindow = mvbeta.DefaultMaxReclamationWindow
+			if err = up.Keepers.Akash.Market.SetParams(sctx, mparams); err != nil {
+				return toVM, fmt.Errorf("failed to set market params: %w", err)
 			}
 		}
 

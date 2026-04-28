@@ -23,10 +23,13 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/api"
 	servergrpc "github.com/cosmos/cosmos-sdk/server/grpc"
 	servercmtlog "github.com/cosmos/cosmos-sdk/server/log"
+	"github.com/cosmos/cosmos-sdk/version"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
+
+	aclient "pkg.akt.dev/go/node/client"
 )
 
 func startInProcess(cfg Config, val *Validator) error {
@@ -45,6 +48,11 @@ func startInProcess(cfg Config, val *Validator) error {
 
 	app := cfg.AppConstructor(*val)
 	val.app = app
+
+	registry := aclient.DefaultRegistry(
+		aclient.WithChainID(cfg.ChainID),
+		aclient.WithNodeVersion(version.Version),
+	)
 
 	appGenesisProvider := func() (node.ChecksummedGenesisDoc, error) {
 		appGenesis, err := genutiltypes.AppGenesisFromFile(cmtCfg.GenesisFile())
@@ -84,7 +92,7 @@ func startInProcess(cfg Config, val *Validator) error {
 	val.tmNode = tmNode
 
 	if val.RPCAddress != "" {
-		val.RPCClient = NewLocalRPCClient(local.New(tmNode))
+		val.RPCClient = NewLocalRPCClient(local.New(tmNode), registry)
 	}
 
 	// We'll need a RPC client if the validator exposes a gRPC or REST endpoint.

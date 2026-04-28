@@ -101,7 +101,26 @@ func (ms msgServer) CreateBid(goCtx context.Context, msg *mvbeta.MsgCreateBid) (
 		return nil, err
 	}
 
-	bid, err := ms.keepers.Market.CreateBid(ctx, msg.ID, msg.Price, msg.ResourcesOffer)
+	// Reclamation validation
+	if order.RequiresReclamation() {
+		if msg.ReclamationWindow == nil {
+			return nil, mv1.ErrReclamationRequired
+		}
+		if *msg.ReclamationWindow < order.Reclamation.MinWindow {
+			return nil, mv1.ErrReclamationWindowTooShort
+		}
+	}
+
+	if msg.ReclamationWindow != nil {
+		if *msg.ReclamationWindow < params.MinReclamationWindow {
+			return nil, mv1.ErrReclamationWindowInvalid
+		}
+		if *msg.ReclamationWindow > params.MaxReclamationWindow {
+			return nil, mv1.ErrReclamationWindowInvalid
+		}
+	}
+
+	bid, err := ms.keepers.Market.CreateBid(ctx, msg.ID, msg.Price, msg.ResourcesOffer, msg.ReclamationWindow)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +158,17 @@ func (ms msgServer) CloseBid(goCtx context.Context, msg *mvbeta.MsgCloseBid) (*m
 		return nil, mv1.ErrUnknownLeaseForBid
 	}
 
-	if lease.State != mv1.LeaseActive {
+	// Reclamation-aware lease state check
+	switch lease.State {
+	case mv1.LeaseActive:
+		if lease.Reclamation != nil {
+			return nil, mv1.ErrReclamationNotStarted
+		}
+	case mv1.LeaseReclaiming:
+		if ctx.BlockTime().Unix() < lease.Reclamation.Deadline {
+			return nil, mv1.ErrReclamationWindowNotElapsed
+		}
+	default:
 		return nil, mv1.ErrLeaseNotActive
 	}
 
@@ -224,6 +253,19 @@ func (ms msgServer) CreateLease(goCtx context.Context, msg *mvbeta.MsgCreateLeas
 		return &mvbeta.MsgCreateLeaseResponse{}, err
 	}
 
+	if bid.ReclamationWindow != nil {
+		lease, found := ms.keepers.Market.GetLease(ctx, bid.ID.LeaseID())
+		if !found {
+			return &mvbeta.MsgCreateLeaseResponse{}, mv1.ErrLeaseNotFound
+		}
+		lease.Reclamation = &mv1.Reclamation{
+			Window: *bid.ReclamationWindow,
+		}
+		if err = ms.keepers.Market.SaveLease(ctx, lease); err != nil {
+			return &mvbeta.MsgCreateLeaseResponse{}, err
+		}
+	}
+
 	ms.keepers.Market.OnOrderMatched(ctx, order)
 	ms.keepers.Market.OnBidMatched(ctx, bid)
 
@@ -264,7 +306,7 @@ func (ms msgServer) CloseLease(goCtx context.Context, msg *mvbeta.MsgCloseLease)
 	if !found {
 		return &mvbeta.MsgCloseLeaseResponse{}, mv1.ErrLeaseNotFound
 	}
-	if lease.State != mv1.LeaseActive {
+	if lease.State != mv1.LeaseActive && lease.State != mv1.LeaseReclaiming {
 		return &mvbeta.MsgCloseLeaseResponse{}, mv1.ErrOrderClosed
 	}
 
@@ -286,11 +328,54 @@ func (ms msgServer) CloseLease(goCtx context.Context, msg *mvbeta.MsgCloseLease)
 		return &mvbeta.MsgCloseLeaseResponse{}, nil
 	}
 
-	if _, err := ms.keepers.Market.CreateOrder(ctx, group.ID, group.GroupSpec); err != nil {
+	if _, err := ms.keepers.Market.CreateOrder(ctx, group.ID, group.GroupSpec, order.Reclamation); err != nil {
 		return &mvbeta.MsgCloseLeaseResponse{}, err
 	}
 
 	return &mvbeta.MsgCloseLeaseResponse{}, nil
+}
+
+func (ms msgServer) LeaseStartReclaim(goCtx context.Context, msg *mvbeta.MsgLeaseStartReclaim) (*mvbeta.MsgLeaseStartReclaimResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	lease, found := ms.keepers.Market.GetLease(ctx, msg.ID)
+	if !found {
+		return nil, mv1.ErrUnknownLease
+	}
+
+	if lease.State != mv1.LeaseActive {
+		return nil, mv1.ErrLeaseNotActive
+	}
+
+	if lease.Reclamation == nil {
+		return nil, mv1.ErrLeaseNotReclamable
+	}
+
+	if lease.Reclamation.StartedAt != 0 {
+		return nil, mv1.ErrLeaseAlreadyReclaiming
+	}
+
+	blockTime := ctx.BlockTime()
+	deadline := blockTime.Add(lease.Reclamation.Window)
+
+	lease.Reclamation.StartedAt = ctx.BlockHeight()
+	lease.Reclamation.Deadline = deadline.Unix()
+	lease.Reclamation.Reason = msg.Reason
+	lease.State = mv1.LeaseReclaiming
+
+	if err := ms.keepers.Market.SaveLease(ctx, lease); err != nil {
+		return nil, err
+	}
+
+	if err := ctx.EventManager().EmitTypedEvent(&mv1.EventLeaseReclaimStarted{
+		ID:       lease.ID,
+		Reason:   msg.Reason,
+		Deadline: deadline.Unix(),
+	}); err != nil {
+		return nil, err
+	}
+
+	return &mvbeta.MsgLeaseStartReclaimResponse{}, nil
 }
 
 func (ms msgServer) UpdateParams(goCtx context.Context, req *mvbeta.MsgUpdateParams) (*mvbeta.MsgUpdateParamsResponse, error) {

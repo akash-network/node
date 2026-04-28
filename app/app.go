@@ -53,7 +53,10 @@ import (
 	transfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 	ibchost "github.com/cosmos/ibc-go/v10/modules/core/exported"
 
+	gogogrpc "github.com/cosmos/gogoproto/grpc"
+
 	cflags "pkg.akt.dev/go/cli/flags"
+	aclient "pkg.akt.dev/go/node/client"
 	epochstypes "pkg.akt.dev/go/node/epochs/v1beta1"
 	"pkg.akt.dev/go/sdkutil"
 
@@ -532,6 +535,11 @@ func (app *AkashApp) RegisterAPIRoutes(apiSvr *api.Server, apiConfig config.APIC
 	// Register node gRPC service for grpc-gateway.
 	nodeservice.RegisterGRPCGatewayRoutes(cctx, apiSvr.GRPCGatewayRouter)
 
+	// Register Akash Discovery gRPC-Gateway route for REST access at GET /akash/discovery/v1/info.
+	if err := aclient.RegisterDiscoveryHandlerServer(cctx.CmdContext, apiSvr.GRPCGatewayRouter, aclient.NewDiscoveryServer(aclient.GetRegistry())); err != nil {
+		panic(fmt.Errorf("failed to register discovery gRPC-Gateway routes: %w", err))
+	}
+
 	// register swagger API from root so that other applications can override easily
 	if apiConfig.Swagger {
 		RegisterSwaggerAPI(cctx, apiSvr.Router)
@@ -555,6 +563,18 @@ func (app *AkashApp) RegisterTendermintService(cctx client.Context) {
 // RegisterNodeService registers the node gRPC Query service.
 func (app *AkashApp) RegisterNodeService(cctx client.Context, cfg config.Config) {
 	nodeservice.RegisterNodeService(cctx, app.GRPCQueryRouter(), cfg)
+}
+
+// RegisterGRPCServerWithSkipCheckHeader registers all gRPC services including
+// the Akash Discovery service for version negotiation.
+func (app *AkashApp) RegisterGRPCServerWithSkipCheckHeader(server gogogrpc.Server, skipCheckHeader bool) {
+	// Register all standard Cosmos SDK module query services.
+	app.BaseApp.RegisterGRPCServerWithSkipCheckHeader(server, skipCheckHeader)
+
+	// Register Akash Discovery service directly on the gRPC server.
+	// This enables version discovery for clients via gRPC at akash.discovery.v1.Discovery/GetInfo
+	// and via REST through gRPC-Gateway at GET /akash/discovery/v1/info.
+	aclient.RegisterDiscoveryService(server, aclient.GetRegistry())
 }
 
 // RegisterSwaggerAPI registers swagger route with API Server

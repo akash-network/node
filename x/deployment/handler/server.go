@@ -61,11 +61,29 @@ func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreate
 		return nil, v1.ErrInvalidDeposit
 	}
 
+	// Validate reclamation window against market module params
+	if msg.Reclamation != nil {
+		marketParams, err := ms.market.GetParams(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if msg.Reclamation.MinWindow < 0 {
+			return nil, v1.ErrInvalidReclamation.Wrap("min_window must be >= 0")
+		}
+		if msg.Reclamation.MinWindow < marketParams.MinReclamationWindow {
+			return nil, v1.ErrInvalidReclamation.Wrap("min_window below governance minimum")
+		}
+		if msg.Reclamation.MinWindow > marketParams.MaxReclamationWindow {
+			return nil, v1.ErrInvalidReclamation.Wrap("min_window above governance maximum")
+		}
+	}
+
 	deployment := v1.Deployment{
-		ID:        did,
-		State:     v1.DeploymentActive,
-		Hash:      msg.Hash,
-		CreatedAt: ctx.BlockHeight(),
+		ID:          did,
+		State:       v1.DeploymentActive,
+		Hash:        msg.Hash,
+		CreatedAt:   ctx.BlockHeight(),
+		Reclamation: msg.Reclamation,
 	}
 
 	if err := types.ValidateDeploymentGroups(msg.Groups); err != nil {
@@ -98,7 +116,7 @@ func (ms msgServer) CreateDeployment(goCtx context.Context, msg *types.MsgCreate
 
 	// create orders
 	for _, group := range groups {
-		if _, err := ms.market.CreateOrder(ctx, group.ID, group.GroupSpec); err != nil {
+		if _, err := ms.market.CreateOrder(ctx, group.ID, group.GroupSpec, msg.Reclamation); err != nil {
 			return &types.MsgCreateDeploymentResponse{}, err
 		}
 	}
@@ -223,7 +241,12 @@ func (ms msgServer) StartGroup(goCtx context.Context, msg *types.MsgStartGroup) 
 	if err != nil {
 		return &types.MsgStartGroupResponse{}, err
 	}
-	if _, err := ms.market.CreateOrder(ctx, group.ID, group.GroupSpec); err != nil {
+	deployment, found := ms.deployment.GetDeployment(ctx, msg.ID.DeploymentID())
+	if !found {
+		return &types.MsgStartGroupResponse{}, v1.ErrDeploymentNotFound
+	}
+
+	if _, err := ms.market.CreateOrder(ctx, group.ID, group.GroupSpec, deployment.Reclamation); err != nil {
 		return &types.MsgStartGroupResponse{}, err
 	}
 

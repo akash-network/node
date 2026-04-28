@@ -19,7 +19,10 @@ import (
 	sdkserver "github.com/cosmos/cosmos-sdk/server"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
 
+	"github.com/cosmos/cosmos-sdk/version"
+
 	cflags "pkg.akt.dev/go/cli/flags"
+	aclient "pkg.akt.dev/go/node/client"
 	"pkg.akt.dev/go/sdkutil"
 
 	akash "pkg.akt.dev/node/v2/app"
@@ -80,6 +83,14 @@ func (a appCreator) newApp(
 		cast.ToUint64(appOpts.Get(cflags.FlagStateSyncSnapshotInterval)),
 		cast.ToUint32(appOpts.Get(cflags.FlagStateSyncSnapshotKeepRecent)),
 	)
+
+	// Configure version discovery registry with chain metadata.
+	// This is used by the CometBFT JSON-RPC "akash" route (automatic via init())
+	// and the gRPC Discovery service (registered in AkashApp.RegisterGRPCServerWithSkipCheckHeader).
+	aclient.SetRegistry(aclient.DefaultRegistry(
+		aclient.WithChainID(chainID),
+		aclient.WithNodeVersion(version.Version),
+	))
 
 	baseAppOptions := []func(*baseapp.BaseApp){
 		baseapp.SetChainID(chainID),

@@ -14,8 +14,10 @@ var minDeposit, _ = dtypes.DefaultParams().MinDepositFor("uakt")
 func RandomizedGenState(simState *module.SimulationState) {
 	marketGenesis := &mvbeta.GenesisState{
 		Params: mvbeta.Params{
-			BidMinDeposit: minDeposit,
-			OrderMaxBids:  20,
+			BidMinDeposit:        minDeposit,
+			OrderMaxBids:         20,
+			MinReclamationWindow: mvbeta.DefaultMinReclamationWindow,
+			MaxReclamationWindow: mvbeta.DefaultMaxReclamationWindow,
 		},
 	}
 

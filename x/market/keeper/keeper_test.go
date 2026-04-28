@@ -24,7 +24,7 @@ func Test_CreateOrder(t *testing.T) {
 	order, gspec := createOrder(t, ctx, keeper)
 
 	// assert one active for group
-	_, err := keeper.CreateOrder(ctx, order.ID.GroupID(), gspec)
+	_, err := keeper.CreateOrder(ctx, order.ID.GroupID(), gspec, nil)
 	require.Error(t, err)
 }
 
@@ -469,7 +469,7 @@ func createBid(t testing.TB, suite *state.TestSuite) (mvbeta.Bid, mvbeta.Order) 
 
 	bidID := mv1.MakeBidID(order.ID, provider)
 
-	bid, err := suite.MarketKeeper().CreateBid(ctx, bidID, price, roffer)
+	bid, err := suite.MarketKeeper().CreateBid(ctx, bidID, price, roffer, nil)
 	require.NoError(t, err)
 	assert.Equal(t, order.ID, bid.ID.OrderID())
 	assert.Equal(t, price, bid.Price)
@@ -500,7 +500,7 @@ func createOrder(t testing.TB, ctx sdk.Context, keeper keeper.IKeeper) (mvbeta.O
 	t.Helper()
 	group := testutil.DeploymentGroup(t, testutil.DeploymentID(t), 0)
 
-	order, err := keeper.CreateOrder(ctx, group.ID, group.GroupSpec)
+	order, err := keeper.CreateOrder(ctx, group.ID, group.GroupSpec, nil)
 	require.NoError(t, err)
 
 	require.Equal(t, group.ID, order.ID.GroupID())

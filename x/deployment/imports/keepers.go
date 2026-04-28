@@ -19,7 +19,8 @@ import (
 
 // MarketKeeper is the subset of the market keeper needed for denom migration.
 type MarketKeeper interface {
-	CreateOrder(ctx sdk.Context, id dv1.GroupID, spec dvbeta.GroupSpec) (mvbeta.Order, error)
+	CreateOrder(ctx sdk.Context, id dv1.GroupID, spec dvbeta.GroupSpec, reclamation *dv1.DeploymentReclamation) (mvbeta.Order, error)
+	GetParams(ctx sdk.Context) (mvbeta.Params, error)
 	OnGroupClosed(ctx sdk.Context, id dv1.GroupID, state dvbeta.Group_State) error
 	WithOrdersForGroup(ctx sdk.Context, id dv1.GroupID, state mvbeta.Order_State, fn func(mvbeta.Order) bool)
 	WithBidsForOrder(ctx sdk.Context, id mv1.OrderID, state mvbeta.Bid_State, fn func(mvbeta.Bid) bool)
