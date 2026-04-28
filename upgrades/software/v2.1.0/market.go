@@ -12,7 +12,7 @@ type marketMigrations struct {
 }
 
 func newMarketMigration(m utypes.Migrator) utypes.Migration {
-	return deploymentMigrations{Migrator: m}
+	return marketMigrations{Migrator: m}
 }
 
 func (m marketMigrations) GetHandler() sdkmodule.MigrationHandler {

@@ -14,15 +14,17 @@ import (
 // needed by DiscoverClient to detect the API version.
 type LocalRPCClient struct {
 	*local.Local
+	registry *aclient.VersionRegistry
 }
 
 // NewLocalRPCClient creates a new LocalRPCClient wrapping the local client
-func NewLocalRPCClient(lc *local.Local) *LocalRPCClient {
-	return &LocalRPCClient{Local: lc}
+// with a local registry instance to avoid mutating global discovery state.
+func NewLocalRPCClient(lc *local.Local, registry *aclient.VersionRegistry) *LocalRPCClient {
+	return &LocalRPCClient{Local: lc, registry: registry}
 }
 
 // Akash implements the RPCClient interface required by chain-sdk.
-// Returns version discovery info from the global registry.
+// Returns version discovery info from the local registry.
 func (c *LocalRPCClient) Akash(_ context.Context) (*aclient.Akash, error) {
-	return aclient.GetRegistry().ToAkash(), nil
+	return c.registry.ToAkash(), nil
 }
