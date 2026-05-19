@@ -467,6 +467,7 @@ func (app *App) InitNormalKeepers(
 	app.Keepers.Akash.Provider = pkeeper.NewKeeper(
 		cdc,
 		app.keys[ptypes.StoreKey],
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 
 	app.Keepers.Akash.Audit = akeeper.NewKeeper(

@@ -3,6 +3,7 @@ package keeper_test
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -153,4 +154,55 @@ func TestGRPCQueryProviders(t *testing.T) {
 			require.Equal(t, tc.expLen, len(res.Providers))
 		})
 	}
+}
+
+func TestGRPCQueryProviderRegistration(t *testing.T) {
+	suite := setupTest(t)
+	provider := testutil.Provider(t)
+	err := suite.keeper.Create(suite.ctx, provider)
+	require.NoError(t, err)
+
+	res, err := suite.queryClient.Registration(suite.ctx, &types.QueryRegistrationRequest{
+		Provider: provider.Owner,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	require.Equal(t, provider.Owner, res.Registration.Owner)
+	require.Equal(t, suite.ctx.BlockTime(), res.Registration.RegisteredAt)
+}
+
+func TestGRPCQueryProviderMaintenances(t *testing.T) {
+	suite := setupTest(t)
+	provider := testutil.Provider(t)
+	err := suite.keeper.Create(suite.ctx, provider)
+	require.NoError(t, err)
+
+	record := types.ProviderMaintenanceRecord{
+		ID:              suite.keeper.AllocateMaintenanceID(suite.ctx),
+		Provider:        provider.Owner,
+		MaintenanceType: types.ProviderMaintenanceType_provider_maintenance_type_planned,
+		StartsAt:        suite.ctx.BlockTime().Add(time.Hour),
+		ExpectedEndsAt:  suite.ctx.BlockTime().Add(2 * time.Hour),
+		OpenedAt:        suite.ctx.BlockTime(),
+	}
+	err = suite.keeper.SetMaintenance(suite.ctx, record)
+	require.NoError(t, err)
+
+	res, err := suite.queryClient.ProviderMaintenance(suite.ctx, &types.QueryProviderMaintenanceRequest{
+		Provider:      provider.Owner,
+		MaintenanceId: record.ID,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	require.Equal(t, record, res.Maintenance.Record)
+	require.Equal(t, types.ProviderMaintenanceStatus_provider_maintenance_status_scheduled, res.Maintenance.Status)
+
+	list, err := suite.queryClient.ProviderMaintenances(suite.ctx, &types.QueryProviderMaintenancesRequest{
+		Provider:     provider.Owner,
+		StatusFilter: types.ProviderMaintenanceStatus_provider_maintenance_status_scheduled,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, list)
+	require.Len(t, list.Maintenance, 1)
+	require.Equal(t, record, list.Maintenance[0].Record)
 }

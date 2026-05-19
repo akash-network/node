@@ -1,6 +1,8 @@
 package keeper
 
 import (
+	"time"
+
 	"cosmossdk.io/store/prefix"
 	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -17,20 +19,39 @@ type IKeeper interface {
 	WithProviders(ctx sdk.Context, fn func(types.Provider) bool)
 	Update(ctx sdk.Context, provider types.Provider) error
 	Delete(ctx sdk.Context, id sdk.Address)
+	GetParams(ctx sdk.Context) types.ProviderMaintenanceParams
+	SetParams(ctx sdk.Context, params types.ProviderMaintenanceParams) error
+	GetRegistration(ctx sdk.Context, id sdk.Address) (types.ProviderRegistration, bool)
+	GetRegistrationTime(ctx sdk.Context, id sdk.Address) (time.Time, bool)
+	SetRegistration(ctx sdk.Context, registration types.ProviderRegistration) error
+	WithRegistrations(ctx sdk.Context, fn func(types.ProviderRegistration) bool)
+	GetMaintenance(ctx sdk.Context, id uint64) (types.ProviderMaintenanceRecord, bool)
+	SetMaintenance(ctx sdk.Context, record types.ProviderMaintenanceRecord) error
+	WithMaintenances(ctx sdk.Context, provider sdk.Address, fn func(types.ProviderMaintenanceRecord) bool)
+	WithAllMaintenances(ctx sdk.Context, fn func(types.ProviderMaintenanceRecord) bool)
+	GetActiveMaintenanceID(ctx sdk.Context, id sdk.Address) (uint64, bool)
+	SetActiveMaintenanceID(ctx sdk.Context, id sdk.Address, maintenanceID uint64)
+	DeleteActiveMaintenanceID(ctx sdk.Context, id sdk.Address)
+	GetNextMaintenanceID(ctx sdk.Context) uint64
+	SetNextMaintenanceID(ctx sdk.Context, id uint64)
+	AllocateMaintenanceID(ctx sdk.Context) uint64
 	NewQuerier() Querier
+	GetAuthority() string
 }
 
 // Keeper of the provider store
 type Keeper struct {
-	skey storetypes.StoreKey
-	cdc  codec.BinaryCodec
+	skey      storetypes.StoreKey
+	cdc       codec.BinaryCodec
+	authority string
 }
 
 // NewKeeper creates and returns an instance for Provider keeper
-func NewKeeper(cdc codec.BinaryCodec, skey storetypes.StoreKey) IKeeper {
+func NewKeeper(cdc codec.BinaryCodec, skey storetypes.StoreKey, authority string) IKeeper {
 	return Keeper{
-		skey: skey,
-		cdc:  cdc,
+		skey:      skey,
+		cdc:       cdc,
+		authority: authority,
 	}
 }
 
@@ -46,6 +67,10 @@ func (k Keeper) Codec() codec.BinaryCodec {
 // StoreKey returns store key
 func (k Keeper) StoreKey() storetypes.StoreKey {
 	return k.skey
+}
+
+func (k Keeper) GetAuthority() string {
+	return k.authority
 }
 
 // Get returns a provider with given provider id
@@ -78,6 +103,12 @@ func (k Keeper) Create(ctx sdk.Context, provider types.Provider) error {
 	}
 
 	store.Set(key, k.cdc.MustMarshal(&provider))
+	if err := k.SetRegistration(ctx, types.ProviderRegistration{
+		Owner:        provider.Owner,
+		RegisteredAt: ctx.BlockTime(),
+	}); err != nil {
+		return err
+	}
 
 	err = ctx.EventManager().EmitTypedEvent(
 		&types.EventProviderCreated{

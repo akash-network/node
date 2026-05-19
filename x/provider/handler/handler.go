@@ -29,6 +29,18 @@ func NewHandler(keeper keeper.IKeeper, mkeeper mkeeper.IKeeper) baseapp.MsgServi
 			res, err := ms.DeleteProvider(ctx, msg)
 			return sdk.WrapServiceResult(ctx, res, err)
 
+		case *types.MsgOpenProviderMaintenance:
+			res, err := ms.OpenProviderMaintenance(ctx, msg)
+			return sdk.WrapServiceResult(ctx, res, err)
+
+		case *types.MsgCloseProviderMaintenance:
+			res, err := ms.CloseProviderMaintenance(ctx, msg)
+			return sdk.WrapServiceResult(ctx, res, err)
+
+		case *types.MsgUpdateParams:
+			res, err := ms.UpdateParams(ctx, msg)
+			return sdk.WrapServiceResult(ctx, res, err)
+
 		default:
 			return nil, sdkerrors.ErrUnknownRequest.Wrapf("unrecognized bank message type: %T", msg)
 		}
