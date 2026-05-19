@@ -216,7 +216,7 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 		)
 	}
 	if keepers.Provider == nil {
-		keepers.Provider = pkeeper.NewKeeper(cdc, app.GetKey(ptypes.StoreKey))
+		keepers.Provider = pkeeper.NewKeeper(cdc, app.GetKey(ptypes.StoreKey), authtypes.NewModuleAddress(govtypes.ModuleName).String())
 	}
 
 	hook := mhooks.New(keepers.Deployment, keepers.Market)

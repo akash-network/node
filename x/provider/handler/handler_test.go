@@ -3,6 +3,7 @@ package handler_test
 import (
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -250,4 +251,156 @@ func TestProviderDeleteNonExisting(t *testing.T) {
 	require.Error(t, err)
 	require.Nil(t, res)
 	require.True(t, errors.Is(err, types.ErrProviderNotFound))
+}
+
+func TestProviderUpdateParams(t *testing.T) {
+	suite := setupTestSuite(t)
+
+	params := keeper.DefaultParams()
+	params.MaintenanceMaxDuration = 24 * time.Hour
+
+	msg := &types.MsgUpdateParams{
+		Authority: suite.keeper.GetAuthority(),
+		Params:    params,
+	}
+
+	res, err := suite.handler(suite.ctx, msg)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	require.Equal(t, params, suite.keeper.GetParams(suite.ctx))
+
+	msg.Authority = testutil.AccAddress(t).String()
+	res, err = suite.handler(suite.ctx, msg)
+	require.Error(t, err)
+	require.Nil(t, res)
+}
+
+func TestProviderMaintenanceLifecycle(t *testing.T) {
+	suite := setupTestSuite(t)
+	suite.ctx = suite.ctx.WithBlockTime(time.Date(2026, 5, 18, 12, 0, 0, 0, time.UTC))
+
+	prov := testutil.Provider(t)
+	err := suite.keeper.Create(suite.ctx, prov)
+	require.NoError(t, err)
+
+	openMsg := &types.MsgOpenProviderMaintenance{
+		Provider:        prov.Owner,
+		MaintenanceType: types.ProviderMaintenanceType_provider_maintenance_type_planned,
+		StartsAt:        suite.ctx.BlockTime().Add(time.Hour),
+		ExpectedEndsAt:  suite.ctx.BlockTime().Add(2 * time.Hour),
+		MetadataHash:    []byte("hash"),
+	}
+
+	res, err := suite.handler(suite.ctx, openMsg)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	record, found := suite.keeper.GetMaintenance(suite.ctx, 1)
+	require.True(t, found)
+	require.Equal(t, openMsg.Provider, record.Provider)
+	require.Equal(t, openMsg.MaintenanceType, record.MaintenanceType)
+	require.Equal(t, openMsg.StartsAt, record.StartsAt)
+	require.Equal(t, openMsg.ExpectedEndsAt, record.ExpectedEndsAt)
+	require.Equal(t, openMsg.MetadataHash, record.MetadataHash)
+
+	provider, err := sdk.AccAddressFromBech32(prov.Owner)
+	require.NoError(t, err)
+	activeID, found := suite.keeper.GetActiveMaintenanceID(suite.ctx, provider)
+	require.True(t, found)
+	require.Equal(t, uint64(1), activeID)
+
+	res, err = suite.handler(suite.ctx, openMsg)
+	require.Error(t, err)
+	require.Nil(t, res)
+
+	closeMsg := &types.MsgCloseProviderMaintenance{
+		Provider:      prov.Owner,
+		MaintenanceID: 1,
+	}
+	closeCtx := suite.ctx.WithBlockTime(suite.ctx.BlockTime().Add(90 * time.Minute))
+	res, err = suite.handler(closeCtx, closeMsg)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	record, found = suite.keeper.GetMaintenance(closeCtx, 1)
+	require.True(t, found)
+	require.NotNil(t, record.ClosedAt)
+	require.Equal(t, closeCtx.BlockTime(), *record.ClosedAt)
+
+	_, found = suite.keeper.GetActiveMaintenanceID(closeCtx, provider)
+	require.False(t, found)
+}
+
+func TestProviderMaintenanceOpenValidation(t *testing.T) {
+	suite := setupTestSuite(t)
+	suite.ctx = suite.ctx.WithBlockTime(time.Date(2026, 5, 18, 12, 0, 0, 0, time.UTC))
+
+	prov := testutil.Provider(t)
+	err := suite.keeper.Create(suite.ctx, prov)
+	require.NoError(t, err)
+
+	valid := &types.MsgOpenProviderMaintenance{
+		Provider:        prov.Owner,
+		MaintenanceType: types.ProviderMaintenanceType_provider_maintenance_type_planned,
+		StartsAt:        suite.ctx.BlockTime().Add(time.Hour),
+		ExpectedEndsAt:  suite.ctx.BlockTime().Add(2 * time.Hour),
+	}
+
+	cases := []struct {
+		name string
+		msg  *types.MsgOpenProviderMaintenance
+	}{
+		{
+			name: "unknown provider",
+			msg: &types.MsgOpenProviderMaintenance{
+				Provider:        testutil.AccAddress(t).String(),
+				MaintenanceType: valid.MaintenanceType,
+				StartsAt:        valid.StartsAt,
+				ExpectedEndsAt:  valid.ExpectedEndsAt,
+			},
+		},
+		{
+			name: "unspecified type",
+			msg: &types.MsgOpenProviderMaintenance{
+				Provider:       valid.Provider,
+				StartsAt:       valid.StartsAt,
+				ExpectedEndsAt: valid.ExpectedEndsAt,
+			},
+		},
+		{
+			name: "bad time order",
+			msg: &types.MsgOpenProviderMaintenance{
+				Provider:        valid.Provider,
+				MaintenanceType: valid.MaintenanceType,
+				StartsAt:        valid.ExpectedEndsAt,
+				ExpectedEndsAt:  valid.StartsAt,
+			},
+		},
+		{
+			name: "duration too long",
+			msg: &types.MsgOpenProviderMaintenance{
+				Provider:        valid.Provider,
+				MaintenanceType: valid.MaintenanceType,
+				StartsAt:        valid.StartsAt,
+				ExpectedEndsAt:  valid.StartsAt.Add(8 * 24 * time.Hour),
+			},
+		},
+		{
+			name: "lookahead too far",
+			msg: &types.MsgOpenProviderMaintenance{
+				Provider:        valid.Provider,
+				MaintenanceType: valid.MaintenanceType,
+				StartsAt:        suite.ctx.BlockTime().Add(91 * 24 * time.Hour),
+				ExpectedEndsAt:  suite.ctx.BlockTime().Add(91*24*time.Hour + time.Hour),
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			res, err := suite.handler(suite.ctx, tc.msg)
+			require.Error(t, err)
+			require.Nil(t, res)
+		})
+	}
 }

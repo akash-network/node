@@ -3,6 +3,7 @@ package keeper_test
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
@@ -16,6 +17,7 @@ import (
 
 func TestProviderCreate(t *testing.T) {
 	ctx, keeper := setupKeeper(t)
+	ctx = ctx.WithBlockTime(time.Date(2026, 5, 18, 12, 0, 0, 0, time.UTC))
 	prov := testutil.Provider(t)
 
 	err := keeper.Create(ctx, prov)
@@ -27,6 +29,11 @@ func TestProviderCreate(t *testing.T) {
 	foundProv, found := keeper.Get(ctx, owner)
 	require.True(t, found)
 	require.Equal(t, prov, foundProv)
+
+	registration, found := keeper.GetRegistration(ctx, owner)
+	require.True(t, found)
+	require.Equal(t, prov.Owner, registration.Owner)
+	require.Equal(t, ctx.BlockTime(), registration.RegisteredAt)
 }
 
 func TestProviderDuplicate(t *testing.T) {
@@ -150,6 +157,66 @@ func TestKeeperCoder(t *testing.T) {
 	_, keeper := setupKeeper(t)
 	codec := keeper.Codec()
 	require.NotNil(t, codec)
+}
+
+func TestProviderParams(t *testing.T) {
+	ctx, keeper := setupKeeper(t)
+
+	params := keeper.GetParams(ctx)
+	require.Equal(t, 7*24*time.Hour, params.MaintenanceMaxDuration)
+	require.Equal(t, 90*24*time.Hour, params.MaintenanceMaxLookahead)
+
+	params.MaintenanceMaxDuration = 24 * time.Hour
+	err := keeper.SetParams(ctx, params)
+	require.NoError(t, err)
+
+	found := keeper.GetParams(ctx)
+	require.Equal(t, params, found)
+}
+
+func TestProviderMaintenanceCRUD(t *testing.T) {
+	ctx, keeper := setupKeeper(t)
+	prov := testutil.Provider(t)
+	err := keeper.Create(ctx, prov)
+	require.NoError(t, err)
+
+	owner, err := sdk.AccAddressFromBech32(prov.Owner)
+	require.NoError(t, err)
+
+	id := keeper.AllocateMaintenanceID(ctx)
+	require.Equal(t, uint64(1), id)
+	require.Equal(t, uint64(2), keeper.GetNextMaintenanceID(ctx))
+
+	record := types.ProviderMaintenanceRecord{
+		ID:              id,
+		Provider:        prov.Owner,
+		MaintenanceType: types.ProviderMaintenanceType_provider_maintenance_type_planned,
+		StartsAt:        ctx.BlockTime().Add(time.Hour),
+		ExpectedEndsAt:  ctx.BlockTime().Add(2 * time.Hour),
+		OpenedAt:        ctx.BlockTime(),
+	}
+	err = keeper.SetMaintenance(ctx, record)
+	require.NoError(t, err)
+	keeper.SetActiveMaintenanceID(ctx, owner, id)
+
+	foundRecord, found := keeper.GetMaintenance(ctx, id)
+	require.True(t, found)
+	require.Equal(t, record, foundRecord)
+
+	activeID, found := keeper.GetActiveMaintenanceID(ctx, owner)
+	require.True(t, found)
+	require.Equal(t, id, activeID)
+
+	var records []types.ProviderMaintenanceRecord
+	keeper.WithMaintenances(ctx, owner, func(record types.ProviderMaintenanceRecord) bool {
+		records = append(records, record)
+		return false
+	})
+	require.Equal(t, []types.ProviderMaintenanceRecord{record}, records)
+
+	keeper.DeleteActiveMaintenanceID(ctx, owner)
+	_, found = keeper.GetActiveMaintenanceID(ctx, owner)
+	require.False(t, found)
 }
 
 func setupKeeper(t testing.TB) (sdk.Context, keeper.IKeeper) {
