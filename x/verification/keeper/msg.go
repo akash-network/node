@@ -373,7 +373,95 @@ func (k *keeper) settleReplacedAttestation(ctx sdk.Context, provider, auditor sd
 	if err != nil {
 		return err
 	}
-	return k.settleAttestationFunds(ctx, auditor, attestation, result)
+	return k.settleAttestationFunds(ctx, provider, auditor, attestation, result)
+}
+
+func (k *keeper) RevokeAttestation(
+	ctx sdk.Context,
+	provider sdk.AccAddress,
+	auditor sdk.AccAddress,
+	reason vtypes.AttestationRevocationReason,
+	evidenceHash []byte,
+) error {
+	if err := validateHash(evidenceHash, "evidence hash"); err != nil {
+		return err
+	}
+
+	attestation, found := k.GetAttestation(ctx, provider, auditor)
+	if !found {
+		return moduletypes.ErrAttestationNotFound
+	}
+	if attestation.Status != vtypes.AttestationStatusValid {
+		return errorsmod.Wrap(moduletypes.ErrInvalidReason, "attestation is not valid")
+	}
+
+	fault, err := revocationFaultAttribution(reason)
+	if err != nil {
+		return err
+	}
+	result, err := k.Settle(SettlementInput{
+		Path:             SettlementPathAttestationRevoked,
+		RevocationReason: reason,
+		FaultAttribution: fault,
+	})
+	if err != nil {
+		return err
+	}
+	if err = k.settleAttestationFunds(ctx, provider, auditor, attestation, result); err != nil {
+		return err
+	}
+
+	attestation.Status = vtypes.AttestationStatusRevoked
+	attestation.FeeStatus = result.FeeStatus
+	attestation.DepositStatus = result.DepositStatus
+	attestation.FaultAttribution = fault
+	return k.SetAttestation(ctx, attestation)
+}
+
+func (k *keeper) RemoveAttestation(ctx sdk.Context, provider sdk.AccAddress, auditor sdk.AccAddress) error {
+	attestation, found := k.GetAttestation(ctx, provider, auditor)
+	if !found {
+		return moduletypes.ErrAttestationNotFound
+	}
+	if attestation.Status != vtypes.AttestationStatusValid {
+		return errorsmod.Wrap(moduletypes.ErrInvalidReason, "attestation is not valid")
+	}
+
+	result, err := k.Settle(SettlementInput{
+		Path:             SettlementPathAttestationRemoved,
+		FaultAttribution: vtypes.FaultAttributionNoFault,
+	})
+	if err != nil {
+		return err
+	}
+	if err = k.settleAttestationFunds(ctx, provider, auditor, attestation, result); err != nil {
+		return err
+	}
+
+	attestation.Status = vtypes.AttestationStatusRemoved
+	attestation.FeeStatus = result.FeeStatus
+	attestation.DepositStatus = result.DepositStatus
+	attestation.FaultAttribution = vtypes.FaultAttributionNoFault
+	return k.SetAttestation(ctx, attestation)
+}
+
+func revocationFaultAttribution(reason vtypes.AttestationRevocationReason) (vtypes.FaultAttribution, error) {
+	switch reason {
+	case vtypes.AttestationRevocationReasonProviderNoLongerQualifies,
+		vtypes.AttestationRevocationReasonSnapshotMismatch,
+		vtypes.AttestationRevocationReasonSoftwareIdentityChanged,
+		vtypes.AttestationRevocationReasonCapabilityMisrepresented,
+		vtypes.AttestationRevocationReasonProviderNonResponsive:
+		return vtypes.FaultAttributionProviderFault, nil
+	case vtypes.AttestationRevocationReasonAuditorEvidenceError:
+		return vtypes.FaultAttributionAuditorFault, nil
+	case vtypes.AttestationRevocationReasonAuditorOperationalExit:
+		return vtypes.FaultAttributionNoFault, nil
+	case vtypes.AttestationRevocationReasonUnspecified:
+		return vtypes.FaultAttributionUnspecified, errorsmod.Wrap(moduletypes.ErrInvalidReason, "unspecified attestation revocation reason")
+	default:
+		return vtypes.FaultAttributionUnspecified, errorsmod.Wrapf(moduletypes.ErrInvalidReason, "unknown attestation revocation reason %d", reason)
+	}
 }
 
 func (k *keeper) setAttestationWithDiscrepancyCheck(ctx sdk.Context, attestation vtypes.AttestationRecord, auditorRecord vtypes.AuditorRecord) error {
@@ -699,7 +787,7 @@ func (k *keeper) settleAuditEscrowFunds(ctx sdk.Context, provider sdk.AccAddress
 	return nil
 }
 
-func (k *keeper) settleAttestationFunds(ctx sdk.Context, auditor sdk.AccAddress, attestation vtypes.AttestationRecord, result SettlementResult) error {
+func (k *keeper) settleAttestationFunds(ctx sdk.Context, provider, auditor sdk.AccAddress, attestation vtypes.AttestationRecord, result SettlementResult) error {
 	if err := requireEscrowedAttestationFunds(attestation); err != nil {
 		return err
 	}
@@ -709,14 +797,20 @@ func (k *keeper) settleAttestationFunds(ctx sdk.Context, auditor sdk.AccAddress,
 		if err := k.sendModuleToAccount(ctx, auditor, attestation.Fee); err != nil {
 			return err
 		}
-	case vtypes.FeeStatusReturnedToProvider, vtypes.FeeStatusEscrowed, vtypes.FeeStatusUnspecified:
+	case vtypes.FeeStatusReturnedToProvider:
+		if err := k.sendModuleToAccount(ctx, provider, attestation.Fee); err != nil {
+			return err
+		}
+	case vtypes.FeeStatusEscrowed, vtypes.FeeStatusUnspecified:
 		return errorsmod.Wrapf(moduletypes.ErrInvalidReason, "unsupported attestation fee settlement %s", result.FeeStatus)
 	}
 
 	switch result.DepositStatus {
 	case vtypes.DepositStatusReturnedToAuditor:
 		return k.sendModuleToAccount(ctx, auditor, attestation.Deposit)
-	case vtypes.DepositStatusSlashed, vtypes.DepositStatusEscrowed, vtypes.DepositStatusPendingDiscrepancy, vtypes.DepositStatusUnspecified:
+	case vtypes.DepositStatusSlashed:
+		return k.sendModuleToDistribution(ctx, attestation.Deposit)
+	case vtypes.DepositStatusEscrowed, vtypes.DepositStatusPendingDiscrepancy, vtypes.DepositStatusUnspecified:
 		return errorsmod.Wrapf(moduletypes.ErrInvalidReason, "unsupported attestation deposit settlement %s", result.DepositStatus)
 	}
 

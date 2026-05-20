@@ -54,7 +54,7 @@ func (k *keeper) processAttestationExpiryQueue(ctx sdk.Context, blockTime time.T
 		if err != nil {
 			return err
 		}
-		if err = k.settleAttestationFunds(ctx, auditor, attestation, result); err != nil {
+		if err = k.settleAttestationFunds(ctx, provider, auditor, attestation, result); err != nil {
 			return err
 		}
 
