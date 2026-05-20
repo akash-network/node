@@ -96,6 +96,12 @@ func (ms msgServer) CreateBid(goCtx context.Context, msg *mvbeta.MsgCreateBid) (
 		return nil, mv1.ErrCapabilitiesMismatch
 	}
 
+	if ms.keepers.Verification != nil {
+		if err := ms.keepers.Verification.BidFilter(ctx, provider, order.Spec.Requirements.Verification); err != nil {
+			return nil, err
+		}
+	}
+
 	deposits, err := ms.keepers.Escrow.AuthorizeDeposits(ctx, msg)
 	if err != nil {
 		return nil, err

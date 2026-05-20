@@ -62,6 +62,7 @@ type Keeper interface {
 	CancelAuditEscrow(sdk.Context, sdk.AccAddress, uint64) error
 	SettleAuditEscrow(sdk.Context, string, uint64, vtypes.AuditEscrowSettlementReason, vtypes.FaultAttribution, []byte) error
 	SubmitAttestation(sdk.Context, sdk.AccAddress, sdk.AccAddress, vtypes.VerificationTier, []vtypes.CapabilityFlag, []byte, sdk.Coin, sdk.Coin, uint64) error
+	BidFilter(sdk.Context, sdk.AccAddress, *vtypes.VerificationRequirement) error
 }
 
 type keeper struct {
