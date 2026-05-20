@@ -3,7 +3,9 @@ package keeper
 import (
 	"context"
 	"testing"
+	"time"
 
+	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	"github.com/stretchr/testify/require"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -140,6 +142,170 @@ func TestSubmitAttestationRejectsSelfAttestation(t *testing.T) {
 	require.ErrorIs(t, err, moduletypes.ErrSelfAttestation)
 }
 
+func TestCancelAuditEscrowSettlesUnconsumedEscrow(t *testing.T) {
+	bank := &recordingBank{}
+	ctx, k := setupStoreKeeperWithOptions(t, WithBankKeeper(bank))
+	provider := testutil.AccAddress(t)
+	params := k.GetParams(ctx)
+
+	require.NoError(t, k.SetAuditEscrow(ctx, openAuditEscrowRecord(ctx, provider, 1, params)))
+
+	err := k.CancelAuditEscrow(ctx, provider, 1)
+	require.NoError(t, err)
+
+	escrow, found := k.GetAuditEscrow(ctx, 1)
+	require.True(t, found)
+	require.Equal(t, vtypes.AuditEscrowStatusCancelled, escrow.Status)
+	require.Equal(t, vtypes.FeeStatusReturnedToProvider, escrow.FeeStatus)
+	require.Equal(t, vtypes.ProviderDepositStatusReturnedToProvider, escrow.ProviderDepositStatus)
+	require.Equal(t, vtypes.AuditEscrowSettlementReasonCancelledUnconsumed, escrow.SettlementReason)
+	require.Equal(t, vtypes.FaultAttributionNoFault, escrow.FaultAttribution)
+	require.Empty(t, escrow.ConsumedByAuditor)
+	require.Nil(t, escrow.ConsumedAt)
+
+	require.Equal(t, []bankTransfer{
+		{to: provider, module: moduletypes.ModuleName, amt: sdk.NewCoins(params.MinFeeL1)},
+		{to: provider, module: moduletypes.ModuleName, amt: sdk.NewCoins(params.ProviderAuditDeposit)},
+	}, bank.moduleToAccount)
+}
+
+func TestCancelAuditEscrowRejectsWrongProvider(t *testing.T) {
+	ctx, k := setupStoreKeeper(t)
+	provider := testutil.AccAddress(t)
+	params := k.GetParams(ctx)
+
+	require.NoError(t, k.SetAuditEscrow(ctx, openAuditEscrowRecord(ctx, provider, 1, params)))
+
+	err := k.CancelAuditEscrow(ctx, testutil.AccAddress(t), 1)
+	require.ErrorIs(t, err, moduletypes.ErrUnauthorizedAuditEscrowSettlement)
+}
+
+func TestCancelAuditEscrowRejectsExpiredEscrow(t *testing.T) {
+	ctx, k := setupStoreKeeper(t)
+	provider := testutil.AccAddress(t)
+	params := k.GetParams(ctx)
+	escrow := openAuditEscrowRecord(ctx, provider, 1, params)
+	escrow.ExpiresAt = ctx.BlockTime().Add(-time.Second)
+
+	require.NoError(t, k.SetAuditEscrow(ctx, escrow))
+
+	err := k.CancelAuditEscrow(ctx, provider, 1)
+	require.ErrorIs(t, err, moduletypes.ErrAuditEscrowNotConsumable)
+}
+
+func TestCancelAuditEscrowRejectsConsumedEscrow(t *testing.T) {
+	ctx, k := setupStoreKeeper(t)
+	provider := testutil.AccAddress(t)
+	auditor := testutil.AccAddress(t)
+	params := k.GetParams(ctx)
+	consumedAt := ctx.BlockTime()
+	escrow := openAuditEscrowRecord(ctx, provider, 1, params)
+	escrow.ConsumedByAuditor = auditor.String()
+	escrow.ConsumedAt = &consumedAt
+
+	require.NoError(t, k.SetAuditEscrow(ctx, escrow))
+
+	err := k.CancelAuditEscrow(ctx, provider, 1)
+	require.ErrorIs(t, err, moduletypes.ErrAuditEscrowNotConsumable)
+}
+
+func TestSettleAuditEscrowProviderFaultSlashesDeposit(t *testing.T) {
+	bank := &recordingBank{}
+	ctx, k := setupStoreKeeperWithOptions(t, WithAuthority("gov"), WithBankKeeper(bank))
+	provider := testutil.AccAddress(t)
+	params := k.GetParams(ctx)
+
+	require.NoError(t, k.SetAuditEscrow(ctx, openAuditEscrowRecord(ctx, provider, 1, params)))
+
+	err := k.SettleAuditEscrow(
+		ctx,
+		"gov",
+		1,
+		vtypes.AuditEscrowSettlementReasonProviderFault,
+		vtypes.FaultAttributionProviderFault,
+		testHash(),
+	)
+	require.NoError(t, err)
+
+	escrow, found := k.GetAuditEscrow(ctx, 1)
+	require.True(t, found)
+	require.Equal(t, vtypes.AuditEscrowStatusSettled, escrow.Status)
+	require.Equal(t, vtypes.FeeStatusReturnedToProvider, escrow.FeeStatus)
+	require.Equal(t, vtypes.ProviderDepositStatusSlashed, escrow.ProviderDepositStatus)
+	require.Equal(t, vtypes.AuditEscrowSettlementReasonProviderFault, escrow.SettlementReason)
+	require.Equal(t, vtypes.FaultAttributionProviderFault, escrow.FaultAttribution)
+
+	require.Equal(t, []bankTransfer{
+		{to: provider, module: moduletypes.ModuleName, amt: sdk.NewCoins(params.MinFeeL1)},
+	}, bank.moduleToAccount)
+	require.Equal(t, []bankTransfer{
+		{fromModule: moduletypes.ModuleName, toModule: distrtypes.ModuleName, amt: sdk.NewCoins(params.ProviderAuditDeposit)},
+	}, bank.moduleToModule)
+}
+
+func TestSettleAuditEscrowRejectsInvalidReasonAttribution(t *testing.T) {
+	ctx, k := setupStoreKeeperWithOptions(t, WithAuthority("gov"))
+	provider := testutil.AccAddress(t)
+	params := k.GetParams(ctx)
+
+	require.NoError(t, k.SetAuditEscrow(ctx, openAuditEscrowRecord(ctx, provider, 1, params)))
+
+	err := k.SettleAuditEscrow(
+		ctx,
+		"gov",
+		1,
+		vtypes.AuditEscrowSettlementReasonProviderFault,
+		vtypes.FaultAttributionNoFault,
+		testHash(),
+	)
+	require.ErrorIs(t, err, moduletypes.ErrInvalidFaultAttribution)
+}
+
+func TestSettleAuditEscrowRejectsMalformedEvidenceHash(t *testing.T) {
+	ctx, k := setupStoreKeeperWithOptions(t, WithAuthority("gov"))
+	provider := testutil.AccAddress(t)
+	params := k.GetParams(ctx)
+
+	require.NoError(t, k.SetAuditEscrow(ctx, openAuditEscrowRecord(ctx, provider, 1, params)))
+
+	err := k.SettleAuditEscrow(
+		ctx,
+		"gov",
+		1,
+		vtypes.AuditEscrowSettlementReasonNoFault,
+		vtypes.FaultAttributionNoFault,
+		[]byte("short"),
+	)
+	require.ErrorIs(t, err, moduletypes.ErrInvalidReason)
+}
+
+func TestSettleAuditEscrowRejectsNonGovernanceSettlementReason(t *testing.T) {
+	ctx, k := setupStoreKeeperWithOptions(t, WithAuthority("gov"))
+	provider := testutil.AccAddress(t)
+	params := k.GetParams(ctx)
+
+	require.NoError(t, k.SetAuditEscrow(ctx, openAuditEscrowRecord(ctx, provider, 1, params)))
+
+	tests := []vtypes.AuditEscrowSettlementReason{
+		vtypes.AuditEscrowSettlementReasonCancelledUnconsumed,
+		vtypes.AuditEscrowSettlementReasonExpiredUnconsumed,
+	}
+
+	for _, reason := range tests {
+		t.Run(reason.String(), func(t *testing.T) {
+			err := k.SettleAuditEscrow(
+				ctx,
+				"gov",
+				1,
+				reason,
+				vtypes.FaultAttributionNoFault,
+				testHash(),
+			)
+			require.ErrorIs(t, err, moduletypes.ErrInvalidReason)
+		})
+	}
+}
+
 func TestSubmitAttestationRejectsMalformedEvidenceHash(t *testing.T) {
 	ctx, k := setupStoreKeeper(t)
 	provider := testutil.AccAddress(t)
@@ -215,14 +381,34 @@ func testHash() []byte {
 	return []byte("12345678901234567890123456789012")
 }
 
+func openAuditEscrowRecord(ctx sdk.Context, provider sdk.AccAddress, id uint64, params vtypes.Params) vtypes.AuditEscrowRecord {
+	return vtypes.AuditEscrowRecord{
+		ID:                    id,
+		Provider:              provider.String(),
+		RequestedTier:         vtypes.TierIdentified,
+		Fee:                   params.MinFeeL1,
+		FeeStatus:             vtypes.FeeStatusEscrowed,
+		ProviderDeposit:       params.ProviderAuditDeposit,
+		ProviderDepositStatus: vtypes.ProviderDepositStatusEscrowed,
+		Status:                vtypes.AuditEscrowStatusOpen,
+		OpenedAt:              ctx.BlockTime(),
+		ExpiresAt:             ctx.BlockTime().Add(params.TtlL1),
+	}
+}
+
 type recordingBank struct {
 	accountToModule []bankTransfer
+	moduleToAccount []bankTransfer
+	moduleToModule  []bankTransfer
 }
 
 type bankTransfer struct {
-	from   sdk.AccAddress
-	module string
-	amt    sdk.Coins
+	from       sdk.AccAddress
+	to         sdk.AccAddress
+	module     string
+	fromModule string
+	toModule   string
+	amt        sdk.Coins
 }
 
 func (b *recordingBank) SendCoinsFromAccountToModule(_ context.Context, senderAddr sdk.AccAddress, recipientModule string, amt sdk.Coins) error {
@@ -234,6 +420,20 @@ func (b *recordingBank) SendCoinsFromAccountToModule(_ context.Context, senderAd
 	return nil
 }
 
-func (b *recordingBank) SendCoinsFromModuleToAccount(context.Context, string, sdk.AccAddress, sdk.Coins) error {
+func (b *recordingBank) SendCoinsFromModuleToAccount(_ context.Context, senderModule string, recipientAddr sdk.AccAddress, amt sdk.Coins) error {
+	b.moduleToAccount = append(b.moduleToAccount, bankTransfer{
+		to:     recipientAddr,
+		module: senderModule,
+		amt:    amt,
+	})
+	return nil
+}
+
+func (b *recordingBank) SendCoinsFromModuleToModule(_ context.Context, senderModule, recipientModule string, amt sdk.Coins) error {
+	b.moduleToModule = append(b.moduleToModule, bankTransfer{
+		fromModule: senderModule,
+		toModule:   recipientModule,
+		amt:        amt,
+	})
 	return nil
 }

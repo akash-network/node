@@ -7,6 +7,7 @@ import (
 	errorsmod "cosmossdk.io/errors"
 	"cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 
 	vtypes "pkg.akt.dev/go/node/verification/v1"
 
@@ -167,6 +168,96 @@ func (k *keeper) OpenAuditEscrow(
 	})
 }
 
+func (k *keeper) CancelAuditEscrow(ctx sdk.Context, provider sdk.AccAddress, auditEscrowID uint64) error {
+	escrow, found := k.GetAuditEscrow(ctx, auditEscrowID)
+	if !found {
+		return moduletypes.ErrAuditEscrowNotFound
+	}
+	if escrow.Provider != provider.String() {
+		return moduletypes.ErrUnauthorizedAuditEscrowSettlement
+	}
+	if escrow.Status != vtypes.AuditEscrowStatusOpen || escrow.ConsumedByAuditor != "" || escrow.ConsumedAt != nil || !escrow.ExpiresAt.After(ctx.BlockTime()) {
+		return moduletypes.ErrAuditEscrowNotConsumable
+	}
+	if err := requireEscrowedAuditEscrowFunds(escrow); err != nil {
+		return err
+	}
+
+	result, err := k.Settle(SettlementInput{
+		Path:              SettlementPathAuditEscrow,
+		AuditEscrowReason: vtypes.AuditEscrowSettlementReasonCancelledUnconsumed,
+		FaultAttribution:  vtypes.FaultAttributionNoFault,
+	})
+	if err != nil {
+		return err
+	}
+	if err = k.settleAuditEscrowFunds(ctx, provider, escrow, result); err != nil {
+		return err
+	}
+
+	escrow.Status = vtypes.AuditEscrowStatusCancelled
+	escrow.FeeStatus = result.FeeStatus
+	escrow.ProviderDepositStatus = result.ProviderDepositStatus
+	escrow.SettlementReason = vtypes.AuditEscrowSettlementReasonCancelledUnconsumed
+	escrow.FaultAttribution = vtypes.FaultAttributionNoFault
+	return k.SetAuditEscrow(ctx, escrow)
+}
+
+func (k *keeper) SettleAuditEscrow(
+	ctx sdk.Context,
+	authority string,
+	auditEscrowID uint64,
+	reason vtypes.AuditEscrowSettlementReason,
+	fault vtypes.FaultAttribution,
+	evidenceHash []byte,
+) error {
+	if k.authority != "" && authority != k.authority {
+		return errorsmod.Wrapf(moduletypes.ErrUnauthorizedAuditEscrowSettlement, "invalid authority %s", authority)
+	}
+	if err := validateHash(evidenceHash, "evidence hash"); err != nil {
+		return err
+	}
+
+	escrow, found := k.GetAuditEscrow(ctx, auditEscrowID)
+	if !found {
+		return moduletypes.ErrAuditEscrowNotFound
+	}
+	if escrow.Status != vtypes.AuditEscrowStatusOpen || escrow.ConsumedByAuditor != "" || escrow.ConsumedAt != nil {
+		return moduletypes.ErrAuditEscrowNotConsumable
+	}
+	if reason != vtypes.AuditEscrowSettlementReasonProviderFault &&
+		reason != vtypes.AuditEscrowSettlementReasonNoFault {
+		return errorsmod.Wrap(moduletypes.ErrInvalidReason, "governance audit escrow settlement requires provider fault or no fault")
+	}
+	if err := requireEscrowedAuditEscrowFunds(escrow); err != nil {
+		return err
+	}
+
+	result, err := k.Settle(SettlementInput{
+		Path:              SettlementPathAuditEscrow,
+		AuditEscrowReason: reason,
+		FaultAttribution:  fault,
+	})
+	if err != nil {
+		return err
+	}
+
+	provider, err := sdk.AccAddressFromBech32(escrow.Provider)
+	if err != nil {
+		return err
+	}
+	if err = k.settleAuditEscrowFunds(ctx, provider, escrow, result); err != nil {
+		return err
+	}
+
+	escrow.Status = auditEscrowStatusForSettlement(reason)
+	escrow.FeeStatus = result.FeeStatus
+	escrow.ProviderDepositStatus = result.ProviderDepositStatus
+	escrow.SettlementReason = reason
+	escrow.FaultAttribution = fault
+	return k.SetAuditEscrow(ctx, escrow)
+}
+
 func (k *keeper) SubmitAttestation(
 	ctx sdk.Context,
 	provider sdk.AccAddress,
@@ -300,6 +391,60 @@ func (k *keeper) sendAccountToModule(ctx sdk.Context, addr sdk.AccAddress, coin 
 		return nil
 	}
 	return k.bank.SendCoinsFromAccountToModule(ctx, addr, moduletypes.ModuleName, sdk.NewCoins(coin))
+}
+
+func (k *keeper) sendModuleToAccount(ctx sdk.Context, addr sdk.AccAddress, coin sdk.Coin) error {
+	if k.bank == nil || coin.IsZero() {
+		return nil
+	}
+	return k.bank.SendCoinsFromModuleToAccount(ctx, moduletypes.ModuleName, addr, sdk.NewCoins(coin))
+}
+
+func (k *keeper) sendModuleToDistribution(ctx sdk.Context, coin sdk.Coin) error {
+	if k.bank == nil || coin.IsZero() {
+		return nil
+	}
+	return k.bank.SendCoinsFromModuleToModule(ctx, moduletypes.ModuleName, distrtypes.ModuleName, sdk.NewCoins(coin))
+}
+
+func (k *keeper) settleAuditEscrowFunds(ctx sdk.Context, provider sdk.AccAddress, escrow vtypes.AuditEscrowRecord, result SettlementResult) error {
+	switch result.FeeStatus {
+	case vtypes.FeeStatusReturnedToProvider:
+		if err := k.sendModuleToAccount(ctx, provider, escrow.Fee); err != nil {
+			return err
+		}
+	case vtypes.FeeStatusEscrowed, vtypes.FeeStatusReleasedToAuditor, vtypes.FeeStatusUnspecified:
+		return errorsmod.Wrapf(moduletypes.ErrInvalidReason, "unsupported audit escrow fee settlement %s", result.FeeStatus)
+	}
+
+	switch result.ProviderDepositStatus {
+	case vtypes.ProviderDepositStatusReturnedToProvider:
+		return k.sendModuleToAccount(ctx, provider, escrow.ProviderDeposit)
+	case vtypes.ProviderDepositStatusSlashed:
+		return k.sendModuleToDistribution(ctx, escrow.ProviderDeposit)
+	case vtypes.ProviderDepositStatusEscrowed, vtypes.ProviderDepositStatusUnspecified:
+		return errorsmod.Wrapf(moduletypes.ErrInvalidReason, "unsupported audit escrow deposit settlement %s", result.ProviderDepositStatus)
+	}
+
+	return nil
+}
+
+func requireEscrowedAuditEscrowFunds(escrow vtypes.AuditEscrowRecord) error {
+	if escrow.FeeStatus != vtypes.FeeStatusEscrowed || escrow.ProviderDepositStatus != vtypes.ProviderDepositStatusEscrowed {
+		return moduletypes.ErrAuditEscrowNotConsumable
+	}
+	return nil
+}
+
+func auditEscrowStatusForSettlement(reason vtypes.AuditEscrowSettlementReason) vtypes.AuditEscrowStatus {
+	switch reason {
+	case vtypes.AuditEscrowSettlementReasonCancelledUnconsumed:
+		return vtypes.AuditEscrowStatusCancelled
+	case vtypes.AuditEscrowSettlementReasonExpiredUnconsumed:
+		return vtypes.AuditEscrowStatusExpired
+	default:
+		return vtypes.AuditEscrowStatusSettled
+	}
 }
 
 func validatePositiveCoin(coin sdk.Coin) error {
