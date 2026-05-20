@@ -177,6 +177,9 @@ func (k *keeper) SubmitAttestation(
 	if !k.providerExists(ctx, provider) {
 		return moduletypes.ErrProviderNotRegistered
 	}
+	if provider.Equals(auditor) {
+		return moduletypes.ErrSelfAttestation
+	}
 	if err := validateMsgTier(tier); err != nil {
 		return err
 	}

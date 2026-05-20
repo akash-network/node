@@ -121,6 +121,25 @@ func TestSubmitAttestationRequiresSnapshotForL2(t *testing.T) {
 	require.ErrorIs(t, err, moduletypes.ErrSnapshotNonCompliant)
 }
 
+func TestSubmitAttestationRejectsSelfAttestation(t *testing.T) {
+	ctx, k := setupStoreKeeper(t)
+	provider := testutil.AccAddress(t)
+	params := k.GetParams(ctx)
+
+	err := k.SubmitAttestation(
+		ctx,
+		provider,
+		provider,
+		vtypes.TierIdentified,
+		nil,
+		[]byte("evidence"),
+		params.MinFeeL1,
+		params.AttestationDeposit,
+		1,
+	)
+	require.ErrorIs(t, err, moduletypes.ErrSelfAttestation)
+}
+
 func TestRegisterAuditorRejectsWrongAuthority(t *testing.T) {
 	ctx, k := setupStoreKeeperWithOptions(t, WithAuthority("gov"))
 
