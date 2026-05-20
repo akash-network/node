@@ -47,6 +47,12 @@ Add new upgrades after this line based on the template above
 - Migrations
     - oracle     `1 -> 2`
     - deployment `7 -> 8`
+    - market     `8 -> 9`
+    - provider   `3 -> 4`
+
+- Stores
+    - added
+        - `verification`
 
 ##### v2.0.0
 
