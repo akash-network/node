@@ -429,9 +429,40 @@ func (k *keeper) settleAuditEscrowFunds(ctx sdk.Context, provider sdk.AccAddress
 	return nil
 }
 
+func (k *keeper) settleAttestationFunds(ctx sdk.Context, auditor sdk.AccAddress, attestation vtypes.AttestationRecord, result SettlementResult) error {
+	if err := requireEscrowedAttestationFunds(attestation); err != nil {
+		return err
+	}
+
+	switch result.FeeStatus {
+	case vtypes.FeeStatusReleasedToAuditor:
+		if err := k.sendModuleToAccount(ctx, auditor, attestation.Fee); err != nil {
+			return err
+		}
+	case vtypes.FeeStatusReturnedToProvider, vtypes.FeeStatusEscrowed, vtypes.FeeStatusUnspecified:
+		return errorsmod.Wrapf(moduletypes.ErrInvalidReason, "unsupported attestation fee settlement %s", result.FeeStatus)
+	}
+
+	switch result.DepositStatus {
+	case vtypes.DepositStatusReturnedToAuditor:
+		return k.sendModuleToAccount(ctx, auditor, attestation.Deposit)
+	case vtypes.DepositStatusSlashed, vtypes.DepositStatusEscrowed, vtypes.DepositStatusPendingDiscrepancy, vtypes.DepositStatusUnspecified:
+		return errorsmod.Wrapf(moduletypes.ErrInvalidReason, "unsupported attestation deposit settlement %s", result.DepositStatus)
+	}
+
+	return nil
+}
+
 func requireEscrowedAuditEscrowFunds(escrow vtypes.AuditEscrowRecord) error {
 	if escrow.FeeStatus != vtypes.FeeStatusEscrowed || escrow.ProviderDepositStatus != vtypes.ProviderDepositStatusEscrowed {
 		return moduletypes.ErrAuditEscrowNotConsumable
+	}
+	return nil
+}
+
+func requireEscrowedAttestationFunds(attestation vtypes.AttestationRecord) error {
+	if attestation.FeeStatus != vtypes.FeeStatusEscrowed || attestation.DepositStatus != vtypes.DepositStatusEscrowed {
+		return moduletypes.ErrInvalidReason
 	}
 	return nil
 }

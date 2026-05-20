@@ -95,7 +95,13 @@ func (k *keeper) SetAttestation(ctx sdk.Context, record vtypes.AttestationRecord
 
 	store := ctx.KVStore(k.skey)
 	store.Set(attestationKey(provider, auditor), k.cdc.MustMarshal(&record))
-	store.Set(auditorAttestationKey(auditor, provider), []byte{})
+	if record.Status == vtypes.AttestationStatusValid {
+		store.Set(auditorAttestationKey(auditor, provider), []byte{})
+		store.Set(attestationExpiryQueueKey(record.ExpiresAt, provider, auditor), []byte{})
+	} else {
+		store.Delete(auditorAttestationKey(auditor, provider))
+		store.Delete(attestationExpiryQueueKey(record.ExpiresAt, provider, auditor))
+	}
 	return nil
 }
 
@@ -243,7 +249,13 @@ func (k *keeper) SetProviderSnapshot(ctx sdk.Context, record vtypes.ProviderSnap
 		return err
 	}
 
-	ctx.KVStore(k.skey).Set(addressKey(prefixProviderSnapshot, provider), k.cdc.MustMarshal(&record))
+	store := ctx.KVStore(k.skey)
+	store.Set(addressKey(prefixProviderSnapshot, provider), k.cdc.MustMarshal(&record))
+	if record.Suspended {
+		store.Delete(snapshotComplianceQueueKey(record.ComplianceDeadline, provider))
+	} else {
+		store.Set(snapshotComplianceQueueKey(record.ComplianceDeadline, provider), []byte{})
+	}
 	return nil
 }
 
@@ -286,6 +298,11 @@ func (k *keeper) SetAuditEscrow(ctx sdk.Context, record vtypes.AuditEscrowRecord
 	store := ctx.KVStore(k.skey)
 	store.Set(idKey(prefixAuditEscrow, record.ID), k.marshalStoreRecord(auditEscrowRecordTypeURL, &record))
 	store.Set(providerAuditEscrowKey(provider, record.ID), []byte{})
+	if record.Status == vtypes.AuditEscrowStatusOpen {
+		store.Set(auditEscrowExpiryQueueKey(record.ExpiresAt, record.ID), []byte{})
+	} else {
+		store.Delete(auditEscrowExpiryQueueKey(record.ExpiresAt, record.ID))
+	}
 
 	if record.ConsumedByAuditor != "" {
 		auditor, err := sdk.AccAddressFromBech32(record.ConsumedByAuditor)
@@ -357,6 +374,11 @@ func (k *keeper) SetProviderVerificationGrace(ctx sdk.Context, record vtypes.Pro
 	store := ctx.KVStore(k.skey)
 	store.Set(idKey(prefixGraceRecord, record.ID), k.marshalStoreRecord(graceRecordTypeURL, &record))
 	store.Set(providerGraceKey(provider, record.ID), []byte{})
+	if record.Status == vtypes.VerificationGraceStatusActive {
+		store.Set(graceExpiryQueueKey(record.ExpiresAt, record.ID), []byte{})
+	} else {
+		store.Delete(graceExpiryQueueKey(record.ExpiresAt, record.ID))
+	}
 	return nil
 }
 

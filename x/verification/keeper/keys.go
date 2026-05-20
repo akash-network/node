@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"encoding/binary"
+	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
@@ -25,6 +26,17 @@ const (
 	prefixProviderAuditEscrow
 	prefixAuditorAuditEscrow
 	prefixProviderGrace
+)
+
+const (
+	prefixQueueAttestationExpiry     byte = 0x20
+	prefixQueueAuditorRenewal        byte = 0x21
+	prefixQueueSnapshotCompliance    byte = 0x22
+	prefixQueueProviderBondUnbonding byte = 0x23
+	prefixQueueAuditorBondUnbonding  byte = 0x24
+	prefixQueueDiscrepancyTimeout    byte = 0x25
+	prefixQueueAuditEscrowExpiry     byte = 0x26
+	prefixQueueGraceExpiry           byte = 0x27
 )
 
 func singletonKey(prefix byte) []byte {
@@ -95,6 +107,40 @@ func providerGraceKey(provider sdk.AccAddress, id uint64) []byte {
 
 func providerGracePrefix(provider sdk.AccAddress) []byte {
 	return addressKey(prefixProviderGrace, provider)
+}
+
+func attestationExpiryQueueKey(expiresAt time.Time, provider, auditor sdk.AccAddress) []byte {
+	return timeQueueKey(prefixQueueAttestationExpiry, expiresAt, provider, auditor)
+}
+
+func snapshotComplianceQueueKey(deadline time.Time, provider sdk.AccAddress) []byte {
+	return timeQueueKey(prefixQueueSnapshotCompliance, deadline, provider)
+}
+
+func auditEscrowExpiryQueueKey(expiresAt time.Time, id uint64) []byte {
+	return timeQueueKey(prefixQueueAuditEscrowExpiry, expiresAt, encodeID(id))
+}
+
+func graceExpiryQueueKey(expiresAt time.Time, id uint64) []byte {
+	return timeQueueKey(prefixQueueGraceExpiry, expiresAt, encodeID(id))
+}
+
+func timeQueueKey(prefix byte, at time.Time, parts ...[]byte) []byte {
+	size := 9
+	for _, part := range parts {
+		size += len(part)
+	}
+
+	key := make([]byte, size)
+	key[0] = prefix
+	binary.BigEndian.PutUint64(key[1:], uint64(at.UnixNano()))
+
+	offset := 9
+	for _, part := range parts {
+		copy(key[offset:], part)
+		offset += len(part)
+	}
+	return key
 }
 
 func readID(bz []byte) uint64 {

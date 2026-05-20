@@ -103,10 +103,6 @@ func (k *keeper) GetAuthority() string {
 	return k.authority
 }
 
-func (k *keeper) EndBlocker(_ context.Context) error {
-	return nil
-}
-
 func (k *keeper) Settle(input SettlementInput) (SettlementResult, error) {
 	return Settle(input)
 }
