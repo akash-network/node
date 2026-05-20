@@ -10,6 +10,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 	vtypes "pkg.akt.dev/go/node/verification/v1"
 	"pkg.akt.dev/go/testutil"
 
@@ -121,6 +122,44 @@ func TestSubmitAttestationRequiresSnapshotForL2(t *testing.T) {
 		1,
 	)
 	require.ErrorIs(t, err, moduletypes.ErrSnapshotNonCompliant)
+}
+
+func TestSubmitAttestationRejectsProviderTooYoungForL2(t *testing.T) {
+	ctx, k, provider, auditor, params := setupL2AttestationPrerequisites(t, func(ctx sdk.Context, params vtypes.Params) time.Time {
+		return ctx.BlockTime().Add(-params.MinAgeL2).Add(time.Second)
+	})
+
+	err := k.SubmitAttestation(
+		ctx,
+		provider,
+		auditor,
+		vtypes.TierVerified,
+		nil,
+		testHash(),
+		params.MinFeeL2,
+		params.AttestationDeposit,
+		1,
+	)
+	require.ErrorIs(t, err, moduletypes.ErrInsufficientProviderAge)
+}
+
+func TestSubmitAttestationAcceptsProviderOldEnoughForL2(t *testing.T) {
+	ctx, k, provider, auditor, params := setupL2AttestationPrerequisites(t, func(ctx sdk.Context, params vtypes.Params) time.Time {
+		return ctx.BlockTime().Add(-params.MinAgeL2)
+	})
+
+	err := k.SubmitAttestation(
+		ctx,
+		provider,
+		auditor,
+		vtypes.TierVerified,
+		nil,
+		testHash(),
+		params.MinFeeL2,
+		params.AttestationDeposit,
+		1,
+	)
+	require.NoError(t, err)
 }
 
 func TestSubmitAttestationRejectsSelfAttestation(t *testing.T) {
@@ -394,6 +433,67 @@ func openAuditEscrowRecord(ctx sdk.Context, provider sdk.AccAddress, id uint64, 
 		OpenedAt:              ctx.BlockTime(),
 		ExpiresAt:             ctx.BlockTime().Add(params.TtlL1),
 	}
+}
+
+func setupL2AttestationPrerequisites(t testing.TB, registeredAt func(sdk.Context, vtypes.Params) time.Time) (sdk.Context, Keeper, sdk.AccAddress, sdk.AccAddress, vtypes.Params) {
+	t.Helper()
+
+	provider := testutil.AccAddress(t)
+	providerKeeper := newStubProviderKeeper(provider)
+	ctx, k := setupStoreKeeperWithOptions(t, WithProviderKeeper(providerKeeper))
+	auditor := testutil.AccAddress(t)
+	params := k.GetParams(ctx)
+	providerKeeper.registrations[provider.String()] = registeredAt(ctx, params)
+
+	require.NoError(t, k.SetAuditor(ctx, vtypes.AuditorRecord{
+		Address:            auditor.String(),
+		Status:             vtypes.AuditorStatusActive,
+		MaxAttestationTier: vtypes.TierTrusted,
+		BondAmount:         params.BondL4,
+		BondStatus:         vtypes.BondStatusBonded,
+		RegisteredAt:       ctx.BlockTime(),
+		RenewalDeadline:    ctx.BlockTime().Add(params.RenewalPeriodL4),
+	}))
+	require.NoError(t, k.SetProviderBond(ctx, providerBondRecord(provider)))
+	require.NoError(t, k.SetProviderSnapshot(ctx, providerSnapshotRecord(provider)))
+	require.NoError(t, k.SetAuditEscrow(ctx, vtypes.AuditEscrowRecord{
+		ID:                    1,
+		Provider:              provider.String(),
+		RequestedTier:         vtypes.TierVerified,
+		Fee:                   params.MinFeeL2,
+		FeeStatus:             vtypes.FeeStatusEscrowed,
+		ProviderDeposit:       params.ProviderAuditDeposit,
+		ProviderDepositStatus: vtypes.ProviderDepositStatusEscrowed,
+		Status:                vtypes.AuditEscrowStatusOpen,
+		OpenedAt:              ctx.BlockTime(),
+		ExpiresAt:             ctx.BlockTime().Add(params.TtlL2),
+	}))
+
+	return ctx, k, provider, auditor, params
+}
+
+type stubProviderKeeper struct {
+	providers     map[string]ptypes.Provider
+	registrations map[string]time.Time
+}
+
+func newStubProviderKeeper(provider sdk.AccAddress) *stubProviderKeeper {
+	return &stubProviderKeeper{
+		providers: map[string]ptypes.Provider{
+			provider.String(): {Owner: provider.String()},
+		},
+		registrations: make(map[string]time.Time),
+	}
+}
+
+func (k *stubProviderKeeper) Get(_ sdk.Context, id sdk.Address) (ptypes.Provider, bool) {
+	provider, found := k.providers[id.String()]
+	return provider, found
+}
+
+func (k *stubProviderKeeper) GetRegistrationTime(_ sdk.Context, id sdk.Address) (time.Time, bool) {
+	registeredAt, found := k.registrations[id.String()]
+	return registeredAt, found
 }
 
 type recordingBank struct {
