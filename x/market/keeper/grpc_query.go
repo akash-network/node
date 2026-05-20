@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -1171,4 +1172,43 @@ func (k Querier) Params(ctx context.Context, req *types.QueryParamsRequest) (*ty
 	}
 
 	return &types.QueryParamsResponse{Params: params}, nil
+}
+
+func (k Querier) ProviderLeaseStats(ctx context.Context, req *types.QueryProviderLeaseStatsRequest) (*types.QueryProviderLeaseStatsResponse, error) {
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "empty request")
+	}
+
+	provider, err := sdk.AccAddressFromBech32(req.Provider)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid provider: %s", err.Error())
+	}
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	completed, failures, _ := k.GetProviderLeaseStats(sdkCtx, provider)
+
+	var faulted uint64
+	reasons := make([]v1.LeaseClosedReason, 0, len(failures))
+	for reason, count := range failures {
+		faulted += count
+		reasons = append(reasons, reason)
+	}
+	sort.Slice(reasons, func(i, j int) bool {
+		return reasons[i] < reasons[j]
+	})
+
+	stats := v1.ProviderLeaseStats{
+		TotalLeases:           completed + faulted,
+		CompletedLeases:       completed,
+		ProviderFaultedLeases: faulted,
+		ProviderFaults:        make([]v1.ProviderLeaseStatsByReason, 0, len(reasons)),
+	}
+	for _, reason := range reasons {
+		stats.ProviderFaults = append(stats.ProviderFaults, v1.ProviderLeaseStatsByReason{
+			Reason: reason,
+			Count:  failures[reason],
+		})
+	}
+
+	return &types.QueryProviderLeaseStatsResponse{Stats: stats}, nil
 }

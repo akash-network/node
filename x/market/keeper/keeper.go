@@ -37,6 +37,7 @@ type IKeeper interface {
 	GetOrder(ctx sdk.Context, id mv1.OrderID) (types.Order, bool)
 	GetBid(ctx sdk.Context, id mv1.BidID) (types.Bid, bool)
 	GetLease(ctx sdk.Context, id mv1.LeaseID) (mv1.Lease, bool)
+	BackfillProviderLeaseStats(ctx sdk.Context) error
 	GetProviderLeaseStats(ctx sdk.Context, provider sdk.Address) (uint64, map[mv1.LeaseClosedReason]uint64, bool)
 	LeaseForOrder(ctx sdk.Context, bs types.Bid_State, oid mv1.OrderID) (mv1.Lease, bool)
 	WithOrders(ctx sdk.Context, fn func(types.Order) bool)
@@ -82,7 +83,7 @@ func NewKeeper(cdc codec.BinaryCodec, skey *storetypes.KVStoreKey, ekeeper Escro
 	bids := collections.NewIndexedMap(sb, collections.NewPrefix(keys.BidPrefixNew), "bids", keys.BidPrimaryKeyCodec, codec.CollValue[types.Bid](cdc), bidIndexes)
 	orders := collections.NewIndexedMap(sb, collections.NewPrefix(keys.OrderPrefixNew), "orders", keys.OrderPrimaryKeyCodec, codec.CollValue[types.Order](cdc), orderIndexes)
 	leases := collections.NewIndexedMap(sb, collections.NewPrefix(keys.LeasePrefixNew), "leases", keys.LeasePrimaryKeyCodec, codec.CollValue[mv1.Lease](cdc), leaseIndexes)
-	leaseStats := collections.NewMap(sb, collections.NewPrefix(keys.ProviderLeaseStatsPrefix), "provider_lease_stats", keys.ProviderLeaseStatsKeyCodec, collections.Uint64Value)
+	leaseStats := NewProviderLeaseStatsMap(sb)
 	params := collections.NewItem(sb, keys.ParamsPrefix, "params", codec.CollValue[types.Params](cdc))
 
 	schema, err := sb.Build()
