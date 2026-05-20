@@ -1,8 +1,6 @@
 package handler
 
 import (
-	"time"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
@@ -10,7 +8,6 @@ import (
 
 type ProviderKeeper interface {
 	Get(ctx sdk.Context, id sdk.Address) (ptypes.Provider, bool)
-	GetRegistrationTime(ctx sdk.Context, id sdk.Address) (time.Time, bool)
 }
 
 type MarketStatsKeeper interface {
