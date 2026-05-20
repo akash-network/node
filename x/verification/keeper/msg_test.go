@@ -11,6 +11,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	mv1 "pkg.akt.dev/go/node/market/v1"
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 	vtypes "pkg.akt.dev/go/node/verification/v1"
 	"pkg.akt.dev/go/testutil"
@@ -187,6 +188,82 @@ func TestSubmitAttestationAcceptsProviderOldEnoughForL2(t *testing.T) {
 		nil,
 		testHash(),
 		params.MinFeeL2,
+		params.AttestationDeposit,
+		1,
+	)
+	require.NoError(t, err)
+}
+
+func TestSubmitAttestationRejectsInsufficientLeaseHistoryForL3(t *testing.T) {
+	tests := []struct {
+		name      string
+		completed uint64
+		failures  map[mv1.LeaseClosedReason]uint64
+		found     bool
+	}{
+		{
+			name:      "no stats",
+			completed: 0,
+			failures:  nil,
+			found:     false,
+		},
+		{
+			name:      "below minimum leases",
+			completed: 9,
+			failures:  nil,
+			found:     true,
+		},
+		{
+			name:      "below completion rate",
+			completed: 97,
+			failures: map[mv1.LeaseClosedReason]uint64{
+				mv1.LeaseClosedReasonUnstable: 3,
+			},
+			found: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, k, provider, auditor, params := setupL3AttestationPrerequisites(t, stubMarketStatsKeeper{
+				completed: tc.completed,
+				failures:  tc.failures,
+				found:     tc.found,
+			})
+
+			err := k.SubmitAttestation(
+				ctx,
+				provider,
+				auditor,
+				vtypes.TierEstablished,
+				nil,
+				testHash(),
+				params.MinFeeL3,
+				params.AttestationDeposit,
+				1,
+			)
+			require.ErrorIs(t, err, moduletypes.ErrInsufficientLeaseCompletionRate)
+		})
+	}
+}
+
+func TestSubmitAttestationAcceptsSufficientLeaseHistoryForL3(t *testing.T) {
+	ctx, k, provider, auditor, params := setupL3AttestationPrerequisites(t, stubMarketStatsKeeper{
+		completed: 98,
+		failures: map[mv1.LeaseClosedReason]uint64{
+			mv1.LeaseClosedReasonUnstable: 2,
+		},
+		found: true,
+	})
+
+	err := k.SubmitAttestation(
+		ctx,
+		provider,
+		auditor,
+		vtypes.TierEstablished,
+		nil,
+		testHash(),
+		params.MinFeeL3,
 		params.AttestationDeposit,
 		1,
 	)
@@ -1105,6 +1182,56 @@ func setupL2AttestationPrerequisites(t testing.TB, registeredAt func(sdk.Context
 	}))
 
 	return ctx, k, provider, auditor, params
+}
+
+func setupL3AttestationPrerequisites(t testing.TB, market MarketStatsKeeper) (sdk.Context, Keeper, sdk.AccAddress, sdk.AccAddress, vtypes.Params) {
+	t.Helper()
+
+	provider := testutil.AccAddress(t)
+	providerKeeper := newStubProviderKeeper(provider)
+	ctx, k := setupStoreKeeperWithOptions(t, WithProviderKeeper(providerKeeper), WithMarketStatsKeeper(market))
+	auditor := testutil.AccAddress(t)
+	params := k.GetParams(ctx)
+	providerKeeper.registrations[provider.String()] = ctx.BlockTime().Add(-params.MinAgeL3)
+
+	require.NoError(t, k.SetAuditor(ctx, vtypes.AuditorRecord{
+		Address:            auditor.String(),
+		Status:             vtypes.AuditorStatusActive,
+		MaxAttestationTier: vtypes.TierTrusted,
+		BondAmount:         params.BondL4,
+		BondStatus:         vtypes.BondStatusBonded,
+		RegisteredAt:       ctx.BlockTime(),
+		RenewalDeadline:    ctx.BlockTime().Add(params.RenewalPeriodL4),
+	}))
+	require.NoError(t, k.SetProviderBond(ctx, vtypes.ProviderBondRecord{
+		Provider:     provider.String(),
+		BondedAmount: params.BondL4,
+	}))
+	require.NoError(t, k.SetProviderSnapshot(ctx, providerSnapshotRecord(provider)))
+	require.NoError(t, k.SetAuditEscrow(ctx, vtypes.AuditEscrowRecord{
+		ID:                    1,
+		Provider:              provider.String(),
+		RequestedTier:         vtypes.TierEstablished,
+		Fee:                   params.MinFeeL3,
+		FeeStatus:             vtypes.FeeStatusEscrowed,
+		ProviderDeposit:       params.ProviderAuditDeposit,
+		ProviderDepositStatus: vtypes.ProviderDepositStatusEscrowed,
+		Status:                vtypes.AuditEscrowStatusOpen,
+		OpenedAt:              ctx.BlockTime(),
+		ExpiresAt:             ctx.BlockTime().Add(params.TtlL3),
+	}))
+
+	return ctx, k, provider, auditor, params
+}
+
+type stubMarketStatsKeeper struct {
+	completed uint64
+	failures  map[mv1.LeaseClosedReason]uint64
+	found     bool
+}
+
+func (k stubMarketStatsKeeper) GetProviderLeaseStats(_ sdk.Context, _ sdk.Address) (uint64, map[mv1.LeaseClosedReason]uint64, bool) {
+	return k.completed, k.failures, k.found
 }
 
 type stubProviderKeeper struct {

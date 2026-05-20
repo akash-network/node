@@ -37,6 +37,7 @@ type IKeeper interface {
 	GetOrder(ctx sdk.Context, id mv1.OrderID) (types.Order, bool)
 	GetBid(ctx sdk.Context, id mv1.BidID) (types.Bid, bool)
 	GetLease(ctx sdk.Context, id mv1.LeaseID) (mv1.Lease, bool)
+	GetProviderLeaseStats(ctx sdk.Context, provider sdk.Address) (uint64, map[mv1.LeaseClosedReason]uint64, bool)
 	LeaseForOrder(ctx sdk.Context, bs types.Bid_State, oid mv1.OrderID) (mv1.Lease, bool)
 	WithOrders(ctx sdk.Context, fn func(types.Order) bool)
 	WithBids(ctx sdk.Context, fn func(types.Bid) bool)
@@ -61,11 +62,12 @@ type Keeper struct {
 	// This should be the x/gov module account.
 	authority string
 
-	schema collections.Schema
-	bids   *collections.IndexedMap[keys.BidPrimaryKey, types.Bid, BidIndexes]
-	orders *collections.IndexedMap[keys.OrderPrimaryKey, types.Order, OrderIndexes]
-	leases *collections.IndexedMap[keys.LeasePrimaryKey, mv1.Lease, LeaseIndexes]
-	Params collections.Item[types.Params]
+	schema     collections.Schema
+	bids       *collections.IndexedMap[keys.BidPrimaryKey, types.Bid, BidIndexes]
+	orders     *collections.IndexedMap[keys.OrderPrimaryKey, types.Order, OrderIndexes]
+	leases     *collections.IndexedMap[keys.LeasePrimaryKey, mv1.Lease, LeaseIndexes]
+	leaseStats collections.Map[keys.ProviderLeaseStatsKey, uint64]
+	Params     collections.Item[types.Params]
 }
 
 // NewKeeper creates and returns an instance for Market keeper
@@ -80,6 +82,7 @@ func NewKeeper(cdc codec.BinaryCodec, skey *storetypes.KVStoreKey, ekeeper Escro
 	bids := collections.NewIndexedMap(sb, collections.NewPrefix(keys.BidPrefixNew), "bids", keys.BidPrimaryKeyCodec, codec.CollValue[types.Bid](cdc), bidIndexes)
 	orders := collections.NewIndexedMap(sb, collections.NewPrefix(keys.OrderPrefixNew), "orders", keys.OrderPrimaryKeyCodec, codec.CollValue[types.Order](cdc), orderIndexes)
 	leases := collections.NewIndexedMap(sb, collections.NewPrefix(keys.LeasePrefixNew), "leases", keys.LeasePrimaryKeyCodec, codec.CollValue[mv1.Lease](cdc), leaseIndexes)
+	leaseStats := collections.NewMap(sb, collections.NewPrefix(keys.ProviderLeaseStatsPrefix), "provider_lease_stats", keys.ProviderLeaseStatsKeyCodec, collections.Uint64Value)
 	params := collections.NewItem(sb, keys.ParamsPrefix, "params", codec.CollValue[types.Params](cdc))
 
 	schema, err := sb.Build()
@@ -88,15 +91,16 @@ func NewKeeper(cdc codec.BinaryCodec, skey *storetypes.KVStoreKey, ekeeper Escro
 	}
 
 	res := &Keeper{
-		skey:      skey,
-		cdc:       cdc,
-		ekeeper:   ekeeper,
-		authority: authority,
-		schema:    schema,
-		bids:      bids,
-		orders:    orders,
-		leases:    leases,
-		Params:    params,
+		skey:       skey,
+		cdc:        cdc,
+		ekeeper:    ekeeper,
+		authority:  authority,
+		schema:     schema,
+		bids:       bids,
+		orders:     orders,
+		leases:     leases,
+		leaseStats: leaseStats,
+		Params:     params,
 	}
 
 	return res
@@ -359,6 +363,9 @@ func (k Keeper) OnLeaseClosed(ctx sdk.Context, lease mv1.Lease, state mv1.Lease_
 	// IndexedMap.Set automatically updates all indexes
 	if err := k.leases.Set(ctx, keys.LeaseIDToKey(lease.ID), lease); err != nil {
 		return fmt.Errorf("failed to update lease: %w", err)
+	}
+	if err := k.incrementProviderLeaseStats(ctx, lease.ID.Provider, reason); err != nil {
+		return fmt.Errorf("failed to update provider lease stats: %w", err)
 	}
 
 	err := ctx.EventManager().EmitTypedEvent(

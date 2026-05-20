@@ -49,6 +49,7 @@ var (
 	LeasePrefixNew                    = []byte{0x13, 0x02}
 	LeaseIndexStatePrefix             = []byte{0x13, 0x03}
 	LeaseIndexProviderPrefix          = []byte{0x13, 0x04}
+	ProviderLeaseStatsPrefix          = []byte{0x13, 0x05}
 	LeaseStateActivePrefix            = []byte{LeaseStateActivePrefixID}
 	LeaseStateInsufficientFundsPrefix = []byte{LeaseStateInsufficientFundsPrefixID}
 	LeaseStateClosedPrefix            = []byte{LeaseStateClosedPrefixID}

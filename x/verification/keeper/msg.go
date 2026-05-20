@@ -1056,6 +1056,9 @@ func (k *keeper) validateProviderPrerequisites(ctx sdk.Context, provider sdk.Acc
 	if err := k.validateProviderAge(ctx, provider, tier, params); err != nil {
 		return err
 	}
+	if err := k.validateProviderLeaseCompletion(ctx, provider, tier, params); err != nil {
+		return err
+	}
 
 	snapshot, found := k.GetProviderSnapshot(ctx, provider)
 	if !found {
@@ -1074,6 +1077,33 @@ func (k *keeper) validateProviderPrerequisites(ctx sdk.Context, provider sdk.Acc
 		if err := requireCoinAtLeast(bond.BondedAmount, required, moduletypes.ErrInsufficientProviderBond); err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (k *keeper) validateProviderLeaseCompletion(ctx sdk.Context, provider sdk.AccAddress, tier vtypes.VerificationTier, params vtypes.Params) error {
+	if k.market == nil || !vtypes.TierAtLeast(tier, vtypes.TierEstablished) {
+		return nil
+	}
+
+	completed, failuresByReason, found := k.market.GetProviderLeaseStats(ctx, provider)
+	var failed uint64
+	for _, count := range failuresByReason {
+		failed += count
+	}
+
+	total := completed + failed
+	if !found || total < uint64(params.MinLeasesForCompletionRate) {
+		return errorsmod.Wrapf(moduletypes.ErrInsufficientLeaseCompletionRate, "completed %d failed %d requires at least %d leases", completed, failed, params.MinLeasesForCompletionRate)
+	}
+
+	minBps := params.MinLeaseCompletionBpsL3
+	if vtypes.TierAtLeast(tier, vtypes.TierTrusted) {
+		minBps = params.MinLeaseCompletionBpsL4
+	}
+	if completed*10000 < total*uint64(minBps) {
+		return errorsmod.Wrapf(moduletypes.ErrInsufficientLeaseCompletionRate, "completed %d failed %d below %d bps", completed, failed, minBps)
 	}
 
 	return nil
