@@ -22,6 +22,7 @@ import (
 
 	apptypes "pkg.akt.dev/node/v2/app/types"
 	utypes "pkg.akt.dev/node/v2/upgrades/types"
+	verificationtypes "pkg.akt.dev/node/v2/x/verification/types"
 )
 
 const (
@@ -46,7 +47,7 @@ func initUpgrade(log log.Logger, app *apptypes.App) (utypes.IUpgrade, error) {
 
 func (up *upgrade) StoreLoader() *storetypes.StoreUpgrades {
 	return &storetypes.StoreUpgrades{
-		Added:   []string{},
+		Added:   []string{verificationtypes.StoreKey},
 		Deleted: []string{},
 	}
 }
