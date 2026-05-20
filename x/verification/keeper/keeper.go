@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"time"
 
 	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
@@ -17,6 +18,7 @@ type Keeper interface {
 	Codec() codec.BinaryCodec
 	StoreKey() storetypes.StoreKey
 	NewQuerier() vtypes.QueryServer
+	GetAuthority() string
 	EndBlocker(context.Context) error
 	Settle(SettlementInput) (SettlementResult, error)
 	GetParams(sdk.Context) vtypes.Params
@@ -52,18 +54,31 @@ type Keeper interface {
 	NextAuditEscrowID(sdk.Context) uint64
 	GetNextGraceRecordID(sdk.Context) uint64
 	SetNextGraceRecordID(sdk.Context, uint64)
+	RegisterAuditor(sdk.Context, string, sdk.AccAddress, vtypes.VerificationTier, []byte) error
+	PostAuditorBond(sdk.Context, sdk.AccAddress, sdk.Coin) error
+	PostProviderBond(sdk.Context, sdk.AccAddress, sdk.Coin) error
+	PostSnapshotHash(sdk.Context, sdk.AccAddress, []byte, vtypes.ResourceSummary, time.Time) error
+	OpenAuditEscrow(sdk.Context, sdk.AccAddress, vtypes.VerificationTier, []vtypes.CapabilityFlag, sdk.Coin, sdk.Coin, time.Time, []byte) (uint64, error)
+	SubmitAttestation(sdk.Context, sdk.AccAddress, sdk.AccAddress, vtypes.VerificationTier, []vtypes.CapabilityFlag, []byte, sdk.Coin, sdk.Coin, uint64) error
 }
 
 type keeper struct {
-	cdc  codec.BinaryCodec
-	skey storetypes.StoreKey
+	cdc       codec.BinaryCodec
+	skey      storetypes.StoreKey
+	authority string
+	bank      BankKeeper
+	provider  ProviderKeeper
 }
 
-func NewKeeper(cdc codec.BinaryCodec, skey storetypes.StoreKey) Keeper {
-	return &keeper{
+func NewKeeper(cdc codec.BinaryCodec, skey storetypes.StoreKey, opts ...Option) Keeper {
+	k := &keeper{
 		cdc:  cdc,
 		skey: skey,
 	}
+	for _, opt := range opts {
+		opt(k)
+	}
+	return k
 }
 
 func (k *keeper) Codec() codec.BinaryCodec {
@@ -80,6 +95,10 @@ func (k *keeper) Logger(sctx sdk.Context) log.Logger {
 
 func (k *keeper) NewQuerier() vtypes.QueryServer {
 	return &Querier{Keeper: k}
+}
+
+func (k *keeper) GetAuthority() string {
+	return k.authority
 }
 
 func (k *keeper) EndBlocker(_ context.Context) error {
