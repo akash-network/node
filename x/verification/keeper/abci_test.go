@@ -32,6 +32,12 @@ func TestEndBlockerExpiresAttestation(t *testing.T) {
 	require.Equal(t, vtypes.DepositStatusReturnedToAuditor, got.DepositStatus)
 	require.Equal(t, vtypes.FaultAttributionNoFault, got.FaultAttribution)
 
+	testutil.EnsureEvent(t, ctx.EventManager().Events().ToABCIEvents(), &vtypes.EventAttestationExpired{
+		Provider: provider.String(),
+		Auditor:  auditor.String(),
+		Tier:     record.Tier,
+	})
+
 	var byAuditor []vtypes.AttestationRecord
 	k.WithAuditorAttestations(ctx, auditor, func(record vtypes.AttestationRecord) bool {
 		byAuditor = append(byAuditor, record)
@@ -115,6 +121,9 @@ func TestEndBlockerSuspendsSnapshotCompliance(t *testing.T) {
 	got, found := k.GetProviderSnapshot(ctx, provider)
 	require.True(t, found)
 	require.True(t, got.Suspended)
+	testutil.EnsureEvent(t, ctx.EventManager().Events().ToABCIEvents(), &vtypes.EventSnapshotSuspended{
+		Provider: provider.String(),
+	})
 }
 
 func TestEndBlockerExpiresAuditEscrowAndHonorsCap(t *testing.T) {
@@ -142,6 +151,11 @@ func TestEndBlockerExpiresAuditEscrowAndHonorsCap(t *testing.T) {
 	require.Equal(t, vtypes.ProviderDepositStatusReturnedToProvider, got1.ProviderDepositStatus)
 	require.Equal(t, vtypes.AuditEscrowSettlementReasonExpiredUnconsumed, got1.SettlementReason)
 	require.Equal(t, vtypes.FaultAttributionNoFault, got1.FaultAttribution)
+	testutil.EnsureEvent(t, ctx.EventManager().Events().ToABCIEvents(), &vtypes.EventAuditEscrowSettled{
+		AuditEscrowID:    1,
+		Reason:           vtypes.AuditEscrowSettlementReasonExpiredUnconsumed,
+		FaultAttribution: vtypes.FaultAttributionNoFault,
+	})
 
 	got2, found := k.GetAuditEscrow(ctx, 2)
 	require.True(t, found)
@@ -190,4 +204,8 @@ func TestEndBlockerExpiresVerificationGrace(t *testing.T) {
 	got, found := k.GetProviderVerificationGrace(ctx, provider)
 	require.True(t, found)
 	require.Equal(t, vtypes.VerificationGraceStatusExpired, got.Status)
+	testutil.EnsureEvent(t, ctx.EventManager().Events().ToABCIEvents(), &vtypes.EventVerificationGraceEnded{
+		GraceRecordID: record.ID,
+		Status:        vtypes.VerificationGraceStatusExpired,
+	})
 }

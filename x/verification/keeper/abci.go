@@ -72,7 +72,14 @@ func (k *keeper) processAttestationExpiryQueue(ctx sdk.Context, blockTime time.T
 		attestation.FeeStatus = result.FeeStatus
 		attestation.DepositStatus = result.DepositStatus
 		attestation.FaultAttribution = vtypes.FaultAttributionNoFault
-		return k.SetAttestation(ctx, attestation)
+		if err = k.SetAttestation(ctx, attestation); err != nil {
+			return err
+		}
+		return ctx.EventManager().EmitTypedEvent(&vtypes.EventAttestationExpired{
+			Provider: attestation.Provider,
+			Auditor:  attestation.Auditor,
+			Tier:     attestation.Tier,
+		})
 	})
 }
 
@@ -132,7 +139,12 @@ func (k *keeper) processSnapshotComplianceQueue(ctx sdk.Context, blockTime time.
 		}
 
 		snapshot.Suspended = true
-		return k.SetProviderSnapshot(ctx, snapshot)
+		if err = k.SetProviderSnapshot(ctx, snapshot); err != nil {
+			return err
+		}
+		return ctx.EventManager().EmitTypedEvent(&vtypes.EventSnapshotSuspended{
+			Provider: snapshot.Provider,
+		})
 	})
 }
 
@@ -214,7 +226,14 @@ func (k *keeper) processDiscrepancyTimeoutQueue(ctx sdk.Context, blockTime time.
 		if err = k.resolveDiscrepancyAuditorBond(ctx, auditorA, discrepancy.ID, false); err != nil {
 			return err
 		}
-		return k.resolveDiscrepancyAuditorBond(ctx, auditorB, discrepancy.ID, false)
+		if err = k.resolveDiscrepancyAuditorBond(ctx, auditorB, discrepancy.ID, false); err != nil {
+			return err
+		}
+		return ctx.EventManager().EmitTypedEvent(&vtypes.EventDiscrepancyTimedOut{
+			DiscrepancyID: discrepancy.ID,
+			AuditorA:      discrepancy.AuditorA,
+			AuditorB:      discrepancy.AuditorB,
+		})
 	})
 }
 
@@ -281,7 +300,14 @@ func (k *keeper) processAuditEscrowExpiryQueue(ctx sdk.Context, blockTime time.T
 		escrow.ProviderDepositStatus = result.ProviderDepositStatus
 		escrow.SettlementReason = vtypes.AuditEscrowSettlementReasonExpiredUnconsumed
 		escrow.FaultAttribution = vtypes.FaultAttributionNoFault
-		return k.SetAuditEscrow(ctx, escrow)
+		if err = k.SetAuditEscrow(ctx, escrow); err != nil {
+			return err
+		}
+		return ctx.EventManager().EmitTypedEvent(&vtypes.EventAuditEscrowSettled{
+			AuditEscrowID:    escrow.ID,
+			Reason:           escrow.SettlementReason,
+			FaultAttribution: escrow.FaultAttribution,
+		})
 	})
 }
 
@@ -298,6 +324,12 @@ func (k *keeper) processGraceExpiryQueue(ctx sdk.Context, blockTime time.Time, l
 		}
 
 		grace.Status = vtypes.VerificationGraceStatusExpired
-		return k.SetProviderVerificationGrace(ctx, grace)
+		if err = k.SetProviderVerificationGrace(ctx, grace); err != nil {
+			return err
+		}
+		return ctx.EventManager().EmitTypedEvent(&vtypes.EventVerificationGraceEnded{
+			GraceRecordID: grace.ID,
+			Status:        grace.Status,
+		})
 	})
 }

@@ -92,6 +92,21 @@ func TestSubmitAttestationCreatesDiscrepancyAndGrace(t *testing.T) {
 	require.True(t, found)
 	require.Equal(t, vtypes.BondStatusFrozen, auditorBRecord.BondStatus)
 	require.Equal(t, uint64(1), auditorBRecord.DiscrepancyCount)
+
+	events := ctx.EventManager().Events().ToABCIEvents()
+	testutil.EnsureEvent(t, events, &vtypes.EventDiscrepancyDetected{
+		DiscrepancyID: 1,
+		Provider:      provider.String(),
+		AuditorA:      auditorA.String(),
+		TierA:         vtypes.TierIdentified,
+		AuditorB:      auditorB.String(),
+		TierB:         vtypes.TierEstablished,
+	})
+	testutil.EnsureEvent(t, events, &vtypes.EventVerificationGraceStarted{
+		GraceRecordID: 1,
+		Provider:      provider.String(),
+		PreservedTier: vtypes.TierIdentified,
+	})
 }
 
 func TestSubmitAttestationDoesNotCreateDiscrepancyAtThreshold(t *testing.T) {
@@ -213,6 +228,13 @@ func TestResolveDiscrepancySettlesAttestationsAndAuditorBonds(t *testing.T) {
 	require.Equal(t, vtypes.BondStatusUnspecified, auditorBRecord.BondStatus)
 	require.True(t, auditorBRecord.BondAmount.Amount.IsZero())
 
+	testutil.EnsureEvent(t, ctx.EventManager().Events().ToABCIEvents(), &vtypes.EventDiscrepancyResolved{
+		DiscrepancyID:     1,
+		VindicatedAuditor: auditorA.String(),
+		Reason:            vtypes.DiscrepancyResolutionReasonAuditorACorrect,
+		FaultAttribution:  vtypes.FaultAttributionAuditorFault,
+	})
+
 	require.Equal(t, []bankTransfer{
 		{to: auditorA, module: moduletypes.ModuleName, amt: sdk.NewCoins(params.MinFeeL1)},
 		{to: auditorA, module: moduletypes.ModuleName, amt: sdk.NewCoins(params.AttestationDeposit)},
@@ -258,6 +280,12 @@ func TestEndBlockerTimesOutPendingDiscrepancy(t *testing.T) {
 	auditorBRecord, found := k.GetAuditor(ctx, auditorB)
 	require.True(t, found)
 	require.Equal(t, vtypes.BondStatusBonded, auditorBRecord.BondStatus)
+
+	testutil.EnsureEvent(t, ctx.EventManager().Events().ToABCIEvents(), &vtypes.EventDiscrepancyTimedOut{
+		DiscrepancyID: 1,
+		AuditorA:      auditorA.String(),
+		AuditorB:      auditorB.String(),
+	})
 
 	require.Equal(t, []bankTransfer{
 		{to: provider, module: moduletypes.ModuleName, amt: sdk.NewCoins(params.MinFeeL1)},

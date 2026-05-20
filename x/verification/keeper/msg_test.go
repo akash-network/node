@@ -80,6 +80,36 @@ func TestHappyPathMessages(t *testing.T) {
 	require.Equal(t, auditor.String(), escrow.ConsumedByAuditor)
 	require.NotNil(t, escrow.ConsumedAt)
 
+	events := ctx.EventManager().Events().ToABCIEvents()
+	testutil.EnsureEvent(t, events, &vtypes.EventAuditorBondPosted{
+		Auditor: auditor.String(),
+		Amount:  params.BondL4,
+	})
+	testutil.EnsureEvent(t, events, &vtypes.EventProviderBondPosted{
+		Provider:    provider.String(),
+		Amount:      sdk.NewInt64Coin(bondDenom, 200000000),
+		TotalBonded: sdk.NewInt64Coin(bondDenom, 200000000),
+	})
+	testutil.EnsureEvent(t, events, &vtypes.EventSnapshotHashPosted{
+		Provider:           provider.String(),
+		SnapshotHash:       testHash(),
+		ComplianceDeadline: ctx.BlockTime().Add(params.SnapshotHashInterval),
+	})
+	testutil.EnsureEvent(t, events, &vtypes.EventAuditEscrowOpened{
+		AuditEscrowID:   escrowID,
+		Provider:        provider.String(),
+		Fee:             params.MinFeeL2,
+		ProviderDeposit: params.ProviderAuditDeposit,
+	})
+	testutil.EnsureEvent(t, events, &vtypes.EventAttestationSubmitted{
+		Provider:      provider.String(),
+		Auditor:       auditor.String(),
+		Tier:          vtypes.TierVerified,
+		Capabilities:  []vtypes.CapabilityFlag{vtypes.CapabilityTEEHardwareAttestation},
+		ExpiresAt:     ctx.BlockTime().Add(params.TtlL2),
+		AuditEscrowID: escrowID,
+	})
+
 	require.Len(t, bank.accountToModule, 5)
 }
 
@@ -246,6 +276,15 @@ func TestSubmitAttestationSameAuditorReplacementDisposition(t *testing.T) {
 				require.Empty(t, bank.accountToModule)
 			} else {
 				require.NoError(t, err)
+				events := ctx.EventManager().Events().ToABCIEvents()
+				testutil.EnsureEvent(t, events, &vtypes.EventAttestationReplaced{
+					Provider:         provider.String(),
+					Auditor:          auditor.String(),
+					OldTier:          existing.Tier,
+					NewTier:          vtypes.TierIdentified,
+					OldAuditEscrowID: existing.AuditEscrowID,
+					NewAuditEscrowID: 1,
+				})
 				require.Equal(t, []bankTransfer{
 					{to: auditor, module: moduletypes.ModuleName, amt: sdk.NewCoins(params.MinFeeL1)},
 					{to: auditor, module: moduletypes.ModuleName, amt: sdk.NewCoins(params.AttestationDeposit)},
@@ -556,6 +595,12 @@ func TestCancelAuditEscrowSettlesUnconsumedEscrow(t *testing.T) {
 	require.Empty(t, escrow.ConsumedByAuditor)
 	require.Nil(t, escrow.ConsumedAt)
 
+	testutil.EnsureEvent(t, ctx.EventManager().Events().ToABCIEvents(), &vtypes.EventAuditEscrowSettled{
+		AuditEscrowID:    1,
+		Reason:           vtypes.AuditEscrowSettlementReasonCancelledUnconsumed,
+		FaultAttribution: vtypes.FaultAttributionNoFault,
+	})
+
 	require.Equal(t, []bankTransfer{
 		{to: provider, module: moduletypes.ModuleName, amt: sdk.NewCoins(params.MinFeeL1)},
 		{to: provider, module: moduletypes.ModuleName, amt: sdk.NewCoins(params.ProviderAuditDeposit)},
@@ -627,6 +672,12 @@ func TestSettleAuditEscrowProviderFaultSlashesDeposit(t *testing.T) {
 	require.Equal(t, vtypes.ProviderDepositStatusSlashed, escrow.ProviderDepositStatus)
 	require.Equal(t, vtypes.AuditEscrowSettlementReasonProviderFault, escrow.SettlementReason)
 	require.Equal(t, vtypes.FaultAttributionProviderFault, escrow.FaultAttribution)
+
+	testutil.EnsureEvent(t, ctx.EventManager().Events().ToABCIEvents(), &vtypes.EventAuditEscrowSettled{
+		AuditEscrowID:    1,
+		Reason:           vtypes.AuditEscrowSettlementReasonProviderFault,
+		FaultAttribution: vtypes.FaultAttributionProviderFault,
+	})
 
 	require.Equal(t, []bankTransfer{
 		{to: provider, module: moduletypes.ModuleName, amt: sdk.NewCoins(params.MinFeeL1)},
