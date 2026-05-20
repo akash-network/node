@@ -181,6 +181,88 @@ func TestSubmitAttestationRejectsSelfAttestation(t *testing.T) {
 	require.ErrorIs(t, err, moduletypes.ErrSelfAttestation)
 }
 
+func TestSubmitAttestationSameAuditorReplacementDisposition(t *testing.T) {
+	tests := []struct {
+		name                  string
+		existingFeeStatus     vtypes.FeeStatus
+		existingDepositStatus vtypes.DepositStatus
+		wantErr               error
+		wantStatus            vtypes.AttestationStatus
+		wantFeeStatus         vtypes.FeeStatus
+		wantDepositStatus     vtypes.DepositStatus
+	}{
+		{
+			name:                  "settles existing valid attestation and stores replacement",
+			existingFeeStatus:     vtypes.FeeStatusEscrowed,
+			existingDepositStatus: vtypes.DepositStatusEscrowed,
+			wantStatus:            vtypes.AttestationStatusValid,
+			wantFeeStatus:         vtypes.FeeStatusEscrowed,
+			wantDepositStatus:     vtypes.DepositStatusEscrowed,
+		},
+		{
+			name:                  "rejects replacement when existing funds are not escrowed",
+			existingFeeStatus:     vtypes.FeeStatusReleasedToAuditor,
+			existingDepositStatus: vtypes.DepositStatusEscrowed,
+			wantErr:               moduletypes.ErrInvalidReason,
+			wantStatus:            vtypes.AttestationStatusValid,
+			wantFeeStatus:         vtypes.FeeStatusReleasedToAuditor,
+			wantDepositStatus:     vtypes.DepositStatusEscrowed,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			bank := &recordingBank{}
+			ctx, k := setupStoreKeeperWithOptions(t, WithBankKeeper(bank))
+			provider := testutil.AccAddress(t)
+			auditor := testutil.AccAddress(t)
+			params := k.GetParams(ctx)
+
+			require.NoError(t, k.SetAuditor(ctx, auditorRecord(auditor)))
+			existing := attestationRecord(provider, auditor)
+			existing.Tier = vtypes.TierIdentified
+			existing.Fee = params.MinFeeL1
+			existing.FeeStatus = tc.existingFeeStatus
+			existing.Deposit = params.AttestationDeposit
+			existing.DepositStatus = tc.existingDepositStatus
+			require.NoError(t, k.SetAttestation(ctx, existing))
+			require.NoError(t, k.SetAuditEscrow(ctx, openAuditEscrowRecord(ctx, provider, 1, params)))
+
+			err := k.SubmitAttestation(
+				ctx,
+				provider,
+				auditor,
+				vtypes.TierIdentified,
+				nil,
+				testHash(),
+				params.MinFeeL1,
+				params.AttestationDeposit,
+				1,
+			)
+			if tc.wantErr != nil {
+				require.ErrorIs(t, err, tc.wantErr)
+				require.Empty(t, bank.moduleToAccount)
+				require.Empty(t, bank.accountToModule)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, []bankTransfer{
+					{to: auditor, module: moduletypes.ModuleName, amt: sdk.NewCoins(params.MinFeeL1)},
+					{to: auditor, module: moduletypes.ModuleName, amt: sdk.NewCoins(params.AttestationDeposit)},
+				}, bank.moduleToAccount)
+				require.Equal(t, []bankTransfer{
+					{from: auditor, module: moduletypes.ModuleName, amt: sdk.NewCoins(params.AttestationDeposit)},
+				}, bank.accountToModule)
+			}
+
+			got, found := k.GetAttestation(ctx, provider, auditor)
+			require.True(t, found)
+			require.Equal(t, tc.wantStatus, got.Status)
+			require.Equal(t, tc.wantFeeStatus, got.FeeStatus)
+			require.Equal(t, tc.wantDepositStatus, got.DepositStatus)
+		})
+	}
+}
+
 func TestCancelAuditEscrowSettlesUnconsumedEscrow(t *testing.T) {
 	bank := &recordingBank{}
 	ctx, k := setupStoreKeeperWithOptions(t, WithBankKeeper(bank))
