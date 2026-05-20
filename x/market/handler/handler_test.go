@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -28,6 +29,7 @@ import (
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 	attr "pkg.akt.dev/go/node/types/attributes/v1"
 	deposit "pkg.akt.dev/go/node/types/deposit/v1"
+	vtypes "pkg.akt.dev/go/node/verification/v1"
 	"pkg.akt.dev/go/sdkutil"
 	"pkg.akt.dev/go/testutil"
 
@@ -36,6 +38,7 @@ import (
 	dhandler "pkg.akt.dev/node/v2/x/deployment/handler"
 	ehandler "pkg.akt.dev/node/v2/x/escrow/handler"
 	"pkg.akt.dev/node/v2/x/market/handler"
+	verificationtypes "pkg.akt.dev/node/v2/x/verification/types"
 )
 
 type testSuite struct {
@@ -48,16 +51,19 @@ type testSuite struct {
 
 func setupTestSuite(t *testing.T) *testSuite {
 	ssuite := state.SetupTestSuite(t)
+	verification, ok := ssuite.VerificationKeeper().(handler.VerificationKeeper)
+	require.True(t, ok)
 	suite := &testSuite{
 		t:         t,
 		TestSuite: ssuite,
 		handler: handler.NewHandler(handler.Keepers{
-			Escrow:     ssuite.EscrowKeeper(),
-			Audit:      ssuite.AuditKeeper(),
-			Market:     ssuite.MarketKeeper(),
-			Deployment: ssuite.DeploymentKeeper(),
-			Provider:   ssuite.ProviderKeeper(),
-			Bank:       ssuite.BankKeeper(),
+			Escrow:       ssuite.EscrowKeeper(),
+			Audit:        ssuite.AuditKeeper(),
+			Verification: verification,
+			Market:       ssuite.MarketKeeper(),
+			Deployment:   ssuite.DeploymentKeeper(),
+			Provider:     ssuite.ProviderKeeper(),
+			Bank:         ssuite.BankKeeper(),
 		}),
 	}
 
@@ -913,6 +919,51 @@ func TestCreateBidValid(t *testing.T) {
 
 	_, found := suite.MarketKeeper().GetBid(suite.Context(), bid)
 	require.True(t, found)
+}
+
+func TestCreateBidVerificationFilterRejectsInsufficientTier(t *testing.T) {
+	suite := setupTestSuite(t)
+	ctx := suite.Context()
+
+	params := suite.VerificationKeeper().GetParams(ctx)
+	params.VerificationModuleActive = true
+	suite.VerificationKeeper().SetParams(ctx, params)
+
+	deployment := testutil.Deployment(t)
+	group := testutil.DeploymentGroup(t, deployment.ID, 0)
+	group.GroupSpec.Resources = testutil.Resources(t, testutil.WithDenom("uact"))
+	group.GroupSpec.Requirements.Verification = &vtypes.VerificationRequirement{
+		MinTier: vtypes.TierVerified,
+	}
+
+	order, err := suite.MarketKeeper().CreateOrder(ctx, group.ID, group.GroupSpec, nil)
+	require.NoError(t, err)
+
+	provider := suite.createProvider(group.GroupSpec.Requirements.Attributes).Owner
+	providerAddr, err := sdk.AccAddressFromBech32(provider)
+	require.NoError(t, err)
+	require.NoError(t, suite.VerificationKeeper().SetProviderSnapshot(ctx, vtypes.ProviderSnapshotRecord{
+		Provider:           provider,
+		SnapshotHash:       []byte("snapshot-hash"),
+		ComplianceDeadline: ctx.BlockTime().Add(time.Hour),
+	}))
+
+	bidID := mv1.MakeBidID(order.ID, providerAddr)
+	msg := &mvbeta.MsgCreateBid{
+		ID:    bidID,
+		Price: sdk.NewDecCoin(sdkutil.DenomUact, sdkmath.NewInt(1)),
+		Deposit: deposit.Deposit{
+			Amount:  mvbeta.DefaultBidMinDepositACT,
+			Sources: deposit.Sources{deposit.SourceBalance},
+		},
+	}
+
+	res, err := suite.handler(ctx, msg)
+	require.Nil(t, res)
+	require.ErrorIs(t, err, verificationtypes.ErrInsufficientVerificationTier)
+
+	_, found := suite.MarketKeeper().GetBid(ctx, bidID)
+	require.False(t, found)
 }
 
 func TestCreateBidInvalidPrice(t *testing.T) {

@@ -35,6 +35,8 @@ import (
 	mkeeper "pkg.akt.dev/node/v2/x/market/keeper"
 	oraclekeeper "pkg.akt.dev/node/v2/x/oracle/keeper"
 	pkeeper "pkg.akt.dev/node/v2/x/provider/keeper"
+	verificationkeeper "pkg.akt.dev/node/v2/x/verification/keeper"
+	verificationtypes "pkg.akt.dev/node/v2/x/verification/types"
 )
 
 // TestSuite encapsulates a functional Akash nodes data stores for
@@ -49,16 +51,17 @@ type TestSuite struct {
 }
 
 type Keepers struct {
-	Account    *emocks.AccountKeeper
-	Audit      akeeper.IKeeper
-	Authz      *emocks.AuthzKeeper
-	Bank       *emocks.BankKeeper
-	BME        bmekeeper.Keeper
-	Deployment dkeeper.IKeeper
-	Escrow     ekeeper.Keeper
-	Market     mkeeper.IKeeper
-	Oracle     oraclekeeper.Keeper
-	Provider   pkeeper.IKeeper
+	Account      *emocks.AccountKeeper
+	Audit        akeeper.IKeeper
+	Authz        *emocks.AuthzKeeper
+	Bank         *emocks.BankKeeper
+	BME          bmekeeper.Keeper
+	Deployment   dkeeper.IKeeper
+	Escrow       ekeeper.Keeper
+	Market       mkeeper.IKeeper
+	Oracle       oraclekeeper.Keeper
+	Provider     pkeeper.IKeeper
+	Verification verificationkeeper.Keeper
 }
 
 // SetupTestSuite provides toolkit for accessing stores and keepers
@@ -218,6 +221,15 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 	if keepers.Provider == nil {
 		keepers.Provider = pkeeper.NewKeeper(cdc, app.GetKey(ptypes.StoreKey), authtypes.NewModuleAddress(govtypes.ModuleName).String())
 	}
+	if keepers.Verification == nil {
+		keepers.Verification = verificationkeeper.NewKeeper(
+			cdc,
+			app.GetKey(verificationtypes.StoreKey),
+			verificationkeeper.WithAuthority(authtypes.NewModuleAddress(govtypes.ModuleName).String()),
+			verificationkeeper.WithBankKeeper(keepers.Bank),
+			verificationkeeper.WithProviderKeeper(keepers.Provider),
+		)
+	}
 
 	hook := mhooks.New(keepers.Deployment, keepers.Market)
 
@@ -290,6 +302,10 @@ func (ts *TestSuite) DeploymentKeeper() dkeeper.IKeeper {
 // ProviderKeeper key store
 func (ts *TestSuite) ProviderKeeper() pkeeper.IKeeper {
 	return ts.keepers.Provider
+}
+
+func (ts *TestSuite) VerificationKeeper() verificationkeeper.Keeper {
+	return ts.keepers.Verification
 }
 
 // BankKeeper key store
