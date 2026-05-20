@@ -167,6 +167,36 @@ func (ms msgServer) SubmitAttestation(goCtx context.Context, msg *vtypes.MsgSubm
 	return &vtypes.MsgSubmitAttestationResponse{}, nil
 }
 
+func (ms msgServer) RevokeAttestation(goCtx context.Context, msg *vtypes.MsgRevokeAttestation) (*vtypes.MsgRevokeAttestationResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	provider, auditor, err := parseProviderAuditor(msg.Provider, msg.Auditor)
+	if err != nil {
+		return nil, err
+	}
+
+	err = ms.keeper.RevokeAttestation(ctx, provider, auditor, msg.Reason, msg.EvidenceHash)
+	if err != nil {
+		return nil, err
+	}
+
+	return &vtypes.MsgRevokeAttestationResponse{}, nil
+}
+
+func (ms msgServer) RemoveAttestation(goCtx context.Context, msg *vtypes.MsgRemoveAttestation) (*vtypes.MsgRemoveAttestationResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	provider, auditor, err := parseProviderAuditor(msg.Provider, msg.Auditor)
+	if err != nil {
+		return nil, err
+	}
+
+	err = ms.keeper.RemoveAttestation(ctx, provider, auditor)
+	if err != nil {
+		return nil, err
+	}
+
+	return &vtypes.MsgRemoveAttestationResponse{}, nil
+}
+
 func (ms msgServer) ResolveDiscrepancy(goCtx context.Context, msg *vtypes.MsgResolveDiscrepancy) (*vtypes.MsgResolveDiscrepancyResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	err := ms.keeper.ResolveDiscrepancy(

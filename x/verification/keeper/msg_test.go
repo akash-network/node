@@ -263,6 +263,277 @@ func TestSubmitAttestationSameAuditorReplacementDisposition(t *testing.T) {
 	}
 }
 
+func TestRevokeAttestationDisposition(t *testing.T) {
+	tests := []struct {
+		name              string
+		reason            vtypes.AttestationRevocationReason
+		wantFault         vtypes.FaultAttribution
+		wantFeeStatus     vtypes.FeeStatus
+		wantDepositStatus vtypes.DepositStatus
+		wantAccountTxs    []func(sdk.AccAddress, sdk.AccAddress, vtypes.AttestationRecord) bankTransfer
+		wantModuleTxs     []func(vtypes.AttestationRecord) bankTransfer
+	}{
+		{
+			name:              "provider fault releases fee and deposit to auditor",
+			reason:            vtypes.AttestationRevocationReasonProviderNoLongerQualifies,
+			wantFault:         vtypes.FaultAttributionProviderFault,
+			wantFeeStatus:     vtypes.FeeStatusReleasedToAuditor,
+			wantDepositStatus: vtypes.DepositStatusReturnedToAuditor,
+			wantAccountTxs: []func(sdk.AccAddress, sdk.AccAddress, vtypes.AttestationRecord) bankTransfer{
+				func(_ sdk.AccAddress, auditor sdk.AccAddress, attestation vtypes.AttestationRecord) bankTransfer {
+					return bankTransfer{to: auditor, module: moduletypes.ModuleName, amt: sdk.NewCoins(attestation.Fee)}
+				},
+				func(_ sdk.AccAddress, auditor sdk.AccAddress, attestation vtypes.AttestationRecord) bankTransfer {
+					return bankTransfer{to: auditor, module: moduletypes.ModuleName, amt: sdk.NewCoins(attestation.Deposit)}
+				},
+			},
+		},
+		{
+			name:              "auditor evidence error refunds provider and slashes deposit",
+			reason:            vtypes.AttestationRevocationReasonAuditorEvidenceError,
+			wantFault:         vtypes.FaultAttributionAuditorFault,
+			wantFeeStatus:     vtypes.FeeStatusReturnedToProvider,
+			wantDepositStatus: vtypes.DepositStatusSlashed,
+			wantAccountTxs: []func(sdk.AccAddress, sdk.AccAddress, vtypes.AttestationRecord) bankTransfer{
+				func(provider sdk.AccAddress, _ sdk.AccAddress, attestation vtypes.AttestationRecord) bankTransfer {
+					return bankTransfer{to: provider, module: moduletypes.ModuleName, amt: sdk.NewCoins(attestation.Fee)}
+				},
+			},
+			wantModuleTxs: []func(vtypes.AttestationRecord) bankTransfer{
+				func(attestation vtypes.AttestationRecord) bankTransfer {
+					return bankTransfer{fromModule: moduletypes.ModuleName, toModule: distrtypes.ModuleName, amt: sdk.NewCoins(attestation.Deposit)}
+				},
+			},
+		},
+		{
+			name:              "auditor operational exit refunds provider and returns deposit",
+			reason:            vtypes.AttestationRevocationReasonAuditorOperationalExit,
+			wantFault:         vtypes.FaultAttributionNoFault,
+			wantFeeStatus:     vtypes.FeeStatusReturnedToProvider,
+			wantDepositStatus: vtypes.DepositStatusReturnedToAuditor,
+			wantAccountTxs: []func(sdk.AccAddress, sdk.AccAddress, vtypes.AttestationRecord) bankTransfer{
+				func(provider sdk.AccAddress, _ sdk.AccAddress, attestation vtypes.AttestationRecord) bankTransfer {
+					return bankTransfer{to: provider, module: moduletypes.ModuleName, amt: sdk.NewCoins(attestation.Fee)}
+				},
+				func(_ sdk.AccAddress, auditor sdk.AccAddress, attestation vtypes.AttestationRecord) bankTransfer {
+					return bankTransfer{to: auditor, module: moduletypes.ModuleName, amt: sdk.NewCoins(attestation.Deposit)}
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			bank := &recordingBank{}
+			ctx, k := setupStoreKeeperWithOptions(t, WithBankKeeper(bank))
+			provider := testutil.AccAddress(t)
+			auditor := testutil.AccAddress(t)
+			attestation := attestationRecord(provider, auditor)
+			require.NoError(t, k.SetAttestation(ctx, attestation))
+
+			err := k.RevokeAttestation(ctx, provider, auditor, tc.reason, testHash())
+			require.NoError(t, err)
+
+			got, found := k.GetAttestation(ctx, provider, auditor)
+			require.True(t, found)
+			require.Equal(t, vtypes.AttestationStatusRevoked, got.Status)
+			require.Equal(t, tc.wantFault, got.FaultAttribution)
+			require.Equal(t, tc.wantFeeStatus, got.FeeStatus)
+			require.Equal(t, tc.wantDepositStatus, got.DepositStatus)
+
+			wantAccountTxs := make([]bankTransfer, 0, len(tc.wantAccountTxs))
+			for _, build := range tc.wantAccountTxs {
+				wantAccountTxs = append(wantAccountTxs, build(provider, auditor, attestation))
+			}
+			wantModuleTxs := make([]bankTransfer, 0, len(tc.wantModuleTxs))
+			for _, build := range tc.wantModuleTxs {
+				wantModuleTxs = append(wantModuleTxs, build(attestation))
+			}
+			require.Equal(t, wantAccountTxs, bank.moduleToAccount)
+			if len(wantModuleTxs) == 0 {
+				require.Empty(t, bank.moduleToModule)
+			} else {
+				require.Equal(t, wantModuleTxs, bank.moduleToModule)
+			}
+		})
+	}
+}
+
+func TestRevokeAttestationRejectsInvalidInputs(t *testing.T) {
+	tests := []struct {
+		name      string
+		setup     func(sdk.Context, Keeper, sdk.AccAddress, sdk.AccAddress)
+		provider  func(sdk.AccAddress) sdk.AccAddress
+		auditor   func(sdk.AccAddress) sdk.AccAddress
+		reason    vtypes.AttestationRevocationReason
+		evidence  []byte
+		wantErr   error
+		wantState vtypes.AttestationStatus
+	}{
+		{
+			name: "wrong auditor has no authorization over record",
+			setup: func(ctx sdk.Context, k Keeper, provider sdk.AccAddress, auditor sdk.AccAddress) {
+				require.NoError(t, k.SetAttestation(ctx, attestationRecord(provider, auditor)))
+			},
+			provider: func(provider sdk.AccAddress) sdk.AccAddress { return provider },
+			auditor:  func(sdk.AccAddress) sdk.AccAddress { return testutil.AccAddress(t) },
+			reason:   vtypes.AttestationRevocationReasonProviderNoLongerQualifies,
+			evidence: testHash(),
+			wantErr:  moduletypes.ErrAttestationNotFound,
+		},
+		{
+			name: "unspecified reason",
+			setup: func(ctx sdk.Context, k Keeper, provider sdk.AccAddress, auditor sdk.AccAddress) {
+				require.NoError(t, k.SetAttestation(ctx, attestationRecord(provider, auditor)))
+			},
+			provider:  func(provider sdk.AccAddress) sdk.AccAddress { return provider },
+			auditor:   func(auditor sdk.AccAddress) sdk.AccAddress { return auditor },
+			reason:    vtypes.AttestationRevocationReasonUnspecified,
+			evidence:  testHash(),
+			wantErr:   moduletypes.ErrInvalidReason,
+			wantState: vtypes.AttestationStatusValid,
+		},
+		{
+			name: "malformed evidence hash",
+			setup: func(ctx sdk.Context, k Keeper, provider sdk.AccAddress, auditor sdk.AccAddress) {
+				require.NoError(t, k.SetAttestation(ctx, attestationRecord(provider, auditor)))
+			},
+			provider:  func(provider sdk.AccAddress) sdk.AccAddress { return provider },
+			auditor:   func(auditor sdk.AccAddress) sdk.AccAddress { return auditor },
+			reason:    vtypes.AttestationRevocationReasonProviderNoLongerQualifies,
+			evidence:  []byte("short"),
+			wantErr:   moduletypes.ErrInvalidReason,
+			wantState: vtypes.AttestationStatusValid,
+		},
+		{
+			name: "already removed attestation",
+			setup: func(ctx sdk.Context, k Keeper, provider sdk.AccAddress, auditor sdk.AccAddress) {
+				attestation := attestationRecord(provider, auditor)
+				attestation.Status = vtypes.AttestationStatusRemoved
+				require.NoError(t, k.SetAttestation(ctx, attestation))
+			},
+			provider:  func(provider sdk.AccAddress) sdk.AccAddress { return provider },
+			auditor:   func(auditor sdk.AccAddress) sdk.AccAddress { return auditor },
+			reason:    vtypes.AttestationRevocationReasonProviderNoLongerQualifies,
+			evidence:  testHash(),
+			wantErr:   moduletypes.ErrInvalidReason,
+			wantState: vtypes.AttestationStatusRemoved,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			bank := &recordingBank{}
+			ctx, k := setupStoreKeeperWithOptions(t, WithBankKeeper(bank))
+			provider := testutil.AccAddress(t)
+			auditor := testutil.AccAddress(t)
+			tc.setup(ctx, k, provider, auditor)
+
+			err := k.RevokeAttestation(ctx, tc.provider(provider), tc.auditor(auditor), tc.reason, tc.evidence)
+			require.ErrorIs(t, err, tc.wantErr)
+			require.Empty(t, bank.moduleToAccount)
+			require.Empty(t, bank.moduleToModule)
+
+			if tc.wantState != vtypes.AttestationStatusUnspecified {
+				got, found := k.GetAttestation(ctx, provider, auditor)
+				require.True(t, found)
+				require.Equal(t, tc.wantState, got.Status)
+				require.Equal(t, vtypes.FeeStatusEscrowed, got.FeeStatus)
+				require.Equal(t, vtypes.DepositStatusEscrowed, got.DepositStatus)
+			}
+		})
+	}
+}
+
+func TestRemoveAttestationDisposition(t *testing.T) {
+	bank := &recordingBank{}
+	ctx, k := setupStoreKeeperWithOptions(t, WithBankKeeper(bank))
+	provider := testutil.AccAddress(t)
+	auditor := testutil.AccAddress(t)
+	attestation := attestationRecord(provider, auditor)
+	require.NoError(t, k.SetAttestation(ctx, attestation))
+
+	err := k.RemoveAttestation(ctx, provider, auditor)
+	require.NoError(t, err)
+
+	got, found := k.GetAttestation(ctx, provider, auditor)
+	require.True(t, found)
+	require.Equal(t, vtypes.AttestationStatusRemoved, got.Status)
+	require.Equal(t, vtypes.FaultAttributionNoFault, got.FaultAttribution)
+	require.Equal(t, vtypes.FeeStatusReleasedToAuditor, got.FeeStatus)
+	require.Equal(t, vtypes.DepositStatusReturnedToAuditor, got.DepositStatus)
+	require.Equal(t, []bankTransfer{
+		{to: auditor, module: moduletypes.ModuleName, amt: sdk.NewCoins(attestation.Fee)},
+		{to: auditor, module: moduletypes.ModuleName, amt: sdk.NewCoins(attestation.Deposit)},
+	}, bank.moduleToAccount)
+}
+
+func TestRemoveAttestationRejectsInvalidInputs(t *testing.T) {
+	tests := []struct {
+		name      string
+		setup     func(sdk.Context, Keeper, sdk.AccAddress, sdk.AccAddress)
+		provider  func(sdk.AccAddress) sdk.AccAddress
+		auditor   func(sdk.AccAddress) sdk.AccAddress
+		wantErr   error
+		wantState vtypes.AttestationStatus
+	}{
+		{
+			name: "wrong provider has no authorization over record",
+			setup: func(ctx sdk.Context, k Keeper, provider sdk.AccAddress, auditor sdk.AccAddress) {
+				require.NoError(t, k.SetAttestation(ctx, attestationRecord(provider, auditor)))
+			},
+			provider: func(sdk.AccAddress) sdk.AccAddress { return testutil.AccAddress(t) },
+			auditor:  func(auditor sdk.AccAddress) sdk.AccAddress { return auditor },
+			wantErr:  moduletypes.ErrAttestationNotFound,
+		},
+		{
+			name: "non escrowed funds",
+			setup: func(ctx sdk.Context, k Keeper, provider sdk.AccAddress, auditor sdk.AccAddress) {
+				attestation := attestationRecord(provider, auditor)
+				attestation.FeeStatus = vtypes.FeeStatusReleasedToAuditor
+				require.NoError(t, k.SetAttestation(ctx, attestation))
+			},
+			provider:  func(provider sdk.AccAddress) sdk.AccAddress { return provider },
+			auditor:   func(auditor sdk.AccAddress) sdk.AccAddress { return auditor },
+			wantErr:   moduletypes.ErrInvalidReason,
+			wantState: vtypes.AttestationStatusValid,
+		},
+		{
+			name: "already revoked attestation",
+			setup: func(ctx sdk.Context, k Keeper, provider sdk.AccAddress, auditor sdk.AccAddress) {
+				attestation := attestationRecord(provider, auditor)
+				attestation.Status = vtypes.AttestationStatusRevoked
+				require.NoError(t, k.SetAttestation(ctx, attestation))
+			},
+			provider:  func(provider sdk.AccAddress) sdk.AccAddress { return provider },
+			auditor:   func(auditor sdk.AccAddress) sdk.AccAddress { return auditor },
+			wantErr:   moduletypes.ErrInvalidReason,
+			wantState: vtypes.AttestationStatusRevoked,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			bank := &recordingBank{}
+			ctx, k := setupStoreKeeperWithOptions(t, WithBankKeeper(bank))
+			provider := testutil.AccAddress(t)
+			auditor := testutil.AccAddress(t)
+			tc.setup(ctx, k, provider, auditor)
+
+			err := k.RemoveAttestation(ctx, tc.provider(provider), tc.auditor(auditor))
+			require.ErrorIs(t, err, tc.wantErr)
+			require.Empty(t, bank.moduleToAccount)
+			require.Empty(t, bank.moduleToModule)
+
+			if tc.wantState != vtypes.AttestationStatusUnspecified {
+				got, found := k.GetAttestation(ctx, provider, auditor)
+				require.True(t, found)
+				require.Equal(t, tc.wantState, got.Status)
+			}
+		})
+	}
+}
+
 func TestCancelAuditEscrowSettlesUnconsumedEscrow(t *testing.T) {
 	bank := &recordingBank{}
 	ctx, k := setupStoreKeeperWithOptions(t, WithBankKeeper(bank))

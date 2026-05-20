@@ -64,6 +64,8 @@ type Keeper interface {
 	CancelAuditEscrow(sdk.Context, sdk.AccAddress, uint64) error
 	SettleAuditEscrow(sdk.Context, string, uint64, vtypes.AuditEscrowSettlementReason, vtypes.FaultAttribution, []byte) error
 	SubmitAttestation(sdk.Context, sdk.AccAddress, sdk.AccAddress, vtypes.VerificationTier, []vtypes.CapabilityFlag, []byte, sdk.Coin, sdk.Coin, uint64) error
+	RevokeAttestation(sdk.Context, sdk.AccAddress, sdk.AccAddress, vtypes.AttestationRevocationReason, []byte) error
+	RemoveAttestation(sdk.Context, sdk.AccAddress, sdk.AccAddress) error
 	ResolveDiscrepancy(sdk.Context, string, uint64, string, bool, bool, vtypes.DiscrepancyResolutionReason, vtypes.FaultAttribution, []byte) error
 	BidFilter(sdk.Context, sdk.AccAddress, *vtypes.VerificationRequirement) error
 }
