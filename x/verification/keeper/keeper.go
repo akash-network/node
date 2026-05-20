@@ -59,6 +59,9 @@ type Keeper interface {
 	NextGraceRecordID(sdk.Context) uint64
 	RegisterAuditor(sdk.Context, string, sdk.AccAddress, vtypes.VerificationTier, []byte) error
 	PostAuditorBond(sdk.Context, sdk.AccAddress, sdk.Coin) error
+	RenewAuditor(sdk.Context, string, sdk.AccAddress) error
+	RemoveAuditor(sdk.Context, string, sdk.AccAddress) error
+	ResignAuditor(sdk.Context, sdk.AccAddress) error
 	PostProviderBond(sdk.Context, sdk.AccAddress, sdk.Coin) error
 	WithdrawProviderBond(sdk.Context, sdk.AccAddress, sdk.Coin) error
 	SlashProviderBond(sdk.Context, string, sdk.AccAddress, math.LegacyDec, vtypes.ProviderBondSlashReason, []byte) error

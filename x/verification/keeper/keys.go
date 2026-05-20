@@ -113,6 +113,14 @@ func attestationExpiryQueueKey(expiresAt time.Time, provider, auditor sdk.AccAdd
 	return timeQueueKey(prefixQueueAttestationExpiry, expiresAt, provider, auditor)
 }
 
+func auditorRenewalQueueKey(deadline time.Time, auditor sdk.AccAddress) []byte {
+	return timeQueueKey(prefixQueueAuditorRenewal, deadline, auditor)
+}
+
+func auditorBondUnbondingQueueKey(completion time.Time, auditor sdk.AccAddress) []byte {
+	return timeQueueKey(prefixQueueAuditorBondUnbonding, completion, auditor)
+}
+
 func snapshotComplianceQueueKey(deadline time.Time, provider sdk.AccAddress) []byte {
 	return timeQueueKey(prefixQueueSnapshotCompliance, deadline, provider)
 }
