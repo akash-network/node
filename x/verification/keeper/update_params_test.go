@@ -40,6 +40,22 @@ func TestMsgUpdateParamsRejectsInvalidAuthority(t *testing.T) {
 	require.Equal(t, verificationkeeper.DefaultParams(), k.GetParams(ctx))
 }
 
+func TestMsgUpdateParamsRejectsInvalidAuthorityBeforeParamsValidation(t *testing.T) {
+	ctx, k, server := setupUpdateParamsMsgServer(t)
+	params := verificationkeeper.DefaultParams()
+	params.BondL1 = sdk.NewInt64Coin("uakt", 0)
+
+	res, err := server.UpdateParams(sdk.WrapSDKContext(ctx), &vtypes.MsgUpdateParams{
+		Authority: "",
+		Params:    params,
+	})
+
+	require.ErrorIs(t, err, govtypes.ErrInvalidSigner)
+	require.NotErrorIs(t, err, moduletypes.ErrInvalidReason)
+	require.Nil(t, res)
+	require.Equal(t, verificationkeeper.DefaultParams(), k.GetParams(ctx))
+}
+
 func TestMsgUpdateParamsPersistsValidUpdate(t *testing.T) {
 	ctx, k, server := setupUpdateParamsMsgServer(t)
 	params := verificationkeeper.DefaultParams()
