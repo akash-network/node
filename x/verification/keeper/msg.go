@@ -710,6 +710,188 @@ func (k *keeper) RemoveAttestation(ctx sdk.Context, provider sdk.AccAddress, aud
 	return k.SetAttestation(ctx, attestation)
 }
 
+func (k *keeper) RevokeProviderAttestation(
+	ctx sdk.Context,
+	authority string,
+	provider sdk.AccAddress,
+	auditor sdk.AccAddress,
+	reason vtypes.GovernanceAttestationReason,
+	fault vtypes.FaultAttribution,
+	evidenceHash []byte,
+) error {
+	if err := k.validateGovernanceAttestationRevocation(authority, evidenceHash); err != nil {
+		return err
+	}
+
+	attestation, found := k.GetAttestation(ctx, provider, auditor)
+	if !found {
+		return moduletypes.ErrAttestationNotFound
+	}
+	if attestation.Status != vtypes.AttestationStatusValid {
+		return errorsmod.Wrap(moduletypes.ErrInvalidReason, "attestation is not valid")
+	}
+
+	result, err := k.Settle(SettlementInput{
+		Path:                SettlementPathGovernanceAttestation,
+		GovernanceReason:    reason,
+		FaultAttribution:    fault,
+		SlashAuditorDeposit: governanceRevocationSlashesAuditorDeposit(fault),
+	})
+	if err != nil {
+		return err
+	}
+	return k.voidGovernanceAttestation(ctx, provider, auditor, attestation, result, fault)
+}
+
+func (k *keeper) RevokeAllProviderAttestations(
+	ctx sdk.Context,
+	authority string,
+	provider sdk.AccAddress,
+	reason vtypes.GovernanceAttestationReason,
+	fault vtypes.FaultAttribution,
+	evidenceHash []byte,
+) error {
+	if err := k.validateGovernanceAttestationRevocation(authority, evidenceHash); err != nil {
+		return err
+	}
+
+	attestations := make([]vtypes.AttestationRecord, 0)
+	k.WithProviderAttestations(ctx, provider, vtypes.AttestationStatusValid, func(record vtypes.AttestationRecord) bool {
+		attestations = append(attestations, record)
+		return false
+	})
+	if len(attestations) == 0 {
+		return moduletypes.ErrAttestationNotFound
+	}
+
+	result, err := k.Settle(SettlementInput{
+		Path:                SettlementPathGovernanceAttestation,
+		GovernanceReason:    reason,
+		FaultAttribution:    fault,
+		SlashAuditorDeposit: governanceRevocationSlashesAuditorDeposit(fault),
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, attestation := range attestations {
+		auditor, err := sdk.AccAddressFromBech32(attestation.Auditor)
+		if err != nil {
+			return err
+		}
+		if err = k.voidGovernanceAttestation(ctx, provider, auditor, attestation, result, fault); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (k *keeper) RevokeAuditorAttestations(
+	ctx sdk.Context,
+	authority string,
+	auditor sdk.AccAddress,
+	reason vtypes.GovernanceAttestationReason,
+	fault vtypes.FaultAttribution,
+	evidenceHash []byte,
+) error {
+	if err := k.validateGovernanceAttestationRevocation(authority, evidenceHash); err != nil {
+		return err
+	}
+
+	auditorRecord, found := k.GetAuditor(ctx, auditor)
+	if !found {
+		return moduletypes.ErrAuditorNotFound
+	}
+
+	attestations := make([]vtypes.AttestationRecord, 0)
+	k.WithAuditorAttestations(ctx, auditor, func(record vtypes.AttestationRecord) bool {
+		if record.Status == vtypes.AttestationStatusValid {
+			attestations = append(attestations, record)
+		}
+		return false
+	})
+	if len(attestations) == 0 {
+		return moduletypes.ErrAttestationNotFound
+	}
+
+	result, err := k.Settle(SettlementInput{
+		Path:                SettlementPathGovernanceAttestation,
+		GovernanceReason:    reason,
+		FaultAttribution:    fault,
+		SlashAuditorDeposit: governanceRevocationSlashesAuditorDeposit(fault),
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, attestation := range attestations {
+		provider, err := sdk.AccAddressFromBech32(attestation.Provider)
+		if err != nil {
+			return err
+		}
+		if err = k.voidGovernanceAttestation(ctx, provider, auditor, attestation, result, fault); err != nil {
+			return err
+		}
+	}
+
+	return k.slashAuditorBond(ctx, auditorRecord)
+}
+
+func (k *keeper) validateGovernanceAttestationRevocation(authority string, evidenceHash []byte) error {
+	if k.authority != "" && authority != k.authority {
+		return govtypes.ErrInvalidSigner.Wrapf("invalid authority; expected %s, got %s", k.authority, authority)
+	}
+	return validateHash(evidenceHash, "evidence hash")
+}
+
+func (k *keeper) voidGovernanceAttestation(
+	ctx sdk.Context,
+	provider sdk.AccAddress,
+	auditor sdk.AccAddress,
+	attestation vtypes.AttestationRecord,
+	result SettlementResult,
+	fault vtypes.FaultAttribution,
+) error {
+	if err := k.settleAttestationFunds(ctx, provider, auditor, attestation, result); err != nil {
+		return err
+	}
+
+	attestation.Status = vtypes.AttestationStatusVoided
+	attestation.VoidedReason = vtypes.VoidedReasonGovernance
+	attestation.FeeStatus = result.FeeStatus
+	attestation.DepositStatus = result.DepositStatus
+	attestation.FaultAttribution = fault
+	if err := k.SetAttestation(ctx, attestation); err != nil {
+		return err
+	}
+	return ctx.EventManager().EmitTypedEvent(&vtypes.EventAttestationVoided{
+		Provider: attestation.Provider,
+		Auditor:  attestation.Auditor,
+		Reason:   vtypes.VoidedReasonGovernance,
+	})
+}
+
+func (k *keeper) slashAuditorBond(ctx sdk.Context, record vtypes.AuditorRecord) error {
+	if !record.BondAmount.IsNil() && !record.BondAmount.IsZero() {
+		if err := k.sendModuleToDistribution(ctx, record.BondAmount); err != nil {
+			return err
+		}
+	}
+
+	denom := k.GetParams(ctx).BondL1.Denom
+	if !record.BondAmount.IsNil() {
+		denom = record.BondAmount.Denom
+	}
+	record.BondAmount = sdk.NewCoin(denom, math.ZeroInt())
+	record.BondStatus = vtypes.BondStatusUnspecified
+	record.BondUnbondingCompletionTime = nil
+	return k.SetAuditor(ctx, record)
+}
+
+func governanceRevocationSlashesAuditorDeposit(fault vtypes.FaultAttribution) bool {
+	return fault == vtypes.FaultAttributionAuditorFault || fault == vtypes.FaultAttributionSharedFault
+}
+
 func revocationFaultAttribution(reason vtypes.AttestationRevocationReason) (vtypes.FaultAttribution, error) {
 	switch reason {
 	case vtypes.AttestationRevocationReasonProviderNoLongerQualifies,

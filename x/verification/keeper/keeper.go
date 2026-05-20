@@ -72,6 +72,9 @@ type Keeper interface {
 	SubmitAttestation(sdk.Context, sdk.AccAddress, sdk.AccAddress, vtypes.VerificationTier, []vtypes.CapabilityFlag, []byte, sdk.Coin, sdk.Coin, uint64) error
 	RevokeAttestation(sdk.Context, sdk.AccAddress, sdk.AccAddress, vtypes.AttestationRevocationReason, []byte) error
 	RemoveAttestation(sdk.Context, sdk.AccAddress, sdk.AccAddress) error
+	RevokeProviderAttestation(sdk.Context, string, sdk.AccAddress, sdk.AccAddress, vtypes.GovernanceAttestationReason, vtypes.FaultAttribution, []byte) error
+	RevokeAllProviderAttestations(sdk.Context, string, sdk.AccAddress, vtypes.GovernanceAttestationReason, vtypes.FaultAttribution, []byte) error
+	RevokeAuditorAttestations(sdk.Context, string, sdk.AccAddress, vtypes.GovernanceAttestationReason, vtypes.FaultAttribution, []byte) error
 	ResolveDiscrepancy(sdk.Context, string, uint64, string, bool, bool, vtypes.DiscrepancyResolutionReason, vtypes.FaultAttribution, []byte) error
 	BidFilter(sdk.Context, sdk.AccAddress, *vtypes.VerificationRequirement) error
 }

@@ -253,6 +253,51 @@ func (ms msgServer) RemoveAttestation(goCtx context.Context, msg *vtypes.MsgRemo
 	return &vtypes.MsgRemoveAttestationResponse{}, nil
 }
 
+func (ms msgServer) RevokeProviderAttestation(goCtx context.Context, msg *vtypes.MsgRevokeProviderAttestation) (*vtypes.MsgRevokeProviderAttestationResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	provider, auditor, err := parseProviderAuditor(msg.Provider, msg.Auditor)
+	if err != nil {
+		return nil, err
+	}
+
+	err = ms.keeper.RevokeProviderAttestation(ctx, msg.Authority, provider, auditor, msg.Reason, msg.FaultAttribution, msg.EvidenceHash)
+	if err != nil {
+		return nil, err
+	}
+
+	return &vtypes.MsgRevokeProviderAttestationResponse{}, nil
+}
+
+func (ms msgServer) RevokeAllProviderAttestations(goCtx context.Context, msg *vtypes.MsgRevokeAllProviderAttestations) (*vtypes.MsgRevokeAllProviderAttestationsResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	provider, err := sdk.AccAddressFromBech32(msg.Provider)
+	if err != nil {
+		return nil, err
+	}
+
+	err = ms.keeper.RevokeAllProviderAttestations(ctx, msg.Authority, provider, msg.Reason, msg.FaultAttribution, msg.EvidenceHash)
+	if err != nil {
+		return nil, err
+	}
+
+	return &vtypes.MsgRevokeAllProviderAttestationsResponse{}, nil
+}
+
+func (ms msgServer) RevokeAuditorAttestations(goCtx context.Context, msg *vtypes.MsgRevokeAuditorAttestations) (*vtypes.MsgRevokeAuditorAttestationsResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	auditor, err := sdk.AccAddressFromBech32(msg.Auditor)
+	if err != nil {
+		return nil, err
+	}
+
+	err = ms.keeper.RevokeAuditorAttestations(ctx, msg.Authority, auditor, msg.Reason, msg.FaultAttribution, msg.EvidenceHash)
+	if err != nil {
+		return nil, err
+	}
+
+	return &vtypes.MsgRevokeAuditorAttestationsResponse{}, nil
+}
+
 func (ms msgServer) ResolveDiscrepancy(goCtx context.Context, msg *vtypes.MsgResolveDiscrepancy) (*vtypes.MsgResolveDiscrepancyResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	err := ms.keeper.ResolveDiscrepancy(
