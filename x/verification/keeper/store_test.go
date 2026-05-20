@@ -79,6 +79,10 @@ func TestRequiredProviderBondUsesSpecUnitConversions(t *testing.T) {
 }
 
 func setupStoreKeeper(t testing.TB) (sdk.Context, Keeper) {
+	return setupStoreKeeperWithOptions(t)
+}
+
+func setupStoreKeeperWithOptions(t testing.TB, opts ...Option) (sdk.Context, Keeper) {
 	t.Helper()
 
 	cfg := testutilmod.MakeTestEncodingConfig()
@@ -92,7 +96,7 @@ func setupStoreKeeper(t testing.TB) (sdk.Context, Keeper) {
 	require.NoError(t, err)
 
 	ctx := sdk.NewContext(ms, tmproto.Header{Time: now()}, false, testutil.Logger(t))
-	return ctx, NewKeeper(cfg.Codec, key)
+	return ctx, NewKeeper(cfg.Codec, key, opts...)
 }
 
 func auditorRecord(auditor sdk.AccAddress) vtypes.AuditorRecord {
