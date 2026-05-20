@@ -85,6 +85,8 @@ import (
 	mkeeper "pkg.akt.dev/node/v2/x/market/keeper"
 	okeeper "pkg.akt.dev/node/v2/x/oracle/keeper"
 	pkeeper "pkg.akt.dev/node/v2/x/provider/keeper"
+	verificationkeeper "pkg.akt.dev/node/v2/x/verification/keeper"
+	verificationtypes "pkg.akt.dev/node/v2/x/verification/types"
 	awasm "pkg.akt.dev/node/v2/x/wasm"
 	wasmbindings "pkg.akt.dev/node/v2/x/wasm/bindings"
 	wkeeper "pkg.akt.dev/node/v2/x/wasm/keeper"
@@ -118,16 +120,17 @@ type AppKeepers struct {
 	}
 
 	Akash struct {
-		Audit      akeeper.Keeper
-		Bme        bmekeeper.Keeper
-		Cert       ckeeper.Keeper
-		Deployment dkeeper.IKeeper
-		Epochs     epochskeeper.Keeper
-		Escrow     ekeeper.Keeper
-		Market     mkeeper.IKeeper
-		Oracle     okeeper.Keeper
-		Provider   pkeeper.IKeeper
-		Wasm       wkeeper.Keeper
+		Audit        akeeper.Keeper
+		Bme          bmekeeper.Keeper
+		Cert         ckeeper.Keeper
+		Deployment   dkeeper.IKeeper
+		Epochs       epochskeeper.Keeper
+		Escrow       ekeeper.Keeper
+		Market       mkeeper.IKeeper
+		Oracle       okeeper.Keeper
+		Provider     pkeeper.IKeeper
+		Verification verificationkeeper.Keeper
+		Wasm         wkeeper.Keeper
 	}
 
 	Modules struct {
@@ -470,6 +473,14 @@ func (app *App) InitNormalKeepers(
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 
+	app.Keepers.Akash.Verification = verificationkeeper.NewKeeper(
+		cdc,
+		app.keys[verificationtypes.StoreKey],
+		verificationkeeper.WithAuthority(authtypes.NewModuleAddress(govtypes.ModuleName).String()),
+		verificationkeeper.WithBankKeeper(app.Keepers.Cosmos.Bank),
+		verificationkeeper.WithProviderKeeper(app.Keepers.Akash.Provider),
+	)
+
 	app.Keepers.Akash.Audit = akeeper.NewKeeper(
 		cdc,
 		app.keys[atypes.StoreKey],
@@ -627,6 +638,7 @@ func kvStoreKeys() []string {
 		dtypes.StoreKey,
 		mtypes.StoreKey,
 		ptypes.StoreKey,
+		verificationtypes.StoreKey,
 		atypes.StoreKey,
 		ctypes.StoreKey,
 		awasm.StoreKey,

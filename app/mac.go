@@ -10,6 +10,7 @@ import (
 	emodule "pkg.akt.dev/go/node/escrow/module"
 
 	bmemodule "pkg.akt.dev/node/v2/x/bme"
+	verification "pkg.akt.dev/node/v2/x/verification"
 )
 
 func ModuleAccountPerms() map[string][]string {
@@ -21,6 +22,7 @@ func ModuleAccountPerms() map[string][]string {
 		minttypes.ModuleName:           {authtypes.Minter},
 		stakingtypes.BondedPoolName:    {authtypes.Burner, authtypes.Staking},
 		stakingtypes.NotBondedPoolName: {authtypes.Burner, authtypes.Staking},
+		verification.ModuleName:        nil,
 		govtypes.ModuleName:            {authtypes.Burner},
 		ibctransfertypes.ModuleName:    {authtypes.Minter, authtypes.Burner},
 	}
