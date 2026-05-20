@@ -966,6 +966,62 @@ func TestCreateBidVerificationFilterRejectsInsufficientTier(t *testing.T) {
 	require.False(t, found)
 }
 
+func TestCreateBidVerificationFilterNoopsWhenInactive(t *testing.T) {
+	suite := setupTestSuite(t)
+	ctx := suite.Context()
+
+	deployment := testutil.Deployment(t)
+	group := testutil.DeploymentGroup(t, deployment.ID, 0)
+	group.GroupSpec.Resources = testutil.Resources(t, testutil.WithDenom("uact"))
+	group.GroupSpec.Requirements.Verification = &vtypes.VerificationRequirement{
+		MinTier: vtypes.TierVerified,
+	}
+
+	order, err := suite.MarketKeeper().CreateOrder(ctx, group.ID, group.GroupSpec, nil)
+	require.NoError(t, err)
+
+	provider := suite.createProvider(group.GroupSpec.Requirements.Attributes).Owner
+	providerAddr, err := sdk.AccAddressFromBech32(provider)
+	require.NoError(t, err)
+
+	bidID := mv1.MakeBidID(order.ID, providerAddr)
+	msg := &mvbeta.MsgCreateBid{
+		ID:    bidID,
+		Price: sdk.NewDecCoin(sdkutil.DenomUact, sdkmath.NewInt(1)),
+		Deposit: deposit.Deposit{
+			Amount:  mvbeta.DefaultBidMinDepositACT,
+			Sources: deposit.Sources{deposit.SourceBalance},
+		},
+	}
+
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("MintCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("BurnCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+	})
+
+	res, err := suite.handler(ctx, msg)
+	require.NotNil(t, res)
+	require.NoError(t, err)
+
+	_, found := suite.MarketKeeper().GetBid(ctx, bidID)
+	require.True(t, found)
+}
+
 func TestCreateBidInvalidPrice(t *testing.T) {
 	suite := setupTestSuite(t)
 	suite.PrepareMocks(func(ts *state.TestSuite) {
