@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"cosmossdk.io/log"
+	"cosmossdk.io/math"
 	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -59,6 +60,8 @@ type Keeper interface {
 	RegisterAuditor(sdk.Context, string, sdk.AccAddress, vtypes.VerificationTier, []byte) error
 	PostAuditorBond(sdk.Context, sdk.AccAddress, sdk.Coin) error
 	PostProviderBond(sdk.Context, sdk.AccAddress, sdk.Coin) error
+	WithdrawProviderBond(sdk.Context, sdk.AccAddress, sdk.Coin) error
+	SlashProviderBond(sdk.Context, string, sdk.AccAddress, math.LegacyDec, vtypes.ProviderBondSlashReason, []byte) error
 	PostSnapshotHash(sdk.Context, sdk.AccAddress, []byte, vtypes.ResourceSummary, time.Time) error
 	OpenAuditEscrow(sdk.Context, sdk.AccAddress, vtypes.VerificationTier, []vtypes.CapabilityFlag, sdk.Coin, sdk.Coin, time.Time, []byte) (uint64, error)
 	CancelAuditEscrow(sdk.Context, sdk.AccAddress, uint64) error

@@ -88,6 +88,95 @@ func (k *keeper) PostProviderBond(ctx sdk.Context, provider sdk.AccAddress, amou
 	return k.SetProviderBond(ctx, record)
 }
 
+func (k *keeper) WithdrawProviderBond(ctx sdk.Context, provider sdk.AccAddress, amount sdk.Coin) error {
+	if err := validatePositiveCoin(amount); err != nil {
+		return err
+	}
+	if !k.providerExists(ctx, provider) {
+		return moduletypes.ErrProviderNotRegistered
+	}
+
+	record, found := k.GetProviderBond(ctx, provider)
+	if !found {
+		return moduletypes.ErrInsufficientProviderBond
+	}
+	if !coinsSameDenom(record.BondedAmount, amount) || record.BondedAmount.Amount.LT(amount.Amount) {
+		return moduletypes.ErrBondWithdrawalExceedsMinimum
+	}
+
+	remaining := sdk.NewCoin(record.BondedAmount.Denom, record.BondedAmount.Amount.Sub(amount.Amount))
+	required := k.requiredProviderBondForCurrentTier(ctx, provider)
+	if err := requireCoinAtLeast(remaining, required, moduletypes.ErrBondWithdrawalExceedsMinimum); err != nil {
+		return err
+	}
+
+	completion := ctx.BlockTime().Add(k.GetParams(ctx).ProviderBondUnbondingPeriod)
+	record.BondedAmount = remaining
+	record.UnbondingEntries = append(record.UnbondingEntries, vtypes.UnbondingEntry{
+		Amount:         amount,
+		CompletionTime: completion,
+	})
+	if err := k.SetProviderBond(ctx, record); err != nil {
+		return err
+	}
+
+	ctx.KVStore(k.skey).Set(providerBondUnbondingQueueKey(completion, provider), []byte{})
+	return nil
+}
+
+func (k *keeper) SlashProviderBond(
+	ctx sdk.Context,
+	authority string,
+	provider sdk.AccAddress,
+	slashFraction math.LegacyDec,
+	reason vtypes.ProviderBondSlashReason,
+	evidenceHash []byte,
+) error {
+	if k.authority != "" && authority != k.authority {
+		return govtypes.ErrInvalidSigner.Wrapf("invalid authority; expected %s, got %s", k.authority, authority)
+	}
+	if err := validateHash(evidenceHash, "evidence hash"); err != nil {
+		return err
+	}
+	if slashFraction.IsNegative() || !slashFraction.IsPositive() || slashFraction.GT(math.LegacyNewDec(1)) {
+		return errorsmod.Wrap(moduletypes.ErrInvalidReason, "slash fraction must be in (0, 1]")
+	}
+	if !k.providerExists(ctx, provider) {
+		return moduletypes.ErrProviderNotRegistered
+	}
+
+	record, found := k.GetProviderBond(ctx, provider)
+	if !found {
+		return moduletypes.ErrInsufficientProviderBond
+	}
+	if _, err := k.Settle(SettlementInput{
+		Path:                    SettlementPathProviderBondSlash,
+		ProviderBondSlashReason: reason,
+		FaultAttribution:        vtypes.FaultAttributionProviderFault,
+	}); err != nil {
+		return err
+	}
+
+	slashAmount := slashFraction.MulInt(record.BondedAmount.Amount).TruncateInt()
+	if !slashAmount.IsPositive() {
+		return errorsmod.Wrap(moduletypes.ErrInvalidReason, "slash amount must be positive")
+	}
+
+	slashedCoin := sdk.NewCoin(record.BondedAmount.Denom, slashAmount)
+	if err := k.sendModuleToDistribution(ctx, slashedCoin); err != nil {
+		return err
+	}
+	if err := k.voidProviderAttestations(ctx, provider, SettlementPathBondSlashed, vtypes.VoidedReasonBondSlashed); err != nil {
+		return err
+	}
+
+	now := ctx.BlockTime()
+	record.BondedAmount = sdk.NewCoin(record.BondedAmount.Denom, record.BondedAmount.Amount.Sub(slashAmount))
+	record.Slashed = true
+	record.LastSlashTime = &now
+	return k.SetProviderBond(ctx, record)
+}
+
 func (k *keeper) PostSnapshotHash(ctx sdk.Context, provider sdk.AccAddress, snapshotHash []byte, resources vtypes.ResourceSummary, snapshotTimestamp time.Time) error {
 	if !k.providerExists(ctx, provider) {
 		return moduletypes.ErrProviderNotRegistered
@@ -561,6 +650,63 @@ func (k *keeper) setAttestationWithDiscrepancyCheck(ctx sdk.Context, attestation
 			k.SetDiscrepancy(ctx, discrepancy)
 		}
 	}
+	return nil
+}
+
+func (k *keeper) requiredProviderBondForCurrentTier(ctx sdk.Context, provider sdk.AccAddress) sdk.Coin {
+	params := k.GetParams(ctx)
+	tier := vtypes.TierUnspecified
+	k.WithProviderAttestations(ctx, provider, vtypes.AttestationStatusValid, func(record vtypes.AttestationRecord) bool {
+		if vtypes.TierBetter(record.Tier, tier) {
+			tier = record.Tier
+		}
+		return false
+	})
+	if !vtypes.TierRequiresProviderBond(tier) {
+		return sdk.NewCoin(params.BondL1.Denom, math.ZeroInt())
+	}
+
+	snapshot, found := k.GetProviderSnapshot(ctx, provider)
+	if !found {
+		return sdk.NewCoin(params.BondL1.Denom, math.ZeroInt())
+	}
+	return requiredProviderBond(params, tier, snapshot.ResourceSummary)
+}
+
+func (k *keeper) voidProviderAttestations(ctx sdk.Context, provider sdk.AccAddress, path SettlementPath, reason vtypes.VoidedReason) error {
+	attestations := make([]vtypes.AttestationRecord, 0)
+	k.WithProviderAttestations(ctx, provider, vtypes.AttestationStatusValid, func(record vtypes.AttestationRecord) bool {
+		attestations = append(attestations, record)
+		return false
+	})
+
+	result, err := k.Settle(SettlementInput{
+		Path:             path,
+		FaultAttribution: vtypes.FaultAttributionProviderFault,
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, attestation := range attestations {
+		auditor, err := sdk.AccAddressFromBech32(attestation.Auditor)
+		if err != nil {
+			return err
+		}
+		if err = k.settleAttestationFunds(ctx, auditor, attestation, result); err != nil {
+			return err
+		}
+
+		attestation.Status = vtypes.AttestationStatusVoided
+		attestation.VoidedReason = reason
+		attestation.FeeStatus = result.FeeStatus
+		attestation.DepositStatus = result.DepositStatus
+		attestation.FaultAttribution = vtypes.FaultAttributionProviderFault
+		if err = k.SetAttestation(ctx, attestation); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
