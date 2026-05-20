@@ -651,6 +651,197 @@ func TestRemoveAttestationRejectsInvalidInputs(t *testing.T) {
 	}
 }
 
+func TestRevokeProviderAttestationVoidsSingleAttestation(t *testing.T) {
+	tests := []struct {
+		name              string
+		reason            vtypes.GovernanceAttestationReason
+		fault             vtypes.FaultAttribution
+		wantFeeStatus     vtypes.FeeStatus
+		wantDepositStatus vtypes.DepositStatus
+		wantAccountTxs    []func(sdk.AccAddress, sdk.AccAddress, vtypes.AttestationRecord) bankTransfer
+		wantModuleTxs     []func(vtypes.AttestationRecord) bankTransfer
+	}{
+		{
+			name:              "provider fault pays auditor",
+			reason:            vtypes.GovernanceAttestationReasonFraudulentProvider,
+			fault:             vtypes.FaultAttributionProviderFault,
+			wantFeeStatus:     vtypes.FeeStatusReleasedToAuditor,
+			wantDepositStatus: vtypes.DepositStatusReturnedToAuditor,
+			wantAccountTxs: []func(sdk.AccAddress, sdk.AccAddress, vtypes.AttestationRecord) bankTransfer{
+				func(_ sdk.AccAddress, auditor sdk.AccAddress, attestation vtypes.AttestationRecord) bankTransfer {
+					return bankTransfer{to: auditor, module: moduletypes.ModuleName, amt: sdk.NewCoins(attestation.Fee)}
+				},
+				func(_ sdk.AccAddress, auditor sdk.AccAddress, attestation vtypes.AttestationRecord) bankTransfer {
+					return bankTransfer{to: auditor, module: moduletypes.ModuleName, amt: sdk.NewCoins(attestation.Deposit)}
+				},
+			},
+		},
+		{
+			name:              "auditor fault refunds provider and slashes deposit",
+			reason:            vtypes.GovernanceAttestationReasonFaultyAuditor,
+			fault:             vtypes.FaultAttributionAuditorFault,
+			wantFeeStatus:     vtypes.FeeStatusReturnedToProvider,
+			wantDepositStatus: vtypes.DepositStatusSlashed,
+			wantAccountTxs: []func(sdk.AccAddress, sdk.AccAddress, vtypes.AttestationRecord) bankTransfer{
+				func(provider sdk.AccAddress, _ sdk.AccAddress, attestation vtypes.AttestationRecord) bankTransfer {
+					return bankTransfer{to: provider, module: moduletypes.ModuleName, amt: sdk.NewCoins(attestation.Fee)}
+				},
+			},
+			wantModuleTxs: []func(vtypes.AttestationRecord) bankTransfer{
+				func(attestation vtypes.AttestationRecord) bankTransfer {
+					return bankTransfer{fromModule: moduletypes.ModuleName, toModule: distrtypes.ModuleName, amt: sdk.NewCoins(attestation.Deposit)}
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			bank := &recordingBank{}
+			ctx, k := setupStoreKeeperWithOptions(t, WithAuthority("gov"), WithBankKeeper(bank))
+			provider := testutil.AccAddress(t)
+			auditor := testutil.AccAddress(t)
+			attestation := attestationRecord(provider, auditor)
+			require.NoError(t, k.SetAttestation(ctx, attestation))
+
+			err := k.RevokeProviderAttestation(ctx, "gov", provider, auditor, tc.reason, tc.fault, testHash())
+			require.NoError(t, err)
+
+			got, found := k.GetAttestation(ctx, provider, auditor)
+			require.True(t, found)
+			require.Equal(t, vtypes.AttestationStatusVoided, got.Status)
+			require.Equal(t, vtypes.VoidedReasonGovernance, got.VoidedReason)
+			require.Equal(t, tc.fault, got.FaultAttribution)
+			require.Equal(t, tc.wantFeeStatus, got.FeeStatus)
+			require.Equal(t, tc.wantDepositStatus, got.DepositStatus)
+
+			wantAccountTxs := make([]bankTransfer, 0, len(tc.wantAccountTxs))
+			for _, build := range tc.wantAccountTxs {
+				wantAccountTxs = append(wantAccountTxs, build(provider, auditor, attestation))
+			}
+			wantModuleTxs := make([]bankTransfer, 0, len(tc.wantModuleTxs))
+			for _, build := range tc.wantModuleTxs {
+				wantModuleTxs = append(wantModuleTxs, build(attestation))
+			}
+			require.Equal(t, wantAccountTxs, bank.moduleToAccount)
+			if len(wantModuleTxs) == 0 {
+				require.Empty(t, bank.moduleToModule)
+			} else {
+				require.Equal(t, wantModuleTxs, bank.moduleToModule)
+			}
+			testutil.EnsureEvent(t, ctx.EventManager().Events().ToABCIEvents(), &vtypes.EventAttestationVoided{
+				Provider: provider.String(),
+				Auditor:  auditor.String(),
+				Reason:   vtypes.VoidedReasonGovernance,
+			})
+		})
+	}
+}
+
+func TestRevokeAllProviderAttestationsVoidsActiveProviderAttestations(t *testing.T) {
+	bank := &recordingBank{}
+	ctx, k := setupStoreKeeperWithOptions(t, WithAuthority("gov"), WithBankKeeper(bank))
+	provider := testutil.AccAddress(t)
+	auditorA := testutil.AccAddress(t)
+	auditorB := testutil.AccAddress(t)
+	attestationA := attestationRecord(provider, auditorA)
+	attestationB := attestationRecord(provider, auditorB)
+	require.NoError(t, k.SetAttestation(ctx, attestationA))
+	require.NoError(t, k.SetAttestation(ctx, attestationB))
+
+	otherProvider := testutil.AccAddress(t)
+	otherAttestation := attestationRecord(otherProvider, auditorA)
+	require.NoError(t, k.SetAttestation(ctx, otherAttestation))
+
+	err := k.RevokeAllProviderAttestations(
+		ctx,
+		"gov",
+		provider,
+		vtypes.GovernanceAttestationReasonFraudulentProvider,
+		vtypes.FaultAttributionProviderFault,
+		testHash(),
+	)
+	require.NoError(t, err)
+
+	gotA, found := k.GetAttestation(ctx, provider, auditorA)
+	require.True(t, found)
+	require.Equal(t, vtypes.AttestationStatusVoided, gotA.Status)
+	require.Equal(t, vtypes.VoidedReasonGovernance, gotA.VoidedReason)
+	gotB, found := k.GetAttestation(ctx, provider, auditorB)
+	require.True(t, found)
+	require.Equal(t, vtypes.AttestationStatusVoided, gotB.Status)
+	require.Equal(t, vtypes.VoidedReasonGovernance, gotB.VoidedReason)
+	otherGot, found := k.GetAttestation(ctx, otherProvider, auditorA)
+	require.True(t, found)
+	require.Equal(t, vtypes.AttestationStatusValid, otherGot.Status)
+
+	require.ElementsMatch(t, []bankTransfer{
+		{to: auditorA, module: moduletypes.ModuleName, amt: sdk.NewCoins(attestationA.Fee)},
+		{to: auditorA, module: moduletypes.ModuleName, amt: sdk.NewCoins(attestationA.Deposit)},
+		{to: auditorB, module: moduletypes.ModuleName, amt: sdk.NewCoins(attestationB.Fee)},
+		{to: auditorB, module: moduletypes.ModuleName, amt: sdk.NewCoins(attestationB.Deposit)},
+	}, bank.moduleToAccount)
+	require.Empty(t, bank.moduleToModule)
+}
+
+func TestRevokeAuditorAttestationsVoidsWorkAndSlashesBond(t *testing.T) {
+	bank := &recordingBank{}
+	ctx, k := setupStoreKeeperWithOptions(t, WithAuthority("gov"), WithBankKeeper(bank))
+	auditor := testutil.AccAddress(t)
+	otherAuditor := testutil.AccAddress(t)
+	auditorRecord := auditorRecord(auditor)
+	require.NoError(t, k.SetAuditor(ctx, auditorRecord))
+
+	providerA := testutil.AccAddress(t)
+	providerB := testutil.AccAddress(t)
+	attestationA := attestationRecord(providerA, auditor)
+	attestationB := attestationRecord(providerB, auditor)
+	require.NoError(t, k.SetAttestation(ctx, attestationA))
+	require.NoError(t, k.SetAttestation(ctx, attestationB))
+
+	otherAttestation := attestationRecord(providerA, otherAuditor)
+	require.NoError(t, k.SetAttestation(ctx, otherAttestation))
+
+	err := k.RevokeAuditorAttestations(
+		ctx,
+		"gov",
+		auditor,
+		vtypes.GovernanceAttestationReasonFaultyAuditor,
+		vtypes.FaultAttributionAuditorFault,
+		testHash(),
+	)
+	require.NoError(t, err)
+
+	gotA, found := k.GetAttestation(ctx, providerA, auditor)
+	require.True(t, found)
+	require.Equal(t, vtypes.AttestationStatusVoided, gotA.Status)
+	require.Equal(t, vtypes.FeeStatusReturnedToProvider, gotA.FeeStatus)
+	require.Equal(t, vtypes.DepositStatusSlashed, gotA.DepositStatus)
+	gotB, found := k.GetAttestation(ctx, providerB, auditor)
+	require.True(t, found)
+	require.Equal(t, vtypes.AttestationStatusVoided, gotB.Status)
+	require.Equal(t, vtypes.FeeStatusReturnedToProvider, gotB.FeeStatus)
+	require.Equal(t, vtypes.DepositStatusSlashed, gotB.DepositStatus)
+	otherGot, found := k.GetAttestation(ctx, providerA, otherAuditor)
+	require.True(t, found)
+	require.Equal(t, vtypes.AttestationStatusValid, otherGot.Status)
+
+	gotAuditor, found := k.GetAuditor(ctx, auditor)
+	require.True(t, found)
+	require.True(t, gotAuditor.BondAmount.IsZero())
+	require.Equal(t, vtypes.BondStatusUnspecified, gotAuditor.BondStatus)
+
+	require.ElementsMatch(t, []bankTransfer{
+		{to: providerA, module: moduletypes.ModuleName, amt: sdk.NewCoins(attestationA.Fee)},
+		{to: providerB, module: moduletypes.ModuleName, amt: sdk.NewCoins(attestationB.Fee)},
+	}, bank.moduleToAccount)
+	require.ElementsMatch(t, []bankTransfer{
+		{fromModule: moduletypes.ModuleName, toModule: distrtypes.ModuleName, amt: sdk.NewCoins(attestationA.Deposit)},
+		{fromModule: moduletypes.ModuleName, toModule: distrtypes.ModuleName, amt: sdk.NewCoins(attestationB.Deposit)},
+		{fromModule: moduletypes.ModuleName, toModule: distrtypes.ModuleName, amt: sdk.NewCoins(auditorRecord.BondAmount)},
+	}, bank.moduleToModule)
+}
+
 func TestCancelAuditEscrowSettlesUnconsumedEscrow(t *testing.T) {
 	bank := &recordingBank{}
 	ctx, k := setupStoreKeeperWithOptions(t, WithBankKeeper(bank))
