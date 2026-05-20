@@ -7,6 +7,7 @@ import (
 	sdkmodule "github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/stretchr/testify/require"
 
+	mv1 "pkg.akt.dev/go/node/market/v1"
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 
 	utypes "pkg.akt.dev/node/v2/upgrades/types"
@@ -39,4 +40,12 @@ func TestUpgradeRegistersVerificationStoreAndProviderMigration(t *testing.T) {
 		}
 	})
 	require.True(t, foundProviderMigration)
+
+	var foundMarketMigration bool
+	utypes.ModuleMigrations(mv1.ModuleName, nil, func(_ string, version uint64, _ sdkmodule.MigrationHandler) {
+		if version == 8 {
+			foundMarketMigration = true
+		}
+	})
+	require.True(t, foundMarketMigration)
 }

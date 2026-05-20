@@ -78,6 +78,10 @@ func InitGenesis(ctx sdk.Context, kpr keeper.IKeeper, data *mvbeta.GenesisState)
 		}
 	}
 
+	if err := k.BackfillProviderLeaseStats(ctx); err != nil {
+		panic(fmt.Errorf("market genesis lease stats init: %w", err))
+	}
+
 	err := kpr.SetParams(ctx, data.Params)
 	if err != nil {
 		panic(err)

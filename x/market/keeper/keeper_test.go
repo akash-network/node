@@ -305,6 +305,30 @@ func Test_GetProviderLeaseStats(t *testing.T) {
 	}, failures)
 }
 
+func Test_BackfillProviderLeaseStats(t *testing.T) {
+	_, keeper, suite := setupKeeper(t)
+	ctx := suite.Context()
+	provider := testutil.AccAddress(t)
+
+	saveLeaseForProvider(t, ctx, keeper, provider, mv1.LeaseClosed, mv1.LeaseClosedReasonOwner)
+	saveLeaseForProvider(t, ctx, keeper, provider, mv1.LeaseInsufficientFunds, mv1.LeaseClosedReasonInsufficientFunds)
+	saveLeaseForProvider(t, ctx, keeper, provider, mv1.LeaseClosed, mv1.LeaseClosedReasonUnstable)
+	saveLeaseForProvider(t, ctx, keeper, provider, mv1.LeaseClosed, mv1.LeaseClosedReasonManifestTimeout)
+	saveLeaseForProvider(t, ctx, keeper, provider, mv1.LeaseActive, mv1.LeaseClosedReasonProvider)
+	saveLeaseForProvider(t, ctx, keeper, testutil.AccAddress(t), mv1.LeaseClosed, mv1.LeaseClosedReasonProvider)
+
+	require.NoError(t, keeper.BackfillProviderLeaseStats(ctx))
+	require.NoError(t, keeper.BackfillProviderLeaseStats(ctx))
+
+	completed, failures, found := keeper.GetProviderLeaseStats(ctx, provider)
+	require.True(t, found)
+	require.Equal(t, uint64(2), completed)
+	require.Equal(t, map[mv1.LeaseClosedReason]uint64{
+		mv1.LeaseClosedReasonManifestTimeout: 1,
+		mv1.LeaseClosedReasonUnstable:        1,
+	}, failures)
+}
+
 func Test_OnLeaseClosed_Idempotency(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -495,11 +519,18 @@ func createLease(t testing.TB, suite *state.TestSuite) mv1.LeaseID {
 func saveActiveLeaseForProvider(t testing.TB, ctx sdk.Context, k keeper.IKeeper, provider sdk.AccAddress) mv1.Lease {
 	t.Helper()
 
+	return saveLeaseForProvider(t, ctx, k, provider, mv1.LeaseActive, mv1.LeaseClosedReasonInvalid)
+}
+
+func saveLeaseForProvider(t testing.TB, ctx sdk.Context, k keeper.IKeeper, provider sdk.AccAddress, state mv1.Lease_State, reason mv1.LeaseClosedReason) mv1.Lease {
+	t.Helper()
+
 	id := testutil.LeaseID(t)
 	id.Provider = provider.String()
 	lease := mv1.Lease{
-		ID:    id,
-		State: mv1.LeaseActive,
+		ID:     id,
+		State:  state,
+		Reason: reason,
 	}
 	require.NoError(t, k.SaveLease(ctx, lease))
 	return lease
