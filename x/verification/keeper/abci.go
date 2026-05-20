@@ -26,6 +26,9 @@ func (k *keeper) EndBlocker(ctx context.Context) error {
 	if err := k.processSnapshotComplianceQueue(sctx, blockTime, params.MaxEndblockerSnapshotSuspensions); err != nil {
 		return err
 	}
+	if err := k.processDiscrepancyTimeoutQueue(sctx, blockTime, params.MaxEndblockerDiscrepancyTimeouts); err != nil {
+		return err
+	}
 	if err := k.processAuditEscrowExpiryQueue(sctx, blockTime, params.MaxEndblockerAuditEscrowExpiries); err != nil {
 		return err
 	}
@@ -78,6 +81,74 @@ func (k *keeper) processSnapshotComplianceQueue(ctx sdk.Context, blockTime time.
 		snapshot.Suspended = true
 		return k.SetProviderSnapshot(ctx, snapshot)
 	})
+}
+
+func (k *keeper) processDiscrepancyTimeoutQueue(ctx sdk.Context, blockTime time.Time, limit uint32) error {
+	return k.processDueQueue(ctx, prefixQueueDiscrepancyTimeout, blockTime, limit, func(key []byte, timeout time.Time) error {
+		id, err := decodeIDQueueKey(key)
+		if err != nil {
+			return err
+		}
+
+		discrepancy, found := k.GetDiscrepancy(ctx, id)
+		if !found || discrepancy.ResolutionStatus != vtypes.DiscrepancyStatusPending {
+			return nil
+		}
+		expectedTimeout := discrepancy.Timestamp.Add(k.GetParams(ctx).DiscrepancyResolutionTimeout)
+		if !expectedTimeout.Equal(timeout) {
+			return nil
+		}
+
+		result := SettlementResult{
+			FeeStatus:     vtypes.FeeStatusReturnedToProvider,
+			DepositStatus: vtypes.DepositStatusSlashed,
+		}
+		if err = k.timeoutDiscrepancyAttestation(ctx, discrepancy.Provider, discrepancy.AuditorA, result); err != nil {
+			return err
+		}
+		if err = k.timeoutDiscrepancyAttestation(ctx, discrepancy.Provider, discrepancy.AuditorB, result); err != nil {
+			return err
+		}
+
+		auditorA, err := sdk.AccAddressFromBech32(discrepancy.AuditorA)
+		if err != nil {
+			return err
+		}
+		auditorB, err := sdk.AccAddressFromBech32(discrepancy.AuditorB)
+		if err != nil {
+			return err
+		}
+
+		discrepancy.ResolutionStatus = vtypes.DiscrepancyStatusTimedOut
+		k.SetDiscrepancy(ctx, discrepancy)
+
+		if err = k.resolveDiscrepancyAuditorBond(ctx, auditorA, discrepancy.ID, false); err != nil {
+			return err
+		}
+		return k.resolveDiscrepancyAuditorBond(ctx, auditorB, discrepancy.ID, false)
+	})
+}
+
+func (k *keeper) timeoutDiscrepancyAttestation(ctx sdk.Context, providerString, auditorString string, result SettlementResult) error {
+	provider, err := sdk.AccAddressFromBech32(providerString)
+	if err != nil {
+		return err
+	}
+	auditor, err := sdk.AccAddressFromBech32(auditorString)
+	if err != nil {
+		return err
+	}
+
+	attestation, found := k.GetAttestation(ctx, provider, auditor)
+	if !found {
+		return moduletypes.ErrAttestationNotFound
+	}
+	if err = k.settlePendingDiscrepancyAttestationFunds(ctx, provider, auditor, attestation, result); err != nil {
+		return err
+	}
+	attestation.FeeStatus = result.FeeStatus
+	attestation.DepositStatus = result.DepositStatus
+	return k.SetAttestation(ctx, attestation)
 }
 
 func (k *keeper) processAuditEscrowExpiryQueue(ctx sdk.Context, blockTime time.Time, limit uint32) error {

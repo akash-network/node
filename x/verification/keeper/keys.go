@@ -125,6 +125,10 @@ func graceExpiryQueueKey(expiresAt time.Time, id uint64) []byte {
 	return timeQueueKey(prefixQueueGraceExpiry, expiresAt, encodeID(id))
 }
 
+func discrepancyTimeoutQueueKey(timeout time.Time, id uint64) []byte {
+	return timeQueueKey(prefixQueueDiscrepancyTimeout, timeout, encodeID(id))
+}
+
 func timeQueueKey(prefix byte, at time.Time, parts ...[]byte) []byte {
 	size := 9
 	for _, part := range parts {

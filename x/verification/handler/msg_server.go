@@ -167,6 +167,26 @@ func (ms msgServer) SubmitAttestation(goCtx context.Context, msg *vtypes.MsgSubm
 	return &vtypes.MsgSubmitAttestationResponse{}, nil
 }
 
+func (ms msgServer) ResolveDiscrepancy(goCtx context.Context, msg *vtypes.MsgResolveDiscrepancy) (*vtypes.MsgResolveDiscrepancyResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	err := ms.keeper.ResolveDiscrepancy(
+		ctx,
+		msg.Authority,
+		msg.DiscrepancyID,
+		msg.VindicatedAuditor,
+		msg.SlashAuditorA,
+		msg.SlashAuditorB,
+		msg.Reason,
+		msg.FaultAttribution,
+		msg.EvidenceHash,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &vtypes.MsgResolveDiscrepancyResponse{}, nil
+}
+
 func parseProviderAuditor(provider, auditor string) (sdk.AccAddress, sdk.AccAddress, error) {
 	providerAddr, err := sdk.AccAddressFromBech32(provider)
 	if err != nil {

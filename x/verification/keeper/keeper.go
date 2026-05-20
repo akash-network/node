@@ -49,11 +49,13 @@ type Keeper interface {
 	WithVerificationGraces(sdk.Context, func(vtypes.ProviderVerificationGraceRecord) bool)
 	GetNextDiscrepancyID(sdk.Context) uint64
 	SetNextDiscrepancyID(sdk.Context, uint64)
+	NextDiscrepancyID(sdk.Context) uint64
 	GetNextAuditEscrowID(sdk.Context) uint64
 	SetNextAuditEscrowID(sdk.Context, uint64)
 	NextAuditEscrowID(sdk.Context) uint64
 	GetNextGraceRecordID(sdk.Context) uint64
 	SetNextGraceRecordID(sdk.Context, uint64)
+	NextGraceRecordID(sdk.Context) uint64
 	RegisterAuditor(sdk.Context, string, sdk.AccAddress, vtypes.VerificationTier, []byte) error
 	PostAuditorBond(sdk.Context, sdk.AccAddress, sdk.Coin) error
 	PostProviderBond(sdk.Context, sdk.AccAddress, sdk.Coin) error
@@ -62,6 +64,7 @@ type Keeper interface {
 	CancelAuditEscrow(sdk.Context, sdk.AccAddress, uint64) error
 	SettleAuditEscrow(sdk.Context, string, uint64, vtypes.AuditEscrowSettlementReason, vtypes.FaultAttribution, []byte) error
 	SubmitAttestation(sdk.Context, sdk.AccAddress, sdk.AccAddress, vtypes.VerificationTier, []vtypes.CapabilityFlag, []byte, sdk.Coin, sdk.Coin, uint64) error
+	ResolveDiscrepancy(sdk.Context, string, uint64, string, bool, bool, vtypes.DiscrepancyResolutionReason, vtypes.FaultAttribution, []byte) error
 	BidFilter(sdk.Context, sdk.AccAddress, *vtypes.VerificationRequirement) error
 }
 
