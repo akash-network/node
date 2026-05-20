@@ -103,6 +103,30 @@ func (ms msgServer) OpenAuditEscrow(goCtx context.Context, msg *vtypes.MsgOpenAu
 	return &vtypes.MsgOpenAuditEscrowResponse{AuditEscrowID: id}, nil
 }
 
+func (ms msgServer) CancelAuditEscrow(goCtx context.Context, msg *vtypes.MsgCancelAuditEscrow) (*vtypes.MsgCancelAuditEscrowResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	provider, err := sdk.AccAddressFromBech32(msg.Provider)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = ms.keeper.CancelAuditEscrow(ctx, provider, msg.AuditEscrowID); err != nil {
+		return nil, err
+	}
+
+	return &vtypes.MsgCancelAuditEscrowResponse{}, nil
+}
+
+func (ms msgServer) SettleAuditEscrow(goCtx context.Context, msg *vtypes.MsgSettleAuditEscrow) (*vtypes.MsgSettleAuditEscrowResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	err := ms.keeper.SettleAuditEscrow(ctx, msg.Authority, msg.AuditEscrowID, msg.Reason, msg.FaultAttribution, msg.EvidenceHash)
+	if err != nil {
+		return nil, err
+	}
+
+	return &vtypes.MsgSettleAuditEscrowResponse{}, nil
+}
+
 func (ms msgServer) SubmitAttestation(goCtx context.Context, msg *vtypes.MsgSubmitAttestation) (*vtypes.MsgSubmitAttestationResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	provider, auditor, err := parseProviderAuditor(msg.Provider, msg.Auditor)

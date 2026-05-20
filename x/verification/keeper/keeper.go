@@ -59,6 +59,8 @@ type Keeper interface {
 	PostProviderBond(sdk.Context, sdk.AccAddress, sdk.Coin) error
 	PostSnapshotHash(sdk.Context, sdk.AccAddress, []byte, vtypes.ResourceSummary, time.Time) error
 	OpenAuditEscrow(sdk.Context, sdk.AccAddress, vtypes.VerificationTier, []vtypes.CapabilityFlag, sdk.Coin, sdk.Coin, time.Time, []byte) (uint64, error)
+	CancelAuditEscrow(sdk.Context, sdk.AccAddress, uint64) error
+	SettleAuditEscrow(sdk.Context, string, uint64, vtypes.AuditEscrowSettlementReason, vtypes.FaultAttribution, []byte) error
 	SubmitAttestation(sdk.Context, sdk.AccAddress, sdk.AccAddress, vtypes.VerificationTier, []vtypes.CapabilityFlag, []byte, sdk.Coin, sdk.Coin, uint64) error
 }
 
