@@ -1,0 +1,40 @@
+package types
+
+import (
+	sdkerrors "cosmossdk.io/errors"
+	"google.golang.org/grpc/codes"
+)
+
+var (
+	ErrAuditorNotFound                   = sdkerrors.RegisterWithGRPCCode(ModuleName, 1, codes.NotFound, "auditor address not in registered set")
+	ErrAuditorNotActive                  = sdkerrors.RegisterWithGRPCCode(ModuleName, 2, codes.FailedPrecondition, "auditor status is not active")
+	ErrAuditorFrozen                     = sdkerrors.RegisterWithGRPCCode(ModuleName, 3, codes.FailedPrecondition, "auditor bond is frozen")
+	ErrAuditorUnauthorizedTier           = sdkerrors.RegisterWithGRPCCode(ModuleName, 4, codes.PermissionDenied, "attested tier exceeds auditor authority")
+	ErrSelfAttestation                   = sdkerrors.RegisterWithGRPCCode(ModuleName, 5, codes.InvalidArgument, "auditor and provider addresses are the same")
+	ErrInsufficientAuditFee              = sdkerrors.RegisterWithGRPCCode(ModuleName, 6, codes.InvalidArgument, "audit fee below governance minimum")
+	ErrProviderNotRegistered             = sdkerrors.RegisterWithGRPCCode(ModuleName, 7, codes.NotFound, "provider not found")
+	ErrInsufficientProviderBond          = sdkerrors.RegisterWithGRPCCode(ModuleName, 8, codes.FailedPrecondition, "provider bond below required minimum")
+	ErrSnapshotNonCompliant              = sdkerrors.RegisterWithGRPCCode(ModuleName, 9, codes.FailedPrecondition, "provider snapshot is suspended or missing")
+	ErrInsufficientProviderAge           = sdkerrors.RegisterWithGRPCCode(ModuleName, 10, codes.FailedPrecondition, "provider registration too recent")
+	ErrInsufficientLeaseCompletionRate   = sdkerrors.RegisterWithGRPCCode(ModuleName, 11, codes.FailedPrecondition, "lease completion rate below threshold")
+	ErrSlashingHistoryViolation          = sdkerrors.RegisterWithGRPCCode(ModuleName, 12, codes.FailedPrecondition, "provider has slashing events within lookback window")
+	ErrInsufficientL3History             = sdkerrors.RegisterWithGRPCCode(ModuleName, 13, codes.FailedPrecondition, "provider lacks required continuous l3 history")
+	ErrAttestationNotFound               = sdkerrors.RegisterWithGRPCCode(ModuleName, 14, codes.NotFound, "attestation not found")
+	ErrDiscrepancyNotFound               = sdkerrors.RegisterWithGRPCCode(ModuleName, 15, codes.NotFound, "discrepancy not found")
+	ErrBondWithdrawalExceedsMinimum      = sdkerrors.RegisterWithGRPCCode(ModuleName, 16, codes.FailedPrecondition, "withdrawal would leave bond below minimum")
+	ErrSnapshotTooOld                    = sdkerrors.RegisterWithGRPCCode(ModuleName, 17, codes.InvalidArgument, "snapshot timestamp exceeds maximum age")
+	ErrInsufficientAuditorBond           = sdkerrors.RegisterWithGRPCCode(ModuleName, 18, codes.FailedPrecondition, "auditor bond below required amount")
+	ErrInsufficientVerificationTier      = sdkerrors.RegisterWithGRPCCode(ModuleName, 19, codes.FailedPrecondition, "provider tier does not meet requirement")
+	ErrProviderSnapshotSuspended         = sdkerrors.RegisterWithGRPCCode(ModuleName, 20, codes.FailedPrecondition, "provider snapshot suspended")
+	ErrMissingCapability                 = sdkerrors.RegisterWithGRPCCode(ModuleName, 21, codes.FailedPrecondition, "provider lacks required capability")
+	ErrRequiredAuditorNotFound           = sdkerrors.RegisterWithGRPCCode(ModuleName, 22, codes.NotFound, "required auditor attestation not found")
+	ErrInsufficientDeposit               = sdkerrors.RegisterWithGRPCCode(ModuleName, 23, codes.InvalidArgument, "attestation deposit below governance minimum")
+	ErrAuditEscrowNotFound               = sdkerrors.RegisterWithGRPCCode(ModuleName, 24, codes.NotFound, "audit escrow not found")
+	ErrAuditEscrowNotConsumable          = sdkerrors.RegisterWithGRPCCode(ModuleName, 25, codes.FailedPrecondition, "audit escrow is not consumable")
+	ErrInsufficientProviderDeposit       = sdkerrors.RegisterWithGRPCCode(ModuleName, 26, codes.InvalidArgument, "provider audit deposit below governance minimum")
+	ErrInvalidReason                     = sdkerrors.RegisterWithGRPCCode(ModuleName, 27, codes.InvalidArgument, "typed reason is unspecified or incompatible")
+	ErrInvalidFaultAttribution           = sdkerrors.RegisterWithGRPCCode(ModuleName, 28, codes.InvalidArgument, "fault attribution is missing or incompatible with settlement")
+	ErrUnknownVerificationRecordType     = sdkerrors.RegisterWithGRPCCode(ModuleName, 29, codes.InvalidArgument, "verification record type has no decoder")
+	ErrInsufficientAuditorCount          = sdkerrors.RegisterWithGRPCCode(ModuleName, 30, codes.FailedPrecondition, "provider lacks required independent auditor count")
+	ErrUnauthorizedAuditEscrowSettlement = sdkerrors.RegisterWithGRPCCode(ModuleName, 31, codes.PermissionDenied, "signer cannot use requested audit escrow settlement path")
+)
