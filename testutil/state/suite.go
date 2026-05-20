@@ -228,6 +228,7 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 			verificationkeeper.WithAuthority(authtypes.NewModuleAddress(govtypes.ModuleName).String()),
 			verificationkeeper.WithBankKeeper(keepers.Bank),
 			verificationkeeper.WithProviderKeeper(keepers.Provider),
+			verificationkeeper.WithMarketStatsKeeper(keepers.Market),
 		)
 	}
 

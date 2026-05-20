@@ -479,6 +479,7 @@ func (app *App) InitNormalKeepers(
 		verificationkeeper.WithAuthority(authtypes.NewModuleAddress(govtypes.ModuleName).String()),
 		verificationkeeper.WithBankKeeper(app.Keepers.Cosmos.Bank),
 		verificationkeeper.WithProviderKeeper(app.Keepers.Akash.Provider),
+		verificationkeeper.WithMarketStatsKeeper(app.Keepers.Akash.Market),
 	)
 
 	app.Keepers.Akash.Audit = akeeper.NewKeeper(

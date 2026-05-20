@@ -82,6 +82,7 @@ type keeper struct {
 	authority string
 	bank      BankKeeper
 	provider  ProviderKeeper
+	market    MarketStatsKeeper
 }
 
 func NewKeeper(cdc codec.BinaryCodec, skey storetypes.StoreKey, opts ...Option) Keeper {

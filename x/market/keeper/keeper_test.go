@@ -272,6 +272,39 @@ func Test_OnLeaseClosed(t *testing.T) {
 	}
 }
 
+func Test_GetProviderLeaseStats(t *testing.T) {
+	_, keeper, suite := setupKeeper(t)
+	ctx := suite.Context()
+	provider := testutil.AccAddress(t)
+
+	_, failures, found := keeper.GetProviderLeaseStats(ctx, provider)
+	require.False(t, found)
+	require.Empty(t, failures)
+
+	ownerClosed := saveActiveLeaseForProvider(t, ctx, keeper, provider)
+	require.NoError(t, keeper.OnLeaseClosed(ctx, ownerClosed, mv1.LeaseClosed, mv1.LeaseClosedReasonOwner))
+
+	providerFailed := saveActiveLeaseForProvider(t, ctx, keeper, provider)
+	require.NoError(t, keeper.OnLeaseClosed(ctx, providerFailed, mv1.LeaseClosed, mv1.LeaseClosedReasonUnstable))
+
+	networkClosed := saveActiveLeaseForProvider(t, ctx, keeper, provider)
+	require.NoError(t, keeper.OnLeaseClosed(ctx, networkClosed, mv1.LeaseInsufficientFunds, mv1.LeaseClosedReasonInsufficientFunds))
+
+	otherProviderLease := saveActiveLeaseForProvider(t, ctx, keeper, testutil.AccAddress(t))
+	require.NoError(t, keeper.OnLeaseClosed(ctx, otherProviderLease, mv1.LeaseClosed, mv1.LeaseClosedReasonUnstable))
+
+	closed, found := keeper.GetLease(ctx, providerFailed.ID)
+	require.True(t, found)
+	require.NoError(t, keeper.OnLeaseClosed(ctx, closed, mv1.LeaseClosed, mv1.LeaseClosedReasonUnspecified))
+
+	completed, failures, found := keeper.GetProviderLeaseStats(ctx, provider)
+	require.True(t, found)
+	require.Equal(t, uint64(2), completed)
+	require.Equal(t, map[mv1.LeaseClosedReason]uint64{
+		mv1.LeaseClosedReasonUnstable: 1,
+	}, failures)
+}
+
 func Test_OnLeaseClosed_Idempotency(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -457,6 +490,19 @@ func createLease(t testing.TB, suite *state.TestSuite) mv1.LeaseID {
 	require.NoError(t, err)
 
 	return bid.ID.LeaseID()
+}
+
+func saveActiveLeaseForProvider(t testing.TB, ctx sdk.Context, k keeper.IKeeper, provider sdk.AccAddress) mv1.Lease {
+	t.Helper()
+
+	id := testutil.LeaseID(t)
+	id.Provider = provider.String()
+	lease := mv1.Lease{
+		ID:    id,
+		State: mv1.LeaseActive,
+	}
+	require.NoError(t, k.SaveLease(ctx, lease))
+	return lease
 }
 
 func createBid(t testing.TB, suite *state.TestSuite) (mvbeta.Bid, mvbeta.Order) {
