@@ -27,7 +27,7 @@ func (k *keeper) RegisterAuditor(ctx sdk.Context, authority string, auditor sdk.
 	}
 
 	params := k.GetParams(ctx)
-	return k.SetAuditor(ctx, vtypes.AuditorRecord{
+	record := vtypes.AuditorRecord{
 		Address:            auditor.String(),
 		Status:             vtypes.AuditorStatusActive,
 		MaxAttestationTier: tier,
@@ -36,6 +36,13 @@ func (k *keeper) RegisterAuditor(ctx sdk.Context, authority string, auditor sdk.
 		MetadataHash:       metadataHash,
 		RegisteredAt:       ctx.BlockTime(),
 		RenewalDeadline:    ctx.BlockTime().Add(renewalPeriodForTier(params, tier)),
+	}
+	if err := k.SetAuditor(ctx, record); err != nil {
+		return err
+	}
+	return ctx.EventManager().EmitTypedEvent(&vtypes.EventAuditorRegistered{
+		Auditor:            record.Address,
+		MaxAttestationTier: record.MaxAttestationTier,
 	})
 }
 
@@ -58,7 +65,13 @@ func (k *keeper) PostAuditorBond(ctx sdk.Context, auditor sdk.AccAddress, amount
 	}
 	record.BondAmount = bond
 	record.BondStatus = vtypes.BondStatusBonded
-	return k.SetAuditor(ctx, record)
+	if err := k.SetAuditor(ctx, record); err != nil {
+		return err
+	}
+	return ctx.EventManager().EmitTypedEvent(&vtypes.EventAuditorBondPosted{
+		Auditor: auditor.String(),
+		Amount:  amount,
+	})
 }
 
 func (k *keeper) RenewAuditor(ctx sdk.Context, authority string, auditor sdk.AccAddress) error {
@@ -77,7 +90,13 @@ func (k *keeper) RenewAuditor(ctx sdk.Context, authority string, auditor sdk.Acc
 	params := k.GetParams(ctx)
 	record.Status = vtypes.AuditorStatusActive
 	record.RenewalDeadline = ctx.BlockTime().Add(renewalPeriodForTier(params, record.MaxAttestationTier))
-	return k.SetAuditor(ctx, record)
+	if err := k.SetAuditor(ctx, record); err != nil {
+		return err
+	}
+	return ctx.EventManager().EmitTypedEvent(&vtypes.EventAuditorRenewed{
+		Auditor:     record.Address,
+		NewDeadline: record.RenewalDeadline,
+	})
 }
 
 func (k *keeper) RemoveAuditor(ctx sdk.Context, authority string, auditor sdk.AccAddress) error {
@@ -113,13 +132,23 @@ func (k *keeper) exitAuditor(ctx sdk.Context, record vtypes.AuditorRecord, statu
 	if record.BondAmount.IsNil() || record.BondAmount.IsZero() {
 		record.BondStatus = vtypes.BondStatusUnspecified
 		record.BondUnbondingCompletionTime = nil
-		return k.SetAuditor(ctx, record)
+	} else {
+		completion := ctx.BlockTime().Add(k.GetParams(ctx).AuditorUnbondingPeriod)
+		record.BondStatus = vtypes.BondStatusUnbonding
+		record.BondUnbondingCompletionTime = &completion
 	}
 
-	completion := ctx.BlockTime().Add(k.GetParams(ctx).AuditorUnbondingPeriod)
-	record.BondStatus = vtypes.BondStatusUnbonding
-	record.BondUnbondingCompletionTime = &completion
-	return k.SetAuditor(ctx, record)
+	if err := k.SetAuditor(ctx, record); err != nil {
+		return err
+	}
+	switch status {
+	case vtypes.AuditorStatusRemoved:
+		return ctx.EventManager().EmitTypedEvent(&vtypes.EventAuditorRemoved{Auditor: record.Address})
+	case vtypes.AuditorStatusResigned:
+		return ctx.EventManager().EmitTypedEvent(&vtypes.EventAuditorResigned{Auditor: record.Address})
+	default:
+		return nil
+	}
 }
 
 func (k *keeper) PostProviderBond(ctx sdk.Context, provider sdk.AccAddress, amount sdk.Coin) error {
@@ -146,7 +175,14 @@ func (k *keeper) PostProviderBond(ctx sdk.Context, provider sdk.AccAddress, amou
 		return err
 	}
 	record.BondedAmount = bond
-	return k.SetProviderBond(ctx, record)
+	if err = k.SetProviderBond(ctx, record); err != nil {
+		return err
+	}
+	return ctx.EventManager().EmitTypedEvent(&vtypes.EventProviderBondPosted{
+		Provider:    provider.String(),
+		Amount:      amount,
+		TotalBonded: bond,
+	})
 }
 
 func (k *keeper) WithdrawProviderBond(ctx sdk.Context, provider sdk.AccAddress, amount sdk.Coin) error {
@@ -182,7 +218,11 @@ func (k *keeper) WithdrawProviderBond(ctx sdk.Context, provider sdk.AccAddress, 
 	}
 
 	ctx.KVStore(k.skey).Set(providerBondUnbondingQueueKey(completion, provider), []byte{})
-	return nil
+	return ctx.EventManager().EmitTypedEvent(&vtypes.EventProviderBondWithdrawalInitiated{
+		Provider:       provider.String(),
+		Amount:         amount,
+		CompletionTime: completion,
+	})
 }
 
 func (k *keeper) SlashProviderBond(
@@ -235,7 +275,14 @@ func (k *keeper) SlashProviderBond(
 	record.BondedAmount = sdk.NewCoin(record.BondedAmount.Denom, record.BondedAmount.Amount.Sub(slashAmount))
 	record.Slashed = true
 	record.LastSlashTime = &now
-	return k.SetProviderBond(ctx, record)
+	if err := k.SetProviderBond(ctx, record); err != nil {
+		return err
+	}
+	return ctx.EventManager().EmitTypedEvent(&vtypes.EventProviderBondSlashed{
+		Provider:      provider.String(),
+		SlashedAmount: slashedCoin,
+		Reason:        reason,
+	})
 }
 
 func (k *keeper) PostSnapshotHash(ctx sdk.Context, provider sdk.AccAddress, snapshotHash []byte, resources vtypes.ResourceSummary, snapshotTimestamp time.Time) error {
@@ -254,7 +301,7 @@ func (k *keeper) PostSnapshotHash(ctx sdk.Context, provider sdk.AccAddress, snap
 		return moduletypes.ErrSnapshotTooOld
 	}
 
-	return k.SetProviderSnapshot(ctx, vtypes.ProviderSnapshotRecord{
+	record := vtypes.ProviderSnapshotRecord{
 		Provider:           provider.String(),
 		SnapshotHash:       snapshotHash,
 		ResourceSummary:    resources,
@@ -262,6 +309,14 @@ func (k *keeper) PostSnapshotHash(ctx sdk.Context, provider sdk.AccAddress, snap
 		SnapshotTimestamp:  snapshotTimestamp,
 		ComplianceDeadline: ctx.BlockTime().Add(params.SnapshotHashInterval),
 		Suspended:          false,
+	}
+	if err := k.SetProviderSnapshot(ctx, record); err != nil {
+		return err
+	}
+	return ctx.EventManager().EmitTypedEvent(&vtypes.EventSnapshotHashPosted{
+		Provider:           record.Provider,
+		SnapshotHash:       record.SnapshotHash,
+		ComplianceDeadline: record.ComplianceDeadline,
 	})
 }
 
@@ -303,7 +358,7 @@ func (k *keeper) OpenAuditEscrow(
 	}
 
 	id := k.NextAuditEscrowID(ctx)
-	return id, k.SetAuditEscrow(ctx, vtypes.AuditEscrowRecord{
+	record := vtypes.AuditEscrowRecord{
 		ID:                    id,
 		Provider:              provider.String(),
 		RequestedTier:         tier,
@@ -316,7 +371,19 @@ func (k *keeper) OpenAuditEscrow(
 		OpenedAt:              ctx.BlockTime(),
 		ExpiresAt:             expiresAt,
 		MetadataHash:          metadataHash,
-	})
+	}
+	if err := k.SetAuditEscrow(ctx, record); err != nil {
+		return 0, err
+	}
+	if err := ctx.EventManager().EmitTypedEvent(&vtypes.EventAuditEscrowOpened{
+		AuditEscrowID:   id,
+		Provider:        provider.String(),
+		Fee:             fee,
+		ProviderDeposit: providerDeposit,
+	}); err != nil {
+		return 0, err
+	}
+	return id, nil
 }
 
 func (k *keeper) CancelAuditEscrow(ctx sdk.Context, provider sdk.AccAddress, auditEscrowID uint64) error {
@@ -351,7 +418,14 @@ func (k *keeper) CancelAuditEscrow(ctx sdk.Context, provider sdk.AccAddress, aud
 	escrow.ProviderDepositStatus = result.ProviderDepositStatus
 	escrow.SettlementReason = vtypes.AuditEscrowSettlementReasonCancelledUnconsumed
 	escrow.FaultAttribution = vtypes.FaultAttributionNoFault
-	return k.SetAuditEscrow(ctx, escrow)
+	if err = k.SetAuditEscrow(ctx, escrow); err != nil {
+		return err
+	}
+	return ctx.EventManager().EmitTypedEvent(&vtypes.EventAuditEscrowSettled{
+		AuditEscrowID:    escrow.ID,
+		Reason:           escrow.SettlementReason,
+		FaultAttribution: escrow.FaultAttribution,
+	})
 }
 
 func (k *keeper) SettleAuditEscrow(
@@ -406,7 +480,14 @@ func (k *keeper) SettleAuditEscrow(
 	escrow.ProviderDepositStatus = result.ProviderDepositStatus
 	escrow.SettlementReason = reason
 	escrow.FaultAttribution = fault
-	return k.SetAuditEscrow(ctx, escrow)
+	if err = k.SetAuditEscrow(ctx, escrow); err != nil {
+		return err
+	}
+	return ctx.EventManager().EmitTypedEvent(&vtypes.EventAuditEscrowSettled{
+		AuditEscrowID:    escrow.ID,
+		Reason:           reason,
+		FaultAttribution: fault,
+	})
 }
 
 func (k *keeper) SubmitAttestation(
@@ -476,7 +557,8 @@ func (k *keeper) SubmitAttestation(
 	if err := k.validateProviderPrerequisites(ctx, provider, tier); err != nil {
 		return err
 	}
-	if err := k.settleReplacedAttestation(ctx, provider, auditor); err != nil {
+	replaced, hasReplacement, err := k.settleReplacedAttestation(ctx, provider, auditor)
+	if err != nil {
 		return err
 	}
 	if err := k.sendAccountToModule(ctx, auditor, deposit); err != nil {
@@ -507,13 +589,35 @@ func (k *keeper) SubmitAttestation(
 		AuditEscrowID: auditEscrowID,
 	}
 
-	return k.setAttestationWithDiscrepancyCheck(ctx, attestation, auditorRecord)
+	if err = k.setAttestationWithDiscrepancyCheck(ctx, attestation, auditorRecord); err != nil {
+		return err
+	}
+	if hasReplacement {
+		if err = ctx.EventManager().EmitTypedEvent(&vtypes.EventAttestationReplaced{
+			Provider:         attestation.Provider,
+			Auditor:          attestation.Auditor,
+			OldTier:          replaced.Tier,
+			NewTier:          attestation.Tier,
+			OldAuditEscrowID: replaced.AuditEscrowID,
+			NewAuditEscrowID: attestation.AuditEscrowID,
+		}); err != nil {
+			return err
+		}
+	}
+	return ctx.EventManager().EmitTypedEvent(&vtypes.EventAttestationSubmitted{
+		Provider:      attestation.Provider,
+		Auditor:       attestation.Auditor,
+		Tier:          attestation.Tier,
+		Capabilities:  attestation.Capabilities,
+		ExpiresAt:     attestation.ExpiresAt,
+		AuditEscrowID: attestation.AuditEscrowID,
+	})
 }
 
-func (k *keeper) settleReplacedAttestation(ctx sdk.Context, provider, auditor sdk.AccAddress) error {
+func (k *keeper) settleReplacedAttestation(ctx sdk.Context, provider, auditor sdk.AccAddress) (vtypes.AttestationRecord, bool, error) {
 	attestation, found := k.GetAttestation(ctx, provider, auditor)
 	if !found || attestation.Status != vtypes.AttestationStatusValid {
-		return nil
+		return vtypes.AttestationRecord{}, false, nil
 	}
 
 	result, err := k.Settle(SettlementInput{
@@ -521,9 +625,12 @@ func (k *keeper) settleReplacedAttestation(ctx sdk.Context, provider, auditor sd
 		FaultAttribution: vtypes.FaultAttributionNoFault,
 	})
 	if err != nil {
-		return err
+		return vtypes.AttestationRecord{}, false, err
 	}
-	return k.settleAttestationFunds(ctx, provider, auditor, attestation, result)
+	if err = k.settleAttestationFunds(ctx, provider, auditor, attestation, result); err != nil {
+		return vtypes.AttestationRecord{}, false, err
+	}
+	return attestation, true, nil
 }
 
 func (k *keeper) RevokeAttestation(
@@ -565,7 +672,15 @@ func (k *keeper) RevokeAttestation(
 	attestation.FeeStatus = result.FeeStatus
 	attestation.DepositStatus = result.DepositStatus
 	attestation.FaultAttribution = fault
-	return k.SetAttestation(ctx, attestation)
+	if err = k.SetAttestation(ctx, attestation); err != nil {
+		return err
+	}
+	return ctx.EventManager().EmitTypedEvent(&vtypes.EventAttestationRevoked{
+		Provider:  attestation.Provider,
+		Auditor:   attestation.Auditor,
+		Initiator: "auditor",
+		Reason:    reason,
+	})
 }
 
 func (k *keeper) RemoveAttestation(ctx sdk.Context, provider sdk.AccAddress, auditor sdk.AccAddress) error {
@@ -676,7 +791,7 @@ func (k *keeper) setAttestationWithDiscrepancyCheck(ctx sdk.Context, attestation
 		}
 
 		id := k.NextDiscrepancyID(ctx)
-		k.SetDiscrepancy(ctx, vtypes.DiscrepancyEvent{
+		discrepancy := vtypes.DiscrepancyEvent{
 			ID:               id,
 			Provider:         attestation.Provider,
 			AuditorA:         conflict.Auditor,
@@ -685,7 +800,18 @@ func (k *keeper) setAttestationWithDiscrepancyCheck(ctx sdk.Context, attestation
 			AuditorBTier:     attestation.Tier,
 			Timestamp:        ctx.BlockTime(),
 			ResolutionStatus: vtypes.DiscrepancyStatusPending,
-		})
+		}
+		k.SetDiscrepancy(ctx, discrepancy)
+		if err = ctx.EventManager().EmitTypedEvent(&vtypes.EventDiscrepancyDetected{
+			DiscrepancyID: id,
+			Provider:      discrepancy.Provider,
+			AuditorA:      discrepancy.AuditorA,
+			TierA:         discrepancy.AuditorATier,
+			AuditorB:      discrepancy.AuditorB,
+			TierB:         discrepancy.AuditorBTier,
+		}); err != nil {
+			return err
+		}
 		discrepancyIDs = append(discrepancyIDs, id)
 	}
 
@@ -698,7 +824,7 @@ func (k *keeper) setAttestationWithDiscrepancyCheck(ctx sdk.Context, attestation
 	})
 
 	if vtypes.TierBetter(bestBefore, bestAfter) {
-		graceID, err := k.upsertProviderVerificationGrace(ctx, provider, bestBefore, discrepancyIDs)
+		graceID, started, err := k.upsertProviderVerificationGrace(ctx, provider, bestBefore, discrepancyIDs)
 		if err != nil {
 			return err
 		}
@@ -709,6 +835,13 @@ func (k *keeper) setAttestationWithDiscrepancyCheck(ctx sdk.Context, attestation
 			}
 			discrepancy.GraceRecordID = graceID
 			k.SetDiscrepancy(ctx, discrepancy)
+		}
+		if started {
+			return ctx.EventManager().EmitTypedEvent(&vtypes.EventVerificationGraceStarted{
+				GraceRecordID: graceID,
+				Provider:      provider.String(),
+				PreservedTier: bestBefore,
+			})
 		}
 	}
 	return nil
@@ -754,7 +887,7 @@ func (k *keeper) voidProviderAttestations(ctx sdk.Context, provider sdk.AccAddre
 		if err != nil {
 			return err
 		}
-		if err = k.settleAttestationFunds(ctx, auditor, attestation, result); err != nil {
+		if err = k.settleAttestationFunds(ctx, provider, auditor, attestation, result); err != nil {
 			return err
 		}
 
@@ -764,6 +897,13 @@ func (k *keeper) voidProviderAttestations(ctx sdk.Context, provider sdk.AccAddre
 		attestation.DepositStatus = result.DepositStatus
 		attestation.FaultAttribution = vtypes.FaultAttributionProviderFault
 		if err = k.SetAttestation(ctx, attestation); err != nil {
+			return err
+		}
+		if err = ctx.EventManager().EmitTypedEvent(&vtypes.EventAttestationVoided{
+			Provider: attestation.Provider,
+			Auditor:  attestation.Auditor,
+			Reason:   reason,
+		}); err != nil {
 			return err
 		}
 	}
@@ -777,7 +917,7 @@ func (k *keeper) freezeAuditorForDiscrepancy(ctx sdk.Context, record vtypes.Audi
 	return k.SetAuditor(ctx, record)
 }
 
-func (k *keeper) upsertProviderVerificationGrace(ctx sdk.Context, provider sdk.AccAddress, preservedTier vtypes.VerificationTier, discrepancyIDs []uint64) (uint64, error) {
+func (k *keeper) upsertProviderVerificationGrace(ctx sdk.Context, provider sdk.AccAddress, preservedTier vtypes.VerificationTier, discrepancyIDs []uint64) (uint64, bool, error) {
 	var active *vtypes.ProviderVerificationGraceRecord
 	k.WithProviderVerificationGraces(ctx, provider, func(record vtypes.ProviderVerificationGraceRecord) bool {
 		if record.Status == vtypes.VerificationGraceStatusActive {
@@ -792,12 +932,12 @@ func (k *keeper) upsertProviderVerificationGrace(ctx sdk.Context, provider sdk.A
 			active.PreservedTier = preservedTier
 		}
 		active.SourceDiscrepancyIDs = append(active.SourceDiscrepancyIDs, discrepancyIDs...)
-		return active.ID, k.SetProviderVerificationGrace(ctx, *active)
+		return active.ID, false, k.SetProviderVerificationGrace(ctx, *active)
 	}
 
 	params := k.GetParams(ctx)
 	id := k.NextGraceRecordID(ctx)
-	return id, k.SetProviderVerificationGrace(ctx, vtypes.ProviderVerificationGraceRecord{
+	record := vtypes.ProviderVerificationGraceRecord{
 		ID:                   id,
 		Provider:             provider.String(),
 		PreservedTier:        preservedTier,
@@ -805,7 +945,8 @@ func (k *keeper) upsertProviderVerificationGrace(ctx sdk.Context, provider sdk.A
 		StartedAt:            ctx.BlockTime(),
 		ExpiresAt:            ctx.BlockTime().Add(params.DiscrepancyGracePeriod),
 		Status:               vtypes.VerificationGraceStatusActive,
-	})
+	}
+	return id, true, k.SetProviderVerificationGrace(ctx, record)
 }
 
 func tierDifference(a, b vtypes.VerificationTier) int32 {
@@ -873,12 +1014,14 @@ func (k *keeper) ResolveDiscrepancy(
 		return err
 	}
 
+	var endedGrace *vtypes.ProviderVerificationGraceRecord
 	if discrepancy.GraceRecordID != 0 && fault == vtypes.FaultAttributionProviderFault {
 		if grace, found := k.getProviderVerificationGraceByID(ctx, discrepancy.GraceRecordID); found && grace.Status == vtypes.VerificationGraceStatusActive {
 			grace.Status = vtypes.VerificationGraceStatusTerminated
 			if err = k.SetProviderVerificationGrace(ctx, grace); err != nil {
 				return err
 			}
+			endedGrace = &grace
 		}
 	}
 
@@ -887,6 +1030,20 @@ func (k *keeper) ResolveDiscrepancy(
 	discrepancy.FaultAttribution = fault
 	discrepancy.ResolutionEvidenceHash = evidenceHash
 	k.SetDiscrepancy(ctx, discrepancy)
+	if err = ctx.EventManager().EmitTypedEvent(&vtypes.EventDiscrepancyResolved{
+		DiscrepancyID:     discrepancy.ID,
+		VindicatedAuditor: vindicatedAuditor,
+		Reason:            reason,
+		FaultAttribution:  fault,
+	}); err != nil {
+		return err
+	}
+	if endedGrace != nil {
+		return ctx.EventManager().EmitTypedEvent(&vtypes.EventVerificationGraceEnded{
+			GraceRecordID: endedGrace.ID,
+			Status:        endedGrace.Status,
+		})
+	}
 	return nil
 }
 
