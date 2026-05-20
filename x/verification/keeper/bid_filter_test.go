@@ -78,7 +78,39 @@ func TestBidFilterTierUsesBestValidAttestationAndActiveGrace(t *testing.T) {
 		ExpiresAt:     ctx.BlockTime().Add(DefaultParams().DiscrepancyGracePeriod),
 		Status:        vtypes.VerificationGraceStatusActive,
 	}))
-	require.ErrorIs(t, k.BidFilter(ctx, provider, req), moduletypes.ErrInsufficientVerificationTier)
+	require.NoError(t, k.BidFilter(ctx, provider, req))
+}
+
+func TestBidFilterGraceOnlySatisfiesTier(t *testing.T) {
+	ctx, k := setupActiveBidFilterKeeper(t)
+	provider := testutil.AccAddress(t)
+	auditor := testutil.AccAddress(t)
+	requireBidFilterSnapshot(t, ctx, k, provider)
+
+	require.NoError(t, k.SetProviderVerificationGrace(ctx, vtypes.ProviderVerificationGraceRecord{
+		ID:            1,
+		Provider:      provider.String(),
+		PreservedTier: vtypes.TierEstablished,
+		StartedAt:     ctx.BlockTime(),
+		ExpiresAt:     ctx.BlockTime().Add(DefaultParams().DiscrepancyGracePeriod),
+		Status:        vtypes.VerificationGraceStatusActive,
+	}))
+	require.NoError(t, k.BidFilter(ctx, provider, &vtypes.VerificationRequirement{
+		MinTier: vtypes.TierEstablished,
+	}))
+
+	require.ErrorIs(t, k.BidFilter(ctx, provider, &vtypes.VerificationRequirement{
+		MinTier:              vtypes.TierEstablished,
+		RequiredCapabilities: []vtypes.CapabilityFlag{vtypes.CapabilityBareMetal},
+	}), moduletypes.ErrMissingCapability)
+	require.ErrorIs(t, k.BidFilter(ctx, provider, &vtypes.VerificationRequirement{
+		MinTier:          vtypes.TierEstablished,
+		RequiredAuditors: []string{auditor.String()},
+	}), moduletypes.ErrRequiredAuditorNotFound)
+	require.ErrorIs(t, k.BidFilter(ctx, provider, &vtypes.VerificationRequirement{
+		MinTier:         vtypes.TierEstablished,
+		MinAuditorCount: 1,
+	}), moduletypes.ErrInsufficientAuditorCount)
 }
 
 func TestBidFilterCapabilitiesAuditorsAndCount(t *testing.T) {
@@ -121,6 +153,18 @@ func TestBidFilterCapabilitiesAuditorsAndCount(t *testing.T) {
 
 	recordB := attestationRecord(provider, auditorB)
 	recordB.Tier = vtypes.TierVerified
+	recordB.Status = vtypes.AttestationStatusVoided
+	require.NoError(t, k.SetAttestation(ctx, recordB))
+
+	req = baseReq
+	req.RequiredAuditors = []string{auditorB.String()}
+	require.ErrorIs(t, k.BidFilter(ctx, provider, &req), moduletypes.ErrRequiredAuditorNotFound)
+
+	req = baseReq
+	req.MinAuditorCount = 2
+	require.ErrorIs(t, k.BidFilter(ctx, provider, &req), moduletypes.ErrInsufficientAuditorCount)
+
+	recordB.Status = vtypes.AttestationStatusValid
 	require.NoError(t, k.SetAttestation(ctx, recordB))
 
 	req = baseReq

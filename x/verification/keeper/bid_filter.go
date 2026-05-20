@@ -84,7 +84,7 @@ func (k *keeper) bidFilterState(ctx sdk.Context, provider sdk.AccAddress, minTie
 	})
 
 	k.WithProviderVerificationGraces(ctx, provider, func(record vtypes.ProviderVerificationGraceRecord) bool {
-		if record.GetStatus() == vtypes.VerificationGraceStatusActive {
+		if record.GetStatus() == vtypes.VerificationGraceStatusActive && vtypes.TierBetter(record.GetPreservedTier(), state.tier) {
 			state.tier = record.GetPreservedTier()
 			return true
 		}
