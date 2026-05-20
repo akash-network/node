@@ -326,6 +326,9 @@ func (k *keeper) SubmitAttestation(
 	if err := k.validateProviderPrerequisites(ctx, provider, tier); err != nil {
 		return err
 	}
+	if err := k.settleReplacedAttestation(ctx, provider, auditor); err != nil {
+		return err
+	}
 	if err := k.sendAccountToModule(ctx, auditor, deposit); err != nil {
 		return err
 	}
@@ -355,6 +358,22 @@ func (k *keeper) SubmitAttestation(
 	}
 
 	return k.setAttestationWithDiscrepancyCheck(ctx, attestation, auditorRecord)
+}
+
+func (k *keeper) settleReplacedAttestation(ctx sdk.Context, provider, auditor sdk.AccAddress) error {
+	attestation, found := k.GetAttestation(ctx, provider, auditor)
+	if !found || attestation.Status != vtypes.AttestationStatusValid {
+		return nil
+	}
+
+	result, err := k.Settle(SettlementInput{
+		Path:             SettlementPathReplacement,
+		FaultAttribution: vtypes.FaultAttributionNoFault,
+	})
+	if err != nil {
+		return err
+	}
+	return k.settleAttestationFunds(ctx, auditor, attestation, result)
 }
 
 func (k *keeper) setAttestationWithDiscrepancyCheck(ctx sdk.Context, attestation vtypes.AttestationRecord, auditorRecord vtypes.AuditorRecord) error {
