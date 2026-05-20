@@ -4,6 +4,7 @@ import (
 	"context"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 
 	vtypes "pkg.akt.dev/go/node/verification/v1"
 
@@ -34,6 +35,20 @@ func (ms msgServer) RegisterAuditor(goCtx context.Context, msg *vtypes.MsgRegist
 	}
 
 	return &vtypes.MsgRegisterAuditorResponse{}, nil
+}
+
+func (ms msgServer) UpdateParams(goCtx context.Context, msg *vtypes.MsgUpdateParams) (*vtypes.MsgUpdateParamsResponse, error) {
+	if ms.keeper.GetAuthority() != msg.Authority {
+		return nil, govtypes.ErrInvalidSigner.Wrapf("invalid authority; expected %s, got %s", ms.keeper.GetAuthority(), msg.Authority)
+	}
+	if err := keeper.ValidateParams(msg.Params); err != nil {
+		return nil, err
+	}
+
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	ms.keeper.SetParams(ctx, msg.Params)
+
+	return &vtypes.MsgUpdateParamsResponse{}, nil
 }
 
 func (ms msgServer) PostAuditorBond(goCtx context.Context, msg *vtypes.MsgPostAuditorBond) (*vtypes.MsgPostAuditorBondResponse, error) {
