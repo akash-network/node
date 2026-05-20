@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"crypto/sha256"
 	"time"
 
 	errorsmod "cosmossdk.io/errors"
@@ -89,8 +90,8 @@ func (k *keeper) PostSnapshotHash(ctx sdk.Context, provider sdk.AccAddress, snap
 	if !k.providerExists(ctx, provider) {
 		return moduletypes.ErrProviderNotRegistered
 	}
-	if len(snapshotHash) == 0 {
-		return errorsmod.Wrap(moduletypes.ErrSnapshotNonCompliant, "snapshot hash is empty")
+	if err := validateHash(snapshotHash, "snapshot hash"); err != nil {
+		return err
 	}
 	if snapshotTimestamp.IsZero() || snapshotTimestamp.After(ctx.BlockTime()) {
 		return moduletypes.ErrSnapshotTooOld
@@ -126,6 +127,9 @@ func (k *keeper) OpenAuditEscrow(
 		return 0, moduletypes.ErrProviderNotRegistered
 	}
 	if err := validateMsgTier(tier); err != nil {
+		return 0, err
+	}
+	if err := validateCapabilities(capabilities); err != nil {
 		return 0, err
 	}
 	params := k.GetParams(ctx)
@@ -183,8 +187,11 @@ func (k *keeper) SubmitAttestation(
 	if err := validateMsgTier(tier); err != nil {
 		return err
 	}
-	if len(evidenceHash) == 0 {
-		return errorsmod.Wrap(moduletypes.ErrInvalidReason, "evidence hash is empty")
+	if err := validateCapabilities(capabilities); err != nil {
+		return err
+	}
+	if err := validateHash(evidenceHash, "evidence hash"); err != nil {
+		return err
 	}
 
 	params := k.GetParams(ctx)
@@ -309,6 +316,34 @@ func validateMsgTier(tier vtypes.VerificationTier) error {
 	default:
 		return errorsmod.Wrapf(moduletypes.ErrInvalidReason, "invalid tier %d", tier)
 	}
+}
+
+func validateCapabilities(capabilities []vtypes.CapabilityFlag) error {
+	seen := make(map[vtypes.CapabilityFlag]struct{}, len(capabilities))
+	for _, capability := range capabilities {
+		switch capability {
+		case vtypes.CapabilityTEEHardwareAttestation,
+			vtypes.CapabilityConfidentialComputing,
+			vtypes.CapabilityPersistentStorage,
+			vtypes.CapabilityBareMetal:
+		default:
+			return errorsmod.Wrapf(moduletypes.ErrInvalidReason, "invalid capability %d", capability)
+		}
+
+		if _, found := seen[capability]; found {
+			return errorsmod.Wrapf(moduletypes.ErrInvalidReason, "duplicate capability %s", capability)
+		}
+		seen[capability] = struct{}{}
+	}
+
+	return nil
+}
+
+func validateHash(hash []byte, name string) error {
+	if len(hash) != sha256.Size {
+		return errorsmod.Wrapf(moduletypes.ErrInvalidReason, "%s must be %d bytes", name, sha256.Size)
+	}
+	return nil
 }
 
 func addCoin(a, b sdk.Coin) (sdk.Coin, error) {
