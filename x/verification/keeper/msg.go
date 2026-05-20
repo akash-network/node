@@ -8,6 +8,7 @@ import (
 	"cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 
 	vtypes "pkg.akt.dev/go/node/verification/v1"
 
@@ -293,6 +294,9 @@ func (k *keeper) SubmitAttestation(
 	if auditorRecord.Status != vtypes.AuditorStatusActive {
 		return moduletypes.ErrAuditorNotActive
 	}
+	if auditorRecord.BondStatus == vtypes.BondStatusFrozen {
+		return moduletypes.ErrAuditorFrozen
+	}
 	if !vtypes.TierAtLeast(auditorRecord.MaxAttestationTier, tier) {
 		return moduletypes.ErrAuditorUnauthorizedTier
 	}
@@ -334,7 +338,7 @@ func (k *keeper) SubmitAttestation(
 		return err
 	}
 
-	return k.SetAttestation(ctx, vtypes.AttestationRecord{
+	attestation := vtypes.AttestationRecord{
 		Provider:      provider.String(),
 		Auditor:       auditor.String(),
 		Tier:          tier,
@@ -348,7 +352,228 @@ func (k *keeper) SubmitAttestation(
 		Deposit:       deposit,
 		DepositStatus: vtypes.DepositStatusEscrowed,
 		AuditEscrowID: auditEscrowID,
+	}
+
+	return k.setAttestationWithDiscrepancyCheck(ctx, attestation, auditorRecord)
+}
+
+func (k *keeper) setAttestationWithDiscrepancyCheck(ctx sdk.Context, attestation vtypes.AttestationRecord, auditorRecord vtypes.AuditorRecord) error {
+	provider, err := sdk.AccAddressFromBech32(attestation.Provider)
+	if err != nil {
+		return err
+	}
+	if _, err = sdk.AccAddressFromBech32(attestation.Auditor); err != nil {
+		return err
+	}
+
+	params := k.GetParams(ctx)
+	conflicts := make([]vtypes.AttestationRecord, 0)
+	bestBefore := vtypes.TierUnspecified
+	k.WithProviderAttestations(ctx, provider, vtypes.AttestationStatusValid, func(record vtypes.AttestationRecord) bool {
+		if vtypes.TierBetter(record.Tier, bestBefore) {
+			bestBefore = record.Tier
+		}
+		if record.Auditor == attestation.Auditor {
+			return false
+		}
+		if tierDifference(record.Tier, attestation.Tier) > int32(params.DiscrepancyThreshold) {
+			conflicts = append(conflicts, record)
+		}
+		return false
 	})
+
+	if len(conflicts) == 0 {
+		return k.SetAttestation(ctx, attestation)
+	}
+
+	discrepancyIDs := make([]uint64, 0, len(conflicts))
+	attestation.Status = vtypes.AttestationStatusVoided
+	attestation.VoidedReason = vtypes.VoidedReasonDiscrepancy
+	attestation.DepositStatus = vtypes.DepositStatusPendingDiscrepancy
+
+	if err = k.SetAttestation(ctx, attestation); err != nil {
+		return err
+	}
+	if err = k.freezeAuditorForDiscrepancy(ctx, auditorRecord); err != nil {
+		return err
+	}
+
+	for _, conflict := range conflicts {
+		conflictAuditor, err := sdk.AccAddressFromBech32(conflict.Auditor)
+		if err != nil {
+			return err
+		}
+		conflict.Status = vtypes.AttestationStatusVoided
+		conflict.VoidedReason = vtypes.VoidedReasonDiscrepancy
+		conflict.DepositStatus = vtypes.DepositStatusPendingDiscrepancy
+		if err = k.SetAttestation(ctx, conflict); err != nil {
+			return err
+		}
+
+		conflictAuditorRecord, found := k.GetAuditor(ctx, conflictAuditor)
+		if !found {
+			return moduletypes.ErrAuditorNotFound
+		}
+		if err = k.freezeAuditorForDiscrepancy(ctx, conflictAuditorRecord); err != nil {
+			return err
+		}
+
+		id := k.NextDiscrepancyID(ctx)
+		k.SetDiscrepancy(ctx, vtypes.DiscrepancyEvent{
+			ID:               id,
+			Provider:         attestation.Provider,
+			AuditorA:         conflict.Auditor,
+			AuditorATier:     conflict.Tier,
+			AuditorB:         attestation.Auditor,
+			AuditorBTier:     attestation.Tier,
+			Timestamp:        ctx.BlockTime(),
+			ResolutionStatus: vtypes.DiscrepancyStatusPending,
+		})
+		discrepancyIDs = append(discrepancyIDs, id)
+	}
+
+	bestAfter := vtypes.TierUnspecified
+	k.WithProviderAttestations(ctx, provider, vtypes.AttestationStatusValid, func(record vtypes.AttestationRecord) bool {
+		if vtypes.TierBetter(record.Tier, bestAfter) {
+			bestAfter = record.Tier
+		}
+		return false
+	})
+
+	if vtypes.TierBetter(bestBefore, bestAfter) {
+		graceID, err := k.upsertProviderVerificationGrace(ctx, provider, bestBefore, discrepancyIDs)
+		if err != nil {
+			return err
+		}
+		for _, id := range discrepancyIDs {
+			discrepancy, found := k.GetDiscrepancy(ctx, id)
+			if !found {
+				return moduletypes.ErrDiscrepancyNotFound
+			}
+			discrepancy.GraceRecordID = graceID
+			k.SetDiscrepancy(ctx, discrepancy)
+		}
+	}
+	return nil
+}
+
+func (k *keeper) freezeAuditorForDiscrepancy(ctx sdk.Context, record vtypes.AuditorRecord) error {
+	record.BondStatus = vtypes.BondStatusFrozen
+	record.DiscrepancyCount++
+	return k.SetAuditor(ctx, record)
+}
+
+func (k *keeper) upsertProviderVerificationGrace(ctx sdk.Context, provider sdk.AccAddress, preservedTier vtypes.VerificationTier, discrepancyIDs []uint64) (uint64, error) {
+	var active *vtypes.ProviderVerificationGraceRecord
+	k.WithProviderVerificationGraces(ctx, provider, func(record vtypes.ProviderVerificationGraceRecord) bool {
+		if record.Status == vtypes.VerificationGraceStatusActive {
+			active = &record
+			return true
+		}
+		return false
+	})
+
+	if active != nil {
+		if vtypes.TierBetter(preservedTier, active.PreservedTier) {
+			active.PreservedTier = preservedTier
+		}
+		active.SourceDiscrepancyIDs = append(active.SourceDiscrepancyIDs, discrepancyIDs...)
+		return active.ID, k.SetProviderVerificationGrace(ctx, *active)
+	}
+
+	params := k.GetParams(ctx)
+	id := k.NextGraceRecordID(ctx)
+	return id, k.SetProviderVerificationGrace(ctx, vtypes.ProviderVerificationGraceRecord{
+		ID:                   id,
+		Provider:             provider.String(),
+		PreservedTier:        preservedTier,
+		SourceDiscrepancyIDs: discrepancyIDs,
+		StartedAt:            ctx.BlockTime(),
+		ExpiresAt:            ctx.BlockTime().Add(params.DiscrepancyGracePeriod),
+		Status:               vtypes.VerificationGraceStatusActive,
+	})
+}
+
+func tierDifference(a, b vtypes.VerificationTier) int32 {
+	diff := int32(a) - int32(b)
+	if diff < 0 {
+		return -diff
+	}
+	return diff
+}
+
+func (k *keeper) ResolveDiscrepancy(
+	ctx sdk.Context,
+	authority string,
+	discrepancyID uint64,
+	vindicatedAuditor string,
+	slashAuditorA bool,
+	slashAuditorB bool,
+	reason vtypes.DiscrepancyResolutionReason,
+	fault vtypes.FaultAttribution,
+	evidenceHash []byte,
+) error {
+	if k.authority != "" && authority != k.authority {
+		return govtypes.ErrInvalidSigner.Wrapf("invalid authority; expected %s, got %s", k.authority, authority)
+	}
+	if err := validateHash(evidenceHash, "evidence hash"); err != nil {
+		return err
+	}
+
+	discrepancy, found := k.GetDiscrepancy(ctx, discrepancyID)
+	if !found {
+		return moduletypes.ErrDiscrepancyNotFound
+	}
+	if discrepancy.ResolutionStatus != vtypes.DiscrepancyStatusPending && discrepancy.ResolutionStatus != vtypes.DiscrepancyStatusTimedOut {
+		return errorsmod.Wrap(moduletypes.ErrInvalidReason, "discrepancy is not pending or timed out")
+	}
+	if err := validateVindicatedAuditor(discrepancy, vindicatedAuditor, reason); err != nil {
+		return err
+	}
+	if _, err := k.Settle(SettlementInput{
+		Path:              SettlementPathDiscrepancyResolved,
+		DiscrepancyReason: reason,
+		FaultAttribution:  fault,
+	}); err != nil {
+		return err
+	}
+
+	if discrepancy.ResolutionStatus == vtypes.DiscrepancyStatusPending {
+		if err := k.settleDiscrepancyAttestations(ctx, discrepancy, reason); err != nil {
+			return err
+		}
+	}
+
+	auditorA, err := sdk.AccAddressFromBech32(discrepancy.AuditorA)
+	if err != nil {
+		return err
+	}
+	auditorB, err := sdk.AccAddressFromBech32(discrepancy.AuditorB)
+	if err != nil {
+		return err
+	}
+	if err = k.resolveDiscrepancyAuditorBond(ctx, auditorA, discrepancy.ID, slashAuditorA); err != nil {
+		return err
+	}
+	if err = k.resolveDiscrepancyAuditorBond(ctx, auditorB, discrepancy.ID, slashAuditorB); err != nil {
+		return err
+	}
+
+	if discrepancy.GraceRecordID != 0 && fault == vtypes.FaultAttributionProviderFault {
+		if grace, found := k.getProviderVerificationGraceByID(ctx, discrepancy.GraceRecordID); found && grace.Status == vtypes.VerificationGraceStatusActive {
+			grace.Status = vtypes.VerificationGraceStatusTerminated
+			if err = k.SetProviderVerificationGrace(ctx, grace); err != nil {
+				return err
+			}
+		}
+	}
+
+	discrepancy.ResolutionStatus = vtypes.DiscrepancyStatusResolved
+	discrepancy.ResolutionReason = reason
+	discrepancy.FaultAttribution = fault
+	discrepancy.ResolutionEvidenceHash = evidenceHash
+	k.SetDiscrepancy(ctx, discrepancy)
+	return nil
 }
 
 func (k *keeper) validateProviderPrerequisites(ctx sdk.Context, provider sdk.AccAddress, tier vtypes.VerificationTier) error {
@@ -477,6 +702,165 @@ func (k *keeper) settleAttestationFunds(ctx sdk.Context, auditor sdk.AccAddress,
 	}
 
 	return nil
+}
+
+func (k *keeper) settlePendingDiscrepancyAttestationFunds(ctx sdk.Context, provider, auditor sdk.AccAddress, attestation vtypes.AttestationRecord, result SettlementResult) error {
+	if attestation.FeeStatus != vtypes.FeeStatusEscrowed || attestation.DepositStatus != vtypes.DepositStatusPendingDiscrepancy {
+		return moduletypes.ErrInvalidReason
+	}
+
+	switch result.FeeStatus {
+	case vtypes.FeeStatusReleasedToAuditor:
+		if err := k.sendModuleToAccount(ctx, auditor, attestation.Fee); err != nil {
+			return err
+		}
+	case vtypes.FeeStatusReturnedToProvider:
+		if err := k.sendModuleToAccount(ctx, provider, attestation.Fee); err != nil {
+			return err
+		}
+	case vtypes.FeeStatusEscrowed, vtypes.FeeStatusUnspecified:
+		return errorsmod.Wrapf(moduletypes.ErrInvalidReason, "unsupported pending discrepancy fee settlement %s", result.FeeStatus)
+	}
+
+	switch result.DepositStatus {
+	case vtypes.DepositStatusReturnedToAuditor:
+		return k.sendModuleToAccount(ctx, auditor, attestation.Deposit)
+	case vtypes.DepositStatusSlashed:
+		return k.sendModuleToDistribution(ctx, attestation.Deposit)
+	case vtypes.DepositStatusEscrowed, vtypes.DepositStatusPendingDiscrepancy, vtypes.DepositStatusUnspecified:
+		return errorsmod.Wrapf(moduletypes.ErrInvalidReason, "unsupported pending discrepancy deposit settlement %s", result.DepositStatus)
+	}
+
+	return nil
+}
+
+func (k *keeper) settleDiscrepancyAttestations(ctx sdk.Context, discrepancy vtypes.DiscrepancyEvent, reason vtypes.DiscrepancyResolutionReason) error {
+	provider, err := sdk.AccAddressFromBech32(discrepancy.Provider)
+	if err != nil {
+		return err
+	}
+	auditorA, err := sdk.AccAddressFromBech32(discrepancy.AuditorA)
+	if err != nil {
+		return err
+	}
+	auditorB, err := sdk.AccAddressFromBech32(discrepancy.AuditorB)
+	if err != nil {
+		return err
+	}
+
+	attestationA, found := k.GetAttestation(ctx, provider, auditorA)
+	if !found {
+		return moduletypes.ErrAttestationNotFound
+	}
+	attestationB, found := k.GetAttestation(ctx, provider, auditorB)
+	if !found {
+		return moduletypes.ErrAttestationNotFound
+	}
+
+	resultA, resultB, err := discrepancyAttestationSettlementResults(reason)
+	if err != nil {
+		return err
+	}
+	if err = k.settlePendingDiscrepancyAttestationFunds(ctx, provider, auditorA, attestationA, resultA); err != nil {
+		return err
+	}
+	if err = k.settlePendingDiscrepancyAttestationFunds(ctx, provider, auditorB, attestationB, resultB); err != nil {
+		return err
+	}
+
+	attestationA.FeeStatus = resultA.FeeStatus
+	attestationA.DepositStatus = resultA.DepositStatus
+	attestationB.FeeStatus = resultB.FeeStatus
+	attestationB.DepositStatus = resultB.DepositStatus
+
+	if err = k.SetAttestation(ctx, attestationA); err != nil {
+		return err
+	}
+	return k.SetAttestation(ctx, attestationB)
+}
+
+func discrepancyAttestationSettlementResults(reason vtypes.DiscrepancyResolutionReason) (SettlementResult, SettlementResult, error) {
+	released := SettlementResult{
+		FeeStatus:     vtypes.FeeStatusReleasedToAuditor,
+		DepositStatus: vtypes.DepositStatusReturnedToAuditor,
+	}
+	slashed := SettlementResult{
+		FeeStatus:     vtypes.FeeStatusReturnedToProvider,
+		DepositStatus: vtypes.DepositStatusSlashed,
+	}
+
+	switch reason {
+	case vtypes.DiscrepancyResolutionReasonAuditorACorrect:
+		return released, slashed, nil
+	case vtypes.DiscrepancyResolutionReasonAuditorBCorrect:
+		return slashed, released, nil
+	case vtypes.DiscrepancyResolutionReasonProviderFault,
+		vtypes.DiscrepancyResolutionReasonEvidenceInconclusive:
+		return released, released, nil
+	case vtypes.DiscrepancyResolutionReasonBothAuditorsWrong,
+		vtypes.DiscrepancyResolutionReasonSharedFault,
+		vtypes.DiscrepancyResolutionReasonGovernanceTimeoutReview:
+		return slashed, slashed, nil
+	default:
+		return SettlementResult{}, SettlementResult{}, errorsmod.Wrapf(moduletypes.ErrInvalidReason, "unknown discrepancy resolution reason %d", reason)
+	}
+}
+
+func validateVindicatedAuditor(discrepancy vtypes.DiscrepancyEvent, vindicatedAuditor string, reason vtypes.DiscrepancyResolutionReason) error {
+	if vindicatedAuditor != "" && vindicatedAuditor != discrepancy.AuditorA && vindicatedAuditor != discrepancy.AuditorB {
+		return errorsmod.Wrap(moduletypes.ErrInvalidReason, "vindicated auditor must be auditor A, auditor B, or empty")
+	}
+
+	switch reason {
+	case vtypes.DiscrepancyResolutionReasonAuditorACorrect:
+		if vindicatedAuditor != discrepancy.AuditorA {
+			return errorsmod.Wrap(moduletypes.ErrInvalidReason, "auditor A resolution must vindicate auditor A")
+		}
+	case vtypes.DiscrepancyResolutionReasonAuditorBCorrect:
+		if vindicatedAuditor != discrepancy.AuditorB {
+			return errorsmod.Wrap(moduletypes.ErrInvalidReason, "auditor B resolution must vindicate auditor B")
+		}
+	case vtypes.DiscrepancyResolutionReasonBothAuditorsWrong,
+		vtypes.DiscrepancyResolutionReasonSharedFault,
+		vtypes.DiscrepancyResolutionReasonGovernanceTimeoutReview:
+		if vindicatedAuditor != "" {
+			return errorsmod.Wrap(moduletypes.ErrInvalidReason, "resolution reason cannot vindicate an auditor")
+		}
+	}
+	return nil
+}
+
+func (k *keeper) resolveDiscrepancyAuditorBond(ctx sdk.Context, auditor sdk.AccAddress, discrepancyID uint64, slash bool) error {
+	record, found := k.GetAuditor(ctx, auditor)
+	if !found {
+		return moduletypes.ErrAuditorNotFound
+	}
+
+	if slash {
+		if err := k.sendModuleToDistribution(ctx, record.BondAmount); err != nil {
+			return err
+		}
+		record.BondAmount = sdk.NewCoin(record.BondAmount.Denom, math.ZeroInt())
+		record.BondStatus = vtypes.BondStatusUnspecified
+		return k.SetAuditor(ctx, record)
+	}
+
+	if !k.auditorHasOtherPendingDiscrepancy(ctx, auditor.String(), discrepancyID) && record.BondStatus == vtypes.BondStatusFrozen {
+		record.BondStatus = vtypes.BondStatusBonded
+	}
+	return k.SetAuditor(ctx, record)
+}
+
+func (k *keeper) auditorHasOtherPendingDiscrepancy(ctx sdk.Context, auditor string, currentID uint64) bool {
+	found := false
+	k.WithDiscrepancies(ctx, vtypes.DiscrepancyStatusPending, func(record vtypes.DiscrepancyEvent) bool {
+		if record.ID != currentID && (record.AuditorA == auditor || record.AuditorB == auditor) {
+			found = true
+			return true
+		}
+		return false
+	})
+	return found
 }
 
 func requireEscrowedAuditEscrowFunds(escrow vtypes.AuditEscrowRecord) error {

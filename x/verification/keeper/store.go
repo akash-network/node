@@ -171,7 +171,15 @@ func (k *keeper) GetDiscrepancy(ctx sdk.Context, id uint64) (vtypes.DiscrepancyE
 }
 
 func (k *keeper) SetDiscrepancy(ctx sdk.Context, record vtypes.DiscrepancyEvent) {
-	ctx.KVStore(k.skey).Set(idKey(prefixDiscrepancy, record.ID), k.cdc.MustMarshal(&record))
+	store := ctx.KVStore(k.skey)
+	store.Set(idKey(prefixDiscrepancy, record.ID), k.cdc.MustMarshal(&record))
+
+	timeout := record.Timestamp.Add(k.GetParams(ctx).DiscrepancyResolutionTimeout)
+	if record.ResolutionStatus == vtypes.DiscrepancyStatusPending {
+		store.Set(discrepancyTimeoutQueueKey(timeout, record.ID), []byte{})
+	} else {
+		store.Delete(discrepancyTimeoutQueueKey(timeout, record.ID))
+	}
 }
 
 func (k *keeper) WithDiscrepancies(ctx sdk.Context, status vtypes.DiscrepancyStatus, fn func(vtypes.DiscrepancyEvent) bool) {
@@ -441,6 +449,12 @@ func (k *keeper) SetNextDiscrepancyID(ctx sdk.Context, id uint64) {
 	k.setNextID(ctx, keyNextDiscrepancyID, id)
 }
 
+func (k *keeper) NextDiscrepancyID(ctx sdk.Context) uint64 {
+	id := k.GetNextDiscrepancyID(ctx)
+	k.SetNextDiscrepancyID(ctx, id+1)
+	return id
+}
+
 func (k *keeper) GetNextAuditEscrowID(ctx sdk.Context) uint64 {
 	return k.getNextID(ctx, keyNextAuditEscrowID)
 }
@@ -461,6 +475,12 @@ func (k *keeper) GetNextGraceRecordID(ctx sdk.Context) uint64 {
 
 func (k *keeper) SetNextGraceRecordID(ctx sdk.Context, id uint64) {
 	k.setNextID(ctx, keyNextGraceRecordID, id)
+}
+
+func (k *keeper) NextGraceRecordID(ctx sdk.Context) uint64 {
+	id := k.GetNextGraceRecordID(ctx)
+	k.SetNextGraceRecordID(ctx, id+1)
+	return id
 }
 
 func (k *keeper) getNextID(ctx sdk.Context, key byte) uint64 {
