@@ -51,7 +51,14 @@ func (k *keeper) SetAuditor(ctx sdk.Context, record vtypes.AuditorRecord) error 
 		return err
 	}
 
-	ctx.KVStore(k.skey).Set(addressKey(prefixAuditor, auditor), k.cdc.MustMarshal(&record))
+	store := ctx.KVStore(k.skey)
+	store.Set(addressKey(prefixAuditor, auditor), k.cdc.MustMarshal(&record))
+	if record.Status == vtypes.AuditorStatusActive && !record.RenewalDeadline.IsZero() {
+		store.Set(auditorRenewalQueueKey(record.RenewalDeadline, auditor), []byte{})
+	}
+	if record.BondStatus == vtypes.BondStatusUnbonding && record.BondUnbondingCompletionTime != nil {
+		store.Set(auditorBondUnbondingQueueKey(*record.BondUnbondingCompletionTime, auditor), []byte{})
+	}
 	return nil
 }
 

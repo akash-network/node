@@ -61,6 +61,67 @@ func (k *keeper) PostAuditorBond(ctx sdk.Context, auditor sdk.AccAddress, amount
 	return k.SetAuditor(ctx, record)
 }
 
+func (k *keeper) RenewAuditor(ctx sdk.Context, authority string, auditor sdk.AccAddress) error {
+	if k.authority != "" && authority != k.authority {
+		return errorsmod.Wrapf(moduletypes.ErrAuditorUnauthorizedTier, "invalid authority %s", authority)
+	}
+
+	record, found := k.GetAuditor(ctx, auditor)
+	if !found {
+		return moduletypes.ErrAuditorNotFound
+	}
+	if record.Status != vtypes.AuditorStatusActive && record.Status != vtypes.AuditorStatusLapsed {
+		return moduletypes.ErrAuditorNotActive
+	}
+
+	params := k.GetParams(ctx)
+	record.Status = vtypes.AuditorStatusActive
+	record.RenewalDeadline = ctx.BlockTime().Add(renewalPeriodForTier(params, record.MaxAttestationTier))
+	return k.SetAuditor(ctx, record)
+}
+
+func (k *keeper) RemoveAuditor(ctx sdk.Context, authority string, auditor sdk.AccAddress) error {
+	if k.authority != "" && authority != k.authority {
+		return errorsmod.Wrapf(moduletypes.ErrAuditorUnauthorizedTier, "invalid authority %s", authority)
+	}
+
+	record, found := k.GetAuditor(ctx, auditor)
+	if !found {
+		return moduletypes.ErrAuditorNotFound
+	}
+	return k.exitAuditor(ctx, record, vtypes.AuditorStatusRemoved)
+}
+
+func (k *keeper) ResignAuditor(ctx sdk.Context, auditor sdk.AccAddress) error {
+	record, found := k.GetAuditor(ctx, auditor)
+	if !found {
+		return moduletypes.ErrAuditorNotFound
+	}
+	return k.exitAuditor(ctx, record, vtypes.AuditorStatusResigned)
+}
+
+func (k *keeper) exitAuditor(ctx sdk.Context, record vtypes.AuditorRecord, status vtypes.AuditorStatus) error {
+	if record.Status != vtypes.AuditorStatusActive && record.Status != vtypes.AuditorStatusLapsed {
+		return moduletypes.ErrAuditorNotActive
+	}
+	if record.BondStatus == vtypes.BondStatusFrozen {
+		return moduletypes.ErrAuditorFrozen
+	}
+
+	record.Status = status
+	record.RenewalDeadline = time.Time{}
+	if record.BondAmount.IsNil() || record.BondAmount.IsZero() {
+		record.BondStatus = vtypes.BondStatusUnspecified
+		record.BondUnbondingCompletionTime = nil
+		return k.SetAuditor(ctx, record)
+	}
+
+	completion := ctx.BlockTime().Add(k.GetParams(ctx).AuditorUnbondingPeriod)
+	record.BondStatus = vtypes.BondStatusUnbonding
+	record.BondUnbondingCompletionTime = &completion
+	return k.SetAuditor(ctx, record)
+}
+
 func (k *keeper) PostProviderBond(ctx sdk.Context, provider sdk.AccAddress, amount sdk.Coin) error {
 	if err := validatePositiveCoin(amount); err != nil {
 		return err

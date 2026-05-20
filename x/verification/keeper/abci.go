@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"cosmossdk.io/math"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -21,6 +22,12 @@ func (k *keeper) EndBlocker(ctx context.Context) error {
 	blockTime := sctx.BlockTime()
 
 	if err := k.processAttestationExpiryQueue(sctx, blockTime, params.MaxEndblockerAttestationExpiries); err != nil {
+		return err
+	}
+	if err := k.processAuditorRenewalQueue(sctx, blockTime, params.MaxEndblockerUnbondingCompletions); err != nil {
+		return err
+	}
+	if err := k.processAuditorBondUnbondingQueue(sctx, blockTime, params.MaxEndblockerUnbondingCompletions); err != nil {
 		return err
 	}
 	if err := k.processSnapshotComplianceQueue(sctx, blockTime, params.MaxEndblockerSnapshotSuspensions); err != nil {
@@ -66,6 +73,49 @@ func (k *keeper) processAttestationExpiryQueue(ctx sdk.Context, blockTime time.T
 		attestation.DepositStatus = result.DepositStatus
 		attestation.FaultAttribution = vtypes.FaultAttributionNoFault
 		return k.SetAttestation(ctx, attestation)
+	})
+}
+
+func (k *keeper) processAuditorRenewalQueue(ctx sdk.Context, blockTime time.Time, limit uint32) error {
+	return k.processDueQueue(ctx, prefixQueueAuditorRenewal, blockTime, limit, func(key []byte, deadline time.Time) error {
+		auditor, err := decodeAddressQueueKey(key)
+		if err != nil {
+			return err
+		}
+
+		record, found := k.GetAuditor(ctx, auditor)
+		if !found || record.Status != vtypes.AuditorStatusActive || !record.RenewalDeadline.Equal(deadline) {
+			return nil
+		}
+
+		record.Status = vtypes.AuditorStatusLapsed
+		return k.SetAuditor(ctx, record)
+	})
+}
+
+func (k *keeper) processAuditorBondUnbondingQueue(ctx sdk.Context, blockTime time.Time, limit uint32) error {
+	return k.processDueQueue(ctx, prefixQueueAuditorBondUnbonding, blockTime, limit, func(key []byte, completion time.Time) error {
+		auditor, err := decodeAddressQueueKey(key)
+		if err != nil {
+			return err
+		}
+
+		record, found := k.GetAuditor(ctx, auditor)
+		if !found ||
+			record.BondStatus != vtypes.BondStatusUnbonding ||
+			record.BondUnbondingCompletionTime == nil ||
+			!record.BondUnbondingCompletionTime.Equal(completion) {
+			return nil
+		}
+
+		if err = k.sendModuleToAccount(ctx, auditor, record.BondAmount); err != nil {
+			return err
+		}
+
+		record.BondAmount = sdk.NewCoin(record.BondAmount.Denom, math.ZeroInt())
+		record.BondStatus = vtypes.BondStatusUnspecified
+		record.BondUnbondingCompletionTime = nil
+		return k.SetAuditor(ctx, record)
 	})
 }
 

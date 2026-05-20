@@ -923,6 +923,83 @@ func TestRegisterAuditorRejectsWrongAuthority(t *testing.T) {
 	require.ErrorIs(t, err, moduletypes.ErrAuditorUnauthorizedTier)
 }
 
+func TestRenewAuditorResetsDeadline(t *testing.T) {
+	ctx, k := setupStoreKeeperWithOptions(t, WithAuthority("gov"))
+	auditor := testutil.AccAddress(t)
+	params := k.GetParams(ctx)
+	record := auditorRecord(auditor)
+	record.Status = vtypes.AuditorStatusLapsed
+	record.MaxAttestationTier = vtypes.TierEstablished
+	record.RenewalDeadline = ctx.BlockTime().Add(-time.Hour)
+	require.NoError(t, k.SetAuditor(ctx, record))
+
+	err := k.RenewAuditor(ctx, "not-gov", auditor)
+	require.ErrorIs(t, err, moduletypes.ErrAuditorUnauthorizedTier)
+
+	err = k.RenewAuditor(ctx, "gov", auditor)
+	require.NoError(t, err)
+
+	got, found := k.GetAuditor(ctx, auditor)
+	require.True(t, found)
+	require.Equal(t, vtypes.AuditorStatusActive, got.Status)
+	require.Equal(t, ctx.BlockTime().Add(params.RenewalPeriodL3), got.RenewalDeadline)
+}
+
+func TestRemoveAuditorStartsBondUnbonding(t *testing.T) {
+	ctx, k := setupStoreKeeperWithOptions(t, WithAuthority("gov"))
+	auditor := testutil.AccAddress(t)
+	params := k.GetParams(ctx)
+	record := auditorRecord(auditor)
+	require.NoError(t, k.SetAuditor(ctx, record))
+
+	err := k.RemoveAuditor(ctx, "not-gov", auditor)
+	require.ErrorIs(t, err, moduletypes.ErrAuditorUnauthorizedTier)
+
+	err = k.RemoveAuditor(ctx, "gov", auditor)
+	require.NoError(t, err)
+
+	got, found := k.GetAuditor(ctx, auditor)
+	require.True(t, found)
+	require.Equal(t, vtypes.AuditorStatusRemoved, got.Status)
+	require.True(t, got.RenewalDeadline.IsZero())
+	require.Equal(t, vtypes.BondStatusUnbonding, got.BondStatus)
+	require.NotNil(t, got.BondUnbondingCompletionTime)
+	require.Equal(t, ctx.BlockTime().Add(params.AuditorUnbondingPeriod), *got.BondUnbondingCompletionTime)
+}
+
+func TestResignAuditorStartsBondUnbonding(t *testing.T) {
+	ctx, k := setupStoreKeeper(t)
+	auditor := testutil.AccAddress(t)
+	params := k.GetParams(ctx)
+	record := auditorRecord(auditor)
+	require.NoError(t, k.SetAuditor(ctx, record))
+
+	err := k.ResignAuditor(ctx, auditor)
+	require.NoError(t, err)
+
+	got, found := k.GetAuditor(ctx, auditor)
+	require.True(t, found)
+	require.Equal(t, vtypes.AuditorStatusResigned, got.Status)
+	require.True(t, got.RenewalDeadline.IsZero())
+	require.Equal(t, vtypes.BondStatusUnbonding, got.BondStatus)
+	require.NotNil(t, got.BondUnbondingCompletionTime)
+	require.Equal(t, ctx.BlockTime().Add(params.AuditorUnbondingPeriod), *got.BondUnbondingCompletionTime)
+}
+
+func TestAuditorLifecycleRejectsFrozenBond(t *testing.T) {
+	ctx, k := setupStoreKeeperWithOptions(t, WithAuthority("gov"))
+	auditor := testutil.AccAddress(t)
+	record := auditorRecord(auditor)
+	record.BondStatus = vtypes.BondStatusFrozen
+	require.NoError(t, k.SetAuditor(ctx, record))
+
+	err := k.ResignAuditor(ctx, auditor)
+	require.ErrorIs(t, err, moduletypes.ErrAuditorFrozen)
+
+	err = k.RemoveAuditor(ctx, "gov", auditor)
+	require.ErrorIs(t, err, moduletypes.ErrAuditorFrozen)
+}
+
 func testHash() []byte {
 	return []byte("12345678901234567890123456789012")
 }

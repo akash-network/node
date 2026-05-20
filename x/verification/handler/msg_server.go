@@ -65,6 +65,48 @@ func (ms msgServer) PostAuditorBond(goCtx context.Context, msg *vtypes.MsgPostAu
 	return &vtypes.MsgPostAuditorBondResponse{}, nil
 }
 
+func (ms msgServer) RenewAuditor(goCtx context.Context, msg *vtypes.MsgRenewAuditor) (*vtypes.MsgRenewAuditorResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	auditor, err := sdk.AccAddressFromBech32(msg.Auditor)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = ms.keeper.RenewAuditor(ctx, msg.Authority, auditor); err != nil {
+		return nil, err
+	}
+
+	return &vtypes.MsgRenewAuditorResponse{}, nil
+}
+
+func (ms msgServer) RemoveAuditor(goCtx context.Context, msg *vtypes.MsgRemoveAuditor) (*vtypes.MsgRemoveAuditorResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	auditor, err := sdk.AccAddressFromBech32(msg.Auditor)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = ms.keeper.RemoveAuditor(ctx, msg.Authority, auditor); err != nil {
+		return nil, err
+	}
+
+	return &vtypes.MsgRemoveAuditorResponse{}, nil
+}
+
+func (ms msgServer) ResignAuditor(goCtx context.Context, msg *vtypes.MsgResignAuditor) (*vtypes.MsgResignAuditorResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	auditor, err := sdk.AccAddressFromBech32(msg.Auditor)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = ms.keeper.ResignAuditor(ctx, auditor); err != nil {
+		return nil, err
+	}
+
+	return &vtypes.MsgResignAuditorResponse{}, nil
+}
+
 func (ms msgServer) PostProviderBond(goCtx context.Context, msg *vtypes.MsgPostProviderBond) (*vtypes.MsgPostProviderBondResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	provider, err := sdk.AccAddressFromBech32(msg.Provider)

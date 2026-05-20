@@ -64,6 +64,45 @@ func TestEndBlockerIgnoresStaleAttestationExpiryQueue(t *testing.T) {
 	require.Empty(t, bank.moduleToAccount)
 }
 
+func TestEndBlockerLapsesAuditorAtRenewalDeadline(t *testing.T) {
+	ctx, k := setupStoreKeeper(t)
+	auditor := testutil.AccAddress(t)
+	record := auditorRecord(auditor)
+	record.RenewalDeadline = ctx.BlockTime().Add(-time.Second)
+
+	require.NoError(t, k.SetAuditor(ctx, record))
+	require.NoError(t, k.EndBlocker(ctx))
+
+	got, found := k.GetAuditor(ctx, auditor)
+	require.True(t, found)
+	require.Equal(t, vtypes.AuditorStatusLapsed, got.Status)
+	require.Equal(t, record.RenewalDeadline, got.RenewalDeadline)
+}
+
+func TestEndBlockerCompletesAuditorBondUnbonding(t *testing.T) {
+	bank := &recordingBank{}
+	ctx, k := setupStoreKeeperWithOptions(t, WithBankKeeper(bank))
+	auditor := testutil.AccAddress(t)
+	record := auditorRecord(auditor)
+	record.Status = vtypes.AuditorStatusResigned
+	record.RenewalDeadline = time.Time{}
+	record.BondStatus = vtypes.BondStatusUnbonding
+	completion := ctx.BlockTime().Add(-time.Second)
+	record.BondUnbondingCompletionTime = &completion
+
+	require.NoError(t, k.SetAuditor(ctx, record))
+	require.NoError(t, k.EndBlocker(ctx))
+
+	got, found := k.GetAuditor(ctx, auditor)
+	require.True(t, found)
+	require.True(t, got.BondAmount.IsZero())
+	require.Equal(t, vtypes.BondStatusUnspecified, got.BondStatus)
+	require.Nil(t, got.BondUnbondingCompletionTime)
+	require.Equal(t, []bankTransfer{
+		{to: auditor, module: moduletypes.ModuleName, amt: sdk.NewCoins(record.BondAmount)},
+	}, bank.moduleToAccount)
+}
+
 func TestEndBlockerSuspendsSnapshotCompliance(t *testing.T) {
 	ctx, k := setupStoreKeeper(t)
 	provider := testutil.AccAddress(t)
