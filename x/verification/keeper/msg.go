@@ -356,6 +356,11 @@ func (k *keeper) validateProviderPrerequisites(ctx sdk.Context, provider sdk.Acc
 		return nil
 	}
 
+	params := k.GetParams(ctx)
+	if err := k.validateProviderAge(ctx, provider, tier, params); err != nil {
+		return err
+	}
+
 	snapshot, found := k.GetProviderSnapshot(ctx, provider)
 	if !found {
 		return moduletypes.ErrSnapshotNonCompliant
@@ -369,10 +374,31 @@ func (k *keeper) validateProviderPrerequisites(ctx sdk.Context, provider sdk.Acc
 		if !found {
 			return moduletypes.ErrInsufficientProviderBond
 		}
-		required := requiredProviderBond(k.GetParams(ctx), tier, snapshot.ResourceSummary)
+		required := requiredProviderBond(params, tier, snapshot.ResourceSummary)
 		if err := requireCoinAtLeast(bond.BondedAmount, required, moduletypes.ErrInsufficientProviderBond); err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (k *keeper) validateProviderAge(ctx sdk.Context, provider sdk.AccAddress, tier vtypes.VerificationTier, params vtypes.Params) error {
+	if k.provider == nil {
+		return nil
+	}
+
+	registeredAt, found := k.provider.GetRegistrationTime(ctx, provider)
+	if !found || registeredAt.IsZero() {
+		return errorsmod.Wrap(moduletypes.ErrInsufficientProviderAge, "provider registration time not found")
+	}
+
+	minAge := minProviderAgeForTier(params, tier)
+	if minAge == 0 {
+		return nil
+	}
+	if registeredAt.After(ctx.BlockTime().Add(-minAge)) {
+		return errorsmod.Wrapf(moduletypes.ErrInsufficientProviderAge, "registered_at %s requires minimum age %s", registeredAt.UTC().Format(time.RFC3339), minAge)
 	}
 
 	return nil
@@ -572,6 +598,21 @@ func ttlForTier(params vtypes.Params, tier vtypes.VerificationTier) time.Duratio
 		return params.TtlL3
 	case vtypes.TierTrusted:
 		return params.TtlL4
+	default:
+		panic("verification: unknown tier")
+	}
+}
+
+func minProviderAgeForTier(params vtypes.Params, tier vtypes.VerificationTier) time.Duration {
+	switch tier {
+	case vtypes.TierIdentified:
+		return 0
+	case vtypes.TierVerified:
+		return params.MinAgeL2
+	case vtypes.TierEstablished:
+		return params.MinAgeL3
+	case vtypes.TierTrusted:
+		return params.MinAgeL4
 	default:
 		panic("verification: unknown tier")
 	}

@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -16,6 +17,7 @@ type BankKeeper interface {
 
 type ProviderKeeper interface {
 	Get(ctx sdk.Context, id sdk.Address) (ptypes.Provider, bool)
+	GetRegistrationTime(ctx sdk.Context, id sdk.Address) (time.Time, bool)
 }
 
 type Option func(*keeper)
