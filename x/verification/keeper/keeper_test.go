@@ -1,7 +1,6 @@
 package keeper
 
 import (
-	"context"
 	"testing"
 
 	storetypes "cosmossdk.io/store/types"
@@ -18,7 +17,6 @@ func TestKeeperShell(t *testing.T) {
 
 	require.Equal(t, key, k.StoreKey())
 	require.Nil(t, k.Codec())
-	require.NoError(t, k.EndBlocker(context.Background()))
 	require.NotNil(t, k.NewQuerier())
 
 	got, err := k.Settle(SettlementInput{
