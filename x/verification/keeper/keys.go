@@ -117,6 +117,10 @@ func snapshotComplianceQueueKey(deadline time.Time, provider sdk.AccAddress) []b
 	return timeQueueKey(prefixQueueSnapshotCompliance, deadline, provider)
 }
 
+func providerBondUnbondingQueueKey(completion time.Time, provider sdk.AccAddress) []byte {
+	return timeQueueKey(prefixQueueProviderBondUnbonding, completion, provider)
+}
+
 func auditEscrowExpiryQueueKey(expiresAt time.Time, id uint64) []byte {
 	return timeQueueKey(prefixQueueAuditEscrowExpiry, expiresAt, encodeID(id))
 }

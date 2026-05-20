@@ -79,6 +79,20 @@ func (ms msgServer) PostProviderBond(goCtx context.Context, msg *vtypes.MsgPostP
 	return &vtypes.MsgPostProviderBondResponse{}, nil
 }
 
+func (ms msgServer) WithdrawProviderBond(goCtx context.Context, msg *vtypes.MsgWithdrawProviderBond) (*vtypes.MsgWithdrawProviderBondResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	provider, err := sdk.AccAddressFromBech32(msg.Provider)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = ms.keeper.WithdrawProviderBond(ctx, provider, msg.Amount); err != nil {
+		return nil, err
+	}
+
+	return &vtypes.MsgWithdrawProviderBondResponse{}, nil
+}
+
 func (ms msgServer) PostSnapshotHash(goCtx context.Context, msg *vtypes.MsgPostSnapshotHash) (*vtypes.MsgPostSnapshotHashResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	provider, err := sdk.AccAddressFromBech32(msg.Provider)
@@ -215,6 +229,21 @@ func (ms msgServer) ResolveDiscrepancy(goCtx context.Context, msg *vtypes.MsgRes
 	}
 
 	return &vtypes.MsgResolveDiscrepancyResponse{}, nil
+}
+
+func (ms msgServer) SlashProviderBond(goCtx context.Context, msg *vtypes.MsgSlashProviderBond) (*vtypes.MsgSlashProviderBondResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	provider, err := sdk.AccAddressFromBech32(msg.Provider)
+	if err != nil {
+		return nil, err
+	}
+
+	err = ms.keeper.SlashProviderBond(ctx, msg.Authority, provider, msg.SlashFraction, msg.Reason, msg.EvidenceHash)
+	if err != nil {
+		return nil, err
+	}
+
+	return &vtypes.MsgSlashProviderBondResponse{}, nil
 }
 
 func parseProviderAuditor(provider, auditor string) (sdk.AccAddress, sdk.AccAddress, error) {

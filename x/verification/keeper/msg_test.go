@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	sdkmath "cosmossdk.io/math"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	"github.com/stretchr/testify/require"
 
@@ -696,6 +697,159 @@ func TestSettleAuditEscrowRejectsNonGovernanceSettlementReason(t *testing.T) {
 			require.ErrorIs(t, err, moduletypes.ErrInvalidReason)
 		})
 	}
+}
+
+func TestWithdrawProviderBondMaintainsMinimum(t *testing.T) {
+	tests := []struct {
+		name    string
+		amount  sdk.Coin
+		wantErr error
+	}{
+		{
+			name:   "leaves current tier minimum bonded",
+			amount: sdk.NewInt64Coin(bondDenom, 95000000),
+		},
+		{
+			name:    "rejects below current tier minimum",
+			amount:  sdk.NewInt64Coin(bondDenom, 100000000),
+			wantErr: moduletypes.ErrBondWithdrawalExceedsMinimum,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, k := setupStoreKeeper(t)
+			provider := testutil.AccAddress(t)
+			auditor := testutil.AccAddress(t)
+			require.NoError(t, k.SetProviderBond(ctx, providerBondRecord(provider)))
+			require.NoError(t, k.SetProviderSnapshot(ctx, providerSnapshotRecord(provider)))
+			require.NoError(t, k.SetAttestation(ctx, attestationRecord(provider, auditor)))
+
+			err := k.WithdrawProviderBond(ctx, provider, tc.amount)
+			if tc.wantErr != nil {
+				require.ErrorIs(t, err, tc.wantErr)
+				return
+			}
+			require.NoError(t, err)
+
+			bond, found := k.GetProviderBond(ctx, provider)
+			require.True(t, found)
+			require.Equal(t, sdk.NewInt64Coin(bondDenom, 105000000), bond.BondedAmount)
+			require.Len(t, bond.UnbondingEntries, 1)
+			require.Equal(t, tc.amount, bond.UnbondingEntries[0].Amount)
+			require.Equal(t, ctx.BlockTime().Add(k.GetParams(ctx).ProviderBondUnbondingPeriod), bond.UnbondingEntries[0].CompletionTime)
+		})
+	}
+}
+
+func TestProviderBondUnbondingCompletionMovesFunds(t *testing.T) {
+	bank := &recordingBank{}
+	ctx, k := setupStoreKeeperWithOptions(t, WithBankKeeper(bank))
+	provider := testutil.AccAddress(t)
+	amount := sdk.NewInt64Coin(bondDenom, 50000000)
+	require.NoError(t, k.SetProviderBond(ctx, providerBondRecord(provider)))
+	require.NoError(t, k.WithdrawProviderBond(ctx, provider, amount))
+
+	ctx = ctx.WithBlockTime(ctx.BlockTime().Add(k.GetParams(ctx).ProviderBondUnbondingPeriod))
+	require.NoError(t, k.EndBlocker(ctx))
+
+	bond, found := k.GetProviderBond(ctx, provider)
+	require.True(t, found)
+	require.Empty(t, bond.UnbondingEntries)
+	require.Equal(t, []bankTransfer{
+		{to: provider, module: moduletypes.ModuleName, amt: sdk.NewCoins(amount)},
+	}, bank.moduleToAccount)
+}
+
+func TestSlashProviderBondValidation(t *testing.T) {
+	tests := []struct {
+		name     string
+		fraction sdkmath.LegacyDec
+		reason   vtypes.ProviderBondSlashReason
+		evidence []byte
+		wantErr  error
+	}{
+		{
+			name:     "rejects unspecified reason",
+			fraction: sdkmath.LegacyMustNewDecFromStr("0.5"),
+			reason:   vtypes.ProviderBondSlashReasonUnspecified,
+			evidence: testHash(),
+			wantErr:  moduletypes.ErrInvalidReason,
+		},
+		{
+			name:     "rejects zero fraction",
+			fraction: sdkmath.LegacyZeroDec(),
+			reason:   vtypes.ProviderBondSlashReasonFraudulentSnapshot,
+			evidence: testHash(),
+			wantErr:  moduletypes.ErrInvalidReason,
+		},
+		{
+			name:     "rejects fraction above one",
+			fraction: sdkmath.LegacyMustNewDecFromStr("1.1"),
+			reason:   vtypes.ProviderBondSlashReasonFraudulentSnapshot,
+			evidence: testHash(),
+			wantErr:  moduletypes.ErrInvalidReason,
+		},
+		{
+			name:     "rejects malformed evidence hash",
+			fraction: sdkmath.LegacyMustNewDecFromStr("0.5"),
+			reason:   vtypes.ProviderBondSlashReasonFraudulentSnapshot,
+			evidence: []byte("short"),
+			wantErr:  moduletypes.ErrInvalidReason,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, k := setupStoreKeeperWithOptions(t, WithAuthority("gov"))
+			provider := testutil.AccAddress(t)
+			require.NoError(t, k.SetProviderBond(ctx, providerBondRecord(provider)))
+
+			err := k.SlashProviderBond(ctx, "gov", provider, tc.fraction, tc.reason, tc.evidence)
+			require.ErrorIs(t, err, tc.wantErr)
+		})
+	}
+}
+
+func TestSlashProviderBondSlashesFundsAndVoidsAttestations(t *testing.T) {
+	bank := &recordingBank{}
+	ctx, k := setupStoreKeeperWithOptions(t, WithAuthority("gov"), WithBankKeeper(bank))
+	provider := testutil.AccAddress(t)
+	auditor := testutil.AccAddress(t)
+	require.NoError(t, k.SetProviderBond(ctx, providerBondRecord(provider)))
+	require.NoError(t, k.SetAttestation(ctx, attestationRecord(provider, auditor)))
+
+	err := k.SlashProviderBond(
+		ctx,
+		"gov",
+		provider,
+		sdkmath.LegacyMustNewDecFromStr("0.5"),
+		vtypes.ProviderBondSlashReasonFraudulentSnapshot,
+		testHash(),
+	)
+	require.NoError(t, err)
+
+	bond, found := k.GetProviderBond(ctx, provider)
+	require.True(t, found)
+	require.Equal(t, sdk.NewInt64Coin(bondDenom, 100000000), bond.BondedAmount)
+	require.True(t, bond.Slashed)
+	require.NotNil(t, bond.LastSlashTime)
+	require.Equal(t, ctx.BlockTime(), *bond.LastSlashTime)
+
+	attestation, found := k.GetAttestation(ctx, provider, auditor)
+	require.True(t, found)
+	require.Equal(t, vtypes.AttestationStatusVoided, attestation.Status)
+	require.Equal(t, vtypes.VoidedReasonBondSlashed, attestation.VoidedReason)
+	require.Equal(t, vtypes.FeeStatusReleasedToAuditor, attestation.FeeStatus)
+	require.Equal(t, vtypes.DepositStatusReturnedToAuditor, attestation.DepositStatus)
+	require.Equal(t, vtypes.FaultAttributionProviderFault, attestation.FaultAttribution)
+	require.Equal(t, []bankTransfer{
+		{to: auditor, module: moduletypes.ModuleName, amt: sdk.NewCoins(attestationRecord(provider, auditor).Fee)},
+		{to: auditor, module: moduletypes.ModuleName, amt: sdk.NewCoins(attestationRecord(provider, auditor).Deposit)},
+	}, bank.moduleToAccount)
+	require.Equal(t, []bankTransfer{
+		{fromModule: moduletypes.ModuleName, toModule: distrtypes.ModuleName, amt: sdk.NewCoins(sdk.NewInt64Coin(bondDenom, 100000000))},
+	}, bank.moduleToModule)
 }
 
 func TestSubmitAttestationRejectsMalformedEvidenceHash(t *testing.T) {

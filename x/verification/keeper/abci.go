@@ -26,6 +26,9 @@ func (k *keeper) EndBlocker(ctx context.Context) error {
 	if err := k.processSnapshotComplianceQueue(sctx, blockTime, params.MaxEndblockerSnapshotSuspensions); err != nil {
 		return err
 	}
+	if err := k.processProviderBondUnbondingQueue(sctx, blockTime, params.MaxEndblockerUnbondingCompletions); err != nil {
+		return err
+	}
 	if err := k.processDiscrepancyTimeoutQueue(sctx, blockTime, params.MaxEndblockerDiscrepancyTimeouts); err != nil {
 		return err
 	}
@@ -80,6 +83,42 @@ func (k *keeper) processSnapshotComplianceQueue(ctx sdk.Context, blockTime time.
 
 		snapshot.Suspended = true
 		return k.SetProviderSnapshot(ctx, snapshot)
+	})
+}
+
+func (k *keeper) processProviderBondUnbondingQueue(ctx sdk.Context, blockTime time.Time, limit uint32) error {
+	return k.processDueQueue(ctx, prefixQueueProviderBondUnbonding, blockTime, limit, func(key []byte, completion time.Time) error {
+		provider, err := decodeAddressQueueKey(key)
+		if err != nil {
+			return err
+		}
+
+		record, found := k.GetProviderBond(ctx, provider)
+		if !found {
+			return nil
+		}
+
+		remaining := make([]vtypes.UnbondingEntry, 0, len(record.UnbondingEntries))
+		var completed sdk.Coin
+		for _, entry := range record.UnbondingEntries {
+			if entry.CompletionTime.After(completion) {
+				remaining = append(remaining, entry)
+				continue
+			}
+			completed, err = addCoin(completed, entry.Amount)
+			if err != nil {
+				return err
+			}
+		}
+		if completed.IsNil() || completed.IsZero() {
+			return nil
+		}
+		if err = k.sendModuleToAccount(ctx, provider, completed); err != nil {
+			return err
+		}
+
+		record.UnbondingEntries = remaining
+		return k.SetProviderBond(ctx, record)
 	})
 }
 
