@@ -36,7 +36,7 @@ func TestHappyPathMessages(t *testing.T) {
 		TotalMemoryMB:  2048,
 		TotalStorageMB: 1048576,
 	}
-	err = k.PostSnapshotHash(ctx, provider, []byte("snapshot"), resources, ctx.BlockTime())
+	err = k.PostSnapshotHash(ctx, provider, testHash(), resources, ctx.BlockTime())
 	require.NoError(t, err)
 
 	escrowID, err := k.OpenAuditEscrow(
@@ -58,7 +58,7 @@ func TestHappyPathMessages(t *testing.T) {
 		auditor,
 		vtypes.TierVerified,
 		[]vtypes.CapabilityFlag{vtypes.CapabilityTEEHardwareAttestation},
-		[]byte("evidence"),
+		testHash(),
 		params.MinFeeL2,
 		params.AttestationDeposit,
 		escrowID,
@@ -113,7 +113,7 @@ func TestSubmitAttestationRequiresSnapshotForL2(t *testing.T) {
 		auditor,
 		vtypes.TierVerified,
 		nil,
-		[]byte("evidence"),
+		testHash(),
 		params.MinFeeL2,
 		params.AttestationDeposit,
 		1,
@@ -132,7 +132,7 @@ func TestSubmitAttestationRejectsSelfAttestation(t *testing.T) {
 		provider,
 		vtypes.TierIdentified,
 		nil,
-		[]byte("evidence"),
+		testHash(),
 		params.MinFeeL1,
 		params.AttestationDeposit,
 		1,
@@ -140,11 +140,79 @@ func TestSubmitAttestationRejectsSelfAttestation(t *testing.T) {
 	require.ErrorIs(t, err, moduletypes.ErrSelfAttestation)
 }
 
+func TestSubmitAttestationRejectsMalformedEvidenceHash(t *testing.T) {
+	ctx, k := setupStoreKeeper(t)
+	provider := testutil.AccAddress(t)
+	auditor := testutil.AccAddress(t)
+	params := k.GetParams(ctx)
+
+	err := k.SubmitAttestation(
+		ctx,
+		provider,
+		auditor,
+		vtypes.TierIdentified,
+		nil,
+		[]byte("short"),
+		params.MinFeeL1,
+		params.AttestationDeposit,
+		1,
+	)
+	require.ErrorIs(t, err, moduletypes.ErrInvalidReason)
+}
+
+func TestSubmitAttestationRejectsInvalidCapabilities(t *testing.T) {
+	ctx, k := setupStoreKeeper(t)
+	provider := testutil.AccAddress(t)
+	auditor := testutil.AccAddress(t)
+	params := k.GetParams(ctx)
+
+	err := k.SubmitAttestation(
+		ctx,
+		provider,
+		auditor,
+		vtypes.TierIdentified,
+		[]vtypes.CapabilityFlag{vtypes.CapabilityUnspecified},
+		testHash(),
+		params.MinFeeL1,
+		params.AttestationDeposit,
+		1,
+	)
+	require.ErrorIs(t, err, moduletypes.ErrInvalidReason)
+}
+
+func TestPostSnapshotHashRejectsMalformedHash(t *testing.T) {
+	ctx, k := setupStoreKeeper(t)
+
+	err := k.PostSnapshotHash(ctx, testutil.AccAddress(t), []byte("short"), vtypes.ResourceSummary{}, ctx.BlockTime())
+	require.ErrorIs(t, err, moduletypes.ErrInvalidReason)
+}
+
+func TestOpenAuditEscrowRejectsInvalidCapabilities(t *testing.T) {
+	ctx, k := setupStoreKeeper(t)
+	params := k.GetParams(ctx)
+
+	_, err := k.OpenAuditEscrow(
+		ctx,
+		testutil.AccAddress(t),
+		vtypes.TierIdentified,
+		[]vtypes.CapabilityFlag{vtypes.CapabilityBareMetal, vtypes.CapabilityBareMetal},
+		params.MinFeeL1,
+		params.ProviderAuditDeposit,
+		ctx.BlockTime().Add(params.TtlL1),
+		nil,
+	)
+	require.ErrorIs(t, err, moduletypes.ErrInvalidReason)
+}
+
 func TestRegisterAuditorRejectsWrongAuthority(t *testing.T) {
 	ctx, k := setupStoreKeeperWithOptions(t, WithAuthority("gov"))
 
 	err := k.RegisterAuditor(ctx, "not-gov", testutil.AccAddress(t), vtypes.TierIdentified, nil)
 	require.ErrorIs(t, err, moduletypes.ErrAuditorUnauthorizedTier)
+}
+
+func testHash() []byte {
+	return []byte("12345678901234567890123456789012")
 }
 
 type recordingBank struct {
