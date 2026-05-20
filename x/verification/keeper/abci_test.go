@@ -44,6 +44,26 @@ func TestEndBlockerExpiresAttestation(t *testing.T) {
 	}, bank.moduleToAccount)
 }
 
+func TestEndBlockerIgnoresStaleAttestationExpiryQueue(t *testing.T) {
+	bank := &recordingBank{}
+	ctx, k := setupStoreKeeperWithOptions(t, WithBankKeeper(bank))
+	provider := testutil.AccAddress(t)
+	auditor := testutil.AccAddress(t)
+	record := attestationRecord(provider, auditor)
+	record.ExpiresAt = ctx.BlockTime().Add(-time.Second)
+	require.NoError(t, k.SetAttestation(ctx, record))
+
+	record.ExpiresAt = ctx.BlockTime().Add(time.Hour)
+	require.NoError(t, k.SetAttestation(ctx, record))
+	require.NoError(t, k.EndBlocker(ctx))
+
+	got, found := k.GetAttestation(ctx, provider, auditor)
+	require.True(t, found)
+	require.Equal(t, vtypes.AttestationStatusValid, got.Status)
+	require.Equal(t, record.ExpiresAt, got.ExpiresAt)
+	require.Empty(t, bank.moduleToAccount)
+}
+
 func TestEndBlockerSuspendsSnapshotCompliance(t *testing.T) {
 	ctx, k := setupStoreKeeper(t)
 	provider := testutil.AccAddress(t)
@@ -96,6 +116,27 @@ func TestEndBlockerExpiresAuditEscrowAndHonorsCap(t *testing.T) {
 	got2, found = k.GetAuditEscrow(ctx, 2)
 	require.True(t, found)
 	require.Equal(t, vtypes.AuditEscrowStatusExpired, got2.Status)
+}
+
+func TestEndBlockerDoesNotExpireConsumedAuditEscrow(t *testing.T) {
+	bank := &recordingBank{}
+	ctx, k := setupStoreKeeperWithOptions(t, WithBankKeeper(bank))
+	provider := testutil.AccAddress(t)
+	auditor := testutil.AccAddress(t)
+	escrow := auditEscrowRecord(provider, auditor)
+	escrow.ExpiresAt = ctx.BlockTime().Add(-time.Second)
+	consumedAt := ctx.BlockTime().Add(-2 * time.Second)
+	escrow.ConsumedAt = &consumedAt
+
+	require.NoError(t, k.SetAuditEscrow(ctx, escrow))
+	require.NoError(t, k.EndBlocker(ctx))
+
+	got, found := k.GetAuditEscrow(ctx, escrow.ID)
+	require.True(t, found)
+	require.Equal(t, vtypes.AuditEscrowStatusOpen, got.Status)
+	require.Equal(t, auditor.String(), got.ConsumedByAuditor)
+	require.Equal(t, consumedAt, *got.ConsumedAt)
+	require.Empty(t, bank.moduleToAccount)
 }
 
 func TestEndBlockerExpiresVerificationGrace(t *testing.T) {

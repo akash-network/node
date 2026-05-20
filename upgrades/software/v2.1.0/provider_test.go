@@ -66,6 +66,41 @@ func TestProviderMigrationKeepsExistingRegistrations(t *testing.T) {
 	require.Equal(t, existing, registration)
 }
 
+func TestProviderMigrationBackfillsMissingRegistrationsOnly(t *testing.T) {
+	ctx, kpr := setupProviderMigrationKeeper(t)
+	ctx = ctx.WithBlockTime(time.Date(2026, 5, 20, 12, 0, 0, 0, time.UTC))
+	store := ctx.KVStore(kpr.StoreKey())
+
+	prov1 := testutil.Provider(t)
+	prov2 := testutil.Provider(t)
+	owner1, err := sdk.AccAddressFromBech32(prov1.Owner)
+	require.NoError(t, err)
+	owner2, err := sdk.AccAddressFromBech32(prov2.Owner)
+	require.NoError(t, err)
+	store.Set(keeper.ProviderKey(owner1), kpr.Codec().MustMarshal(&prov1))
+	store.Set(keeper.ProviderKey(owner2), kpr.Codec().MustMarshal(&prov2))
+
+	existing := types.ProviderRegistration{
+		Owner:        prov1.Owner,
+		RegisteredAt: ctx.BlockTime().Add(-24 * time.Hour),
+	}
+	require.NoError(t, kpr.SetRegistration(ctx, existing))
+
+	migration := newProviderMigration(utypes.NewMigrator(kpr.Codec(), kpr.StoreKey()))
+	require.NoError(t, migration.GetHandler()(ctx))
+
+	registration1, found := kpr.GetRegistration(ctx, owner1)
+	require.True(t, found)
+	require.Equal(t, existing, registration1)
+
+	registration2, found := kpr.GetRegistration(ctx, owner2)
+	require.True(t, found)
+	require.Equal(t, types.ProviderRegistration{
+		Owner:        prov2.Owner,
+		RegisteredAt: ctx.BlockTime(),
+	}, registration2)
+}
+
 func setupProviderMigrationKeeper(t testing.TB) (sdk.Context, keeper.IKeeper) {
 	t.Helper()
 
