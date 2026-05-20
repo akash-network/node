@@ -43,6 +43,7 @@ import (
 	"pkg.akt.dev/node/v2/x/market"
 	"pkg.akt.dev/node/v2/x/oracle"
 	"pkg.akt.dev/node/v2/x/provider"
+	"pkg.akt.dev/node/v2/x/verification"
 	awasm "pkg.akt.dev/node/v2/x/wasm"
 )
 
@@ -182,6 +183,10 @@ func appModules(
 			app.Keepers.Cosmos.Acct,
 			app.Keepers.Cosmos.Bank,
 			app.Keepers.Akash.Market,
+		),
+		verification.NewAppModule(
+			app.cdc,
+			app.Keepers.Akash.Verification,
 		),
 		audit.NewAppModule(
 			app.cdc,
@@ -335,6 +340,10 @@ func appSimModules(
 			app.Keepers.Cosmos.Acct,
 			app.Keepers.Cosmos.Bank,
 			app.Keepers.Akash.Market,
+		),
+		verification.NewAppModule(
+			app.cdc,
+			app.Keepers.Akash.Verification,
 		),
 		cert.NewAppModule(
 			app.cdc,

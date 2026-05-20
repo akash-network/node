@@ -54,6 +54,7 @@ import (
 	"pkg.akt.dev/node/v2/app/sim"
 	simtestutil "pkg.akt.dev/node/v2/testutil/sims"
 	dkeys "pkg.akt.dev/node/v2/x/deployment/keeper/keys"
+	verificationtypes "pkg.akt.dev/node/v2/x/verification/types"
 )
 
 // AppChainID hardcoded chainID for simulation
@@ -344,6 +345,12 @@ func TestAppImportExport(t *testing.T) {
 		},
 		{
 			ptypes.StoreKey,
+			appA,
+			appB,
+			[][]byte{},
+		},
+		{
+			verificationtypes.StoreKey,
 			appA,
 			appB,
 			[][]byte{},

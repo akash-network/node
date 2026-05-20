@@ -33,6 +33,7 @@ import (
 	"pkg.akt.dev/node/v2/x/market"
 	"pkg.akt.dev/node/v2/x/oracle"
 	"pkg.akt.dev/node/v2/x/provider"
+	"pkg.akt.dev/node/v2/x/verification"
 	awasm "pkg.akt.dev/node/v2/x/wasm"
 )
 
@@ -43,6 +44,7 @@ func akashModuleBasics() []module.AppModuleBasic {
 		deployment.AppModuleBasic{},
 		market.AppModuleBasic{},
 		provider.AppModuleBasic{},
+		verification.AppModuleBasic{},
 		audit.AppModuleBasic{},
 		cert.AppModuleBasic{},
 		oracle.AppModuleBasic{},
@@ -81,6 +83,7 @@ func orderInitGenesis(_ []string) []string {
 		oracle.ModuleName,
 		deployment.ModuleName,
 		provider.ModuleName,
+		verification.ModuleName,
 		market.ModuleName,
 		genutiltypes.ModuleName,
 		epochs.ModuleName,
