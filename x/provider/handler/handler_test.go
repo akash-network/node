@@ -273,6 +273,12 @@ func TestProviderUpdateParams(t *testing.T) {
 	res, err = suite.handler(suite.ctx, msg)
 	require.Error(t, err)
 	require.Nil(t, res)
+
+	msg.Authority = suite.keeper.GetAuthority()
+	msg.Params.MaintenanceMaxDuration = 0
+	res, err = suite.handler(suite.ctx, msg)
+	require.Error(t, err)
+	require.Nil(t, res)
 }
 
 func TestProviderMaintenanceLifecycle(t *testing.T) {
@@ -294,6 +300,14 @@ func TestProviderMaintenanceLifecycle(t *testing.T) {
 	res, err := suite.handler(suite.ctx, openMsg)
 	require.NoError(t, err)
 	require.NotNil(t, res)
+	testutil.EnsureEvent(t, res.Events, &types.EventProviderMaintenanceOpened{
+		MaintenanceID:   1,
+		Provider:        openMsg.Provider,
+		MaintenanceType: openMsg.MaintenanceType,
+		StartsAt:        openMsg.StartsAt,
+		ExpectedEndsAt:  openMsg.ExpectedEndsAt,
+		MetadataHash:    openMsg.MetadataHash,
+	})
 
 	record, found := suite.keeper.GetMaintenance(suite.ctx, 1)
 	require.True(t, found)
@@ -321,6 +335,11 @@ func TestProviderMaintenanceLifecycle(t *testing.T) {
 	res, err = suite.handler(closeCtx, closeMsg)
 	require.NoError(t, err)
 	require.NotNil(t, res)
+	testutil.EnsureEvent(t, res.Events, &types.EventProviderMaintenanceClosed{
+		MaintenanceID: closeMsg.MaintenanceID,
+		Provider:      closeMsg.Provider,
+		ClosedAt:      closeCtx.BlockTime(),
+	})
 
 	record, found = suite.keeper.GetMaintenance(closeCtx, 1)
 	require.True(t, found)
@@ -368,6 +387,15 @@ func TestProviderMaintenanceOpenValidation(t *testing.T) {
 			},
 		},
 		{
+			name: "unknown type",
+			msg: &types.MsgOpenProviderMaintenance{
+				Provider:        valid.Provider,
+				MaintenanceType: types.ProviderMaintenanceType(99),
+				StartsAt:        valid.StartsAt,
+				ExpectedEndsAt:  valid.ExpectedEndsAt,
+			},
+		},
+		{
 			name: "bad time order",
 			msg: &types.MsgOpenProviderMaintenance{
 				Provider:        valid.Provider,
@@ -403,4 +431,105 @@ func TestProviderMaintenanceOpenValidation(t *testing.T) {
 			require.Nil(t, res)
 		})
 	}
+}
+
+func TestProviderMaintenanceClearsStaleActiveIndex(t *testing.T) {
+	suite := setupTestSuite(t)
+	suite.ctx = suite.ctx.WithBlockTime(time.Date(2026, 5, 18, 12, 0, 0, 0, time.UTC))
+
+	prov := testutil.Provider(t)
+	err := suite.keeper.Create(suite.ctx, prov)
+	require.NoError(t, err)
+
+	provider, err := sdk.AccAddressFromBech32(prov.Owner)
+	require.NoError(t, err)
+
+	stale := types.ProviderMaintenanceRecord{
+		ID:              1,
+		Provider:        prov.Owner,
+		MaintenanceType: types.ProviderMaintenanceType_provider_maintenance_type_planned,
+		StartsAt:        suite.ctx.BlockTime().Add(-2 * time.Hour),
+		ExpectedEndsAt:  suite.ctx.BlockTime().Add(-time.Hour),
+		OpenedAt:        suite.ctx.BlockTime().Add(-3 * time.Hour),
+	}
+	require.NoError(t, suite.keeper.SetMaintenance(suite.ctx, stale))
+	suite.keeper.SetActiveMaintenanceID(suite.ctx, provider, stale.ID)
+	suite.keeper.SetNextMaintenanceID(suite.ctx, 2)
+
+	msg := &types.MsgOpenProviderMaintenance{
+		Provider:        prov.Owner,
+		MaintenanceType: types.ProviderMaintenanceType_provider_maintenance_type_security,
+		StartsAt:        suite.ctx.BlockTime().Add(time.Hour),
+		ExpectedEndsAt:  suite.ctx.BlockTime().Add(2 * time.Hour),
+	}
+
+	res, err := suite.handler(suite.ctx, msg)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	activeID, found := suite.keeper.GetActiveMaintenanceID(suite.ctx, provider)
+	require.True(t, found)
+	require.Equal(t, uint64(2), activeID)
+}
+
+func TestProviderMaintenanceCloseValidation(t *testing.T) {
+	suite := setupTestSuite(t)
+	suite.ctx = suite.ctx.WithBlockTime(time.Date(2026, 5, 18, 12, 0, 0, 0, time.UTC))
+
+	prov := testutil.Provider(t)
+	err := suite.keeper.Create(suite.ctx, prov)
+	require.NoError(t, err)
+
+	other := testutil.Provider(t)
+	err = suite.keeper.Create(suite.ctx, other)
+	require.NoError(t, err)
+
+	record := types.ProviderMaintenanceRecord{
+		ID:              1,
+		Provider:        prov.Owner,
+		MaintenanceType: types.ProviderMaintenanceType_provider_maintenance_type_network,
+		StartsAt:        suite.ctx.BlockTime().Add(time.Hour),
+		ExpectedEndsAt:  suite.ctx.BlockTime().Add(2 * time.Hour),
+		OpenedAt:        suite.ctx.BlockTime(),
+	}
+	require.NoError(t, suite.keeper.SetMaintenance(suite.ctx, record))
+
+	cases := []struct {
+		name string
+		msg  *types.MsgCloseProviderMaintenance
+	}{
+		{
+			name: "unknown record",
+			msg: &types.MsgCloseProviderMaintenance{
+				Provider:      prov.Owner,
+				MaintenanceID: 99,
+			},
+		},
+		{
+			name: "wrong provider",
+			msg: &types.MsgCloseProviderMaintenance{
+				Provider:      other.Owner,
+				MaintenanceID: record.ID,
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			res, err := suite.handler(suite.ctx, tc.msg)
+			require.Error(t, err)
+			require.Nil(t, res)
+		})
+	}
+
+	closedAt := suite.ctx.BlockTime()
+	record.ClosedAt = &closedAt
+	require.NoError(t, suite.keeper.SetMaintenance(suite.ctx, record))
+
+	res, err := suite.handler(suite.ctx, &types.MsgCloseProviderMaintenance{
+		Provider:      prov.Owner,
+		MaintenanceID: record.ID,
+	})
+	require.Error(t, err)
+	require.Nil(t, res)
 }

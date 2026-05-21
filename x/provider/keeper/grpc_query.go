@@ -116,6 +116,10 @@ func (k Querier) ProviderMaintenances(c context.Context, req *types.QueryProvide
 		return nil, types.ErrProviderNotFound
 	}
 
+	if !ValidMaintenanceStatusFilter(req.StatusFilter) {
+		return nil, status.Error(codes.InvalidArgument, "invalid maintenance status filter")
+	}
+
 	var records []types.ProviderMaintenanceWithStatus
 	store := prefix.NewStore(ctx.KVStore(k.skey), ProviderMaintenanceOwnerPrefix(provider))
 

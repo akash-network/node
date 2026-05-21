@@ -219,6 +219,50 @@ func TestProviderMaintenanceCRUD(t *testing.T) {
 	require.False(t, found)
 }
 
+func TestProviderMaintenanceReassignsOwnerIndex(t *testing.T) {
+	ctx, keeper := setupKeeper(t)
+	prov := testutil.Provider(t)
+	err := keeper.Create(ctx, prov)
+	require.NoError(t, err)
+
+	prov2 := testutil.Provider(t)
+	err = keeper.Create(ctx, prov2)
+	require.NoError(t, err)
+
+	owner, err := sdk.AccAddressFromBech32(prov.Owner)
+	require.NoError(t, err)
+	owner2, err := sdk.AccAddressFromBech32(prov2.Owner)
+	require.NoError(t, err)
+
+	record := types.ProviderMaintenanceRecord{
+		ID:              1,
+		Provider:        prov.Owner,
+		MaintenanceType: types.ProviderMaintenanceType_provider_maintenance_type_planned,
+		StartsAt:        ctx.BlockTime().Add(time.Hour),
+		ExpectedEndsAt:  ctx.BlockTime().Add(2 * time.Hour),
+		OpenedAt:        ctx.BlockTime(),
+	}
+	err = keeper.SetMaintenance(ctx, record)
+	require.NoError(t, err)
+
+	record.Provider = prov2.Owner
+	err = keeper.SetMaintenance(ctx, record)
+	require.NoError(t, err)
+
+	var records []types.ProviderMaintenanceRecord
+	keeper.WithMaintenances(ctx, owner, func(record types.ProviderMaintenanceRecord) bool {
+		records = append(records, record)
+		return false
+	})
+	require.Empty(t, records)
+
+	keeper.WithMaintenances(ctx, owner2, func(record types.ProviderMaintenanceRecord) bool {
+		records = append(records, record)
+		return false
+	})
+	require.Equal(t, []types.ProviderMaintenanceRecord{record}, records)
+}
+
 func setupKeeper(t testing.TB) (sdk.Context, keeper.IKeeper) {
 	t.Helper()
 
