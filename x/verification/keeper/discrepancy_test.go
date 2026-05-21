@@ -212,11 +212,13 @@ func TestResolveDiscrepancySettlesAttestationsAndAuditorBonds(t *testing.T) {
 	require.True(t, found)
 	require.Equal(t, vtypes.FeeStatusReleasedToAuditor, attestationA.FeeStatus)
 	require.Equal(t, vtypes.DepositStatusReturnedToAuditor, attestationA.DepositStatus)
+	require.Equal(t, vtypes.FaultAttributionNoFault, attestationA.FaultAttribution)
 
 	attestationB, found := k.GetAttestation(ctx, provider, auditorB)
 	require.True(t, found)
 	require.Equal(t, vtypes.FeeStatusReturnedToProvider, attestationB.FeeStatus)
 	require.Equal(t, vtypes.DepositStatusSlashed, attestationB.DepositStatus)
+	require.Equal(t, vtypes.FaultAttributionAuditorFault, attestationB.FaultAttribution)
 
 	auditorARecord, found := k.GetAuditor(ctx, auditorA)
 	require.True(t, found)
@@ -262,16 +264,19 @@ func TestEndBlockerTimesOutPendingDiscrepancy(t *testing.T) {
 	discrepancy, found := k.GetDiscrepancy(ctx, 1)
 	require.True(t, found)
 	require.Equal(t, vtypes.DiscrepancyStatusTimedOut, discrepancy.ResolutionStatus)
+	require.Equal(t, vtypes.FaultAttributionInconclusive, discrepancy.FaultAttribution)
 
 	attestationA, found := k.GetAttestation(ctx, provider, auditorA)
 	require.True(t, found)
 	require.Equal(t, vtypes.FeeStatusReturnedToProvider, attestationA.FeeStatus)
 	require.Equal(t, vtypes.DepositStatusSlashed, attestationA.DepositStatus)
+	require.Equal(t, vtypes.FaultAttributionInconclusive, attestationA.FaultAttribution)
 
 	attestationB, found := k.GetAttestation(ctx, provider, auditorB)
 	require.True(t, found)
 	require.Equal(t, vtypes.FeeStatusReturnedToProvider, attestationB.FeeStatus)
 	require.Equal(t, vtypes.DepositStatusSlashed, attestationB.DepositStatus)
+	require.Equal(t, vtypes.FaultAttributionInconclusive, attestationB.FaultAttribution)
 
 	auditorARecord, found := k.GetAuditor(ctx, auditorA)
 	require.True(t, found)

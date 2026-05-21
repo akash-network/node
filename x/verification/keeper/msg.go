@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"crypto/sha256"
+	"sort"
 	"time"
 
 	errorsmod "cosmossdk.io/errors"
@@ -202,11 +203,6 @@ func (k *keeper) WithdrawProviderBond(ctx sdk.Context, provider sdk.AccAddress, 
 	}
 
 	remaining := sdk.NewCoin(record.BondedAmount.Denom, record.BondedAmount.Amount.Sub(amount.Amount))
-	required := k.requiredProviderBondForCurrentTier(ctx, provider)
-	if err := requireCoinAtLeast(remaining, required, moduletypes.ErrBondWithdrawalExceedsMinimum); err != nil {
-		return err
-	}
-
 	completion := ctx.BlockTime().Add(k.GetParams(ctx).ProviderBondUnbondingPeriod)
 	record.BondedAmount = remaining
 	record.UnbondingEntries = append(record.UnbondingEntries, vtypes.UnbondingEntry{
@@ -218,6 +214,9 @@ func (k *keeper) WithdrawProviderBond(ctx sdk.Context, provider sdk.AccAddress, 
 	}
 
 	ctx.KVStore(k.skey).Set(providerBondUnbondingQueueKey(completion, provider), []byte{})
+	if err := k.voidUnsupportedProviderAttestations(ctx, provider, remaining, SettlementPathBondWithdrawn, vtypes.VoidedReasonBondWithdrawn); err != nil {
+		return err
+	}
 	return ctx.EventManager().EmitTypedEvent(&vtypes.EventProviderBondWithdrawalInitiated{
 		Provider:       provider.String(),
 		Amount:         amount,
@@ -264,18 +263,19 @@ func (k *keeper) SlashProviderBond(
 	}
 
 	slashedCoin := sdk.NewCoin(record.BondedAmount.Denom, slashAmount)
+	remaining := sdk.NewCoin(record.BondedAmount.Denom, record.BondedAmount.Amount.Sub(slashAmount))
 	if err := k.sendModuleToDistribution(ctx, slashedCoin); err != nil {
-		return err
-	}
-	if err := k.voidProviderAttestations(ctx, provider, SettlementPathBondSlashed, vtypes.VoidedReasonBondSlashed); err != nil {
 		return err
 	}
 
 	now := ctx.BlockTime()
-	record.BondedAmount = sdk.NewCoin(record.BondedAmount.Denom, record.BondedAmount.Amount.Sub(slashAmount))
+	record.BondedAmount = remaining
 	record.Slashed = true
 	record.LastSlashTime = &now
 	if err := k.SetProviderBond(ctx, record); err != nil {
+		return err
+	}
+	if err := k.voidUnsupportedProviderAttestations(ctx, provider, remaining, SettlementPathBondSlashed, vtypes.VoidedReasonBondSlashed); err != nil {
 		return err
 	}
 	return ctx.EventManager().EmitTypedEvent(&vtypes.EventProviderBondSlashed{
@@ -551,7 +551,10 @@ func (k *keeper) SubmitAttestation(
 	if !capabilitiesInclude(capabilities, escrow.RequestedCapabilities) {
 		return moduletypes.ErrMissingCapability
 	}
-	if !coinsEqual(fee, escrow.Fee) {
+	if err := requireCoinAtLeast(fee, minFeeForTier(params, tier), moduletypes.ErrInsufficientAuditFee); err != nil {
+		return err
+	}
+	if err := requireCoinAtLeast(escrow.Fee, fee, moduletypes.ErrInsufficientAuditFee); err != nil {
 		return moduletypes.ErrInsufficientAuditFee
 	}
 	if err := k.validateProviderPrerequisites(ctx, provider, tier); err != nil {
@@ -566,6 +569,13 @@ func (k *keeper) SubmitAttestation(
 	}
 
 	now := ctx.BlockTime()
+	if escrow.Fee.Amount.GT(fee.Amount) {
+		refund := sdk.NewCoin(escrow.Fee.Denom, escrow.Fee.Amount.Sub(fee.Amount))
+		if err := k.sendModuleToAccount(ctx, provider, refund); err != nil {
+			return err
+		}
+		escrow.Fee = fee
+	}
 	escrow.Status = vtypes.AuditEscrowStatusConsumed
 	escrow.ConsumedByAuditor = auditor.String()
 	escrow.ConsumedAt = &now
@@ -1029,32 +1039,17 @@ func (k *keeper) setAttestationWithDiscrepancyCheck(ctx sdk.Context, attestation
 	return nil
 }
 
-func (k *keeper) requiredProviderBondForCurrentTier(ctx sdk.Context, provider sdk.AccAddress) sdk.Coin {
-	params := k.GetParams(ctx)
-	tier := vtypes.TierUnspecified
+func (k *keeper) voidUnsupportedProviderAttestations(ctx sdk.Context, provider sdk.AccAddress, remaining sdk.Coin, path SettlementPath, reason vtypes.VoidedReason) error {
+	attestations := make([]vtypes.AttestationRecord, 0)
 	k.WithProviderAttestations(ctx, provider, vtypes.AttestationStatusValid, func(record vtypes.AttestationRecord) bool {
-		if vtypes.TierBetter(record.Tier, tier) {
-			tier = record.Tier
+		if !k.providerBondSupportsAttestation(ctx, provider, remaining, record) {
+			attestations = append(attestations, record)
 		}
 		return false
 	})
-	if !vtypes.TierRequiresProviderBond(tier) {
-		return sdk.NewCoin(params.BondL1.Denom, math.ZeroInt())
+	if len(attestations) == 0 {
+		return nil
 	}
-
-	snapshot, found := k.GetProviderSnapshot(ctx, provider)
-	if !found {
-		return sdk.NewCoin(params.BondL1.Denom, math.ZeroInt())
-	}
-	return requiredProviderBond(params, tier, snapshot.ResourceSummary)
-}
-
-func (k *keeper) voidProviderAttestations(ctx sdk.Context, provider sdk.AccAddress, path SettlementPath, reason vtypes.VoidedReason) error {
-	attestations := make([]vtypes.AttestationRecord, 0)
-	k.WithProviderAttestations(ctx, provider, vtypes.AttestationStatusValid, func(record vtypes.AttestationRecord) bool {
-		attestations = append(attestations, record)
-		return false
-	})
 
 	result, err := k.Settle(SettlementInput{
 		Path:             path,
@@ -1091,6 +1086,20 @@ func (k *keeper) voidProviderAttestations(ctx sdk.Context, provider sdk.AccAddre
 	}
 
 	return nil
+}
+
+func (k *keeper) providerBondSupportsAttestation(ctx sdk.Context, provider sdk.AccAddress, bonded sdk.Coin, attestation vtypes.AttestationRecord) bool {
+	if !vtypes.TierRequiresProviderBond(attestation.Tier) {
+		return true
+	}
+
+	snapshot, found := k.GetProviderSnapshot(ctx, provider)
+	if !found {
+		return false
+	}
+
+	required := requiredProviderBond(k.GetParams(ctx), attestation.Tier, snapshot.ResourceSummary)
+	return requireCoinAtLeast(bonded, required, moduletypes.ErrInsufficientProviderBond) == nil
 }
 
 func (k *keeper) freezeAuditorForDiscrepancy(ctx sdk.Context, record vtypes.AuditorRecord) error {
@@ -1250,8 +1259,10 @@ func (k *keeper) validateProviderPrerequisites(ctx sdk.Context, provider sdk.Acc
 		return moduletypes.ErrProviderSnapshotSuspended
 	}
 
+	var bond vtypes.ProviderBondRecord
 	if vtypes.TierRequiresProviderBond(tier) {
-		bond, found := k.GetProviderBond(ctx, provider)
+		var found bool
+		bond, found = k.GetProviderBond(ctx, provider)
 		if !found {
 			return moduletypes.ErrInsufficientProviderBond
 		}
@@ -1259,6 +1270,12 @@ func (k *keeper) validateProviderPrerequisites(ctx sdk.Context, provider sdk.Acc
 		if err := requireCoinAtLeast(bond.BondedAmount, required, moduletypes.ErrInsufficientProviderBond); err != nil {
 			return err
 		}
+	}
+	if err := k.validateProviderSlashingHistory(ctx, tier, params, bond); err != nil {
+		return err
+	}
+	if vtypes.TierAtLeast(tier, vtypes.TierTrusted) && !k.hasContinuousL3History(ctx, provider, params.MinL3DurationForL4) {
+		return moduletypes.ErrInsufficientL3History
 	}
 
 	return nil
@@ -1277,7 +1294,7 @@ func (k *keeper) validateProviderLeaseCompletion(ctx sdk.Context, provider sdk.A
 
 	total := completed + failed
 	if !found || total < uint64(params.MinLeasesForCompletionRate) {
-		return errorsmod.Wrapf(moduletypes.ErrInsufficientLeaseCompletionRate, "completed %d failed %d requires at least %d leases", completed, failed, params.MinLeasesForCompletionRate)
+		return nil
 	}
 
 	minBps := params.MinLeaseCompletionBpsL3
@@ -1289,6 +1306,74 @@ func (k *keeper) validateProviderLeaseCompletion(ctx sdk.Context, provider sdk.A
 	}
 
 	return nil
+}
+
+func (k *keeper) validateProviderSlashingHistory(ctx sdk.Context, tier vtypes.VerificationTier, params vtypes.Params, bond vtypes.ProviderBondRecord) error {
+	if !vtypes.TierAtLeast(tier, vtypes.TierEstablished) || bond.LastSlashTime == nil {
+		return nil
+	}
+
+	window := cleanHistoryWindowForTier(params, tier)
+	if window == 0 {
+		return nil
+	}
+	if bond.LastSlashTime.After(ctx.BlockTime().Add(-window)) {
+		return moduletypes.ErrSlashingHistoryViolation
+	}
+	return nil
+}
+
+type attestationInterval struct {
+	start time.Time
+	end   time.Time
+}
+
+func (k *keeper) hasContinuousL3History(ctx sdk.Context, provider sdk.AccAddress, duration time.Duration) bool {
+	if duration == 0 {
+		return true
+	}
+
+	start := ctx.BlockTime().Add(-duration)
+	end := ctx.BlockTime()
+	intervals := make([]attestationInterval, 0)
+	k.WithProviderAttestations(ctx, provider, vtypes.AttestationStatusUnspecified, func(record vtypes.AttestationRecord) bool {
+		if !vtypes.TierAtLeast(record.Tier, vtypes.TierEstablished) {
+			return false
+		}
+		if record.Status != vtypes.AttestationStatusValid && record.Status != vtypes.AttestationStatusExpired {
+			return false
+		}
+		if !record.ExpiresAt.After(start) || record.CreatedAt.After(end) {
+			return false
+		}
+		intervals = append(intervals, attestationInterval{
+			start: record.CreatedAt,
+			end:   record.ExpiresAt,
+		})
+		return false
+	})
+	if len(intervals) == 0 {
+		return false
+	}
+
+	sort.Slice(intervals, func(i, j int) bool {
+		return intervals[i].start.Before(intervals[j].start)
+	})
+
+	coveredUntil := start
+	for _, interval := range intervals {
+		if !interval.end.After(coveredUntil) {
+			continue
+		}
+		if interval.start.After(coveredUntil) {
+			return false
+		}
+		coveredUntil = interval.end
+		if !coveredUntil.Before(end) {
+			return true
+		}
+	}
+	return false
 }
 
 func (k *keeper) validateProviderAge(ctx sdk.Context, provider sdk.AccAddress, tier vtypes.VerificationTier, params vtypes.Params) error {
@@ -1461,6 +1546,12 @@ func (k *keeper) settleDiscrepancyAttestations(ctx sdk.Context, discrepancy vtyp
 	attestationA.DepositStatus = resultA.DepositStatus
 	attestationB.FeeStatus = resultB.FeeStatus
 	attestationB.DepositStatus = resultB.DepositStatus
+	faultA, faultB, err := discrepancyAttestationFaultAttributions(reason)
+	if err != nil {
+		return err
+	}
+	attestationA.FaultAttribution = faultA
+	attestationB.FaultAttribution = faultB
 
 	if err = k.SetAttestation(ctx, attestationA); err != nil {
 		return err
@@ -1492,6 +1583,26 @@ func discrepancyAttestationSettlementResults(reason vtypes.DiscrepancyResolution
 		return slashed, slashed, nil
 	default:
 		return SettlementResult{}, SettlementResult{}, errorsmod.Wrapf(moduletypes.ErrInvalidReason, "unknown discrepancy resolution reason %d", reason)
+	}
+}
+
+func discrepancyAttestationFaultAttributions(reason vtypes.DiscrepancyResolutionReason) (vtypes.FaultAttribution, vtypes.FaultAttribution, error) {
+	switch reason {
+	case vtypes.DiscrepancyResolutionReasonAuditorACorrect:
+		return vtypes.FaultAttributionNoFault, vtypes.FaultAttributionAuditorFault, nil
+	case vtypes.DiscrepancyResolutionReasonAuditorBCorrect:
+		return vtypes.FaultAttributionAuditorFault, vtypes.FaultAttributionNoFault, nil
+	case vtypes.DiscrepancyResolutionReasonProviderFault:
+		return vtypes.FaultAttributionProviderFault, vtypes.FaultAttributionProviderFault, nil
+	case vtypes.DiscrepancyResolutionReasonEvidenceInconclusive:
+		return vtypes.FaultAttributionNoFault, vtypes.FaultAttributionNoFault, nil
+	case vtypes.DiscrepancyResolutionReasonBothAuditorsWrong,
+		vtypes.DiscrepancyResolutionReasonGovernanceTimeoutReview:
+		return vtypes.FaultAttributionAuditorFault, vtypes.FaultAttributionAuditorFault, nil
+	case vtypes.DiscrepancyResolutionReasonSharedFault:
+		return vtypes.FaultAttributionSharedFault, vtypes.FaultAttributionSharedFault, nil
+	default:
+		return vtypes.FaultAttributionUnspecified, vtypes.FaultAttributionUnspecified, errorsmod.Wrapf(moduletypes.ErrInvalidReason, "unknown discrepancy resolution reason %d", reason)
 	}
 }
 
@@ -1642,10 +1753,6 @@ func coinsSameDenom(a, b sdk.Coin) bool {
 	return a.Denom == b.Denom && !a.IsNil() && !b.IsNil()
 }
 
-func coinsEqual(a, b sdk.Coin) bool {
-	return coinsSameDenom(a, b) && a.Amount.Equal(b.Amount)
-}
-
 func minFeeForTier(params vtypes.Params, tier vtypes.VerificationTier) sdk.Coin {
 	switch tier {
 	case vtypes.TierIdentified:
@@ -1686,6 +1793,19 @@ func minProviderAgeForTier(params vtypes.Params, tier vtypes.VerificationTier) t
 		return params.MinAgeL3
 	case vtypes.TierTrusted:
 		return params.MinAgeL4
+	default:
+		panic("verification: unknown tier")
+	}
+}
+
+func cleanHistoryWindowForTier(params vtypes.Params, tier vtypes.VerificationTier) time.Duration {
+	switch tier {
+	case vtypes.TierIdentified, vtypes.TierVerified:
+		return 0
+	case vtypes.TierEstablished:
+		return params.CleanHistoryWindowL3
+	case vtypes.TierTrusted:
+		return params.CleanHistoryWindowL4
 	default:
 		panic("verification: unknown tier")
 	}

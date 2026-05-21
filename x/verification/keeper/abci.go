@@ -221,6 +221,7 @@ func (k *keeper) processDiscrepancyTimeoutQueue(ctx sdk.Context, blockTime time.
 		}
 
 		discrepancy.ResolutionStatus = vtypes.DiscrepancyStatusTimedOut
+		discrepancy.FaultAttribution = vtypes.FaultAttributionInconclusive
 		k.SetDiscrepancy(ctx, discrepancy)
 
 		if err = k.resolveDiscrepancyAuditorBond(ctx, auditorA, discrepancy.ID, false); err != nil {
@@ -256,6 +257,7 @@ func (k *keeper) timeoutDiscrepancyAttestation(ctx sdk.Context, providerString, 
 	}
 	attestation.FeeStatus = result.FeeStatus
 	attestation.DepositStatus = result.DepositStatus
+	attestation.FaultAttribution = vtypes.FaultAttributionInconclusive
 	return k.SetAttestation(ctx, attestation)
 }
 
