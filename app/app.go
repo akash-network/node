@@ -65,7 +65,9 @@ import (
 	"pkg.akt.dev/node/v2/util/partialord"
 	"pkg.akt.dev/node/v2/x/bme"
 	"pkg.akt.dev/node/v2/x/escrow"
+	"pkg.akt.dev/node/v2/x/market"
 	"pkg.akt.dev/node/v2/x/oracle"
+	"pkg.akt.dev/node/v2/x/verification"
 	awasm "pkg.akt.dev/node/v2/x/wasm"
 	// unnamed import of statik for swagger UI support
 	_ "pkg.akt.dev/node/v2/client/docs/statik"
@@ -387,9 +389,7 @@ func orderBeginBlockers(modules []string) []string {
 func orderEndBlockers(modules []string) []string {
 	ord := partialord.NewPartialOrdering(modules)
 
-	// Staking must be after gov.
-	ord.FirstElements(govtypes.ModuleName, stakingtypes.ModuleName)
-	//ord.Before(govtypes.ModuleName, )
+	ord.Sequence(market.ModuleName, verification.ModuleName, govtypes.ModuleName, stakingtypes.ModuleName)
 
 	return ord.TotalOrdering()
 }
