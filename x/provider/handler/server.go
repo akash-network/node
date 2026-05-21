@@ -199,7 +199,7 @@ func (ms msgServer) UpdateParams(goCtx context.Context, req *types.MsgUpdatePara
 }
 
 func validateOpenProviderMaintenance(ctx sdk.Context, k keeper.IKeeper, provider sdk.Address, msg *types.MsgOpenProviderMaintenance) error {
-	if msg.MaintenanceType == types.ProviderMaintenanceType_provider_maintenance_type_unspecified {
+	if !keeper.ValidMaintenanceType(msg.MaintenanceType) {
 		return sdkerrors.ErrInvalidRequest.Wrap("maintenance type must be specified")
 	}
 

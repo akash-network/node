@@ -56,6 +56,15 @@ func (k Keeper) SetMaintenance(ctx sdk.Context, record types.ProviderMaintenance
 	}
 
 	store := ctx.KVStore(k.skey)
+	if existing, found := k.GetMaintenance(ctx, record.ID); found && existing.Provider != record.Provider {
+		previousProvider, err := sdk.AccAddressFromBech32(existing.Provider)
+		if err != nil {
+			return types.ErrInvalidAddress.Wrap(err.Error())
+		}
+
+		store.Delete(ProviderMaintenanceOwnerKey(previousProvider, record.ID))
+	}
+
 	store.Set(ProviderMaintenanceKey(record.ID), k.cdc.MustMarshal(&record))
 	store.Set(ProviderMaintenanceOwnerKey(provider, record.ID), []byte{})
 	return nil
@@ -157,4 +166,30 @@ func MaintenanceStatus(blockTime time.Time, record types.ProviderMaintenanceReco
 	}
 
 	return types.ProviderMaintenanceStatus_provider_maintenance_status_active
+}
+
+func ValidMaintenanceType(maintenanceType types.ProviderMaintenanceType) bool {
+	switch maintenanceType {
+	case types.ProviderMaintenanceType_provider_maintenance_type_planned,
+		types.ProviderMaintenanceType_provider_maintenance_type_emergency,
+		types.ProviderMaintenanceType_provider_maintenance_type_security,
+		types.ProviderMaintenanceType_provider_maintenance_type_network,
+		types.ProviderMaintenanceType_provider_maintenance_type_capacity:
+		return true
+	default:
+		return false
+	}
+}
+
+func ValidMaintenanceStatusFilter(status types.ProviderMaintenanceStatus) bool {
+	switch status {
+	case types.ProviderMaintenanceStatus_provider_maintenance_status_unspecified,
+		types.ProviderMaintenanceStatus_provider_maintenance_status_scheduled,
+		types.ProviderMaintenanceStatus_provider_maintenance_status_active,
+		types.ProviderMaintenanceStatus_provider_maintenance_status_elapsed,
+		types.ProviderMaintenanceStatus_provider_maintenance_status_closed:
+		return true
+	default:
+		return false
+	}
 }

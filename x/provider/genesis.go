@@ -57,10 +57,16 @@ func ValidateGenesis(data *types.GenesisState) error {
 	}
 
 	var maxMaintenanceID uint64
+	maintenanceIDs := make(map[uint64]struct{})
 	for _, record := range data.Maintenances {
 		if err := validateGenesisMaintenance(record, providers, params); err != nil {
 			return err
 		}
+
+		if _, exists := maintenanceIDs[record.ID]; exists {
+			return sdkerrors.ErrInvalidRequest.Wrapf("duplicate maintenance id: %d", record.ID)
+		}
+		maintenanceIDs[record.ID] = struct{}{}
 
 		if record.ID > maxMaintenanceID {
 			maxMaintenanceID = record.ID
@@ -233,7 +239,7 @@ func validateGenesisMaintenance(record types.ProviderMaintenanceRecord, provider
 		return types.ErrProviderNotFound.Wrapf("maintenance provider: %s", record.Provider)
 	}
 
-	if record.MaintenanceType == types.ProviderMaintenanceType_provider_maintenance_type_unspecified {
+	if !keeper.ValidMaintenanceType(record.MaintenanceType) {
 		return sdkerrors.ErrInvalidRequest.Wrap("maintenance type must be specified")
 	}
 

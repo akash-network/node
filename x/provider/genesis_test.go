@@ -84,3 +84,59 @@ func TestProviderGenesisBackfillsMissingRegistration(t *testing.T) {
 	require.Equal(t, prov.Owner, exported.Registrations[0].Owner)
 	require.Equal(t, ctx.BlockTime(), exported.Registrations[0].RegisteredAt)
 }
+
+func TestProviderGenesisRejectsDuplicateMaintenanceID(t *testing.T) {
+	prov := testutil.Provider(t)
+	blockTime := time.Date(2026, 5, 18, 12, 0, 0, 0, time.UTC)
+
+	genesis := &types.GenesisState{
+		Providers: types.Providers{prov},
+		Params:    keeper.DefaultParams(),
+		Maintenances: []types.ProviderMaintenanceRecord{
+			{
+				ID:              1,
+				Provider:        prov.Owner,
+				MaintenanceType: types.ProviderMaintenanceType_provider_maintenance_type_planned,
+				StartsAt:        blockTime.Add(time.Hour),
+				ExpectedEndsAt:  blockTime.Add(2 * time.Hour),
+				OpenedAt:        blockTime,
+			},
+			{
+				ID:              1,
+				Provider:        prov.Owner,
+				MaintenanceType: types.ProviderMaintenanceType_provider_maintenance_type_security,
+				StartsAt:        blockTime.Add(3 * time.Hour),
+				ExpectedEndsAt:  blockTime.Add(4 * time.Hour),
+				OpenedAt:        blockTime,
+			},
+		},
+		NextMaintenanceID: 2,
+	}
+
+	err := provider.ValidateGenesis(genesis)
+	require.Error(t, err)
+}
+
+func TestProviderGenesisRejectsUnknownMaintenanceType(t *testing.T) {
+	prov := testutil.Provider(t)
+	blockTime := time.Date(2026, 5, 18, 12, 0, 0, 0, time.UTC)
+
+	genesis := &types.GenesisState{
+		Providers: types.Providers{prov},
+		Params:    keeper.DefaultParams(),
+		Maintenances: []types.ProviderMaintenanceRecord{
+			{
+				ID:              1,
+				Provider:        prov.Owner,
+				MaintenanceType: types.ProviderMaintenanceType(99),
+				StartsAt:        blockTime.Add(time.Hour),
+				ExpectedEndsAt:  blockTime.Add(2 * time.Hour),
+				OpenedAt:        blockTime,
+			},
+		},
+		NextMaintenanceID: 2,
+	}
+
+	err := provider.ValidateGenesis(genesis)
+	require.Error(t, err)
+}

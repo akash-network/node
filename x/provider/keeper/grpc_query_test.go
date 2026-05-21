@@ -173,36 +173,112 @@ func TestGRPCQueryProviderRegistration(t *testing.T) {
 
 func TestGRPCQueryProviderMaintenances(t *testing.T) {
 	suite := setupTest(t)
+	suite.ctx = suite.ctx.WithBlockTime(time.Date(2026, 5, 18, 12, 0, 0, 0, time.UTC))
+	queryHelper := baseapp.NewQueryServerTestHelper(suite.ctx, suite.app.InterfaceRegistry())
+	types.RegisterQueryServer(queryHelper, suite.keeper.NewQuerier())
+	suite.queryClient = types.NewQueryClient(queryHelper)
+
 	provider := testutil.Provider(t)
 	err := suite.keeper.Create(suite.ctx, provider)
 	require.NoError(t, err)
 
-	record := types.ProviderMaintenanceRecord{
-		ID:              suite.keeper.AllocateMaintenanceID(suite.ctx),
-		Provider:        provider.Owner,
-		MaintenanceType: types.ProviderMaintenanceType_provider_maintenance_type_planned,
-		StartsAt:        suite.ctx.BlockTime().Add(time.Hour),
-		ExpectedEndsAt:  suite.ctx.BlockTime().Add(2 * time.Hour),
-		OpenedAt:        suite.ctx.BlockTime(),
+	closedAt := suite.ctx.BlockTime().Add(-time.Hour)
+	records := []types.ProviderMaintenanceRecord{
+		{
+			ID:              1,
+			Provider:        provider.Owner,
+			MaintenanceType: types.ProviderMaintenanceType_provider_maintenance_type_planned,
+			StartsAt:        suite.ctx.BlockTime().Add(time.Hour),
+			ExpectedEndsAt:  suite.ctx.BlockTime().Add(2 * time.Hour),
+			OpenedAt:        suite.ctx.BlockTime(),
+		},
+		{
+			ID:              2,
+			Provider:        provider.Owner,
+			MaintenanceType: types.ProviderMaintenanceType_provider_maintenance_type_emergency,
+			StartsAt:        suite.ctx.BlockTime().Add(-time.Hour),
+			ExpectedEndsAt:  suite.ctx.BlockTime().Add(time.Hour),
+			OpenedAt:        suite.ctx.BlockTime().Add(-2 * time.Hour),
+		},
+		{
+			ID:              3,
+			Provider:        provider.Owner,
+			MaintenanceType: types.ProviderMaintenanceType_provider_maintenance_type_network,
+			StartsAt:        suite.ctx.BlockTime().Add(-2 * time.Hour),
+			ExpectedEndsAt:  suite.ctx.BlockTime().Add(-time.Hour),
+			OpenedAt:        suite.ctx.BlockTime().Add(-3 * time.Hour),
+		},
+		{
+			ID:              4,
+			Provider:        provider.Owner,
+			MaintenanceType: types.ProviderMaintenanceType_provider_maintenance_type_security,
+			StartsAt:        suite.ctx.BlockTime().Add(-3 * time.Hour),
+			ExpectedEndsAt:  suite.ctx.BlockTime().Add(-2 * time.Hour),
+			OpenedAt:        suite.ctx.BlockTime().Add(-4 * time.Hour),
+			ClosedAt:        &closedAt,
+		},
 	}
-	err = suite.keeper.SetMaintenance(suite.ctx, record)
-	require.NoError(t, err)
+
+	for _, record := range records {
+		err = suite.keeper.SetMaintenance(suite.ctx, record)
+		require.NoError(t, err)
+	}
 
 	res, err := suite.queryClient.ProviderMaintenance(suite.ctx, &types.QueryProviderMaintenanceRequest{
 		Provider:      provider.Owner,
-		MaintenanceId: record.ID,
+		MaintenanceId: records[0].ID,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, res)
-	require.Equal(t, record, res.Maintenance.Record)
+	require.Equal(t, records[0], res.Maintenance.Record)
 	require.Equal(t, types.ProviderMaintenanceStatus_provider_maintenance_status_scheduled, res.Maintenance.Status)
 
+	cases := []struct {
+		status types.ProviderMaintenanceStatus
+		record types.ProviderMaintenanceRecord
+	}{
+		{
+			status: types.ProviderMaintenanceStatus_provider_maintenance_status_scheduled,
+			record: records[0],
+		},
+		{
+			status: types.ProviderMaintenanceStatus_provider_maintenance_status_active,
+			record: records[1],
+		},
+		{
+			status: types.ProviderMaintenanceStatus_provider_maintenance_status_elapsed,
+			record: records[2],
+		},
+		{
+			status: types.ProviderMaintenanceStatus_provider_maintenance_status_closed,
+			record: records[3],
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.status.String(), func(t *testing.T) {
+			list, err := suite.queryClient.ProviderMaintenances(suite.ctx, &types.QueryProviderMaintenancesRequest{
+				Provider:     provider.Owner,
+				StatusFilter: tc.status,
+			})
+			require.NoError(t, err)
+			require.NotNil(t, list)
+			require.Len(t, list.Maintenance, 1)
+			require.Equal(t, tc.record, list.Maintenance[0].Record)
+			require.Equal(t, tc.status, list.Maintenance[0].Status)
+		})
+	}
+
 	list, err := suite.queryClient.ProviderMaintenances(suite.ctx, &types.QueryProviderMaintenancesRequest{
-		Provider:     provider.Owner,
-		StatusFilter: types.ProviderMaintenanceStatus_provider_maintenance_status_scheduled,
+		Provider: provider.Owner,
 	})
 	require.NoError(t, err)
-	require.NotNil(t, list)
-	require.Len(t, list.Maintenance, 1)
-	require.Equal(t, record, list.Maintenance[0].Record)
+	require.Len(t, list.Maintenance, len(records))
+
+	list, err = suite.queryClient.ProviderMaintenances(suite.ctx, &types.QueryProviderMaintenancesRequest{
+		Provider:     provider.Owner,
+		StatusFilter: types.ProviderMaintenanceStatus(99),
+	})
+	require.Error(t, err)
+	require.Nil(t, list)
 }
