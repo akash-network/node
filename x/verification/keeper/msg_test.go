@@ -114,6 +114,50 @@ func TestHappyPathMessages(t *testing.T) {
 	require.Len(t, bank.accountToModule, 5)
 }
 
+func TestSubmitAttestationConsumesCoveredEscrowFee(t *testing.T) {
+	bank := &recordingBank{}
+	ctx, k := setupStoreKeeperWithOptions(t, WithBankKeeper(bank))
+	provider := testutil.AccAddress(t)
+	auditor := testutil.AccAddress(t)
+	params := k.GetParams(ctx)
+
+	require.NoError(t, k.SetAuditor(ctx, auditorRecord(auditor)))
+	require.NoError(t, k.SetProviderBond(ctx, vtypes.ProviderBondRecord{
+		Provider:     provider.String(),
+		BondedAmount: params.BondL4,
+	}))
+	require.NoError(t, k.SetProviderSnapshot(ctx, providerSnapshotRecord(provider)))
+
+	escrow := openAuditEscrowRecord(ctx, provider, 1, params)
+	escrow.RequestedTier = vtypes.TierVerified
+	escrow.Fee = sdk.NewCoin(params.MinFeeL2.Denom, params.MinFeeL2.Amount.AddRaw(1000))
+	require.NoError(t, k.SetAuditEscrow(ctx, escrow))
+
+	err := k.SubmitAttestation(
+		ctx,
+		provider,
+		auditor,
+		vtypes.TierVerified,
+		nil,
+		testHash(),
+		params.MinFeeL2,
+		params.AttestationDeposit,
+		1,
+	)
+	require.NoError(t, err)
+
+	gotEscrow, found := k.GetAuditEscrow(ctx, 1)
+	require.True(t, found)
+	require.Equal(t, params.MinFeeL2, gotEscrow.Fee)
+
+	gotAttestation, found := k.GetAttestation(ctx, provider, auditor)
+	require.True(t, found)
+	require.Equal(t, params.MinFeeL2, gotAttestation.Fee)
+	require.Equal(t, []bankTransfer{
+		{to: provider, module: moduletypes.ModuleName, amt: sdk.NewCoins(sdk.NewInt64Coin(bondDenom, 1000))},
+	}, bank.moduleToAccount)
+}
+
 func TestSubmitAttestationRequiresSnapshotForL2(t *testing.T) {
 	ctx, k := setupStoreKeeper(t)
 	provider := testutil.AccAddress(t)
@@ -202,18 +246,6 @@ func TestSubmitAttestationRejectsInsufficientLeaseHistoryForL3(t *testing.T) {
 		found     bool
 	}{
 		{
-			name:      "no stats",
-			completed: 0,
-			failures:  nil,
-			found:     false,
-		},
-		{
-			name:      "below minimum leases",
-			completed: 9,
-			failures:  nil,
-			found:     true,
-		},
-		{
 			name:      "below completion rate",
 			completed: 97,
 			failures: map[mv1.LeaseClosedReason]uint64{
@@ -247,6 +279,51 @@ func TestSubmitAttestationRejectsInsufficientLeaseHistoryForL3(t *testing.T) {
 	}
 }
 
+func TestSubmitAttestationSkipsLeaseHistoryForLowVolume(t *testing.T) {
+	tests := []struct {
+		name      string
+		completed uint64
+		failures  map[mv1.LeaseClosedReason]uint64
+		found     bool
+	}{
+		{
+			name:      "no stats",
+			completed: 0,
+			failures:  nil,
+			found:     false,
+		},
+		{
+			name:      "below minimum leases",
+			completed: 9,
+			failures:  nil,
+			found:     true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, k, provider, auditor, params := setupL3AttestationPrerequisites(t, stubMarketStatsKeeper{
+				completed: tc.completed,
+				failures:  tc.failures,
+				found:     tc.found,
+			})
+
+			err := k.SubmitAttestation(
+				ctx,
+				provider,
+				auditor,
+				vtypes.TierEstablished,
+				nil,
+				testHash(),
+				params.MinFeeL3,
+				params.AttestationDeposit,
+				1,
+			)
+			require.NoError(t, err)
+		})
+	}
+}
+
 func TestSubmitAttestationAcceptsSufficientLeaseHistoryForL3(t *testing.T) {
 	ctx, k, provider, auditor, params := setupL3AttestationPrerequisites(t, stubMarketStatsKeeper{
 		completed: 98,
@@ -264,6 +341,68 @@ func TestSubmitAttestationAcceptsSufficientLeaseHistoryForL3(t *testing.T) {
 		nil,
 		testHash(),
 		params.MinFeeL3,
+		params.AttestationDeposit,
+		1,
+	)
+	require.NoError(t, err)
+}
+
+func TestSubmitAttestationRejectsRecentProviderSlashForL3(t *testing.T) {
+	ctx, k, provider, auditor, params := setupL3AttestationPrerequisites(t, stubMarketStatsKeeper{
+		completed: 98,
+		failures: map[mv1.LeaseClosedReason]uint64{
+			mv1.LeaseClosedReasonUnstable: 2,
+		},
+		found: true,
+	})
+	bond, found := k.GetProviderBond(ctx, provider)
+	require.True(t, found)
+	slashedAt := ctx.BlockTime().Add(-params.CleanHistoryWindowL3).Add(time.Second)
+	bond.LastSlashTime = &slashedAt
+	require.NoError(t, k.SetProviderBond(ctx, bond))
+
+	err := k.SubmitAttestation(
+		ctx,
+		provider,
+		auditor,
+		vtypes.TierEstablished,
+		nil,
+		testHash(),
+		params.MinFeeL3,
+		params.AttestationDeposit,
+		1,
+	)
+	require.ErrorIs(t, err, moduletypes.ErrSlashingHistoryViolation)
+}
+
+func TestSubmitAttestationRejectsInsufficientL3HistoryForL4(t *testing.T) {
+	ctx, k, provider, auditor, params := setupL4AttestationPrerequisites(t, false)
+
+	err := k.SubmitAttestation(
+		ctx,
+		provider,
+		auditor,
+		vtypes.TierTrusted,
+		nil,
+		testHash(),
+		params.MinFeeL4,
+		params.AttestationDeposit,
+		1,
+	)
+	require.ErrorIs(t, err, moduletypes.ErrInsufficientL3History)
+}
+
+func TestSubmitAttestationAcceptsContinuousL3HistoryForL4(t *testing.T) {
+	ctx, k, provider, auditor, params := setupL4AttestationPrerequisites(t, true)
+
+	err := k.SubmitAttestation(
+		ctx,
+		provider,
+		auditor,
+		vtypes.TierTrusted,
+		nil,
+		testHash(),
+		params.MinFeeL4,
 		params.AttestationDeposit,
 		1,
 	)
@@ -1018,45 +1157,59 @@ func TestSettleAuditEscrowRejectsNonGovernanceSettlementReason(t *testing.T) {
 	}
 }
 
-func TestWithdrawProviderBondMaintainsMinimum(t *testing.T) {
+func TestWithdrawProviderBondVoidsUnsupportedAttestations(t *testing.T) {
 	tests := []struct {
-		name    string
-		amount  sdk.Coin
-		wantErr error
+		name       string
+		amount     sdk.Coin
+		wantStatus vtypes.AttestationStatus
+		wantReason vtypes.VoidedReason
 	}{
 		{
-			name:   "leaves current tier minimum bonded",
-			amount: sdk.NewInt64Coin(bondDenom, 95000000),
+			name:       "leaves current tier minimum bonded",
+			amount:     sdk.NewInt64Coin(bondDenom, 95000000),
+			wantStatus: vtypes.AttestationStatusValid,
 		},
 		{
-			name:    "rejects below current tier minimum",
-			amount:  sdk.NewInt64Coin(bondDenom, 100000000),
-			wantErr: moduletypes.ErrBondWithdrawalExceedsMinimum,
+			name:       "voids attestation below current tier minimum",
+			amount:     sdk.NewInt64Coin(bondDenom, 100000000),
+			wantStatus: vtypes.AttestationStatusVoided,
+			wantReason: vtypes.VoidedReasonBondWithdrawn,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx, k := setupStoreKeeper(t)
+			bank := &recordingBank{}
+			ctx, k := setupStoreKeeperWithOptions(t, WithBankKeeper(bank))
 			provider := testutil.AccAddress(t)
 			auditor := testutil.AccAddress(t)
+			attestation := attestationRecord(provider, auditor)
 			require.NoError(t, k.SetProviderBond(ctx, providerBondRecord(provider)))
 			require.NoError(t, k.SetProviderSnapshot(ctx, providerSnapshotRecord(provider)))
-			require.NoError(t, k.SetAttestation(ctx, attestationRecord(provider, auditor)))
+			require.NoError(t, k.SetAttestation(ctx, attestation))
 
 			err := k.WithdrawProviderBond(ctx, provider, tc.amount)
-			if tc.wantErr != nil {
-				require.ErrorIs(t, err, tc.wantErr)
-				return
-			}
 			require.NoError(t, err)
 
 			bond, found := k.GetProviderBond(ctx, provider)
 			require.True(t, found)
-			require.Equal(t, sdk.NewInt64Coin(bondDenom, 105000000), bond.BondedAmount)
+			require.Equal(t, sdk.NewCoin(bondDenom, providerBondRecord(provider).BondedAmount.Amount.Sub(tc.amount.Amount)), bond.BondedAmount)
 			require.Len(t, bond.UnbondingEntries, 1)
 			require.Equal(t, tc.amount, bond.UnbondingEntries[0].Amount)
 			require.Equal(t, ctx.BlockTime().Add(k.GetParams(ctx).ProviderBondUnbondingPeriod), bond.UnbondingEntries[0].CompletionTime)
+
+			got, found := k.GetAttestation(ctx, provider, auditor)
+			require.True(t, found)
+			require.Equal(t, tc.wantStatus, got.Status)
+			require.Equal(t, tc.wantReason, got.VoidedReason)
+			if tc.wantStatus == vtypes.AttestationStatusVoided {
+				require.Equal(t, vtypes.FeeStatusReleasedToAuditor, got.FeeStatus)
+				require.Equal(t, vtypes.DepositStatusReturnedToAuditor, got.DepositStatus)
+				require.Equal(t, []bankTransfer{
+					{to: auditor, module: moduletypes.ModuleName, amt: sdk.NewCoins(attestation.Fee)},
+					{to: auditor, module: moduletypes.ModuleName, amt: sdk.NewCoins(attestation.Deposit)},
+				}, bank.moduleToAccount)
+			}
 		})
 	}
 }
@@ -1130,12 +1283,38 @@ func TestSlashProviderBondValidation(t *testing.T) {
 	}
 }
 
+func TestSlashProviderBondLeavesSupportedAttestationsValid(t *testing.T) {
+	bank := &recordingBank{}
+	ctx, k := setupStoreKeeperWithOptions(t, WithAuthority("gov"), WithBankKeeper(bank))
+	provider := testutil.AccAddress(t)
+	auditor := testutil.AccAddress(t)
+	require.NoError(t, k.SetProviderBond(ctx, providerBondRecord(provider)))
+	require.NoError(t, k.SetProviderSnapshot(ctx, providerSnapshotRecord(provider)))
+	require.NoError(t, k.SetAttestation(ctx, attestationRecord(provider, auditor)))
+
+	err := k.SlashProviderBond(
+		ctx,
+		"gov",
+		provider,
+		sdkmath.LegacyMustNewDecFromStr("0.1"),
+		vtypes.ProviderBondSlashReasonFraudulentSnapshot,
+		testHash(),
+	)
+	require.NoError(t, err)
+
+	attestation, found := k.GetAttestation(ctx, provider, auditor)
+	require.True(t, found)
+	require.Equal(t, vtypes.AttestationStatusValid, attestation.Status)
+	require.Empty(t, bank.moduleToAccount)
+}
+
 func TestSlashProviderBondSlashesFundsAndVoidsAttestations(t *testing.T) {
 	bank := &recordingBank{}
 	ctx, k := setupStoreKeeperWithOptions(t, WithAuthority("gov"), WithBankKeeper(bank))
 	provider := testutil.AccAddress(t)
 	auditor := testutil.AccAddress(t)
 	require.NoError(t, k.SetProviderBond(ctx, providerBondRecord(provider)))
+	require.NoError(t, k.SetProviderSnapshot(ctx, providerSnapshotRecord(provider)))
 	require.NoError(t, k.SetAttestation(ctx, attestationRecord(provider, auditor)))
 
 	err := k.SlashProviderBond(
@@ -1411,6 +1590,75 @@ func setupL3AttestationPrerequisites(t testing.TB, market MarketStatsKeeper) (sd
 		OpenedAt:              ctx.BlockTime(),
 		ExpiresAt:             ctx.BlockTime().Add(params.TtlL3),
 	}))
+
+	return ctx, k, provider, auditor, params
+}
+
+func setupL4AttestationPrerequisites(t testing.TB, continuousHistory bool) (sdk.Context, Keeper, sdk.AccAddress, sdk.AccAddress, vtypes.Params) {
+	t.Helper()
+
+	provider := testutil.AccAddress(t)
+	providerKeeper := newStubProviderKeeper(provider)
+	ctx, k := setupStoreKeeperWithOptions(t,
+		WithProviderKeeper(providerKeeper),
+		WithMarketStatsKeeper(stubMarketStatsKeeper{
+			completed: 98,
+			failures: map[mv1.LeaseClosedReason]uint64{
+				mv1.LeaseClosedReasonUnstable: 2,
+			},
+			found: true,
+		}),
+	)
+	auditor := testutil.AccAddress(t)
+	params := k.GetParams(ctx)
+	providerKeeper.registrations[provider.String()] = ctx.BlockTime().Add(-params.MinAgeL4)
+
+	require.NoError(t, k.SetAuditor(ctx, vtypes.AuditorRecord{
+		Address:            auditor.String(),
+		Status:             vtypes.AuditorStatusActive,
+		MaxAttestationTier: vtypes.TierTrusted,
+		BondAmount:         params.BondL4,
+		BondStatus:         vtypes.BondStatusBonded,
+		RegisteredAt:       ctx.BlockTime(),
+		RenewalDeadline:    ctx.BlockTime().Add(params.RenewalPeriodL4),
+	}))
+	require.NoError(t, k.SetProviderBond(ctx, vtypes.ProviderBondRecord{
+		Provider:     provider.String(),
+		BondedAmount: params.BondL4,
+	}))
+	require.NoError(t, k.SetProviderSnapshot(ctx, providerSnapshotRecord(provider)))
+	require.NoError(t, k.SetAuditEscrow(ctx, vtypes.AuditEscrowRecord{
+		ID:                    1,
+		Provider:              provider.String(),
+		RequestedTier:         vtypes.TierTrusted,
+		Fee:                   params.MinFeeL4,
+		FeeStatus:             vtypes.FeeStatusEscrowed,
+		ProviderDeposit:       params.ProviderAuditDeposit,
+		ProviderDepositStatus: vtypes.ProviderDepositStatusEscrowed,
+		Status:                vtypes.AuditEscrowStatusOpen,
+		OpenedAt:              ctx.BlockTime(),
+		ExpiresAt:             ctx.BlockTime().Add(params.TtlL4),
+	}))
+
+	historyStart := ctx.BlockTime().Add(-params.MinL3DurationForL4)
+	firstAuditor := testutil.AccAddress(t)
+	secondAuditor := testutil.AccAddress(t)
+	first := attestationRecord(provider, firstAuditor)
+	first.Tier = vtypes.TierEstablished
+	first.Status = vtypes.AttestationStatusExpired
+	first.CreatedAt = historyStart
+	first.ExpiresAt = historyStart.Add(params.MinL3DurationForL4 / 2)
+	require.NoError(t, k.SetAttestation(ctx, first))
+
+	second := attestationRecord(provider, secondAuditor)
+	second.Tier = vtypes.TierEstablished
+	second.Status = vtypes.AttestationStatusValid
+	second.CreatedAt = first.ExpiresAt
+	if !continuousHistory {
+		second.CreatedAt = second.CreatedAt.Add(time.Hour)
+	}
+	second.ExpiresAt = ctx.BlockTime().Add(time.Hour)
+	require.NoError(t, k.SetAttestation(ctx, second))
 
 	return ctx, k, provider, auditor, params
 }
