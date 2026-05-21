@@ -30,6 +30,7 @@ var (
 	_ appmodule.AppModule        = AppModule{}
 	_ module.HasConsensusVersion = AppModule{}
 	_ module.HasGenesis          = AppModule{}
+	_ module.HasInvariants       = AppModule{}
 	_ module.HasServices         = AppModule{}
 
 	_ module.AppModuleSimulation = AppModule{}
@@ -109,6 +110,10 @@ func (am AppModule) QuerierRoute() string {
 func (am AppModule) RegisterServices(cfg module.Configurator) {
 	vtypes.RegisterMsgServer(cfg.MsgServer(), handler.NewMsgServerImpl(am.keeper))
 	vtypes.RegisterQueryServer(cfg.QueryServer(), am.keeper.NewQuerier())
+}
+
+func (am AppModule) RegisterInvariants(ir sdk.InvariantRegistry) {
+	keeper.RegisterInvariants(ir, am.keeper)
 }
 
 func (am AppModule) BeginBlock(_ context.Context) error {

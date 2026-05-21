@@ -9,6 +9,7 @@ import (
 	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
 	vtypes "pkg.akt.dev/go/node/verification/v1"
 
@@ -48,6 +49,7 @@ type Keeper interface {
 	GetProviderVerificationGrace(sdk.Context, sdk.AccAddress) (vtypes.ProviderVerificationGraceRecord, bool)
 	SetProviderVerificationGrace(sdk.Context, vtypes.ProviderVerificationGraceRecord) error
 	WithVerificationGraces(sdk.Context, func(vtypes.ProviderVerificationGraceRecord) bool)
+	ModuleBalance(sdk.Context, string) sdk.Coin
 	GetNextDiscrepancyID(sdk.Context) uint64
 	SetNextDiscrepancyID(sdk.Context, uint64)
 	NextDiscrepancyID(sdk.Context) uint64
@@ -113,6 +115,13 @@ func (k *keeper) Logger(sctx sdk.Context) log.Logger {
 
 func (k *keeper) NewQuerier() vtypes.QueryServer {
 	return &Querier{Keeper: k}
+}
+
+func (k *keeper) ModuleBalance(ctx sdk.Context, denom string) sdk.Coin {
+	if k.bank == nil {
+		return sdk.NewCoin(denom, math.ZeroInt())
+	}
+	return k.bank.GetBalance(ctx, authtypes.NewModuleAddress(moduletypes.ModuleName), denom)
 }
 
 func (k *keeper) GetAuthority() string {

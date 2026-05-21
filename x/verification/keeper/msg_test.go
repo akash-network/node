@@ -1701,6 +1701,7 @@ type recordingBank struct {
 	accountToModule []bankTransfer
 	moduleToAccount []bankTransfer
 	moduleToModule  []bankTransfer
+	balances        map[string]sdk.Coin
 }
 
 type bankTransfer struct {
@@ -1710,6 +1711,15 @@ type bankTransfer struct {
 	fromModule string
 	toModule   string
 	amt        sdk.Coins
+}
+
+func (b *recordingBank) GetBalance(_ context.Context, _ sdk.AccAddress, denom string) sdk.Coin {
+	if b.balances != nil {
+		if balance, found := b.balances[denom]; found {
+			return balance
+		}
+	}
+	return sdk.NewInt64Coin(denom, 0)
 }
 
 func (b *recordingBank) SendCoinsFromAccountToModule(_ context.Context, senderAddr sdk.AccAddress, recipientModule string, amt sdk.Coins) error {
