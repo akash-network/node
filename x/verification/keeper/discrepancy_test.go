@@ -227,7 +227,7 @@ func TestResolveDiscrepancySettlesAttestationsAndAuditorBonds(t *testing.T) {
 
 	auditorBRecord, found := k.GetAuditor(ctx, auditorB)
 	require.True(t, found)
-	require.Equal(t, vtypes.BondStatusUnspecified, auditorBRecord.BondStatus)
+	require.Equal(t, vtypes.BondStatusNotBonded, auditorBRecord.BondStatus)
 	require.True(t, auditorBRecord.BondAmount.Amount.IsZero())
 
 	testutil.EnsureEvent(t, ctx.EventManager().Events().ToABCIEvents(), &vtypes.EventDiscrepancyResolved{

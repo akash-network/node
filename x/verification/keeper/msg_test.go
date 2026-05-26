@@ -114,6 +114,80 @@ func TestHappyPathMessages(t *testing.T) {
 	require.Len(t, bank.accountToModule, 5)
 }
 
+func TestRegisterAuditorCreatesPendingBondRecord(t *testing.T) {
+	ctx, k := setupStoreKeeperWithOptions(t, WithAuthority("gov"))
+	auditor := testutil.AccAddress(t)
+	params := k.GetParams(ctx)
+
+	err := k.RegisterAuditor(ctx, "gov", auditor, vtypes.TierVerified, []byte("auditor-meta"))
+	require.NoError(t, err)
+
+	record, found := k.GetAuditor(ctx, auditor)
+	require.True(t, found)
+	require.Equal(t, vtypes.AuditorStatusPendingBond, record.Status)
+	require.Equal(t, vtypes.BondStatusNotBonded, record.BondStatus)
+	require.True(t, record.BondAmount.IsZero())
+	require.Equal(t, sdk.NewCoin(params.BondL1.Denom, sdkmath.ZeroInt()), record.BondAmount)
+}
+
+func TestPostAuditorBondActivatesAfterRequiredBond(t *testing.T) {
+	ctx, k := setupStoreKeeperWithOptions(t, WithAuthority("gov"))
+	auditor := testutil.AccAddress(t)
+	params := k.GetParams(ctx)
+
+	err := k.RegisterAuditor(ctx, "gov", auditor, vtypes.TierVerified, nil)
+	require.NoError(t, err)
+
+	err = k.PostAuditorBond(ctx, auditor, params.BondL1)
+	require.NoError(t, err)
+
+	record, found := k.GetAuditor(ctx, auditor)
+	require.True(t, found)
+	require.Equal(t, vtypes.AuditorStatusPendingBond, record.Status)
+	require.Equal(t, vtypes.BondStatusNotBonded, record.BondStatus)
+	require.Equal(t, params.BondL1, record.BondAmount)
+
+	err = k.PostAuditorBond(ctx, auditor, params.BondL2)
+	require.NoError(t, err)
+
+	record, found = k.GetAuditor(ctx, auditor)
+	require.True(t, found)
+	require.Equal(t, vtypes.AuditorStatusActive, record.Status)
+	require.Equal(t, vtypes.BondStatusBonded, record.BondStatus)
+	require.True(t, record.BondAmount.Amount.GTE(params.BondL2.Amount))
+}
+
+func TestSubmitAttestationRejectsAuditorWithoutBondedStatus(t *testing.T) {
+	ctx, k := setupStoreKeeper(t)
+	provider := testutil.AccAddress(t)
+	auditor := testutil.AccAddress(t)
+	params := k.GetParams(ctx)
+
+	require.NoError(t, k.SetAuditor(ctx, vtypes.AuditorRecord{
+		Address:            auditor.String(),
+		Status:             vtypes.AuditorStatusActive,
+		MaxAttestationTier: vtypes.TierIdentified,
+		BondAmount:         params.BondL1,
+		BondStatus:         vtypes.BondStatusNotBonded,
+		RegisteredAt:       ctx.BlockTime(),
+		RenewalDeadline:    ctx.BlockTime().Add(params.RenewalPeriodL1),
+	}))
+	require.NoError(t, k.SetAuditEscrow(ctx, openAuditEscrowRecord(ctx, provider, 1, params)))
+
+	err := k.SubmitAttestation(
+		ctx,
+		provider,
+		auditor,
+		vtypes.TierIdentified,
+		nil,
+		testHash(),
+		params.MinFeeL1,
+		params.AttestationDeposit,
+		1,
+	)
+	require.ErrorIs(t, err, moduletypes.ErrInsufficientAuditorBond)
+}
+
 func TestSubmitAttestationConsumesCoveredEscrowFee(t *testing.T) {
 	bank := &recordingBank{}
 	ctx, k := setupStoreKeeperWithOptions(t, WithBankKeeper(bank))
@@ -968,7 +1042,7 @@ func TestRevokeAuditorAttestationsVoidsWorkAndSlashesBond(t *testing.T) {
 	gotAuditor, found := k.GetAuditor(ctx, auditor)
 	require.True(t, found)
 	require.True(t, gotAuditor.BondAmount.IsZero())
-	require.Equal(t, vtypes.BondStatusUnspecified, gotAuditor.BondStatus)
+	require.Equal(t, vtypes.BondStatusNotBonded, gotAuditor.BondStatus)
 
 	require.ElementsMatch(t, []bankTransfer{
 		{to: providerA, module: moduletypes.ModuleName, amt: sdk.NewCoins(attestationA.Fee)},
