@@ -120,7 +120,7 @@ func (k *keeper) processAuditorBondUnbondingQueue(ctx sdk.Context, blockTime tim
 		}
 
 		record.BondAmount = sdk.NewCoin(record.BondAmount.Denom, math.ZeroInt())
-		record.BondStatus = vtypes.BondStatusUnspecified
+		record.BondStatus = vtypes.BondStatusNotBonded
 		record.BondUnbondingCompletionTime = nil
 		return k.SetAuditor(ctx, record)
 	})

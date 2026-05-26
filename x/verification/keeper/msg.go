@@ -30,10 +30,10 @@ func (k *keeper) RegisterAuditor(ctx sdk.Context, authority string, auditor sdk.
 	params := k.GetParams(ctx)
 	record := vtypes.AuditorRecord{
 		Address:            auditor.String(),
-		Status:             vtypes.AuditorStatusActive,
+		Status:             vtypes.AuditorStatusPendingBond,
 		MaxAttestationTier: tier,
 		BondAmount:         sdk.NewCoin(params.BondL1.Denom, math.ZeroInt()),
-		BondStatus:         vtypes.BondStatusUnspecified,
+		BondStatus:         vtypes.BondStatusNotBonded,
 		MetadataHash:       metadataHash,
 		RegisteredAt:       ctx.BlockTime(),
 		RenewalDeadline:    ctx.BlockTime().Add(renewalPeriodForTier(params, tier)),
@@ -65,7 +65,17 @@ func (k *keeper) PostAuditorBond(ctx sdk.Context, auditor sdk.AccAddress, amount
 		return err
 	}
 	record.BondAmount = bond
-	record.BondStatus = vtypes.BondStatusBonded
+	if record.BondStatus != vtypes.BondStatusFrozen && record.BondStatus != vtypes.BondStatusUnbonding {
+		record.BondStatus = vtypes.BondStatusNotBonded
+		if coinAtLeast(bond, vtypes.MinBondForTier(k.GetParams(ctx), record.MaxAttestationTier)) {
+			record.BondStatus = vtypes.BondStatusBonded
+			if record.Status == vtypes.AuditorStatusPendingBond || record.Status == vtypes.AuditorStatusUnspecified {
+				record.Status = vtypes.AuditorStatusActive
+			}
+		} else if record.Status == vtypes.AuditorStatusActive {
+			record.Status = vtypes.AuditorStatusPendingBond
+		}
+	}
 	if err := k.SetAuditor(ctx, record); err != nil {
 		return err
 	}
@@ -131,7 +141,7 @@ func (k *keeper) exitAuditor(ctx sdk.Context, record vtypes.AuditorRecord, statu
 	record.Status = status
 	record.RenewalDeadline = time.Time{}
 	if record.BondAmount.IsNil() || record.BondAmount.IsZero() {
-		record.BondStatus = vtypes.BondStatusUnspecified
+		record.BondStatus = vtypes.BondStatusNotBonded
 		record.BondUnbondingCompletionTime = nil
 	} else {
 		completion := ctx.BlockTime().Add(k.GetParams(ctx).AuditorUnbondingPeriod)
@@ -528,6 +538,9 @@ func (k *keeper) SubmitAttestation(
 	if auditorRecord.BondStatus == vtypes.BondStatusFrozen {
 		return moduletypes.ErrAuditorFrozen
 	}
+	if auditorRecord.BondStatus != vtypes.BondStatusBonded {
+		return moduletypes.ErrInsufficientAuditorBond
+	}
 	if !vtypes.TierAtLeast(auditorRecord.MaxAttestationTier, tier) {
 		return moduletypes.ErrAuditorUnauthorizedTier
 	}
@@ -893,7 +906,7 @@ func (k *keeper) slashAuditorBond(ctx sdk.Context, record vtypes.AuditorRecord) 
 		denom = record.BondAmount.Denom
 	}
 	record.BondAmount = sdk.NewCoin(denom, math.ZeroInt())
-	record.BondStatus = vtypes.BondStatusUnspecified
+	record.BondStatus = vtypes.BondStatusNotBonded
 	record.BondUnbondingCompletionTime = nil
 	return k.SetAuditor(ctx, record)
 }
@@ -1641,7 +1654,7 @@ func (k *keeper) resolveDiscrepancyAuditorBond(ctx sdk.Context, auditor sdk.AccA
 			return err
 		}
 		record.BondAmount = sdk.NewCoin(record.BondAmount.Denom, math.ZeroInt())
-		record.BondStatus = vtypes.BondStatusUnspecified
+		record.BondStatus = vtypes.BondStatusNotBonded
 		return k.SetAuditor(ctx, record)
 	}
 
@@ -1743,10 +1756,14 @@ func addCoin(a, b sdk.Coin) (sdk.Coin, error) {
 }
 
 func requireCoinAtLeast(got, want sdk.Coin, err error) error {
-	if !coinsSameDenom(got, want) || got.Amount.LT(want.Amount) {
+	if !coinAtLeast(got, want) {
 		return err
 	}
 	return nil
+}
+
+func coinAtLeast(got, want sdk.Coin) bool {
+	return coinsSameDenom(got, want) && !got.Amount.LT(want.Amount)
 }
 
 func coinsSameDenom(a, b sdk.Coin) bool {

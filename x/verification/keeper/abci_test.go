@@ -102,7 +102,7 @@ func TestEndBlockerCompletesAuditorBondUnbonding(t *testing.T) {
 	got, found := k.GetAuditor(ctx, auditor)
 	require.True(t, found)
 	require.True(t, got.BondAmount.IsZero())
-	require.Equal(t, vtypes.BondStatusUnspecified, got.BondStatus)
+	require.Equal(t, vtypes.BondStatusNotBonded, got.BondStatus)
 	require.Nil(t, got.BondUnbondingCompletionTime)
 	require.Equal(t, []bankTransfer{
 		{to: auditor, module: moduletypes.ModuleName, amt: sdk.NewCoins(record.BondAmount)},
