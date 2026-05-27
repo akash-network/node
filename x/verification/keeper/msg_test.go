@@ -780,8 +780,15 @@ func TestRemoveAttestationDisposition(t *testing.T) {
 	ctx, k := setupStoreKeeperWithOptions(t, WithBankKeeper(bank))
 	provider := testutil.AccAddress(t)
 	auditor := testutil.AccAddress(t)
+	params := k.GetParams(ctx)
 	attestation := attestationRecord(provider, auditor)
 	require.NoError(t, k.SetAttestation(ctx, attestation))
+	escrow := openAuditEscrowRecord(ctx, provider, attestation.AuditEscrowID, params)
+	escrow.Status = vtypes.AuditEscrowStatusConsumed
+	escrow.ConsumedByAuditor = auditor.String()
+	now := ctx.BlockTime()
+	escrow.ConsumedAt = &now
+	require.NoError(t, k.SetAuditEscrow(ctx, escrow))
 
 	err := k.RemoveAttestation(ctx, provider, auditor)
 	require.NoError(t, err)
@@ -792,10 +799,24 @@ func TestRemoveAttestationDisposition(t *testing.T) {
 	require.Equal(t, vtypes.FaultAttributionNoFault, got.FaultAttribution)
 	require.Equal(t, vtypes.FeeStatusReleasedToAuditor, got.FeeStatus)
 	require.Equal(t, vtypes.DepositStatusReturnedToAuditor, got.DepositStatus)
+
+	settledEscrow, found := k.GetAuditEscrow(ctx, attestation.AuditEscrowID)
+	require.True(t, found)
+	require.Equal(t, vtypes.AuditEscrowStatusSettled, settledEscrow.Status)
+	require.Equal(t, vtypes.FeeStatusReleasedToAuditor, settledEscrow.FeeStatus)
+	require.Equal(t, vtypes.ProviderDepositStatusReturnedToProvider, settledEscrow.ProviderDepositStatus)
+	require.Equal(t, vtypes.AuditEscrowSettlementReasonNoFault, settledEscrow.SettlementReason)
+	require.Equal(t, vtypes.FaultAttributionNoFault, settledEscrow.FaultAttribution)
 	require.Equal(t, []bankTransfer{
 		{to: auditor, module: moduletypes.ModuleName, amt: sdk.NewCoins(attestation.Fee)},
 		{to: auditor, module: moduletypes.ModuleName, amt: sdk.NewCoins(attestation.Deposit)},
+		{to: provider, module: moduletypes.ModuleName, amt: sdk.NewCoins(escrow.ProviderDeposit)},
 	}, bank.moduleToAccount)
+	testutil.EnsureEvent(t, ctx.EventManager().Events().ToABCIEvents(), &vtypes.EventAuditEscrowSettled{
+		AuditEscrowID:    attestation.AuditEscrowID,
+		Reason:           vtypes.AuditEscrowSettlementReasonNoFault,
+		FaultAttribution: vtypes.FaultAttributionNoFault,
+	})
 }
 
 func TestRemoveAttestationRejectsInvalidInputs(t *testing.T) {

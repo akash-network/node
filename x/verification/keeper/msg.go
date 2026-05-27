@@ -722,7 +722,17 @@ func (k *keeper) RemoveAttestation(ctx sdk.Context, provider sdk.AccAddress, aud
 	if err != nil {
 		return err
 	}
+	if err = requireEscrowedAttestationFunds(attestation); err != nil {
+		return err
+	}
+	escrow, err := k.consumedAttestationEscrow(ctx, provider, auditor, attestation)
+	if err != nil {
+		return err
+	}
 	if err = k.settleAttestationFunds(ctx, provider, auditor, attestation, result); err != nil {
+		return err
+	}
+	if err = k.sendModuleToAccount(ctx, provider, escrow.ProviderDeposit); err != nil {
 		return err
 	}
 
@@ -730,7 +740,22 @@ func (k *keeper) RemoveAttestation(ctx sdk.Context, provider sdk.AccAddress, aud
 	attestation.FeeStatus = result.FeeStatus
 	attestation.DepositStatus = result.DepositStatus
 	attestation.FaultAttribution = vtypes.FaultAttributionNoFault
-	return k.SetAttestation(ctx, attestation)
+	escrow.Status = vtypes.AuditEscrowStatusSettled
+	escrow.FeeStatus = result.FeeStatus
+	escrow.ProviderDepositStatus = vtypes.ProviderDepositStatusReturnedToProvider
+	escrow.SettlementReason = vtypes.AuditEscrowSettlementReasonNoFault
+	escrow.FaultAttribution = vtypes.FaultAttributionNoFault
+	if err = k.SetAuditEscrow(ctx, escrow); err != nil {
+		return err
+	}
+	if err = k.SetAttestation(ctx, attestation); err != nil {
+		return err
+	}
+	return ctx.EventManager().EmitTypedEvent(&vtypes.EventAuditEscrowSettled{
+		AuditEscrowID:    escrow.ID,
+		Reason:           escrow.SettlementReason,
+		FaultAttribution: escrow.FaultAttribution,
+	})
 }
 
 func (k *keeper) RevokeProviderAttestation(
@@ -1489,6 +1514,22 @@ func (k *keeper) settleAttestationFunds(ctx sdk.Context, provider, auditor sdk.A
 	}
 
 	return nil
+}
+
+func (k *keeper) consumedAttestationEscrow(ctx sdk.Context, provider, auditor sdk.AccAddress, attestation vtypes.AttestationRecord) (vtypes.AuditEscrowRecord, error) {
+	escrow, found := k.GetAuditEscrow(ctx, attestation.AuditEscrowID)
+	if !found {
+		return vtypes.AuditEscrowRecord{}, moduletypes.ErrAuditEscrowNotFound
+	}
+	if escrow.Status != vtypes.AuditEscrowStatusConsumed ||
+		escrow.Provider != provider.String() ||
+		escrow.ConsumedByAuditor != auditor.String() ||
+		!coinsEqual(escrow.Fee, attestation.Fee) ||
+		escrow.FeeStatus != vtypes.FeeStatusEscrowed ||
+		escrow.ProviderDepositStatus != vtypes.ProviderDepositStatusEscrowed {
+		return vtypes.AuditEscrowRecord{}, moduletypes.ErrAuditEscrowNotConsumable
+	}
+	return escrow, nil
 }
 
 func (k *keeper) settlePendingDiscrepancyAttestationFunds(ctx sdk.Context, provider, auditor sdk.AccAddress, attestation vtypes.AttestationRecord, result SettlementResult) error {
