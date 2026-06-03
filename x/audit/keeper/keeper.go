@@ -261,7 +261,6 @@ func (k Keeper) WithProvider(ctx sdk.Context, id sdk.Address, fn func(types.Audi
 			Auditor:    aID.Auditor.String(),
 			Attributes: attr.Attributes,
 		}
-		k.cdc.MustUnmarshal(iter.Value(), &val)
 		if stop := fn(val); stop {
 			break
 		}
