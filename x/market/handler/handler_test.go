@@ -915,6 +915,45 @@ func TestCreateBidValid(t *testing.T) {
 	require.True(t, found)
 }
 
+// TestCreateBidExceedsOrderMaxBids is a regression test for the OrderMaxBids
+// off-by-one (akash-network/support#413). The original check used `>`, which
+// allowed OrderMaxBids+1 bids per order. With the cap set to 1 and one bid
+// already present, a further bid must be rejected.
+func TestCreateBidExceedsOrderMaxBids(t *testing.T) {
+	suite := setupTestSuite(t)
+
+	order, gspec := suite.createOrder(testutil.Resources(t, testutil.WithDenom("uact")))
+
+	params, err := suite.MarketKeeper().GetParams(suite.Context())
+	require.NoError(t, err)
+	params.OrderMaxBids = 1
+	require.NoError(t, suite.MarketKeeper().SetParams(suite.Context(), params))
+
+	// Seed the single permitted bid directly via the keeper so the order is at
+	// its cap. The OrderMaxBids check runs before any provider/escrow lookup, so
+	// no provider registration or bank mocks are required here.
+	roffer := mvbeta.ResourceOfferFromRU(gspec.Resources)
+	_, err = suite.MarketKeeper().CreateBid(suite.Context(), mv1.MakeBidID(order.ID, testutil.AccAddress(t)), order.Price(), roffer, nil)
+	require.NoError(t, err)
+	require.Equal(t, uint32(1), suite.MarketKeeper().BidCountForOrder(suite.Context(), order.ID))
+
+	// With the cap reached, a further bid must be rejected.
+	msg := &mvbeta.MsgCreateBid{
+		ID:    mv1.MakeBidID(order.ID, testutil.AccAddress(t)),
+		Price: sdk.NewDecCoin(sdkutil.DenomUact, sdkmath.NewInt(1)),
+		Deposit: deposit.Deposit{
+			Amount:  mvbeta.DefaultBidMinDepositACT,
+			Sources: deposit.Sources{deposit.SourceBalance},
+		},
+	}
+
+	res, err := suite.handler(suite.Context(), msg)
+	require.Nil(t, res)
+	require.Error(t, err)
+	require.ErrorIs(t, err, mv1.ErrInvalidBid)
+	require.Contains(t, err.Error(), "too many existing bids")
+}
+
 func TestCreateBidInvalidPrice(t *testing.T) {
 	suite := setupTestSuite(t)
 	suite.PrepareMocks(func(ts *state.TestSuite) {
