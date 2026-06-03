@@ -42,7 +42,7 @@ func (ms msgServer) CreateBid(goCtx context.Context, msg *mvbeta.MsgCreateBid) (
 		return nil, fmt.Errorf("%w: minimum:%v received:%v", mv1.ErrInvalidDeposit, sdk.NewCoin(msg.Deposit.Amount.Denom, minDeposit), msg.Deposit)
 	}
 
-	if ms.keepers.Market.BidCountForOrder(ctx, msg.ID.OrderID()) > params.OrderMaxBids {
+	if ms.keepers.Market.BidCountForOrder(ctx, msg.ID.OrderID()) >= params.OrderMaxBids {
 		return nil, fmt.Errorf("%w: too many existing bids (%v)", mv1.ErrInvalidBid, params.OrderMaxBids)
 	}
 
