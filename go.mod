@@ -48,9 +48,9 @@ require (
 	google.golang.org/grpc v1.76.0
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.2
-	pkg.akt.dev/go v0.2.14
-	pkg.akt.dev/go/cli v0.2.4
-	pkg.akt.dev/go/sdl v0.2.2
+	pkg.akt.dev/go v0.4.0-alpha.aep86.0
+	pkg.akt.dev/go/cli v0.4.0-alpha.aep86.0
+	pkg.akt.dev/go/sdl v0.4.0-alpha.aep86.0
 )
 
 retract v2.0.0
