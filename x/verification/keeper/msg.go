@@ -1811,6 +1811,10 @@ func coinsSameDenom(a, b sdk.Coin) bool {
 	return a.Denom == b.Denom && !a.IsNil() && !b.IsNil()
 }
 
+func coinsEqual(a, b sdk.Coin) bool {
+	return coinsSameDenom(a, b) && a.Amount.Equal(b.Amount)
+}
+
 func minFeeForTier(params vtypes.Params, tier vtypes.VerificationTier) sdk.Coin {
 	switch tier {
 	case vtypes.TierIdentified:
