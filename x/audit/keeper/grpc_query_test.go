@@ -121,6 +121,11 @@ func TestGRPCQueryProviders(t *testing.T) {
 	err = suite.keeper.CreateOrUpdateProviderAttributes(suite.ctx, id2, provider2.Attributes)
 	require.NoError(t, err)
 
+	expByOwner := map[string]types.AuditedProvider{
+		provider.Owner:  provider,
+		provider2.Owner: provider2,
+	}
+
 	var req *types.QueryAllProvidersAttributesRequest
 
 	testCases := []struct {
@@ -159,6 +164,79 @@ func TestGRPCQueryProviders(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, res)
 			require.Equal(t, tc.expLen, len(res.Providers))
+
+			for _, got := range res.Providers {
+				// Regression guard: Owner must be a valid bech32 address, not raw
+				// protobuf bytes from a mis-unmarshaled value.
+				_, err := sdk.AccAddressFromBech32(got.Owner)
+				require.NoErrorf(t, err, "owner %q is not a valid bech32 address", got.Owner)
+
+				exp, ok := expByOwner[got.Owner]
+				require.Truef(t, ok, "unexpected owner %q", got.Owner)
+				require.Equal(t, exp.Auditor, got.Auditor)
+				require.Equal(t, exp.Attributes, got.Attributes)
+			}
 		})
 	}
+}
+
+func TestGRPCQueryAuditorAttributes(t *testing.T) {
+	suite := setupTest(t)
+
+	// Two providers under the same auditor.
+	auditor := testutil.AccAddress(t)
+
+	_, provider1 := testutil.AuditedProvider(t)
+	id1 := types.ProviderID{Owner: testutil.AccAddress(t), Auditor: auditor}
+	provider1.Owner = id1.Owner.String()
+	provider1.Auditor = id1.Auditor.String()
+	err := suite.keeper.CreateOrUpdateProviderAttributes(suite.ctx, id1, provider1.Attributes)
+	require.NoError(t, err)
+
+	_, provider2 := testutil.AuditedProvider(t)
+	id2 := types.ProviderID{Owner: testutil.AccAddress(t), Auditor: auditor}
+	provider2.Owner = id2.Owner.String()
+	provider2.Auditor = id2.Auditor.String()
+	err = suite.keeper.CreateOrUpdateProviderAttributes(suite.ctx, id2, provider2.Attributes)
+	require.NoError(t, err)
+
+	// A third provider under a different auditor, which must be filtered out.
+	idOther, providerOther := testutil.AuditedProvider(t)
+	err = suite.keeper.CreateOrUpdateProviderAttributes(suite.ctx, idOther, providerOther.Attributes)
+	require.NoError(t, err)
+
+	res, err := suite.queryClient.AuditorAttributes(suite.ctx, &types.QueryAuditorAttributesRequest{
+		Auditor: auditor.String(),
+	})
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	require.Len(t, res.Providers, 2)
+
+	expByOwner := map[string]types.AuditedProvider{
+		provider1.Owner: provider1,
+		provider2.Owner: provider2,
+	}
+
+	for _, got := range res.Providers {
+		require.Equal(t, auditor.String(), got.Auditor)
+		exp, ok := expByOwner[got.Owner]
+		require.Truef(t, ok, "unexpected owner %q returned for auditor", got.Owner)
+		require.Equal(t, exp.Attributes, got.Attributes)
+	}
+}
+
+func TestGRPCQueryProviderAttributes(t *testing.T) {
+	suite := setupTest(t)
+
+	id, provider := testutil.AuditedProvider(t)
+	err := suite.keeper.CreateOrUpdateProviderAttributes(suite.ctx, id, provider.Attributes)
+	require.NoError(t, err)
+
+	res, err := suite.queryClient.ProviderAttributes(suite.ctx, &types.QueryProviderAttributesRequest{
+		Owner: provider.Owner,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	require.Len(t, res.Providers, 1)
+	require.Equal(t, provider, res.Providers[0])
 }
