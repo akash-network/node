@@ -37,7 +37,7 @@ import (
 )
 
 func init() {
-	uttypes.RegisterPostUpgradeWorker("v2.0.0", &postUpgrade{})
+	uttypes.RegisterPostUpgradeWorker("v3.0.0", &postUpgrade{})
 }
 
 type postUpgrade struct {
