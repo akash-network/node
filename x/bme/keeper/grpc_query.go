@@ -13,7 +13,7 @@ import (
 
 	types "pkg.akt.dev/go/node/bme/v1"
 
-	"pkg.akt.dev/node/v2/util/query"
+	"pkg.akt.dev/node/v3/util/query"
 )
 
 type Querier struct {

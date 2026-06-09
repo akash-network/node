@@ -14,8 +14,8 @@ import (
 	etypes "pkg.akt.dev/go/node/escrow/types/v1"
 	"pkg.akt.dev/go/testutil"
 
-	"pkg.akt.dev/node/v2/testutil/state"
-	bmemodule "pkg.akt.dev/node/v2/x/bme"
+	"pkg.akt.dev/node/v3/testutil/state"
+	bmemodule "pkg.akt.dev/node/v3/x/bme"
 )
 
 type kTestSuite struct {

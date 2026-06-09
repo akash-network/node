@@ -9,7 +9,7 @@ import (
 
 	types "pkg.akt.dev/go/node/wasm/v1"
 
-	"pkg.akt.dev/node/v2/x/wasm/keeper"
+	"pkg.akt.dev/node/v3/x/wasm/keeper"
 )
 
 // ValidateGenesis does validation check of the Genesis and return error incase of failure

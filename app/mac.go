@@ -9,8 +9,8 @@ import (
 	ibctransfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 	emodule "pkg.akt.dev/go/node/escrow/module"
 
-	bmemodule "pkg.akt.dev/node/v2/x/bme"
-	verification "pkg.akt.dev/node/v2/x/verification"
+	bmemodule "pkg.akt.dev/node/v3/x/bme"
+	verification "pkg.akt.dev/node/v3/x/verification"
 )
 
 func ModuleAccountPerms() map[string][]string {

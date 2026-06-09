@@ -21,8 +21,8 @@ import (
 
 	types "pkg.akt.dev/go/node/epochs/v1beta1"
 
-	"pkg.akt.dev/node/v2/x/epochs/keeper"
-	"pkg.akt.dev/node/v2/x/epochs/simulation"
+	"pkg.akt.dev/node/v3/x/epochs/keeper"
+	"pkg.akt.dev/node/v3/x/epochs/simulation"
 )
 
 var (

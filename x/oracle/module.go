@@ -20,9 +20,9 @@ import (
 
 	types "pkg.akt.dev/go/node/oracle/v2"
 
-	"pkg.akt.dev/node/v2/x/oracle/handler"
-	"pkg.akt.dev/node/v2/x/oracle/keeper"
-	"pkg.akt.dev/node/v2/x/oracle/simulation"
+	"pkg.akt.dev/node/v3/x/oracle/handler"
+	"pkg.akt.dev/node/v3/x/oracle/keeper"
+	"pkg.akt.dev/node/v3/x/oracle/simulation"
 )
 
 var (

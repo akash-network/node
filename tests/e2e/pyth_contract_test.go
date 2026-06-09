@@ -27,8 +27,8 @@ import (
 	cclient "pkg.akt.dev/go/node/client/v1beta3"
 	oracletypes "pkg.akt.dev/go/node/oracle/v2"
 
-	"pkg.akt.dev/node/v2/testutil"
-	"pkg.akt.dev/node/v2/testutil/network"
+	"pkg.akt.dev/node/v3/testutil"
+	"pkg.akt.dev/node/v3/testutil/network"
 )
 
 // priceOracleContractTestSuite tests the Wormhole and Pyth CosmWasm contracts

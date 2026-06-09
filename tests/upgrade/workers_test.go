@@ -32,8 +32,8 @@ import (
 	mvbeta "pkg.akt.dev/go/node/market/v1beta5"
 	"pkg.akt.dev/go/sdkutil"
 
-	akash "pkg.akt.dev/node/v2/app"
-	uttypes "pkg.akt.dev/node/v2/tests/upgrade/types"
+	akash "pkg.akt.dev/node/v3/app"
+	uttypes "pkg.akt.dev/node/v3/tests/upgrade/types"
 )
 
 func init() {

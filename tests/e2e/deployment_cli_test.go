@@ -20,7 +20,7 @@ import (
 	ev1 "pkg.akt.dev/go/node/escrow/v1"
 	deposit "pkg.akt.dev/go/node/types/deposit/v1"
 
-	"pkg.akt.dev/node/v2/testutil"
+	"pkg.akt.dev/node/v3/testutil"
 )
 
 type deploymentIntegrationTestSuite struct {

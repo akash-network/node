@@ -1,4 +1,4 @@
-package v2_1_0
+package v3_0_0
 
 import (
 	"testing"
@@ -17,8 +17,8 @@ import (
 	types "pkg.akt.dev/go/node/provider/v1beta4"
 	"pkg.akt.dev/go/testutil"
 
-	utypes "pkg.akt.dev/node/v2/upgrades/types"
-	"pkg.akt.dev/node/v2/x/provider/keeper"
+	utypes "pkg.akt.dev/node/v3/upgrades/types"
+	"pkg.akt.dev/node/v3/x/provider/keeper"
 )
 
 func TestProviderMigrationBackfillsRegistrationsAtUpgradeBlockTime(t *testing.T) {

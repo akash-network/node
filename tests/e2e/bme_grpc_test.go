@@ -13,7 +13,7 @@ import (
 	clitestutil "pkg.akt.dev/go/cli/testutil"
 	types "pkg.akt.dev/go/node/bme/v1"
 
-	"pkg.akt.dev/node/v2/testutil"
+	"pkg.akt.dev/node/v3/testutil"
 )
 
 type bmeGRPCRestTestSuite struct {

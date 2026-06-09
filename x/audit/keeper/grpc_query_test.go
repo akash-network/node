@@ -13,8 +13,8 @@ import (
 	types "pkg.akt.dev/go/node/audit/v1"
 	"pkg.akt.dev/go/testutil"
 
-	"pkg.akt.dev/node/v2/app"
-	"pkg.akt.dev/node/v2/x/audit/keeper"
+	"pkg.akt.dev/node/v3/app"
+	"pkg.akt.dev/node/v3/x/audit/keeper"
 )
 
 type grpcTestSuite struct {

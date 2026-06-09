@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"pkg.akt.dev/go/sdkutil"
 
-	"pkg.akt.dev/node/v2/testutil"
+	"pkg.akt.dev/node/v3/testutil"
 )
 
 var DefaultDeposit = sdk.NewCoin(sdkutil.DenomUact, sdkmath.NewInt(5000000))

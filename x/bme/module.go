@@ -20,10 +20,10 @@ import (
 
 	types "pkg.akt.dev/go/node/bme/v1"
 
-	"pkg.akt.dev/node/v2/x/bme/handler"
-	bmeimports "pkg.akt.dev/node/v2/x/bme/imports"
-	"pkg.akt.dev/node/v2/x/bme/keeper"
-	"pkg.akt.dev/node/v2/x/bme/simulation"
+	"pkg.akt.dev/node/v3/x/bme/handler"
+	bmeimports "pkg.akt.dev/node/v3/x/bme/imports"
+	"pkg.akt.dev/node/v3/x/bme/keeper"
+	"pkg.akt.dev/node/v3/x/bme/simulation"
 )
 
 var (

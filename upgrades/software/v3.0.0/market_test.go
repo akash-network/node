@@ -1,4 +1,4 @@
-package v2_1_0
+package v3_0_0
 
 import (
 	"testing"
@@ -16,8 +16,8 @@ import (
 	mv1 "pkg.akt.dev/go/node/market/v1"
 	"pkg.akt.dev/go/testutil"
 
-	utypes "pkg.akt.dev/node/v2/upgrades/types"
-	"pkg.akt.dev/node/v2/x/market/keeper"
+	utypes "pkg.akt.dev/node/v3/upgrades/types"
+	"pkg.akt.dev/node/v3/x/market/keeper"
 )
 
 func TestMarketMigrationBackfillsProviderLeaseStats(t *testing.T) {
@@ -29,7 +29,7 @@ func TestMarketMigrationBackfillsProviderLeaseStats(t *testing.T) {
 	saveMarketMigrationLease(t, ctx, kpr, provider, mv1.LeaseActive, mv1.LeaseClosedReasonUnstable)
 	saveMarketMigrationLease(t, ctx, kpr, testutil.AccAddress(t), mv1.LeaseClosed, mv1.LeaseClosedReasonProvider)
 
-	migration := newMarketMigration(utypes.NewMigrator(kpr.Codec(), kpr.StoreKey()))
+	migration := newMarketV10Migration(utypes.NewMigrator(kpr.Codec(), kpr.StoreKey()))
 	require.NoError(t, migration.GetHandler()(ctx))
 
 	completed, failures, found := kpr.GetProviderLeaseStats(ctx, provider)

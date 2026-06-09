@@ -50,11 +50,11 @@ import (
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 	"pkg.akt.dev/go/sdkutil"
 
-	akash "pkg.akt.dev/node/v2/app"
-	"pkg.akt.dev/node/v2/app/sim"
-	simtestutil "pkg.akt.dev/node/v2/testutil/sims"
-	dkeys "pkg.akt.dev/node/v2/x/deployment/keeper/keys"
-	verificationtypes "pkg.akt.dev/node/v2/x/verification/types"
+	akash "pkg.akt.dev/node/v3/app"
+	"pkg.akt.dev/node/v3/app/sim"
+	simtestutil "pkg.akt.dev/node/v3/testutil/sims"
+	dkeys "pkg.akt.dev/node/v3/x/deployment/keeper/keys"
+	verificationtypes "pkg.akt.dev/node/v3/x/verification/types"
 )
 
 // AppChainID hardcoded chainID for simulation

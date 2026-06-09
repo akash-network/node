@@ -28,14 +28,14 @@ import (
 	"pkg.akt.dev/go/sdkutil"
 	"pkg.akt.dev/go/testutil"
 
-	cmocks "pkg.akt.dev/node/v2/testutil/cosmos/mocks"
-	"pkg.akt.dev/node/v2/testutil/state"
-	bmemodule "pkg.akt.dev/node/v2/x/bme"
-	"pkg.akt.dev/node/v2/x/deployment/handler"
-	dimports "pkg.akt.dev/node/v2/x/deployment/imports"
-	"pkg.akt.dev/node/v2/x/deployment/keeper"
-	ehandler "pkg.akt.dev/node/v2/x/escrow/handler"
-	mkeeper "pkg.akt.dev/node/v2/x/market/keeper"
+	cmocks "pkg.akt.dev/node/v3/testutil/cosmos/mocks"
+	"pkg.akt.dev/node/v3/testutil/state"
+	bmemodule "pkg.akt.dev/node/v3/x/bme"
+	"pkg.akt.dev/node/v3/x/deployment/handler"
+	dimports "pkg.akt.dev/node/v3/x/deployment/imports"
+	"pkg.akt.dev/node/v3/x/deployment/keeper"
+	ehandler "pkg.akt.dev/node/v3/x/escrow/handler"
+	mkeeper "pkg.akt.dev/node/v3/x/market/keeper"
 )
 
 type testSuite struct {

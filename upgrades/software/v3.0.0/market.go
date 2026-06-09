@@ -1,4 +1,4 @@
-package v2_1_0
+package v3_0_0
 
 import (
 	"cosmossdk.io/collections"
@@ -10,25 +10,42 @@ import (
 
 	mv1 "pkg.akt.dev/go/node/market/v1"
 
-	utypes "pkg.akt.dev/node/v2/upgrades/types"
-	marketkeeper "pkg.akt.dev/node/v2/x/market/keeper"
-	"pkg.akt.dev/node/v2/x/market/keeper/keys"
+	utypes "pkg.akt.dev/node/v3/upgrades/types"
+	marketkeeper "pkg.akt.dev/node/v3/x/market/keeper"
+	"pkg.akt.dev/node/v3/x/market/keeper/keys"
 )
 
-type marketMigrations struct {
+type marketV9Migrations struct {
 	utypes.Migrator
 }
 
-func newMarketMigration(m utypes.Migrator) utypes.Migration {
-	return marketMigrations{Migrator: m}
+func newMarketV9Migration(m utypes.Migrator) utypes.Migration {
+	return marketV9Migrations{Migrator: m}
 }
 
-func (m marketMigrations) GetHandler() sdkmodule.MigrationHandler {
+func (m marketV9Migrations) GetHandler() sdkmodule.MigrationHandler {
 	return m.handler
 }
 
 // handler migrates market from version 8 to 9.
-func (m marketMigrations) handler(ctx sdk.Context) error {
+func (m marketV9Migrations) handler(_ sdk.Context) error {
+	return nil
+}
+
+type marketV10Migrations struct {
+	utypes.Migrator
+}
+
+func newMarketV10Migration(m utypes.Migrator) utypes.Migration {
+	return marketV10Migrations{Migrator: m}
+}
+
+func (m marketV10Migrations) GetHandler() sdkmodule.MigrationHandler {
+	return m.handler
+}
+
+// handler migrates market from version 9 to 10.
+func (m marketV10Migrations) handler(ctx sdk.Context) error {
 	skey := m.StoreKey().(*storetypes.KVStoreKey)
 	ssvc := runtime.NewKVStoreService(skey)
 	sb := collections.NewSchemaBuilder(ssvc)

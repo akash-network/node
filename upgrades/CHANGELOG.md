@@ -10,9 +10,10 @@
 |    cert    |       4 |
 | deployment |       7 |
 |   escrow   |       3 |
-|   market   |       8 |
-|  provider  |       3 |
+|   market   |      10 |
+|  provider  |       4 |
 |    take    |       3 |
+| verification |     1 |
 
 #### Upgrades
 
@@ -40,6 +41,21 @@ Goal of the upgrade here
 Add new upgrades after this line based on the template above
 -----
 
+##### v3.0.0
+
+###### Description
+
+- Stores
+    - added
+        - `verification`
+
+- Migrations
+    - oracle     `1 -> 2`
+    - deployment `7 -> 8`
+    - market     `8 -> 9`
+    - market     `9 -> 10`
+    - provider   `3 -> 4`
+
 ##### v2.1.0
 
 ###### Description
@@ -48,11 +64,6 @@ Add new upgrades after this line based on the template above
     - oracle     `1 -> 2`
     - deployment `7 -> 8`
     - market     `8 -> 9`
-    - provider   `3 -> 4`
-
-- Stores
-    - added
-        - `verification`
 
 ##### v2.0.0
 

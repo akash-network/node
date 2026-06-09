@@ -19,7 +19,7 @@ import (
 	"pkg.akt.dev/go/cli"
 	clitestutil "pkg.akt.dev/go/cli/testutil"
 
-	"pkg.akt.dev/node/v2/testutil"
+	"pkg.akt.dev/node/v3/testutil"
 )
 
 type marketIntegrationTestSuite struct {

@@ -18,9 +18,9 @@ import (
 
 	types "pkg.akt.dev/go/node/wasm/v1"
 
-	"pkg.akt.dev/node/v2/x/wasm/handler"
-	"pkg.akt.dev/node/v2/x/wasm/keeper"
-	"pkg.akt.dev/node/v2/x/wasm/simulation"
+	"pkg.akt.dev/node/v3/x/wasm/handler"
+	"pkg.akt.dev/node/v3/x/wasm/keeper"
+	"pkg.akt.dev/node/v3/x/wasm/simulation"
 )
 
 var (

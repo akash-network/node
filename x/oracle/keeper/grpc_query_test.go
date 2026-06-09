@@ -15,8 +15,8 @@ import (
 	oracletypes "pkg.akt.dev/go/node/oracle/v2"
 	"pkg.akt.dev/go/sdkutil"
 
-	"pkg.akt.dev/node/v2/testutil/state"
-	oraclekeeper "pkg.akt.dev/node/v2/x/oracle/keeper"
+	"pkg.akt.dev/node/v3/testutil/state"
+	oraclekeeper "pkg.akt.dev/node/v3/x/oracle/keeper"
 )
 
 type grpcTestSuite struct {

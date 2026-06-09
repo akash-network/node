@@ -13,7 +13,7 @@ import (
 	mvbeta "pkg.akt.dev/go/node/market/v1beta5"
 	deposit "pkg.akt.dev/go/node/types/deposit/v1"
 
-	dimports "pkg.akt.dev/node/v2/x/deployment/imports"
+	dimports "pkg.akt.dev/node/v3/x/deployment/imports"
 )
 
 type migrationGrant struct {

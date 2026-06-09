@@ -22,11 +22,11 @@ import (
 
 	mtypes "pkg.akt.dev/go/node/market/v1beta5"
 
-	akeeper "pkg.akt.dev/node/v2/x/audit/keeper"
-	ekeeper "pkg.akt.dev/node/v2/x/escrow/keeper"
-	"pkg.akt.dev/node/v2/x/market/handler"
-	"pkg.akt.dev/node/v2/x/market/keeper"
-	"pkg.akt.dev/node/v2/x/market/simulation"
+	akeeper "pkg.akt.dev/node/v3/x/audit/keeper"
+	ekeeper "pkg.akt.dev/node/v3/x/escrow/keeper"
+	"pkg.akt.dev/node/v3/x/market/handler"
+	"pkg.akt.dev/node/v3/x/market/keeper"
+	"pkg.akt.dev/node/v3/x/market/simulation"
 )
 
 // type check to ensure the interface is properly implemented
@@ -182,7 +182,7 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 
 // ConsensusVersion implements module.AppModule#ConsensusVersion
 func (am AppModule) ConsensusVersion() uint64 {
-	return 9
+	return 10
 }
 
 // AppModuleSimulation functions

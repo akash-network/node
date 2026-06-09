@@ -13,7 +13,7 @@ import (
 
 	vtypes "pkg.akt.dev/go/node/verification/v1"
 
-	moduletypes "pkg.akt.dev/node/v2/x/verification/types"
+	moduletypes "pkg.akt.dev/node/v3/x/verification/types"
 )
 
 func (k *keeper) RegisterAuditor(ctx sdk.Context, authority string, auditor sdk.AccAddress, tier vtypes.VerificationTier, metadataHash []byte) error {

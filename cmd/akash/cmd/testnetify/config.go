@@ -12,7 +12,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
-	akash "pkg.akt.dev/node/v2/app"
+	akash "pkg.akt.dev/node/v3/app"
 )
 
 type PrivValidatorKey struct {

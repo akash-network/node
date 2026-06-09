@@ -10,7 +10,7 @@ import (
 	types "pkg.akt.dev/go/node/oracle/v2"
 	"pkg.akt.dev/go/util/conv"
 
-	"pkg.akt.dev/node/v2/util/validation"
+	"pkg.akt.dev/node/v3/util/validation"
 )
 
 // priceDataIDCodec implements codec.KeyCodec[PriceDataID]

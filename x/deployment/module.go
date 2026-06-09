@@ -22,10 +22,10 @@ import (
 	v1 "pkg.akt.dev/go/node/deployment/v1"
 	types "pkg.akt.dev/go/node/deployment/v1beta4"
 
-	"pkg.akt.dev/node/v2/x/deployment/handler"
-	dimports "pkg.akt.dev/node/v2/x/deployment/imports"
-	"pkg.akt.dev/node/v2/x/deployment/keeper"
-	"pkg.akt.dev/node/v2/x/deployment/simulation"
+	"pkg.akt.dev/node/v3/x/deployment/handler"
+	dimports "pkg.akt.dev/node/v3/x/deployment/imports"
+	"pkg.akt.dev/node/v3/x/deployment/keeper"
+	"pkg.akt.dev/node/v3/x/deployment/simulation"
 )
 
 // type check to ensure the interface is properly implemented

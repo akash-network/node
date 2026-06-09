@@ -20,9 +20,9 @@ import (
 	"pkg.akt.dev/go/sdkutil"
 	sdlv1 "pkg.akt.dev/go/sdl"
 
-	appparams "pkg.akt.dev/node/v2/app/params"
-	testsim "pkg.akt.dev/node/v2/testutil/sim"
-	"pkg.akt.dev/node/v2/x/deployment/keeper"
+	appparams "pkg.akt.dev/node/v3/app/params"
+	testsim "pkg.akt.dev/node/v3/testutil/sim"
+	"pkg.akt.dev/node/v3/x/deployment/keeper"
 )
 
 // Simulation operation weights constants

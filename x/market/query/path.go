@@ -9,7 +9,7 @@ import (
 
 	mv1 "pkg.akt.dev/go/node/market/v1"
 
-	dpath "pkg.akt.dev/node/v2/x/deployment/query"
+	dpath "pkg.akt.dev/node/v3/x/deployment/query"
 )
 
 const (

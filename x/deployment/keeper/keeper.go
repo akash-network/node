@@ -16,8 +16,8 @@ import (
 	"pkg.akt.dev/go/node/deployment/v1"
 	types "pkg.akt.dev/go/node/deployment/v1beta4"
 
-	dimports "pkg.akt.dev/node/v2/x/deployment/imports"
-	"pkg.akt.dev/node/v2/x/deployment/keeper/keys"
+	dimports "pkg.akt.dev/node/v3/x/deployment/imports"
+	"pkg.akt.dev/node/v3/x/deployment/keeper/keys"
 )
 
 type IKeeper interface {

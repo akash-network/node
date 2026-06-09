@@ -1,4 +1,4 @@
-package v2_1_0
+package v3_0_0
 
 import (
 	"cosmossdk.io/collections"
@@ -9,8 +9,8 @@ import (
 	sdkmodule "github.com/cosmos/cosmos-sdk/types/module"
 	dv1 "pkg.akt.dev/go/node/deployment/v1"
 
-	utypes "pkg.akt.dev/node/v2/upgrades/types"
-	"pkg.akt.dev/node/v2/x/deployment/keeper/keys"
+	utypes "pkg.akt.dev/node/v3/upgrades/types"
+	"pkg.akt.dev/node/v3/x/deployment/keeper/keys"
 )
 
 type deploymentMigrations struct {

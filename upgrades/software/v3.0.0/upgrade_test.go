@@ -1,4 +1,4 @@
-package v2_1_0
+package v3_0_0
 
 import (
 	"testing"
@@ -10,8 +10,8 @@ import (
 	mv1 "pkg.akt.dev/go/node/market/v1"
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 
-	utypes "pkg.akt.dev/node/v2/upgrades/types"
-	verificationtypes "pkg.akt.dev/node/v2/x/verification/types"
+	utypes "pkg.akt.dev/node/v3/upgrades/types"
+	verificationtypes "pkg.akt.dev/node/v3/x/verification/types"
 )
 
 func TestStoreLoaderAddsVerificationStore(t *testing.T) {

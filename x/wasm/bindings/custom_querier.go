@@ -6,7 +6,7 @@ import (
 	wasmvmtypes "github.com/CosmWasm/wasmvm/v3/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	oraclekeeper "pkg.akt.dev/node/v2/x/oracle/keeper"
+	oraclekeeper "pkg.akt.dev/node/v3/x/oracle/keeper"
 )
 
 // CustomQuerier returns a custom querier for Akash-specific queries from CosmWasm contracts.

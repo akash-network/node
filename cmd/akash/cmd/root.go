@@ -19,8 +19,8 @@ import (
 	"pkg.akt.dev/go/cli"
 	"pkg.akt.dev/go/sdkutil"
 
-	"pkg.akt.dev/node/v2/app"
-	"pkg.akt.dev/node/v2/cmd/akash/cmd/testnetify"
+	"pkg.akt.dev/node/v3/app"
+	"pkg.akt.dev/node/v3/cmd/akash/cmd/testnetify"
 )
 
 // NewRootCmd creates a new root command for akash. It is called once in the

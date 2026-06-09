@@ -17,9 +17,9 @@ import (
 	deposit "pkg.akt.dev/go/node/types/deposit/v1"
 	"pkg.akt.dev/go/sdkutil"
 
-	appparams "pkg.akt.dev/node/v2/app/params"
-	testsim "pkg.akt.dev/node/v2/testutil/sim"
-	keepers "pkg.akt.dev/node/v2/x/market/handler"
+	appparams "pkg.akt.dev/node/v3/app/params"
+	testsim "pkg.akt.dev/node/v3/testutil/sim"
+	keepers "pkg.akt.dev/node/v3/x/market/handler"
 )
 
 // Simulation operation weights constants

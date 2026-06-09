@@ -33,12 +33,12 @@ import (
 	"pkg.akt.dev/go/sdkutil"
 	"pkg.akt.dev/go/testutil"
 
-	"pkg.akt.dev/node/v2/testutil/state"
-	bmemodule "pkg.akt.dev/node/v2/x/bme"
-	dhandler "pkg.akt.dev/node/v2/x/deployment/handler"
-	ehandler "pkg.akt.dev/node/v2/x/escrow/handler"
-	"pkg.akt.dev/node/v2/x/market/handler"
-	verificationtypes "pkg.akt.dev/node/v2/x/verification/types"
+	"pkg.akt.dev/node/v3/testutil/state"
+	bmemodule "pkg.akt.dev/node/v3/x/bme"
+	dhandler "pkg.akt.dev/node/v3/x/deployment/handler"
+	ehandler "pkg.akt.dev/node/v3/x/escrow/handler"
+	"pkg.akt.dev/node/v3/x/market/handler"
+	verificationtypes "pkg.akt.dev/node/v3/x/verification/types"
 )
 
 type testSuite struct {

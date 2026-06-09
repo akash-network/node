@@ -8,7 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	utilcli "pkg.akt.dev/node/v2/util/cli"
+	utilcli "pkg.akt.dev/node/v3/util/cli"
 )
 
 func main() {

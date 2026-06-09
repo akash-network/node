@@ -11,7 +11,7 @@ import (
 	vtypes "pkg.akt.dev/go/node/verification/v1"
 	"pkg.akt.dev/go/testutil"
 
-	moduletypes "pkg.akt.dev/node/v2/x/verification/types"
+	moduletypes "pkg.akt.dev/node/v3/x/verification/types"
 )
 
 func TestEndBlockerExpiresAttestation(t *testing.T) {

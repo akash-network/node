@@ -18,8 +18,8 @@ import (
 	vtypes "pkg.akt.dev/go/node/verification/v1"
 	"pkg.akt.dev/go/testutil"
 
-	"pkg.akt.dev/node/v2/x/verification/keeper"
-	moduletypes "pkg.akt.dev/node/v2/x/verification/types"
+	"pkg.akt.dev/node/v3/x/verification/keeper"
+	moduletypes "pkg.akt.dev/node/v3/x/verification/types"
 )
 
 func TestGenesisRoundTrip(t *testing.T) {

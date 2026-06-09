@@ -18,9 +18,9 @@ import (
 	vtypes "pkg.akt.dev/go/node/verification/v1"
 	"pkg.akt.dev/go/testutil"
 
-	verificationhandler "pkg.akt.dev/node/v2/x/verification/handler"
-	verificationkeeper "pkg.akt.dev/node/v2/x/verification/keeper"
-	moduletypes "pkg.akt.dev/node/v2/x/verification/types"
+	verificationhandler "pkg.akt.dev/node/v3/x/verification/handler"
+	verificationkeeper "pkg.akt.dev/node/v3/x/verification/keeper"
+	moduletypes "pkg.akt.dev/node/v3/x/verification/types"
 )
 
 const updateParamsAuthority = "gov"

@@ -16,8 +16,8 @@ import (
 
 	types "pkg.akt.dev/go/node/bme/v1"
 
-	"pkg.akt.dev/node/v2/testutil/state"
-	"pkg.akt.dev/node/v2/x/bme/keeper"
+	"pkg.akt.dev/node/v3/testutil/state"
+	"pkg.akt.dev/node/v3/x/bme/keeper"
 )
 
 type grpcTestSuite struct {

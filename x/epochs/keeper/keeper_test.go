@@ -18,7 +18,7 @@ import (
 
 	types "pkg.akt.dev/go/node/epochs/v1beta1"
 
-	epochskeeper "pkg.akt.dev/node/v2/x/epochs/keeper"
+	epochskeeper "pkg.akt.dev/node/v3/x/epochs/keeper"
 )
 
 type KeeperTestSuite struct {

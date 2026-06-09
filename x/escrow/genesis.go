@@ -12,7 +12,7 @@ import (
 	etypes "pkg.akt.dev/go/node/escrow/types/v1"
 	types "pkg.akt.dev/go/node/escrow/v1"
 
-	"pkg.akt.dev/node/v2/x/escrow/keeper"
+	"pkg.akt.dev/node/v3/x/escrow/keeper"
 )
 
 // ValidateGenesis does validation check of the Genesis and returns an error in case of failure

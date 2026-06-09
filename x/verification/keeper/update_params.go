@@ -8,7 +8,7 @@ import (
 
 	vtypes "pkg.akt.dev/go/node/verification/v1"
 
-	moduletypes "pkg.akt.dev/node/v2/x/verification/types"
+	moduletypes "pkg.akt.dev/node/v3/x/verification/types"
 )
 
 const maxBasisPoints = uint32(10000)

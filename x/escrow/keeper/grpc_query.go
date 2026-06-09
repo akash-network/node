@@ -15,7 +15,7 @@ import (
 	types "pkg.akt.dev/go/node/escrow/types/v1"
 	etypes "pkg.akt.dev/go/node/escrow/v1"
 
-	"pkg.akt.dev/node/v2/util/query"
+	"pkg.akt.dev/node/v3/util/query"
 )
 
 // Querier is used as Keeper will have duplicate methods if used directly, and gRPC names take precedence over keeper

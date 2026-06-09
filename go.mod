@@ -1,4 +1,4 @@
-module pkg.akt.dev/node/v2
+module pkg.akt.dev/node/v3
 
 go 1.26.2
 
@@ -52,8 +52,6 @@ require (
 	pkg.akt.dev/go/cli v0.4.0-alpha.aep86.1
 	pkg.akt.dev/go/sdl v0.4.0-alpha.aep86.1
 )
-
-retract v2.0.0
 
 replace (
 	// use cosmos fork of keyring

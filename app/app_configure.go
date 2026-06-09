@@ -24,17 +24,17 @@ import (
 
 	audittypes "pkg.akt.dev/go/node/audit/v1"
 
-	"pkg.akt.dev/node/v2/x/audit"
-	"pkg.akt.dev/node/v2/x/bme"
-	"pkg.akt.dev/node/v2/x/cert"
-	"pkg.akt.dev/node/v2/x/deployment"
-	"pkg.akt.dev/node/v2/x/epochs"
-	"pkg.akt.dev/node/v2/x/escrow"
-	"pkg.akt.dev/node/v2/x/market"
-	"pkg.akt.dev/node/v2/x/oracle"
-	"pkg.akt.dev/node/v2/x/provider"
-	"pkg.akt.dev/node/v2/x/verification"
-	awasm "pkg.akt.dev/node/v2/x/wasm"
+	"pkg.akt.dev/node/v3/x/audit"
+	"pkg.akt.dev/node/v3/x/bme"
+	"pkg.akt.dev/node/v3/x/cert"
+	"pkg.akt.dev/node/v3/x/deployment"
+	"pkg.akt.dev/node/v3/x/epochs"
+	"pkg.akt.dev/node/v3/x/escrow"
+	"pkg.akt.dev/node/v3/x/market"
+	"pkg.akt.dev/node/v3/x/oracle"
+	"pkg.akt.dev/node/v3/x/provider"
+	"pkg.akt.dev/node/v3/x/verification"
+	awasm "pkg.akt.dev/node/v3/x/wasm"
 )
 
 func akashModuleBasics() []module.AppModuleBasic {

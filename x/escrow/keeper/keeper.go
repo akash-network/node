@@ -27,7 +27,7 @@ import (
 	bmetypes "pkg.akt.dev/go/node/bme/v1"
 	"pkg.akt.dev/go/sdkutil"
 
-	"pkg.akt.dev/node/v2/x/escrow/imports"
+	"pkg.akt.dev/node/v3/x/escrow/imports"
 )
 
 type AccountHook func(sdk.Context, etypes.Account) error

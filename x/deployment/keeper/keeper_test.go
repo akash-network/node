@@ -11,8 +11,8 @@ import (
 	dvbeta "pkg.akt.dev/go/node/deployment/v1beta4"
 	"pkg.akt.dev/go/testutil"
 
-	"pkg.akt.dev/node/v2/testutil/state"
-	"pkg.akt.dev/node/v2/x/deployment/keeper"
+	"pkg.akt.dev/node/v3/testutil/state"
+	"pkg.akt.dev/node/v3/x/deployment/keeper"
 )
 
 func Test_Create(t *testing.T) {

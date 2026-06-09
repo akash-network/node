@@ -11,8 +11,8 @@ import (
 
 	types "pkg.akt.dev/go/node/bme/v1"
 
-	bmeimports "pkg.akt.dev/node/v2/x/bme/imports"
-	"pkg.akt.dev/node/v2/x/bme/keeper"
+	bmeimports "pkg.akt.dev/node/v3/x/bme/imports"
+	"pkg.akt.dev/node/v3/x/bme/keeper"
 )
 
 type msgServer struct {

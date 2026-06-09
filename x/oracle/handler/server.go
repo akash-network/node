@@ -8,7 +8,7 @@ import (
 
 	types "pkg.akt.dev/go/node/oracle/v2"
 
-	"pkg.akt.dev/node/v2/x/oracle/keeper"
+	"pkg.akt.dev/node/v3/x/oracle/keeper"
 )
 
 var _ types.MsgServer = msgServer{}

@@ -8,7 +8,7 @@ import (
 
 	vtypes "pkg.akt.dev/go/node/verification/v1"
 
-	"pkg.akt.dev/node/v2/x/verification/keeper"
+	"pkg.akt.dev/node/v3/x/verification/keeper"
 )
 
 type msgServer struct {

@@ -8,7 +8,7 @@ import (
 	storeprefix "cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	moduletypes "pkg.akt.dev/node/v2/x/verification/types"
+	moduletypes "pkg.akt.dev/node/v3/x/verification/types"
 )
 
 type dueQueueEntry struct {

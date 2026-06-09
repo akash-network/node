@@ -1,4 +1,4 @@
-package v2_1_0
+package v3_0_0
 
 import (
 	"cosmossdk.io/store/prefix"
@@ -7,8 +7,8 @@ import (
 
 	types "pkg.akt.dev/go/node/provider/v1beta4"
 
-	utypes "pkg.akt.dev/node/v2/upgrades/types"
-	"pkg.akt.dev/node/v2/x/provider/keeper"
+	utypes "pkg.akt.dev/node/v3/upgrades/types"
+	"pkg.akt.dev/node/v3/x/provider/keeper"
 )
 
 type providerMigrations struct {

@@ -5,9 +5,9 @@ import (
 
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 
-	utypes "pkg.akt.dev/node/v2/upgrades/types"
+	utypes "pkg.akt.dev/node/v3/upgrades/types"
 	// nolint: revive
-	_ "pkg.akt.dev/node/v2/upgrades"
+	_ "pkg.akt.dev/node/v3/upgrades"
 )
 
 func (app *AkashApp) registerUpgradeHandlers() error {

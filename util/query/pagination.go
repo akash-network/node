@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"hash/crc32"
 
-	"pkg.akt.dev/node/v2/util/validation"
+	"pkg.akt.dev/node/v3/util/validation"
 )
 
 var (

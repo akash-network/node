@@ -10,8 +10,8 @@ import (
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 	types "pkg.akt.dev/go/node/provider/v1beta4"
 
-	mkeeper "pkg.akt.dev/node/v2/x/market/keeper"
-	"pkg.akt.dev/node/v2/x/provider/keeper"
+	mkeeper "pkg.akt.dev/node/v3/x/market/keeper"
+	"pkg.akt.dev/node/v3/x/provider/keeper"
 )
 
 var (

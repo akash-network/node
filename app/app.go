@@ -60,17 +60,17 @@ import (
 	epochstypes "pkg.akt.dev/go/node/epochs/v1beta1"
 	"pkg.akt.dev/go/sdkutil"
 
-	apptypes "pkg.akt.dev/node/v2/app/types"
-	utypes "pkg.akt.dev/node/v2/upgrades/types"
-	"pkg.akt.dev/node/v2/util/partialord"
-	"pkg.akt.dev/node/v2/x/bme"
-	"pkg.akt.dev/node/v2/x/escrow"
-	"pkg.akt.dev/node/v2/x/market"
-	"pkg.akt.dev/node/v2/x/oracle"
-	"pkg.akt.dev/node/v2/x/verification"
-	awasm "pkg.akt.dev/node/v2/x/wasm"
+	apptypes "pkg.akt.dev/node/v3/app/types"
+	utypes "pkg.akt.dev/node/v3/upgrades/types"
+	"pkg.akt.dev/node/v3/util/partialord"
+	"pkg.akt.dev/node/v3/x/bme"
+	"pkg.akt.dev/node/v3/x/escrow"
+	"pkg.akt.dev/node/v3/x/market"
+	"pkg.akt.dev/node/v3/x/oracle"
+	"pkg.akt.dev/node/v3/x/verification"
+	awasm "pkg.akt.dev/node/v3/x/wasm"
 	// unnamed import of statik for swagger UI support
-	_ "pkg.akt.dev/node/v2/client/docs/statik"
+	_ "pkg.akt.dev/node/v3/client/docs/statik"
 )
 
 const (

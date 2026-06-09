@@ -25,7 +25,7 @@ import (
 	aclient "pkg.akt.dev/go/node/client"
 	"pkg.akt.dev/go/sdkutil"
 
-	akash "pkg.akt.dev/node/v2/app"
+	akash "pkg.akt.dev/node/v3/app"
 )
 
 type appCreator struct {

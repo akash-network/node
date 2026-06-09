@@ -1,9 +1,9 @@
 package verification
 
 import (
-	module "pkg.akt.dev/node/v2/x/verification/types"
+	module "pkg.akt.dev/node/v3/x/verification/types"
 
-	"pkg.akt.dev/node/v2/x/verification/keeper"
+	"pkg.akt.dev/node/v3/x/verification/keeper"
 )
 
 const (

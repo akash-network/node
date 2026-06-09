@@ -3,7 +3,7 @@ package deployment
 import (
 	types "pkg.akt.dev/go/node/deployment/v1"
 
-	"pkg.akt.dev/node/v2/x/deployment/keeper"
+	"pkg.akt.dev/node/v3/x/deployment/keeper"
 )
 
 const (

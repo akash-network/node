@@ -19,11 +19,11 @@ import (
 	deposit "pkg.akt.dev/go/node/types/deposit/v1"
 	"pkg.akt.dev/go/testutil"
 
-	"pkg.akt.dev/node/v2/app"
-	"pkg.akt.dev/node/v2/testutil/state"
-	"pkg.akt.dev/node/v2/x/deployment/keeper"
-	eimports "pkg.akt.dev/node/v2/x/escrow/imports"
-	ekeeper "pkg.akt.dev/node/v2/x/escrow/keeper"
+	"pkg.akt.dev/node/v3/app"
+	"pkg.akt.dev/node/v3/testutil/state"
+	"pkg.akt.dev/node/v3/x/deployment/keeper"
+	eimports "pkg.akt.dev/node/v3/x/escrow/imports"
+	ekeeper "pkg.akt.dev/node/v3/x/escrow/keeper"
 )
 
 type grpcTestSuite struct {

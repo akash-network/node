@@ -6,7 +6,7 @@ import (
 
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 
-	keepers "pkg.akt.dev/node/v2/x/market/handler"
+	keepers "pkg.akt.dev/node/v3/x/market/handler"
 )
 
 func getOrdersWithState(ctx sdk.Context, ks keepers.Keepers, state mtypes.Order_State) mtypes.Orders {

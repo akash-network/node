@@ -20,7 +20,7 @@ import (
 	otypes "pkg.akt.dev/go/node/oracle/v2"
 	"pkg.akt.dev/go/sdkutil"
 
-	bmeimports "pkg.akt.dev/node/v2/x/bme/imports"
+	bmeimports "pkg.akt.dev/node/v3/x/bme/imports"
 )
 
 const (

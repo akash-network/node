@@ -12,7 +12,7 @@ import (
 
 	types "pkg.akt.dev/go/node/bme/v1"
 
-	"pkg.akt.dev/node/v2/util/validation"
+	"pkg.akt.dev/node/v3/util/validation"
 )
 
 type ledgerRecordIDCodec struct{}

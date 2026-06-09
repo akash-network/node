@@ -17,7 +17,7 @@ import (
 	mv1 "pkg.akt.dev/go/node/market/v1"
 	types "pkg.akt.dev/go/node/market/v1beta5"
 
-	"pkg.akt.dev/node/v2/x/market/keeper/keys"
+	"pkg.akt.dev/node/v3/x/market/keeper/keys"
 )
 
 type IKeeper interface {

@@ -7,7 +7,7 @@ import (
 
 	types "pkg.akt.dev/go/node/escrow/v1"
 
-	"pkg.akt.dev/node/v2/x/escrow/keeper"
+	"pkg.akt.dev/node/v3/x/escrow/keeper"
 )
 
 // NewHandler returns a handler for "deployment" type messages
