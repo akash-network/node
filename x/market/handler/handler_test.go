@@ -954,6 +954,96 @@ func TestCreateBidExceedsOrderMaxBids(t *testing.T) {
 	require.Contains(t, err.Error(), "too many existing bids")
 }
 
+// TestCreateBidCapSurvivesBidChurn verifies that the OrderMaxBids cap is
+// enforced against the monotonic bids-ever-created counter rather than the
+// live bid count. Closing a bid must not free up cap capacity, otherwise a
+// provider could loop CreateBid/CloseBid to accumulate unbounded bid records.
+func TestCreateBidCapSurvivesBidChurn(t *testing.T) {
+	suite := setupTestSuite(t)
+
+	order, gspec := suite.createOrder(testutil.Resources(t, testutil.WithDenom("uact")))
+
+	params, err := suite.MarketKeeper().GetParams(suite.Context())
+	require.NoError(t, err)
+	params.OrderMaxBids = 1
+	require.NoError(t, suite.MarketKeeper().SetParams(suite.Context(), params))
+
+	roffer := mvbeta.ResourceOfferFromRU(gspec.Resources)
+	bid, err := suite.MarketKeeper().CreateBid(suite.Context(), mv1.MakeBidID(order.ID, testutil.AccAddress(t)), order.Price(), roffer, nil)
+	require.NoError(t, err)
+
+	// Closing the bid drops the live count to zero...
+	require.NoError(t, suite.MarketKeeper().OnBidClosed(suite.Context(), bid))
+	require.Equal(t, uint32(0), suite.MarketKeeper().BidCountForOrder(suite.Context(), order.ID))
+
+	// ...but the monotonic counter still holds the order at its cap.
+	require.Equal(t, uint32(1), suite.MarketKeeper().BidsEverCreatedForOrder(suite.Context(), order.ID))
+
+	msg := &mvbeta.MsgCreateBid{
+		ID:    mv1.MakeBidID(order.ID, testutil.AccAddress(t)),
+		Price: sdk.NewDecCoin(sdkutil.DenomUact, sdkmath.NewInt(1)),
+		Deposit: deposit.Deposit{
+			Amount:  mvbeta.DefaultBidMinDepositACT,
+			Sources: deposit.Sources{deposit.SourceBalance},
+		},
+	}
+
+	res, err := suite.handler(suite.Context(), msg)
+	require.Nil(t, res)
+	require.Error(t, err)
+	require.ErrorIs(t, err, mv1.ErrInvalidBid)
+	require.Contains(t, err.Error(), "too many existing bids")
+}
+
+// TestBidsEverCreatedLazySeedsFromStore covers orders that predate the
+// bids-ever-created counter: with no counter record present the count is
+// derived from all stored bids, including closed and lost ones, so the cap
+// carries over an upgrade or genesis import unchanged.
+func TestBidsEverCreatedLazySeedsFromStore(t *testing.T) {
+	suite := setupTestSuite(t)
+
+	order, gspec := suite.createOrder(testutil.Resources(t, testutil.WithDenom("uact")))
+
+	params, err := suite.MarketKeeper().GetParams(suite.Context())
+	require.NoError(t, err)
+	params.OrderMaxBids = 2
+	require.NoError(t, suite.MarketKeeper().SetParams(suite.Context(), params))
+
+	// Seed bids directly in the store, the same way genesis import and
+	// pre-counter state do, so no counter record exists for the order.
+	roffer := mvbeta.ResourceOfferFromRU(gspec.Resources)
+	for _, bstate := range []mvbeta.Bid_State{mvbeta.BidClosed, mvbeta.BidLost} {
+		err := suite.MarketKeeper().SaveBid(suite.Context(), mvbeta.Bid{
+			ID:             mv1.MakeBidID(order.ID, testutil.AccAddress(t)),
+			State:          bstate,
+			Price:          order.Price(),
+			CreatedAt:      suite.Context().BlockHeight(),
+			ResourcesOffer: roffer,
+		})
+		require.NoError(t, err)
+	}
+
+	// The live count excludes the seeded bids, but the lazily derived
+	// bids-ever-created count sees both and holds the order at its cap.
+	require.Equal(t, uint32(0), suite.MarketKeeper().BidCountForOrder(suite.Context(), order.ID))
+	require.Equal(t, uint32(2), suite.MarketKeeper().BidsEverCreatedForOrder(suite.Context(), order.ID))
+
+	msg := &mvbeta.MsgCreateBid{
+		ID:    mv1.MakeBidID(order.ID, testutil.AccAddress(t)),
+		Price: sdk.NewDecCoin(sdkutil.DenomUact, sdkmath.NewInt(1)),
+		Deposit: deposit.Deposit{
+			Amount:  mvbeta.DefaultBidMinDepositACT,
+			Sources: deposit.Sources{deposit.SourceBalance},
+		},
+	}
+
+	res, err := suite.handler(suite.Context(), msg)
+	require.Nil(t, res)
+	require.Error(t, err)
+	require.ErrorIs(t, err, mv1.ErrInvalidBid)
+	require.Contains(t, err.Error(), "too many existing bids")
+}
+
 func TestCreateBidInvalidPrice(t *testing.T) {
 	suite := setupTestSuite(t)
 	suite.PrepareMocks(func(ts *state.TestSuite) {

@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -44,6 +45,7 @@ type IKeeper interface {
 	WithLeases(ctx sdk.Context, fn func(mv1.Lease) bool)
 	WithOrdersForGroup(ctx sdk.Context, id dtypes.GroupID, state types.Order_State, fn func(types.Order) bool)
 	BidCountForOrder(ctx sdk.Context, id mv1.OrderID) uint32
+	BidsEverCreatedForOrder(ctx sdk.Context, id mv1.OrderID) uint32
 	GetParams(ctx sdk.Context) (types.Params, error)
 	SetParams(ctx sdk.Context, params types.Params) error
 	GetAuthority() string
@@ -61,11 +63,12 @@ type Keeper struct {
 	// This should be the x/gov module account.
 	authority string
 
-	schema collections.Schema
-	bids   *collections.IndexedMap[keys.BidPrimaryKey, types.Bid, BidIndexes]
-	orders *collections.IndexedMap[keys.OrderPrimaryKey, types.Order, OrderIndexes]
-	leases *collections.IndexedMap[keys.LeasePrimaryKey, mv1.Lease, LeaseIndexes]
-	Params collections.Item[types.Params]
+	schema    collections.Schema
+	bids      *collections.IndexedMap[keys.BidPrimaryKey, types.Bid, BidIndexes]
+	orders    *collections.IndexedMap[keys.OrderPrimaryKey, types.Order, OrderIndexes]
+	leases    *collections.IndexedMap[keys.LeasePrimaryKey, mv1.Lease, LeaseIndexes]
+	bidCounts collections.Map[keys.OrderPrimaryKey, uint32]
+	Params    collections.Item[types.Params]
 }
 
 // NewKeeper creates and returns an instance for Market keeper
@@ -80,6 +83,7 @@ func NewKeeper(cdc codec.BinaryCodec, skey *storetypes.KVStoreKey, ekeeper Escro
 	bids := collections.NewIndexedMap(sb, collections.NewPrefix(keys.BidPrefixNew), "bids", keys.BidPrimaryKeyCodec, codec.CollValue[types.Bid](cdc), bidIndexes)
 	orders := collections.NewIndexedMap(sb, collections.NewPrefix(keys.OrderPrefixNew), "orders", keys.OrderPrimaryKeyCodec, codec.CollValue[types.Order](cdc), orderIndexes)
 	leases := collections.NewIndexedMap(sb, collections.NewPrefix(keys.LeasePrefixNew), "leases", keys.LeasePrimaryKeyCodec, codec.CollValue[mv1.Lease](cdc), leaseIndexes)
+	bidCounts := collections.NewMap(sb, collections.NewPrefix(keys.BidCountPrefix), "bid_counts", keys.OrderPrimaryKeyCodec, collections.Uint32Value)
 	params := collections.NewItem(sb, keys.ParamsPrefix, "params", codec.CollValue[types.Params](cdc))
 
 	schema, err := sb.Build()
@@ -96,6 +100,7 @@ func NewKeeper(cdc codec.BinaryCodec, skey *storetypes.KVStoreKey, ekeeper Escro
 		bids:      bids,
 		orders:    orders,
 		leases:    leases,
+		bidCounts: bidCounts,
 		Params:    params,
 	}
 
@@ -228,6 +233,15 @@ func (k Keeper) CreateBid(ctx sdk.Context, id mv1.BidID, price sdk.DecCoin, roff
 		CreatedAt:         ctx.BlockHeight(),
 		ResourcesOffer:    roffer,
 		ReclamationWindow: reclaimWindow,
+	}
+
+	// Bump the monotonic bids-ever-created counter for the order. It never
+	// decrements when bids close, so total bid records per order stay bounded
+	// by OrderMaxBids regardless of create/close churn. Read before storing
+	// the new bid: a lazy seed scans stored bids and must not see this one.
+	count := k.BidsEverCreatedForOrder(ctx, id.OrderID())
+	if err := k.bidCounts.Set(ctx, keys.OrderIDToKey(id.OrderID()), count+1); err != nil {
+		return types.Bid{}, err
 	}
 
 	if err := k.bids.Set(ctx, pk, bid); err != nil {
@@ -559,15 +573,40 @@ func (k Keeper) WithBidsForOrder(ctx sdk.Context, id mv1.OrderID, state types.Bi
 	}
 }
 
+// BidCountForOrder returns the number of live (open or active) bids on an
+// order. Closed and lost bids are excluded; use BidsEverCreatedForOrder for
+// the monotonic count that backs the OrderMaxBids cap.
 func (k Keeper) BidCountForOrder(ctx sdk.Context, id mv1.OrderID) uint32 {
+	return k.bidCountForStates(ctx, id, []types.Bid_State{types.BidOpen, types.BidActive})
+}
+
+// BidsEverCreatedForOrder returns the monotonic count of bids ever created for
+// an order. The counter is bumped on CreateBid and never decremented when a
+// bid closes or loses, so it bounds the total number of bid records an order
+// can accumulate. Orders that predate the counter are seeded lazily from a
+// scan of all stored bids, which preserves the cap across the upgrade and
+// after genesis import.
+func (k Keeper) BidsEverCreatedForOrder(ctx sdk.Context, id mv1.OrderID) uint32 {
+	count, err := k.bidCounts.Get(ctx, keys.OrderIDToKey(id))
+	if err == nil {
+		return count
+	}
+	if !errors.Is(err, collections.ErrNotFound) {
+		panic(fmt.Sprintf("BidsEverCreatedForOrder failed: %v", err))
+	}
+
+	return k.bidCountForStates(ctx, id, []types.Bid_State{types.BidOpen, types.BidActive, types.BidLost, types.BidClosed})
+}
+
+func (k Keeper) bidCountForStates(ctx sdk.Context, id mv1.OrderID, states []types.Bid_State) uint32 {
 	orderPart := collections.Join4(id.Owner, id.DSeq, id.GSeq, id.OSeq)
 	count := uint32(0)
 
-	for _, state := range []types.Bid_State{types.BidOpen, types.BidActive, types.BidClosed} {
+	for _, state := range states {
 		refKey := collections.Join(orderPart, int32(state))
 		iter, err := k.bids.Indexes.OrderState.MatchExact(ctx, refKey)
 		if err != nil {
-			panic(fmt.Sprintf("BidCountForOrder failed: %v", err))
+			panic(fmt.Sprintf("bidCountForStates failed: %v", err))
 		}
 		for ; iter.Valid(); iter.Next() {
 			count++

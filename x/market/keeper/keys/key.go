@@ -40,6 +40,7 @@ var (
 	BidIndexStatePrefix               = []byte{0x12, 0x03}
 	BidIndexProviderPrefix            = []byte{0x12, 0x04}
 	BidIndexOrderStatePrefix          = []byte{0x12, 0x05}
+	BidCountPrefix                    = []byte{0x12, 0x06}
 	BidStateOpenPrefix                = []byte{BidStateOpenPrefixID}
 	BidStateActivePrefix              = []byte{BidStateActivePrefixID}
 	BidStateLostPrefix                = []byte{BidStateLostPrefixID}

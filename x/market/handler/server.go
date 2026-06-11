@@ -42,7 +42,10 @@ func (ms msgServer) CreateBid(goCtx context.Context, msg *mvbeta.MsgCreateBid) (
 		return nil, fmt.Errorf("%w: minimum:%v received:%v", mv1.ErrInvalidDeposit, sdk.NewCoin(msg.Deposit.Amount.Denom, minDeposit), msg.Deposit)
 	}
 
-	if ms.keepers.Market.BidCountForOrder(ctx, msg.ID.OrderID()) >= params.OrderMaxBids {
+	// Cap on bids ever created, not live bids: closing a bid must not free up
+	// capacity, otherwise a provider can loop CreateBid/CloseBid to grow state
+	// without bound and crowd out other providers.
+	if ms.keepers.Market.BidsEverCreatedForOrder(ctx, msg.ID.OrderID()) >= params.OrderMaxBids {
 		return nil, fmt.Errorf("%w: too many existing bids (%v)", mv1.ErrInvalidBid, params.OrderMaxBids)
 	}
 
