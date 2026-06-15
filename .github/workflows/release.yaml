@@ -92,11 +92,9 @@ jobs:
         id: check
         run: |
           is_prerelease=$(./script/is_prerelease.sh ${{ env.RELEASE_TAG }}; echo $?)
-          is_mainnet=$(./script/mainnet-from-tag.sh ${{ env.RELEASE_TAG }}; echo $?)
           echo "is_prerelease=${is_prerelease}" >> $GITHUB_OUTPUT
-          echo "is_mainnet=${is_mainnet}" >> $GITHUB_OUTPUT
       - name: notify homebrew with a new release
-        if: contains(steps.check.outputs.is_mainnet, '0') && contains(steps.check.outputs.is_prerelease, '1')
+        if: steps.check.outputs.is_prerelease == '1'
         uses: benc-uk/workflow-dispatch@v1
         with:
           token: ${{ secrets.GORELEASER_ACCESS_TOKEN }}

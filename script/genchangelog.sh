@@ -2,17 +2,11 @@
 
 # generated changelog depends on the tag type
 # only SEMVER tags are accounted
-# there are two type of tag distinguished by minor part of the semver:
-#   - even number: mainnet
-#   - odd number: testnet
-# net detection is done in section s1
 
 # there are two type release notes generated
 #   - prerelease: changelog between current and nearest lower prerelease (or previous release)
 #     for example current tag v0.1.1-rc.10 and previous was v0.1.1-rc.9, so changelog is generated between
 #   - release: changelog between current and previous release tags
-# mainnet status is taken care as well. if current tag is edgenet (e.g. v0.1.1-rc.10) it
-# will be generated to edgenet changes only
 
 PATH=$PATH:$(pwd)/.cache/bin
 export PATH=$PATH
@@ -26,17 +20,11 @@ fi
 
 to_tag=$1
 
-# s1
-# shellcheck disable=SC1073
-if ! "${SCRIPT_DIR}"/mainnet-from-tag.sh "$to_tag" ; then
-	version_rel="^[v|V]?(0|[1-9][0-9]*)\\.(\\d*[13579])\\.(0|[1-9][0-9]*)$"
-	version_prerel="^[v|V]?(0|[1-9][0-9]*)\\.(\\d*[13579])\\.(0|[1-9][0-9]*)(\\-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$"
-else
-	version_rel="^[v|V]?(0|[1-9][0-9]*)\.(\d*[02468])\.(0|[1-9][0-9]*)$"
-	version_prerel="^[v|V]?(0|[1-9][0-9]*)\.(\d*[02468])\.(0|[1-9][0-9]*)(\-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$"
-fi
+source "${SCRIPT_DIR}/semver_funcs.sh"
 
-# s2
+version_rel="^[vV]?($NAT)\.($NAT)\.($NAT)$"
+version_prerel="$SEMVER_REGEX"
+
 if [[ -z $("${SCRIPT_DIR}"/semver.sh get prerel "$to_tag") ]]; then
 	tag_regexp=$version_rel
 else

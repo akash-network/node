@@ -17,7 +17,6 @@ GIT_HEAD_COMMIT_SHORT := $(shell git rev-parse --short HEAD)
 GIT_HEAD_ABBREV       := $(shell git rev-parse --abbrev-ref HEAD)
 
 IS_PREREL             := $(shell $(ROOT_DIR)/script/is_prerelease.sh "$(RELEASE_TAG)" && echo "true" || echo "false")
-IS_MAINNET            := $(shell $(ROOT_DIR)/script/mainnet-from-tag.sh "$(RELEASE_TAG)" && echo "true" || echo "false")
 IS_STABLE             ?= false
 
 GO_LINKMODE            ?= external
@@ -25,10 +24,8 @@ GOMOD                  ?= readonly
 BUILD_TAGS             ?= osusergo,netgo,hidraw,ledger
 GORELEASER_STRIP_FLAGS ?=
 
-ifeq ($(IS_MAINNET), true)
-	ifeq ($(IS_PREREL), false)
-		IS_STABLE                  := true
-	endif
+ifeq ($(IS_PREREL), false)
+	IS_STABLE                  := true
 endif
 
 GOMOD                  ?= readonly
