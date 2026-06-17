@@ -446,3 +446,63 @@ func Test_PaymentCreate_later(t *testing.T) {
 		require.Equal(t, ctx.BlockHeight()-1, acct.State.SettledAt)
 	}
 }
+
+// Test_PaymentWithdraw_SameBlockAsSettlement reproduces a panic where withdrawing
+// from an open payment in the same block the account was last settled (heightDelta
+// == 0) caused accountSettle to query only overdrawn payments, so the open payment
+// was missing from the settled set and PaymentWithdraw panicked with
+// "couldn't find payment".
+func Test_PaymentWithdraw_SameBlockAsSettlement(t *testing.T) {
+	ssuite := state.SetupTestSuite(t)
+	ctx := ssuite.Context()
+
+	bkeeper := ssuite.BankKeeper()
+	ekeeper := ssuite.EscrowKeeper()
+
+	lid := testutil.LeaseID(t)
+	aid := lid.DeploymentID().ToEscrowAccountID()
+	pid := lid.ToEscrowPaymentID()
+
+	aowner := testutil.AccAddress(t)
+	powner := testutil.AccAddress(t)
+
+	amt := testutil.ACTCoin(t, 1000)
+	rate := sdk.NewCoin("uact", sdkmath.NewInt(30))
+
+	ssuite.MockBMEForDeposit(aowner, amt)
+	require.NoError(t, ekeeper.AccountCreate(ctx, aid, aowner, []etypes.Depositor{{
+		Owner:   aowner.String(),
+		Height:  ctx.BlockHeight(),
+		Balance: sdk.NewDecCoinFromCoin(amt),
+	}}))
+
+	require.NoError(t, ekeeper.PaymentCreate(ctx, pid, powner, sdk.NewDecCoinFromCoin(rate)))
+
+	// The account was just settled at the current height by AccountCreate, so a
+	// withdrawal in this same block yields heightDelta == 0.
+	acct, err := ekeeper.GetAccount(ctx, aid)
+	require.NoError(t, err)
+	require.Equal(t, ctx.BlockHeight(), acct.State.SettledAt)
+
+	bkeeper.
+		On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(nil).Maybe()
+	bkeeper.
+		On("MintCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
+		Return(nil).Maybe()
+	bkeeper.
+		On("BurnCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
+		Return(nil).Maybe()
+	bkeeper.
+		On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(nil).Maybe()
+
+	require.NotPanics(t, func() {
+		err = ekeeper.PaymentWithdraw(ctx, pid)
+	})
+	require.NoError(t, err)
+
+	payment, err := ekeeper.GetPayment(ctx, pid)
+	require.NoError(t, err)
+	require.Equal(t, etypes.StateOpen, payment.State.State)
+}

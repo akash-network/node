@@ -549,12 +549,13 @@ func (k *keeper) accountSettle(ctx sdk.Context, acc *account) ([]payment, bool, 
 		acc.State.SettledAt = ctx.BlockHeight()
 	}
 
+	// Always settle open payments alongside overdrawn ones. When heightDelta is
+	// zero (e.g. a withdrawal in the same block the account was last settled) the
+	// open payments settle to a zero transfer, but they must still be included so
+	// callers such as PaymentWithdraw can find the payment they are operating on.
 	pStates := []etypes.State{
 		etypes.StateOverdrawn,
-	}
-
-	if !heightDelta.IsZero() {
-		pStates = append(pStates, etypes.StateOpen)
+		etypes.StateOpen,
 	}
 
 	acc.dirty = true
