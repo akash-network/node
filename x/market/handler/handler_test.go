@@ -1142,6 +1142,66 @@ func TestCreateBidAlreadyExists(t *testing.T) {
 	require.Error(t, err)
 }
 
+// TestCreateBidExceedsMaxBids verifies that the bid count limit is enforced when
+// the existing count reaches OrderMaxBids, not only when it exceeds it. With
+// OrderMaxBids set to 1, a single bid is allowed and the next bid must be
+// rejected (otherwise OrderMaxBids+1 bids could be created).
+func TestCreateBidExceedsMaxBids(t *testing.T) {
+	suite := setupTestSuite(t)
+
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		// BME deposit flow mocks
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("MintCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("BurnCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+	})
+
+	params, err := suite.MarketKeeper().GetParams(suite.Context())
+	require.NoError(t, err)
+	params.OrderMaxBids = 1
+	require.NoError(t, suite.MarketKeeper().SetParams(suite.Context(), params))
+
+	order, gspec := suite.createOrder(testutil.Resources(t, testutil.WithDenom("uact")))
+
+	newBid := func() *mvbeta.MsgCreateBid {
+		providerAddr, err := sdk.AccAddressFromBech32(suite.createProvider(gspec.Requirements.Attributes).Owner)
+		require.NoError(t, err)
+
+		return &mvbeta.MsgCreateBid{
+			ID:    mv1.MakeBidID(order.ID, providerAddr),
+			Price: sdk.NewDecCoin(sdkutil.DenomUact, sdkmath.NewInt(1)),
+			Deposit: deposit.Deposit{
+				Amount:  mvbeta.DefaultBidMinDepositACT,
+				Sources: deposit.Sources{deposit.SourceBalance},
+			},
+		}
+	}
+
+	// First bid brings the count up to OrderMaxBids.
+	res, err := suite.handler(suite.Context(), newBid())
+	require.NotNil(t, res)
+	require.NoError(t, err)
+
+	// Second bid would exceed OrderMaxBids and must be rejected.
+	res, err = suite.handler(suite.Context(), newBid())
+	require.Nil(t, res)
+	require.ErrorIs(t, err, mv1.ErrInvalidBid)
+}
+
 func TestCloseOrderNonExisting(t *testing.T) {
 	t.Skip("TODO CLOSE LEASE")
 	// suite := setupTestSuite(t)
