@@ -51,9 +51,9 @@ func (w *grpcSurfaceWorker) Run(ctx context.Context, t *testing.T, params uttype
 		FunderAddr:   params.FromAddress,
 		BondDenom:    sdkutil.DenomUakt,
 		GasPrices:    "0.025uakt",
-		// Partial pack coverage today; flip to true once every Akash tx has an
-		// authored pack so the gate enforces full coverage post-upgrade.
-		RequireFullCoverage: false,
+		// Enforce full coverage post-upgrade: fail if any in-scope Akash tx or
+		// query was not exercised against the upgraded chain.
+		RequireFullCoverage: true,
 	}
 
 	grpcsuite.Run(ctx, t, env)

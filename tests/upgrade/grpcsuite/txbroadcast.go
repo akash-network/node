@@ -3,6 +3,7 @@ package grpcsuite
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	clienttx "github.com/cosmos/cosmos-sdk/client/tx"
@@ -154,4 +155,25 @@ func (s *Suite) BroadcastExpectErr(fromName string, msgs ...sdk.Msg) (*sdk.TxRes
 	res, err := s.TX.Broadcast(fromName, msgs...)
 	require.Error(s.T, err, "expected broadcast from %s to fail", fromName)
 	return res, err
+}
+
+// BroadcastTolerant broadcasts msgs and accepts EITHER success OR a failure whose
+// error contains one of okErrSubstrs. Use for messages whose acceptance depends on
+// dynamic chain state that is hard to control deterministically in a test/forked
+// network (e.g. the bme circuit breaker / collateral ratio): the message is still
+// exercised (and counted for coverage) and the gRPC handler is proven wired,
+// responding either by executing or by correctly rejecting.
+func (s *Suite) BroadcastTolerant(fromName string, okErrSubstrs []string, msgs ...sdk.Msg) {
+	s.T.Helper()
+	_, err := s.TX.Broadcast(fromName, msgs...)
+	if err == nil {
+		return
+	}
+	for _, sub := range okErrSubstrs {
+		if strings.Contains(err.Error(), sub) {
+			s.logf("tolerated expected rejection from %s: %v", fromName, err)
+			return
+		}
+	}
+	require.NoErrorf(s.T, err, "broadcast from %s (not a tolerated rejection)", fromName)
 }

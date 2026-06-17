@@ -76,9 +76,9 @@ func TestFullSurfaceGRPC(t *testing.T) {
 		FunderAddr:   val.Address,
 		BondDenom:    cfg.BondDenom,
 		GasPrices:    "0.025uakt",
-		// Relaxed while packs are still being authored; flipped to true once the
-		// suite covers the full surface.
-		RequireFullCoverage: false,
+		// Enforce full coverage: fail if any in-scope Akash tx or query is not
+		// exercised (a new RPC added by a future upgrade turns this red).
+		RequireFullCoverage: true,
 	}
 
 	grpcsuite.Run(context.Background(), t, env)

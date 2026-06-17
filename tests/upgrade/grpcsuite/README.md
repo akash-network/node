@@ -58,17 +58,21 @@ The deployment, provider and gov-params packs are worked examples.
 
 ## Status
 
-Covered today (run `make test-grpc-surface` and read the `coverage:` line):
-- **Queries: full** (130/130 via the smoke sweep).
-- **Transactions: deployment (full lifecycle), provider (create/update; delete
-  correctly rejected), and all `MsgUpdateParams` via the gov fast-path.**
+**Full Akash coverage** — run `make test-grpc-surface` and read the `coverage:` line:
+- **Queries: 30/30 Akash modules, 130/130 in-scope methods** (smoke sweep + authored).
+- **Transactions: 30/30 Akash messages.** deployment (full lifecycle), provider
+  (create/update; delete correctly rejected as disabled), market (bid → lease →
+  withdraw → reclaim-rejected → close lease → close bid), audit (sign/delete
+  attributes), escrow (account deposit), cert (create/revoke), oracle (authorize
+  source + add price), bme (fund vault + mint ACT; burn ACT / burn-mint tolerate
+  the circuit-breaker rejection), and all `MsgUpdateParams` via the gov fast-path.
 
-Remaining transaction packs to author (the gate lists them as `UNCOVERED tx`):
-`cert`, `market` (bid/lease lifecycle), `escrow` (`MsgAccountDeposit` — note its
-`ID` field is an `escrow/types/v1.Account`), `audit`, `oracle` (`MsgAddPriceEntry`
-needs an authorized source), `bme` (`MsgMintACT`/`BurnACT`/`BurnMint`/`FundVault` —
-needs oracle prices + a funded vault). Flip `RequireFullCoverage` to `true` in both
-drivers once these exist, so the gate enforces full tx coverage.
+`RequireFullCoverage` is `true` in both drivers, so the gate **fails** if any
+in-scope Akash tx or query stops being exercised — e.g. when a future upgrade adds
+a new Akash RPC, until a case is authored for it.
+
+Cosmos-SDK transactions are not yet gated (their queries are, via the smoke sweep);
+they are the natural next tier to add for downstream-effect coverage.
 
 ### Verification module (AEP-86)
 
