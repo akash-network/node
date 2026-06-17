@@ -1,0 +1,79 @@
+# grpcsuite — exhaustive post-upgrade gRPC tx/query verification
+
+`grpcsuite` exercises **every Akash transaction and every query over the chain's
+gRPC API** after a network upgrade, so that a passing run means the upgraded
+chain's API surface is verified accurate. CLI is explicitly out of scope.
+
+It runs in two places against the **same** code:
+
+| Driver | Build tag | Target | Speed | Purpose |
+| --- | --- | --- | --- | --- |
+| `tests/upgrade` universal worker (`grpcsurface_worker_test.go`) | `e2e.upgrade` | testnetify-forked, freshly-upgraded validator | slow (full upgrade) | **acceptance path** — runs after every upgrade |
+| `tests/fullsurface` (`fullsurface_test.go`) | `e2e.integration` | in-process single-validator `testutil/network` | minutes | fast local iteration + per-PR CI |
+
+Run the fast path: `make test-grpc-surface`.
+The acceptance path runs automatically inside `make -C tests/upgrade test` (the
+existing `network-upgrade` CI job), because the suite is registered as the
+**universal post-upgrade worker** (runs for every upgrade name).
+
+## How it works
+
+- **All checks run over gRPC.** Queries route through a gRPC-backed
+  `client.Context` (`WithGRPCClient`); transactions are signed locally and
+  broadcast via the cosmos `tx.ServiceClient`, then polled for inclusion — nothing
+  touches Comet RPC. See `grpcconn.go`, `txbroadcast.go`.
+- **Dynamic discovery + coverage gate (`coverage.go`).** The binary drives *what*
+  is tested: gRPC server reflection lists the live Query services; the
+  InterfaceRegistry lists the registered `Msg` implementations, restricted to the
+  active served version. The gate fails if any in-scope Msg/query was never
+  exercised — so a new RPC added by a future upgrade turns CI red until a case
+  exists. This is what keeps "test every single one" self-maintaining.
+- **Dynamic query smoke sweep (`smoke.go`).** Fires an empty request at every
+  discovered query method, auto-covering the entire query surface and failing on
+  any advertised-but-`Unimplemented` method. Authored query cases add correctness
+  with real inputs.
+- **Authored, dependency-ordered packs (`pack_*.go`).** A valid tx needs real
+  prior state (lease ⇐ bid ⇐ order ⇐ deployment+provider), so transactions are
+  authored scenarios, not fuzzed. Packs run in order and thread created handles
+  through the shared `World`.
+- **Governance fast-path (`gov.go`).** Gov-gated messages (every `MsgUpdateParams`,
+  `MsgFundVault`, etc.) are batched into one proposal, voted through by the
+  funder (who holds ~all voting power on a testnetify fork / single-validator
+  net), and recorded once passed. Requires a short voting period (set in
+  `tests/upgrade/testnet.json` and the in-process driver).
+
+## Adding a module pack
+
+1. Create `pack_<module>.go` implementing `Pack` (`Name`, `Available`, `Run`).
+2. Gate `Available` on `d.HasModule("akash.<module>.<version>")` (Query service).
+3. In `Run`, fund accounts via `s.FundAccountDefault`, build msgs with the SDK
+   types, broadcast with `s.BroadcastOK` (happy path) or `s.BroadcastExpectErr`
+   (negative / disabled), query with the generated `NewQueryClient(s.Conn)`.
+4. For gov-gated msgs, build them with `Authority: s.GovAuthority()` and pass via
+   `s.PassGovProposal(...)`.
+5. Publish handles other packs need via `s.World.Set`; read with `s.World.Get`.
+6. Register the pack in `pack.go` in dependency order.
+
+The deployment, provider and gov-params packs are worked examples.
+
+## Status
+
+Covered today (run `make test-grpc-surface` and read the `coverage:` line):
+- **Queries: full** (130/130 via the smoke sweep).
+- **Transactions: deployment (full lifecycle), provider (create/update; delete
+  correctly rejected), and all `MsgUpdateParams` via the gov fast-path.**
+
+Remaining transaction packs to author (the gate lists them as `UNCOVERED tx`):
+`cert`, `market` (bid/lease lifecycle), `escrow` (`MsgAccountDeposit` — note its
+`ID` field is an `escrow/types/v1.Account`), `audit`, `oracle` (`MsgAddPriceEntry`
+needs an authorized source), `bme` (`MsgMintACT`/`BurnACT`/`BurnMint`/`FundVault` —
+needs oracle prices + a funded vault). Flip `RequireFullCoverage` to `true` in both
+drivers once these exist, so the gate enforces full tx coverage.
+
+### Verification module (AEP-86)
+
+`x/verification` does not exist on `main` (SDK `v0.2.14` has no verification
+types), so its pack cannot compile here. It is added when this suite is rebased
+onto the AEP-86 branch; the reflection-gating (`Available`/`HasModule`) already
+makes every pack skip modules absent on the branch under test, so the pack will
+activate automatically there with no framework change.

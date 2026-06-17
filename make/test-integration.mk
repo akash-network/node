@@ -22,6 +22,13 @@ test-full: wasmvm-libs
 test-integration:
 	$(GO_TEST) -v -tags="e2e.integration" -ldflags '$(ldflags)' ./tests/e2e/...
 
+# test-grpc-surface runs the exhaustive gRPC transaction/query suite against an
+# in-process single-validator network (the fast, standalone-compilable mirror of
+# the post-upgrade verification that runs against a testnetify-forked node).
+.PHONY: test-grpc-surface
+test-grpc-surface: wasmvm-libs
+	$(GO_TEST) -v -tags="e2e.integration" -ldflags '$(ldflags)' -timeout 30m ./tests/fullsurface/...
+
 .PHONY: test-coverage
 test-coverage: wasmvm-libs
 	$(GO_TEST) $(BUILD_FLAGS) -coverprofile=coverage.txt \

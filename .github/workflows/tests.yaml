@@ -48,6 +48,15 @@ jobs:
         uses: ./.github/actions/setup-ubuntu
       - run: make build-contracts test-full
 
+  grpc-surface:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup environment
+        uses: ./.github/actions/setup-ubuntu
+      - run: make build-contracts test-grpc-surface
+
   coverage:
     runs-on: ubuntu-latest
     steps:

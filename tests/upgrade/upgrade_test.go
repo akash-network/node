@@ -398,6 +398,7 @@ func TestUpgrade(t *testing.T) {
 			postUpgradeParams.SourceDir = *sourcesdir
 			postUpgradeParams.ChainID = cfg.ChainID
 			postUpgradeParams.Node = "tcp://127.0.0.1:26657"
+			postUpgradeParams.GRPC = "127.0.0.1:9090" // validator 0 gRPC (9090 + 0*3)
 			postUpgradeParams.KeyringBackend = "test"
 			postUpgradeParams.From = cfg.Work.Key
 			postUpgradeParams.FromAddress = addr
@@ -596,15 +597,16 @@ loop:
 				if stageCount == 0 {
 					l.t.Log("all nodes performed upgrade")
 
-					postUpgradeWorker := uttypes.GetPostUpgradeWorker(l.upgradeName)
-					if postUpgradeWorker == nil {
+					namedWorker := uttypes.GetPostUpgradeWorker(l.upgradeName)
+					universalWorker := uttypes.GetUniversalPostUpgradeWorker()
+					if namedWorker == nil && universalWorker == nil {
 						l.t.Log("no post upgrade handlers found. submitting shutdown")
 						_ = bus.Publish(postUpgradeTestDone{})
 
 						break
 					}
 
-					l.t.Log("running post upgrade test handler")
+					l.t.Log("running post upgrade test handler(s)")
 
 					l.group.Go(func() error {
 						defer func() {
@@ -612,7 +614,12 @@ loop:
 						}()
 
 						result := l.t.Run(l.upgradeName, func(t *testing.T) {
-							postUpgradeWorker.Run(l.ctx, l.t, l.postUpgradeParams)
+							if namedWorker != nil {
+								namedWorker.Run(l.ctx, t, l.postUpgradeParams)
+							}
+							if universalWorker != nil {
+								universalWorker.Run(l.ctx, t, l.postUpgradeParams)
+							}
 						})
 
 						if !result {
