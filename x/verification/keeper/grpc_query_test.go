@@ -9,6 +9,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	testutilmod "github.com/cosmos/cosmos-sdk/types/module/testutil"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	vtypes "pkg.akt.dev/go/node/verification/v1"
 	"pkg.akt.dev/go/testutil"
@@ -111,6 +113,7 @@ func TestGRPCQueryMissingRecords(t *testing.T) {
 
 	_, err = client.ProviderSnapshot(ctx, &vtypes.QueryProviderSnapshotRequest{Provider: testutil.AccAddress(t).String()})
 	require.Error(t, err)
+	require.Equal(t, codes.NotFound, status.Code(err))
 }
 
 func queryClient(t testing.TB, ctx sdk.Context, k Keeper) vtypes.QueryClient {

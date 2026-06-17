@@ -283,7 +283,7 @@ func (k Querier) ProviderSnapshot(c context.Context, req *vtypes.QueryProviderSn
 
 	record, found := k.Keeper.GetProviderSnapshot(sdk.UnwrapSDKContext(c), provider)
 	if !found {
-		return nil, moduletypes.ErrSnapshotNonCompliant
+		return nil, moduletypes.ErrProviderSnapshotNotFound
 	}
 
 	return &vtypes.QueryProviderSnapshotResponse{Snapshot: record}, nil
