@@ -23,5 +23,6 @@ var packs = []Pack{
 	auditPack{},
 	escrowPack{},
 	certPack{},
+	oraclePack{},
 	govParamsPack{},
 }

@@ -239,6 +239,18 @@ func (s *Suite) LatestHeight() int64 {
 	return resp.Block.Header.Height
 }
 
+// LatestBlockTime returns the chain's latest block time over gRPC (use this rather
+// than wall-clock time for on-chain timestamp fields).
+func (s *Suite) LatestBlockTime() time.Time {
+	s.T.Helper()
+	resp, err := cmtservice.NewServiceClient(s.Conn).GetLatestBlock(s.Ctx, &cmtservice.GetLatestBlockRequest{})
+	require.NoError(s.T, err, "grpcsuite: GetLatestBlock")
+	if resp.SdkBlock != nil {
+		return resp.SdkBlock.Header.Time
+	}
+	return resp.Block.Header.Time
+}
+
 // ensureKey returns the address of a keyring key named role, creating it if needed.
 func (s *Suite) ensureKey(role string) sdk.AccAddress {
 	s.T.Helper()
