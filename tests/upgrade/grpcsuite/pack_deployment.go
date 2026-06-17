@@ -124,6 +124,24 @@ func deploymentSDLPath(s *Suite) string {
 	return filepath.Join(s.Env.RepoRoot, "x", "deployment", "testdata", "deployment.yaml")
 }
 
+// createDeploymentFromSDL creates a fresh deployment owned by the keyring account
+// `signer` from the repo's SDL testdata and returns its ID. Used by the market pack
+// to obtain additional orders.
+func createDeploymentFromSDL(s *Suite, signer string) dv1.DeploymentID {
+	s.T.Helper()
+	pr, err := dvbeta.NewQueryClient(s.Conn).Params(s.Ctx, &dvbeta.QueryParamsRequest{})
+	require.NoError(s.T, err, "deployment Params")
+	groups, version := readSDLGroups(s, deploymentSDLPath(s))
+	id := dv1.DeploymentID{Owner: s.Addr(signer).String(), DSeq: s.NextDSeq()}
+	s.BroadcastOK(signer, &dvbeta.MsgCreateDeployment{
+		ID:      id,
+		Groups:  groups,
+		Hash:    version,
+		Deposit: depositv1.Deposit{Amount: deploymentMinDeposit(s, pr.Params), Sources: depositv1.Sources{depositv1.SourceBalance}},
+	})
+	return id
+}
+
 func readSDLGroups(s *Suite, path string) (dvbeta.GroupSpecs, []byte) {
 	s.T.Helper()
 	m, err := sdl.ReadFile(path)

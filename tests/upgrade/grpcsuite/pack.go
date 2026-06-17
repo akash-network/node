@@ -19,5 +19,8 @@ type Pack interface {
 var packs = []Pack{
 	deploymentPack{},
 	providerPack{},
+	marketPack{},
+	auditPack{},
+	escrowPack{},
 	govParamsPack{},
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"time"
 
 	sdkmath "cosmossdk.io/math"
 	sdkclient "github.com/cosmos/cosmos-sdk/client"
@@ -206,6 +207,25 @@ func (s *Suite) NextDSeq() uint64 {
 	}
 	s.dseqSeed++
 	return s.dseqSeed
+}
+
+// WaitBlocks blocks until the chain advances by at least n blocks.
+func (s *Suite) WaitBlocks(n int64) {
+	s.T.Helper()
+	start := s.LatestHeight()
+	ctx, cancel := context.WithTimeout(s.Ctx, 60*time.Second)
+	defer cancel()
+	for {
+		if s.LatestHeight() >= start+n {
+			return
+		}
+		select {
+		case <-ctx.Done():
+			s.T.Fatalf("grpcsuite: WaitBlocks(%d) timed out", n)
+			return
+		case <-time.After(500 * time.Millisecond):
+		}
+	}
 }
 
 // LatestHeight returns the chain's latest block height over gRPC.
