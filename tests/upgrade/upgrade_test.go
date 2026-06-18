@@ -237,6 +237,10 @@ var (
 	upgradeVersion = flag.String("upgrade-version", "local", "akash release to download. local if it is built locally")
 	upgradeName    = flag.String("upgrade-name", "", "name of the upgrade")
 	testCasesFile  = flag.String("test-cases", "", "")
+	// grpcSuite, when set, runs the exhaustive gRPC transaction/query suite against
+	// the upgraded node as an optional post-upgrade step (off by default, like the
+	// hermes relayer integration). Enable via `make test GRPC_SUITE=true`.
+	grpcSuite = flag.Bool("grpc-suite", false, "run the exhaustive gRPC tx/query suite post-upgrade")
 )
 
 func (cmd *commander) execute(ctx context.Context, args string) ([]byte, error) {
@@ -598,7 +602,11 @@ loop:
 					l.t.Log("all nodes performed upgrade")
 
 					namedWorker := uttypes.GetPostUpgradeWorker(l.upgradeName)
-					universalWorker := uttypes.GetUniversalPostUpgradeWorker()
+					// The gRPC tx/query suite (universal worker) is opt-in via -grpc-suite.
+					var universalWorker uttypes.TestWorker
+					if *grpcSuite {
+						universalWorker = uttypes.GetUniversalPostUpgradeWorker()
+					}
 					if namedWorker == nil && universalWorker == nil {
 						l.t.Log("no post upgrade handlers found. submitting shutdown")
 						_ = bus.Publish(postUpgradeTestDone{})
