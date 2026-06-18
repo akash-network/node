@@ -20,18 +20,20 @@ func (escrowPack) Available(d *Discovery) bool { return d.HasModule("akash.escro
 
 func (escrowPack) Run(s *Suite) {
 	// Fresh deployment so the escrow account is open and independent of other packs.
-	dep := createDeploymentFromSDL(s, "tenant")
+	dep := createDeploymentFromSDL(s, s.TenantSigner())
 
 	// The deployment query returns its escrow account (incl. its ID) directly.
 	depResp, err := dvbeta.NewQueryClient(s.Conn).Deployment(s.Ctx, &dvbeta.QueryDeploymentRequest{ID: dep})
 	require.NoError(s.T, err, "Deployment (for escrow account id)")
 	accountID := depResp.EscrowAccount.ID
 
+	// The deployment's escrow account is uact-denominated (the deployment deposit is
+	// uact), so the additional deposit must also be uact; the tenant (funder) holds it.
 	depositCoin := sdk.NewCoin(sdkutil.DenomUact, sdkmath.NewInt(1_000_000))
 
 	// MsgAccountDeposit — the signer need not be the account owner.
-	s.BroadcastOK("tenant", &ev1.MsgAccountDeposit{
-		Signer:  s.Addr("tenant").String(),
+	s.BroadcastOK(s.TenantSigner(), &ev1.MsgAccountDeposit{
+		Signer:  s.TenantAddr().String(),
 		ID:      accountID,
 		Deposit: depositv1.Deposit{Amount: depositCoin, Sources: depositv1.Sources{depositv1.SourceBalance}},
 	})
@@ -54,8 +56,8 @@ func (escrowPack) Run(s *Suite) {
 	// Negative: deposit to an account id that does not exist.
 	bogus := accountID
 	bogus.XID = "akash1nonexistentnonexistentnonexistentnn/999999999"
-	s.BroadcastExpectErr("tenant", &ev1.MsgAccountDeposit{
-		Signer:  s.Addr("tenant").String(),
+	s.BroadcastExpectErr(s.TenantSigner(), &ev1.MsgAccountDeposit{
+		Signer:  s.TenantAddr().String(),
 		ID:      bogus,
 		Deposit: depositv1.Deposit{Amount: depositCoin, Sources: depositv1.Sources{depositv1.SourceBalance}},
 	})

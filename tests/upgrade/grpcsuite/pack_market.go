@@ -13,6 +13,7 @@ import (
 	mv1 "pkg.akt.dev/go/node/market/v1"
 	mvbeta "pkg.akt.dev/go/node/market/v1beta5"
 	depositv1 "pkg.akt.dev/go/node/types/deposit/v1"
+	"pkg.akt.dev/go/sdkutil"
 )
 
 type marketPack struct{}
@@ -75,7 +76,7 @@ func (mp marketPack) Run(s *Suite) {
 	}
 
 	// Tenant accepts the bid -> creates a lease.
-	s.BroadcastOK("tenant", &mvbeta.MsgCreateLease{BidID: bidA.ID})
+	s.BroadcastOK(s.TenantSigner(), &mvbeta.MsgCreateLease{BidID: bidA.ID})
 	leaseA := mv1.LeaseID{
 		Owner: bidA.ID.Owner, DSeq: bidA.ID.DSeq, GSeq: bidA.ID.GSeq,
 		OSeq: bidA.ID.OSeq, Provider: bidA.ID.Provider,
@@ -112,10 +113,10 @@ func (mp marketPack) Run(s *Suite) {
 	require.Error(s.T, err, "LeaseStartReclaim should be rejected for a non-reclamation lease")
 
 	// Close the lease (tenant). Reason must be in the lease-closed-reason range.
-	s.BroadcastOK("tenant", &mvbeta.MsgCloseLease{ID: leaseA, Reason: mv1.LeaseClosedReasonDecommissioned})
+	s.BroadcastOK(s.TenantSigner(), &mvbeta.MsgCloseLease{ID: leaseA, Reason: mv1.LeaseClosedReasonDecommissioned})
 
 	// --- order B: bid then close the bid (un-leased) ---
-	depB := createDeploymentFromSDL(s, "tenant")
+	depB := createDeploymentFromSDL(s, s.TenantSigner())
 	orderB := s.findOrder(q, depB.Owner, depB.DSeq)
 	bidB := s.newBid(q, orderB, providerAddr.String())
 	s.BroadcastOK("provider", bidB)
@@ -141,7 +142,7 @@ func (marketPack) assertOrdersPaginate(q mvbeta.QueryClient, owner string) {
 // out-of-bounds inputs so the live order/lease state is untouched.
 func (marketPack) marketNegatives(s *Suite, q mvbeta.QueryClient, providerAddr string) {
 	// Fresh open order to derive a structurally-valid bid for the price-too-high case.
-	depN := createDeploymentFromSDL(s, "tenant")
+	depN := createDeploymentFromSDL(s, s.TenantSigner())
 	orderN := s.findOrder(q, depN.Owner, depN.DSeq)
 	deposit := depositv1.Deposit{Amount: s.marketBidDeposit(q), Sources: depositv1.Sources{depositv1.SourceBalance}}
 	offer := resourcesOfferFrom(orderN.Spec)
@@ -165,12 +166,12 @@ func (marketPack) marketNegatives(s *Suite, q mvbeta.QueryClient, providerAddr s
 	})
 
 	// 3. Create a lease referencing a non-existent bid.
-	s.BroadcastExpectErr("tenant", &mvbeta.MsgCreateLease{
+	s.BroadcastExpectErr(s.TenantSigner(), &mvbeta.MsgCreateLease{
 		BidID: mv1.BidID{Owner: orderN.ID.Owner, DSeq: orderN.ID.DSeq + 8_000_000, GSeq: 1, OSeq: 1, Provider: providerAddr},
 	})
 
 	// 4. Close a lease with an invalid (out-of-range) reason.
-	s.BroadcastExpectErr("tenant", &mvbeta.MsgCloseLease{
+	s.BroadcastExpectErr(s.TenantSigner(), &mvbeta.MsgCloseLease{
 		ID:     mv1.LeaseID{Owner: orderN.ID.Owner, DSeq: orderN.ID.DSeq, GSeq: 1, OSeq: 1, Provider: providerAddr},
 		Reason: 0,
 	})
@@ -240,12 +241,15 @@ func (s *Suite) marketBidDeposit(q mvbeta.QueryClient) sdk.Coin {
 	s.T.Helper()
 	resp, err := q.Params(s.Ctx, &mvbeta.QueryParamsRequest{})
 	require.NoError(s.T, err, "market Params")
-	if !resp.Params.BidMinDeposit.IsZero() {
+	// Prefer the uakt min deposit — providers are funded in uakt.
+	for _, c := range resp.Params.BidMinDeposits {
+		if c.Denom == sdkutil.DenomUakt && !c.IsZero() {
+			return c
+		}
+	}
+	if resp.Params.BidMinDeposit.Denom == sdkutil.DenomUakt && !resp.Params.BidMinDeposit.IsZero() {
 		return resp.Params.BidMinDeposit
 	}
-	if len(resp.Params.BidMinDeposits) > 0 {
-		return resp.Params.BidMinDeposits[0]
-	}
-	s.T.Fatal("market params have no bid min deposit")
+	s.T.Fatal("market params have no uakt bid min deposit")
 	return sdk.Coin{}
 }

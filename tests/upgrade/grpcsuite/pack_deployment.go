@@ -33,8 +33,9 @@ func (deploymentPack) Available(d *Discovery) bool {
 func (dp deploymentPack) Run(s *Suite) {
 	q := dvbeta.NewQueryClient(s.Conn)
 
-	// Setup: a funded tenant account.
-	tenant := s.FundAccountDefault("tenant")
+	// The tenant (deployment owner) is the funder — it holds the uact the deposit
+	// must be in (see TenantSigner). No sub-account funding is needed.
+	tenant := s.TenantAddr()
 
 	// Query Params (also sizes the deposit).
 	pr, err := q.Params(s.Ctx, &dvbeta.QueryParamsRequest{})
@@ -50,7 +51,7 @@ func (dp deploymentPack) Run(s *Suite) {
 		Hash:    version,
 		Deposit: depositv1.Deposit{Amount: deposit, Sources: depositv1.Sources{depositv1.SourceBalance}},
 	}
-	s.BroadcastOK("tenant", create)
+	s.BroadcastOK(s.TenantSigner(), create)
 	s.logf("created deployment %s/%d (%d group(s))", depID.Owner, depID.DSeq, len(groups))
 
 	// Query Deployment by ID — assert the full response (deployment, groups, escrow).
@@ -96,7 +97,7 @@ func (dp deploymentPack) Run(s *Suite) {
 	require.LessOrEqual(s.T, len(paged.Deployments), 1, "pagination Limit=1 must cap results")
 
 	// Publish handles so the market/escrow packs can use this OPEN deployment.
-	s.World.Set(wDeploymentSigner, "tenant")
+	s.World.Set(wDeploymentSigner, s.TenantSigner())
 	s.World.Set(wDeploymentID, depID)
 	s.World.Set(wDeploymentGSeq, gseq)
 
@@ -112,22 +113,22 @@ func (dp deploymentPack) Run(s *Suite) {
 // deployment id, and close/update/group ops against ids that do not exist. All run
 // against throwaway / non-existent ids so the primary open deployment is untouched.
 func (dp deploymentPack) deploymentNegatives(s *Suite, groups dvbeta.GroupSpecs, version []byte, deposit sdk.Coin) {
-	owner := s.Addr("tenant")
+	owner := s.TenantAddr()
 	mkDeposit := depositv1.Deposit{Amount: deposit, Sources: depositv1.Sources{depositv1.SourceBalance}}
 
 	// Duplicate deployment id: create once, then re-create with the same id.
 	dupID := dv1.DeploymentID{Owner: owner.String(), DSeq: s.NextDSeq()}
 	dup := &dvbeta.MsgCreateDeployment{ID: dupID, Groups: groups, Hash: version, Deposit: mkDeposit}
-	s.BroadcastOK("tenant", dup)
-	s.BroadcastExpectErr("tenant", dup)
+	s.BroadcastOK(s.TenantSigner(), dup)
+	s.BroadcastExpectErr(s.TenantSigner(), dup)
 
 	// Operations against ids that were never created.
 	ghost := dv1.DeploymentID{Owner: owner.String(), DSeq: s.NextDSeq()}
 	ghostGroup := dv1.GroupID{Owner: ghost.Owner, DSeq: ghost.DSeq, GSeq: 1}
-	s.BroadcastExpectErr("tenant", &dvbeta.MsgCloseDeployment{ID: ghost})
-	s.BroadcastExpectErr("tenant", &dvbeta.MsgUpdateDeployment{ID: ghost, Hash: version})
-	s.BroadcastExpectErr("tenant", &dvbeta.MsgCloseGroup{ID: ghostGroup})
-	s.BroadcastExpectErr("tenant", &dvbeta.MsgPauseGroup{ID: ghostGroup})
+	s.BroadcastExpectErr(s.TenantSigner(), &dvbeta.MsgCloseDeployment{ID: ghost})
+	s.BroadcastExpectErr(s.TenantSigner(), &dvbeta.MsgUpdateDeployment{ID: ghost, Hash: version})
+	s.BroadcastExpectErr(s.TenantSigner(), &dvbeta.MsgCloseGroup{ID: ghostGroup})
+	s.BroadcastExpectErr(s.TenantSigner(), &dvbeta.MsgPauseGroup{ID: ghostGroup})
 	s.logf("deployment negatives complete (duplicate create + missing-id close/update/closeGroup/pauseGroup rejected)")
 }
 
@@ -138,22 +139,22 @@ func (dp deploymentPack) runLifecycle(s *Suite, groups dvbeta.GroupSpecs, versio
 		return depositv1.Deposit{Amount: deposit, Sources: depositv1.Sources{depositv1.SourceBalance}}
 	}
 	create := func() dv1.DeploymentID {
-		id := dv1.DeploymentID{Owner: s.Addr("tenant").String(), DSeq: s.NextDSeq()}
-		s.BroadcastOK("tenant", &dvbeta.MsgCreateDeployment{ID: id, Groups: groups, Hash: version, Deposit: mkDeposit()})
+		id := dv1.DeploymentID{Owner: s.TenantAddr().String(), DSeq: s.NextDSeq()}
+		s.BroadcastOK(s.TenantSigner(), &dvbeta.MsgCreateDeployment{ID: id, Groups: groups, Hash: version, Deposit: mkDeposit()})
 		return id
 	}
 
 	// Scratch deployment #1: update + group pause/start/close.
 	scratch := create()
-	s.BroadcastOK("tenant", &dvbeta.MsgUpdateDeployment{ID: scratch, Hash: bumpHash(version)})
+	s.BroadcastOK(s.TenantSigner(), &dvbeta.MsgUpdateDeployment{ID: scratch, Hash: bumpHash(version)})
 	gid := dv1.GroupID{Owner: scratch.Owner, DSeq: scratch.DSeq, GSeq: 1}
-	s.BroadcastOK("tenant", &dvbeta.MsgPauseGroup{ID: gid})
-	s.BroadcastOK("tenant", &dvbeta.MsgStartGroup{ID: gid})
-	s.BroadcastOK("tenant", &dvbeta.MsgCloseGroup{ID: gid})
+	s.BroadcastOK(s.TenantSigner(), &dvbeta.MsgPauseGroup{ID: gid})
+	s.BroadcastOK(s.TenantSigner(), &dvbeta.MsgStartGroup{ID: gid})
+	s.BroadcastOK(s.TenantSigner(), &dvbeta.MsgCloseGroup{ID: gid})
 
 	// Scratch deployment #2: close the whole deployment.
 	scratch2 := create()
-	s.BroadcastOK("tenant", &dvbeta.MsgCloseDeployment{ID: scratch2})
+	s.BroadcastOK(s.TenantSigner(), &dvbeta.MsgCloseDeployment{ID: scratch2})
 	s.logf("deployment lifecycle complete (update/pause/start/closeGroup/closeDeployment)")
 }
 
@@ -202,6 +203,8 @@ func readSDLGroups(s *Suite, path string) (dvbeta.GroupSpecs, []byte) {
 }
 
 func deploymentMinDeposit(s *Suite, p dvbeta.Params) sdk.Coin {
+	// The deposit denom must match the group price denom, which the chain requires
+	// to be uact; the tenant (the funder) holds uact to cover it. See TenantSigner.
 	if c, err := p.MinDepositFor(sdkutil.DenomUact); err == nil && !c.IsZero() {
 		return c
 	}

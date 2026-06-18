@@ -17,8 +17,6 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
-
-	"pkg.akt.dev/go/sdkutil"
 )
 
 // Env is the harness-agnostic environment the suite runs against. Both the upgrade
@@ -130,6 +128,12 @@ func Run(ctx context.Context, t *testing.T, env Env) {
 	}
 	s.TX = newBroadcaster(s)
 
+	// Register the funder under its own role so packs can address it directly. The
+	// tenant role is the funder (it is the account guaranteed to hold uact — see
+	// TenantSigner), so deployment deposits never require provisioning uact to a
+	// sub-account.
+	s.World.Accounts[env.Funder] = env.FunderAddr
+
 	// Discover what the running binary actually serves so the coverage gate and
 	// pack availability adapt to the branch under test (e.g. verification appears
 	// on AEP-86 but not on main).
@@ -187,15 +191,23 @@ func (s *Suite) FundAccount(role string, coins sdk.Coins) sdk.AccAddress {
 	return addr
 }
 
-// FundAccountDefault funds role with a generous bundle of fee (uakt) and deposit
-// (uact) tokens, sufficient for any scenario in the suite.
+// FundAccountDefault funds role with uakt — the freely-transferable denom used for
+// fees and for the uakt bid deposit. The one deposit that must be in uact (the
+// deployment owner's, which has to match the uact group price) is made by the
+// funder via TenantSigner, so sub-accounts never need the non-transferable uact.
 func (s *Suite) FundAccountDefault(role string) sdk.AccAddress {
-	coins := sdk.NewCoins(
-		sdk.NewCoin(s.Env.BondDenom, sdkmath.NewInt(1_000_000_000)),   // ~1000 AKT for fees
-		sdk.NewCoin(sdkutil.DenomUact, sdkmath.NewInt(1_000_000_000)), // for deposits
-	)
-	return s.FundAccount(role, coins)
+	return s.FundAccount(role, sdk.NewCoins(sdk.NewCoin(s.Env.BondDenom, sdkmath.NewInt(2_000_000_000)))) // ~2000 AKT
 }
+
+// TenantSigner is the keyring key name that owns the suite's deployments. A
+// deployment deposit must be in uact (it has to match the uact group price), and
+// the funder is the account guaranteed to hold uact on both the forked chain and
+// the in-process net — so the funder doubles as the tenant. This mirrors the real
+// chain, where uact is non-transferable and tenants spend their own uact.
+func (s *Suite) TenantSigner() string { return s.Env.Funder }
+
+// TenantAddr is the tenant's address (the funder's).
+func (s *Suite) TenantAddr() sdk.AccAddress { return s.Env.FunderAddr }
 
 // NextDSeq returns a process-unique, monotonically increasing deployment sequence
 // number seeded from the chain's current height (the conventional DSeq source).
