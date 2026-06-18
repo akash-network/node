@@ -3,6 +3,7 @@ package grpcsuite
 import (
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/stretchr/testify/require"
 
 	bmev1 "pkg.akt.dev/go/node/bme/v1"
@@ -41,11 +42,31 @@ func (bmePack) Run(s *Suite) {
 	s.BroadcastTolerant("bme", tolerate, &bmev1.MsgBurnACT{Owner: actor.String(), To: actor.String(), CoinsToBurn: act(1_000_000)})
 	s.BroadcastTolerant("bme", tolerate, &bmev1.MsgBurnMint{Owner: actor.String(), To: actor.String(), CoinsToBurn: akt(1_000_000), DenomToMint: sdkutil.DenomUact})
 
-	var err error
-
-	_, err = q.VaultState(s.Ctx, &bmev1.QueryVaultStateRequest{})
+	// Queries: every bme query RPC with real inputs.
+	vs, err := q.VaultState(s.Ctx, &bmev1.QueryVaultStateRequest{})
 	require.NoError(s.T, err, "VaultState")
-	_, err = q.Status(s.Ctx, &bmev1.QueryStatusRequest{})
+	require.NotNil(s.T, vs, "VaultState response")
+	st, err := q.Status(s.Ctx, &bmev1.QueryStatusRequest{})
 	require.NoError(s.T, err, "Status")
+	require.False(s.T, st.CollateralRatio.IsNil(), "Status should expose a collateral ratio")
+	_, err = q.LedgerRecords(s.Ctx, &bmev1.QueryLedgerRecordsRequest{Pagination: &sdkquery.PageRequest{Limit: 10}})
+	require.NoError(s.T, err, "LedgerRecords")
+	_, err = q.Params(s.Ctx, &bmev1.QueryParamsRequest{})
+	require.NoError(s.T, err, "bme Params")
+
+	bmeNegatives(s, actor)
 	s.logf("bme complete (fund vault + mint ACT + burn ACT + burn/mint)")
+}
+
+func bmeNegatives(s *Suite, actor sdk.AccAddress) {
+	s.T.Helper()
+	// Zero amount to burn — rejected by validation.
+	s.BroadcastExpectErr("bme", &bmev1.MsgMintACT{
+		Owner: actor.String(), To: actor.String(), CoinsToBurn: sdk.NewInt64Coin(sdkutil.DenomUakt, 0),
+	})
+	// MsgFundVault is gov-gated; broadcasting it directly (authority = a normal
+	// account, not the gov module account) must be rejected.
+	s.BroadcastExpectErr("bme", &bmev1.MsgFundVault{
+		Authority: actor.String(), Amount: sdk.NewInt64Coin(sdkutil.DenomUakt, 1_000_000), Source: actor.String(),
+	})
 }

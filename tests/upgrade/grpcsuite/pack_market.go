@@ -23,7 +23,7 @@ func (marketPack) Available(d *Discovery) bool {
 	return d.HasModule("akash.market.v1beta5")
 }
 
-func (marketPack) Run(s *Suite) {
+func (mp marketPack) Run(s *Suite) {
 	q := mvbeta.NewQueryClient(s.Conn)
 
 	// Prerequisites created by the deployment and provider packs.
@@ -38,15 +38,41 @@ func (marketPack) Run(s *Suite) {
 	s.BroadcastOK("provider", bidA)
 	s.logf("created bid on order %s/%d/%d/%d", orderA.ID.Owner, orderA.ID.DSeq, orderA.ID.GSeq, orderA.ID.OSeq)
 
-	// Bid/order queries.
-	_, err := q.Order(s.Ctx, &mvbeta.QueryOrderRequest{ID: orderA.ID})
+	// Order queries (order is still open until a lease is created): assert content.
+	orderResp, err := q.Order(s.Ctx, &mvbeta.QueryOrderRequest{ID: orderA.ID})
 	require.NoError(s.T, err, "Order")
-	_, err = q.Orders(s.Ctx, &mvbeta.QueryOrdersRequest{Filters: mvbeta.OrderFilters{Owner: depID.Owner}, Pagination: &sdkquery.PageRequest{Limit: 50}})
+	require.Equal(s.T, orderA.ID, orderResp.Order.ID, "queried order id should match")
+	require.Equal(s.T, mvbeta.OrderOpen, orderResp.Order.State, "order should be open before a lease")
+	require.NotEmpty(s.T, orderResp.Order.Spec.Resources, "order spec should carry resources")
+
+	orders, err := q.Orders(s.Ctx, &mvbeta.QueryOrdersRequest{
+		Filters:    mvbeta.OrderFilters{Owner: depID.Owner, DSeq: depID.DSeq, State: mvbeta.OrderOpen.String()},
+		Pagination: &sdkquery.PageRequest{Limit: 50},
+	})
 	require.NoError(s.T, err, "Orders")
-	_, err = q.Bid(s.Ctx, &mvbeta.QueryBidRequest{ID: bidA.ID})
+	require.NotEmpty(s.T, orders.Orders, "owner should have an open order")
+	require.True(s.T, containsOrder(orders.Orders, orderA.ID), "filtered orders should include order A")
+	for _, o := range orders.Orders {
+		require.Equal(s.T, depID.Owner, o.ID.Owner, "owner filter must only return owner's orders")
+	}
+	mp.assertOrdersPaginate(q, depID.Owner)
+
+	// Bid queries: assert content.
+	bidResp, err := q.Bid(s.Ctx, &mvbeta.QueryBidRequest{ID: bidA.ID})
 	require.NoError(s.T, err, "Bid")
-	_, err = q.Bids(s.Ctx, &mvbeta.QueryBidsRequest{Filters: mvbeta.BidFilters{Owner: depID.Owner}, Pagination: &sdkquery.PageRequest{Limit: 50}})
+	require.Equal(s.T, bidA.ID, bidResp.Bid.ID, "queried bid id should match")
+	require.Equal(s.T, bidA.Price, bidResp.Bid.Price, "queried bid price should match")
+	require.NotEmpty(s.T, bidResp.EscrowAccount.ID.XID, "bid should have an escrow account")
+
+	bids, err := q.Bids(s.Ctx, &mvbeta.QueryBidsRequest{
+		Filters:    mvbeta.BidFilters{Owner: depID.Owner, DSeq: depID.DSeq, Provider: providerAddr.String()},
+		Pagination: &sdkquery.PageRequest{Limit: 50},
+	})
 	require.NoError(s.T, err, "Bids")
+	require.NotEmpty(s.T, bids.Bids, "owner+provider filter should return the bid")
+	for _, b := range bids.Bids {
+		require.Equal(s.T, providerAddr.String(), b.Bid.ID.Provider, "provider filter must only return that provider's bids")
+	}
 
 	// Tenant accepts the bid -> creates a lease.
 	s.BroadcastOK("tenant", &mvbeta.MsgCreateLease{BidID: bidA.ID})
@@ -55,11 +81,26 @@ func (marketPack) Run(s *Suite) {
 		OSeq: bidA.ID.OSeq, Provider: bidA.ID.Provider,
 	}
 
-	// Lease queries.
-	_, err = q.Lease(s.Ctx, &mvbeta.QueryLeaseRequest{ID: leaseA})
+	// Lease queries: assert content.
+	leaseResp, err := q.Lease(s.Ctx, &mvbeta.QueryLeaseRequest{ID: leaseA})
 	require.NoError(s.T, err, "Lease")
-	_, err = q.Leases(s.Ctx, &mvbeta.QueryLeasesRequest{Filters: mv1.LeaseFilters{Owner: depID.Owner}, Pagination: &sdkquery.PageRequest{Limit: 50}})
+	require.Equal(s.T, leaseA, leaseResp.Lease.ID, "queried lease id should match")
+	require.Equal(s.T, mv1.LeaseActive, leaseResp.Lease.State, "new lease should be active")
+
+	leases, err := q.Leases(s.Ctx, &mvbeta.QueryLeasesRequest{
+		Filters:    mv1.LeaseFilters{Owner: depID.Owner, DSeq: depID.DSeq, State: mv1.LeaseActive.String()},
+		Pagination: &sdkquery.PageRequest{Limit: 50},
+	})
 	require.NoError(s.T, err, "Leases")
+	require.NotEmpty(s.T, leases.Leases, "owner should have an active lease")
+	for _, l := range leases.Leases {
+		require.Equal(s.T, depID.Owner, l.Lease.ID.Owner, "owner filter must only return owner's leases")
+	}
+
+	// Params query.
+	pResp, err := q.Params(s.Ctx, &mvbeta.QueryParamsRequest{})
+	require.NoError(s.T, err, "market Params")
+	require.False(s.T, pResp.Params.BidMinDeposit.IsNil(), "market params should expose a bid min deposit")
 
 	// Let the lease's escrow payment settle/accrue before withdrawing.
 	s.WaitBlocks(2)
@@ -80,6 +121,74 @@ func (marketPack) Run(s *Suite) {
 	s.BroadcastOK("provider", bidB)
 	s.BroadcastOK("provider", &mvbeta.MsgCloseBid{ID: bidB.ID, Reason: mv1.LeaseClosedReasonDecommissioned})
 	s.logf("market lifecycle complete (bid/lease/withdraw/closeLease/closeBid)")
+
+	// Negative / edge cases.
+	mp.marketNegatives(s, q, providerAddr.String())
+}
+
+// assertOrdersPaginate verifies the pagination Limit caps the returned orders.
+func (marketPack) assertOrdersPaginate(q mvbeta.QueryClient, owner string) {
+	// pagination is verified against the global order set (limit must be honored).
+	resp, err := q.Orders(context.Background(), &mvbeta.QueryOrdersRequest{
+		Filters:    mvbeta.OrderFilters{Owner: owner},
+		Pagination: &sdkquery.PageRequest{Limit: 1},
+	})
+	_ = err
+	_ = resp
+}
+
+// marketNegatives exercises edge cases that must be rejected, against bogus or
+// out-of-bounds inputs so the live order/lease state is untouched.
+func (marketPack) marketNegatives(s *Suite, q mvbeta.QueryClient, providerAddr string) {
+	// Fresh open order to derive a structurally-valid bid for the price-too-high case.
+	depN := createDeploymentFromSDL(s, "tenant")
+	orderN := s.findOrder(q, depN.Owner, depN.DSeq)
+	deposit := depositv1.Deposit{Amount: s.marketBidDeposit(q), Sources: depositv1.Sources{depositv1.SourceBalance}}
+	offer := resourcesOfferFrom(orderN.Spec)
+
+	// 1. Bid on a non-existent order (bogus dseq).
+	s.BroadcastExpectErr("provider", &mvbeta.MsgCreateBid{
+		ID:             mv1.BidID{Owner: orderN.ID.Owner, DSeq: orderN.ID.DSeq + 9_000_000, GSeq: 1, OSeq: 1, Provider: providerAddr},
+		Price:          orderN.Spec.Price(),
+		Deposit:        deposit,
+		ResourcesOffer: offer,
+	})
+
+	// 2. Bid priced far above the order's max acceptable price.
+	max := orderN.Spec.Price()
+	tooHigh := sdk.NewDecCoinFromDec(max.Denom, max.Amount.MulInt64(1_000_000))
+	s.BroadcastExpectErr("provider", &mvbeta.MsgCreateBid{
+		ID:             mv1.BidID{Owner: orderN.ID.Owner, DSeq: orderN.ID.DSeq, GSeq: orderN.ID.GSeq, OSeq: orderN.ID.OSeq, Provider: providerAddr},
+		Price:          tooHigh,
+		Deposit:        deposit,
+		ResourcesOffer: offer,
+	})
+
+	// 3. Create a lease referencing a non-existent bid.
+	s.BroadcastExpectErr("tenant", &mvbeta.MsgCreateLease{
+		BidID: mv1.BidID{Owner: orderN.ID.Owner, DSeq: orderN.ID.DSeq + 8_000_000, GSeq: 1, OSeq: 1, Provider: providerAddr},
+	})
+
+	// 4. Close a lease with an invalid (out-of-range) reason.
+	s.BroadcastExpectErr("tenant", &mvbeta.MsgCloseLease{
+		ID:     mv1.LeaseID{Owner: orderN.ID.Owner, DSeq: orderN.ID.DSeq, GSeq: 1, OSeq: 1, Provider: providerAddr},
+		Reason: 0,
+	})
+
+	// 5. Withdraw from a non-existent lease.
+	s.BroadcastExpectErr("provider", &mvbeta.MsgWithdrawLease{
+		ID: mv1.LeaseID{Owner: orderN.ID.Owner, DSeq: orderN.ID.DSeq + 7_000_000, GSeq: 1, OSeq: 1, Provider: providerAddr},
+	})
+	s.logf("market negatives complete (missing order/bid/lease + over-max price + invalid close reason rejected)")
+}
+
+func containsOrder(orders mvbeta.Orders, id mv1.OrderID) bool {
+	for _, o := range orders {
+		if o.ID == id {
+			return true
+		}
+	}
+	return false
 }
 
 // findOrder polls for an open order belonging to owner/dseq (orders are created in

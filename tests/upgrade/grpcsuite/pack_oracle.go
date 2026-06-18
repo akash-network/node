@@ -29,8 +29,21 @@ func (oraclePack) Run(s *Suite) {
 	// Submit a price entry as the now-authorized source.
 	s.feedAKTPrice(3)
 
-	_, err = q.Prices(s.Ctx, &oraclev2.QueryPricesRequest{})
+	// Params now lists the authorized writer.
+	pr2, err := q.Params(s.Ctx, &oraclev2.QueryParamsRequest{})
+	require.NoError(s.T, err, "oracle Params (after authorize)")
+	require.Contains(s.T, pr2.Params.Sources, writer.String(), "writer should be an authorized source")
+
+	// Prices: assert at least one entry exists after the feed.
+	prices, err := q.Prices(s.Ctx, &oraclev2.QueryPricesRequest{})
 	require.NoError(s.T, err, "Prices")
+	require.NotEmpty(s.T, prices.Prices, "expected at least one price entry")
+
+	// AggregatedPrice for the AKT denom.
+	_, err = q.AggregatedPrice(s.Ctx, &oraclev2.QueryAggregatedPriceRequest{Denom: sdkutil.DenomAkt})
+	require.NoError(s.T, err, "AggregatedPrice")
+
+	oracleNegatives(s)
 	s.logf("oracle price entry submitted")
 }
 
@@ -44,6 +57,25 @@ func (s *Suite) feedAKTPrice(price int64) {
 		Signer:    s.Addr("pricewriter").String(),
 		ID:        oraclev2.DataID{Denom: sdkutil.DenomAkt, BaseDenom: sdkutil.DenomUSD},
 		Price:     sdkmath.LegacyNewDec(price),
+		Timestamp: s.LatestBlockTime(),
+	})
+}
+
+func oracleNegatives(s *Suite) {
+	s.T.Helper()
+	// Unauthorized account (not in Params.Sources) submitting a price.
+	unauth := s.FundAccountDefault("pricewriter-unauth")
+	s.BroadcastExpectErr("pricewriter-unauth", &oraclev2.MsgAddPriceEntry{
+		Signer:    unauth.String(),
+		ID:        oraclev2.DataID{Denom: sdkutil.DenomAkt, BaseDenom: sdkutil.DenomUSD},
+		Price:     sdkmath.LegacyNewDec(1),
+		Timestamp: s.LatestBlockTime(),
+	})
+	// Authorized writer, but an unsupported denom pair (only AKT/USD is accepted).
+	s.BroadcastExpectErr("pricewriter", &oraclev2.MsgAddPriceEntry{
+		Signer:    s.Addr("pricewriter").String(),
+		ID:        oraclev2.DataID{Denom: "uatom", BaseDenom: sdkutil.DenomUSD},
+		Price:     sdkmath.LegacyNewDec(1),
 		Timestamp: s.LatestBlockTime(),
 	})
 }

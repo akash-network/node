@@ -53,25 +53,47 @@ func (dp deploymentPack) Run(s *Suite) {
 	s.BroadcastOK("tenant", create)
 	s.logf("created deployment %s/%d (%d group(s))", depID.Owner, depID.DSeq, len(groups))
 
-	// Query Deployment by ID.
+	// Query Deployment by ID — assert the full response (deployment, groups, escrow).
 	depResp, err := q.Deployment(s.Ctx, &dvbeta.QueryDeploymentRequest{ID: depID})
 	require.NoError(s.T, err, "Deployment by id")
+	require.Equal(s.T, depID, depResp.Deployment.ID, "queried deployment id should match")
+	require.Equal(s.T, dv1.DeploymentActive, depResp.Deployment.State, "new deployment should be active")
 	require.NotEmpty(s.T, depResp.Groups, "created deployment should have groups")
+	require.NotEmpty(s.T, depResp.Groups[0].GroupSpec.Resources, "group should carry resources")
+	require.NotEmpty(s.T, depResp.EscrowAccount.ID.XID, "deployment should have an escrow account")
 	gseq := depResp.Groups[0].ID.GSeq
 
-	// Query Group by ID.
-	_, err = q.Group(s.Ctx, &dvbeta.QueryGroupRequest{
-		ID: dv1.GroupID{Owner: depID.Owner, DSeq: depID.DSeq, GSeq: gseq},
-	})
+	// Query Group by ID — assert the returned group id matches.
+	gid := dv1.GroupID{Owner: depID.Owner, DSeq: depID.DSeq, GSeq: gseq}
+	gResp, err := q.Group(s.Ctx, &dvbeta.QueryGroupRequest{ID: gid})
 	require.NoError(s.T, err, "Group by id")
+	require.Equal(s.T, gid, gResp.Group.ID, "queried group id should match")
 
-	// Query Deployments filtered by owner.
+	// Query Deployments filtered by owner — assert non-empty and that the filter
+	// only returns the owner's deployments.
 	list, err := q.Deployments(s.Ctx, &dvbeta.QueryDeploymentsRequest{
 		Filters:    dvbeta.DeploymentFilters{Owner: depID.Owner},
 		Pagination: &sdkquery.PageRequest{Limit: 100},
 	})
 	require.NoError(s.T, err, "Deployments")
 	require.NotEmpty(s.T, list.Deployments, "owner should have at least one deployment")
+	for _, d := range list.Deployments {
+		require.Equal(s.T, depID.Owner, d.Deployment.ID.Owner, "owner filter must only return owner's deployments")
+	}
+
+	// Query Deployments with the active-state filter and with a pagination limit.
+	active, err := q.Deployments(s.Ctx, &dvbeta.QueryDeploymentsRequest{
+		Filters:    dvbeta.DeploymentFilters{Owner: depID.Owner, State: dv1.DeploymentActive.String()},
+		Pagination: &sdkquery.PageRequest{Limit: 100},
+	})
+	require.NoError(s.T, err, "Deployments (active filter)")
+	require.NotEmpty(s.T, active.Deployments, "owner should have an active deployment")
+	paged, err := q.Deployments(s.Ctx, &dvbeta.QueryDeploymentsRequest{
+		Filters:    dvbeta.DeploymentFilters{Owner: depID.Owner},
+		Pagination: &sdkquery.PageRequest{Limit: 1},
+	})
+	require.NoError(s.T, err, "Deployments (paginated)")
+	require.LessOrEqual(s.T, len(paged.Deployments), 1, "pagination Limit=1 must cap results")
 
 	// Publish handles so the market/escrow packs can use this OPEN deployment.
 	s.World.Set(wDeploymentSigner, "tenant")
@@ -81,6 +103,32 @@ func (dp deploymentPack) Run(s *Suite) {
 	// Exercise the rest of the deployment lifecycle on throwaway deployments so the
 	// primary one above stays open for the market pack.
 	dp.runLifecycle(s, groups, version, deposit)
+
+	// Negative / edge cases.
+	dp.deploymentNegatives(s, groups, version, deposit)
+}
+
+// deploymentNegatives exercises edge cases that must be rejected: a duplicate
+// deployment id, and close/update/group ops against ids that do not exist. All run
+// against throwaway / non-existent ids so the primary open deployment is untouched.
+func (dp deploymentPack) deploymentNegatives(s *Suite, groups dvbeta.GroupSpecs, version []byte, deposit sdk.Coin) {
+	owner := s.Addr("tenant")
+	mkDeposit := depositv1.Deposit{Amount: deposit, Sources: depositv1.Sources{depositv1.SourceBalance}}
+
+	// Duplicate deployment id: create once, then re-create with the same id.
+	dupID := dv1.DeploymentID{Owner: owner.String(), DSeq: s.NextDSeq()}
+	dup := &dvbeta.MsgCreateDeployment{ID: dupID, Groups: groups, Hash: version, Deposit: mkDeposit}
+	s.BroadcastOK("tenant", dup)
+	s.BroadcastExpectErr("tenant", dup)
+
+	// Operations against ids that were never created.
+	ghost := dv1.DeploymentID{Owner: owner.String(), DSeq: s.NextDSeq()}
+	ghostGroup := dv1.GroupID{Owner: ghost.Owner, DSeq: ghost.DSeq, GSeq: 1}
+	s.BroadcastExpectErr("tenant", &dvbeta.MsgCloseDeployment{ID: ghost})
+	s.BroadcastExpectErr("tenant", &dvbeta.MsgUpdateDeployment{ID: ghost, Hash: version})
+	s.BroadcastExpectErr("tenant", &dvbeta.MsgCloseGroup{ID: ghostGroup})
+	s.BroadcastExpectErr("tenant", &dvbeta.MsgPauseGroup{ID: ghostGroup})
+	s.logf("deployment negatives complete (duplicate create + missing-id close/update/closeGroup/pauseGroup rejected)")
 }
 
 // runLifecycle exercises MsgUpdateDeployment, MsgPauseGroup, MsgStartGroup,
