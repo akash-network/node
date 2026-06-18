@@ -74,10 +74,8 @@ a new Akash RPC, until a case is authored for it.
 Cosmos-SDK transactions are not yet gated (their queries are, via the smoke sweep);
 they are the natural next tier to add for downstream-effect coverage.
 
-### Verification module (AEP-86)
-
-`x/verification` does not exist on `main` (SDK `v0.2.14` has no verification
-types), so its pack cannot compile here. It is added when this suite is rebased
-onto the AEP-86 branch; the reflection-gating (`Available`/`HasModule`) already
-makes every pack skip modules absent on the branch under test, so the pack will
-activate automatically there with no framework change.
+The suite targets exactly the surface the running `main` binary serves: discovery
+is driven by gRPC reflection + the interface registry, and every pack is
+reflection-gated (`Available`/`HasModule`). A pack whose module is not served by
+the binary under test is skipped automatically, so the suite always matches the
+active surface with no manual bookkeeping.
