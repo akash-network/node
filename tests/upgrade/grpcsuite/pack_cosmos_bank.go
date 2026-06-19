@@ -4,6 +4,8 @@ import (
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type cosmosBankPack struct{}
@@ -61,8 +63,16 @@ func (cosmosBankPack) Run(s *Suite) {
 	require.NoError(s.T, err, "bank Params")
 	_, err = q.DenomsMetadata(s.Ctx, &banktypes.QueryDenomsMetadataRequest{Pagination: &sdkquery.PageRequest{Limit: 10}})
 	require.NoError(s.T, err, "bank DenomsMetadata")
-	_, _ = q.DenomMetadata(s.Ctx, &banktypes.QueryDenomMetadataRequest{Denom: s.Env.BondDenom})
-	_, _ = q.DenomMetadataByQueryString(s.Ctx, &banktypes.QueryDenomMetadataByQueryStringRequest{Denom: s.Env.BondDenom})
+	metadata, err := q.DenomMetadata(s.Ctx, &banktypes.QueryDenomMetadataRequest{Denom: s.Env.BondDenom})
+	requireBankMetadataResult(s, "bank DenomMetadata", err)
+	if err == nil {
+		require.Equal(s.T, s.Env.BondDenom, metadata.Metadata.Base, "metadata base denom should match")
+	}
+	metadataByQuery, err := q.DenomMetadataByQueryString(s.Ctx, &banktypes.QueryDenomMetadataByQueryStringRequest{Denom: s.Env.BondDenom})
+	requireBankMetadataResult(s, "bank DenomMetadataByQueryString", err)
+	if err == nil {
+		require.Equal(s.T, s.Env.BondDenom, metadataByQuery.Metadata.Base, "metadata query base denom should match")
+	}
 	owners, err := q.DenomOwners(s.Ctx, &banktypes.QueryDenomOwnersRequest{
 		Denom:      s.Env.BondDenom,
 		Pagination: &sdkquery.PageRequest{Limit: 10},
@@ -86,4 +96,12 @@ func (cosmosBankPack) Run(s *Suite) {
 	))
 
 	s.logf("cosmos bank complete (send, multisend, typed queries, negative sends)")
+}
+
+func requireBankMetadataResult(s *Suite, query string, err error) {
+	s.T.Helper()
+	if err == nil {
+		return
+	}
+	require.Equal(s.T, codes.NotFound, status.Code(err), "%s should only fail when metadata is absent", query)
 }

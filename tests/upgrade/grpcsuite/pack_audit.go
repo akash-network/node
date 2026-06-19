@@ -16,8 +16,10 @@ func (auditPack) Name() string { return "audit" }
 func (auditPack) Available(d *Discovery) bool { return d.HasModule("akash.audit.v1") }
 
 func (auditPack) Run(s *Suite) {
-	require.NotEmpty(s.T, s.World.Get(wProviderSigner), "audit pack needs the provider pack")
-	provider := s.Addr("provider")
+	providerSigner, ok := s.World.Get(wProviderSigner).(string)
+	require.True(s.T, ok, "audit pack needs the provider pack")
+	require.NotEmpty(s.T, providerSigner, "audit pack needs the provider signer")
+	provider := s.Addr(providerSigner)
 	auditor := s.FundAccountDefault("auditor")
 
 	attrs := tattr.Attributes{
@@ -53,7 +55,7 @@ func (auditPack) Run(s *Suite) {
 	require.NoError(s.T, err, "AuditorAttributes")
 	require.NotEmpty(s.T, aa.Providers, "auditor should have audited providers")
 
-	auditNegatives(s, auditor)
+	auditNegatives(s, providerSigner, auditor)
 
 	// Auditor revokes the attested attributes (kept last so the queries above see them).
 	s.BroadcastOK("auditor", &av1.MsgDeleteProviderAttributes{
@@ -64,9 +66,9 @@ func (auditPack) Run(s *Suite) {
 	s.logf("audit complete (sign, query all 4, delete provider attributes)")
 }
 
-func auditNegatives(s *Suite, auditor sdk.AccAddress) {
+func auditNegatives(s *Suite, providerSigner string, auditor sdk.AccAddress) {
 	s.T.Helper()
-	provider := s.Addr("provider").String()
+	provider := s.Addr(providerSigner).String()
 
 	// The Auditor field is the required signer. A tx signed by "auditor" but
 	// declaring a DIFFERENT auditor must be rejected (signer mismatch). This holds
