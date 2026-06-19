@@ -13,6 +13,13 @@ It runs in two places against the **same** code:
 | `tests/fullsurface` (`fullsurface_test.go`) | `e2e.integration` | in-process single-validator `testutil/network` | minutes | fast local iteration + per-PR CI |
 
 Run the fast path: `make test-grpc-surface`.
+
+For narrower local debugging:
+- `make test-grpc-surface-tx` runs the authored tx packs and gates tx coverage.
+  Packs still call query RPCs for setup and assertions.
+- `make test-grpc-surface-query` runs the dynamic query smoke sweep and gates
+  query coverage without mutating chain state.
+
 The acceptance path runs automatically inside `make -C tests/upgrade test` (the
 existing `network-upgrade` CI job), because the suite is registered as the
 **universal post-upgrade worker** (runs for every upgrade name).

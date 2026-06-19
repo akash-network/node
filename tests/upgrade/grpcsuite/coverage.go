@@ -314,8 +314,8 @@ func (c *Coverage) setExpected(d *Discovery) {
 }
 
 // assert reports the coverage summary and, when strict, fails the test if any
-// in-scope Msg or query RPC was never exercised.
-func (c *Coverage) assert(t *testing.T) {
+// in-scope RPC for the selected mode was never exercised.
+func (c *Coverage) assert(t *testing.T, mode RunMode) {
 	t.Helper()
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -334,20 +334,35 @@ func (c *Coverage) assert(t *testing.T) {
 	sort.Strings(missingMsgs)
 	sort.Strings(missingQueries)
 
-	t.Logf("coverage: tx %d/%d, query %d/%d",
-		len(c.expectedMsgs)-len(missingMsgs), len(c.expectedMsgs),
-		len(c.expectedQueries)-len(missingQueries), len(c.expectedQueries))
-
-	for _, m := range missingMsgs {
-		t.Logf("coverage: UNCOVERED tx %s", m)
+	if mode == RunModeAll || mode == RunModeTx {
+		t.Logf("coverage: tx %d/%d", len(c.expectedMsgs)-len(missingMsgs), len(c.expectedMsgs))
+		for _, m := range missingMsgs {
+			t.Logf("coverage: UNCOVERED tx %s", m)
+		}
 	}
-	for _, q := range missingQueries {
-		t.Logf("coverage: UNCOVERED query %s", q)
+	if mode == RunModeAll || mode == RunModeQuery {
+		t.Logf("coverage: query %d/%d", len(c.expectedQueries)-len(missingQueries), len(c.expectedQueries))
+		for _, q := range missingQueries {
+			t.Logf("coverage: UNCOVERED query %s", q)
+		}
 	}
 
-	if c.strict && (len(missingMsgs) > 0 || len(missingQueries) > 0) {
-		t.Errorf("coverage gate: %d tx and %d query RPC(s) were never exercised (see UNCOVERED logs above)",
-			len(missingMsgs), len(missingQueries))
+	if c.strict {
+		switch mode {
+		case RunModeAll:
+			if len(missingMsgs) > 0 || len(missingQueries) > 0 {
+				t.Errorf("coverage gate: %d tx and %d query RPC(s) were never exercised (see UNCOVERED logs above)",
+					len(missingMsgs), len(missingQueries))
+			}
+		case RunModeTx:
+			if len(missingMsgs) > 0 {
+				t.Errorf("coverage gate: %d tx RPC(s) were never exercised (see UNCOVERED logs above)", len(missingMsgs))
+			}
+		case RunModeQuery:
+			if len(missingQueries) > 0 {
+				t.Errorf("coverage gate: %d query RPC(s) were never exercised (see UNCOVERED logs above)", len(missingQueries))
+			}
+		}
 	}
 }
 

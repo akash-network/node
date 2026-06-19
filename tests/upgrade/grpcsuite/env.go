@@ -2,6 +2,7 @@ package grpcsuite
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -18,6 +19,34 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 )
+
+type RunMode string
+
+const (
+	RunModeAll   RunMode = "all"
+	RunModeTx    RunMode = "tx"
+	RunModeQuery RunMode = "query"
+)
+
+func ParseRunMode(value string) (RunMode, error) {
+	if value == "" {
+		return RunModeAll, nil
+	}
+	switch mode := RunMode(value); mode {
+	case RunModeAll, RunModeTx, RunModeQuery:
+		return mode, nil
+	default:
+		return "", fmt.Errorf("unknown grpcsuite run mode %q", value)
+	}
+}
+
+func (m RunMode) runsTxPacks() bool {
+	return m == RunModeAll || m == RunModeTx
+}
+
+func (m RunMode) runsQuerySmoke() bool {
+	return m == RunModeAll || m == RunModeQuery
+}
 
 // Env is the harness-agnostic environment the suite runs against. Both the upgrade
 // post-upgrade worker and the in-process integration driver populate one of these.
@@ -47,6 +76,9 @@ type Env struct {
 	// Msg or query RPC was never exercised. Drivers set this true; it can be
 	// relaxed while authoring new packs.
 	RequireFullCoverage bool
+
+	// Mode selects which half of the suite is gated. Empty means RunModeAll.
+	Mode RunMode
 }
 
 // World threads state created by earlier packs to later ones (a deployment's dseq,
@@ -108,6 +140,8 @@ func Run(ctx context.Context, t *testing.T, env Env) {
 
 	require.NotEmpty(t, env.GRPCEndpoint, "grpcsuite: GRPCEndpoint required")
 	require.NotNil(t, env.InterfaceReg, "grpcsuite: InterfaceReg required")
+	mode, err := ParseRunMode(string(env.Mode))
+	require.NoError(t, err, "grpcsuite: parse run mode")
 
 	cov := newCoverage()
 
@@ -142,39 +176,44 @@ func Run(ctx context.Context, t *testing.T, env Env) {
 	cov.setExpected(disc)
 	cov.setStrict(env.RequireFullCoverage)
 	s.Disc = disc
-	t.Logf("grpcsuite: discovered %d in-scope tx methods, %d in-scope query methods",
+	t.Logf("grpcsuite: mode=%s discovered %d in-scope tx methods, %d in-scope query methods",
+		mode,
 		len(disc.InScopeMsgs()), len(disc.InScopeQueries()))
 
-	s.bootstrapFunderUact()
+	if mode.runsTxPacks() {
+		s.bootstrapFunderUact()
 
-	// Packs run sequentially (later packs depend on state earlier ones create via
-	// the shared World), so it is safe to retarget s.T at the active subtest rather
-	// than copying the Suite (which holds a mutex).
-	for _, p := range packs {
-		if !p.Available(disc) {
-			t.Logf("grpcsuite: pack %q not available on this binary; skipping", p.Name())
-			continue
+		// Packs run sequentially (later packs depend on state earlier ones create via
+		// the shared World), so it is safe to retarget s.T at the active subtest rather
+		// than copying the Suite (which holds a mutex).
+		for _, p := range packs {
+			if !p.Available(disc) {
+				t.Logf("grpcsuite: pack %q not available on this binary; skipping", p.Name())
+				continue
+			}
+			t.Run(p.Name(), func(subT *testing.T) {
+				prev := s.T
+				s.T = subT
+				defer func() { s.T = prev }()
+				p.Run(s)
+			})
 		}
-		t.Run(p.Name(), func(subT *testing.T) {
+	}
+
+	if mode.runsQuerySmoke() {
+		// Dynamic query smoke sweep: reach every advertised query handler over gRPC.
+		// This auto-covers the query surface and catches advertised-but-unimplemented
+		// methods; authored query cases (in packs) verify correctness with real inputs.
+		t.Run("query-smoke-sweep", func(subT *testing.T) {
 			prev := s.T
 			s.T = subT
 			defer func() { s.T = prev }()
-			p.Run(s)
+			s.querySmokeSweep(disc)
 		})
 	}
 
-	// Dynamic query smoke sweep: reach every advertised query handler over gRPC.
-	// This auto-covers the query surface and catches advertised-but-unimplemented
-	// methods; authored query cases (in packs) verify correctness with real inputs.
-	t.Run("query-smoke-sweep", func(subT *testing.T) {
-		prev := s.T
-		s.T = subT
-		defer func() { s.T = prev }()
-		s.querySmokeSweep(disc)
-	})
-
 	// Coverage gate: fail if any in-scope tx or query RPC was never exercised.
-	cov.assert(t)
+	cov.assert(t, mode)
 }
 
 // FundAccount creates a fresh key named role (if absent) and funds it from the

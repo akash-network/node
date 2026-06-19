@@ -27,7 +27,15 @@ test-integration:
 # the post-upgrade verification that runs against a testnetify-forked node).
 .PHONY: test-grpc-surface
 test-grpc-surface: wasmvm-libs
-	$(GO_TEST) -v -tags="e2e.integration" -ldflags '$(ldflags)' -timeout 30m ./tests/fullsurface/...
+	$(GO_TEST) -v -tags="e2e.integration" -ldflags '$(ldflags)' -timeout 30m ./tests/fullsurface/... -args -grpc-suite-mode=all
+
+.PHONY: test-grpc-surface-tx
+test-grpc-surface-tx: wasmvm-libs
+	$(GO_TEST) -v -tags="e2e.integration" -ldflags '$(ldflags)' -timeout 30m ./tests/fullsurface/... -args -grpc-suite-mode=tx
+
+.PHONY: test-grpc-surface-query
+test-grpc-surface-query: wasmvm-libs
+	$(GO_TEST) -v -tags="e2e.integration" -ldflags '$(ldflags)' -timeout 10m ./tests/fullsurface/... -args -grpc-suite-mode=query
 
 .PHONY: test-coverage
 test-coverage: wasmvm-libs

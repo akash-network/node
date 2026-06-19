@@ -14,6 +14,7 @@ package fullsurface
 import (
 	"context"
 	"encoding/json"
+	"flag"
 	"path/filepath"
 	"testing"
 	"time"
@@ -30,7 +31,12 @@ import (
 	"pkg.akt.dev/node/v2/testutil/network"
 )
 
+var grpcSuiteMode = flag.String("grpc-suite-mode", string(grpcsuite.RunModeAll), "grpcsuite run mode: all, tx, or query")
+
 func TestFullSurfaceGRPC(t *testing.T) {
+	mode, err := grpcsuite.ParseRunMode(*grpcSuiteMode)
+	require.NoError(t, err)
+
 	// Short gov voting period + low min deposit so the suite's gov fast-path (used
 	// for every MsgUpdateParams and other gov-gated messages) completes quickly.
 	// The post-upgrade harness gets the equivalent via tests/upgrade/testnet.json.
@@ -54,7 +60,7 @@ func TestFullSurfaceGRPC(t *testing.T) {
 	net := network.New(t, cfg)
 	defer net.Cleanup()
 
-	_, err := net.WaitForHeightWithTimeout(2, 30*time.Second)
+	_, err = net.WaitForHeightWithTimeout(2, 30*time.Second)
 	require.NoError(t, err)
 
 	val := net.Validators[0]
@@ -79,6 +85,7 @@ func TestFullSurfaceGRPC(t *testing.T) {
 		// Enforce full coverage: fail if any in-scope tx or query is not
 		// exercised (a new RPC added by a future upgrade turns this red).
 		RequireFullCoverage: true,
+		Mode:                mode,
 	}
 
 	grpcsuite.Run(context.Background(), t, env)
