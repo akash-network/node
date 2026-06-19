@@ -2,6 +2,7 @@ package grpcsuite
 
 import (
 	sdkmath "cosmossdk.io/math"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 
 	oraclev2 "pkg.akt.dev/go/node/oracle/v2"
@@ -53,8 +54,13 @@ func (oraclePack) Run(s *Suite) {
 // time. Other packs (bme) re-feed just before use so the price stays healthy.
 func (s *Suite) feedAKTPrice(price int64) {
 	s.T.Helper()
-	s.BroadcastOK("pricewriter", &oraclev2.MsgAddPriceEntry{
-		Signer:    s.Addr("pricewriter").String(),
+	s.feedAKTPriceAs("pricewriter", s.Addr("pricewriter"), price)
+}
+
+func (s *Suite) feedAKTPriceAs(signer string, addr sdk.AccAddress, price int64) {
+	s.T.Helper()
+	s.BroadcastOK(signer, &oraclev2.MsgAddPriceEntry{
+		Signer:    addr.String(),
 		ID:        oraclev2.DataID{Denom: sdkutil.DenomAkt, BaseDenom: sdkutil.DenomUSD},
 		Price:     sdkmath.LegacyNewDec(price),
 		Timestamp: s.LatestBlockTime(),

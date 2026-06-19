@@ -3,10 +3,10 @@ package grpcsuite
 import (
 	"context"
 	"strconv"
-	"testing"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	govv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	"github.com/stretchr/testify/require"
@@ -45,8 +45,12 @@ func (s *Suite) PassGovProposal(title string, msgs ...sdk.Msg) {
 	prop, err := govv1.NewMsgSubmitProposal(msgs, deposit, s.Env.FunderAddr.String(), "", title, title, false)
 	require.NoError(s.T, err, "build gov proposal")
 
+	lastProposalID := s.latestProposalID(gq)
 	res := s.BroadcastOK(s.Env.Funder, prop)
-	pid := proposalIDFromEvents(s.T, res)
+	pid, ok := proposalIDFromEvents(res)
+	if !ok {
+		pid = s.waitSubmittedProposalID(gq, title, lastProposalID)
+	}
 
 	s.BroadcastOK(s.Env.Funder, govv1.NewMsgVote(s.Env.FunderAddr, pid, govv1.VoteOption_VOTE_OPTION_YES, ""))
 	s.waitProposalPassed(gq, pid)
@@ -64,6 +68,74 @@ func (s *Suite) govMinDeposit(gq govv1.QueryClient) sdk.Coins {
 		return sdk.NewCoins(resp.Params.MinDeposit...)
 	}
 	return sdk.NewCoins(sdk.NewInt64Coin(s.Env.BondDenom, 10_000_000))
+}
+
+func (s *Suite) latestProposalID(gq govv1.QueryClient) uint64 {
+	s.T.Helper()
+
+	var maxID uint64
+	err := s.eachProposal(s.Ctx, gq, func(p *govv1.Proposal) bool {
+		if p.Id > maxID {
+			maxID = p.Id
+		}
+		return false
+	})
+	require.NoError(s.T, err, "query gov proposals before submit")
+	return maxID
+}
+
+func (s *Suite) waitSubmittedProposalID(gq govv1.QueryClient, title string, after uint64) uint64 {
+	s.T.Helper()
+
+	ctx, cancel := context.WithTimeout(s.Ctx, 20*time.Second)
+	defer cancel()
+
+	var lastErr error
+	for {
+		var found uint64
+		err := s.eachProposal(ctx, gq, func(p *govv1.Proposal) bool {
+			if p.Id > after && p.Title == title && p.Proposer == s.Env.FunderAddr.String() {
+				found = p.Id
+				return true
+			}
+			return false
+		})
+		if err == nil && found != 0 {
+			return found
+		}
+		if err != nil {
+			lastErr = err
+		}
+
+		select {
+		case <-ctx.Done():
+			s.T.Fatalf("gov proposal %q submitted but was not found in gov state after proposal %d: %v", title, after, lastErr)
+		case <-time.After(500 * time.Millisecond):
+		}
+	}
+}
+
+func (s *Suite) eachProposal(ctx context.Context, gq govv1.QueryClient, visit func(*govv1.Proposal) bool) error {
+	s.T.Helper()
+
+	var next []byte
+	for {
+		resp, err := gq.Proposals(ctx, &govv1.QueryProposalsRequest{
+			Pagination: &sdkquery.PageRequest{Key: next, Limit: 100},
+		})
+		if err != nil {
+			return err
+		}
+		for _, p := range resp.Proposals {
+			if p != nil && visit(p) {
+				return nil
+			}
+		}
+		if resp.Pagination == nil || len(resp.Pagination.NextKey) == 0 {
+			return nil
+		}
+		next = resp.Pagination.NextKey
+	}
 }
 
 func (s *Suite) waitProposalPassed(gq govv1.QueryClient, pid uint64) {
@@ -88,18 +160,22 @@ func (s *Suite) waitProposalPassed(gq govv1.QueryClient, pid uint64) {
 	}
 }
 
-// proposalIDFromEvents extracts the proposal_id emitted by a MsgSubmitProposal tx.
-func proposalIDFromEvents(t *testing.T, res *sdk.TxResponse) uint64 {
-	t.Helper()
+// proposalIDFromEvents extracts the proposal_id emitted by a MsgSubmitProposal tx
+// when tx indexing is enabled. Forked upgrade nodes may disable tx indexing, so
+// callers must fall back to gov state when this returns false.
+func proposalIDFromEvents(res *sdk.TxResponse) (uint64, bool) {
+	if res == nil {
+		return 0, false
+	}
 	for _, ev := range res.Events {
 		for _, a := range ev.Attributes {
 			if a.Key == "proposal_id" {
 				id, err := strconv.ParseUint(a.Value, 10, 64)
-				require.NoErrorf(t, err, "parse proposal_id %q", a.Value)
-				return id
+				if err == nil {
+					return id, true
+				}
 			}
 		}
 	}
-	t.Fatalf("proposal_id not found in submit-proposal tx events")
-	return 0
+	return 0, false
 }

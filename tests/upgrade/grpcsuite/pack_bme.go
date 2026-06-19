@@ -1,6 +1,9 @@
 package grpcsuite
 
 import (
+	"context"
+	"time"
+
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
@@ -46,8 +49,7 @@ func (bmePack) Run(s *Suite) {
 	vs, err := q.VaultState(s.Ctx, &bmev1.QueryVaultStateRequest{})
 	require.NoError(s.T, err, "VaultState")
 	require.NotNil(s.T, vs, "VaultState response")
-	st, err := q.Status(s.Ctx, &bmev1.QueryStatusRequest{})
-	require.NoError(s.T, err, "Status")
+	st := s.bmeStatusWithFreshPrice(q)
 	require.False(s.T, st.CollateralRatio.IsNil(), "Status should expose a collateral ratio")
 	_, err = q.LedgerRecords(s.Ctx, &bmev1.QueryLedgerRecordsRequest{Pagination: &sdkquery.PageRequest{Limit: 10}})
 	require.NoError(s.T, err, "LedgerRecords")
@@ -56,6 +58,36 @@ func (bmePack) Run(s *Suite) {
 
 	bmeNegatives(s, actor)
 	s.logf("bme complete (fund vault + mint ACT + burn ACT + burn/mint)")
+}
+
+func (s *Suite) bmeStatusWithFreshPrice(q bmev1.QueryClient) *bmev1.QueryStatusResponse {
+	s.T.Helper()
+
+	ctx, cancel := context.WithTimeout(s.Ctx, 45*time.Second)
+	defer cancel()
+
+	var lastErr error
+	var lastFeedHeight int64
+	for {
+		resp, err := q.Status(ctx, &bmev1.QueryStatusRequest{})
+		if err == nil {
+			return resp
+		}
+		lastErr = err
+
+		latest := s.LatestHeight()
+		if latest-lastFeedHeight >= 2 {
+			s.feedAKTPrice(3)
+			lastFeedHeight = s.LatestHeight()
+		}
+
+		select {
+		case <-ctx.Done():
+			require.NoError(s.T, lastErr, "Status")
+			return nil
+		case <-time.After(500 * time.Millisecond):
+		}
+	}
 }
 
 func bmeNegatives(s *Suite, actor sdk.AccAddress) {

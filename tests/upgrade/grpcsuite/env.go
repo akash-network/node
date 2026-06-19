@@ -145,6 +145,8 @@ func Run(ctx context.Context, t *testing.T, env Env) {
 	t.Logf("grpcsuite: discovered %d in-scope tx methods, %d in-scope query methods",
 		len(disc.InScopeMsgs()), len(disc.InScopeQueries()))
 
+	s.bootstrapFunderUact()
+
 	// Packs run sequentially (later packs depend on state earlier ones create via
 	// the shared World), so it is safe to retarget s.T at the active subtest rather
 	// than copying the Suite (which holds a mutex).

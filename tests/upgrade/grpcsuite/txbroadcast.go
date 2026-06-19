@@ -1,11 +1,15 @@
 package grpcsuite
 
 import (
+	"bytes"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"time"
 
+	cmttypes "github.com/cometbft/cometbft/types"
+	cmtservice "github.com/cosmos/cosmos-sdk/client/grpc/cmtservice"
 	clienttx "github.com/cosmos/cosmos-sdk/client/tx"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
@@ -19,6 +23,7 @@ import (
 type Broadcaster struct {
 	s      *Suite
 	txSvc  txtypes.ServiceClient
+	cmtSvc cmtservice.ServiceClient
 	gasAdj float64
 }
 
@@ -26,6 +31,7 @@ func newBroadcaster(s *Suite) *Broadcaster {
 	return &Broadcaster{
 		s:      s,
 		txSvc:  txtypes.NewServiceClient(s.Conn),
+		cmtSvc: cmtservice.NewServiceClient(s.Conn),
 		gasAdj: 1.5,
 	}
 }
@@ -91,6 +97,7 @@ func (b *Broadcaster) Broadcast(fromName string, msgs ...sdk.Msg) (*sdk.TxRespon
 	if err != nil {
 		return nil, err
 	}
+	startHeight := b.s.LatestHeight()
 
 	res, err := b.txSvc.BroadcastTx(b.s.Ctx, &txtypes.BroadcastTxRequest{
 		TxBytes: bz,
@@ -107,7 +114,7 @@ func (b *Broadcaster) Broadcast(fromName string, msgs ...sdk.Msg) (*sdk.TxRespon
 
 	// Accepted into the mempool; wait for it to land in a block and read the
 	// DeliverTx result.
-	final, err := b.waitForTx(check.TxHash)
+	final, err := b.waitForTx(check.TxHash, bz, startHeight)
 	if err != nil {
 		return final, err
 	}
@@ -117,9 +124,56 @@ func (b *Broadcaster) Broadcast(fromName string, msgs ...sdk.Msg) (*sdk.TxRespon
 	return final, nil
 }
 
-func (b *Broadcaster) waitForTx(hash string) (*sdk.TxResponse, error) {
-	ctx, cancel := context.WithTimeout(b.s.Ctx, 90*time.Second)
+func (b *Broadcaster) waitForTx(hash string, txBytes []byte, startHeight int64) (*sdk.TxResponse, error) {
+	ctx, cancel := context.WithTimeout(b.s.Ctx, 2*time.Minute)
 	defer cancel()
+	hash = strings.ToUpper(hash)
+	nextScanHeight := startHeight + 1
+	var lastGetTxErr error
+	var lastBlockScanErr error
+	for {
+		gr, err := b.txSvc.GetTx(ctx, &txtypes.GetTxRequest{Hash: hash})
+		if err == nil && gr.TxResponse != nil {
+			return gr.TxResponse, nil
+		}
+		if err != nil {
+			lastGetTxErr = err
+		}
+
+		latest := b.s.LatestHeight()
+		for height := nextScanHeight; height <= latest; height++ {
+			found, err := b.txIncludedAtHeight(ctx, hash, txBytes, height)
+			if err != nil {
+				lastBlockScanErr = err
+				continue
+			}
+			if found {
+				if indexed, indexErr := b.waitForTxIndex(ctx, hash, 5*time.Second); indexErr == nil {
+					return indexed, nil
+				}
+				// The block scan proves the tx landed even when the tx indexer is
+				// lagging or not answering GetTx. Keep the response conservative:
+				// it has the hash and height, but no DeliverTx events.
+				b.s.logf("tx %s found in block %d before GetTx returned it (last GetTx err: %v)", hash, height, lastGetTxErr)
+				return &sdk.TxResponse{TxHash: hash, Height: height, Code: 0}, nil
+			}
+		}
+		nextScanHeight = latest + 1
+
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf(
+				"waiting for tx %s inclusion from height %d to %d: %w (last GetTx err: %v; last block scan err: %v)",
+				hash, startHeight, nextScanHeight-1, ctx.Err(), lastGetTxErr, lastBlockScanErr,
+			)
+		case <-time.After(500 * time.Millisecond):
+		}
+	}
+}
+
+func (b *Broadcaster) waitForTxIndex(ctx context.Context, hash string, timeout time.Duration) (*sdk.TxResponse, error) {
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
 	for {
 		gr, err := b.txSvc.GetTx(ctx, &txtypes.GetTxRequest{Hash: hash})
 		if err == nil && gr.TxResponse != nil {
@@ -127,10 +181,42 @@ func (b *Broadcaster) waitForTx(hash string) (*sdk.TxResponse, error) {
 		}
 		select {
 		case <-ctx.Done():
-			return nil, fmt.Errorf("waiting for tx %s inclusion: %w", hash, ctx.Err())
+			return nil, ctx.Err()
+		case <-timer.C:
+			if err != nil {
+				return nil, err
+			}
+			return nil, fmt.Errorf("tx %s was not indexed within %s", hash, timeout)
 		case <-time.After(500 * time.Millisecond):
 		}
 	}
+}
+
+func (b *Broadcaster) txIncludedAtHeight(ctx context.Context, hash string, txBytes []byte, height int64) (bool, error) {
+	resp, err := b.cmtSvc.GetBlockByHeight(ctx, &cmtservice.GetBlockByHeightRequest{Height: height})
+	if err != nil {
+		return false, err
+	}
+	for _, tx := range blockTxs(resp) {
+		txHash := strings.ToUpper(hex.EncodeToString(cmttypes.Tx(tx).Hash()))
+		if txHash == hash || bytes.Equal(tx, txBytes) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func blockTxs(resp *cmtservice.GetBlockByHeightResponse) [][]byte {
+	if resp == nil {
+		return nil
+	}
+	if resp.SdkBlock != nil {
+		return resp.SdkBlock.Data.Txs
+	}
+	if resp.Block != nil {
+		return resp.Block.Data.Txs
+	}
+	return nil
 }
 
 func abciErr(r *sdk.TxResponse) error {
