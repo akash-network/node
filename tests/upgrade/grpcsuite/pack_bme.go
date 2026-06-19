@@ -19,11 +19,14 @@ type bmePack struct{}
 
 func (bmePack) Name() string { return "bme" }
 
-func (bmePack) Available(d *Discovery) bool { return d.HasModule("akash.bme.v1") }
+func (bmePack) Available(d *Discovery) bool {
+	return d.HasModule("akash.bme.v1") && d.HasModule("akash.oracle.v2")
+}
 
 func (bmePack) Run(s *Suite) {
 	q := bmev1.NewQueryClient(s.Conn)
 	actor := s.FundAccountDefault("bme") // holds both uakt and uact
+	_ = s.Addr("pricewriter")            // created and authorized by the oracle pack
 
 	akt := func(n int64) sdk.Coin { return sdk.NewCoin(sdkutil.DenomUakt, sdkmath.NewInt(n)) }
 	act := func(n int64) sdk.Coin { return sdk.NewCoin(sdkutil.DenomUact, sdkmath.NewInt(n)) }

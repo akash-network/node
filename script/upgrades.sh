@@ -531,6 +531,9 @@ function prepare_state() {
 
 	if [[ -n "$UPGRADE_TO" && -x "$rvaldir/cosmovisor/upgrades/$UPGRADE_TO/bin/akash" ]]; then
 		echo "rolling snapshot back before testnetify"
+		# Testnetify must commit one fork-state block before the scheduled upgrade
+		# height. Cached snapshots can sit at the last pre-upgrade height, so roll
+		# back twice to start one block earlier.
 		"$rvaldir/cosmovisor/upgrades/$UPGRADE_TO/bin/akash" rollback --home "$rvaldir" --hard
 		"$rvaldir/cosmovisor/upgrades/$UPGRADE_TO/bin/akash" rollback --home "$rvaldir" --hard
 		cat >"$rvaldir/data/priv_validator_state.json" <<EOL

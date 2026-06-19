@@ -36,25 +36,25 @@ func newBroadcaster(s *Suite) *Broadcaster {
 	}
 }
 
-// sign builds, simulates for gas, and signs a tx in DIRECT mode, returning the
-// encoded tx bytes. Account number/sequence are fetched fresh over gRPC.
-func (b *Broadcaster) sign(fromName string, msgs []sdk.Msg) ([]byte, error) {
+// txFactory prepares the local signing factory. Account number/sequence are
+// fetched fresh over gRPC.
+func (b *Broadcaster) txFactory(fromName string) (clienttx.Factory, error) {
 	s := b.s
 	rec, err := s.Env.Keyring.Key(fromName)
 	if err != nil {
-		return nil, fmt.Errorf("keyring lookup %q: %w", fromName, err)
+		return clienttx.Factory{}, fmt.Errorf("keyring lookup %q: %w", fromName, err)
 	}
 	addr, err := rec.GetAddress()
 	if err != nil {
-		return nil, err
+		return clienttx.Factory{}, err
 	}
 
 	num, seq, err := s.Cctx.AccountRetriever.GetAccountNumberSequence(s.Cctx, addr)
 	if err != nil {
-		return nil, fmt.Errorf("account number/sequence for %s: %w", addr, err)
+		return clienttx.Factory{}, fmt.Errorf("account number/sequence for %s: %w", addr, err)
 	}
 
-	txf := clienttx.Factory{}.
+	return clienttx.Factory{}.
 		WithChainID(s.Env.ChainID).
 		WithKeybase(s.Env.Keyring).
 		WithTxConfig(s.Env.TxConfig).
@@ -64,11 +64,47 @@ func (b *Broadcaster) sign(fromName string, msgs []sdk.Msg) ([]byte, error) {
 		WithGasPrices(s.Env.GasPrices).
 		WithFromName(fromName).
 		WithAccountNumber(num).
-		WithSequence(seq)
+		WithSequence(seq), nil
+}
+
+func (b *Broadcaster) requireLocallySignable(txf clienttx.Factory, fromName string, msgs []sdk.Msg) error {
+	s := b.s
+	txb, err := txf.WithGas(1).BuildUnsignedTx(msgs...)
+	if err != nil {
+		return err
+	}
+	if err := clienttx.Sign(s.Ctx, txf, fromName, txb, true); err != nil {
+		return fmt.Errorf("sign: %w", err)
+	}
+	if _, err := s.Env.TxConfig.TxEncoder()(txb.GetTx()); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (b *Broadcaster) simulateGas(txf clienttx.Factory, msgs []sdk.Msg) (uint64, error) {
+	txBytes, err := txf.BuildSimTx(msgs...)
+	if err != nil {
+		return 0, err
+	}
+	simRes, err := b.txSvc.Simulate(b.s.Ctx, &txtypes.SimulateRequest{TxBytes: txBytes})
+	if err != nil {
+		return 0, err
+	}
+	if simRes == nil || simRes.GasInfo == nil {
+		return 0, fmt.Errorf("simulate gas response was empty")
+	}
+	return uint64(txf.GasAdjustment() * float64(simRes.GasInfo.GasUsed)), nil
+}
+
+// sign simulates for gas over gRPC and signs a tx in DIRECT mode, returning the
+// encoded tx bytes.
+func (b *Broadcaster) sign(txf clienttx.Factory, fromName string, msgs []sdk.Msg) ([]byte, error) {
+	s := b.s
 
 	// Simulate over gRPC to compute an accurate gas limit; fees are derived from
 	// gas prices in BuildUnsignedTx.
-	_, adjusted, err := clienttx.CalculateGas(s.Cctx, txf, msgs...)
+	adjusted, err := b.simulateGas(txf, msgs)
 	if err != nil {
 		return nil, fmt.Errorf("simulate gas: %w", err)
 	}
@@ -89,15 +125,26 @@ func (b *Broadcaster) sign(fromName string, msgs []sdk.Msg) ([]byte, error) {
 // (at CheckTx or DeliverTx) is returned as an error alongside the response so
 // callers can assert on either.
 func (b *Broadcaster) Broadcast(fromName string, msgs ...sdk.Msg) (*sdk.TxResponse, error) {
+	txf, err := b.txFactory(fromName)
+	if err != nil {
+		return nil, err
+	}
+	if err := b.requireLocallySignable(txf, fromName, msgs); err != nil {
+		return nil, err
+	}
+
 	for _, m := range msgs {
 		b.s.Cov.recordMsg(sdk.MsgTypeURL(m))
 	}
 
-	bz, err := b.sign(fromName, msgs)
+	bz, err := b.sign(txf, fromName, msgs)
 	if err != nil {
 		return nil, err
 	}
-	startHeight := b.s.LatestHeight()
+	startHeight, err := b.latestHeight(b.s.Ctx)
+	if err != nil {
+		return nil, fmt.Errorf("latest height before broadcast: %w", err)
+	}
 
 	res, err := b.txSvc.BroadcastTx(b.s.Ctx, &txtypes.BroadcastTxRequest{
 		TxBytes: bz,
@@ -140,25 +187,29 @@ func (b *Broadcaster) waitForTx(hash string, txBytes []byte, startHeight int64) 
 			lastGetTxErr = err
 		}
 
-		latest := b.s.LatestHeight()
-		for height := nextScanHeight; height <= latest; height++ {
-			found, err := b.txIncludedAtHeight(ctx, hash, txBytes, height)
-			if err != nil {
-				lastBlockScanErr = err
-				continue
-			}
-			if found {
-				if indexed, indexErr := b.waitForTxIndex(ctx, hash, 5*time.Second); indexErr == nil {
-					return indexed, nil
+		latest, err := b.latestHeight(ctx)
+		if err != nil {
+			lastBlockScanErr = err
+		} else {
+			for height := nextScanHeight; height <= latest; height++ {
+				found, err := b.txIncludedAtHeight(ctx, hash, txBytes, height)
+				if err != nil {
+					lastBlockScanErr = err
+					continue
 				}
-				// The block scan proves the tx landed even when the tx indexer is
-				// lagging or not answering GetTx. Keep the response conservative:
-				// it has the hash and height, but no DeliverTx events.
-				b.s.logf("tx %s found in block %d before GetTx returned it (last GetTx err: %v)", hash, height, lastGetTxErr)
-				return &sdk.TxResponse{TxHash: hash, Height: height, Code: 0}, nil
+				if found {
+					if indexed, indexErr := b.waitForTxIndex(ctx, hash, 5*time.Second); indexErr == nil {
+						return indexed, nil
+					}
+					// The block scan proves the tx landed even when the tx indexer is
+					// lagging or not answering GetTx. Keep the response conservative:
+					// it has the hash and height, but no DeliverTx events.
+					b.s.logf("tx %s found in block %d before GetTx returned it (last GetTx err: %v)", hash, height, lastGetTxErr)
+					return &sdk.TxResponse{TxHash: hash, Height: height, Code: 0}, nil
+				}
 			}
+			nextScanHeight = latest + 1
 		}
-		nextScanHeight = latest + 1
 
 		select {
 		case <-ctx.Done():
@@ -169,6 +220,23 @@ func (b *Broadcaster) waitForTx(hash string, txBytes []byte, startHeight int64) 
 		case <-time.After(500 * time.Millisecond):
 		}
 	}
+}
+
+func (b *Broadcaster) latestHeight(ctx context.Context) (int64, error) {
+	resp, err := b.cmtSvc.GetLatestBlock(ctx, &cmtservice.GetLatestBlockRequest{})
+	if err != nil {
+		return 0, err
+	}
+	if resp == nil {
+		return 0, fmt.Errorf("latest block response was empty")
+	}
+	if resp.SdkBlock != nil {
+		return resp.SdkBlock.Header.Height, nil
+	}
+	if resp.Block != nil {
+		return resp.Block.Header.Height, nil
+	}
+	return 0, fmt.Errorf("latest block response was empty")
 }
 
 func (b *Broadcaster) waitForTxIndex(ctx context.Context, hash string, timeout time.Duration) (*sdk.TxResponse, error) {

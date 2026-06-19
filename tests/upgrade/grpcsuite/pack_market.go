@@ -56,7 +56,7 @@ func (mp marketPack) Run(s *Suite) {
 	for _, o := range orders.Orders {
 		require.Equal(s.T, depID.Owner, o.ID.Owner, "owner filter must only return owner's orders")
 	}
-	mp.assertOrdersPaginate(q, depID.Owner)
+	mp.assertOrdersPaginate(s, q, depID.Owner)
 
 	// Bid queries: assert content.
 	bidResp, err := q.Bid(s.Ctx, &mvbeta.QueryBidRequest{ID: bidA.ID})
@@ -128,14 +128,15 @@ func (mp marketPack) Run(s *Suite) {
 }
 
 // assertOrdersPaginate verifies the pagination Limit caps the returned orders.
-func (marketPack) assertOrdersPaginate(q mvbeta.QueryClient, owner string) {
+func (marketPack) assertOrdersPaginate(s *Suite, q mvbeta.QueryClient, owner string) {
 	// pagination is verified against the global order set (limit must be honored).
-	resp, err := q.Orders(context.Background(), &mvbeta.QueryOrdersRequest{
+	resp, err := q.Orders(s.Ctx, &mvbeta.QueryOrdersRequest{
 		Filters:    mvbeta.OrderFilters{Owner: owner},
 		Pagination: &sdkquery.PageRequest{Limit: 1},
 	})
-	_ = err
-	_ = resp
+	require.NoError(s.T, err, "Orders pagination")
+	require.NotNil(s.T, resp, "Orders pagination response")
+	require.LessOrEqual(s.T, len(resp.Orders), 1, "Orders pagination limit must be honored")
 }
 
 // marketNegatives exercises edge cases that must be rejected, against bogus or
@@ -199,7 +200,7 @@ func (s *Suite) findOrder(q mvbeta.QueryClient, owner string, dseq uint64) mvbet
 	ctx, cancel := context.WithTimeout(s.Ctx, 30*time.Second)
 	defer cancel()
 	for {
-		resp, err := q.Orders(s.Ctx, &mvbeta.QueryOrdersRequest{
+		resp, err := q.Orders(ctx, &mvbeta.QueryOrdersRequest{
 			Filters:    mvbeta.OrderFilters{Owner: owner, DSeq: dseq},
 			Pagination: &sdkquery.PageRequest{Limit: 10},
 		})

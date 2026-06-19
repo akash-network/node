@@ -10,6 +10,7 @@ import (
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	"github.com/stretchr/testify/require"
 
 	bmev1 "pkg.akt.dev/go/node/bme/v1"
 	dvbeta "pkg.akt.dev/go/node/deployment/v1beta4"
@@ -37,46 +38,46 @@ func (govParamsPack) Run(s *Suite) {
 
 	if d := s.Disc; d.HasModule("akash.deployment.v1beta4") {
 		p, err := dvbeta.NewQueryClient(s.Conn).Params(s.Ctx, &dvbeta.QueryParamsRequest{})
-		if err == nil {
-			msgs = append(msgs, &dvbeta.MsgUpdateParams{Authority: authority, Params: p.Params})
-		}
+		require.NoError(s.T, err, "deployment Params")
+		require.NotNil(s.T, p, "deployment Params response")
+		msgs = append(msgs, &dvbeta.MsgUpdateParams{Authority: authority, Params: p.Params})
 	}
 	if d := s.Disc; d.HasModule("akash.market.v1beta5") {
 		p, err := mvbeta.NewQueryClient(s.Conn).Params(s.Ctx, &mvbeta.QueryParamsRequest{})
-		if err == nil {
-			msgs = append(msgs, &mvbeta.MsgUpdateParams{Authority: authority, Params: p.Params})
-		}
+		require.NoError(s.T, err, "market Params")
+		require.NotNil(s.T, p, "market Params response")
+		msgs = append(msgs, &mvbeta.MsgUpdateParams{Authority: authority, Params: p.Params})
 	}
 	if d := s.Disc; d.HasModule("akash.oracle.v2") {
 		p, err := oraclev2.NewQueryClient(s.Conn).Params(s.Ctx, &oraclev2.QueryParamsRequest{})
-		if err == nil {
-			msgs = append(msgs, &oraclev2.MsgUpdateParams{Authority: authority, Params: p.Params})
-		}
+		require.NoError(s.T, err, "oracle Params")
+		require.NotNil(s.T, p, "oracle Params response")
+		msgs = append(msgs, &oraclev2.MsgUpdateParams{Authority: authority, Params: p.Params})
 	}
 	if d := s.Disc; d.HasModule("akash.bme.v1") {
 		p, err := bmev1.NewQueryClient(s.Conn).Params(s.Ctx, &bmev1.QueryParamsRequest{})
-		if err == nil {
-			msgs = append(msgs, &bmev1.MsgUpdateParams{Authority: authority, Params: p.Params})
-		}
+		require.NoError(s.T, err, "bme Params")
+		require.NotNil(s.T, p, "bme Params response")
+		msgs = append(msgs, &bmev1.MsgUpdateParams{Authority: authority, Params: p.Params})
 	}
 	if d := s.Disc; d.HasModule("akash.wasm.v1") {
 		p, err := wasmv1.NewQueryClient(s.Conn).Params(s.Ctx, &wasmv1.QueryParamsRequest{})
-		if err == nil {
-			msgs = append(msgs, &wasmv1.MsgUpdateParams{Authority: authority, Params: p.Params})
-		}
+		require.NoError(s.T, err, "wasm Params")
+		require.NotNil(s.T, p, "wasm Params response")
+		msgs = append(msgs, &wasmv1.MsgUpdateParams{Authority: authority, Params: p.Params})
 	}
 	if d := s.Disc; d.HasModule("cosmos.auth.v1beta1") {
 		p, err := authtypes.NewQueryClient(s.Conn).Params(s.Ctx, &authtypes.QueryParamsRequest{})
-		if err == nil {
-			msgs = append(msgs, &authtypes.MsgUpdateParams{Authority: authority, Params: p.Params})
-		}
+		require.NoError(s.T, err, "auth Params")
+		require.NotNil(s.T, p, "auth Params response")
+		msgs = append(msgs, &authtypes.MsgUpdateParams{Authority: authority, Params: p.Params})
 	}
 	if d := s.Disc; d.HasModule("cosmos.bank.v1beta1") {
 		q := banktypes.NewQueryClient(s.Conn)
 		p, err := q.Params(s.Ctx, &banktypes.QueryParamsRequest{})
-		if err == nil {
-			msgs = append(msgs, &banktypes.MsgUpdateParams{Authority: authority, Params: p.Params})
-		}
+		require.NoError(s.T, err, "bank Params")
+		require.NotNil(s.T, p, "bank Params response")
+		msgs = append(msgs, &banktypes.MsgUpdateParams{Authority: authority, Params: p.Params})
 		msgs = append(msgs, banktypes.NewMsgSetSendEnabled(
 			authority,
 			[]*banktypes.SendEnabled{{Denom: s.Env.BondDenom, Enabled: true}},
@@ -85,45 +86,47 @@ func (govParamsPack) Run(s *Suite) {
 	}
 	if d := s.Disc; d.HasModule("cosmos.consensus.v1") {
 		p, err := consensustypes.NewQueryClient(s.Conn).Params(s.Ctx, &consensustypes.QueryParamsRequest{})
-		if err == nil && p.Params != nil {
-			msgs = append(msgs, &consensustypes.MsgUpdateParams{
-				Authority: authority,
-				Block:     p.Params.Block,
-				Evidence:  p.Params.Evidence,
-				Validator: p.Params.Validator,
-				Abci:      p.Params.Abci,
-			})
-		}
+		require.NoError(s.T, err, "consensus Params")
+		require.NotNil(s.T, p, "consensus Params response")
+		require.NotNil(s.T, p.Params, "consensus params")
+		msgs = append(msgs, &consensustypes.MsgUpdateParams{
+			Authority: authority,
+			Block:     p.Params.Block,
+			Evidence:  p.Params.Evidence,
+			Validator: p.Params.Validator,
+			Abci:      p.Params.Abci,
+		})
 	}
 	if d := s.Disc; d.HasModule("cosmos.distribution.v1beta1") {
 		p, err := distrtypes.NewQueryClient(s.Conn).Params(s.Ctx, &distrtypes.QueryParamsRequest{})
-		if err == nil {
-			msgs = append(msgs, &distrtypes.MsgUpdateParams{Authority: authority, Params: p.Params})
-		}
+		require.NoError(s.T, err, "distribution Params")
+		require.NotNil(s.T, p, "distribution Params response")
+		msgs = append(msgs, &distrtypes.MsgUpdateParams{Authority: authority, Params: p.Params})
 	}
 	if d := s.Disc; d.HasModule("cosmos.gov.v1") {
 		p, err := govv1.NewQueryClient(s.Conn).Params(s.Ctx, &govv1.QueryParamsRequest{})
-		if err == nil && p.Params != nil {
-			msgs = append(msgs, &govv1.MsgUpdateParams{Authority: authority, Params: govParamsForUpdate(*p.Params)})
-		}
+		require.NoError(s.T, err, "gov Params")
+		require.NotNil(s.T, p, "gov Params response")
+		require.NotNil(s.T, p.Params, "gov params")
+		msgs = append(msgs, &govv1.MsgUpdateParams{Authority: authority, Params: govParamsForUpdate(*p.Params)})
 	}
 	if d := s.Disc; d.HasModule("cosmos.mint.v1beta1") {
 		p, err := minttypes.NewQueryClient(s.Conn).Params(s.Ctx, &minttypes.QueryParamsRequest{})
-		if err == nil {
-			msgs = append(msgs, &minttypes.MsgUpdateParams{Authority: authority, Params: p.Params})
-		}
+		require.NoError(s.T, err, "mint Params")
+		require.NotNil(s.T, p, "mint Params response")
+		msgs = append(msgs, &minttypes.MsgUpdateParams{Authority: authority, Params: p.Params})
 	}
 	if d := s.Disc; d.HasModule("cosmos.slashing.v1beta1") {
 		p, err := slashingtypes.NewQueryClient(s.Conn).Params(s.Ctx, &slashingtypes.QueryParamsRequest{})
-		if err == nil {
-			msgs = append(msgs, &slashingtypes.MsgUpdateParams{Authority: authority, Params: p.Params})
-		}
+		require.NoError(s.T, err, "slashing Params")
+		require.NotNil(s.T, p, "slashing Params response")
+		msgs = append(msgs, &slashingtypes.MsgUpdateParams{Authority: authority, Params: p.Params})
 	}
 	if d := s.Disc; d.HasModule("cosmos.staking.v1beta1") {
 		p, err := stakingtypes.NewQueryClient(s.Conn).Params(s.Ctx, &stakingtypes.QueryParamsRequest{})
-		if err == nil {
-			msgs = append(msgs, &stakingtypes.MsgUpdateParams{Authority: authority, Params: p.Params})
-		}
+		require.NoError(s.T, err, "staking Params")
+		require.NotNil(s.T, p, "staking Params response")
+		msgs = append(msgs, &stakingtypes.MsgUpdateParams{Authority: authority, Params: p.Params})
 	}
 
 	if len(msgs) == 0 {
