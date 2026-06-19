@@ -79,6 +79,7 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig sdkutil.EncodingConfig) 
 		rosettaCmd.RosettaCommand(encodingConfig.InterfaceRegistry, encodingConfig.Codec),
 		pruning.Cmd(ac.newApp, home),
 		snapshot.Cmd(ac.newApp),
+		sdkserver.NewRollbackCmd(ac.newApp, home),
 		testnetCmd(app.ModuleBasics(), banktypes.GenesisBalancesIterator{}),
 		PrepareGenesisCmd(app.DefaultHome, app.ModuleBasics()),
 		testnetify.GetCmd(ac.newTestnetApp),

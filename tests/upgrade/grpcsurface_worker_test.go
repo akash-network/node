@@ -51,8 +51,8 @@ func (w *grpcSurfaceWorker) Run(ctx context.Context, t *testing.T, params uttype
 		FunderAddr:   params.FromAddress,
 		BondDenom:    sdkutil.DenomUakt,
 		GasPrices:    "0.025uakt",
-		// Enforce full coverage post-upgrade: fail if any in-scope Akash tx or
-		// query was not exercised against the upgraded chain.
+		// Enforce full coverage post-upgrade: fail if any in-scope tx or query
+		// was not exercised against the upgraded chain.
 		RequireFullCoverage: true,
 	}
 

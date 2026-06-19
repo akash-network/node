@@ -1,8 +1,9 @@
 # grpcsuite — exhaustive post-upgrade gRPC tx/query verification
 
-`grpcsuite` exercises **every Akash transaction and every query over the chain's
-gRPC API** after a network upgrade, so that a passing run means the upgraded
-chain's API surface is verified accurate. CLI is explicitly out of scope.
+`grpcsuite` exercises **every in-scope Akash and mounted Cosmos SDK transaction,
+plus every in-scope query over the chain's gRPC API** after a network upgrade, so
+that a passing run means the upgraded chain's API surface is verified accurate.
+CLI is explicitly out of scope.
 
 It runs in two places against the **same** code:
 
@@ -58,21 +59,18 @@ The deployment, provider and gov-params packs are worked examples.
 
 ## Status
 
-**Full Akash coverage** — run `make test-grpc-surface` and read the `coverage:` line:
-- **Queries: 30/30 Akash modules, 130/130 in-scope methods** (smoke sweep + authored).
-- **Transactions: 30/30 Akash messages.** deployment (full lifecycle), provider
-  (create/update; delete correctly rejected as disabled), market (bid → lease →
-  withdraw → reclaim-rejected → close lease → close bid), audit (sign/delete
-  attributes), escrow (account deposit), cert (create/revoke), oracle (authorize
-  source + add price), bme (fund vault + mint ACT; burn ACT / burn-mint tolerate
-  the circuit-breaker rejection), and all `MsgUpdateParams` via the gov fast-path.
+**Full in-scope coverage** — run `make test-grpc-surface` and read the
+`coverage:` line:
+- **Queries: 130/130 in-scope methods** (smoke sweep + authored typed cases).
+- **Transactions: 76/76 in-scope messages.** Akash coverage includes deployment,
+  provider, market, audit, escrow, cert, oracle, bme and module params. Cosmos SDK
+  coverage includes auth, authz, bank, consensus, distribution, evidence,
+  feegrant, gov v1, legacy gov v1beta1, mint, slashing, staking, upgrade and
+  vesting.
 
 `RequireFullCoverage` is `true` in both drivers, so the gate **fails** if any
-in-scope Akash tx or query stops being exercised — e.g. when a future upgrade adds
-a new Akash RPC, until a case is authored for it.
-
-Cosmos-SDK transactions are not yet gated (their queries are, via the smoke sweep);
-they are the natural next tier to add for downstream-effect coverage.
+in-scope tx or query stops being exercised — e.g. when a future upgrade adds a new
+Akash or mounted Cosmos SDK RPC, until a case is authored for it.
 
 The suite targets exactly the surface the running `main` binary serves: discovery
 is driven by gRPC reflection + the interface registry, and every pack is

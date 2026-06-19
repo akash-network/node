@@ -25,5 +25,13 @@ var packs = []Pack{
 	certPack{},
 	oraclePack{},
 	bmePack{},
+	cosmosBankPack{},
+	cosmosAuthVestingPack{},
+	cosmosAuthzPack{},
+	cosmosFeegrantPack{},
+	cosmosGovPack{},
+	cosmosStakingPack{},
+	cosmosDistributionPack{},
+	cosmosMiscPack{},
 	govParamsPack{},
 }

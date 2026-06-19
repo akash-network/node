@@ -438,6 +438,13 @@ function prepare_state() {
 		cosmovisor_dir=$valdir/cosmovisor
 		genesis_bin=$cosmovisor_dir/genesis/bin
 
+		rm -rf "$cosmovisor_dir/current"
+		rm -f "$cosmovisor_dir/upgrades/${UPGRADE_TO}/upgrade-info.json"
+		pushd "$(pwd)"
+		cd "$cosmovisor_dir"
+		ln -snf genesis current
+		popd
+
 		genesis_file=${valdir}/config/genesis.json
 		addrbook_file=${valdir}/config/genesis.json
 		rm -f "$genesis_file"
@@ -491,11 +498,13 @@ function prepare_state() {
 			cd "${valdir}"
 
 			echo "Unpacking snapshot from $snap_file..."
+			rm -rf data
 
 			# shellcheck disable=SC2086
 			(pv -petrafb -i 5 "$snap_file" | eval "$tar_cmd") 2>&1 | stdbuf -o0 tr '\r' '\n'
 
 			rm -f upgrade-info.json
+			rm -f data/upgrade-info.json
 
 			popd
 		else
@@ -520,8 +529,69 @@ function prepare_state() {
 
 	rvaldir=$validators_dir/.akash0
 
+	if [[ -n "$UPGRADE_TO" && -x "$rvaldir/cosmovisor/upgrades/$UPGRADE_TO/bin/akash" ]]; then
+		echo "rolling snapshot back before testnetify"
+		"$rvaldir/cosmovisor/upgrades/$UPGRADE_TO/bin/akash" rollback --home "$rvaldir" --hard
+		"$rvaldir/cosmovisor/upgrades/$UPGRADE_TO/bin/akash" rollback --home "$rvaldir" --hard
+		cat >"$rvaldir/data/priv_validator_state.json" <<EOL
+{
+  "height": "0",
+  "round": 0,
+  "step": 0
+}
+EOL
+	fi
+
 	echo "testnetifying state"
-	$AKASH testnetify --home="$rvaldir" --testnet-rootdir="$validators_dir" --testnet-config="${STATE_CONFIG}" --yes
+	$AKASH testnetify --home="$rvaldir" --testnet-rootdir="$validators_dir" --testnet-config="${STATE_CONFIG}" --yes &
+	rpid=$!
+
+	local testnetify_wait
+	local testnetify_timeout
+	testnetify_wait=0
+	testnetify_timeout=${TESTNETIFY_TIMEOUT_SECONDS:-600}
+	while kill -0 "$rpid" 2>/dev/null; do
+		if [[ -f "$rvaldir/data/upgrade-info.json" ]]; then
+			kill "$rpid" 2>/dev/null || true
+			wait "$rpid" || true
+			rpid=
+			break
+		fi
+		if [[ $testnetify_wait -ge $testnetify_timeout ]]; then
+			kill "$rpid" 2>/dev/null || true
+			wait "$rpid" || true
+			echoerr "testnetify did not complete within ${testnetify_timeout}s"
+			return 1
+		fi
+		sleep 1
+		testnetify_wait=$((testnetify_wait + 1))
+	done
+	if [[ -n "$rpid" ]]; then
+		if ! wait "$rpid"; then
+			if [[ ! -f "$rvaldir/data/upgrade-info.json" ]]; then
+				return 1
+			fi
+		fi
+	fi
+
+	if [[ -f "$rvaldir/data/upgrade-info.json" ]]; then
+		local rollback_upgrade
+		rollback_upgrade=$UPGRADE_TO
+		if [[ -z "$rollback_upgrade" ]]; then
+			rollback_upgrade=$(jq -r '.name' "$rvaldir/data/upgrade-info.json")
+		fi
+
+		echo "testnetify reached upgrade height; rolling back pending upgrade block"
+		"$rvaldir/cosmovisor/upgrades/$rollback_upgrade/bin/akash" rollback --home "$rvaldir" --hard
+		rm -f "$rvaldir/data/upgrade-info.json"
+		cat >"$rvaldir/data/priv_validator_state.json" <<EOL
+{
+  "height": "0",
+  "round": 0,
+  "step": 0
+}
+EOL
+	fi
 
 	if [[ $MAX_VALIDATORS -gt 1 ]]; then
 		echo "starting testnet validator"

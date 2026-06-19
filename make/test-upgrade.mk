@@ -59,12 +59,6 @@ init: $(COSMOVISOR) $(AKASH_INIT)
 .PHONY: genesis
 genesis: $(GENESIS_DEST)
 
-# Optionally run the exhaustive gRPC tx/query suite as a post-upgrade step.
-# Enable with `make test GRPC_SUITE=true` (off by default, like the hermes relayer).
-ifeq ($(GRPC_SUITE),true)
-GRPC_SUITE_ARG := -grpc-suite=true
-endif
-
 .PHONY: test
 test: init
 	$(GO_TEST) -run "^\QTestUpgrade\E$$" -tags e2e.upgrade -timeout 180m -v -args \
@@ -74,8 +68,7 @@ test: init
 		-config=$(TEST_CONFIG) \
 		-upgrade-name=$(UPGRADE_TO) \
 		-upgrade-version="$(UPGRADE_BINARY_VERSION)" \
-		-test-cases=test-cases.json \
-		$(GRPC_SUITE_ARG)
+		-test-cases=test-cases.json
 
 
 .PHONY: setup-hermes
@@ -91,11 +84,11 @@ test-reset:
 	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) --snapshot-url=$(SNAPSHOT_URL) --chain-meta=$(CHAIN_METADATA_URL) --max-validators=$(MAX_VALIDATORS) clean
 	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) --snapshot-url=$(SNAPSHOT_URL) --gbv=$(GENESIS_BINARY_VERSION) --chain-meta=$(CHAIN_METADATA_URL) bins
 	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --uto=$(UPGRADE_TO) --snapshot-url=$(SNAPSHOT_URL) --chain-meta=$(CHAIN_METADATA_URL) keys
-	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --state-config=$(STATE_CONFIG) --snapshot-url=$(SNAPSHOT_URL) --chain-meta=$(CHAIN_METADATA_URL) --max-validators=$(MAX_VALIDATORS) prepare-state
+	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --state-config=$(STATE_CONFIG) --snapshot-url=$(SNAPSHOT_URL) --chain-meta=$(CHAIN_METADATA_URL) --uto=$(UPGRADE_TO) --max-validators=$(MAX_VALIDATORS) prepare-state
 
 .PHONY: prepare-state
 prepare-state:
-	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --state-config=$(STATE_CONFIG) --chain-meta=$(CHAIN_METADATA_URL) --max-validators=$(MAX_VALIDATORS) prepare-state
+	$(ROOT_DIR)/script/upgrades.sh --workdir=$(AP_RUN_DIR) --config="$(PWD)/config.json" --state-config=$(STATE_CONFIG) --chain-meta=$(CHAIN_METADATA_URL) --uto=$(UPGRADE_TO) --max-validators=$(MAX_VALIDATORS) prepare-state
 
 .PHONY: bins
 bins:

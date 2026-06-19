@@ -36,11 +36,34 @@ var inScopePrefixes = []string{
 	"cosmos.evidence.",
 }
 
-// strictMsgPrefixes are packages whose every served Msg RPC MUST be exercised by an
-// authored tx case. This is the Akash-specific API surface that an upgrade can
-// regress and that nothing upstream covers. Cosmos/wasm txs are exercised
-// opportunistically but not gated.
-var strictMsgPrefixes = []string{"akash."}
+// strictMsgPrefixes are packages whose every served Msg RPC MUST be exercised by
+// an authored tx case. Keep this list aligned with the packs in pack.go: widening
+// it without an authored pack turns the coverage gate into a noisy type registry
+// check instead of a real post-upgrade acceptance test.
+var strictMsgPrefixes = []string{
+	"akash.",
+	"cosmos.auth.",
+	"cosmos.authz.",
+	"cosmos.bank.",
+	"cosmos.consensus.",
+	"cosmos.distribution.",
+	"cosmos.evidence.",
+	"cosmos.feegrant.",
+	"cosmos.gov.",
+	"cosmos.mint.",
+	"cosmos.slashing.",
+	"cosmos.staking.",
+	"cosmos.upgrade.",
+	"cosmos.vesting.",
+}
+
+// msgOnlyPkgs are mounted modules with Msg services but no Query service. Most
+// modules are discovered by matching Msg packages to served Query packages, which
+// filters inactive historical versions. Vesting is different: Akash mounts its Msg
+// server but the SDK module has no query service.
+var msgOnlyPkgs = map[string]bool{
+	"cosmos.vesting.v1beta1": true,
+}
 
 func inScope(name string) bool {
 	for _, p := range inScopePrefixes {
@@ -155,7 +178,7 @@ func discover(ctx context.Context, conn *grpc.ClientConn, ireg codectypes.Interf
 		if idx < 0 {
 			continue
 		}
-		if pkg := trimmed[:idx]; servedQueryPkgs[pkg] {
+		if pkg := trimmed[:idx]; servedQueryPkgs[pkg] || msgOnlyPkgs[pkg] {
 			d.msgs[u] = pkg
 		}
 	}

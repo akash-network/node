@@ -76,7 +76,7 @@ func TestFullSurfaceGRPC(t *testing.T) {
 		FunderAddr:   val.Address,
 		BondDenom:    cfg.BondDenom,
 		GasPrices:    "0.025uakt",
-		// Enforce full coverage: fail if any in-scope Akash tx or query is not
+		// Enforce full coverage: fail if any in-scope tx or query is not
 		// exercised (a new RPC added by a future upgrade turns this red).
 		RequireFullCoverage: true,
 	}
