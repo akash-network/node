@@ -69,11 +69,12 @@ The deployment, provider and gov-params packs are worked examples.
 **Full in-scope coverage** — run `make test-grpc-surface` and read the
 `coverage:` line:
 - **Queries: 130/130 in-scope methods** (smoke sweep + authored typed cases).
-- **Transactions: 76/76 in-scope messages.** Akash coverage includes deployment,
+- **Transactions: 93/93 in-scope messages.** Akash coverage includes deployment,
   provider, market, audit, escrow, cert, oracle, bme and module params. Cosmos SDK
   coverage includes auth, authz, bank, consensus, distribution, evidence,
   feegrant, gov v1, legacy gov v1beta1, mint, slashing, staking, upgrade and
-  vesting.
+  vesting. CosmWasm coverage includes store, instantiate, execute, migrate, admin,
+  code config, pin/unpin and wasm params.
 
 `RequireFullCoverage` is `true` in both drivers, so the gate **fails** if any
 in-scope tx or query stops being exercised — e.g. when a future upgrade adds a new

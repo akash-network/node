@@ -33,5 +33,6 @@ var packs = []Pack{
 	cosmosStakingPack{},
 	cosmosDistributionPack{},
 	cosmosMiscPack{},
+	cosmwasmPack{},
 	govParamsPack{},
 }

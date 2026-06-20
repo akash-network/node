@@ -1,6 +1,7 @@
 package grpcsuite
 
 import (
+	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -65,6 +66,12 @@ func (govParamsPack) Run(s *Suite) {
 		require.NoError(s.T, err, "wasm Params")
 		require.NotNil(s.T, p, "wasm Params response")
 		msgs = append(msgs, &wasmv1.MsgUpdateParams{Authority: authority, Params: p.Params})
+	}
+	if d := s.Disc; d.HasModule("cosmwasm.wasm.v1") {
+		p, err := wasmtypes.NewQueryClient(s.Conn).Params(s.Ctx, &wasmtypes.QueryParamsRequest{})
+		require.NoError(s.T, err, "cosmwasm Params")
+		require.NotNil(s.T, p, "cosmwasm Params response")
+		msgs = append(msgs, &wasmtypes.MsgUpdateParams{Authority: authority, Params: p.Params})
 	}
 	if d := s.Disc; d.HasModule("cosmos.auth.v1beta1") {
 		p, err := authtypes.NewQueryClient(s.Conn).Params(s.Ctx, &authtypes.QueryParamsRequest{})

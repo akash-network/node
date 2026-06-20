@@ -42,6 +42,7 @@ var inScopePrefixes = []string{
 // check instead of a real post-upgrade acceptance test.
 var strictMsgPrefixes = []string{
 	"akash.",
+	"cosmwasm.wasm.",
 	"cosmos.auth.",
 	"cosmos.authz.",
 	"cosmos.bank.",
@@ -55,6 +56,14 @@ var strictMsgPrefixes = []string{
 	"cosmos.staking.",
 	"cosmos.upgrade.",
 	"cosmos.vesting.",
+}
+
+// strictMsgExclusions are registered sdk.Msg implementations that are not public
+// transaction service requests. Wasmd registers these internal IBC bridge messages
+// for contract dispatch, but they are not signer-addressed gRPC tx messages.
+var strictMsgExclusions = map[string]bool{
+	"cosmwasm.wasm.v1.MsgIBCCloseChannel": true,
+	"cosmwasm.wasm.v1.MsgIBCSend":         true,
 }
 
 // msgOnlyPkgs are mounted modules with Msg services but no Query service. Most
@@ -172,6 +181,9 @@ func discover(ctx context.Context, conn *grpc.ClientConn, ireg codectypes.Interf
 		u := withSlash(url)
 		trimmed := strings.TrimPrefix(u, "/")
 		if !strictMsg(trimmed) {
+			continue
+		}
+		if strictMsgExclusions[trimmed] {
 			continue
 		}
 		idx := strings.LastIndex(trimmed, ".")
