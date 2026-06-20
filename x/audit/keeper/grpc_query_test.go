@@ -112,6 +112,8 @@ func TestGRPCQueryProvider(t *testing.T) {
 func TestGRPCQueryProviders(t *testing.T) {
 	suite := setupTest(t)
 
+	suite.ctx.KVStore(suite.keeper.StoreKey()).Set([]byte{0xff}, []byte{0x01})
+
 	// creating providers
 	id1, provider := testutil.AuditedProvider(t)
 	err := suite.keeper.CreateOrUpdateProviderAttributes(suite.ctx, id1, provider.Attributes)
@@ -182,6 +184,8 @@ func TestGRPCQueryProviders(t *testing.T) {
 
 func TestGRPCQueryAuditorAttributes(t *testing.T) {
 	suite := setupTest(t)
+
+	suite.ctx.KVStore(suite.keeper.StoreKey()).Set([]byte{0xff}, []byte{0x01})
 
 	// Two providers under the same auditor.
 	auditor := testutil.AccAddress(t)

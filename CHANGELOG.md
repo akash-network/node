@@ -46,4 +46,5 @@ Ref: https://keepachangelog.com/en/1.0.0/
 
 ### Bug Fixes
 
+* (audit) [akash-network/support#619](https://github.com/akash-network/support/issues/619) Scope provider attribute queries to audit provider keys
 * Fix bug in ditribution and querying rewards

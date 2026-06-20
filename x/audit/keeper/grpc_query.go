@@ -6,6 +6,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"cosmossdk.io/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 
@@ -30,10 +31,10 @@ func (q Querier) AllProvidersAttributes(
 	var providers types.AuditedProviders
 	ctx := sdk.UnwrapSDKContext(c)
 
-	store := ctx.KVStore(q.skey)
+	store := prefix.NewStore(ctx.KVStore(q.skey), types.PrefixProviderID())
 
 	pageRes, err := sdkquery.Paginate(store, req.Pagination, func(key []byte, value []byte) error {
-		id := ParseIDFromKey(key)
+		id := ParseIDFromKey(append(append([]byte(nil), types.PrefixProviderID()...), key...))
 
 		var sVal types.AuditedAttributesStore
 		if err := q.cdc.Unmarshal(value, &sVal); err != nil {
@@ -132,10 +133,10 @@ func (q Querier) AuditorAttributes(
 
 	var providers types.AuditedProviders
 	ctx := sdk.UnwrapSDKContext(c)
-	store := ctx.KVStore(q.skey)
+	store := prefix.NewStore(ctx.KVStore(q.skey), types.PrefixProviderID())
 
 	pageRes, err := sdkquery.FilteredPaginate(store, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
-		id := ParseIDFromKey(key)
+		id := ParseIDFromKey(append(append([]byte(nil), types.PrefixProviderID()...), key...))
 		if !id.Auditor.Equals(auditor) {
 			return false, nil
 		}
