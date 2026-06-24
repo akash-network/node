@@ -46,10 +46,6 @@ func (ms msgServer) CreateBid(goCtx context.Context, msg *mvbeta.MsgCreateBid) (
 		return nil, fmt.Errorf("%w: too many existing bids (%v)", mv1.ErrInvalidBid, params.OrderMaxBids)
 	}
 
-	if msg.ID.BSeq != 0 {
-		return nil, mv1.ErrInvalidBid
-	}
-
 	order, found := ms.keepers.Market.GetOrder(ctx, msg.ID.OrderID())
 	if !found {
 		return nil, mv1.ErrOrderNotFound
