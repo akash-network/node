@@ -38,7 +38,7 @@ type IKeeper interface {
 	GetBid(ctx sdk.Context, id mv1.BidID) (types.Bid, bool)
 	GetLease(ctx sdk.Context, id mv1.LeaseID) (mv1.Lease, bool)
 	BackfillProviderLeaseStats(ctx sdk.Context) error
-	GetProviderLeaseStats(ctx sdk.Context, provider sdk.Address) (uint64, map[mv1.LeaseClosedReason]uint64, bool)
+	GetProviderLeaseStats(ctx sdk.Context, provider sdk.Address, since time.Time) (uint64, map[mv1.LeaseClosedReason]uint64, bool)
 	LeaseForOrder(ctx sdk.Context, bs types.Bid_State, oid mv1.OrderID) (mv1.Lease, bool)
 	WithOrders(ctx sdk.Context, fn func(types.Order) bool)
 	WithBids(ctx sdk.Context, fn func(types.Bid) bool)

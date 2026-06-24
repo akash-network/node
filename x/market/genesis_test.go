@@ -2,6 +2,7 @@ package market
 
 import (
 	"testing"
+	"time"
 
 	"cosmossdk.io/log"
 	"cosmossdk.io/store"
@@ -33,7 +34,7 @@ func TestInitGenesisBackfillsProviderLeaseStats(t *testing.T) {
 		Leases: mv1.Leases{ownerClosed, providerFailed, active},
 	})
 
-	completed, failures, found := kpr.GetProviderLeaseStats(ctx, provider)
+	completed, failures, found := kpr.GetProviderLeaseStats(ctx, provider, time.Time{})
 	require.True(t, found)
 	require.Equal(t, uint64(1), completed)
 	require.Equal(t, map[mv1.LeaseClosedReason]uint64{

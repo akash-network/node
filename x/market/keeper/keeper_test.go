@@ -2,7 +2,10 @@ package keeper_test
 
 import (
 	"testing"
+	"time"
 
+	"cosmossdk.io/collections"
+	"cosmossdk.io/store/prefix"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -17,6 +20,7 @@ import (
 
 	"pkg.akt.dev/node/v3/testutil/state"
 	"pkg.akt.dev/node/v3/x/market/keeper"
+	"pkg.akt.dev/node/v3/x/market/keeper/keys"
 )
 
 func Test_CreateOrder(t *testing.T) {
@@ -277,7 +281,7 @@ func Test_GetProviderLeaseStats(t *testing.T) {
 	ctx := suite.Context()
 	provider := testutil.AccAddress(t)
 
-	_, failures, found := keeper.GetProviderLeaseStats(ctx, provider)
+	_, failures, found := keeper.GetProviderLeaseStats(ctx, provider, time.Time{})
 	require.False(t, found)
 	require.Empty(t, failures)
 
@@ -297,12 +301,90 @@ func Test_GetProviderLeaseStats(t *testing.T) {
 	require.True(t, found)
 	require.NoError(t, keeper.OnLeaseClosed(ctx, closed, mv1.LeaseClosed, mv1.LeaseClosedReasonUnspecified))
 
-	completed, failures, found := keeper.GetProviderLeaseStats(ctx, provider)
+	completed, failures, found := keeper.GetProviderLeaseStats(ctx, provider, time.Time{})
 	require.True(t, found)
 	require.Equal(t, uint64(2), completed)
 	require.Equal(t, map[mv1.LeaseClosedReason]uint64{
 		mv1.LeaseClosedReasonUnstable: 1,
 	}, failures)
+}
+
+func Test_GetProviderLeaseStatsSince(t *testing.T) {
+	_, keeper, suite := setupKeeper(t)
+	provider := testutil.AccAddress(t)
+	oldTime := time.Date(2026, 6, 22, 10, 0, 0, 0, time.UTC)
+	newTime := oldTime.Add(time.Hour)
+
+	ctx := suite.Context().WithBlockTime(oldTime)
+	ownerClosed := saveActiveLeaseForProvider(t, ctx, keeper, provider)
+	require.NoError(t, keeper.OnLeaseClosed(ctx, ownerClosed, mv1.LeaseClosed, mv1.LeaseClosedReasonOwner))
+
+	ctx = ctx.WithBlockTime(newTime)
+	unstable := saveActiveLeaseForProvider(t, ctx, keeper, provider)
+	require.NoError(t, keeper.OnLeaseClosed(ctx, unstable, mv1.LeaseClosed, mv1.LeaseClosedReasonUnstable))
+
+	manifestTimeout := saveActiveLeaseForProvider(t, ctx, keeper, provider)
+	require.NoError(t, keeper.OnLeaseClosed(ctx, manifestTimeout, mv1.LeaseClosed, mv1.LeaseClosedReasonManifestTimeout))
+
+	otherProviderLease := saveActiveLeaseForProvider(t, ctx, keeper, testutil.AccAddress(t))
+	require.NoError(t, keeper.OnLeaseClosed(ctx, otherProviderLease, mv1.LeaseClosed, mv1.LeaseClosedReasonUnstable))
+
+	completed, failures, found := keeper.GetProviderLeaseStats(ctx, provider, time.Time{})
+	require.True(t, found)
+	require.Equal(t, uint64(1), completed)
+	require.Equal(t, map[mv1.LeaseClosedReason]uint64{
+		mv1.LeaseClosedReasonUnstable:        1,
+		mv1.LeaseClosedReasonManifestTimeout: 1,
+	}, failures)
+
+	completed, failures, found = keeper.GetProviderLeaseStats(ctx, provider, newTime)
+	require.True(t, found)
+	require.Zero(t, completed)
+	require.Equal(t, map[mv1.LeaseClosedReason]uint64{
+		mv1.LeaseClosedReasonUnstable:        1,
+		mv1.LeaseClosedReasonManifestTimeout: 1,
+	}, failures)
+
+	completed, failures, found = keeper.GetProviderLeaseStats(ctx, provider, newTime.Add(time.Second))
+	require.False(t, found)
+	require.Zero(t, completed)
+	require.Empty(t, failures)
+}
+
+func Test_GetProviderLeaseStatsLegacyKeys(t *testing.T) {
+	_, keeper, suite := setupKeeper(t)
+	ctx := suite.Context()
+	provider := testutil.AccAddress(t)
+	legacyCodec := collections.PairKeyCodec(collections.StringKey, collections.Int32Key)
+
+	store := prefix.NewStore(ctx.KVStore(keeper.StoreKey()), keys.ProviderLeaseStatsPrefix)
+	setLegacyStat := func(reason int32, count uint64) {
+		t.Helper()
+
+		key := collections.Join(provider.String(), reason)
+		keyBz := make([]byte, legacyCodec.Size(key))
+		_, err := legacyCodec.Encode(keyBz, key)
+		require.NoError(t, err)
+
+		valueBz, err := collections.Uint64Value.Encode(count)
+		require.NoError(t, err)
+		store.Set(keyBz, valueBz)
+	}
+
+	setLegacyStat(-1, 2)
+	setLegacyStat(int32(mv1.LeaseClosedReasonUnstable), 1)
+
+	completed, failures, found := keeper.GetProviderLeaseStats(ctx, provider, time.Time{})
+	require.True(t, found)
+	require.Equal(t, uint64(2), completed)
+	require.Equal(t, map[mv1.LeaseClosedReason]uint64{
+		mv1.LeaseClosedReasonUnstable: 1,
+	}, failures)
+
+	completed, failures, found = keeper.GetProviderLeaseStats(ctx, provider, time.Date(2026, 6, 22, 10, 0, 0, 0, time.UTC))
+	require.False(t, found)
+	require.Zero(t, completed)
+	require.Empty(t, failures)
 }
 
 func Test_BackfillProviderLeaseStats(t *testing.T) {
@@ -320,7 +402,7 @@ func Test_BackfillProviderLeaseStats(t *testing.T) {
 	require.NoError(t, keeper.BackfillProviderLeaseStats(ctx))
 	require.NoError(t, keeper.BackfillProviderLeaseStats(ctx))
 
-	completed, failures, found := keeper.GetProviderLeaseStats(ctx, provider)
+	completed, failures, found := keeper.GetProviderLeaseStats(ctx, provider, time.Time{})
 	require.True(t, found)
 	require.Equal(t, uint64(2), completed)
 	require.Equal(t, map[mv1.LeaseClosedReason]uint64{

@@ -1185,11 +1185,11 @@ func (k Querier) ProviderLeaseStats(ctx context.Context, req *types.QueryProvide
 	}
 
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
-	completed, failures, _ := k.GetProviderLeaseStats(sdkCtx, provider)
+	leaseStats := k.getProviderLeaseStats(sdkCtx, provider, req.GetSince())
 
 	var faulted uint64
-	reasons := make([]v1.LeaseClosedReason, 0, len(failures))
-	for reason, count := range failures {
+	reasons := make([]v1.LeaseClosedReason, 0, len(leaseStats.failures))
+	for reason, count := range leaseStats.failures {
 		faulted += count
 		reasons = append(reasons, reason)
 	}
@@ -1198,15 +1198,17 @@ func (k Querier) ProviderLeaseStats(ctx context.Context, req *types.QueryProvide
 	})
 
 	stats := v1.ProviderLeaseStats{
-		TotalLeases:           completed + faulted,
-		CompletedLeases:       completed,
-		ProviderFaultedLeases: faulted,
-		ProviderFaults:        make([]v1.ProviderLeaseStatsByReason, 0, len(reasons)),
+		TotalLeases:             leaseStats.completed + faulted,
+		CompletedLeases:         leaseStats.completed,
+		ProviderFaultedLeases:   faulted,
+		ProviderFaults:          make([]v1.ProviderLeaseStatsByReason, 0, len(reasons)),
+		TenantClosedLeases:      leaseStats.completedByReason[v1.LeaseClosedReasonOwner],
+		InsufficientFundsLeases: leaseStats.completedByReason[v1.LeaseClosedReasonInsufficientFunds],
 	}
 	for _, reason := range reasons {
 		stats.ProviderFaults = append(stats.ProviderFaults, v1.ProviderLeaseStatsByReason{
 			Reason: reason,
-			Count:  failures[reason],
+			Count:  leaseStats.failures[reason],
 		})
 	}
 

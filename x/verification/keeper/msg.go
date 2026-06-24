@@ -1324,7 +1324,11 @@ func (k *keeper) validateProviderLeaseCompletion(ctx sdk.Context, provider sdk.A
 		return nil
 	}
 
-	completed, failuresByReason, found := k.market.GetProviderLeaseStats(ctx, provider)
+	since := time.Time{}
+	if window := leaseCompletionWindowForTier(params, tier); window > 0 {
+		since = ctx.BlockTime().Add(-window)
+	}
+	completed, failuresByReason, found := k.market.GetProviderLeaseStats(ctx, provider, since)
 	var failed uint64
 	for _, count := range failuresByReason {
 		failed += count
@@ -1871,6 +1875,10 @@ func cleanHistoryWindowForTier(params vtypes.Params, tier vtypes.VerificationTie
 	default:
 		panic("verification: unknown tier")
 	}
+}
+
+func leaseCompletionWindowForTier(params vtypes.Params, tier vtypes.VerificationTier) time.Duration {
+	return cleanHistoryWindowForTier(params, tier)
 }
 
 func renewalPeriodForTier(params vtypes.Params, tier vtypes.VerificationTier) time.Duration {

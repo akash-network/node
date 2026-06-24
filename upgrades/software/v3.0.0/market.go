@@ -1,7 +1,10 @@
 package v3_0_0
 
 import (
+	"bytes"
+
 	"cosmossdk.io/collections"
+	"cosmossdk.io/store/prefix"
 	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/runtime"
@@ -47,6 +50,10 @@ func (m marketV10Migrations) GetHandler() sdkmodule.MigrationHandler {
 // handler migrates market from version 9 to 10.
 func (m marketV10Migrations) handler(ctx sdk.Context) error {
 	skey := m.StoreKey().(*storetypes.KVStoreKey)
+	if err := clearStorePrefix(ctx.KVStore(skey), keys.ProviderLeaseStatsPrefix); err != nil {
+		return err
+	}
+
 	ssvc := runtime.NewKVStoreService(skey)
 	sb := collections.NewSchemaBuilder(ssvc)
 
@@ -59,4 +66,24 @@ func (m marketV10Migrations) handler(ctx sdk.Context) error {
 	}
 
 	return marketkeeper.BackfillProviderLeaseStats(ctx, leases, leaseStats)
+}
+
+func clearStorePrefix(store storetypes.KVStore, prefixBz []byte) error {
+	pStore := prefix.NewStore(store, prefixBz)
+
+	var keys [][]byte
+	iter := pStore.Iterator(nil, nil)
+	for iter.Valid() {
+		keys = append(keys, bytes.Clone(iter.Key()))
+		iter.Next()
+	}
+	if err := iter.Close(); err != nil {
+		return err
+	}
+
+	for _, key := range keys {
+		pStore.Delete(key)
+	}
+
+	return nil
 }

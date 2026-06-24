@@ -2,6 +2,7 @@ package v3_0_0
 
 import (
 	"testing"
+	"time"
 
 	"cosmossdk.io/log"
 	"cosmossdk.io/store"
@@ -32,7 +33,7 @@ func TestMarketMigrationBackfillsProviderLeaseStats(t *testing.T) {
 	migration := newMarketV10Migration(utypes.NewMigrator(kpr.Codec(), kpr.StoreKey()))
 	require.NoError(t, migration.GetHandler()(ctx))
 
-	completed, failures, found := kpr.GetProviderLeaseStats(ctx, provider)
+	completed, failures, found := kpr.GetProviderLeaseStats(ctx, provider, time.Time{})
 	require.True(t, found)
 	require.Equal(t, uint64(1), completed)
 	require.Equal(t, map[mv1.LeaseClosedReason]uint64{

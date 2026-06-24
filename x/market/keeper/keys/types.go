@@ -13,8 +13,8 @@ type ProviderPartKey = collections.Pair[string, uint32]
 // GroupPartKey represents (owner, dseq, gseq) for group-based index lookups
 type GroupPartKey = collections.Triple[string, uint64, uint32]
 
-// ProviderLeaseStatsKey represents (provider, reason).
-type ProviderLeaseStatsKey = collections.Pair[string, int32]
+// ProviderLeaseStatsKey represents (provider, close timestamp, reason).
+type ProviderLeaseStatsKey = collections.Triple[string, int64, int32]
 
 // OrderPrimaryKeyCodec is the key codec for OrderPrimaryKey
 var OrderPrimaryKeyCodec = collections.QuadKeyCodec(
@@ -25,7 +25,8 @@ var OrderPrimaryKeyCodec = collections.QuadKeyCodec(
 )
 
 // ProviderLeaseStatsKeyCodec is the key codec for ProviderLeaseStatsKey.
-var ProviderLeaseStatsKeyCodec = collections.PairKeyCodec(
+var ProviderLeaseStatsKeyCodec = collections.TripleKeyCodec(
 	collections.StringKey,
+	collections.Int64Key,
 	collections.Int32Key,
 )

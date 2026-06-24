@@ -421,6 +421,61 @@ func TestSubmitAttestationAcceptsSufficientLeaseHistoryForL3(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestSubmitAttestationQueriesLeaseHistoryWindow(t *testing.T) {
+	t.Run("l3", func(t *testing.T) {
+		var since time.Time
+		ctx, k, provider, auditor, params := setupL3AttestationPrerequisites(t, stubMarketStatsKeeper{
+			completed: 98,
+			failures: map[mv1.LeaseClosedReason]uint64{
+				mv1.LeaseClosedReasonUnstable: 2,
+			},
+			found: true,
+			since: &since,
+		})
+
+		err := k.SubmitAttestation(
+			ctx,
+			provider,
+			auditor,
+			vtypes.TierEstablished,
+			nil,
+			testHash(),
+			params.MinFeeL3,
+			params.AttestationDeposit,
+			1,
+		)
+		require.NoError(t, err)
+		require.Equal(t, ctx.BlockTime().Add(-params.CleanHistoryWindowL3), since)
+	})
+
+	t.Run("l4", func(t *testing.T) {
+		var since time.Time
+		ctx, k, provider, auditor, params := setupL4AttestationPrerequisites(t, true, stubMarketStatsKeeper{
+			completed: 98,
+			failures: map[mv1.LeaseClosedReason]uint64{
+				mv1.LeaseClosedReasonUnstable: 2,
+			},
+			found: true,
+			since: &since,
+		})
+
+		err := k.SubmitAttestation(
+			ctx,
+			provider,
+			auditor,
+			vtypes.TierTrusted,
+			nil,
+			testHash(),
+			params.MinFeeL4,
+			params.AttestationDeposit,
+			1,
+		)
+		require.NoError(t, err)
+		require.Equal(t, ctx.BlockTime().Add(-params.CleanHistoryWindowL4), since)
+		require.NotEqual(t, ctx.BlockTime().Add(-params.TtlL4), since)
+	})
+}
+
 func TestSubmitAttestationRejectsRecentProviderSlashForL3(t *testing.T) {
 	ctx, k, provider, auditor, params := setupL3AttestationPrerequisites(t, stubMarketStatsKeeper{
 		completed: 98,
@@ -1689,20 +1744,24 @@ func setupL3AttestationPrerequisites(t testing.TB, market MarketStatsKeeper) (sd
 	return ctx, k, provider, auditor, params
 }
 
-func setupL4AttestationPrerequisites(t testing.TB, continuousHistory bool) (sdk.Context, Keeper, sdk.AccAddress, sdk.AccAddress, vtypes.Params) {
+func setupL4AttestationPrerequisites(t testing.TB, continuousHistory bool, marketStats ...stubMarketStatsKeeper) (sdk.Context, Keeper, sdk.AccAddress, sdk.AccAddress, vtypes.Params) {
 	t.Helper()
 
 	provider := testutil.AccAddress(t)
 	providerKeeper := newStubProviderKeeper(provider)
+	stats := stubMarketStatsKeeper{
+		completed: 98,
+		failures: map[mv1.LeaseClosedReason]uint64{
+			mv1.LeaseClosedReasonUnstable: 2,
+		},
+		found: true,
+	}
+	if len(marketStats) > 0 {
+		stats = marketStats[0]
+	}
 	ctx, k := setupStoreKeeperWithOptions(t,
 		WithProviderKeeper(providerKeeper),
-		WithMarketStatsKeeper(stubMarketStatsKeeper{
-			completed: 98,
-			failures: map[mv1.LeaseClosedReason]uint64{
-				mv1.LeaseClosedReasonUnstable: 2,
-			},
-			found: true,
-		}),
+		WithMarketStatsKeeper(stats),
 	)
 	auditor := testutil.AccAddress(t)
 	params := k.GetParams(ctx)
@@ -1762,9 +1821,13 @@ type stubMarketStatsKeeper struct {
 	completed uint64
 	failures  map[mv1.LeaseClosedReason]uint64
 	found     bool
+	since     *time.Time
 }
 
-func (k stubMarketStatsKeeper) GetProviderLeaseStats(_ sdk.Context, _ sdk.Address) (uint64, map[mv1.LeaseClosedReason]uint64, bool) {
+func (k stubMarketStatsKeeper) GetProviderLeaseStats(_ sdk.Context, _ sdk.Address, since time.Time) (uint64, map[mv1.LeaseClosedReason]uint64, bool) {
+	if k.since != nil {
+		*k.since = since
+	}
 	return k.completed, k.failures, k.found
 }
 
