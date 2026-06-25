@@ -6,26 +6,10 @@
             ]
         },
         "migrations": {
-            "deployment": [
-                {
-                    "from": "7",
-                    "to": "8"
-                }
-            ],
             "market": [
-                {
-                    "from": "8",
-                    "to": "9"
-                },
                 {
                     "from": "9",
                     "to": "10"
-                }
-            ],
-            "oracle": [
-                {
-                    "from": "1",
-                    "to": "2"
                 }
             ],
             "provider": [
