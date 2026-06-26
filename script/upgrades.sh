@@ -252,13 +252,26 @@ function content_name() {
 }
 
 function content_location() {
-	name=$(wget "$1" --spider --server-response -O - 2>&1 | grep -i -m 1 "Location:" | awk '{print $2}' | tr -d '\n')
-	# shellcheck disable=SC2181
-	if [[ "$name" == "" ]]; then
-		echo "$1"
-	else
+	local name
+	local network
+	local latest
+
+	name=$(wget "$1" --spider --server-response -O - 2>&1 | grep -i -m 1 "Location:" | awk '{print $2}' | tr -d '\r\n')
+	if [[ "$name" != "" ]] && wget "$name" --spider -q; then
 		echo "$name"
+		return
 	fi
+
+	if [[ "$1" =~ ^https://snapshots\.akash\.network/([^/]+)/latest$ ]]; then
+		network=${BASH_REMATCH[1]}
+		latest=$(wget -q -O - "https://snapshots.akash.network/${network}/" | grep -o "<Key>${network}_[^<]*\\.tar\\.lz4</Key>" | sed 's#<Key>##; s#</Key>##' | sort -V | tail -n 1)
+		if [[ "$latest" != "" ]]; then
+			echo "https://snapshots.akash.network/${network}/${latest}"
+			return
+		fi
+	fi
+
+	echo "$1"
 }
 
 uname_arch() {
