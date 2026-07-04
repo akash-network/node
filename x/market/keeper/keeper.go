@@ -598,6 +598,9 @@ func (k Keeper) BidsEverCreatedForOrder(ctx sdk.Context, id mv1.OrderID) uint32 
 	return k.bidCountForStates(ctx, id, []types.Bid_State{types.BidOpen, types.BidActive, types.BidLost, types.BidClosed})
 }
 
+// bidCountForStates counts the bids on an order whose state is in the given
+// set, by iterating the OrderState index once per state. It backs both the
+// live-only BidCountForOrder and the lazy seed for BidsEverCreatedForOrder.
 func (k Keeper) bidCountForStates(ctx sdk.Context, id mv1.OrderID, states []types.Bid_State) uint32 {
 	orderPart := collections.Join4(id.Owner, id.DSeq, id.GSeq, id.OSeq)
 	count := uint32(0)
