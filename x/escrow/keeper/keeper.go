@@ -1129,19 +1129,19 @@ func (k *keeper) savePayment(ctx sdk.Context, obj payment) error {
 }
 
 func (k *keeper) save(ctx sdk.Context, acc *account, payments []payment) error {
-	if acc.dirty {
-		err := k.saveAccount(ctx, acc)
-		if err != nil {
-			return err
-		}
-	}
-
 	for _, pmnt := range payments {
 		if pmnt.dirty {
 			err := k.savePayment(ctx, pmnt)
 			if err != nil {
 				return err
 			}
+		}
+	}
+
+	if acc.dirty {
+		err := k.saveAccount(ctx, acc)
+		if err != nil {
+			return err
 		}
 	}
 
