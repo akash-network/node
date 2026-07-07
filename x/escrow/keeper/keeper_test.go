@@ -273,6 +273,71 @@ func Test_PaymentCreate(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func Test_AccountClose_ClosesPaymentBeforeAccountHook(t *testing.T) {
+	ssuite := state.SetupTestSuite(t)
+	ctx := ssuite.Context()
+
+	bkeeper := ssuite.BankKeeper()
+	ekeeper := ssuite.EscrowKeeper()
+
+	lid := testutil.LeaseID(t)
+	did := lid.DeploymentID()
+
+	aid := did.ToEscrowAccountID()
+	pid := lid.ToEscrowPaymentID()
+
+	aowner := testutil.AccAddress(t)
+	powner := testutil.AccAddress(t)
+
+	amt := testutil.ACTCoin(t, 1000)
+	rate := sdk.NewCoin("uact", sdkmath.NewInt(30))
+
+	ssuite.MockBMEForDeposit(aowner, amt)
+	require.NoError(t, ekeeper.AccountCreate(ctx, aid, aowner, []etypes.Depositor{{
+		Owner:   aowner.String(),
+		Height:  ctx.BlockHeight(),
+		Balance: sdk.NewDecCoinFromCoin(amt),
+	}}))
+	require.NoError(t, ekeeper.PaymentCreate(ctx, pid, powner, sdk.NewDecCoinFromCoin(rate)))
+
+	var nestedErr error
+	ekeeper.AddOnAccountClosedHook(func(ctx sdk.Context, _ etypes.Account) error {
+		payment, err := ekeeper.GetPayment(ctx, pid)
+		if err != nil {
+			nestedErr = err
+			return nil
+		}
+
+		if payment.State.State != etypes.StateClosed {
+			nestedErr = ekeeper.PaymentClose(ctx, pid)
+		}
+
+		return nil
+	})
+
+	ctx = ctx.WithBlockHeight(ctx.BlockHeight() + 10)
+	bkeeper.
+		On("SendCoinsFromModuleToModule", mock.Anything, module.ModuleName, mock.MatchedBy(func(dest string) bool {
+			return dest == bmemodule.ModuleName || dest == distrtypes.ModuleName
+		}), mock.Anything).
+		Return(nil).Maybe()
+	bkeeper.
+		On("SendCoinsFromModuleToModule", mock.Anything, bmemodule.ModuleName, mock.Anything, mock.Anything).
+		Return(nil).Maybe()
+	bkeeper.
+		On("MintCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
+		Return(nil).Maybe()
+	bkeeper.
+		On("BurnCoins", mock.Anything, bmemodule.ModuleName, mock.Anything).
+		Return(nil).Maybe()
+	bkeeper.
+		On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(nil).Maybe()
+
+	require.NoError(t, ekeeper.AccountClose(ctx, aid))
+	require.NoError(t, nestedErr)
+}
+
 func Test_Overdraft(t *testing.T) {
 	ssuite := state.SetupTestSuite(t)
 	ctx := ssuite.Context()
