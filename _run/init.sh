@@ -22,8 +22,8 @@ if [[ -z "$CONTRACTS_DIR" ]]; then
 	exit 1
 fi
 
-WORMHOLE_WASM="${CONTRACTS_DIR}/artifacts/wormhole.wasm"
 PYTH_WASM="${CONTRACTS_DIR}/artifacts/pyth.wasm"
+PYTH_PRO_VERIFIER_WASM="${CONTRACTS_DIR}/artifacts/pyth_pro_verifier.wasm"
 
 HERMES_MNEMONIC="wire museum tragic inmate final lady illegal father whisper margin sea cool soul half moon nut tissue strategy ladder come glory opera device elbow"
 
@@ -41,34 +41,24 @@ AKT_PRICE_FEED_ID="0x4ea5bb4d2f5900cc2e97ba534240950740b4d3b89fe712a94a7304fd2fd
 PYTH_EMITTER_CHAIN="26" # Pythnet
 PYTH_EMITTER_ADDRESS="e101faedac5851e32b9b23b5f9411a8c2bac4aae3ed4dd7b811dd1a72ea4aa71"
 
-
-# Wormhole Mainnet Guardian Set 5 (19 guardians)
-# Source: https://github.com/wormhole-foundation/wormhole/blob/main/guardianset/mainnetv2/v5.prototxt
-# TODO load them from URL above
-GUARDIAN_ADDRESSES=(
-	"5893B5A76c3f739645648885bDCcC06cd70a3Cd3"
-	"fF6CB952589BDE862c25Ef4392132fb9D4A42157"
-	"114De8460193bdf3A2fCf81f86a09765F4762fD1"
-	"107A0086b32d7A0977926A205131d8731D39cbEB"
-	"8C82B2fd82FaeD2711d59AF0F2499D16e726f6b2"
-	"11b39756C042441BE6D8650b69b54EbE715E2343"
-	"938f104AEb5581293216ce97d771e0CB721221B1"
-	"15e7cAF07C4e3DC8e7C469f92C8Cd88FB8005a20"
-	"74a3bf913953D695260D88BC1aA25A4eeE363ef0"
-	"000aC0076727b35FBea2dAc28fEE5cCB0fEA768e"
-	"AF45Ced136b9D9e24903464AE889F5C8a723FC14"
-	"f93124b7c738843CBB89E864c862c38cddCccF95"
-	"D2CC37A4dc036a8D232b48f62cDD4731412f4890"
-	"DA798F6896A3331F64b48c12D1D57Fd9cbe70811"
-	"D1F64e26238811de5553C40f64af41eE1B6057Cc"
-	"43ac8f567A31e7850Da532B361988Bfe0d3ae11b"
-	"178e21ad2E77AE06711549CFBB1f9c7a9d8096e8"
-	"5E1487F35515d02A92753504a8D75471b9f49EdB"
-	"6FbEBc898F403E4773E95feB15E80C9A99c8348d"
+# Pyth Core upgraded router verifier configuration.
+PYTH_PRO_ROUTER_SET_INDEX="0"
+PYTH_PRO_EXPECTED_EMITTER_CHAIN="26"
+PYTH_PRO_EXPECTED_EMITTER_ADDRESS="507974686e6574507974686e6574507974686e6574507974686e657450797468"
+PYTH_PRO_ROUTER_ADDRESSES=(
+	"41534bb176e461a3fb30479400f210549ecce638"
+	"6502987b62f21cab7eb5ccd8f0173084b60d5b41"
+	"44a3e8f6a382412cf6bb90a3f8106e68977476c9"
+	"d9d7d4529577864352c9a6539a48238fcd447052"
+	"1663a5a822336ece48559b1dfb1e93a017a7dac3"
 )
 
 log() {
 	echo "[$(date -u '+%Y-%m-%d %H:%M:%S UTC')] $*"
+}
+
+hex_to_base64() {
+	echo -n "$1" | xxd -r -p | base64
 }
 
 wait_for_block() {
@@ -90,16 +80,6 @@ configure_genesis() {
 
 	cp "${GENESIS_PATH}" "${GENESIS_PATH}.orig"
 
-	# Build guardian addresses JSON array
-	local guardian_json="["
-	for i in "${!GUARDIAN_ADDRESSES[@]}"; do
-		if [ "$i" -gt 0 ]; then
-			guardian_json+=","
-		fi
-		guardian_json+="\"${GUARDIAN_ADDRESSES[$i]}\""
-	done
-	guardian_json+="]"
-
 	# shellcheck disable=SC2002
 	cat "${GENESIS_PATH}.orig" | \
 		jq -M '.app_state.gov.voting_params.voting_period = "60s"' \
@@ -108,7 +88,7 @@ configure_genesis() {
 		| jq -M '.app_state.gov.params.max_deposit_period = "60s"' \
 		| jq -M '.app_state.wasm.params.code_upload_access.permission = "Everybody"' \
 		| jq -M '.app_state.wasm.params.instantiate_default_permission = "Everybody"' \
-		| jq -M --argjson guardians "$guardian_json" --arg feed_id "$AKT_PRICE_FEED_ID" '
+		| jq -M '
 			.app_state.oracle.params.min_price_sources = 1 |
 			.app_state.oracle.params.max_price_staleness_period = "60s" |
 			.app_state.oracle.params.twap_window = "30s" |
@@ -162,13 +142,6 @@ deploy_contracts() {
 	admin_addr=$(akash keys show $admin_key -a)
 
 	# Check if contract files exist
-	if [ ! -f "$WORMHOLE_WASM" ]; then
-		log "ERROR: Wormhole contract not found at $WORMHOLE_WASM"
-		log "Skipping contract deployment. Build contracts first with: cd contracts && make build"
-		write_hermes_config "CONTRACT_NOT_DEPLOYED"
-		return 1
-	fi
-
 	if [ ! -f "$PYTH_WASM" ]; then
 		log "ERROR: Pyth contract not found at $PYTH_WASM"
 		log "Skipping contract deployment. Build contracts first with: cd contracts && make build"
@@ -176,55 +149,55 @@ deploy_contracts() {
 		return 1
 	fi
 
-	# Deploy Wormhole contract
-	log "Storing Wormhole contract..."
-	akash tx wasm store "$WORMHOLE_WASM" --from $admin_key -o json
+	if [ ! -f "$PYTH_PRO_VERIFIER_WASM" ]; then
+		log "ERROR: Pyth Pro verifier contract not found at $PYTH_PRO_VERIFIER_WASM"
+		log "Skipping contract deployment. Build contracts first with: cd contracts && make build"
+		write_hermes_config "CONTRACT_NOT_DEPLOYED"
+		return 1
+	fi
 
-	local wormhole_code_id
-	wormhole_code_id=$(akash query wasm list-code -o json | jq -r '.code_infos[-1].code_id')
-	log "Wormhole code ID: $wormhole_code_id"
+	# Deploy Pyth Pro verifier contract.
+	log "Storing Pyth Pro verifier contract..."
+	akash tx wasm store "$PYTH_PRO_VERIFIER_WASM" --from $admin_key
 
-	# Instantiate Wormhole contract with initial guardian set
-	# Build guardian set JSON for the new wormhole contract
-	local guardian_set_json='['
-	for i in "${!GUARDIAN_ADDRESSES[@]}"; do
+	local pyth_pro_verifier_code_id
+	pyth_pro_verifier_code_id=$(akash query wasm list-code -o json | jq -r '.code_infos[-1].code_id')
+	log "Pyth Pro verifier code ID: $pyth_pro_verifier_code_id"
+
+	local router_json='['
+	for i in "${!PYTH_PRO_ROUTER_ADDRESSES[@]}"; do
 		if [ "$i" -gt 0 ]; then
-			guardian_set_json+=','
+			router_json+=','
 		fi
-		# Convert hex address to base64 for Binary field
-		local hex_addr="${GUARDIAN_ADDRESSES[$i]}"
-		local b64_addr
-		b64_addr=$(echo -n "$hex_addr" | xxd -r -p | base64)
-		guardian_set_json+="{\"bytes\":\"$b64_addr\"}"
+		local router_b64
+		router_b64=$(hex_to_base64 "${PYTH_PRO_ROUTER_ADDRESSES[$i]}")
+		router_json+="{\"bytes\":\"$router_b64\"}"
 	done
-	guardian_set_json+=']'
+	router_json+=']'
 
-	local wormhole_init_msg
-	wormhole_init_msg=$(cat <<EOF
+	local pyth_pro_emitter_b64
+	pyth_pro_emitter_b64=$(hex_to_base64 "$PYTH_PRO_EXPECTED_EMITTER_ADDRESS")
+
+	local pyth_pro_verifier_init_msg
+	pyth_pro_verifier_init_msg=$(cat <<EOF
 {
-	"gov_chain": 1,
-	"gov_address": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQ=",
-	"initial_guardian_set": {
-		"addresses": $guardian_set_json,
-		"expiration_time": 0
-	},
-	"guardian_set_index": 5,
-	"guardian_set_expirity": 86400,
-	"chain_id": 26,
-	"fee_denom": "uakt"
+	"router_set_index": $PYTH_PRO_ROUTER_SET_INDEX,
+	"routers": $router_json,
+	"expected_emitter_chain": $PYTH_PRO_EXPECTED_EMITTER_CHAIN,
+	"expected_emitter_address": "$pyth_pro_emitter_b64"
 }
 EOF
 )
 
-	log "Instantiating Wormhole contract..."
-	akash tx wasm instantiate "$wormhole_code_id" "$wormhole_init_msg" \
-		--label "wormhole" \
+	log "Instantiating Pyth Pro verifier contract..."
+	akash tx wasm instantiate "$pyth_pro_verifier_code_id" "$pyth_pro_verifier_init_msg" \
+		--label "pyth-pro-verifier" \
 		--admin "$admin_addr" \
-		--from $admin_key \
+		--from $admin_key
 
-	local wormhole_addr
-	wormhole_addr=$(akash query wasm list-contract-by-code "$wormhole_code_id" -o json | jq -r '.contracts[-1]')
-	log "Wormhole contract address: $wormhole_addr"
+	local pyth_pro_verifier_addr
+	pyth_pro_verifier_addr=$(akash query wasm list-contract-by-code "$pyth_pro_verifier_code_id" -o json | jq -r '.contracts[-1]')
+	log "Pyth Pro verifier contract address: $pyth_pro_verifier_addr"
 
 	# Deploy Pyth contract
 	log "Storing Pyth contract..."
@@ -239,7 +212,7 @@ EOF
 	pyth_init_msg=$(cat <<EOF
 {
 	"admin": "$admin_addr",
-	"wormhole_contract": "$wormhole_addr",
+	"wormhole_contract": "$pyth_pro_verifier_addr",
 	"update_fee": "1000",
 	"price_feed_id": "$AKT_PRICE_FEED_ID",
 	"data_sources": [
@@ -269,7 +242,7 @@ EOF
 	write_hermes_config "$pyth_addr"
 
 	log "Contract deployment complete!"
-	log "  Wormhole: $wormhole_addr"
+	log "  Pyth Pro verifier: $pyth_pro_verifier_addr"
 	log "  Pyth:     $pyth_addr"
 }
 

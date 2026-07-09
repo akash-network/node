@@ -18,8 +18,9 @@ fi
 
 wormhole_wasm="$ARTIFACTS_DIR/wormhole.wasm"
 pyth_wasm="$ARTIFACTS_DIR/pyth.wasm"
+pyth_pro_verifier_wasm="$ARTIFACTS_DIR/pyth_pro_verifier.wasm"
 
-for f in "$wormhole_wasm" "$pyth_wasm"; do
+for f in "$wormhole_wasm" "$pyth_wasm" "$pyth_pro_verifier_wasm"; do
 	if [[ ! -f "$f" ]]; then
 		echo "error: $f not found. Run 'make build-contracts' first." >&2
 		exit 1
@@ -47,6 +48,10 @@ HEADER
 	printf '\nvar pythContract = []byte{\n\t'
 	file_to_go_bytes "$pyth_wasm"
 	printf '\n}\n'
+
+	printf '\nvar pythProVerifierContract = []byte{\n\t'
+	file_to_go_bytes "$pyth_pro_verifier_wasm"
+	printf '\n}\n'
 } > "$OUTPUT_FILE"
 
 gofmt -w "$OUTPUT_FILE"
@@ -54,3 +59,4 @@ gofmt -w "$OUTPUT_FILE"
 echo "Generated $OUTPUT_FILE"
 echo "  wormhole: $(wc -c < "$wormhole_wasm" | tr -d ' ') bytes"
 echo "  pyth:     $(wc -c < "$pyth_wasm" | tr -d ' ') bytes"
+echo "  verifier: $(wc -c < "$pyth_pro_verifier_wasm" | tr -d ' ') bytes"

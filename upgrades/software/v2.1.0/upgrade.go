@@ -63,14 +63,34 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 		msgServer := wasmkeeper.NewMsgServerImpl(up.Keepers.Cosmos.Wasm)
 		govAddr := up.Keepers.Cosmos.Wasm.GetAuthority()
 
-		contractAddr := "akash1nc5tatafv6eyq7llkr2gv50ff9e22mnf70qgjlv737ktmt4eswrqyagled"
+		verifierInstantiateMsg, err := newPythProVerifierInstantiateMsg()
+		if err != nil {
+			return toVM, err
+		}
+
+		verifierResp, err := msgServer.StoreAndInstantiateContract(ctx, &wasmtypes.MsgStoreAndInstantiateContract{
+			Authority:             govAddr,
+			WASMByteCode:          pythProVerifierContract,
+			InstantiatePermission: &wasmtypes.AllowNobody,
+			Admin:                 govAddr,
+			Label:                 pythProVerifierContractLabel,
+			Msg:                   verifierInstantiateMsg,
+		})
+		if err != nil {
+			return toVM, err
+		}
+
+		pythMigrationMsg, err := newPythVerifierMigrationMsg(verifierResp.Address)
+		if err != nil {
+			return toVM, err
+		}
 
 		_, err = msgServer.StoreAndMigrateContract(ctx, &wasmtypes.MsgStoreAndMigrateContract{
 			Authority:             govAddr,
 			WASMByteCode:          pythContract,
-			Contract:              contractAddr,
+			Contract:              pythContractAddr,
 			InstantiatePermission: &wasmtypes.AllowNobody,
-			Msg:                   []byte("{}"),
+			Msg:                   pythMigrationMsg,
 		})
 		if err != nil {
 			return toVM, err
@@ -79,7 +99,7 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 		oparams := otypes.DefaultParams()
 		oparams.MinPriceSources = 1
 		// Set the pyth contract as an authorized oracle price source
-		oparams.Sources = []string{contractAddr}
+		oparams.Sources = []string{pythContractAddr}
 		err = up.Keepers.Akash.Oracle.SetParams(sctx, oparams)
 		if err != nil {
 			return toVM, err

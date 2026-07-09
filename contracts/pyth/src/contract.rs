@@ -448,10 +448,20 @@ fn query_price_feed_id(deps: Deps) -> StdResult<PriceFeedIdResponse> {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    Ok(Response::new()
+pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
+    let mut response = Response::new()
         .add_attribute("method", "migrate")
-        .add_attribute("version", "3.0.0"))
+        .add_attribute("version", "3.0.0");
+
+    if let Some(wormhole_contract) = msg.wormhole_contract {
+        let mut config = CONFIG.load(deps.storage)?;
+        config.wormhole_contract = deps.api.addr_validate(&wormhole_contract)?;
+        CONFIG.save(deps.storage, &config)?;
+
+        response = response.add_attribute("wormhole_contract", wormhole_contract);
+    }
+
+    Ok(response)
 }
 
 #[cfg(test)]
@@ -548,6 +558,30 @@ mod tests {
         assert!(!response.wormhole_contract.is_empty());
         assert_eq!(1, response.data_sources.len());
         assert_eq!(26, response.data_sources[0].emitter_chain);
+    }
+
+    #[test]
+    fn test_migrate_can_update_verifier_contract() {
+        let mut deps = mock_deps();
+        setup_config(&mut deps);
+
+        let verifier = deps.api.addr_make("pyth-pro-verifier");
+        let res = migrate(
+            deps.as_mut(),
+            mock_env(),
+            MigrateMsg {
+                wormhole_contract: Some(verifier.to_string()),
+            },
+        )
+        .unwrap();
+
+        assert!(res
+            .attributes
+            .iter()
+            .any(|attr| attr.key == "wormhole_contract" && attr.value == verifier.as_str()));
+
+        let config = CONFIG.load(&deps.storage).unwrap();
+        assert_eq!(verifier, config.wormhole_contract);
     }
 
     #[test]

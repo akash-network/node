@@ -99,4 +99,6 @@ pub struct PriceFeedIdResponse {
 }
 
 #[cw_serde]
-pub struct MigrateMsg {}
+pub struct MigrateMsg {
+    pub wormhole_contract: Option<String>,
+}
