@@ -973,6 +973,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "pyth-pro-verifier"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus",
+ "hex",
+ "k256",
+ "serde",
+ "sha3",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"

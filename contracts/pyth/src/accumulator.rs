@@ -300,6 +300,9 @@ pub fn verify_merkle_proof(
 mod tests {
     use super::*;
 
+    const AKT_UPGRADED_HERMES_PNAU_HEX: &str =
+        "504e4155010000000124010000000003013e1fb8c03541656c8e9f8a3edc9e939c676a07d6e76a6481babf53b3ffe3eb354cea03c9beacc220c6c1b59039d732cd3403762a8eb8c005829ea93175cb6ce20003d2ed8e50e7d7350255ee6974a845c2f83236c9be4969f6a3063f1c87173fe1dc35e07fe6cea3d9341dc8887a858abacc33883acd2f1c6a9a94cfa3718ea8130901043dbc0d384f891945d9e6c8636826d58ad7f74f4162346052f37bfc5cf5da0ea75f1d1795acf9a8685f96308393947a0a9a22e381585e804506aa7c19d3400945006a4f27ed00000000001a507974686e6574507974686e6574507974686e6574507974686e657450797468000000084e2f1e84004155575600000000084e2f1e84000000000f57eee39f1b76403b1094b3a177ecef270e3226010055004ea5bb4d2f5900cc2e97ba534240950740b4d3b89fe712a94a7304fd2fd9270200000000037ee0d8000000000000dd37fffffff8000000006a4f27ed000000006a4f27ec0000000003811f7d0000000000007eb30ba0cdbf661704cbaafd0b1d24d5212bfb70d6b86de187f9c1fbaf5b8c9816d8a15bbeefe167cfa33e4148f15de06c47c1b06330a086746b9d4e1f4f146081345c6a9c954cae73fa4a7659ac1db4c5fc961f8610d5a455209bc7b3453f23f1cda609fdf32a2df0ac5a8d5d7e87863768ebb2df823831306c409a5c7afad2585d206428db6aa3f03ceeb68cfe62260ba763cb51529ae9360a085e2c9dff0538286a6ec453c0c9b1997be26ef1157fbc5e453a9079a2b0734c15bf28320e803084128b00b50722ad44a541ab71df0ba693d62defeed4e1ebe935b65699c7";
+
     #[test]
     fn test_merkle_leaf_hash() {
         // Test that leaf hashing works correctly
@@ -335,6 +338,27 @@ mod tests {
         let data = b"TEST0100";
         let result = parse_accumulator_update(data);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Invalid PNAU magic"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Invalid PNAU magic"));
+    }
+
+    #[test]
+    fn parses_live_upgraded_hermes_akt_pnau_fixture() {
+        let data = hex::decode(AKT_UPGRADED_HERMES_PNAU_HEX).unwrap();
+        let update = parse_accumulator_update(&data).unwrap();
+
+        assert_eq!(update.vaa.len(), 292);
+        assert_eq!(update.price_updates.len(), 1);
+        assert_eq!(
+            hex::encode(update.merkle_root),
+            "0f57eee39f1b76403b1094b3a177ecef270e3226"
+        );
+        assert!(verify_merkle_proof(
+            &update.price_updates[0].message_data,
+            &update.price_updates[0].merkle_proof,
+            &update.merkle_root
+        ));
     }
 }
