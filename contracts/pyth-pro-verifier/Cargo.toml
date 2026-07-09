@@ -21,6 +21,7 @@ k256 = { version = "0.13", default-features = false, features = ["ecdsa"] }
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 sha3 = { version = "0.10", default-features = false }
 thiserror = "1.0"
+wormhole = { path = "../wormhole", default-features = false, features = ["library"] }
 
 [dev-dependencies]
 hex = "0.4"

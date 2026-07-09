@@ -7,10 +7,10 @@ use cosmwasm_std::entry_point;
 
 use crate::{
     error::ContractError,
-    msg::{InstantiateMsg, MigrateMsg, ParsedVAA, QueryMsg},
+    msg::{InstantiateMsg, MigrateMsg, QueryMsg},
     state::{Config, CONFIG},
-    vaa::{parse_vaa, HEADER_LEN, SIGNATURE_LEN, SIG_DATA_LEN, SIG_DATA_POS, SIG_RECOVERY_POS},
 };
+use wormhole::state::ParsedVAA;
 
 const ROUTER_COUNT: usize = 5;
 const ROUTER_QUORUM: usize = 3;
@@ -72,7 +72,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
 pub fn query_verify_vaa(deps: Deps, data: &[u8], _block_time: u64) -> StdResult<ParsedVAA> {
     let config = CONFIG.load(deps.storage)?;
-    let vaa = parse_vaa(data)?;
+    let vaa = ParsedVAA::deserialize(data)?;
 
     if vaa.version != 1 {
         return ContractError::InvalidVersion.std_err();
@@ -100,9 +100,9 @@ fn verify_router_signatures(config: &Config, vaa: &ParsedVAA, data: &[u8]) -> St
     }
 
     let mut last_index: i16 = -1;
-    let mut pos = HEADER_LEN;
+    let mut pos = ParsedVAA::HEADER_LEN;
     for _ in 0..signer_count {
-        if pos + SIGNATURE_LEN > data.len() {
+        if pos + ParsedVAA::SIGNATURE_LEN > data.len() {
             return ContractError::InvalidVAA.std_err();
         }
 
@@ -117,14 +117,17 @@ fn verify_router_signatures(config: &Config, vaa: &ParsedVAA, data: &[u8]) -> St
             return ContractError::TooManySignatures.std_err();
         }
 
-        let signature =
-            Signature::try_from(&data[pos + SIG_DATA_POS..pos + SIG_DATA_POS + SIG_DATA_LEN])
-                .map_err(|_| {
-                    cosmwasm_std::StdError::msg(ContractError::CannotDecodeSignature.to_string())
-                })?;
-        let recovery_id = RecoveryId::try_from(data[pos + SIG_RECOVERY_POS]).map_err(|_| {
+        let signature = Signature::try_from(
+            &data[pos + ParsedVAA::SIG_DATA_POS
+                ..pos + ParsedVAA::SIG_DATA_POS + ParsedVAA::SIG_DATA_LEN],
+        )
+        .map_err(|_| {
             cosmwasm_std::StdError::msg(ContractError::CannotDecodeSignature.to_string())
         })?;
+        let recovery_id =
+            RecoveryId::try_from(data[pos + ParsedVAA::SIG_RECOVERY_POS]).map_err(|_| {
+                cosmwasm_std::StdError::msg(ContractError::CannotDecodeSignature.to_string())
+            })?;
         let verify_key =
             VerifyingKey::recover_from_prehash(vaa.hash.as_slice(), &signature, recovery_id)
                 .map_err(|_| {
@@ -135,7 +138,7 @@ fn verify_router_signatures(config: &Config, vaa: &ParsedVAA, data: &[u8]) -> St
             return ContractError::RouterSignatureError.std_err();
         }
 
-        pos += SIGNATURE_LEN;
+        pos += ParsedVAA::SIGNATURE_LEN;
     }
 
     Ok(())
