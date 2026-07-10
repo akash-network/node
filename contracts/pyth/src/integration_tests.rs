@@ -6,8 +6,6 @@
 // Note: Price update execution requires router-signed PNAU data. Those flows are
 // tested via the contract's unit tests and actual chain integration tests.
 
-#![cfg(test)]
-
 use cosmwasm_std::testing::{message_info, mock_env, MockApi, MockQuerier, MockStorage};
 use cosmwasm_std::{from_json, Addr, Binary, Empty, OwnedDeps, Uint128, Uint256};
 

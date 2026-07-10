@@ -97,8 +97,3 @@ pub struct ConfigResponse {
 pub struct PriceFeedIdResponse {
     pub price_feed_id: String,
 }
-
-#[cw_serde]
-pub struct MigrateMsg {
-    pub router_verifier: Option<RouterVerifierConfigMsg>,
-}

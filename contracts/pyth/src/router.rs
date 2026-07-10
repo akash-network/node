@@ -104,7 +104,7 @@ fn verify_router_signatures(
 
         let router_index = router_index as usize;
         if router_index >= config.routers.len() {
-            return Err(ContractError::TooManySignatures);
+            return Err(ContractError::InvalidRouterIndex);
         }
 
         let signature = Signature::try_from(
@@ -237,6 +237,41 @@ mod tests {
         .unwrap_err();
 
         assert!(err.to_string().contains("InvalidConfig"));
+    }
+
+    #[test]
+    fn rejects_invalid_router_index() {
+        let keys = router_keys();
+        let config = setup(&keys);
+        let vaa = signed_vaa_with_keys(
+            &[keys[0].clone(), keys[1].clone(), keys[4].clone()],
+            &[0, 1, 5],
+            ROUTER_SET_INDEX,
+            EMITTER_CHAIN,
+            EMITTER_ADDRESS,
+            vec![],
+        );
+
+        let err = verify_vaa(&config, &vaa).unwrap_err();
+        assert!(matches!(err, ContractError::InvalidRouterIndex));
+    }
+
+    #[test]
+    fn rejects_too_many_signatures() {
+        let mut keys = router_keys();
+        keys.push(SigningKey::from_bytes((&[6u8; 32]).into()).unwrap());
+        let config = setup(&keys[..ROUTER_COUNT]);
+        let vaa = signed_vaa_with_keys(
+            &keys,
+            &[0, 1, 2, 3, 4, 5],
+            ROUTER_SET_INDEX,
+            EMITTER_CHAIN,
+            EMITTER_ADDRESS,
+            vec![],
+        );
+
+        let err = verify_vaa(&config, &vaa).unwrap_err();
+        assert!(matches!(err, ContractError::TooManySignatures));
     }
 
     #[test]

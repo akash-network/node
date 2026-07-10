@@ -6,7 +6,7 @@ use cosmwasm_std::{
 use crate::accumulator::{parse_accumulator_update, verify_merkle_proof};
 use crate::error::ContractError;
 use crate::msg::{
-    ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, PriceFeedIdResponse, PriceFeedResponse,
+    ConfigResponse, ExecuteMsg, InstantiateMsg, PriceFeedIdResponse, PriceFeedResponse,
     PriceResponse, QueryMsg, RouterVerifierConfigMsg,
 };
 use crate::oracle::{pyth_price_to_decimal, MsgAddPriceEntry};
@@ -357,23 +357,6 @@ fn query_price_feed_id(deps: Deps) -> StdResult<PriceFeedIdResponse> {
     })
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
-    let mut response = Response::new()
-        .add_attribute("method", "migrate")
-        .add_attribute("version", "3.0.0");
-
-    if let Some(router_config) = msg.router_verifier {
-        let mut config = CONFIG.load(deps.storage)?;
-        config.router_verifier = router::parse_config(router_config)?;
-        CONFIG.save(deps.storage, &config)?;
-
-        response = response.add_attribute("router_verifier", "configured");
-    }
-
-    Ok(response)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -480,31 +463,6 @@ mod tests {
         assert_eq!(0, response.router_verifier.router_set_index);
         assert_eq!(5, response.router_verifier.routers.len());
         assert_eq!(26, response.router_verifier.expected_emitter_chain);
-    }
-
-    #[test]
-    fn test_migrate_can_update_router_verifier() {
-        let mut deps = mock_deps();
-        setup_config(&mut deps);
-
-        let mut router_config = production_router_config_msg();
-        router_config.router_set_index = 1;
-        let res = migrate(
-            deps.as_mut(),
-            mock_env(),
-            MigrateMsg {
-                router_verifier: Some(router_config),
-            },
-        )
-        .unwrap();
-
-        assert!(res
-            .attributes
-            .iter()
-            .any(|attr| attr.key == "router_verifier" && attr.value == "configured"));
-
-        let config = CONFIG.load(&deps.storage).unwrap();
-        assert_eq!(1, config.router_verifier.router_set_index);
     }
 
     #[test]

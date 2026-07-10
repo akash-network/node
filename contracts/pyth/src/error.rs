@@ -45,6 +45,9 @@ pub enum ContractError {
     #[error("WrongRouterIndexOrder")]
     WrongRouterIndexOrder,
 
+    #[error("InvalidRouterIndex")]
+    InvalidRouterIndex,
+
     #[error("TooManySignatures")]
     TooManySignatures,
 
