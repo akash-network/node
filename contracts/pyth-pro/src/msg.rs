@@ -5,31 +5,20 @@ use cosmwasm_std::{Binary, Uint128, Uint256};
 pub struct InstantiateMsg {
     /// Address of the contract admin
     pub admin: String,
-    /// Wormhole contract address for VAA verification
-    pub wormhole_contract: String,
+    /// Pyth VAA verifier contract address
+    pub pyth_vaa_contract: String,
     /// Initial update fee in uakt (Uint256 for CosmWasm 3.x)
     pub update_fee: Uint256,
     /// Pyth price feed ID for AKT/USD (required)
     pub price_feed_id: String,
-    /// Valid Pyth data sources (emitter chain + address pairs)
-    pub data_sources: Vec<DataSourceMsg>,
-}
-
-/// A data source identifies a valid price feed source (Pyth publisher)
-#[cw_serde]
-pub struct DataSourceMsg {
-    /// Wormhole chain ID of the emitter (26 for Pythnet)
-    pub emitter_chain: u16,
-    /// Emitter address (32 bytes, hex encoded)
-    pub emitter_address: String,
 }
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    /// Update the AKT/USD price feed with VAA proof
-    /// VAA is verified via Wormhole contract, then Pyth payload is parsed and relayed to x/oracle
+    /// Update the AKT/USD price feed with upgraded Pyth PNAU data.
+    /// pyth-vaa validates the embedded router-signed VAA before the price is relayed to x/oracle.
     UpdatePriceFeed {
-        /// VAA data from Pyth Hermes API (base64 encoded Binary)
+        /// PNAU update data from the upgraded Pyth Hermes API.
         vaa: Binary,
     },
     /// Update the update fee (admin only)
@@ -38,9 +27,8 @@ pub enum ExecuteMsg {
     TransferAdmin { new_admin: String },
     /// Update contract configuration (admin only)
     UpdateConfig {
-        wormhole_contract: Option<String>,
+        pyth_vaa_contract: Option<String>,
         price_feed_id: Option<String>,
-        data_sources: Option<Vec<DataSourceMsg>>,
     },
 }
 
@@ -85,12 +73,11 @@ pub struct PriceFeedResponse {
 #[cw_serde]
 pub struct ConfigResponse {
     pub admin: String,
-    pub wormhole_contract: String,
+    pub pyth_vaa_contract: String,
     pub update_fee: Uint256,
     pub price_feed_id: String,
     pub default_denom: String,
     pub default_base_denom: String,
-    pub data_sources: Vec<DataSourceMsg>,
 }
 
 #[cw_serde]
@@ -99,4 +86,21 @@ pub struct PriceFeedIdResponse {
 }
 
 #[cw_serde]
-pub struct MigrateMsg {}
+pub enum VaaQueryMsg {
+    VerifyVAA { vaa: Binary, block_time: u64 },
+}
+
+#[cw_serde]
+pub struct ParsedVAA {
+    pub version: u8,
+    pub guardian_set_index: u32,
+    pub timestamp: u32,
+    pub nonce: u32,
+    pub len_signers: u8,
+    pub emitter_chain: u16,
+    pub emitter_address: Vec<u8>,
+    pub sequence: u64,
+    pub consistency_level: u8,
+    pub payload: Vec<u8>,
+    pub hash: Vec<u8>,
+}

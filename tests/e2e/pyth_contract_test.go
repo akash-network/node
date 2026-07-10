@@ -31,9 +31,9 @@ import (
 	"pkg.akt.dev/node/v2/testutil/network"
 )
 
-// priceOracleContractTestSuite tests the Pyth CosmWasm contract deployed on a
-// test network. Upgraded Hermes submits PNAU data, Pyth verifies the router
-// quorum, then relays the price to x/oracle.
+// priceOracleContractTestSuite tests the Pyth CosmWasm contracts deployed on a
+// test network. Upgraded Hermes submits PNAU data to pyth-pro, which queries
+// pyth-vaa for router quorum verification before relaying to x/oracle.
 type priceOracleContractTestSuite struct {
 	*testutil.NetworkTestSuite
 
@@ -160,12 +160,17 @@ type RouterVerifierConfig struct {
 	ExpectedEmitterAddress string          `json:"expected_emitter_address"`
 }
 
-// InstantiateMsg is the message to instantiate the Pyth contract
-type InstantiateMsg struct {
+type PythVaaInstantiateMsg struct {
 	Admin          string               `json:"admin"`
 	RouterVerifier RouterVerifierConfig `json:"router_verifier"`
-	UpdateFee      string               `json:"update_fee"`
-	PriceFeedID    string               `json:"price_feed_id"`
+}
+
+// InstantiateMsg is the message to instantiate the pyth-pro contract.
+type InstantiateMsg struct {
+	Admin           string `json:"admin"`
+	PythVaaContract string `json:"pyth_vaa_contract"`
+	UpdateFee       string `json:"update_fee"`
+	PriceFeedID     string `json:"price_feed_id"`
 }
 
 // ExecuteUpdatePriceFeed is the message to update the price feed with PNAU data.
@@ -184,8 +189,8 @@ type ExecuteUpdateConfig struct {
 }
 
 type UpdateConfigData struct {
-	RouterVerifier *RouterVerifierConfig `json:"router_verifier,omitempty"`
-	PriceFeedID    *string               `json:"price_feed_id,omitempty"`
+	PythVaaContract *string `json:"pyth_vaa_contract,omitempty"`
+	PriceFeedID     *string `json:"price_feed_id,omitempty"`
 }
 
 // QueryGetConfig is the query to get contract config
@@ -205,12 +210,12 @@ type QueryGetOracleParams struct{}
 
 // ConfigResponse is the response from GetConfig query
 type ConfigResponse struct {
-	Admin            string               `json:"admin"`
-	RouterVerifier   RouterVerifierConfig `json:"router_verifier"`
-	UpdateFee        string               `json:"update_fee"`
-	PriceFeedID      string               `json:"price_feed_id"`
-	DefaultDenom     string               `json:"default_denom"`
-	DefaultBaseDenom string               `json:"default_base_denom"`
+	Admin            string `json:"admin"`
+	PythVaaContract  string `json:"pyth_vaa_contract"`
+	UpdateFee        string `json:"update_fee"`
+	PriceFeedID      string `json:"price_feed_id"`
+	DefaultDenom     string `json:"default_denom"`
+	DefaultBaseDenom string `json:"default_base_denom"`
 }
 
 // PriceResponse is the response from GetPrice query
@@ -265,10 +270,10 @@ func (s *priceOracleContractTestSuite) TestStoreContractViaGovernance() {
 	ctx := context.Background()
 	val := s.Network().Validators[0]
 
-	// Load the pyth wasm contract
-	wasmPath := findWasmPath("pyth", "pyth.wasm")
+	// Load the pyth-pro wasm contract.
+	wasmPath := findWasmPath("pyth-pro", "pyth_pro.wasm")
 	if wasmPath == "" {
-		s.T().Skip("pyth.wasm not found, skipping contract store test")
+		s.T().Skip("pyth_pro.wasm not found, skipping contract store test")
 		return
 	}
 
@@ -316,8 +321,8 @@ func (s *priceOracleContractTestSuite) TestStoreContractViaGovernance() {
 		sdk.Coins{sdk.NewInt64Coin("uakt", 1000000000)},
 		val.Address.String(),
 		"",
-		"Store pyth contract",
-		"Deploy pyth CosmWasm contract for Pyth price feeds",
+		"Store pyth-pro contract",
+		"Deploy pyth-pro CosmWasm contract for Pyth price feeds",
 		false,
 	)
 	s.Require().NoError(err)
@@ -390,23 +395,37 @@ func (s *priceOracleContractTestSuite) TestWormholeContractMessageEncoding() {
 
 // TestPriceOracleWithVAAMessageEncoding tests that Pyth contract PNAU message types serialize correctly.
 func (s *priceOracleContractTestSuite) TestPriceOracleWithVAAMessageEncoding() {
-	instantiateMsg := InstantiateMsg{
+	vaaInstantiateMsg := PythVaaInstantiateMsg{
 		Admin:          "akash1admin123",
 		RouterVerifier: testRouterVerifierConfig(),
-		UpdateFee:      "1000000",
-		PriceFeedID:    "0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d",
 	}
 
-	data, err := json.Marshal(instantiateMsg)
+	data, err := json.Marshal(vaaInstantiateMsg)
 	s.Require().NoError(err)
-	s.T().Logf("Pyth InstantiateMsg JSON: %s", string(data))
+	s.T().Logf("Pyth VAA InstantiateMsg JSON: %s", string(data))
+
+	var decodedVaa PythVaaInstantiateMsg
+	err = json.Unmarshal(data, &decodedVaa)
+	s.Require().NoError(err)
+	s.Require().Len(decodedVaa.RouterVerifier.Routers, 5)
+	s.Require().Equal(uint16(26), decodedVaa.RouterVerifier.ExpectedEmitterChain)
+
+	instantiateMsg := InstantiateMsg{
+		Admin:           "akash1admin123",
+		PythVaaContract: "akash1pythvaa456",
+		UpdateFee:       "1000000",
+		PriceFeedID:     "0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d",
+	}
+
+	data, err = json.Marshal(instantiateMsg)
+	s.Require().NoError(err)
+	s.T().Logf("Pyth Pro InstantiateMsg JSON: %s", string(data))
 
 	var decoded InstantiateMsg
 	err = json.Unmarshal(data, &decoded)
 	s.Require().NoError(err)
 	s.Require().Equal(instantiateMsg.Admin, decoded.Admin)
-	s.Require().Len(decoded.RouterVerifier.Routers, 5)
-	s.Require().Equal(uint16(26), decoded.RouterVerifier.ExpectedEmitterChain)
+	s.Require().Equal(instantiateMsg.PythVaaContract, decoded.PythVaaContract)
 
 	// Test ExecuteUpdatePriceFeed with PNAU encoding
 	executeMsg := ExecuteUpdatePriceFeed{
@@ -420,11 +439,10 @@ func (s *priceOracleContractTestSuite) TestPriceOracleWithVAAMessageEncoding() {
 	s.T().Logf("Pyth UpdatePriceFeed with PNAU JSON: %s", string(data))
 
 	// Test UpdateConfig encoding
-	routerConfig := testRouterVerifierConfig()
-	routerConfig.RouterSetIndex = 1
+	pythVaaContract := "akash1newpythvaa"
 	updateConfigMsg := ExecuteUpdateConfig{
 		UpdateConfig: UpdateConfigData{
-			RouterVerifier: &routerConfig,
+			PythVaaContract: &pythVaaContract,
 		},
 	}
 
@@ -465,12 +483,12 @@ func (s *priceOracleContractTestSuite) TestQueryOracleModuleParams() {
 
 // TestContractMessageEncoding tests that contract message types serialize correctly
 func (s *priceOracleContractTestSuite) TestContractMessageEncoding() {
-	// Test InstantiateMsg encoding with router verifier.
+	// Test pyth-pro InstantiateMsg encoding.
 	instantiateMsg := InstantiateMsg{
-		Admin:          "akash1test123",
-		RouterVerifier: testRouterVerifierConfig(),
-		UpdateFee:      "1000",
-		PriceFeedID:    "0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d",
+		Admin:           "akash1test123",
+		PythVaaContract: "akash1pythvaa456",
+		UpdateFee:       "1000",
+		PriceFeedID:     "0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d",
 	}
 
 	data, err := json.Marshal(instantiateMsg)
@@ -480,7 +498,7 @@ func (s *priceOracleContractTestSuite) TestContractMessageEncoding() {
 	err = json.Unmarshal(data, &decoded)
 	s.Require().NoError(err)
 	s.Require().Equal(instantiateMsg.Admin, decoded.Admin)
-	s.Require().Len(decoded.RouterVerifier.Routers, 5)
+	s.Require().Equal(instantiateMsg.PythVaaContract, decoded.PythVaaContract)
 	s.Require().Equal(instantiateMsg.PriceFeedID, decoded.PriceFeedID)
 
 	// Test ExecuteMsg encoding with PNAU data.
@@ -522,21 +540,10 @@ func (s *priceOracleContractTestSuite) TestContractMessageEncoding() {
 
 // TestContractResponseParsing tests parsing of expected contract responses
 func (s *priceOracleContractTestSuite) TestContractResponseParsing() {
-	// Test ConfigResponse parsing with router verifier.
+	// Test pyth-pro ConfigResponse parsing.
 	configJSON := `{
 		"admin": "akash1abc123",
-		"router_verifier": {
-			"router_set_index": 0,
-			"routers": [
-				{"bytes": "QVNLMXbkYaP7MEeUAPIQVJ7M5jg="},
-				{"bytes": "ZQKYe2LyHKt+tc3Y8BcwSLYNW0E="},
-				{"bytes": "RKPo9qOCQSz2u5Cj+BBuaJd0dsk="},
-				{"bytes": "2dfUUpV3hkNSyaZTmkI4/NREcFI="},
-				{"bytes": "FmOlqCIzbs5IVZsd+x6ToBenvKM="}
-			],
-			"expected_emitter_chain": 26,
-			"expected_emitter_address": "UHl0aG5ldFB5dGhuZXRQeXRobmV0UHl0aG5ldFB5dGhuZXQ="
-		},
+		"pyth_vaa_contract": "akash1pythvaa456",
 		"update_fee": "1000",
 		"price_feed_id": "0xtest",
 		"default_denom": "uakt",
@@ -547,8 +554,7 @@ func (s *priceOracleContractTestSuite) TestContractResponseParsing() {
 	err := json.Unmarshal([]byte(configJSON), &config)
 	s.Require().NoError(err)
 	s.Require().Equal("akash1abc123", config.Admin)
-	s.Require().Len(config.RouterVerifier.Routers, 5)
-	s.Require().Equal(uint16(26), config.RouterVerifier.ExpectedEmitterChain)
+	s.Require().Equal("akash1pythvaa456", config.PythVaaContract)
 	s.Require().Equal("1000", config.UpdateFee)
 	s.Require().Equal("0xtest", config.PriceFeedID)
 	s.Require().Equal("uakt", config.DefaultDenom)
@@ -663,6 +669,8 @@ func (s *priceOracleContractTestSuite) TestAllContractsExist() {
 	}{
 		{"wormhole", "wormhole", "wormhole.wasm"},
 		{"pyth", "pyth", "pyth.wasm"},
+		{"pyth-vaa", "pyth-vaa", "pyth_vaa.wasm"},
+		{"pyth-pro", "pyth-pro", "pyth_pro.wasm"},
 	}
 
 	for _, c := range contracts {
@@ -1074,12 +1082,12 @@ func (s *priceOracleContractTestSuite) TestStoreContractCodeViaGovernance() {
 	s.Require().NoError(err)
 
 	// Step 1: Load contract WASM
-	wasmPath := findWasmPath("pyth", "pyth.wasm")
+	wasmPath := findWasmPath("pyth-pro", "pyth_pro.wasm")
 	if wasmPath == "" {
-		s.T().Skip("pyth.wasm not found, skipping contract deployment test")
+		s.T().Skip("pyth_pro.wasm not found, skipping contract deployment test")
 		return
 	}
-	s.T().Logf("Found pyth contract at: %s", wasmPath)
+	s.T().Logf("Found pyth-pro contract at: %s", wasmPath)
 
 	wasmBytes, err := LoadAndGzipWasm(wasmPath)
 	s.Require().NoError(err)
@@ -1095,8 +1103,8 @@ func (s *priceOracleContractTestSuite) TestStoreContractCodeViaGovernance() {
 	proposalID, err := SubmitStoreCodeProposal(
 		ctx, cl, govAddr, wasmBytes,
 		val.Address, deposit,
-		"Store pyth contract",
-		"Deploy pyth CosmWasm contract for testing",
+		"Store pyth-pro contract",
+		"Deploy pyth-pro CosmWasm contract for testing",
 	)
 	s.Require().NoError(err)
 	s.T().Logf("Submitted store code proposal: %d", proposalID)
@@ -1140,19 +1148,17 @@ func (s *priceOracleContractTestSuite) TestStoreContractCodeViaGovernance() {
 		codeInfoResp.CodeInfoResponse.DataHash)
 
 	// Step 7: Instantiate the contract
-	// The pyth contract requires:
-	// - router_verifier: upgraded Pyth router quorum config
-	// - Queries oracle module params during instantiation via custom Akash querier
+	// The pyth-pro contract points at pyth-vaa for verification.
 	initMsg := InstantiateMsg{
-		Admin:          val.Address.String(),
-		RouterVerifier: testRouterVerifierConfig(),
-		UpdateFee:      "1000",
-		PriceFeedID:    "0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d", // AKT/USD price feed ID
+		Admin:           val.Address.String(),
+		PythVaaContract: val.Address.String(),
+		UpdateFee:       "1000",
+		PriceFeedID:     "0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d", // AKT/USD price feed ID
 	}
 
 	contractAddr, err := InstantiateContract(
 		ctx, cl, codeID, initMsg,
-		"pyth-test",
+		"pyth-pro-test",
 		val.Address.String(), // admin
 		val.Address,
 	)
@@ -1172,6 +1178,6 @@ func (s *priceOracleContractTestSuite) TestStoreContractCodeViaGovernance() {
 
 	s.Require().Equal(val.Address.String(), config.Admin)
 	s.Require().Equal("1000", config.UpdateFee)
-	s.Require().Len(config.RouterVerifier.Routers, 5)
+	s.Require().Equal(val.Address.String(), config.PythVaaContract)
 	s.T().Log("Contract deployed and configured successfully!")
 }

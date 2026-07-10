@@ -20,13 +20,4 @@ pub enum ContractError {
 
     #[error("Price cannot be zero")]
     ZeroPrice {},
-
-    #[error("Invalid data source: emitter_chain {emitter_chain}, emitter_address {emitter_address}")]
-    InvalidDataSource {
-        emitter_chain: u16,
-        emitter_address: String,
-    },
-
-    #[error("VAA verification failed: {reason}")]
-    VAAVerificationFailed { reason: String },
 }

@@ -966,6 +966,36 @@ dependencies = [
  "cw-multi-test",
  "cw-storage-plus",
  "hex",
+ "schemars 0.8.22",
+ "serde",
+ "sha3",
+ "thiserror 1.0.69",
+]
+
+[[package]]
+name = "pyth-pro"
+version = "1.0.1"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "hex",
+ "schemars 0.8.22",
+ "serde",
+ "sha3",
+ "thiserror 1.0.69",
+]
+
+[[package]]
+name = "pyth-vaa"
+version = "1.0.1"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "hex",
  "k256",
  "schemars 0.8.22",
  "serde",

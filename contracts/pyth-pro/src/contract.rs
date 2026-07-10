@@ -1,21 +1,17 @@
 use cosmwasm_std::{
     entry_point, to_json_binary, AnyMsg, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
-    Response, StdResult, Uint128, Uint256, WasmQuery, QueryRequest,
+    QueryRequest, Response, StdResult, Uint128, Uint256, WasmQuery,
 };
 
-use crate::accumulator::{parse_accumulator_update, verify_merkle_proof, PNAU_MAGIC};
+use crate::accumulator::{parse_accumulator_update, verify_merkle_proof};
 use crate::error::ContractError;
 use crate::msg::{
-    ConfigResponse, DataSourceMsg, ExecuteMsg, InstantiateMsg, MigrateMsg,
-    PriceFeedIdResponse, PriceFeedResponse, PriceResponse, QueryMsg,
+    ConfigResponse, ExecuteMsg, InstantiateMsg, ParsedVAA, PriceFeedIdResponse, PriceFeedResponse,
+    PriceResponse, QueryMsg, VaaQueryMsg,
 };
 use crate::oracle::{pyth_price_to_decimal, MsgAddPriceEntry};
-use crate::pyth::{parse_pyth_payload, parse_price_feed_message};
-use crate::state::{
-    Config, DataID, DataSource, PriceFeed,
-    CONFIG, PRICE_FEED,
-};
-use crate::wormhole::{WormholeQueryMsg, ParsedVAA};
+use crate::pyth::parse_price_feed_message;
+use crate::state::{Config, DataID, PriceFeed, CONFIG, PRICE_FEED};
 
 // Expected exponent for AKT/USD price (8 decimals)
 const EXPECTED_EXPO: i32 = -8;
@@ -30,8 +26,7 @@ pub fn instantiate(
     // Validate admin address
     let admin = deps.api.addr_validate(&msg.admin)?;
 
-    // Validate Wormhole contract address
-    let wormhole_contract = deps.api.addr_validate(&msg.wormhole_contract)?;
+    let pyth_vaa_contract = deps.api.addr_validate(&msg.pyth_vaa_contract)?;
 
     // Require price feed ID
     if msg.price_feed_id.is_empty() {
@@ -40,24 +35,12 @@ pub fn instantiate(
         });
     }
 
-    // Convert data sources from message format to storage format
-    let data_sources: Vec<DataSource> = msg
-        .data_sources
-        .into_iter()
-        .map(|ds| DataSource {
-            emitter_chain: ds.emitter_chain,
-            emitter_address: ds.emitter_address,
-        })
-        .collect();
-
-    // Initialize config with Wormhole contract and data sources
     let config = Config {
         admin,
-        wormhole_contract,
+        pyth_vaa_contract,
         update_fee: msg.update_fee,
         price_feed_id: msg.price_feed_id.clone(),
         default_data_id: DataID::akt_usd(),
-        data_sources,
     };
     CONFIG.save(deps.storage, &config)?;
 
@@ -68,7 +51,7 @@ pub fn instantiate(
     Ok(Response::new()
         .add_attribute("method", "instantiate")
         .add_attribute("admin", msg.admin)
-        .add_attribute("wormhole_contract", msg.wormhole_contract)
+        .add_attribute("pyth_vaa_contract", msg.pyth_vaa_contract)
         .add_attribute("update_fee", msg.update_fee)
         .add_attribute("price_feed_id", msg.price_feed_id))
 }
@@ -81,16 +64,13 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::UpdatePriceFeed { vaa } => {
-            execute_update_price_feed(deps, env, info, vaa)
-        }
+        ExecuteMsg::UpdatePriceFeed { vaa } => execute_update_price_feed(deps, env, info, vaa),
         ExecuteMsg::UpdateFee { new_fee } => execute_update_fee(deps, info, new_fee),
         ExecuteMsg::TransferAdmin { new_admin } => execute_transfer_admin(deps, info, new_admin),
         ExecuteMsg::UpdateConfig {
-            wormhole_contract,
+            pyth_vaa_contract,
             price_feed_id,
-            data_sources,
-        } => execute_update_config(deps, info, wormhole_contract, price_feed_id, data_sources),
+        } => execute_update_config(deps, info, pyth_vaa_contract, price_feed_id),
     }
 }
 
@@ -106,10 +86,7 @@ fn validate_pyth_price(raw_price: i64) -> Result<Uint128, ContractError> {
     Ok(Uint128::new(raw_price as u128))
 }
 
-/// Execute price feed update with VAA verification
-/// Accepts either:
-/// - PNAU accumulator format (from Pyth Hermes v2 API)
-/// - Raw Wormhole VAA (legacy format)
+/// Execute price feed update with upgraded Pyth PNAU accumulator data.
 pub fn execute_update_price_feed(
     deps: DepsMut,
     env: Env,
@@ -135,91 +112,41 @@ pub fn execute_update_price_feed(
 
     let data_bytes = vaa.as_slice();
 
-    // Detect format: PNAU accumulator or raw VAA
-    let (actual_vaa, price_message_data) = if data_bytes.len() >= 4 && &data_bytes[0..4] == PNAU_MAGIC {
-        // Parse PNAU accumulator format from Hermes v2 API
-        let accumulator = parse_accumulator_update(data_bytes)
-            .map_err(|_| ContractError::InvalidPriceData {
-                reason: "failed to parse accumulator update".to_string(),
-            })?;
+    let accumulator =
+        parse_accumulator_update(data_bytes).map_err(|_| ContractError::InvalidPriceData {
+            reason: "failed to parse accumulator update".to_string(),
+        })?;
 
-        // Must have at least one price update
-        if accumulator.price_updates.is_empty() {
-            return Err(ContractError::InvalidPriceData {
-                reason: "No price updates in accumulator".to_string(),
-            });
-        }
-
-        // Get the first price update and verify its Merkle proof
-        let price_update = &accumulator.price_updates[0];
-
-        // Verify Merkle proof
-        if !verify_merkle_proof(
-            &price_update.message_data,
-            &price_update.merkle_proof,
-            &accumulator.merkle_root,
-        ) {
-            return Err(ContractError::InvalidPriceData {
-                reason: "Merkle proof verification failed".to_string(),
-            });
-        }
-
-        (accumulator.vaa, Some(price_update.message_data.clone()))
-    } else {
-        // Assume raw VAA format (legacy)
-        (vaa, None)
-    };
-
-    // Step 1: Verify VAA via Wormhole contract
-    let verify_query = WormholeQueryMsg::VerifyVAA {
-        vaa: actual_vaa.clone(),
-        block_time: env.block.time.seconds(),
-    };
-
-    let verified_vaa: ParsedVAA = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
-        contract_addr: config.wormhole_contract.to_string(),
-        msg: to_json_binary(&verify_query)?,
-    }))?;
-
-    // Step 2: Validate emitter is from Pythnet (chain 26) for accumulator updates
-    // For accumulator updates, the VAA contains a Merkle root signed by Wormhole
-    // The emitter is Pythnet's accumulator program, not a specific data source
-    if price_message_data.is_some() {
-        // For PNAU format, verify emitter is Pythnet (chain 26)
-        if verified_vaa.emitter_chain != 26 {
-            return Err(ContractError::InvalidDataSource {
-                emitter_chain: verified_vaa.emitter_chain,
-                emitter_address: hex::encode(&verified_vaa.emitter_address),
-            });
-        }
-    } else {
-        // For raw VAA format, validate against configured data sources
-        let is_valid_source = config.data_sources.iter().any(|ds| {
-            ds.matches(verified_vaa.emitter_chain, &verified_vaa.emitter_address)
+    if accumulator.price_updates.is_empty() {
+        return Err(ContractError::InvalidPriceData {
+            reason: "No price updates in accumulator".to_string(),
         });
-
-        if !is_valid_source {
-            return Err(ContractError::InvalidDataSource {
-                emitter_chain: verified_vaa.emitter_chain,
-                emitter_address: hex::encode(&verified_vaa.emitter_address),
-            });
-        }
     }
 
-    // Step 3: Parse Pyth price data
-    let pyth_price = if let Some(ref message_data) = price_message_data {
-        // Parse from PNAU price message (Merkle-proven)
-        parse_price_feed_message(message_data)
-            .map_err(|_| ContractError::InvalidPriceData {
-                reason: "failed to parse price feed message".to_string(),
-            })?
-    } else {
-        // Parse from raw VAA payload (legacy)
-        parse_pyth_payload(&verified_vaa.payload)
-            .map_err(|_| ContractError::InvalidPriceData {
-                reason: "failed to parse price payload".to_string(),
-            })?
-    };
+    let verified_vaa: ParsedVAA = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
+        contract_addr: config.pyth_vaa_contract.to_string(),
+        msg: to_json_binary(&VaaQueryMsg::VerifyVAA {
+            vaa: accumulator.vaa.clone(),
+            block_time: env.block.time.seconds(),
+        })?,
+    }))?;
+
+    let price_update = &accumulator.price_updates[0];
+    if !verify_merkle_proof(
+        &price_update.message_data,
+        &price_update.merkle_proof,
+        &accumulator.merkle_root,
+    ) {
+        return Err(ContractError::InvalidPriceData {
+            reason: "Merkle proof verification failed".to_string(),
+        });
+    }
+
+    let pyth_price = parse_price_feed_message(&price_update.message_data).map_err(|_| {
+        ContractError::InvalidPriceData {
+            reason: "failed to parse price feed message".to_string(),
+        }
+    })?;
 
     // Step 4: Validate price feed ID matches expected
     if pyth_price.id != config.price_feed_id {
@@ -347,9 +274,8 @@ pub fn execute_transfer_admin(
 pub fn execute_update_config(
     deps: DepsMut,
     info: MessageInfo,
-    wormhole_contract: Option<String>,
+    pyth_vaa_contract: Option<String>,
     price_feed_id: Option<String>,
-    data_sources: Option<Vec<DataSourceMsg>>,
 ) -> Result<Response, ContractError> {
     let mut config = CONFIG.load(deps.storage)?;
 
@@ -358,29 +284,24 @@ pub fn execute_update_config(
         return Err(ContractError::Unauthorized {});
     }
 
-    if let Some(wormhole) = wormhole_contract {
-        config.wormhole_contract = deps.api.addr_validate(&wormhole)?;
+    if let Some(contract) = pyth_vaa_contract {
+        config.pyth_vaa_contract = deps.api.addr_validate(&contract)?;
     }
 
     if let Some(feed_id) = price_feed_id {
+        if feed_id.is_empty() {
+            return Err(ContractError::InvalidPriceData {
+                reason: "price_feed_id is required".to_string(),
+            });
+        }
         config.price_feed_id = feed_id;
-    }
-
-    if let Some(sources) = data_sources {
-        config.data_sources = sources
-            .into_iter()
-            .map(|ds| DataSource {
-                emitter_chain: ds.emitter_chain,
-                emitter_address: ds.emitter_address,
-            })
-            .collect();
     }
 
     CONFIG.save(deps.storage, &config)?;
 
     Ok(Response::new()
         .add_attribute("method", "update_config")
-        .add_attribute("wormhole_contract", config.wormhole_contract.to_string())
+        .add_attribute("pyth_vaa_contract", config.pyth_vaa_contract.to_string())
         .add_attribute("price_feed_id", config.price_feed_id))
 }
 
@@ -423,19 +344,11 @@ fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
 
     Ok(ConfigResponse {
         admin: config.admin.to_string(),
-        wormhole_contract: config.wormhole_contract.to_string(),
+        pyth_vaa_contract: config.pyth_vaa_contract.to_string(),
         update_fee: config.update_fee,
         price_feed_id: config.price_feed_id,
         default_denom: config.default_data_id.denom,
         default_base_denom: config.default_data_id.base_denom,
-        data_sources: config
-            .data_sources
-            .into_iter()
-            .map(|ds| DataSourceMsg {
-                emitter_chain: ds.emitter_chain,
-                emitter_address: ds.emitter_address,
-            })
-            .collect(),
     })
 }
 
@@ -447,18 +360,11 @@ fn query_price_feed_id(deps: Deps) -> StdResult<PriceFeedIdResponse> {
     })
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    Ok(Response::new()
-        .add_attribute("method", "migrate")
-        .add_attribute("version", "3.0.0"))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use cosmwasm_std::testing::{message_info, mock_env, MockApi, MockQuerier, MockStorage};
-    use cosmwasm_std::{from_json, Empty, OwnedDeps};
+    use cosmwasm_std::{coin, from_json, ContractResult, Empty, OwnedDeps, SystemResult};
 
     type MockDeps = OwnedDeps<MockStorage, MockApi, MockQuerier, Empty>;
 
@@ -474,16 +380,43 @@ mod tests {
     fn setup_config(deps: &mut MockDeps) {
         let config = Config {
             admin: deps.api.addr_make("admin"),
-            wormhole_contract: deps.api.addr_make("wormhole"),
+            pyth_vaa_contract: deps.api.addr_make("pythvaa"),
             update_fee: Uint256::from(1000u128),
             price_feed_id: "0xtest123".to_string(),
             default_data_id: DataID::akt_usd(),
-            data_sources: vec![DataSource {
-                emitter_chain: 26,
-                emitter_address: "e101faedac5851e32b9b23b5f9411a8c2bac4aae3ed4dd7b811dd1a72ea4aa71".to_string(),
-            }],
         };
         CONFIG.save(&mut deps.storage, &config).unwrap();
+    }
+
+    fn setup_price_feed(deps: &mut MockDeps) {
+        PRICE_FEED
+            .save(&mut deps.storage, &PriceFeed::new())
+            .unwrap();
+    }
+
+    fn mock_pyth_vaa_query(deps: &mut MockDeps) {
+        deps.querier.update_wasm(|query| match query {
+            WasmQuery::Smart { msg, .. } => {
+                let _: VaaQueryMsg = from_json(msg).unwrap();
+                SystemResult::Ok(ContractResult::Ok(
+                    to_json_binary(&ParsedVAA {
+                        version: 1,
+                        guardian_set_index: 0,
+                        timestamp: 0,
+                        nonce: 0,
+                        len_signers: 3,
+                        emitter_chain: 26,
+                        emitter_address: vec![0; 32],
+                        sequence: 0,
+                        consistency_level: 0,
+                        payload: vec![],
+                        hash: vec![0; 32],
+                    })
+                    .unwrap(),
+                ))
+            }
+            _ => SystemResult::Ok(ContractResult::Err("unsupported wasm query".to_string())),
+        });
     }
 
     #[test]
@@ -499,8 +432,7 @@ mod tests {
         assert_eq!(2, res.attributes.len());
 
         let config: ConfigResponse =
-            from_json(query(deps.as_ref(), mock_env(), QueryMsg::GetConfig {}).unwrap())
-                .unwrap();
+            from_json(query(deps.as_ref(), mock_env(), QueryMsg::GetConfig {}).unwrap()).unwrap();
         assert_eq!(Uint256::from(2000u128), config.update_fee);
     }
 
@@ -514,40 +446,83 @@ mod tests {
         config.price_feed_id = "0xabc123def456".to_string();
         CONFIG.save(&mut deps.storage, &config).unwrap();
 
-        let response: PriceFeedIdResponse = from_json(
-            query(
-                deps.as_ref(),
-                mock_env(),
-                QueryMsg::GetPriceFeedId {},
-            )
-            .unwrap(),
-        )
-        .unwrap();
+        let response: PriceFeedIdResponse =
+            from_json(query(deps.as_ref(), mock_env(), QueryMsg::GetPriceFeedId {}).unwrap())
+                .unwrap();
 
         assert_eq!("0xabc123def456", response.price_feed_id);
     }
 
     #[test]
-    fn test_query_config_includes_wormhole() {
+    fn test_query_config_includes_pyth_vaa_contract() {
         let mut deps = mock_deps();
         setup_config(&mut deps);
 
-        let response: ConfigResponse = from_json(
-            query(
-                deps.as_ref(),
-                mock_env(),
-                QueryMsg::GetConfig {},
-            )
-            .unwrap(),
-        )
-        .unwrap();
+        let response: ConfigResponse =
+            from_json(query(deps.as_ref(), mock_env(), QueryMsg::GetConfig {}).unwrap()).unwrap();
 
         // Oracle module expects "akt" (not "uakt") for denom
         assert_eq!("akt", response.default_denom);
         assert_eq!("usd", response.default_base_denom);
-        assert!(!response.wormhole_contract.is_empty());
-        assert_eq!(1, response.data_sources.len());
-        assert_eq!(26, response.data_sources[0].emitter_chain);
+        assert_eq!(
+            deps.api.addr_make("pythvaa").to_string(),
+            response.pyth_vaa_contract
+        );
+    }
+
+    #[test]
+    fn test_update_price_feed_with_pyth_vaa_verified_pnau() {
+        let mut deps = mock_deps();
+        let config = Config {
+            admin: deps.api.addr_make("admin"),
+            pyth_vaa_contract: deps.api.addr_make("pythvaa"),
+            update_fee: Uint256::from(1000u128),
+            price_feed_id: "0x4ea5bb4d2f5900cc2e97ba534240950740b4d3b89fe712a94a7304fd2fd92702"
+                .to_string(),
+            default_data_id: DataID::akt_usd(),
+        };
+        CONFIG.save(&mut deps.storage, &config).unwrap();
+        setup_price_feed(&mut deps);
+        mock_pyth_vaa_query(&mut deps);
+
+        let update =
+            Binary::from(hex::decode(crate::accumulator::AKT_UPGRADED_HERMES_PNAU_HEX).unwrap());
+        let info = message_info(&deps.api.addr_make("updater"), &[coin(1000, "uakt")]);
+        let res = execute_update_price_feed(deps.as_mut(), mock_env(), info, update).unwrap();
+
+        assert!(res
+            .attributes
+            .iter()
+            .any(|attr| attr.key == "method" && attr.value == "update_price_feed"));
+
+        let price_feed = PRICE_FEED.load(&deps.storage).unwrap();
+        assert!(!price_feed.price.is_zero());
+        assert_eq!(price_feed.expo, -8);
+        assert!(price_feed.publish_time > 0);
+    }
+
+    #[test]
+    fn test_update_price_feed_rejects_non_pnau_input() {
+        let mut deps = mock_deps();
+        let config = Config {
+            admin: deps.api.addr_make("admin"),
+            pyth_vaa_contract: deps.api.addr_make("pythvaa"),
+            update_fee: Uint256::from(1000u128),
+            price_feed_id: "0x4ea5bb4d2f5900cc2e97ba534240950740b4d3b89fe712a94a7304fd2fd92702"
+                .to_string(),
+            default_data_id: DataID::akt_usd(),
+        };
+        CONFIG.save(&mut deps.storage, &config).unwrap();
+        setup_price_feed(&mut deps);
+
+        let info = message_info(&deps.api.addr_make("updater"), &[coin(1000, "uakt")]);
+        let err =
+            execute_update_price_feed(deps.as_mut(), mock_env(), info, Binary::from(vec![1, 2, 3]))
+                .unwrap_err();
+
+        assert!(err
+            .to_string()
+            .contains("failed to parse accumulator update"));
     }
 
     #[test]

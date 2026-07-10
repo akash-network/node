@@ -1,7 +1,7 @@
 //! PNAU (Pyth Network Accumulator Update) parser
 //!
 //! Parses the accumulator format returned by Pyth Hermes v2 API.
-//! This format wraps a Wormhole VAA containing a Merkle root,
+//! This format wraps a router-signed VAA-format message containing a Merkle root,
 //! along with price updates and their Merkle proofs.
 //!
 //! The MerklePriceUpdate section uses big-endian for length prefixes.
@@ -14,8 +14,8 @@ use sha3::{Digest, Keccak256};
 /// Magic bytes identifying PNAU format
 pub const PNAU_MAGIC: &[u8] = b"PNAU";
 
-/// Wormhole Merkle update type
-pub const UPDATE_TYPE_WORMHOLE_MERKLE: u8 = 0;
+/// Merkle proof update type used by Pyth accumulator payloads.
+pub const UPDATE_TYPE_MERKLE_PROOF: u8 = 0;
 
 /// Merkle tree constants (matching Pyth's implementation)
 const MERKLE_LEAF_PREFIX: u8 = 0;
@@ -24,7 +24,7 @@ const MERKLE_NODE_PREFIX: u8 = 1;
 /// Parsed PNAU accumulator update
 #[derive(Debug)]
 pub struct AccumulatorUpdate {
-    /// The embedded Wormhole VAA (contains signed Merkle root)
+    /// The embedded router-signed VAA-format message.
     pub vaa: Binary,
     /// Merkle root from the VAA payload
     pub merkle_root: [u8; 20],
@@ -49,7 +49,7 @@ pub struct PriceUpdateWithProof {
 /// - Minor version (1 byte) [offset 5]
 /// - Trailing length (1 byte) [offset 6]
 /// - Trailing data (trailing_len bytes) [offset 7 to 7+trailing_len-1]
-/// - Proof discriminant (1 byte): 0=WormholeMerkle [offset 7+trailing_len]
+/// - Proof discriminant (1 byte): 0=Merkle proof update [offset 7+trailing_len]
 /// - VAA length (2 bytes, big-endian) [offset 8+trailing_len]
 /// - VAA data (vaa_len bytes)
 /// - Number of updates (1 byte)
@@ -96,10 +96,10 @@ pub fn parse_accumulator_update(data: &[u8]) -> StdResult<AccumulatorUpdate> {
     let update_type = data[offset];
     offset += 1;
 
-    // Only support WormholeMerkle updates
-    if update_type != UPDATE_TYPE_WORMHOLE_MERKLE {
+    // Only support Merkle proof updates carrying the router-signed VAA message.
+    if update_type != UPDATE_TYPE_MERKLE_PROOF {
         return Err(StdError::msg(format!(
-            "Unsupported update type: {}, expected WormholeMerkle (0)",
+            "Unsupported update type: {}, expected Merkle proof update (0)",
             update_type
         )));
     }
@@ -148,11 +148,11 @@ pub fn parse_accumulator_update(data: &[u8]) -> StdResult<AccumulatorUpdate> {
     })
 }
 
-/// Extract the Merkle root from a Wormhole VAA payload
+/// Extract the Merkle root from a router-signed VAA-format payload.
 fn extract_merkle_root_from_vaa(vaa: &[u8]) -> StdResult<[u8; 20]> {
     // VAA structure:
     // - Version (1 byte)
-    // - Guardian set index (4 bytes)
+    // - Router set index, stored in the VAA guardian_set_index field (4 bytes)
     // - Signature count (1 byte)
     // - Signatures (66 bytes each)
     // - Body starts after signatures
@@ -181,7 +181,7 @@ fn extract_merkle_root_from_vaa(vaa: &[u8]) -> StdResult<[u8; 20]> {
     let payload = &vaa[payload_offset..];
 
     // Payload for Merkle root:
-    // - Magic "AUWV" (4 bytes) - Accumulator Update Wormhole Verification
+    // - Magic "AUWV" (4 bytes)
     // - Update type (1 byte)
     // - Slot (8 bytes)
     // - Ring size (4 bytes)
@@ -261,7 +261,7 @@ fn parse_price_update(data: &[u8], mut offset: usize) -> StdResult<(PriceUpdateW
 /// Verify a Merkle proof for a price update
 ///
 /// The proof demonstrates that the message is included in the tree
-/// whose root was signed by Wormhole guardians.
+/// whose root was signed by Pyth routers.
 pub fn verify_merkle_proof(
     message_data: &[u8],
     proof: &[[u8; 20]],
@@ -295,6 +295,10 @@ pub fn verify_merkle_proof(
 
     current == *expected_root
 }
+
+#[cfg(test)]
+pub const AKT_UPGRADED_HERMES_PNAU_HEX: &str =
+        "504e4155010000000124010000000003013e1fb8c03541656c8e9f8a3edc9e939c676a07d6e76a6481babf53b3ffe3eb354cea03c9beacc220c6c1b59039d732cd3403762a8eb8c005829ea93175cb6ce20003d2ed8e50e7d7350255ee6974a845c2f83236c9be4969f6a3063f1c87173fe1dc35e07fe6cea3d9341dc8887a858abacc33883acd2f1c6a9a94cfa3718ea8130901043dbc0d384f891945d9e6c8636826d58ad7f74f4162346052f37bfc5cf5da0ea75f1d1795acf9a8685f96308393947a0a9a22e381585e804506aa7c19d3400945006a4f27ed00000000001a507974686e6574507974686e6574507974686e6574507974686e657450797468000000084e2f1e84004155575600000000084e2f1e84000000000f57eee39f1b76403b1094b3a177ecef270e3226010055004ea5bb4d2f5900cc2e97ba534240950740b4d3b89fe712a94a7304fd2fd9270200000000037ee0d8000000000000dd37fffffff8000000006a4f27ed000000006a4f27ec0000000003811f7d0000000000007eb30ba0cdbf661704cbaafd0b1d24d5212bfb70d6b86de187f9c1fbaf5b8c9816d8a15bbeefe167cfa33e4148f15de06c47c1b06330a086746b9d4e1f4f146081345c6a9c954cae73fa4a7659ac1db4c5fc961f8610d5a455209bc7b3453f23f1cda609fdf32a2df0ac5a8d5d7e87863768ebb2df823831306c409a5c7afad2585d206428db6aa3f03ceeb68cfe62260ba763cb51529ae9360a085e2c9dff0538286a6ec453c0c9b1997be26ef1157fbc5e453a9079a2b0734c15bf28320e803084128b00b50722ad44a541ab71df0ba693d62defeed4e1ebe935b65699c7";
 
 #[cfg(test)]
 mod tests {
@@ -335,6 +339,27 @@ mod tests {
         let data = b"TEST0100";
         let result = parse_accumulator_update(data);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Invalid PNAU magic"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Invalid PNAU magic"));
+    }
+
+    #[test]
+    fn parses_live_upgraded_hermes_akt_pnau_fixture() {
+        let data = hex::decode(AKT_UPGRADED_HERMES_PNAU_HEX).unwrap();
+        let update = parse_accumulator_update(&data).unwrap();
+
+        assert_eq!(update.vaa.len(), 292);
+        assert_eq!(update.price_updates.len(), 1);
+        assert_eq!(
+            hex::encode(update.merkle_root),
+            "0f57eee39f1b76403b1094b3a177ecef270e3226"
+        );
+        assert!(verify_merkle_proof(
+            &update.price_updates[0].message_data,
+            &update.price_updates[0].merkle_proof,
+            &update.merkle_root
+        ));
     }
 }

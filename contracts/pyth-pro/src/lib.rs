@@ -5,7 +5,6 @@ pub mod msg;
 pub mod oracle;
 pub mod pyth;
 pub mod state;
-pub mod wormhole;
 
 #[cfg(test)]
 mod integration_tests;

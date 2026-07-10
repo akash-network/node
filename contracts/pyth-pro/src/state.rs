@@ -33,45 +33,19 @@ impl Default for DataID {
     }
 }
 
-/// A data source identifies a valid price feed source (Pyth publisher)
-#[cw_serde]
-pub struct DataSource {
-    /// Wormhole chain ID of the emitter (26 for Pythnet)
-    pub emitter_chain: u16,
-    /// Emitter address (32 bytes, hex encoded)
-    pub emitter_address: String,
-}
-
-impl DataSource {
-    /// Check if this data source matches the given emitter chain and address
-    pub fn matches(&self, chain: u16, address: &[u8]) -> bool {
-        if self.emitter_chain != chain {
-            return false;
-        }
-        // Compare hex-encoded address with raw bytes
-        match hex::decode(&self.emitter_address) {
-            Ok(decoded) => decoded == address,
-            Err(_) => false,
-        }
-    }
-}
-
 #[cw_serde]
 pub struct Config {
     /// Admin address that can update contract settings
     pub admin: Addr,
-    /// Wormhole contract address for VAA verification
-    pub wormhole_contract: Addr,
+    /// Pyth VAA verifier contract address
+    pub pyth_vaa_contract: Addr,
     /// Fee required to update the price feed (in Uint256 for CosmWasm 3.x)
     pub update_fee: Uint256,
     /// Pyth price feed ID for AKT/USD
     pub price_feed_id: String,
     /// Default data ID for price submissions (denom + base_denom)
     pub default_data_id: DataID,
-    /// Valid Pyth data sources (emitter chain + address pairs)
-    pub data_sources: Vec<DataSource>,
 }
-
 
 #[cw_serde]
 pub struct PriceFeed {

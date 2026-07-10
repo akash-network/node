@@ -22,7 +22,8 @@ if [[ -z "$CONTRACTS_DIR" ]]; then
 	exit 1
 fi
 
-PYTH_WASM="${CONTRACTS_DIR}/artifacts/pyth.wasm"
+PYTH_VAA_WASM="${CONTRACTS_DIR}/artifacts/pyth_vaa.wasm"
+PYTH_PRO_WASM="${CONTRACTS_DIR}/artifacts/pyth_pro.wasm"
 
 HERMES_MNEMONIC="wire museum tragic inmate final lady illegal father whisper margin sea cool soul half moon nut tissue strategy ladder come glory opera device elbow"
 
@@ -139,8 +140,15 @@ deploy_contracts() {
 	admin_addr=$(akash keys show $admin_key -a)
 
 	# Check if contract files exist
-	if [ ! -f "$PYTH_WASM" ]; then
-		log "ERROR: Pyth contract not found at $PYTH_WASM"
+	if [ ! -f "$PYTH_VAA_WASM" ]; then
+		log "ERROR: Pyth VAA contract not found at $PYTH_VAA_WASM"
+		log "Skipping contract deployment. Build contracts first with: cd contracts && make build"
+		write_hermes_config "CONTRACT_NOT_DEPLOYED"
+		return 1
+	fi
+
+	if [ ! -f "$PYTH_PRO_WASM" ]; then
+		log "ERROR: Pyth Pro contract not found at $PYTH_PRO_WASM"
 		log "Skipping contract deployment. Build contracts first with: cd contracts && make build"
 		write_hermes_config "CONTRACT_NOT_DEPLOYED"
 		return 1
@@ -160,17 +168,16 @@ deploy_contracts() {
 	local pyth_router_emitter_b64
 	pyth_router_emitter_b64=$(hex_to_base64 "$PYTH_ROUTER_EXPECTED_EMITTER_ADDRESS")
 
-	# Deploy Pyth contract
-	log "Storing Pyth contract..."
-	akash tx wasm store "$PYTH_WASM" --from $admin_key
+	# Deploy Pyth VAA verifier contract
+	log "Storing Pyth VAA contract..."
+	akash tx wasm store "$PYTH_VAA_WASM" --from $admin_key
 
-	local pyth_code_id
-	pyth_code_id=$(akash query wasm list-code -o json | jq -r '.code_infos[-1].code_id')
-	log "Pyth code ID: $pyth_code_id"
+	local pyth_vaa_code_id
+	pyth_vaa_code_id=$(akash query wasm list-code -o json | jq -r '.code_infos[-1].code_id')
+	log "Pyth VAA code ID: $pyth_vaa_code_id"
 
-	# Instantiate Pyth contract
-	local pyth_init_msg
-	pyth_init_msg=$(cat <<EOF
+	local pyth_vaa_init_msg
+	pyth_vaa_init_msg=$(cat <<EOF
 {
 	"admin": "$admin_addr",
 	"router_verifier": {
@@ -178,22 +185,49 @@ deploy_contracts() {
 		"routers": $router_json,
 		"expected_emitter_chain": $PYTH_ROUTER_EXPECTED_EMITTER_CHAIN,
 		"expected_emitter_address": "$pyth_router_emitter_b64"
-	},
+	}
+}
+EOF
+)
+
+	log "Instantiating Pyth VAA contract..."
+	akash tx wasm instantiate "$pyth_vaa_code_id" "$pyth_vaa_init_msg" \
+		--label "pyth-vaa" \
+		--admin "$admin_addr" \
+		--from $admin_key
+
+	local pyth_vaa_addr
+	pyth_vaa_addr=$(akash query wasm list-contract-by-code "$pyth_vaa_code_id" -o json | jq -r '.contracts[-1]')
+	log "Pyth VAA contract address: $pyth_vaa_addr"
+
+	# Deploy Pyth Pro price-feed contract
+	log "Storing Pyth Pro contract..."
+	akash tx wasm store "$PYTH_PRO_WASM" --from $admin_key
+
+	local pyth_pro_code_id
+	pyth_pro_code_id=$(akash query wasm list-code -o json | jq -r '.code_infos[-1].code_id')
+	log "Pyth Pro code ID: $pyth_pro_code_id"
+
+	local pyth_pro_init_msg
+	pyth_pro_init_msg=$(cat <<EOF
+{
+	"admin": "$admin_addr",
+	"pyth_vaa_contract": "$pyth_vaa_addr",
 	"update_fee": "1000",
 	"price_feed_id": "$AKT_PRICE_FEED_ID"
 }
 EOF
 )
 
-	log "Instantiating Pyth contract..."
-	akash tx wasm instantiate "$pyth_code_id" "$pyth_init_msg" \
-		--label "pyth" \
+	log "Instantiating Pyth Pro contract..."
+	akash tx wasm instantiate "$pyth_pro_code_id" "$pyth_pro_init_msg" \
+		--label "pyth-pro" \
 		--admin "$admin_addr" \
 		--from $admin_key
 
 	local pyth_addr
-	pyth_addr=$(akash query wasm list-contract-by-code "$pyth_code_id" -o json | jq -r '.contracts[-1]')
-	log "Pyth contract address: $pyth_addr"
+	pyth_addr=$(akash query wasm list-contract-by-code "$pyth_pro_code_id" -o json | jq -r '.contracts[-1]')
+	log "Pyth Pro contract address: $pyth_addr"
 
 	# Register Pyth as authorized oracle source and fund BME vault via gov proposal
 	register_oracle_source "$pyth_addr" "$admin_addr"
@@ -202,13 +236,14 @@ EOF
 	write_hermes_config "$pyth_addr"
 
 	log "Contract deployment complete!"
-	log "  Pyth:     $pyth_addr"
+	log "  Pyth VAA: $pyth_vaa_addr"
+	log "  Pyth Pro: $pyth_addr"
 }
 
 register_oracle_source() {
 	local pyth_addr=$1
 	local admin_addr=$2
-	log "Registering Pyth contract as authorized oracle source and funding BME vault..."
+	log "Registering Pyth Pro contract as authorized oracle source and funding BME vault..."
 
 	# Create proposal JSON with both oracle params and BME vault funding
 	cat > /tmp/oracle-params.json <<EOF
@@ -237,7 +272,7 @@ register_oracle_source() {
 	],
 	"deposit": "10000000uakt",
 	"title": "Register Pyth Contract and Fund BME Vault",
-	"summary": "Authorize pyth contract as oracle source and seed BME vault with initial AKT"
+	"summary": "Authorize pyth-pro contract as oracle source and seed BME vault with initial AKT"
 }
 EOF
 
