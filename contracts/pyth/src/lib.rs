@@ -4,6 +4,7 @@ pub mod error;
 pub mod msg;
 pub mod oracle;
 pub mod pyth;
+pub mod router;
 pub mod state;
 pub mod wormhole;
 

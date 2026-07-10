@@ -5,31 +5,33 @@ use cosmwasm_std::{Binary, Uint128, Uint256};
 pub struct InstantiateMsg {
     /// Address of the contract admin
     pub admin: String,
-    /// Wormhole contract address for VAA verification
-    pub wormhole_contract: String,
+    /// Upgraded Pyth router verifier configuration
+    pub router_verifier: RouterVerifierConfigMsg,
     /// Initial update fee in uakt (Uint256 for CosmWasm 3.x)
     pub update_fee: Uint256,
     /// Pyth price feed ID for AKT/USD (required)
     pub price_feed_id: String,
-    /// Valid Pyth data sources (emitter chain + address pairs)
-    pub data_sources: Vec<DataSourceMsg>,
 }
 
-/// A data source identifies a valid price feed source (Pyth publisher)
 #[cw_serde]
-pub struct DataSourceMsg {
-    /// Wormhole chain ID of the emitter (26 for Pythnet)
-    pub emitter_chain: u16,
-    /// Emitter address (32 bytes, hex encoded)
-    pub emitter_address: String,
+pub struct RouterVerifierConfigMsg {
+    pub router_set_index: u32,
+    pub routers: Vec<RouterAddress>,
+    pub expected_emitter_chain: u16,
+    pub expected_emitter_address: Binary,
+}
+
+#[cw_serde]
+pub struct RouterAddress {
+    pub bytes: Binary,
 }
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    /// Update the AKT/USD price feed with VAA proof
-    /// VAA is verified via Wormhole contract, then Pyth payload is parsed and relayed to x/oracle
+    /// Update the AKT/USD price feed with upgraded Pyth PNAU data.
+    /// The router verifier validates the embedded VAA before the price is relayed to x/oracle.
     UpdatePriceFeed {
-        /// VAA data from Pyth Hermes API (base64 encoded Binary)
+        /// PNAU update data from the upgraded Pyth Hermes API.
         vaa: Binary,
     },
     /// Update the update fee (admin only)
@@ -38,9 +40,8 @@ pub enum ExecuteMsg {
     TransferAdmin { new_admin: String },
     /// Update contract configuration (admin only)
     UpdateConfig {
-        wormhole_contract: Option<String>,
+        router_verifier: Option<RouterVerifierConfigMsg>,
         price_feed_id: Option<String>,
-        data_sources: Option<Vec<DataSourceMsg>>,
     },
 }
 
@@ -85,12 +86,11 @@ pub struct PriceFeedResponse {
 #[cw_serde]
 pub struct ConfigResponse {
     pub admin: String,
-    pub wormhole_contract: String,
+    pub router_verifier: RouterVerifierConfigMsg,
     pub update_fee: Uint256,
     pub price_feed_id: String,
     pub default_denom: String,
     pub default_base_denom: String,
-    pub data_sources: Vec<DataSourceMsg>,
 }
 
 #[cw_serde]
@@ -100,5 +100,5 @@ pub struct PriceFeedIdResponse {
 
 #[cw_serde]
 pub struct MigrateMsg {
-    pub wormhole_contract: Option<String>,
+    pub router_verifier: Option<RouterVerifierConfigMsg>,
 }

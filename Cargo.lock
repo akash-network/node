@@ -966,25 +966,11 @@ dependencies = [
  "cw-multi-test",
  "cw-storage-plus",
  "hex",
+ "k256",
  "schemars 0.8.22",
  "serde",
  "sha3",
  "thiserror 1.0.69",
-]
-
-[[package]]
-name = "pyth-pro-verifier"
-version = "0.1.0"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw-storage-plus",
- "hex",
- "k256",
- "serde",
- "sha3",
- "thiserror 1.0.69",
- "wormhole",
 ]
 
 [[package]]

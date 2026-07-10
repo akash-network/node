@@ -10,14 +10,11 @@ import (
 	sdkmath "cosmossdk.io/math"
 	storetypes "cosmossdk.io/store/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
-	wasmkeeper "github.com/CosmWasm/wasmd/x/wasm/keeper"
-	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	etypes "pkg.akt.dev/go/node/escrow/module"
 	mvbeta "pkg.akt.dev/go/node/market/v1beta5"
-	otypes "pkg.akt.dev/go/node/oracle/v2"
 	"pkg.akt.dev/go/sdkutil"
 
 	apptypes "pkg.akt.dev/node/v2/app/types"
@@ -56,51 +53,6 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 		sctx := sdk.UnwrapSDKContext(ctx)
 
 		toVM, err := up.MM.RunMigrations(ctx, up.Configurator, fromVM)
-		if err != nil {
-			return toVM, err
-		}
-
-		msgServer := wasmkeeper.NewMsgServerImpl(up.Keepers.Cosmos.Wasm)
-		govAddr := up.Keepers.Cosmos.Wasm.GetAuthority()
-
-		verifierInstantiateMsg, err := newPythProVerifierInstantiateMsg()
-		if err != nil {
-			return toVM, err
-		}
-
-		verifierResp, err := msgServer.StoreAndInstantiateContract(ctx, &wasmtypes.MsgStoreAndInstantiateContract{
-			Authority:             govAddr,
-			WASMByteCode:          pythProVerifierContract,
-			InstantiatePermission: &wasmtypes.AllowNobody,
-			Admin:                 govAddr,
-			Label:                 pythProVerifierContractLabel,
-			Msg:                   verifierInstantiateMsg,
-		})
-		if err != nil {
-			return toVM, err
-		}
-
-		pythMigrationMsg, err := newPythVerifierMigrationMsg(verifierResp.Address)
-		if err != nil {
-			return toVM, err
-		}
-
-		_, err = msgServer.StoreAndMigrateContract(ctx, &wasmtypes.MsgStoreAndMigrateContract{
-			Authority:             govAddr,
-			WASMByteCode:          pythContract,
-			Contract:              pythContractAddr,
-			InstantiatePermission: &wasmtypes.AllowNobody,
-			Msg:                   pythMigrationMsg,
-		})
-		if err != nil {
-			return toVM, err
-		}
-
-		oparams := otypes.DefaultParams()
-		oparams.MinPriceSources = 1
-		// Set the pyth contract as an authorized oracle price source
-		oparams.Sources = []string{pythContractAddr}
-		err = up.Keepers.Akash.Oracle.SetParams(sctx, oparams)
 		if err != nil {
 			return toVM, err
 		}

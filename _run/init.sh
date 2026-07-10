@@ -23,7 +23,6 @@ if [[ -z "$CONTRACTS_DIR" ]]; then
 fi
 
 PYTH_WASM="${CONTRACTS_DIR}/artifacts/pyth.wasm"
-PYTH_PRO_VERIFIER_WASM="${CONTRACTS_DIR}/artifacts/pyth_pro_verifier.wasm"
 
 HERMES_MNEMONIC="wire museum tragic inmate final lady illegal father whisper margin sea cool soul half moon nut tissue strategy ladder come glory opera device elbow"
 
@@ -38,14 +37,12 @@ ACCOUNTS=($KEYS)
 
 # Pyth configuration
 AKT_PRICE_FEED_ID="0x4ea5bb4d2f5900cc2e97ba534240950740b4d3b89fe712a94a7304fd2fd92702"
-PYTH_EMITTER_CHAIN="26" # Pythnet
-PYTH_EMITTER_ADDRESS="e101faedac5851e32b9b23b5f9411a8c2bac4aae3ed4dd7b811dd1a72ea4aa71"
 
 # Pyth Core upgraded router verifier configuration.
-PYTH_PRO_ROUTER_SET_INDEX="0"
-PYTH_PRO_EXPECTED_EMITTER_CHAIN="26"
-PYTH_PRO_EXPECTED_EMITTER_ADDRESS="507974686e6574507974686e6574507974686e6574507974686e657450797468"
-PYTH_PRO_ROUTER_ADDRESSES=(
+PYTH_ROUTER_SET_INDEX="0"
+PYTH_ROUTER_EXPECTED_EMITTER_CHAIN="26"
+PYTH_ROUTER_EXPECTED_EMITTER_ADDRESS="507974686e6574507974686e6574507974686e6574507974686e657450797468"
+PYTH_ROUTER_ADDRESSES=(
 	"41534bb176e461a3fb30479400f210549ecce638"
 	"6502987b62f21cab7eb5ccd8f0173084b60d5b41"
 	"44a3e8f6a382412cf6bb90a3f8106e68977476c9"
@@ -149,55 +146,19 @@ deploy_contracts() {
 		return 1
 	fi
 
-	if [ ! -f "$PYTH_PRO_VERIFIER_WASM" ]; then
-		log "ERROR: Pyth Pro verifier contract not found at $PYTH_PRO_VERIFIER_WASM"
-		log "Skipping contract deployment. Build contracts first with: cd contracts && make build"
-		write_hermes_config "CONTRACT_NOT_DEPLOYED"
-		return 1
-	fi
-
-	# Deploy Pyth Pro verifier contract.
-	log "Storing Pyth Pro verifier contract..."
-	akash tx wasm store "$PYTH_PRO_VERIFIER_WASM" --from $admin_key
-
-	local pyth_pro_verifier_code_id
-	pyth_pro_verifier_code_id=$(akash query wasm list-code -o json | jq -r '.code_infos[-1].code_id')
-	log "Pyth Pro verifier code ID: $pyth_pro_verifier_code_id"
-
 	local router_json='['
-	for i in "${!PYTH_PRO_ROUTER_ADDRESSES[@]}"; do
+	for i in "${!PYTH_ROUTER_ADDRESSES[@]}"; do
 		if [ "$i" -gt 0 ]; then
 			router_json+=','
 		fi
 		local router_b64
-		router_b64=$(hex_to_base64 "${PYTH_PRO_ROUTER_ADDRESSES[$i]}")
+		router_b64=$(hex_to_base64 "${PYTH_ROUTER_ADDRESSES[$i]}")
 		router_json+="{\"bytes\":\"$router_b64\"}"
 	done
 	router_json+=']'
 
-	local pyth_pro_emitter_b64
-	pyth_pro_emitter_b64=$(hex_to_base64 "$PYTH_PRO_EXPECTED_EMITTER_ADDRESS")
-
-	local pyth_pro_verifier_init_msg
-	pyth_pro_verifier_init_msg=$(cat <<EOF
-{
-	"router_set_index": $PYTH_PRO_ROUTER_SET_INDEX,
-	"routers": $router_json,
-	"expected_emitter_chain": $PYTH_PRO_EXPECTED_EMITTER_CHAIN,
-	"expected_emitter_address": "$pyth_pro_emitter_b64"
-}
-EOF
-)
-
-	log "Instantiating Pyth Pro verifier contract..."
-	akash tx wasm instantiate "$pyth_pro_verifier_code_id" "$pyth_pro_verifier_init_msg" \
-		--label "pyth-pro-verifier" \
-		--admin "$admin_addr" \
-		--from $admin_key
-
-	local pyth_pro_verifier_addr
-	pyth_pro_verifier_addr=$(akash query wasm list-contract-by-code "$pyth_pro_verifier_code_id" -o json | jq -r '.contracts[-1]')
-	log "Pyth Pro verifier contract address: $pyth_pro_verifier_addr"
+	local pyth_router_emitter_b64
+	pyth_router_emitter_b64=$(hex_to_base64 "$PYTH_ROUTER_EXPECTED_EMITTER_ADDRESS")
 
 	# Deploy Pyth contract
 	log "Storing Pyth contract..."
@@ -212,15 +173,14 @@ EOF
 	pyth_init_msg=$(cat <<EOF
 {
 	"admin": "$admin_addr",
-	"wormhole_contract": "$pyth_pro_verifier_addr",
+	"router_verifier": {
+		"router_set_index": $PYTH_ROUTER_SET_INDEX,
+		"routers": $router_json,
+		"expected_emitter_chain": $PYTH_ROUTER_EXPECTED_EMITTER_CHAIN,
+		"expected_emitter_address": "$pyth_router_emitter_b64"
+	},
 	"update_fee": "1000",
-	"price_feed_id": "$AKT_PRICE_FEED_ID",
-	"data_sources": [
-		{
-			"emitter_chain": $PYTH_EMITTER_CHAIN,
-			"emitter_address": "$PYTH_EMITTER_ADDRESS"
-		}
-	]
+	"price_feed_id": "$AKT_PRICE_FEED_ID"
 }
 EOF
 )
@@ -242,7 +202,6 @@ EOF
 	write_hermes_config "$pyth_addr"
 
 	log "Contract deployment complete!"
-	log "  Pyth Pro verifier: $pyth_pro_verifier_addr"
 	log "  Pyth:     $pyth_addr"
 }
 

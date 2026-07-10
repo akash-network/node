@@ -3,25 +3,21 @@
 // These tests verify the contract logic by testing query responses, admin operations,
 // and validation logic using direct state manipulation.
 //
-// Note: Price update execution requires Wormhole VAA verification which cannot be
-// mocked in unit tests. Those flows are tested via the contract's unit tests and
-// actual chain integration tests.
+// Note: Price update execution requires router-signed PNAU data. Those flows are
+// tested via the contract's unit tests and actual chain integration tests.
 
 #![cfg(test)]
 
 use cosmwasm_std::testing::{message_info, mock_env, MockApi, MockQuerier, MockStorage};
-use cosmwasm_std::{from_json, Addr, Empty, OwnedDeps, Uint128, Uint256};
+use cosmwasm_std::{from_json, Addr, Binary, Empty, OwnedDeps, Uint128, Uint256};
 
 use crate::contract::{execute, query};
 use crate::msg::{
-    ConfigResponse, ExecuteMsg, PriceFeedIdResponse, PriceFeedResponse,
-    PriceResponse, QueryMsg,
+    ConfigResponse, ExecuteMsg, PriceFeedIdResponse, PriceFeedResponse, PriceResponse, QueryMsg,
+    RouterAddress, RouterVerifierConfigMsg,
 };
 use crate::oracle::{pyth_price_to_decimal, MsgAddPriceEntry};
-use crate::state::{
-    Config, DataID, DataSource, PriceFeed,
-    CONFIG, PRICE_FEED,
-};
+use crate::state::{Config, DataID, PriceFeed, RouterVerifierConfig, CONFIG, PRICE_FEED};
 
 type MockDeps = OwnedDeps<MockStorage, MockApi, MockQuerier, Empty>;
 
@@ -35,21 +31,43 @@ fn mock_deps() -> MockDeps {
     }
 }
 
+fn production_router_config_msg() -> RouterVerifierConfigMsg {
+    RouterVerifierConfigMsg {
+        router_set_index: 0,
+        routers: [
+            "41534bb176e461a3fb30479400f210549ecce638",
+            "6502987b62f21cab7eb5ccd8f0173084b60d5b41",
+            "44a3e8f6a382412cf6bb90a3f8106e68977476c9",
+            "d9d7d4529577864352c9a6539a48238fcd447052",
+            "1663a5a822336ece48559b1dfb1e93a017a7dac3",
+        ]
+        .iter()
+        .map(|addr| RouterAddress {
+            bytes: Binary::from(hex::decode(addr).unwrap()),
+        })
+        .collect(),
+        expected_emitter_chain: 26,
+        expected_emitter_address: Binary::from(
+            hex::decode("507974686e6574507974686e6574507974686e6574507974686e657450797468")
+                .unwrap(),
+        ),
+    }
+}
+
+fn production_router_config() -> RouterVerifierConfig {
+    crate::router::parse_config(production_router_config_msg()).unwrap()
+}
+
 /// Set up a fully configured contract state for testing
 fn setup_contract(deps: &mut MockDeps) -> Addr {
     let admin = deps.api.addr_make("admin");
-    let wormhole = deps.api.addr_make("wormhole");
 
     let config = Config {
         admin: admin.clone(),
-        wormhole_contract: wormhole,
+        router_verifier: production_router_config(),
         update_fee: Uint256::from(1000u128),
         price_feed_id: "0xtest_pyth_price_feed_id".to_string(),
         default_data_id: DataID::akt_usd(),
-        data_sources: vec![DataSource {
-            emitter_chain: 26,
-            emitter_address: "e101faedac5851e32b9b23b5f9411a8c2bac4aae3ed4dd7b811dd1a72ea4aa71".to_string(),
-        }],
     };
     CONFIG.save(&mut deps.storage, &config).unwrap();
 
@@ -88,9 +106,9 @@ fn e2e_query_initial_state() {
     // Oracle module expects "akt" (not "uakt") for denom
     assert_eq!(config.default_denom, "akt");
     assert_eq!(config.default_base_denom, "usd");
-    assert!(!config.wormhole_contract.is_empty());
-    assert_eq!(config.data_sources.len(), 1);
-    assert_eq!(config.data_sources[0].emitter_chain, 26);
+    assert_eq!(config.router_verifier.router_set_index, 0);
+    assert_eq!(config.router_verifier.routers.len(), 5);
+    assert_eq!(config.router_verifier.expected_emitter_chain, 26);
 
     // Query initial price (should be zero)
     let price: PriceResponse =
@@ -180,7 +198,13 @@ fn e2e_admin_operations_flow() {
         new_fee: Uint256::from(5000u128),
     };
 
-    let res = execute(deps.as_mut(), env.clone(), admin_info.clone(), update_fee_msg).unwrap();
+    let res = execute(
+        deps.as_mut(),
+        env.clone(),
+        admin_info.clone(),
+        update_fee_msg,
+    )
+    .unwrap();
     assert!(res
         .attributes
         .iter()
@@ -278,7 +302,10 @@ fn e2e_price_conversion() {
     // price=100000000, expo=-8 -> 1.0 -> 1000000000000000000
     assert_eq!(pyth_price_to_decimal(100000000, -8), "1000000000000000000");
     // price=1000000000, expo=-8 -> 10.0 -> 10000000000000000000
-    assert_eq!(pyth_price_to_decimal(1000000000, -8), "10000000000000000000");
+    assert_eq!(
+        pyth_price_to_decimal(1000000000, -8),
+        "10000000000000000000"
+    );
     // negative price
     assert_eq!(pyth_price_to_decimal(-52468300, -8), "-524683000000000000");
     // zero
@@ -312,11 +339,10 @@ fn e2e_query_response_schema() {
     // Verify all fields are present and correctly typed
     assert!(!config_response.admin.is_empty());
     assert!(!config_response.price_feed_id.is_empty());
-    assert!(!config_response.wormhole_contract.is_empty());
+    assert_eq!(config_response.router_verifier.routers.len(), 5);
     // Oracle module expects "akt" (not "uakt") for denom
     assert_eq!(config_response.default_denom, "akt");
     assert_eq!(config_response.default_base_denom, "usd");
-    assert!(!config_response.data_sources.is_empty());
 
     // Test GetPriceFeedId response
     let feed_id_response: PriceFeedIdResponse =
@@ -416,49 +442,26 @@ fn e2e_price_volatility_scenario() {
 }
 
 // ============================================================================
-// E2E Test: Data source configuration
+// E2E Test: Router verifier configuration
 // ============================================================================
 
 #[test]
-fn e2e_data_source_configuration() {
+fn e2e_router_verifier_configuration() {
     let mut deps = mock_deps();
     let _admin = setup_contract(&mut deps);
     let env = mock_env();
 
-    // Query config to verify data sources
+    // Query config to verify router verifier settings.
     let config: ConfigResponse =
         from_json(query(deps.as_ref(), env.clone(), QueryMsg::GetConfig {}).unwrap()).unwrap();
 
-    // Verify Pythnet data source is configured
-    assert_eq!(config.data_sources.len(), 1);
-    assert_eq!(config.data_sources[0].emitter_chain, 26); // Pythnet
+    assert_eq!(config.router_verifier.router_set_index, 0);
+    assert_eq!(config.router_verifier.routers.len(), 5);
+    assert_eq!(config.router_verifier.expected_emitter_chain, 26);
     assert_eq!(
-        config.data_sources[0].emitter_address,
-        "e101faedac5851e32b9b23b5f9411a8c2bac4aae3ed4dd7b811dd1a72ea4aa71"
+        hex::encode(config.router_verifier.expected_emitter_address),
+        "507974686e6574507974686e6574507974686e6574507974686e657450797468"
     );
-}
-
-// ============================================================================
-// E2E Test: DataSource matching logic
-// ============================================================================
-
-#[test]
-fn e2e_data_source_matching() {
-    let ds = DataSource {
-        emitter_chain: 26,
-        emitter_address: "e101faedac5851e32b9b23b5f9411a8c2bac4aae3ed4dd7b811dd1a72ea4aa71".to_string(),
-    };
-
-    // Test matching
-    let valid_address = hex::decode("e101faedac5851e32b9b23b5f9411a8c2bac4aae3ed4dd7b811dd1a72ea4aa71").unwrap();
-    assert!(ds.matches(26, &valid_address));
-
-    // Test wrong chain
-    assert!(!ds.matches(1, &valid_address));
-
-    // Test wrong address
-    let wrong_address = hex::decode("0000000000000000000000000000000000000000000000000000000000000000").unwrap();
-    assert!(!ds.matches(26, &wrong_address));
 }
 
 // ============================================================================
@@ -474,9 +477,8 @@ fn e2e_update_config() {
     // Update price feed ID
     let admin_info = message_info(&admin, &[]);
     let update_msg = ExecuteMsg::UpdateConfig {
-        wormhole_contract: None,
+        router_verifier: None,
         price_feed_id: Some("0xnew_price_feed_id".to_string()),
-        data_sources: None,
     };
 
     let res = execute(deps.as_mut(), env.clone(), admin_info.clone(), update_msg).unwrap();
@@ -491,13 +493,28 @@ fn e2e_update_config() {
     let non_admin = deps.api.addr_make("non_admin");
     let non_admin_info = message_info(&non_admin, &[]);
     let update_msg = ExecuteMsg::UpdateConfig {
-        wormhole_contract: None,
+        router_verifier: None,
         price_feed_id: Some("0xmalicious".to_string()),
-        data_sources: None,
     };
 
     let res = execute(deps.as_mut(), env.clone(), non_admin_info, update_msg);
     assert!(res.is_err());
+}
+
+#[test]
+fn e2e_update_config_rejects_empty_price_feed_id() {
+    let mut deps = mock_deps();
+    let admin = setup_contract(&mut deps);
+    let env = mock_env();
+
+    let admin_info = message_info(&admin, &[]);
+    let update_msg = ExecuteMsg::UpdateConfig {
+        router_verifier: None,
+        price_feed_id: Some(String::new()),
+    };
+
+    let err = execute(deps.as_mut(), env, admin_info, update_msg).unwrap_err();
+    assert!(err.to_string().contains("price_feed_id is required"));
 }
 
 // ============================================================================
@@ -532,9 +549,7 @@ fn e2e_price_feed_message_parsing() {
     message[0] = 0; // Message type: price feed
 
     // Price feed ID (bytes 1-33)
-    for i in 1..33 {
-        message[i] = 0xAB;
-    }
+    message[1..33].fill(0xAB);
 
     // Price: 52468300 (i64)
     let price: i64 = 52468300;
@@ -609,7 +624,11 @@ fn e2e_merkle_proof_verification() {
 
     // Verify should fail with wrong root
     let wrong_root = [0u8; 20];
-    assert!(!verify_merkle_proof(message_data, &empty_proof, &wrong_root));
+    assert!(!verify_merkle_proof(
+        message_data,
+        &empty_proof,
+        &wrong_root
+    ));
 
     // Verify should fail with wrong data
     assert!(!verify_merkle_proof(b"wrong data", &empty_proof, &root));

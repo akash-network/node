@@ -19,6 +19,7 @@ cosmwasm-schema = "3.0.2"
 cosmwasm-std = { version = "3.0.2", features = ["cosmwasm_2_0"] }
 cw-storage-plus = "3.0.1"
 hex = "0.4"
+k256 = { version = "0.13", default-features = false, features = ["ecdsa"] }
 schemars = "0.8"
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 sha3 = "0.10"

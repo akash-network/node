@@ -1,21 +1,18 @@
 use cosmwasm_std::{
     entry_point, to_json_binary, AnyMsg, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
-    Response, StdResult, Uint128, Uint256, WasmQuery, QueryRequest,
+    Response, StdResult, Uint128, Uint256,
 };
 
-use crate::accumulator::{parse_accumulator_update, verify_merkle_proof, PNAU_MAGIC};
+use crate::accumulator::{parse_accumulator_update, verify_merkle_proof};
 use crate::error::ContractError;
 use crate::msg::{
-    ConfigResponse, DataSourceMsg, ExecuteMsg, InstantiateMsg, MigrateMsg,
-    PriceFeedIdResponse, PriceFeedResponse, PriceResponse, QueryMsg,
+    ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, PriceFeedIdResponse, PriceFeedResponse,
+    PriceResponse, QueryMsg, RouterVerifierConfigMsg,
 };
 use crate::oracle::{pyth_price_to_decimal, MsgAddPriceEntry};
-use crate::pyth::{parse_pyth_payload, parse_price_feed_message};
-use crate::state::{
-    Config, DataID, DataSource, PriceFeed,
-    CONFIG, PRICE_FEED,
-};
-use crate::wormhole::{WormholeQueryMsg, ParsedVAA};
+use crate::pyth::parse_price_feed_message;
+use crate::router;
+use crate::state::{Config, DataID, PriceFeed, CONFIG, PRICE_FEED};
 
 // Expected exponent for AKT/USD price (8 decimals)
 const EXPECTED_EXPO: i32 = -8;
@@ -30,8 +27,7 @@ pub fn instantiate(
     // Validate admin address
     let admin = deps.api.addr_validate(&msg.admin)?;
 
-    // Validate Wormhole contract address
-    let wormhole_contract = deps.api.addr_validate(&msg.wormhole_contract)?;
+    let router_verifier = router::parse_config(msg.router_verifier)?;
 
     // Require price feed ID
     if msg.price_feed_id.is_empty() {
@@ -40,24 +36,12 @@ pub fn instantiate(
         });
     }
 
-    // Convert data sources from message format to storage format
-    let data_sources: Vec<DataSource> = msg
-        .data_sources
-        .into_iter()
-        .map(|ds| DataSource {
-            emitter_chain: ds.emitter_chain,
-            emitter_address: ds.emitter_address,
-        })
-        .collect();
-
-    // Initialize config with Wormhole contract and data sources
     let config = Config {
         admin,
-        wormhole_contract,
+        router_verifier,
         update_fee: msg.update_fee,
         price_feed_id: msg.price_feed_id.clone(),
         default_data_id: DataID::akt_usd(),
-        data_sources,
     };
     CONFIG.save(deps.storage, &config)?;
 
@@ -65,12 +49,15 @@ pub fn instantiate(
     let price_feed = PriceFeed::new();
     PRICE_FEED.save(deps.storage, &price_feed)?;
 
-    Ok(Response::new()
+    let mut response = Response::new()
         .add_attribute("method", "instantiate")
         .add_attribute("admin", msg.admin)
-        .add_attribute("wormhole_contract", msg.wormhole_contract)
         .add_attribute("update_fee", msg.update_fee)
-        .add_attribute("price_feed_id", msg.price_feed_id))
+        .add_attribute("price_feed_id", msg.price_feed_id);
+
+    response = response.add_attribute("router_verifier", "configured");
+
+    Ok(response)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -81,16 +68,13 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::UpdatePriceFeed { vaa } => {
-            execute_update_price_feed(deps, env, info, vaa)
-        }
+        ExecuteMsg::UpdatePriceFeed { vaa } => execute_update_price_feed(deps, env, info, vaa),
         ExecuteMsg::UpdateFee { new_fee } => execute_update_fee(deps, info, new_fee),
         ExecuteMsg::TransferAdmin { new_admin } => execute_transfer_admin(deps, info, new_admin),
         ExecuteMsg::UpdateConfig {
-            wormhole_contract,
+            router_verifier,
             price_feed_id,
-            data_sources,
-        } => execute_update_config(deps, info, wormhole_contract, price_feed_id, data_sources),
+        } => execute_update_config(deps, info, router_verifier, price_feed_id),
     }
 }
 
@@ -106,10 +90,7 @@ fn validate_pyth_price(raw_price: i64) -> Result<Uint128, ContractError> {
     Ok(Uint128::new(raw_price as u128))
 }
 
-/// Execute price feed update with VAA verification
-/// Accepts either:
-/// - PNAU accumulator format (from Pyth Hermes v2 API)
-/// - Raw Wormhole VAA (legacy format)
+/// Execute price feed update with upgraded Pyth PNAU accumulator data.
 pub fn execute_update_price_feed(
     deps: DepsMut,
     env: Env,
@@ -135,91 +116,35 @@ pub fn execute_update_price_feed(
 
     let data_bytes = vaa.as_slice();
 
-    // Detect format: PNAU accumulator or raw VAA
-    let (actual_vaa, price_message_data) = if data_bytes.len() >= 4 && &data_bytes[0..4] == PNAU_MAGIC {
-        // Parse PNAU accumulator format from Hermes v2 API
-        let accumulator = parse_accumulator_update(data_bytes)
-            .map_err(|_| ContractError::InvalidPriceData {
-                reason: "failed to parse accumulator update".to_string(),
-            })?;
+    let accumulator =
+        parse_accumulator_update(data_bytes).map_err(|_| ContractError::InvalidPriceData {
+            reason: "failed to parse accumulator update".to_string(),
+        })?;
 
-        // Must have at least one price update
-        if accumulator.price_updates.is_empty() {
-            return Err(ContractError::InvalidPriceData {
-                reason: "No price updates in accumulator".to_string(),
-            });
-        }
-
-        // Get the first price update and verify its Merkle proof
-        let price_update = &accumulator.price_updates[0];
-
-        // Verify Merkle proof
-        if !verify_merkle_proof(
-            &price_update.message_data,
-            &price_update.merkle_proof,
-            &accumulator.merkle_root,
-        ) {
-            return Err(ContractError::InvalidPriceData {
-                reason: "Merkle proof verification failed".to_string(),
-            });
-        }
-
-        (accumulator.vaa, Some(price_update.message_data.clone()))
-    } else {
-        // Assume raw VAA format (legacy)
-        (vaa, None)
-    };
-
-    // Step 1: Verify VAA via Wormhole contract
-    let verify_query = WormholeQueryMsg::VerifyVAA {
-        vaa: actual_vaa.clone(),
-        block_time: env.block.time.seconds(),
-    };
-
-    let verified_vaa: ParsedVAA = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
-        contract_addr: config.wormhole_contract.to_string(),
-        msg: to_json_binary(&verify_query)?,
-    }))?;
-
-    // Step 2: Validate emitter is from Pythnet (chain 26) for accumulator updates
-    // For accumulator updates, the VAA contains a Merkle root signed by Wormhole
-    // The emitter is Pythnet's accumulator program, not a specific data source
-    if price_message_data.is_some() {
-        // For PNAU format, verify emitter is Pythnet (chain 26)
-        if verified_vaa.emitter_chain != 26 {
-            return Err(ContractError::InvalidDataSource {
-                emitter_chain: verified_vaa.emitter_chain,
-                emitter_address: hex::encode(&verified_vaa.emitter_address),
-            });
-        }
-    } else {
-        // For raw VAA format, validate against configured data sources
-        let is_valid_source = config.data_sources.iter().any(|ds| {
-            ds.matches(verified_vaa.emitter_chain, &verified_vaa.emitter_address)
+    if accumulator.price_updates.is_empty() {
+        return Err(ContractError::InvalidPriceData {
+            reason: "No price updates in accumulator".to_string(),
         });
-
-        if !is_valid_source {
-            return Err(ContractError::InvalidDataSource {
-                emitter_chain: verified_vaa.emitter_chain,
-                emitter_address: hex::encode(&verified_vaa.emitter_address),
-            });
-        }
     }
 
-    // Step 3: Parse Pyth price data
-    let pyth_price = if let Some(ref message_data) = price_message_data {
-        // Parse from PNAU price message (Merkle-proven)
-        parse_price_feed_message(message_data)
-            .map_err(|_| ContractError::InvalidPriceData {
-                reason: "failed to parse price feed message".to_string(),
-            })?
-    } else {
-        // Parse from raw VAA payload (legacy)
-        parse_pyth_payload(&verified_vaa.payload)
-            .map_err(|_| ContractError::InvalidPriceData {
-                reason: "failed to parse price payload".to_string(),
-            })?
-    };
+    let verified_vaa = router::verify_vaa(&config.router_verifier, accumulator.vaa.as_slice())?;
+
+    let price_update = &accumulator.price_updates[0];
+    if !verify_merkle_proof(
+        &price_update.message_data,
+        &price_update.merkle_proof,
+        &accumulator.merkle_root,
+    ) {
+        return Err(ContractError::InvalidPriceData {
+            reason: "Merkle proof verification failed".to_string(),
+        });
+    }
+
+    let pyth_price = parse_price_feed_message(&price_update.message_data).map_err(|_| {
+        ContractError::InvalidPriceData {
+            reason: "failed to parse price feed message".to_string(),
+        }
+    })?;
 
     // Step 4: Validate price feed ID matches expected
     if pyth_price.id != config.price_feed_id {
@@ -347,9 +272,8 @@ pub fn execute_transfer_admin(
 pub fn execute_update_config(
     deps: DepsMut,
     info: MessageInfo,
-    wormhole_contract: Option<String>,
+    router_verifier: Option<RouterVerifierConfigMsg>,
     price_feed_id: Option<String>,
-    data_sources: Option<Vec<DataSourceMsg>>,
 ) -> Result<Response, ContractError> {
     let mut config = CONFIG.load(deps.storage)?;
 
@@ -358,29 +282,23 @@ pub fn execute_update_config(
         return Err(ContractError::Unauthorized {});
     }
 
-    if let Some(wormhole) = wormhole_contract {
-        config.wormhole_contract = deps.api.addr_validate(&wormhole)?;
+    if let Some(router_config) = router_verifier {
+        config.router_verifier = router::parse_config(router_config)?;
     }
 
     if let Some(feed_id) = price_feed_id {
+        if feed_id.is_empty() {
+            return Err(ContractError::InvalidPriceData {
+                reason: "price_feed_id is required".to_string(),
+            });
+        }
         config.price_feed_id = feed_id;
-    }
-
-    if let Some(sources) = data_sources {
-        config.data_sources = sources
-            .into_iter()
-            .map(|ds| DataSource {
-                emitter_chain: ds.emitter_chain,
-                emitter_address: ds.emitter_address,
-            })
-            .collect();
     }
 
     CONFIG.save(deps.storage, &config)?;
 
     Ok(Response::new()
         .add_attribute("method", "update_config")
-        .add_attribute("wormhole_contract", config.wormhole_contract.to_string())
         .add_attribute("price_feed_id", config.price_feed_id))
 }
 
@@ -423,19 +341,11 @@ fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
 
     Ok(ConfigResponse {
         admin: config.admin.to_string(),
-        wormhole_contract: config.wormhole_contract.to_string(),
+        router_verifier: router::config_to_msg(&config.router_verifier),
         update_fee: config.update_fee,
         price_feed_id: config.price_feed_id,
         default_denom: config.default_data_id.denom,
         default_base_denom: config.default_data_id.base_denom,
-        data_sources: config
-            .data_sources
-            .into_iter()
-            .map(|ds| DataSourceMsg {
-                emitter_chain: ds.emitter_chain,
-                emitter_address: ds.emitter_address,
-            })
-            .collect(),
     })
 }
 
@@ -453,12 +363,12 @@ pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, Co
         .add_attribute("method", "migrate")
         .add_attribute("version", "3.0.0");
 
-    if let Some(wormhole_contract) = msg.wormhole_contract {
+    if let Some(router_config) = msg.router_verifier {
         let mut config = CONFIG.load(deps.storage)?;
-        config.wormhole_contract = deps.api.addr_validate(&wormhole_contract)?;
+        config.router_verifier = router::parse_config(router_config)?;
         CONFIG.save(deps.storage, &config)?;
 
-        response = response.add_attribute("wormhole_contract", wormhole_contract);
+        response = response.add_attribute("router_verifier", "configured");
     }
 
     Ok(response)
@@ -468,7 +378,10 @@ pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, Co
 mod tests {
     use super::*;
     use cosmwasm_std::testing::{message_info, mock_env, MockApi, MockQuerier, MockStorage};
-    use cosmwasm_std::{from_json, Empty, OwnedDeps};
+    use cosmwasm_std::{coin, from_json, Empty, OwnedDeps};
+
+    use crate::msg::{RouterAddress, RouterVerifierConfigMsg};
+    use crate::state::RouterVerifierConfig;
 
     type MockDeps = OwnedDeps<MockStorage, MockApi, MockQuerier, Empty>;
 
@@ -484,16 +397,39 @@ mod tests {
     fn setup_config(deps: &mut MockDeps) {
         let config = Config {
             admin: deps.api.addr_make("admin"),
-            wormhole_contract: deps.api.addr_make("wormhole"),
+            router_verifier: production_router_config(),
             update_fee: Uint256::from(1000u128),
             price_feed_id: "0xtest123".to_string(),
             default_data_id: DataID::akt_usd(),
-            data_sources: vec![DataSource {
-                emitter_chain: 26,
-                emitter_address: "e101faedac5851e32b9b23b5f9411a8c2bac4aae3ed4dd7b811dd1a72ea4aa71".to_string(),
-            }],
         };
         CONFIG.save(&mut deps.storage, &config).unwrap();
+    }
+
+    fn production_router_config_msg() -> RouterVerifierConfigMsg {
+        RouterVerifierConfigMsg {
+            router_set_index: 0,
+            routers: [
+                "41534bb176e461a3fb30479400f210549ecce638",
+                "6502987b62f21cab7eb5ccd8f0173084b60d5b41",
+                "44a3e8f6a382412cf6bb90a3f8106e68977476c9",
+                "d9d7d4529577864352c9a6539a48238fcd447052",
+                "1663a5a822336ece48559b1dfb1e93a017a7dac3",
+            ]
+            .iter()
+            .map(|addr| RouterAddress {
+                bytes: Binary::from(hex::decode(addr).unwrap()),
+            })
+            .collect(),
+            expected_emitter_chain: 26,
+            expected_emitter_address: Binary::from(
+                hex::decode("507974686e6574507974686e6574507974686e6574507974686e657450797468")
+                    .unwrap(),
+            ),
+        }
+    }
+
+    fn production_router_config() -> RouterVerifierConfig {
+        router::parse_config(production_router_config_msg()).unwrap()
     }
 
     #[test]
@@ -509,8 +445,7 @@ mod tests {
         assert_eq!(2, res.attributes.len());
 
         let config: ConfigResponse =
-            from_json(query(deps.as_ref(), mock_env(), QueryMsg::GetConfig {}).unwrap())
-                .unwrap();
+            from_json(query(deps.as_ref(), mock_env(), QueryMsg::GetConfig {}).unwrap()).unwrap();
         assert_eq!(Uint256::from(2000u128), config.update_fee);
     }
 
@@ -524,53 +459,41 @@ mod tests {
         config.price_feed_id = "0xabc123def456".to_string();
         CONFIG.save(&mut deps.storage, &config).unwrap();
 
-        let response: PriceFeedIdResponse = from_json(
-            query(
-                deps.as_ref(),
-                mock_env(),
-                QueryMsg::GetPriceFeedId {},
-            )
-            .unwrap(),
-        )
-        .unwrap();
+        let response: PriceFeedIdResponse =
+            from_json(query(deps.as_ref(), mock_env(), QueryMsg::GetPriceFeedId {}).unwrap())
+                .unwrap();
 
         assert_eq!("0xabc123def456", response.price_feed_id);
     }
 
     #[test]
-    fn test_query_config_includes_wormhole() {
+    fn test_query_config_includes_router_verifier() {
         let mut deps = mock_deps();
         setup_config(&mut deps);
 
-        let response: ConfigResponse = from_json(
-            query(
-                deps.as_ref(),
-                mock_env(),
-                QueryMsg::GetConfig {},
-            )
-            .unwrap(),
-        )
-        .unwrap();
+        let response: ConfigResponse =
+            from_json(query(deps.as_ref(), mock_env(), QueryMsg::GetConfig {}).unwrap()).unwrap();
 
         // Oracle module expects "akt" (not "uakt") for denom
         assert_eq!("akt", response.default_denom);
         assert_eq!("usd", response.default_base_denom);
-        assert!(!response.wormhole_contract.is_empty());
-        assert_eq!(1, response.data_sources.len());
-        assert_eq!(26, response.data_sources[0].emitter_chain);
+        assert_eq!(0, response.router_verifier.router_set_index);
+        assert_eq!(5, response.router_verifier.routers.len());
+        assert_eq!(26, response.router_verifier.expected_emitter_chain);
     }
 
     #[test]
-    fn test_migrate_can_update_verifier_contract() {
+    fn test_migrate_can_update_router_verifier() {
         let mut deps = mock_deps();
         setup_config(&mut deps);
 
-        let verifier = deps.api.addr_make("pyth-pro-verifier");
+        let mut router_config = production_router_config_msg();
+        router_config.router_set_index = 1;
         let res = migrate(
             deps.as_mut(),
             mock_env(),
             MigrateMsg {
-                wormhole_contract: Some(verifier.to_string()),
+                router_verifier: Some(router_config),
             },
         )
         .unwrap();
@@ -578,10 +501,68 @@ mod tests {
         assert!(res
             .attributes
             .iter()
-            .any(|attr| attr.key == "wormhole_contract" && attr.value == verifier.as_str()));
+            .any(|attr| attr.key == "router_verifier" && attr.value == "configured"));
 
         let config = CONFIG.load(&deps.storage).unwrap();
-        assert_eq!(verifier, config.wormhole_contract);
+        assert_eq!(1, config.router_verifier.router_set_index);
+    }
+
+    #[test]
+    fn test_update_price_feed_with_router_verified_pnau() {
+        let mut deps = mock_deps();
+        let config = Config {
+            admin: deps.api.addr_make("admin"),
+            router_verifier: production_router_config(),
+            update_fee: Uint256::from(1000u128),
+            price_feed_id: "0x4ea5bb4d2f5900cc2e97ba534240950740b4d3b89fe712a94a7304fd2fd92702"
+                .to_string(),
+            default_data_id: DataID::akt_usd(),
+        };
+        CONFIG.save(&mut deps.storage, &config).unwrap();
+        PRICE_FEED
+            .save(&mut deps.storage, &PriceFeed::new())
+            .unwrap();
+
+        let update =
+            Binary::from(hex::decode(crate::accumulator::AKT_UPGRADED_HERMES_PNAU_HEX).unwrap());
+        let info = message_info(&deps.api.addr_make("updater"), &[coin(1000, "uakt")]);
+        let res = execute_update_price_feed(deps.as_mut(), mock_env(), info, update).unwrap();
+
+        assert!(res
+            .attributes
+            .iter()
+            .any(|attr| attr.key == "method" && attr.value == "update_price_feed"));
+
+        let price_feed = PRICE_FEED.load(&deps.storage).unwrap();
+        assert!(!price_feed.price.is_zero());
+        assert_eq!(price_feed.expo, -8);
+        assert!(price_feed.publish_time > 0);
+    }
+
+    #[test]
+    fn test_update_price_feed_rejects_non_pnau_input() {
+        let mut deps = mock_deps();
+        let config = Config {
+            admin: deps.api.addr_make("admin"),
+            router_verifier: production_router_config(),
+            update_fee: Uint256::from(1000u128),
+            price_feed_id: "0x4ea5bb4d2f5900cc2e97ba534240950740b4d3b89fe712a94a7304fd2fd92702"
+                .to_string(),
+            default_data_id: DataID::akt_usd(),
+        };
+        CONFIG.save(&mut deps.storage, &config).unwrap();
+        PRICE_FEED
+            .save(&mut deps.storage, &PriceFeed::new())
+            .unwrap();
+
+        let info = message_info(&deps.api.addr_make("updater"), &[coin(1000, "uakt")]);
+        let err =
+            execute_update_price_feed(deps.as_mut(), mock_env(), info, Binary::from(vec![1, 2, 3]))
+                .unwrap_err();
+
+        assert!(err
+            .to_string()
+            .contains("failed to parse accumulator update"));
     }
 
     #[test]
