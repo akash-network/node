@@ -1,7 +1,7 @@
 //! PNAU (Pyth Network Accumulator Update) parser
 //!
 //! Parses the accumulator format returned by Pyth Hermes v2 API.
-//! This format wraps a Wormhole VAA containing a Merkle root,
+//! This format wraps a router-signed VAA-format message containing a Merkle root,
 //! along with price updates and their Merkle proofs.
 //!
 //! The MerklePriceUpdate section uses big-endian for length prefixes.
@@ -14,8 +14,8 @@ use sha3::{Digest, Keccak256};
 /// Magic bytes identifying PNAU format
 pub const PNAU_MAGIC: &[u8] = b"PNAU";
 
-/// Wormhole Merkle update type
-pub const UPDATE_TYPE_WORMHOLE_MERKLE: u8 = 0;
+/// Merkle proof update type used by Pyth accumulator payloads.
+pub const UPDATE_TYPE_MERKLE_PROOF: u8 = 0;
 
 /// Merkle tree constants (matching Pyth's implementation)
 const MERKLE_LEAF_PREFIX: u8 = 0;
@@ -24,7 +24,7 @@ const MERKLE_NODE_PREFIX: u8 = 1;
 /// Parsed PNAU accumulator update
 #[derive(Debug)]
 pub struct AccumulatorUpdate {
-    /// The embedded Wormhole VAA (contains signed Merkle root)
+    /// The embedded router-signed VAA-format message.
     pub vaa: Binary,
     /// Merkle root from the VAA payload
     pub merkle_root: [u8; 20],
@@ -49,7 +49,7 @@ pub struct PriceUpdateWithProof {
 /// - Minor version (1 byte) [offset 5]
 /// - Trailing length (1 byte) [offset 6]
 /// - Trailing data (trailing_len bytes) [offset 7 to 7+trailing_len-1]
-/// - Proof discriminant (1 byte): 0=WormholeMerkle [offset 7+trailing_len]
+/// - Proof discriminant (1 byte): 0=Merkle proof update [offset 7+trailing_len]
 /// - VAA length (2 bytes, big-endian) [offset 8+trailing_len]
 /// - VAA data (vaa_len bytes)
 /// - Number of updates (1 byte)
@@ -96,10 +96,10 @@ pub fn parse_accumulator_update(data: &[u8]) -> StdResult<AccumulatorUpdate> {
     let update_type = data[offset];
     offset += 1;
 
-    // Only support WormholeMerkle updates
-    if update_type != UPDATE_TYPE_WORMHOLE_MERKLE {
+    // Only support Merkle proof updates carrying the router-signed VAA message.
+    if update_type != UPDATE_TYPE_MERKLE_PROOF {
         return Err(StdError::msg(format!(
-            "Unsupported update type: {}, expected WormholeMerkle (0)",
+            "Unsupported update type: {}, expected Merkle proof update (0)",
             update_type
         )));
     }
@@ -148,11 +148,11 @@ pub fn parse_accumulator_update(data: &[u8]) -> StdResult<AccumulatorUpdate> {
     })
 }
 
-/// Extract the Merkle root from a Wormhole VAA payload
+/// Extract the Merkle root from a router-signed VAA-format payload.
 fn extract_merkle_root_from_vaa(vaa: &[u8]) -> StdResult<[u8; 20]> {
     // VAA structure:
     // - Version (1 byte)
-    // - Guardian set index (4 bytes)
+    // - Router set index, stored in the VAA guardian_set_index field (4 bytes)
     // - Signature count (1 byte)
     // - Signatures (66 bytes each)
     // - Body starts after signatures
@@ -181,7 +181,7 @@ fn extract_merkle_root_from_vaa(vaa: &[u8]) -> StdResult<[u8; 20]> {
     let payload = &vaa[payload_offset..];
 
     // Payload for Merkle root:
-    // - Magic "AUWV" (4 bytes) - Accumulator Update Wormhole Verification
+    // - Magic "AUWV" (4 bytes)
     // - Update type (1 byte)
     // - Slot (8 bytes)
     // - Ring size (4 bytes)
@@ -261,7 +261,7 @@ fn parse_price_update(data: &[u8], mut offset: usize) -> StdResult<(PriceUpdateW
 /// Verify a Merkle proof for a price update
 ///
 /// The proof demonstrates that the message is included in the tree
-/// whose root was signed by Wormhole guardians.
+/// whose root was signed by Pyth routers.
 pub fn verify_merkle_proof(
     message_data: &[u8],
     proof: &[[u8; 20]],

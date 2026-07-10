@@ -6,7 +6,7 @@ use crate::{
     error::ContractError,
     msg::{RouterAddress, RouterVerifierConfigMsg},
     state::RouterVerifierConfig,
-    wormhole::ParsedVAA,
+    vaa::ParsedVAA,
 };
 
 const ROUTER_COUNT: usize = 5;

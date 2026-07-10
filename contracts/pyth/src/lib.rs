@@ -6,7 +6,7 @@ pub mod oracle;
 pub mod pyth;
 pub mod router;
 pub mod state;
-pub mod wormhole;
+pub mod vaa;
 
 #[cfg(test)]
 mod integration_tests;

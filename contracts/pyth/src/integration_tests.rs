@@ -76,7 +76,7 @@ fn setup_contract(deps: &mut MockDeps) -> Addr {
 }
 
 /// Helper to simulate a price update by directly modifying state
-/// (Used to test query responses without needing Wormhole mock)
+/// (Used to test query responses without needing a signed PNAU fixture)
 fn simulate_price_update(deps: &mut MockDeps, price: u128, conf: u128, publish_time: i64) {
     let mut price_feed = PRICE_FEED.load(&deps.storage).unwrap();
     price_feed.prev_publish_time = price_feed.publish_time;
