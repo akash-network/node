@@ -22,8 +22,8 @@ if [[ -z "$CONTRACTS_DIR" ]]; then
 	exit 1
 fi
 
-PYTH_VAA_WASM="${CONTRACTS_DIR}/artifacts/pyth_vaa.wasm"
-PYTH_PRO_WASM="${CONTRACTS_DIR}/artifacts/pyth_pro.wasm"
+PYTH_VAA_WASM="${CONTRACTS_DIR}/artifacts/pyth-vaa.wasm"
+PYTH_PRO_WASM="${CONTRACTS_DIR}/artifacts/pyth-pro.wasm"
 
 HERMES_MNEMONIC="wire museum tragic inmate final lady illegal father whisper margin sea cool soul half moon nut tissue strategy ladder come glory opera device elbow"
 

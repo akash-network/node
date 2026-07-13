@@ -198,9 +198,9 @@ func (s *priceOracleContractTestSuite) TestStoreContractViaGovernance() {
 	val := s.Network().Validators[0]
 
 	// Load the pyth-pro wasm contract.
-	wasmPath := findWasmPath("pyth-pro", "pyth_pro.wasm")
+	wasmPath := findWasmPath("pyth-pro", "pyth-pro.wasm")
 	if wasmPath == "" {
-		s.T().Skip("pyth_pro.wasm not found, skipping contract store test")
+		s.T().Skip("pyth-pro.wasm not found, skipping contract store test")
 		return
 	}
 
@@ -499,8 +499,8 @@ func (s *priceOracleContractTestSuite) TestAllContractsExist() {
 		dir      string
 		wasmFile string
 	}{
-		{"pyth-vaa", "pyth-vaa", "pyth_vaa.wasm"},
-		{"pyth-pro", "pyth-pro", "pyth_pro.wasm"},
+		{"pyth-vaa", "pyth-vaa", "pyth-vaa.wasm"},
+		{"pyth-pro", "pyth-pro", "pyth-pro.wasm"},
 	}
 
 	for _, c := range contracts {
@@ -568,9 +568,17 @@ func (s *priceOracleContractTestSuite) TestRouterSignedVAAStructure() {
 func findWasmPath(contractDir, wasmFile string) string {
 	// Try common paths relative to the test location
 	paths := []string{
+		filepath.Join("../../.cache/cosmwasm/artifacts", wasmFile),
+		filepath.Join("../.cache/cosmwasm/artifacts", wasmFile),
+		filepath.Join(".cache/cosmwasm/artifacts", wasmFile),
 		filepath.Join("../../contracts", contractDir, "artifacts", wasmFile),
 		filepath.Join("../contracts", contractDir, "artifacts", wasmFile),
 		filepath.Join("contracts", contractDir, "artifacts", wasmFile),
+	}
+
+	devcache := os.Getenv("AKASH_DEVCACHE")
+	if devcache != "" {
+		paths = append(paths, filepath.Join(devcache, "cosmwasm/artifacts", wasmFile))
 	}
 
 	// Also try using GOPATH
@@ -912,9 +920,9 @@ func (s *priceOracleContractTestSuite) TestStoreContractCodeViaGovernance() {
 	s.Require().NoError(err)
 
 	// Step 1: Load contract WASM
-	wasmPath := findWasmPath("pyth-pro", "pyth_pro.wasm")
+	wasmPath := findWasmPath("pyth-pro", "pyth-pro.wasm")
 	if wasmPath == "" {
-		s.T().Skip("pyth_pro.wasm not found, skipping contract deployment test")
+		s.T().Skip("pyth-pro.wasm not found, skipping contract deployment test")
 		return
 	}
 	s.T().Logf("Found pyth-pro contract at: %s", wasmPath)
