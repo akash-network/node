@@ -1,12 +1,12 @@
 # Docker Compose for Akash Local Development with Pyth Oracle
 #
 # This setup includes:
-#   - akash-node: Single-node validator with Wormhole and Pyth contracts
-#   - hermes-client: Price relayer that submits Pyth prices to the oracle
+#   - akash-node: Single-node validator with pyth-vaa and pyth-pro contracts
+#   - hermes-client: Upgraded Hermes relayer that submits Pyth PNAU data to pyth-pro
 #
 # Prerequisites:
 #   - Build contracts first: cd contracts && make build
-#   - Hermes repo at ../../hermes (relative to node repo)
+#   - PYTH_HERMES_API_KEY for the upgraded Pyth Hermes API
 #
 # Usage:
 #   docker-compose -f _build/docker-compose.yaml up -d          # Start all services
@@ -23,7 +23,7 @@
 ---
 services:
   validator:
-    image: ghcr.io/akash-network/node:latest-arm64
+    image: ${AKASH_NODE_IMAGE:-ghcr.io/akash-network/node:latest-arm64}
     container_name: validator
     hostname: validator
     environment:
@@ -59,19 +59,22 @@ services:
   # Hermes Price Relayer
   # =============================================================================
   hermes-client:
-    image: ghcr.io/akash-network/hermes:latest
+    image: ${HERMES_IMAGE:-ghcr.io/akash-network/hermes:latest}
     container_name: hermes-client
     hostname: hermes-client
     environment:
       # RPC endpoint (internal docker network)
-      - RPC_ENDPOINT=http://validator:26657
-      # Pyth Hermes API
-      - HERMES_ENDPOINT=https://hermes.pyth.network
+      - HC_RPC_ENDPOINT=http://validator:26657
+      # Upgraded Pyth Hermes API
+      - HC_HERMES_ENDPOINT=${PYTH_HERMES_ENDPOINT:-https://pyth.dourolabs.app/hermes}
+      - HC_HERMES_API_KEY=${PYTH_HERMES_API_KEY:-}
+      - HC_PRICE_FETCHING_METHOD=polling
       # Update interval (1 minute for testing, use 5+ minutes in production)
-      - UPDATE_INTERVAL_MS=10000
+      - HC_UPDATE_INTERVAL_MS=10000
+      - HC_PRICE_DEVIATION_TOLERANCE=0
       # Gas configuration
-      - GAS_PRICE=0.025uakt
-      - DENOM=uakt
+      - HC_GAS_PRICE=0.025uakt
+      - HC_DENOM=uakt
       - NODE_ENV=development
     env_file:
       - ${AKASH_RUN_DIR}/hermes.env
@@ -84,7 +87,7 @@ services:
         echo "Hermes Price Relayer - Waiting for configuration"
         echo "================================================"
 
-        echo "Contract address: $$CONTRACT_ADDRESS"
+        echo "Contract address: $$HC_CONTRACT_ADDRESS"
         echo "Starting Hermes daemon..."
         echo ""
 

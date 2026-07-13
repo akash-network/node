@@ -73,79 +73,6 @@ func NetworkConfig() *network.Config {
 }
 
 // =====================
-// Wormhole Contract Types
-// =====================
-
-// WormholeInstantiateMsg is the message to instantiate the wormhole contract
-type WormholeInstantiateMsg struct {
-	GovChain            uint16          `json:"gov_chain"`
-	GovAddress          string          `json:"gov_address"`
-	InitialGuardianSet  GuardianSetInfo `json:"initial_guardian_set"`
-	GuardianSetExpirity uint64          `json:"guardian_set_expirity"`
-	ChainID             uint16          `json:"chain_id"`
-	FeeDenom            string          `json:"fee_denom"`
-}
-
-// GuardianSetInfo contains guardian set data
-type GuardianSetInfo struct {
-	Addresses      []GuardianAddress `json:"addresses"`
-	ExpirationTime uint64            `json:"expiration_time"`
-}
-
-// GuardianAddress represents a guardian's Ethereum-style address
-type GuardianAddress struct {
-	Bytes string `json:"bytes"` // base64 encoded
-}
-
-// WormholeExecuteMsg is the execute message for wormhole contract
-type WormholeExecuteMsg struct {
-	SubmitVAA   *SubmitVAAMsg   `json:"submit_v_a_a,omitempty"`
-	PostMessage *PostMessageMsg `json:"post_message,omitempty"`
-}
-
-type SubmitVAAMsg struct {
-	VAA string `json:"vaa"` // base64 encoded
-}
-
-type PostMessageMsg struct {
-	Message string `json:"message"` // base64 encoded
-	Nonce   uint32 `json:"nonce"`
-}
-
-// WormholeQueryMsg is the query message for wormhole contract
-type WormholeQueryMsg struct {
-	GuardianSetInfo *struct{}           `json:"guardian_set_info,omitempty"`
-	VerifyVAA       *VerifyVAAQuery     `json:"verify_v_a_a,omitempty"`
-	GetState        *struct{}           `json:"get_state,omitempty"`
-	QueryAddressHex *QueryAddressHexMsg `json:"query_address_hex,omitempty"`
-}
-
-type VerifyVAAQuery struct {
-	VAA       string `json:"vaa"` // base64 encoded
-	BlockTime uint64 `json:"block_time"`
-}
-
-type QueryAddressHexMsg struct {
-	Address string `json:"address"`
-}
-
-// WormholeGuardianSetInfoResponse is the response from GuardianSetInfo query
-type WormholeGuardianSetInfoResponse struct {
-	GuardianSetIndex uint32            `json:"guardian_set_index"`
-	Addresses        []GuardianAddress `json:"addresses"`
-}
-
-// WormholeGetStateResponse is the response from GetState query
-type WormholeGetStateResponse struct {
-	Fee CoinResponse `json:"fee"`
-}
-
-type CoinResponse struct {
-	Denom  string `json:"denom"`
-	Amount string `json:"amount"`
-}
-
-// =====================
 // Price Oracle Contract Types
 // =====================
 
@@ -332,65 +259,6 @@ func (s *priceOracleContractTestSuite) TestStoreContractViaGovernance() {
 	s.Require().NoError(err)
 	s.Require().NotNil(resp)
 	s.T().Log("Successfully submitted store code proposal via governance")
-}
-
-// TestWormholeContractMessageEncoding tests that Wormhole contract message types serialize correctly
-func (s *priceOracleContractTestSuite) TestWormholeContractMessageEncoding() {
-	// Test WormholeInstantiateMsg encoding
-	// Use a test guardian address (20 bytes)
-	testGuardianAddr := make([]byte, 20)
-	for i := range testGuardianAddr {
-		testGuardianAddr[i] = byte(i + 1)
-	}
-
-	instantiateMsg := WormholeInstantiateMsg{
-		GovChain:   1, // Solana
-		GovAddress: base64.StdEncoding.EncodeToString(make([]byte, 32)),
-		InitialGuardianSet: GuardianSetInfo{
-			Addresses: []GuardianAddress{
-				{Bytes: base64.StdEncoding.EncodeToString(testGuardianAddr)},
-			},
-			ExpirationTime: 0,
-		},
-		GuardianSetExpirity: 86400,
-		ChainID:             18, // Example chain ID
-		FeeDenom:            "uakt",
-	}
-
-	data, err := json.Marshal(instantiateMsg)
-	s.Require().NoError(err)
-	s.T().Logf("Wormhole InstantiateMsg JSON: %s", string(data))
-
-	var decoded WormholeInstantiateMsg
-	err = json.Unmarshal(data, &decoded)
-	s.Require().NoError(err)
-	s.Require().Equal(instantiateMsg.GovChain, decoded.GovChain)
-	s.Require().Equal(instantiateMsg.ChainID, decoded.ChainID)
-
-	// Test WormholeQueryMsg encoding
-	queryMsg := WormholeQueryMsg{
-		GuardianSetInfo: &struct{}{},
-	}
-
-	data, err = json.Marshal(queryMsg)
-	s.Require().NoError(err)
-	s.Require().Equal(`{"guardian_set_info":{}}`, string(data))
-
-	queryMsg = WormholeQueryMsg{
-		GetState: &struct{}{},
-	}
-
-	data, err = json.Marshal(queryMsg)
-	s.Require().NoError(err)
-	s.Require().Equal(`{"get_state":{}}`, string(data))
-
-	queryMsg = WormholeQueryMsg{
-		QueryAddressHex: &QueryAddressHexMsg{Address: "akash1test123"},
-	}
-
-	data, err = json.Marshal(queryMsg)
-	s.Require().NoError(err)
-	s.T().Logf("Wormhole QueryAddressHex JSON: %s", string(data))
 }
 
 // TestPriceOracleWithVAAMessageEncoding tests that Pyth contract PNAU message types serialize correctly.
@@ -595,42 +463,6 @@ func (s *priceOracleContractTestSuite) TestContractResponseParsing() {
 	s.Require().Equal(uint64(100), params.LastUpdatedHeight)
 }
 
-// TestWormholeResponseParsing tests parsing of Wormhole contract responses
-func (s *priceOracleContractTestSuite) TestWormholeResponseParsing() {
-	// Test GuardianSetInfoResponse parsing
-	testGuardianAddr := make([]byte, 20)
-	for i := range testGuardianAddr {
-		testGuardianAddr[i] = byte(i + 1)
-	}
-
-	guardianSetJSON := `{
-		"guardian_set_index": 3,
-		"addresses": [
-			{"bytes": "` + base64.StdEncoding.EncodeToString(testGuardianAddr) + `"}
-		]
-	}`
-
-	var guardianSet WormholeGuardianSetInfoResponse
-	err := json.Unmarshal([]byte(guardianSetJSON), &guardianSet)
-	s.Require().NoError(err)
-	s.Require().Equal(uint32(3), guardianSet.GuardianSetIndex)
-	s.Require().Len(guardianSet.Addresses, 1)
-
-	// Test GetStateResponse parsing
-	stateJSON := `{
-		"fee": {
-			"denom": "uakt",
-			"amount": "1000"
-		}
-	}`
-
-	var state WormholeGetStateResponse
-	err = json.Unmarshal([]byte(stateJSON), &state)
-	s.Require().NoError(err)
-	s.Require().Equal("uakt", state.Fee.Denom)
-	s.Require().Equal("1000", state.Fee.Amount)
-}
-
 // TestPNAUExecuteMessageParsing tests that PNAU execute messages are properly formatted.
 func (s *priceOracleContractTestSuite) TestPNAUExecuteMessageParsing() {
 	testPNAUData := []byte("PNAU" + "test_router_signed_accumulator_update")
@@ -667,8 +499,6 @@ func (s *priceOracleContractTestSuite) TestAllContractsExist() {
 		dir      string
 		wasmFile string
 	}{
-		{"wormhole", "wormhole", "wormhole.wasm"},
-		{"pyth", "pyth", "pyth.wasm"},
 		{"pyth-vaa", "pyth-vaa", "pyth_vaa.wasm"},
 		{"pyth-pro", "pyth-pro", "pyth_pro.wasm"},
 	}
@@ -692,11 +522,12 @@ func (s *priceOracleContractTestSuite) TestAllContractsExist() {
 	}
 }
 
-// TestVAAStructure validates VAA binary structure understanding
-func (s *priceOracleContractTestSuite) TestVAAStructure() {
-	// VAA header structure (for reference):
+// TestRouterSignedVAAStructure documents the VAA-format envelope used inside PNAU.
+func (s *priceOracleContractTestSuite) TestRouterSignedVAAStructure() {
+	// The upgraded Pyth router payload keeps the VAA-format envelope, but the
+	// signer set is the Pyth router set rather than the former guardian set.
 	// - version (1 byte)
-	// - guardian_set_index (4 bytes)
+	// - router_set_index (4 bytes)
 	// - len_signers (1 byte)
 	// - signatures (66 bytes each)
 	// - body:
@@ -711,7 +542,7 @@ func (s *priceOracleContractTestSuite) TestVAAStructure() {
 	// Test that we understand the structure correctly
 	s.T().Log("VAA Header structure:")
 	s.T().Log("  - Version: 1 byte at offset 0")
-	s.T().Log("  - Guardian Set Index: 4 bytes at offset 1")
+	s.T().Log("  - Router Set Index: 4 bytes at offset 1")
 	s.T().Log("  - Num Signers: 1 byte at offset 5")
 	s.T().Log("  - Signatures: 66 bytes each starting at offset 6")
 	s.T().Log("Body structure (after signatures):")
@@ -723,15 +554,14 @@ func (s *priceOracleContractTestSuite) TestVAAStructure() {
 	s.T().Log("  - Consistency Level: 1 byte at offset 50")
 	s.T().Log("  - Payload: variable starting at offset 51")
 
-	// Create a minimal test VAA structure
-	testGuardianAddr := make([]byte, 20)
-	for i := range testGuardianAddr {
-		testGuardianAddr[i] = byte(i + 1)
+	// Router addresses use the same 20-byte Ethereum-style address encoding.
+	testRouterAddr := make([]byte, 20)
+	for i := range testRouterAddr {
+		testRouterAddr[i] = byte(i + 1)
 	}
 
-	// Log test guardian address
-	s.T().Logf("Test guardian address (hex): %s", hex.EncodeToString(testGuardianAddr))
-	s.T().Logf("Test guardian address (base64): %s", base64.StdEncoding.EncodeToString(testGuardianAddr))
+	s.T().Logf("Test router address (hex): %s", hex.EncodeToString(testRouterAddr))
+	s.T().Logf("Test router address (base64): %s", base64.StdEncoding.EncodeToString(testRouterAddr))
 }
 
 // findWasmPath attempts to find a wasm file for a given contract
