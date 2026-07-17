@@ -60,8 +60,6 @@ Darwin | amd64 | ✅ **Supported**
 Darwin | arm64 | ✅ **Supported**
 Linux | amd64 | ✅ **Supported**
 Linux | arm64 (aka aarch64) | ✅ **Supported**
-Linux | armhf GOARM=5,6,7 | ⚠️ **Not supported**
-Windows | amd64 | ⚠️ **Experimental**
 
 # Installing
 
