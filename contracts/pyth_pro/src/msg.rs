@@ -16,7 +16,7 @@ pub struct InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     /// Update the AKT/USD price feed with upgraded Pyth PNAU data.
-    /// pyth-vaa validates the embedded router-signed VAA before the price is relayed to x/oracle.
+    /// pyth_vaa validates the embedded router-signed VAA before the price is relayed to x/oracle.
     UpdatePriceFeed {
         /// PNAU update data from the upgraded Pyth Hermes API.
         vaa: Binary,

@@ -32,8 +32,8 @@ import (
 )
 
 // priceOracleContractTestSuite tests the Pyth CosmWasm contracts deployed on a
-// test network. Upgraded Hermes submits PNAU data to pyth-pro, which queries
-// pyth-vaa for router quorum verification before relaying to x/oracle.
+// test network. Upgraded Hermes submits PNAU data to pyth_pro, which queries
+// pyth_vaa for router quorum verification before relaying to x/oracle.
 type priceOracleContractTestSuite struct {
 	*testutil.NetworkTestSuite
 
@@ -92,7 +92,7 @@ type PythVaaInstantiateMsg struct {
 	RouterVerifier RouterVerifierConfig `json:"router_verifier"`
 }
 
-// InstantiateMsg is the message to instantiate the pyth-pro contract.
+// InstantiateMsg is the message to instantiate the pyth_pro contract.
 type InstantiateMsg struct {
 	Admin           string `json:"admin"`
 	PythVaaContract string `json:"pyth_vaa_contract"`
@@ -197,8 +197,8 @@ func (s *priceOracleContractTestSuite) TestStoreContractViaGovernance() {
 	ctx := context.Background()
 	val := s.Network().Validators[0]
 
-	// Load the pyth-pro wasm contract.
-	wasmPath := findWasmPath("pyth-pro", "pyth_pro.wasm")
+	// Load the pyth_pro wasm contract.
+	wasmPath := findWasmPath("pyth_pro", "pyth_pro.wasm")
 	if wasmPath == "" {
 		s.T().Skip("pyth_pro.wasm not found, skipping contract store test")
 		return
@@ -248,8 +248,8 @@ func (s *priceOracleContractTestSuite) TestStoreContractViaGovernance() {
 		sdk.Coins{sdk.NewInt64Coin("uakt", 1000000000)},
 		val.Address.String(),
 		"",
-		"Store pyth-pro contract",
-		"Deploy pyth-pro CosmWasm contract for Pyth price feeds",
+		"Store pyth_pro contract",
+		"Deploy pyth_pro CosmWasm contract for Pyth price feeds",
 		false,
 	)
 	s.Require().NoError(err)
@@ -351,7 +351,7 @@ func (s *priceOracleContractTestSuite) TestQueryOracleModuleParams() {
 
 // TestContractMessageEncoding tests that contract message types serialize correctly
 func (s *priceOracleContractTestSuite) TestContractMessageEncoding() {
-	// Test pyth-pro InstantiateMsg encoding.
+	// Test pyth_pro InstantiateMsg encoding.
 	instantiateMsg := InstantiateMsg{
 		Admin:           "akash1test123",
 		PythVaaContract: "akash1pythvaa456",
@@ -408,7 +408,7 @@ func (s *priceOracleContractTestSuite) TestContractMessageEncoding() {
 
 // TestContractResponseParsing tests parsing of expected contract responses
 func (s *priceOracleContractTestSuite) TestContractResponseParsing() {
-	// Test pyth-pro ConfigResponse parsing.
+	// Test pyth_pro ConfigResponse parsing.
 	configJSON := `{
 		"admin": "akash1abc123",
 		"pyth_vaa_contract": "akash1pythvaa456",
@@ -499,8 +499,8 @@ func (s *priceOracleContractTestSuite) TestAllContractsExist() {
 		dir      string
 		wasmFile string
 	}{
-		{"pyth-vaa", "pyth-vaa", "pyth_vaa.wasm"},
-		{"pyth-pro", "pyth-pro", "pyth_pro.wasm"},
+		{"pyth_vaa", "pyth_vaa", "pyth_vaa.wasm"},
+		{"pyth_pro", "pyth_pro", "pyth_pro.wasm"},
 	}
 
 	for _, c := range contracts {
@@ -920,12 +920,12 @@ func (s *priceOracleContractTestSuite) TestStoreContractCodeViaGovernance() {
 	s.Require().NoError(err)
 
 	// Step 1: Load contract WASM
-	wasmPath := findWasmPath("pyth-pro", "pyth_pro.wasm")
+	wasmPath := findWasmPath("pyth_pro", "pyth_pro.wasm")
 	if wasmPath == "" {
 		s.T().Skip("pyth_pro.wasm not found, skipping contract deployment test")
 		return
 	}
-	s.T().Logf("Found pyth-pro contract at: %s", wasmPath)
+	s.T().Logf("Found pyth_pro contract at: %s", wasmPath)
 
 	wasmBytes, err := LoadAndGzipWasm(wasmPath)
 	s.Require().NoError(err)
@@ -941,8 +941,8 @@ func (s *priceOracleContractTestSuite) TestStoreContractCodeViaGovernance() {
 	proposalID, err := SubmitStoreCodeProposal(
 		ctx, cl, govAddr, wasmBytes,
 		val.Address, deposit,
-		"Store pyth-pro contract",
-		"Deploy pyth-pro CosmWasm contract for testing",
+		"Store pyth_pro contract",
+		"Deploy pyth_pro CosmWasm contract for testing",
 	)
 	s.Require().NoError(err)
 	s.T().Logf("Submitted store code proposal: %d", proposalID)
@@ -986,7 +986,7 @@ func (s *priceOracleContractTestSuite) TestStoreContractCodeViaGovernance() {
 		codeInfoResp.CodeInfoResponse.DataHash)
 
 	// Step 7: Instantiate the contract
-	// The pyth-pro contract points at pyth-vaa for verification.
+	// The pyth_pro contract points at pyth_vaa for verification.
 	initMsg := InstantiateMsg{
 		Admin:           val.Address.String(),
 		PythVaaContract: val.Address.String(),
@@ -996,7 +996,7 @@ func (s *priceOracleContractTestSuite) TestStoreContractCodeViaGovernance() {
 
 	contractAddr, err := InstantiateContract(
 		ctx, cl, codeID, initMsg,
-		"pyth-pro-test",
+		"pyth_pro_test",
 		val.Address.String(), // admin
 		val.Address,
 	)

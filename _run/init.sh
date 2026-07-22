@@ -192,7 +192,7 @@ EOF
 
 	log "Instantiating Pyth VAA contract..."
 	akash tx wasm instantiate "$pyth_vaa_code_id" "$pyth_vaa_init_msg" \
-		--label "pyth-vaa" \
+		--label "pyth_vaa" \
 		--admin "$admin_addr" \
 		--from $admin_key
 
@@ -221,7 +221,7 @@ EOF
 
 	log "Instantiating Pyth Pro contract..."
 	akash tx wasm instantiate "$pyth_pro_code_id" "$pyth_pro_init_msg" \
-		--label "pyth-pro" \
+		--label "pyth_pro" \
 		--admin "$admin_addr" \
 		--from $admin_key
 
@@ -272,7 +272,7 @@ register_oracle_source() {
 	],
 	"deposit": "10000000uakt",
 	"title": "Register Pyth Contract and Fund BME Vault",
-	"summary": "Authorize pyth-pro contract as oracle source and seed BME vault with initial AKT"
+	"summary": "Authorize pyth_pro contract as oracle source and seed BME vault with initial AKT"
 }
 EOF
 

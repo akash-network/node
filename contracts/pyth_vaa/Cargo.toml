@@ -1,5 +1,5 @@
 [package]
-name = "pyth-vaa"
+name = "pyth_vaa"
 version = "1.0.1"
 authors = ["Artur Troian <troian.ap@gmail.com"]
 edition = "2021"

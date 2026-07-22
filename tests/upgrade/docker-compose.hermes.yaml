@@ -1,8 +1,8 @@
 # Docker Compose for Akash Local Development with Pyth Oracle
 #
 # This setup includes:
-#   - akash-node: Single-node validator with pyth-vaa and pyth-pro contracts
-#   - hermes-client: Upgraded Hermes relayer that submits Pyth PNAU data to pyth-pro
+#   - akash-node: Single-node validator with pyth_vaa and pyth_pro contracts
+#   - hermes-client: Upgraded Hermes relayer that submits Pyth PNAU data to pyth_pro
 #
 # Prerequisites:
 #   - Build contracts first: cd contracts && make build

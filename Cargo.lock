@@ -973,7 +973,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "pyth-pro"
+name = "pyth_pro"
 version = "1.0.1"
 dependencies = [
  "cosmwasm-schema",
@@ -988,7 +988,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "pyth-vaa"
+name = "pyth_vaa"
 version = "1.0.1"
 dependencies = [
  "cosmwasm-schema",
