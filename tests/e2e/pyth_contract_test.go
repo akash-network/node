@@ -198,9 +198,9 @@ func (s *priceOracleContractTestSuite) TestStoreContractViaGovernance() {
 	val := s.Network().Validators[0]
 
 	// Load the pyth-pro wasm contract.
-	wasmPath := findWasmPath("pyth-pro", "pyth-pro.wasm")
+	wasmPath := findWasmPath("pyth-pro", "pyth_pro.wasm")
 	if wasmPath == "" {
-		s.T().Skip("pyth-pro.wasm not found, skipping contract store test")
+		s.T().Skip("pyth_pro.wasm not found, skipping contract store test")
 		return
 	}
 
@@ -499,8 +499,8 @@ func (s *priceOracleContractTestSuite) TestAllContractsExist() {
 		dir      string
 		wasmFile string
 	}{
-		{"pyth-vaa", "pyth-vaa", "pyth-vaa.wasm"},
-		{"pyth-pro", "pyth-pro", "pyth-pro.wasm"},
+		{"pyth-vaa", "pyth-vaa", "pyth_vaa.wasm"},
+		{"pyth-pro", "pyth-pro", "pyth_pro.wasm"},
 	}
 
 	for _, c := range contracts {
@@ -920,9 +920,9 @@ func (s *priceOracleContractTestSuite) TestStoreContractCodeViaGovernance() {
 	s.Require().NoError(err)
 
 	// Step 1: Load contract WASM
-	wasmPath := findWasmPath("pyth-pro", "pyth-pro.wasm")
+	wasmPath := findWasmPath("pyth-pro", "pyth_pro.wasm")
 	if wasmPath == "" {
-		s.T().Skip("pyth-pro.wasm not found, skipping contract deployment test")
+		s.T().Skip("pyth_pro.wasm not found, skipping contract deployment test")
 		return
 	}
 	s.T().Logf("Found pyth-pro contract at: %s", wasmPath)
