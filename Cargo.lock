@@ -973,6 +973,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "pyth_pro"
+version = "1.0.1"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "hex",
+ "schemars 0.8.22",
+ "serde",
+ "sha3",
+ "thiserror 1.0.69",
+]
+
+[[package]]
+name = "pyth_vaa"
+version = "1.0.1"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "hex",
+ "k256",
+ "schemars 0.8.22",
+ "serde",
+ "sha3",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"

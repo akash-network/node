@@ -289,15 +289,21 @@ npm run cli:daemon
 
 ### Configuration
 
-| Variable             | Required | Default                       | Description                 |
-|----------------------|----------|-------------------------------|-----------------------------|
-| `RPC_ENDPOINT`       | Yes      | —                             | Akash RPC endpoint          |
-| `CONTRACT_ADDRESS`   | Yes      | —                             | Pyth contract address       |
-| `MNEMONIC`           | Yes      | —                             | Wallet mnemonic for signing |
-| `HERMES_ENDPOINT`    | No       | `https://hermes.pyth.network` | Pyth Hermes API URL         |
-| `UPDATE_INTERVAL_MS` | No       | `300000`                      | Update interval (5 min)     |
-| `GAS_PRICE`          | No       | `0.025uakt`                   | Gas price for transactions  |
-| `DENOM`              | No       | `uakt`                        | Token denomination          |
+The upgraded Hermes client reads Akash-specific settings from `HC_*` environment variables. Local Akash compose files accept `PYTH_HERMES_API_KEY` and map it to `HC_HERMES_API_KEY`.
+
+| Variable                       | Required | Default                              | Description                                      |
+|--------------------------------|----------|--------------------------------------|--------------------------------------------------|
+| `HC_RPC_ENDPOINT`              | Yes      | `https://rpc.akashnet.net:443`       | Akash RPC endpoint                               |
+| `HC_CONTRACT_ADDRESS`          | Yes      | —                                    | `pyth-pro` contract address                      |
+| `HC_WALLET_SECRET`             | Yes      | —                                    | Signing key, formatted as `mnemonic:<words>` or `privateKey:<hex>` |
+| `HC_HERMES_ENDPOINT`           | Yes      | —                                    | Pyth Hermes API base URL. Set to `https://pyth.dourolabs.app/hermes` for upgraded PNAU updates |
+| `HC_HERMES_API_KEY`            | Yes      | —                                    | Pyth Hermes API key for the upgraded endpoint    |
+| `HC_PRICE_FETCHING_METHOD`     | No       | `polling`                            | Price fetch mode, `polling` or `sse`             |
+| `HC_UPDATE_INTERVAL_MS`        | No       | `5000`                               | Polling interval in milliseconds                 |
+| `HC_PRICE_DEVIATION_TOLERANCE` | No       | `0`                                  | Absolute or percentage threshold for skipping small price changes |
+| `HC_GAS_PRICE`                 | No       | `0.025uakt`                          | Gas price for transactions                       |
+| `HC_DENOM`                     | No       | `uakt`                               | Fee token denomination                           |
+| `NODE_ENV`                     | No       | —                                    | Set to `development` for local HTTP RPC endpoints |
 
 ### CLI Commands
 
@@ -332,9 +338,12 @@ docker pull ghcr.io/akash-network/hermes:latest
 # Run with environment variables
 docker run -d \
   --name hermes-client \
-  -e RPC_ENDPOINT=https://rpc.akashnet.net:443 \
-  -e CONTRACT_ADDRESS=akash1... \
-  -e "MNEMONIC=your twelve word mnemonic here" \
+  -e HC_RPC_ENDPOINT=https://rpc.akashnet.net:443 \
+  -e HC_CONTRACT_ADDRESS=akash1... \
+  -e "HC_WALLET_SECRET=mnemonic:your twelve word mnemonic here" \
+  -e HC_HERMES_ENDPOINT=https://pyth.dourolabs.app/hermes \
+  -e HC_HERMES_API_KEY="$PYTH_HERMES_API_KEY" \
+  -e HC_PRICE_FETCHING_METHOD=polling \
   --restart unless-stopped \
   ghcr.io/akash-network/hermes:latest node dist/cli.js daemon
 
@@ -917,7 +926,9 @@ npm run cli:daemon
 
 **Test Hermes API:**
 ```bash
-curl "https://hermes.pyth.network/v2/updates/price/latest?ids=<PRICE_FEED_ID>"
+curl \
+  -H "Authorization: Bearer $PYTH_HERMES_API_KEY" \
+  "https://pyth.dourolabs.app/hermes/v2/updates/price/latest?ids%5B%5D=<PRICE_FEED_ID>&encoding=base64"
 ```
 
 ---

@@ -31,11 +31,9 @@ import (
 	"pkg.akt.dev/node/v2/testutil/network"
 )
 
-// priceOracleContractTestSuite tests the Wormhole and Pyth CosmWasm contracts
-// deployed on a test network.
-// Architecture: Hermes → Pyth (verifies VAA + relays) → x/oracle
-//
-//	Wormhole provides VAA signature verification
+// priceOracleContractTestSuite tests the Pyth CosmWasm contracts deployed on a
+// test network. Upgraded Hermes submits PNAU data to pyth_pro, which queries
+// pyth_vaa for router quorum verification before relaying to x/oracle.
 type priceOracleContractTestSuite struct {
 	*testutil.NetworkTestSuite
 
@@ -75,110 +73,40 @@ func NetworkConfig() *network.Config {
 }
 
 // =====================
-// Wormhole Contract Types
-// =====================
-
-// WormholeInstantiateMsg is the message to instantiate the wormhole contract
-type WormholeInstantiateMsg struct {
-	GovChain            uint16          `json:"gov_chain"`
-	GovAddress          string          `json:"gov_address"`
-	InitialGuardianSet  GuardianSetInfo `json:"initial_guardian_set"`
-	GuardianSetExpirity uint64          `json:"guardian_set_expirity"`
-	ChainID             uint16          `json:"chain_id"`
-	FeeDenom            string          `json:"fee_denom"`
-}
-
-// GuardianSetInfo contains guardian set data
-type GuardianSetInfo struct {
-	Addresses      []GuardianAddress `json:"addresses"`
-	ExpirationTime uint64            `json:"expiration_time"`
-}
-
-// GuardianAddress represents a guardian's Ethereum-style address
-type GuardianAddress struct {
-	Bytes string `json:"bytes"` // base64 encoded
-}
-
-// WormholeExecuteMsg is the execute message for wormhole contract
-type WormholeExecuteMsg struct {
-	SubmitVAA   *SubmitVAAMsg   `json:"submit_v_a_a,omitempty"`
-	PostMessage *PostMessageMsg `json:"post_message,omitempty"`
-}
-
-type SubmitVAAMsg struct {
-	VAA string `json:"vaa"` // base64 encoded
-}
-
-type PostMessageMsg struct {
-	Message string `json:"message"` // base64 encoded
-	Nonce   uint32 `json:"nonce"`
-}
-
-// WormholeQueryMsg is the query message for wormhole contract
-type WormholeQueryMsg struct {
-	GuardianSetInfo *struct{}           `json:"guardian_set_info,omitempty"`
-	VerifyVAA       *VerifyVAAQuery     `json:"verify_v_a_a,omitempty"`
-	GetState        *struct{}           `json:"get_state,omitempty"`
-	QueryAddressHex *QueryAddressHexMsg `json:"query_address_hex,omitempty"`
-}
-
-type VerifyVAAQuery struct {
-	VAA       string `json:"vaa"` // base64 encoded
-	BlockTime uint64 `json:"block_time"`
-}
-
-type QueryAddressHexMsg struct {
-	Address string `json:"address"`
-}
-
-// WormholeGuardianSetInfoResponse is the response from GuardianSetInfo query
-type WormholeGuardianSetInfoResponse struct {
-	GuardianSetIndex uint32            `json:"guardian_set_index"`
-	Addresses        []GuardianAddress `json:"addresses"`
-}
-
-// WormholeGetStateResponse is the response from GetState query
-type WormholeGetStateResponse struct {
-	Fee CoinResponse `json:"fee"`
-}
-
-type CoinResponse struct {
-	Denom  string `json:"denom"`
-	Amount string `json:"amount"`
-}
-
-// =====================
-// DataSource Type (shared)
-// =====================
-
-// DataSource identifies a valid price feed source (Pyth emitter)
-type DataSource struct {
-	EmitterChain   uint16 `json:"emitter_chain"`
-	EmitterAddress string `json:"emitter_address"`
-}
-
-// =====================
 // Price Oracle Contract Types
 // =====================
 
-// InstantiateMsg is the message to instantiate the Pyth contract
-type InstantiateMsg struct {
-	Admin            string       `json:"admin"`
-	WormholeContract string       `json:"wormhole_contract"`
-	UpdateFee        string       `json:"update_fee"`
-	PriceFeedID      string       `json:"price_feed_id"`
-	DataSources      []DataSource `json:"data_sources"`
+type RouterAddress struct {
+	Bytes string `json:"bytes"`
 }
 
-// ExecuteUpdatePriceFeed is the message to update the price feed with VAA
+type RouterVerifierConfig struct {
+	RouterSetIndex         uint32          `json:"router_set_index"`
+	Routers                []RouterAddress `json:"routers"`
+	ExpectedEmitterChain   uint16          `json:"expected_emitter_chain"`
+	ExpectedEmitterAddress string          `json:"expected_emitter_address"`
+}
+
+type PythVaaInstantiateMsg struct {
+	Admin          string               `json:"admin"`
+	RouterVerifier RouterVerifierConfig `json:"router_verifier"`
+}
+
+// InstantiateMsg is the message to instantiate the pyth_pro contract.
+type InstantiateMsg struct {
+	Admin           string `json:"admin"`
+	PythVaaContract string `json:"pyth_vaa_contract"`
+	UpdateFee       string `json:"update_fee"`
+	PriceFeedID     string `json:"price_feed_id"`
+}
+
+// ExecuteUpdatePriceFeed is the message to update the price feed with PNAU data.
 type ExecuteUpdatePriceFeed struct {
 	UpdatePriceFeed UpdatePriceFeedData `json:"update_price_feed"`
 }
 
-// UpdatePriceFeedData contains the VAA for price verification
+// UpdatePriceFeedData contains upgraded Pyth PNAU update data.
 type UpdatePriceFeedData struct {
-	// VAA data from Pyth Hermes API (base64 encoded Binary)
-	// Contract will verify VAA via Wormhole, parse Pyth payload, relay to x/oracle
 	VAA string `json:"vaa"`
 }
 
@@ -188,9 +116,8 @@ type ExecuteUpdateConfig struct {
 }
 
 type UpdateConfigData struct {
-	WormholeContract *string       `json:"wormhole_contract,omitempty"`
-	PriceFeedID      *string       `json:"price_feed_id,omitempty"`
-	DataSources      *[]DataSource `json:"data_sources,omitempty"`
+	PythVaaContract *string `json:"pyth_vaa_contract,omitempty"`
+	PriceFeedID     *string `json:"price_feed_id,omitempty"`
 }
 
 // QueryGetConfig is the query to get contract config
@@ -210,13 +137,12 @@ type QueryGetOracleParams struct{}
 
 // ConfigResponse is the response from GetConfig query
 type ConfigResponse struct {
-	Admin            string       `json:"admin"`
-	WormholeContract string       `json:"wormhole_contract"`
-	UpdateFee        string       `json:"update_fee"`
-	PriceFeedID      string       `json:"price_feed_id"`
-	DefaultDenom     string       `json:"default_denom"`
-	DefaultBaseDenom string       `json:"default_base_denom"`
-	DataSources      []DataSource `json:"data_sources"`
+	Admin            string `json:"admin"`
+	PythVaaContract  string `json:"pyth_vaa_contract"`
+	UpdateFee        string `json:"update_fee"`
+	PriceFeedID      string `json:"price_feed_id"`
+	DefaultDenom     string `json:"default_denom"`
+	DefaultBaseDenom string `json:"default_base_denom"`
 }
 
 // PriceResponse is the response from GetPrice query
@@ -225,6 +151,29 @@ type PriceResponse struct {
 	Conf        string `json:"conf"`
 	Expo        int32  `json:"expo"`
 	PublishTime int64  `json:"publish_time"`
+}
+
+func testRouterVerifierConfig() RouterVerifierConfig {
+	return RouterVerifierConfig{
+		RouterSetIndex: 0,
+		Routers: []RouterAddress{
+			{Bytes: mustHexToBase64("41534bb176e461a3fb30479400f210549ecce638")},
+			{Bytes: mustHexToBase64("6502987b62f21cab7eb5ccd8f0173084b60d5b41")},
+			{Bytes: mustHexToBase64("44a3e8f6a382412cf6bb90a3f8106e68977476c9")},
+			{Bytes: mustHexToBase64("d9d7d4529577864352c9a6539a48238fcd447052")},
+			{Bytes: mustHexToBase64("1663a5a822336ece48559b1dfb1e93a017a7dac3")},
+		},
+		ExpectedEmitterChain:   26,
+		ExpectedEmitterAddress: mustHexToBase64("507974686e6574507974686e6574507974686e6574507974686e657450797468"),
+	}
+}
+
+func mustHexToBase64(value string) string {
+	decoded, err := hex.DecodeString(value)
+	if err != nil {
+		panic(err)
+	}
+	return base64.StdEncoding.EncodeToString(decoded)
 }
 
 // OracleParamsResponse is the response from GetOracleParams query
@@ -248,10 +197,10 @@ func (s *priceOracleContractTestSuite) TestStoreContractViaGovernance() {
 	ctx := context.Background()
 	val := s.Network().Validators[0]
 
-	// Load the pyth wasm contract
-	wasmPath := findWasmPath("pyth", "pyth.wasm")
+	// Load the pyth_pro wasm contract.
+	wasmPath := findWasmPath("pyth_pro", "pyth_pro.wasm")
 	if wasmPath == "" {
-		s.T().Skip("pyth.wasm not found, skipping contract store test")
+		s.T().Skip("pyth_pro.wasm not found, skipping contract store test")
 		return
 	}
 
@@ -299,8 +248,8 @@ func (s *priceOracleContractTestSuite) TestStoreContractViaGovernance() {
 		sdk.Coins{sdk.NewInt64Coin("uakt", 1000000000)},
 		val.Address.String(),
 		"",
-		"Store pyth contract",
-		"Deploy pyth CosmWasm contract for Pyth price feeds",
+		"Store pyth_pro contract",
+		"Deploy pyth_pro CosmWasm contract for Pyth price feeds",
 		false,
 	)
 	s.Require().NoError(err)
@@ -312,111 +261,56 @@ func (s *priceOracleContractTestSuite) TestStoreContractViaGovernance() {
 	s.T().Log("Successfully submitted store code proposal via governance")
 }
 
-// TestWormholeContractMessageEncoding tests that Wormhole contract message types serialize correctly
-func (s *priceOracleContractTestSuite) TestWormholeContractMessageEncoding() {
-	// Test WormholeInstantiateMsg encoding
-	// Use a test guardian address (20 bytes)
-	testGuardianAddr := make([]byte, 20)
-	for i := range testGuardianAddr {
-		testGuardianAddr[i] = byte(i + 1)
-	}
-
-	instantiateMsg := WormholeInstantiateMsg{
-		GovChain:   1, // Solana
-		GovAddress: base64.StdEncoding.EncodeToString(make([]byte, 32)),
-		InitialGuardianSet: GuardianSetInfo{
-			Addresses: []GuardianAddress{
-				{Bytes: base64.StdEncoding.EncodeToString(testGuardianAddr)},
-			},
-			ExpirationTime: 0,
-		},
-		GuardianSetExpirity: 86400,
-		ChainID:             18, // Example chain ID
-		FeeDenom:            "uakt",
-	}
-
-	data, err := json.Marshal(instantiateMsg)
-	s.Require().NoError(err)
-	s.T().Logf("Wormhole InstantiateMsg JSON: %s", string(data))
-
-	var decoded WormholeInstantiateMsg
-	err = json.Unmarshal(data, &decoded)
-	s.Require().NoError(err)
-	s.Require().Equal(instantiateMsg.GovChain, decoded.GovChain)
-	s.Require().Equal(instantiateMsg.ChainID, decoded.ChainID)
-
-	// Test WormholeQueryMsg encoding
-	queryMsg := WormholeQueryMsg{
-		GuardianSetInfo: &struct{}{},
-	}
-
-	data, err = json.Marshal(queryMsg)
-	s.Require().NoError(err)
-	s.Require().Equal(`{"guardian_set_info":{}}`, string(data))
-
-	queryMsg = WormholeQueryMsg{
-		GetState: &struct{}{},
-	}
-
-	data, err = json.Marshal(queryMsg)
-	s.Require().NoError(err)
-	s.Require().Equal(`{"get_state":{}}`, string(data))
-
-	queryMsg = WormholeQueryMsg{
-		QueryAddressHex: &QueryAddressHexMsg{Address: "akash1test123"},
-	}
-
-	data, err = json.Marshal(queryMsg)
-	s.Require().NoError(err)
-	s.T().Logf("Wormhole QueryAddressHex JSON: %s", string(data))
-}
-
-// TestPriceOracleWithVAAMessageEncoding tests that Pyth contract VAA message types serialize correctly
+// TestPriceOracleWithVAAMessageEncoding tests that Pyth contract PNAU message types serialize correctly.
 func (s *priceOracleContractTestSuite) TestPriceOracleWithVAAMessageEncoding() {
-	// Test InstantiateMsg encoding with Wormhole and data sources
-	pythEmitterAddr := "e101faedac5851e32b9b23b5f9411a8c2bac4aae3ed4dd7b811dd1a72ea4aa71"
+	vaaInstantiateMsg := PythVaaInstantiateMsg{
+		Admin:          "akash1admin123",
+		RouterVerifier: testRouterVerifierConfig(),
+	}
+
+	data, err := json.Marshal(vaaInstantiateMsg)
+	s.Require().NoError(err)
+	s.T().Logf("Pyth VAA InstantiateMsg JSON: %s", string(data))
+
+	var decodedVaa PythVaaInstantiateMsg
+	err = json.Unmarshal(data, &decodedVaa)
+	s.Require().NoError(err)
+	s.Require().Len(decodedVaa.RouterVerifier.Routers, 5)
+	s.Require().Equal(uint16(26), decodedVaa.RouterVerifier.ExpectedEmitterChain)
 
 	instantiateMsg := InstantiateMsg{
-		Admin:            "akash1admin123",
-		WormholeContract: "akash1wormhole456",
-		UpdateFee:        "1000000",
-		PriceFeedID:      "0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d",
-		DataSources: []DataSource{
-			{
-				EmitterChain:   26, // Pythnet
-				EmitterAddress: pythEmitterAddr,
-			},
-		},
+		Admin:           "akash1admin123",
+		PythVaaContract: "akash1pythvaa456",
+		UpdateFee:       "1000000",
+		PriceFeedID:     "0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d",
 	}
 
-	data, err := json.Marshal(instantiateMsg)
+	data, err = json.Marshal(instantiateMsg)
 	s.Require().NoError(err)
-	s.T().Logf("Pyth InstantiateMsg JSON: %s", string(data))
+	s.T().Logf("Pyth Pro InstantiateMsg JSON: %s", string(data))
 
 	var decoded InstantiateMsg
 	err = json.Unmarshal(data, &decoded)
 	s.Require().NoError(err)
 	s.Require().Equal(instantiateMsg.Admin, decoded.Admin)
-	s.Require().Equal(instantiateMsg.WormholeContract, decoded.WormholeContract)
-	s.Require().Len(decoded.DataSources, 1)
-	s.Require().Equal(uint16(26), decoded.DataSources[0].EmitterChain)
+	s.Require().Equal(instantiateMsg.PythVaaContract, decoded.PythVaaContract)
 
-	// Test ExecuteUpdatePriceFeed with VAA encoding
+	// Test ExecuteUpdatePriceFeed with PNAU encoding
 	executeMsg := ExecuteUpdatePriceFeed{
 		UpdatePriceFeed: UpdatePriceFeedData{
-			VAA: base64.StdEncoding.EncodeToString([]byte("test_vaa_data")),
+			VAA: base64.StdEncoding.EncodeToString([]byte("test_pnau_data")),
 		},
 	}
 
 	data, err = json.Marshal(executeMsg)
 	s.Require().NoError(err)
-	s.T().Logf("Pyth UpdatePriceFeed with VAA JSON: %s", string(data))
+	s.T().Logf("Pyth UpdatePriceFeed with PNAU JSON: %s", string(data))
 
 	// Test UpdateConfig encoding
-	wormholeContract := "akash1newwormhole"
+	pythVaaContract := "akash1newpythvaa"
 	updateConfigMsg := ExecuteUpdateConfig{
 		UpdateConfig: UpdateConfigData{
-			WormholeContract: &wormholeContract,
+			PythVaaContract: &pythVaaContract,
 		},
 	}
 
@@ -457,15 +351,12 @@ func (s *priceOracleContractTestSuite) TestQueryOracleModuleParams() {
 
 // TestContractMessageEncoding tests that contract message types serialize correctly
 func (s *priceOracleContractTestSuite) TestContractMessageEncoding() {
-	// Test InstantiateMsg encoding (now includes wormhole_contract and data_sources)
+	// Test pyth_pro InstantiateMsg encoding.
 	instantiateMsg := InstantiateMsg{
-		Admin:            "akash1test123",
-		WormholeContract: "akash1wormhole456",
-		UpdateFee:        "1000",
-		PriceFeedID:      "0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d",
-		DataSources: []DataSource{
-			{EmitterChain: 26, EmitterAddress: "e101faedac5851e32b9b23b5f9411a8c2bac4aae3ed4dd7b811dd1a72ea4aa71"},
-		},
+		Admin:           "akash1test123",
+		PythVaaContract: "akash1pythvaa456",
+		UpdateFee:       "1000",
+		PriceFeedID:     "0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d",
 	}
 
 	data, err := json.Marshal(instantiateMsg)
@@ -475,13 +366,13 @@ func (s *priceOracleContractTestSuite) TestContractMessageEncoding() {
 	err = json.Unmarshal(data, &decoded)
 	s.Require().NoError(err)
 	s.Require().Equal(instantiateMsg.Admin, decoded.Admin)
-	s.Require().Equal(instantiateMsg.WormholeContract, decoded.WormholeContract)
+	s.Require().Equal(instantiateMsg.PythVaaContract, decoded.PythVaaContract)
 	s.Require().Equal(instantiateMsg.PriceFeedID, decoded.PriceFeedID)
 
-	// Test ExecuteMsg encoding (now uses VAA)
+	// Test ExecuteMsg encoding with PNAU data.
 	executeMsg := ExecuteUpdatePriceFeed{
 		UpdatePriceFeed: UpdatePriceFeedData{
-			VAA: base64.StdEncoding.EncodeToString([]byte("test_vaa_binary_data")),
+			VAA: base64.StdEncoding.EncodeToString([]byte("test_pnau_binary_data")),
 		},
 	}
 
@@ -517,28 +408,25 @@ func (s *priceOracleContractTestSuite) TestContractMessageEncoding() {
 
 // TestContractResponseParsing tests parsing of expected contract responses
 func (s *priceOracleContractTestSuite) TestContractResponseParsing() {
-	// Test ConfigResponse parsing (now includes wormhole_contract and data_sources)
+	// Test pyth_pro ConfigResponse parsing.
 	configJSON := `{
 		"admin": "akash1abc123",
-		"wormhole_contract": "akash1wormhole456",
+		"pyth_vaa_contract": "akash1pythvaa456",
 		"update_fee": "1000",
 		"price_feed_id": "0xtest",
 		"default_denom": "uakt",
-		"default_base_denom": "usd",
-		"data_sources": [{"emitter_chain": 26, "emitter_address": "e101faedac5851e32b9b23b5f9411a8c2bac4aae3ed4dd7b811dd1a72ea4aa71"}]
+		"default_base_denom": "usd"
 	}`
 
 	var config ConfigResponse
 	err := json.Unmarshal([]byte(configJSON), &config)
 	s.Require().NoError(err)
 	s.Require().Equal("akash1abc123", config.Admin)
-	s.Require().Equal("akash1wormhole456", config.WormholeContract)
+	s.Require().Equal("akash1pythvaa456", config.PythVaaContract)
 	s.Require().Equal("1000", config.UpdateFee)
 	s.Require().Equal("0xtest", config.PriceFeedID)
 	s.Require().Equal("uakt", config.DefaultDenom)
 	s.Require().Equal("usd", config.DefaultBaseDenom)
-	s.Require().Len(config.DataSources, 1)
-	s.Require().Equal(uint16(26), config.DataSources[0].EmitterChain)
 
 	// Test PriceResponse parsing
 	priceJSON := `{
@@ -575,51 +463,14 @@ func (s *priceOracleContractTestSuite) TestContractResponseParsing() {
 	s.Require().Equal(uint64(100), params.LastUpdatedHeight)
 }
 
-// TestWormholeResponseParsing tests parsing of Wormhole contract responses
-func (s *priceOracleContractTestSuite) TestWormholeResponseParsing() {
-	// Test GuardianSetInfoResponse parsing
-	testGuardianAddr := make([]byte, 20)
-	for i := range testGuardianAddr {
-		testGuardianAddr[i] = byte(i + 1)
-	}
-
-	guardianSetJSON := `{
-		"guardian_set_index": 3,
-		"addresses": [
-			{"bytes": "` + base64.StdEncoding.EncodeToString(testGuardianAddr) + `"}
-		]
-	}`
-
-	var guardianSet WormholeGuardianSetInfoResponse
-	err := json.Unmarshal([]byte(guardianSetJSON), &guardianSet)
-	s.Require().NoError(err)
-	s.Require().Equal(uint32(3), guardianSet.GuardianSetIndex)
-	s.Require().Len(guardianSet.Addresses, 1)
-
-	// Test GetStateResponse parsing
-	stateJSON := `{
-		"fee": {
-			"denom": "uakt",
-			"amount": "1000"
-		}
-	}`
-
-	var state WormholeGetStateResponse
-	err = json.Unmarshal([]byte(stateJSON), &state)
-	s.Require().NoError(err)
-	s.Require().Equal("uakt", state.Fee.Denom)
-	s.Require().Equal("1000", state.Fee.Amount)
-}
-
-// TestVAAExecuteMessageParsing tests that VAA-based execute messages are properly formatted
-func (s *priceOracleContractTestSuite) TestVAAExecuteMessageParsing() {
-	// Test that VAA binary data is properly base64 encoded in execute message
-	testVAAData := []byte("P2WH" + "test_vaa_payload_data_with_guardian_signatures")
-	vaaBase64 := base64.StdEncoding.EncodeToString(testVAAData)
+// TestPNAUExecuteMessageParsing tests that PNAU execute messages are properly formatted.
+func (s *priceOracleContractTestSuite) TestPNAUExecuteMessageParsing() {
+	testPNAUData := []byte("PNAU" + "test_router_signed_accumulator_update")
+	pnauBase64 := base64.StdEncoding.EncodeToString(testPNAUData)
 
 	executeMsg := ExecuteUpdatePriceFeed{
 		UpdatePriceFeed: UpdatePriceFeedData{
-			VAA: vaaBase64,
+			VAA: pnauBase64,
 		},
 	}
 
@@ -636,21 +487,20 @@ func (s *priceOracleContractTestSuite) TestVAAExecuteMessageParsing() {
 
 	vaaField, ok := updatePriceFeed["vaa"].(string)
 	s.Require().True(ok, "Should have vaa field as string")
-	s.Require().Equal(vaaBase64, vaaField)
+	s.Require().Equal(pnauBase64, vaaField)
 
-	s.T().Logf("VAA execute message JSON: %s", string(data))
+	s.T().Logf("PNAU execute message JSON: %s", string(data))
 }
 
 // TestAllContractsExist verifies that all contract WASM files are available
 func (s *priceOracleContractTestSuite) TestAllContractsExist() {
-	// Note: Pyth contract removed - Pyth now handles VAA verification directly via Wormhole
 	contracts := []struct {
 		name     string
 		dir      string
 		wasmFile string
 	}{
-		{"wormhole", "wormhole", "wormhole.wasm"},
-		{"pyth", "pyth", "pyth.wasm"},
+		{"pyth_vaa", "pyth_vaa", "pyth_vaa.wasm"},
+		{"pyth_pro", "pyth_pro", "pyth_pro.wasm"},
 	}
 
 	for _, c := range contracts {
@@ -672,11 +522,12 @@ func (s *priceOracleContractTestSuite) TestAllContractsExist() {
 	}
 }
 
-// TestVAAStructure validates VAA binary structure understanding
-func (s *priceOracleContractTestSuite) TestVAAStructure() {
-	// VAA header structure (for reference):
+// TestRouterSignedVAAStructure documents the VAA-format envelope used inside PNAU.
+func (s *priceOracleContractTestSuite) TestRouterSignedVAAStructure() {
+	// The upgraded Pyth router payload keeps the VAA-format envelope, but the
+	// signer set is the Pyth router set rather than the former guardian set.
 	// - version (1 byte)
-	// - guardian_set_index (4 bytes)
+	// - router_set_index (4 bytes)
 	// - len_signers (1 byte)
 	// - signatures (66 bytes each)
 	// - body:
@@ -691,7 +542,7 @@ func (s *priceOracleContractTestSuite) TestVAAStructure() {
 	// Test that we understand the structure correctly
 	s.T().Log("VAA Header structure:")
 	s.T().Log("  - Version: 1 byte at offset 0")
-	s.T().Log("  - Guardian Set Index: 4 bytes at offset 1")
+	s.T().Log("  - Router Set Index: 4 bytes at offset 1")
 	s.T().Log("  - Num Signers: 1 byte at offset 5")
 	s.T().Log("  - Signatures: 66 bytes each starting at offset 6")
 	s.T().Log("Body structure (after signatures):")
@@ -703,24 +554,31 @@ func (s *priceOracleContractTestSuite) TestVAAStructure() {
 	s.T().Log("  - Consistency Level: 1 byte at offset 50")
 	s.T().Log("  - Payload: variable starting at offset 51")
 
-	// Create a minimal test VAA structure
-	testGuardianAddr := make([]byte, 20)
-	for i := range testGuardianAddr {
-		testGuardianAddr[i] = byte(i + 1)
+	// Router addresses use the same 20-byte Ethereum-style address encoding.
+	testRouterAddr := make([]byte, 20)
+	for i := range testRouterAddr {
+		testRouterAddr[i] = byte(i + 1)
 	}
 
-	// Log test guardian address
-	s.T().Logf("Test guardian address (hex): %s", hex.EncodeToString(testGuardianAddr))
-	s.T().Logf("Test guardian address (base64): %s", base64.StdEncoding.EncodeToString(testGuardianAddr))
+	s.T().Logf("Test router address (hex): %s", hex.EncodeToString(testRouterAddr))
+	s.T().Logf("Test router address (base64): %s", base64.StdEncoding.EncodeToString(testRouterAddr))
 }
 
 // findWasmPath attempts to find a wasm file for a given contract
 func findWasmPath(contractDir, wasmFile string) string {
 	// Try common paths relative to the test location
 	paths := []string{
+		filepath.Join("../../.cache/cosmwasm/artifacts", wasmFile),
+		filepath.Join("../.cache/cosmwasm/artifacts", wasmFile),
+		filepath.Join(".cache/cosmwasm/artifacts", wasmFile),
 		filepath.Join("../../contracts", contractDir, "artifacts", wasmFile),
 		filepath.Join("../contracts", contractDir, "artifacts", wasmFile),
 		filepath.Join("contracts", contractDir, "artifacts", wasmFile),
+	}
+
+	devcache := os.Getenv("AKASH_DEVCACHE")
+	if devcache != "" {
+		paths = append(paths, filepath.Join(devcache, "cosmwasm/artifacts", wasmFile))
 	}
 
 	// Also try using GOPATH
@@ -1062,12 +920,12 @@ func (s *priceOracleContractTestSuite) TestStoreContractCodeViaGovernance() {
 	s.Require().NoError(err)
 
 	// Step 1: Load contract WASM
-	wasmPath := findWasmPath("pyth", "pyth.wasm")
+	wasmPath := findWasmPath("pyth_pro", "pyth_pro.wasm")
 	if wasmPath == "" {
-		s.T().Skip("pyth.wasm not found, skipping contract deployment test")
+		s.T().Skip("pyth_pro.wasm not found, skipping contract deployment test")
 		return
 	}
-	s.T().Logf("Found pyth contract at: %s", wasmPath)
+	s.T().Logf("Found pyth_pro contract at: %s", wasmPath)
 
 	wasmBytes, err := LoadAndGzipWasm(wasmPath)
 	s.Require().NoError(err)
@@ -1083,8 +941,8 @@ func (s *priceOracleContractTestSuite) TestStoreContractCodeViaGovernance() {
 	proposalID, err := SubmitStoreCodeProposal(
 		ctx, cl, govAddr, wasmBytes,
 		val.Address, deposit,
-		"Store pyth contract",
-		"Deploy pyth CosmWasm contract for testing",
+		"Store pyth_pro contract",
+		"Deploy pyth_pro CosmWasm contract for testing",
 	)
 	s.Require().NoError(err)
 	s.T().Logf("Submitted store code proposal: %d", proposalID)
@@ -1128,26 +986,17 @@ func (s *priceOracleContractTestSuite) TestStoreContractCodeViaGovernance() {
 		codeInfoResp.CodeInfoResponse.DataHash)
 
 	// Step 7: Instantiate the contract
-	// The pyth contract requires:
-	// - wormhole_contract: Address for VAA verification (use placeholder for test)
-	// - data_sources: Trusted Pyth emitters
-	// - Queries oracle module params during instantiation via custom Akash querier
+	// The pyth_pro contract points at pyth_vaa for verification.
 	initMsg := InstantiateMsg{
-		Admin:            val.Address.String(),
-		WormholeContract: val.Address.String(), // Use validator address as placeholder wormhole contract
-		UpdateFee:        "1000",
-		PriceFeedID:      "0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d", // AKT/USD price feed ID
-		DataSources: []DataSource{
-			{
-				EmitterChain:   26, // Pythnet
-				EmitterAddress: "e101faedac5851e32b9b23b5f9411a8c2bac4aae3ed4dd7b811dd1a72ea4aa71",
-			},
-		},
+		Admin:           val.Address.String(),
+		PythVaaContract: val.Address.String(),
+		UpdateFee:       "1000",
+		PriceFeedID:     "0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d", // AKT/USD price feed ID
 	}
 
 	contractAddr, err := InstantiateContract(
 		ctx, cl, codeID, initMsg,
-		"pyth-test",
+		"pyth_pro_test",
 		val.Address.String(), // admin
 		val.Address,
 	)
@@ -1167,5 +1016,6 @@ func (s *priceOracleContractTestSuite) TestStoreContractCodeViaGovernance() {
 
 	s.Require().Equal(val.Address.String(), config.Admin)
 	s.Require().Equal("1000", config.UpdateFee)
+	s.Require().Equal(val.Address.String(), config.PythVaaContract)
 	s.T().Log("Contract deployed and configured successfully!")
 }

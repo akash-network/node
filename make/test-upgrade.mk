@@ -74,9 +74,13 @@ test: init
 .PHONY: setup-hermes
 .ONESHELL:
 setup-hermes:
+	@if [ -z "$${PYTH_HERMES_API_KEY:-}" ]; then \
+		echo "PYTH_HERMES_API_KEY is required for upgraded Hermes tests"; \
+		exit 1; \
+	fi
 	@cat << 'EOF' > "$(AKASH_RUN_DIR)/hermes.env"
-	CONTRACT_ADDRESS="akash1nc5tatafv6eyq7llkr2gv50ff9e22mnf70qgjlv737ktmt4eswrqyagled"
-	WALLET_SECRET="privateKey:47affbcbbcc1b68241f5090549f4ccf7bc9fdab6870ae760d1e3469fd82e828e"
+	HC_CONTRACT_ADDRESS="akash1nc5tatafv6eyq7llkr2gv50ff9e22mnf70qgjlv737ktmt4eswrqyagled"
+	HC_WALLET_SECRET="privateKey:47affbcbbcc1b68241f5090549f4ccf7bc9fdab6870ae760d1e3469fd82e828e"
 	EOF
 
 .PHONY: test-reset

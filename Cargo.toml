@@ -3,6 +3,8 @@ resolver = "2"
 members = [
     "contracts/wormhole",
     "contracts/pyth",
+    "contracts/pyth_vaa",
+    "contracts/pyth_pro",
 ]
 
 [workspace.package]
