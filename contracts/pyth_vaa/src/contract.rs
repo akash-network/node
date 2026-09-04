@@ -6,7 +6,12 @@ use cosmwasm_std::{
 use crate::error::ContractError;
 use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::router;
-use crate::state::{Config, RouterSet, RouterVerifierConfig, CONFIG, LEGACY_CONFIG, ROUTER_SETS};
+use crate::state::{
+    Config, RouterSet, RouterState, RouterVerifierConfig, CONFIG, LEGACY_CONFIG, ROUTER_SETS,
+    ROUTER_STATE,
+};
+
+const DEFAULT_GOVERNANCE_TARGET_CHAIN: u16 = 0;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -22,9 +27,17 @@ pub fn instantiate(
         deps.storage,
         &Config {
             admin,
-            router_set_index: router_verifier.router_set_index,
+            governance_target_chain: msg
+                .governance_target_chain
+                .unwrap_or(DEFAULT_GOVERNANCE_TARGET_CHAIN),
             expected_emitter_chain: router_verifier.expected_emitter_chain,
             expected_emitter_address: router_verifier.expected_emitter_address,
+        },
+    )?;
+    ROUTER_STATE.save(
+        deps.storage,
+        &RouterState {
+            router_set_index: router_verifier.router_set_index,
         },
     )?;
     ROUTER_SETS.save(
@@ -42,7 +55,7 @@ pub fn instantiate(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
     let legacy = LEGACY_CONFIG.load(deps.storage)?;
     let router_verifier = legacy.router_verifier;
     let router_set_index = router_verifier.router_set_index;
@@ -51,11 +64,14 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, C
         deps.storage,
         &Config {
             admin: legacy.admin,
-            router_set_index,
+            governance_target_chain: msg
+                .governance_target_chain
+                .unwrap_or(DEFAULT_GOVERNANCE_TARGET_CHAIN),
             expected_emitter_chain: router_verifier.expected_emitter_chain,
             expected_emitter_address: router_verifier.expected_emitter_address,
         },
     )?;
+    ROUTER_STATE.save(deps.storage, &RouterState { router_set_index })?;
     ROUTER_SETS.save(
         deps.storage,
         router_set_index,
@@ -101,11 +117,13 @@ fn execute_transfer_admin(
 }
 
 fn execute_submit_vaa(deps: DepsMut, vaa: Binary) -> Result<Response, ContractError> {
-    let mut config = CONFIG.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
+    let mut router_state = ROUTER_STATE.load(deps.storage)?;
     let current_router_verifier = load_router_verifier(deps.storage)?;
     let parsed_vaa = router::verify_vaa(&current_router_verifier, vaa.as_slice())?;
-    let router_set_update = router::parse_router_set_update(&parsed_vaa.payload)?;
-    let expected_next_index = config
+    let router_set_update =
+        router::parse_router_set_update(&parsed_vaa.payload, config.governance_target_chain)?;
+    let expected_next_index = router_state
         .router_set_index
         .checked_add(1)
         .ok_or(ContractError::RouterSetIndexIncreaseError)?;
@@ -117,8 +135,8 @@ fn execute_submit_vaa(deps: DepsMut, vaa: Binary) -> Result<Response, ContractEr
         return Err(ContractError::RouterSetAlreadyExists);
     }
 
-    let old_router_set_index = config.router_set_index;
-    config.router_set_index = router_set_update.router_set_index;
+    let old_router_set_index = router_state.router_set_index;
+    router_state.router_set_index = router_set_update.router_set_index;
     ROUTER_SETS.save(
         deps.storage,
         router_set_update.router_set_index,
@@ -126,12 +144,15 @@ fn execute_submit_vaa(deps: DepsMut, vaa: Binary) -> Result<Response, ContractEr
             routers: router_set_update.routers,
         },
     )?;
-    CONFIG.save(deps.storage, &config)?;
+    ROUTER_STATE.save(deps.storage, &router_state)?;
 
     Ok(Response::new()
         .add_attribute("method", "submit_v_a_a")
         .add_attribute("old_router_set_index", old_router_set_index.to_string())
-        .add_attribute("new_router_set_index", config.router_set_index.to_string()))
+        .add_attribute(
+            "new_router_set_index",
+            router_state.router_set_index.to_string(),
+        ))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -153,16 +174,18 @@ fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
 
     Ok(ConfigResponse {
         admin: config.admin.to_string(),
+        governance_target_chain: config.governance_target_chain,
         router_verifier: router::config_to_msg(&router_verifier),
     })
 }
 
 fn load_router_verifier(storage: &dyn Storage) -> Result<RouterVerifierConfig, ContractError> {
     let config = CONFIG.load(storage)?;
-    let router_set = ROUTER_SETS.load(storage, config.router_set_index)?;
+    let router_state = ROUTER_STATE.load(storage)?;
+    let router_set = ROUTER_SETS.load(storage, router_state.router_set_index)?;
 
     Ok(RouterVerifierConfig {
-        router_set_index: config.router_set_index,
+        router_set_index: router_state.router_set_index,
         routers: router_set.routers,
         expected_emitter_chain: config.expected_emitter_chain,
         expected_emitter_address: config.expected_emitter_address,
@@ -181,6 +204,7 @@ mod tests {
 
     const EMITTER_CHAIN: u16 = 26;
     const EMITTER_ADDRESS: [u8; 32] = *b"PythnetPythnetPythnetPythnetPyth";
+    const GOVERNANCE_TARGET_CHAIN: u16 = 29;
 
     fn router_config() -> RouterVerifierConfigMsg {
         RouterVerifierConfigMsg {
@@ -210,6 +234,7 @@ mod tests {
         let mut deps = mock_dependencies();
         let msg = InstantiateMsg {
             admin: deps.api.addr_make("admin").to_string(),
+            governance_target_chain: None,
             router_verifier: router_config(),
         };
         let sender = deps.api.addr_make("sender");
@@ -236,6 +261,7 @@ mod tests {
             message_info(&sender, &[]),
             InstantiateMsg {
                 admin: admin.to_string(),
+                governance_target_chain: None,
                 router_verifier: RouterVerifierConfigMsg {
                     router_set_index: 0,
                     routers: current_keys.iter().map(router_address_msg).collect(),
@@ -290,6 +316,329 @@ mod tests {
         );
     }
 
+    #[test]
+    fn submit_v_a_a_rejects_admin_without_current_router_signatures() {
+        let mut deps = mock_dependencies();
+        let sender = deps.api.addr_make("sender");
+        let admin = deps.api.addr_make("admin");
+        let current_keys = router_keys(1);
+        let next_keys = router_keys(6);
+        let outsider_keys = router_keys(20);
+
+        instantiate_with_keys(deps.as_mut(), &sender, &admin, &current_keys);
+
+        let router_update_vaa = signed_vaa(
+            &outsider_keys,
+            &[0, 1, 2],
+            0,
+            EMITTER_CHAIN,
+            EMITTER_ADDRESS,
+            governance_packet(router_set_update_payload(1, &next_keys)),
+        );
+
+        let err = execute(
+            deps.as_mut(),
+            mock_env(),
+            message_info(&admin, &[]),
+            ExecuteMsg::SubmitVAA {
+                vaa: Binary::from(router_update_vaa),
+            },
+        )
+        .unwrap_err();
+
+        assert!(matches!(err, ContractError::RouterSignatureError));
+        assert_active_router_set(deps.as_ref(), 0, &current_keys);
+    }
+
+    #[test]
+    fn submit_v_a_a_rejects_skipped_router_set_index() {
+        let mut deps = mock_dependencies();
+        let sender = deps.api.addr_make("sender");
+        let admin = deps.api.addr_make("admin");
+        let submitter = deps.api.addr_make("anyone");
+        let current_keys = router_keys(1);
+        let next_keys = router_keys(6);
+
+        instantiate_with_keys(deps.as_mut(), &sender, &admin, &current_keys);
+
+        let router_update_vaa = signed_vaa(
+            &current_keys,
+            &[0, 1, 2],
+            0,
+            EMITTER_CHAIN,
+            EMITTER_ADDRESS,
+            governance_packet(router_set_update_payload(2, &next_keys)),
+        );
+
+        let err = execute(
+            deps.as_mut(),
+            mock_env(),
+            message_info(&submitter, &[]),
+            ExecuteMsg::SubmitVAA {
+                vaa: Binary::from(router_update_vaa),
+            },
+        )
+        .unwrap_err();
+
+        assert!(matches!(err, ContractError::RouterSetIndexIncreaseError));
+        assert_active_router_set(deps.as_ref(), 0, &current_keys);
+    }
+
+    #[test]
+    fn submit_v_a_a_rejects_wrong_emitter() {
+        let mut deps = mock_dependencies();
+        let sender = deps.api.addr_make("sender");
+        let admin = deps.api.addr_make("admin");
+        let submitter = deps.api.addr_make("anyone");
+        let current_keys = router_keys(1);
+        let next_keys = router_keys(6);
+
+        instantiate_with_keys(deps.as_mut(), &sender, &admin, &current_keys);
+
+        let router_update_vaa = signed_vaa(
+            &current_keys,
+            &[0, 1, 2],
+            0,
+            EMITTER_CHAIN + 1,
+            EMITTER_ADDRESS,
+            governance_packet(router_set_update_payload(1, &next_keys)),
+        );
+
+        let err = execute(
+            deps.as_mut(),
+            mock_env(),
+            message_info(&submitter, &[]),
+            ExecuteMsg::SubmitVAA {
+                vaa: Binary::from(router_update_vaa),
+            },
+        )
+        .unwrap_err();
+
+        assert!(matches!(err, ContractError::InvalidEmitter));
+        assert_active_router_set(deps.as_ref(), 0, &current_keys);
+    }
+
+    #[test]
+    fn submit_v_a_a_accepts_configured_governance_target_chain() {
+        let mut deps = mock_dependencies();
+        let sender = deps.api.addr_make("sender");
+        let admin = deps.api.addr_make("admin");
+        let submitter = deps.api.addr_make("anyone");
+        let current_keys = router_keys(1);
+        let next_keys = router_keys(6);
+
+        instantiate_with_keys_and_target(
+            deps.as_mut(),
+            &sender,
+            &admin,
+            &current_keys,
+            Some(GOVERNANCE_TARGET_CHAIN),
+        );
+
+        let router_update_vaa = signed_vaa(
+            &current_keys,
+            &[0, 1, 2],
+            0,
+            EMITTER_CHAIN,
+            EMITTER_ADDRESS,
+            governance_packet_for_chain(
+                GOVERNANCE_TARGET_CHAIN,
+                router_set_update_payload(1, &next_keys),
+            ),
+        );
+
+        execute(
+            deps.as_mut(),
+            mock_env(),
+            message_info(&submitter, &[]),
+            ExecuteMsg::SubmitVAA {
+                vaa: Binary::from(router_update_vaa),
+            },
+        )
+        .unwrap();
+
+        assert_active_router_set(deps.as_ref(), 1, &next_keys);
+    }
+
+    #[test]
+    fn submit_v_a_a_rejects_wrong_governance_target_chain() {
+        let mut deps = mock_dependencies();
+        let sender = deps.api.addr_make("sender");
+        let admin = deps.api.addr_make("admin");
+        let submitter = deps.api.addr_make("anyone");
+        let current_keys = router_keys(1);
+        let next_keys = router_keys(6);
+
+        instantiate_with_keys_and_target(
+            deps.as_mut(),
+            &sender,
+            &admin,
+            &current_keys,
+            Some(GOVERNANCE_TARGET_CHAIN),
+        );
+
+        let router_update_vaa = signed_vaa(
+            &current_keys,
+            &[0, 1, 2],
+            0,
+            EMITTER_CHAIN,
+            EMITTER_ADDRESS,
+            governance_packet_for_chain(
+                GOVERNANCE_TARGET_CHAIN + 1,
+                router_set_update_payload(1, &next_keys),
+            ),
+        );
+
+        let err = execute(
+            deps.as_mut(),
+            mock_env(),
+            message_info(&submitter, &[]),
+            ExecuteMsg::SubmitVAA {
+                vaa: Binary::from(router_update_vaa),
+            },
+        )
+        .unwrap_err();
+
+        assert!(matches!(err, ContractError::InvalidGovernanceTarget));
+        assert_active_router_set(deps.as_ref(), 0, &current_keys);
+    }
+
+    #[test]
+    fn submit_v_a_a_rejects_replay_after_rotation() {
+        let mut deps = mock_dependencies();
+        let sender = deps.api.addr_make("sender");
+        let admin = deps.api.addr_make("admin");
+        let submitter = deps.api.addr_make("anyone");
+        let current_keys = router_keys(1);
+        let next_keys = router_keys(6);
+
+        instantiate_with_keys(deps.as_mut(), &sender, &admin, &current_keys);
+
+        let router_update_vaa = signed_vaa(
+            &current_keys,
+            &[0, 1, 2],
+            0,
+            EMITTER_CHAIN,
+            EMITTER_ADDRESS,
+            governance_packet(router_set_update_payload(1, &next_keys)),
+        );
+
+        execute(
+            deps.as_mut(),
+            mock_env(),
+            message_info(&submitter, &[]),
+            ExecuteMsg::SubmitVAA {
+                vaa: Binary::from(router_update_vaa.clone()),
+            },
+        )
+        .unwrap();
+
+        let err = execute(
+            deps.as_mut(),
+            mock_env(),
+            message_info(&submitter, &[]),
+            ExecuteMsg::SubmitVAA {
+                vaa: Binary::from(router_update_vaa),
+            },
+        )
+        .unwrap_err();
+
+        assert!(matches!(err, ContractError::InvalidRouterSetIndex));
+        assert_active_router_set(deps.as_ref(), 1, &next_keys);
+    }
+
+    #[test]
+    fn migrate_splits_legacy_router_config_into_state_and_sets() {
+        let mut deps = mock_dependencies();
+        let admin = deps.api.addr_make("admin");
+        let current_keys = router_keys(1);
+        let router_verifier = RouterVerifierConfig {
+            router_set_index: 0,
+            routers: current_keys
+                .iter()
+                .map(|key| address_from_key(key.verifying_key()).to_vec())
+                .collect(),
+            expected_emitter_chain: EMITTER_CHAIN,
+            expected_emitter_address: EMITTER_ADDRESS.to_vec(),
+        };
+
+        LEGACY_CONFIG
+            .save(
+                deps.as_mut().storage,
+                &crate::state::LegacyConfig {
+                    admin: admin.clone(),
+                    router_verifier,
+                },
+            )
+            .unwrap();
+
+        migrate(
+            deps.as_mut(),
+            mock_env(),
+            MigrateMsg {
+                governance_target_chain: Some(GOVERNANCE_TARGET_CHAIN),
+            },
+        )
+        .unwrap();
+
+        let config = CONFIG.load(deps.as_ref().storage).unwrap();
+        assert_eq!(config.admin, admin);
+        assert_eq!(config.governance_target_chain, GOVERNANCE_TARGET_CHAIN);
+        assert_eq!(config.expected_emitter_chain, EMITTER_CHAIN);
+        assert_eq!(config.expected_emitter_address, EMITTER_ADDRESS);
+        assert_active_router_set(deps.as_ref(), 0, &current_keys);
+    }
+
+    fn instantiate_with_keys(
+        deps: DepsMut,
+        sender: &cosmwasm_std::Addr,
+        admin: &cosmwasm_std::Addr,
+        keys: &[SigningKey],
+    ) {
+        instantiate_with_keys_and_target(deps, sender, admin, keys, None);
+    }
+
+    fn instantiate_with_keys_and_target(
+        deps: DepsMut,
+        sender: &cosmwasm_std::Addr,
+        admin: &cosmwasm_std::Addr,
+        keys: &[SigningKey],
+        governance_target_chain: Option<u16>,
+    ) {
+        instantiate(
+            deps,
+            mock_env(),
+            message_info(sender, &[]),
+            InstantiateMsg {
+                admin: admin.to_string(),
+                governance_target_chain,
+                router_verifier: RouterVerifierConfigMsg {
+                    router_set_index: 0,
+                    routers: keys.iter().map(router_address_msg).collect(),
+                    expected_emitter_chain: EMITTER_CHAIN,
+                    expected_emitter_address: Binary::from(EMITTER_ADDRESS),
+                },
+            },
+        )
+        .unwrap();
+    }
+
+    fn assert_active_router_set(deps: Deps, index: u32, keys: &[SigningKey]) {
+        let response = query_config(deps).unwrap();
+        assert_eq!(response.router_verifier.router_set_index, index);
+        assert_eq!(
+            response
+                .router_verifier
+                .routers
+                .iter()
+                .map(|router| router.bytes.to_vec())
+                .collect::<Vec<_>>(),
+            keys.iter()
+                .map(|key| address_from_key(key.verifying_key()).to_vec())
+                .collect::<Vec<_>>()
+        );
+    }
+
     fn router_keys(start: u8) -> Vec<SigningKey> {
         (start..start + 5)
             .map(|i| SigningKey::from_bytes((&[i; 32]).into()).unwrap())
@@ -319,10 +668,14 @@ mod tests {
     }
 
     fn governance_packet(inner_payload: Vec<u8>) -> Vec<u8> {
+        governance_packet_for_chain(0, inner_payload)
+    }
+
+    fn governance_packet_for_chain(target_chain: u16, inner_payload: Vec<u8>) -> Vec<u8> {
         let mut payload = vec![0u8; 32];
         payload[28..].copy_from_slice(b"Core");
         payload.push(2);
-        payload.extend_from_slice(&0u16.to_be_bytes());
+        payload.extend_from_slice(&target_chain.to_be_bytes());
         payload.extend_from_slice(&inner_payload);
         payload
     }

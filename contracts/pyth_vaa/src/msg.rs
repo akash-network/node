@@ -4,6 +4,8 @@ use cosmwasm_std::Binary;
 #[cw_serde]
 pub struct InstantiateMsg {
     pub admin: String,
+    #[serde(default)]
+    pub governance_target_chain: Option<u16>,
     pub router_verifier: RouterVerifierConfigMsg,
 }
 
@@ -27,7 +29,10 @@ pub enum ExecuteMsg {
 }
 
 #[cw_serde]
-pub struct MigrateMsg {}
+pub struct MigrateMsg {
+    #[serde(default)]
+    pub governance_target_chain: Option<u16>,
+}
 
 #[cw_serde]
 #[derive(QueryResponses)]
@@ -42,5 +47,6 @@ pub enum QueryMsg {
 #[cw_serde]
 pub struct ConfigResponse {
     pub admin: String,
+    pub governance_target_chain: u16,
     pub router_verifier: RouterVerifierConfigMsg,
 }

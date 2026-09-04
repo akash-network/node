@@ -27,6 +27,9 @@ pub enum ContractError {
     #[error("InvalidEmitter")]
     InvalidEmitter,
 
+    #[error("InvalidGovernanceTarget")]
+    InvalidGovernanceTarget,
+
     #[error("NoQuorum")]
     NoQuorum,
 

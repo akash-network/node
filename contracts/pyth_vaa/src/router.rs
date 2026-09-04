@@ -15,8 +15,10 @@ const ROUTER_ADDRESS_LEN: usize = 20;
 const GOVERNANCE_PACKET_LEN: usize = 35;
 const GOVERNANCE_MODULE_LEN: usize = 32;
 const GOVERNANCE_ACTION_POS: usize = 32;
+const GOVERNANCE_TARGET_CHAIN_POS: usize = 33;
 const GOVERNANCE_PAYLOAD_POS: usize = 35;
 const GOVERNANCE_ACTION_ROUTER_SET_UPGRADE: u8 = 2;
+const GOVERNANCE_TARGET_CHAIN_GLOBAL: u16 = 0;
 
 pub struct RouterSetUpdate {
     pub router_set_index: u32,
@@ -61,8 +63,11 @@ pub fn config_to_msg(config: &RouterVerifierConfig) -> RouterVerifierConfigMsg {
     }
 }
 
-pub fn parse_router_set_update(data: &[u8]) -> Result<RouterSetUpdate, ContractError> {
-    let data = parse_governance_router_set_update(data)?;
+pub fn parse_router_set_update(
+    data: &[u8],
+    governance_target_chain: u16,
+) -> Result<RouterSetUpdate, ContractError> {
+    let data = parse_governance_router_set_update(data, governance_target_chain)?;
 
     if data.len() < 5 {
         return Err(ContractError::InvalidRouterSetUpdate);
@@ -95,7 +100,10 @@ pub fn parse_router_set_update(data: &[u8]) -> Result<RouterSetUpdate, ContractE
     })
 }
 
-fn parse_governance_router_set_update(data: &[u8]) -> Result<&[u8], ContractError> {
+fn parse_governance_router_set_update(
+    data: &[u8],
+    governance_target_chain: u16,
+) -> Result<&[u8], ContractError> {
     if data.len() < GOVERNANCE_PACKET_LEN {
         return Err(ContractError::InvalidRouterSetUpdate);
     }
@@ -109,6 +117,15 @@ fn parse_governance_router_set_update(data: &[u8]) -> Result<&[u8], ContractErro
 
     if data[GOVERNANCE_ACTION_POS] != GOVERNANCE_ACTION_ROUTER_SET_UPGRADE {
         return Err(ContractError::InvalidVAAAction);
+    }
+
+    let target_chain = u16::from_be_bytes(
+        data[GOVERNANCE_TARGET_CHAIN_POS..GOVERNANCE_PAYLOAD_POS]
+            .try_into()
+            .map_err(|_| ContractError::InvalidRouterSetUpdate)?,
+    );
+    if target_chain != GOVERNANCE_TARGET_CHAIN_GLOBAL && target_chain != governance_target_chain {
+        return Err(ContractError::InvalidGovernanceTarget);
     }
 
     Ok(&data[GOVERNANCE_PAYLOAD_POS..])

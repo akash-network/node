@@ -5,9 +5,14 @@ use cw_storage_plus::{Item, Map};
 #[cw_serde]
 pub struct Config {
     pub admin: Addr,
-    pub router_set_index: u32,
+    pub governance_target_chain: u16,
     pub expected_emitter_chain: u16,
     pub expected_emitter_address: Vec<u8>,
+}
+
+#[cw_serde]
+pub struct RouterState {
+    pub router_set_index: u32,
 }
 
 #[cw_serde]
@@ -31,4 +36,5 @@ pub struct RouterVerifierConfig {
 
 pub const CONFIG: Item<Config> = Item::new("config");
 pub const LEGACY_CONFIG: Item<LegacyConfig> = Item::new("config");
+pub const ROUTER_STATE: Item<RouterState> = Item::new("router_state");
 pub const ROUTER_SETS: Map<u32, RouterSet> = Map::new("router_set");
