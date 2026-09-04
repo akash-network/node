@@ -22,13 +22,12 @@ pub struct RouterAddress {
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    TransferAdmin {
-        new_admin: String,
-    },
-    UpdateConfig {
-        router_verifier: RouterVerifierConfigMsg,
-    },
+    TransferAdmin { new_admin: String },
+    SubmitVAA { vaa: Binary },
 }
+
+#[cw_serde]
+pub struct MigrateMsg {}
 
 #[cw_serde]
 #[derive(QueryResponses)]

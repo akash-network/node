@@ -11,6 +11,17 @@ use crate::{
 
 const ROUTER_COUNT: usize = 5;
 const ROUTER_QUORUM: usize = 3;
+const ROUTER_ADDRESS_LEN: usize = 20;
+const GOVERNANCE_PACKET_LEN: usize = 35;
+const GOVERNANCE_MODULE_LEN: usize = 32;
+const GOVERNANCE_ACTION_POS: usize = 32;
+const GOVERNANCE_PAYLOAD_POS: usize = 35;
+const GOVERNANCE_ACTION_ROUTER_SET_UPGRADE: u8 = 2;
+
+pub struct RouterSetUpdate {
+    pub router_set_index: u32,
+    pub routers: Vec<Vec<u8>>,
+}
 
 pub fn parse_config(msg: RouterVerifierConfigMsg) -> Result<RouterVerifierConfig, ContractError> {
     if msg.routers.len() != ROUTER_COUNT {
@@ -19,14 +30,7 @@ pub fn parse_config(msg: RouterVerifierConfigMsg) -> Result<RouterVerifierConfig
 
     let mut routers: Vec<Vec<u8>> = Vec::with_capacity(ROUTER_COUNT);
     for router in msg.routers {
-        let bytes = router.bytes.as_slice();
-        if bytes.len() != 20 {
-            return Err(ContractError::InvalidAddressLength);
-        }
-        if routers.iter().any(|existing| existing.as_slice() == bytes) {
-            return Err(ContractError::InvalidConfig);
-        }
-        routers.push(bytes.to_vec());
+        push_router_address(&mut routers, router.bytes.as_slice())?;
     }
 
     if msg.expected_emitter_address.len() != 32 {
@@ -55,6 +59,59 @@ pub fn config_to_msg(config: &RouterVerifierConfig) -> RouterVerifierConfigMsg {
         expected_emitter_chain: config.expected_emitter_chain,
         expected_emitter_address: Binary::from(config.expected_emitter_address.clone()),
     }
+}
+
+pub fn parse_router_set_update(data: &[u8]) -> Result<RouterSetUpdate, ContractError> {
+    let data = parse_governance_router_set_update(data)?;
+
+    if data.len() < 5 {
+        return Err(ContractError::InvalidRouterSetUpdate);
+    }
+
+    let router_set_index = u32::from_be_bytes(
+        data[0..4]
+            .try_into()
+            .map_err(|_| ContractError::InvalidRouterSetUpdate)?,
+    );
+    let router_count = data[4] as usize;
+    if router_count != ROUTER_COUNT {
+        return Err(ContractError::InvalidConfig);
+    }
+
+    let expected_len = 5 + router_count * ROUTER_ADDRESS_LEN;
+    if data.len() != expected_len {
+        return Err(ContractError::InvalidRouterSetUpdate);
+    }
+
+    let mut routers = Vec::with_capacity(router_count);
+    for i in 0..router_count {
+        let pos = 5 + i * ROUTER_ADDRESS_LEN;
+        push_router_address(&mut routers, &data[pos..pos + ROUTER_ADDRESS_LEN])?;
+    }
+
+    Ok(RouterSetUpdate {
+        router_set_index,
+        routers,
+    })
+}
+
+fn parse_governance_router_set_update(data: &[u8]) -> Result<&[u8], ContractError> {
+    if data.len() < GOVERNANCE_PACKET_LEN {
+        return Err(ContractError::InvalidRouterSetUpdate);
+    }
+
+    let module = String::from_utf8(data[..GOVERNANCE_MODULE_LEN].to_vec())
+        .map_err(|_| ContractError::InvalidVAAAction)?;
+    let module = module.trim_matches(char::from(0));
+    if module != "Core" {
+        return Err(ContractError::InvalidVAAAction);
+    }
+
+    if data[GOVERNANCE_ACTION_POS] != GOVERNANCE_ACTION_ROUTER_SET_UPGRADE {
+        return Err(ContractError::InvalidVAAAction);
+    }
+
+    Ok(&data[GOVERNANCE_PAYLOAD_POS..])
 }
 
 pub fn verify_vaa(config: &RouterVerifierConfig, data: &[u8]) -> Result<ParsedVAA, ContractError> {
@@ -132,6 +189,17 @@ fn router_address(key: &VerifyingKey) -> Vec<u8> {
     let point = key.to_encoded_point(false);
     let hash = Keccak256::digest(&point.as_bytes()[1..]);
     hash[12..].to_vec()
+}
+
+fn push_router_address(routers: &mut Vec<Vec<u8>>, bytes: &[u8]) -> Result<(), ContractError> {
+    if bytes.len() != ROUTER_ADDRESS_LEN {
+        return Err(ContractError::InvalidAddressLength);
+    }
+    if routers.iter().any(|existing| existing.as_slice() == bytes) {
+        return Err(ContractError::InvalidConfig);
+    }
+    routers.push(bytes.to_vec());
+    Ok(())
 }
 
 #[cfg(test)]
