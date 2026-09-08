@@ -27,6 +27,9 @@ pub enum ContractError {
     #[error("InvalidEmitter")]
     InvalidEmitter,
 
+    #[error("InvalidGovernanceTarget")]
+    InvalidGovernanceTarget,
+
     #[error("NoQuorum")]
     NoQuorum,
 
@@ -47,4 +50,16 @@ pub enum ContractError {
 
     #[error("RouterSignatureError")]
     RouterSignatureError,
+
+    #[error("InvalidRouterSetUpdate")]
+    InvalidRouterSetUpdate,
+
+    #[error("InvalidVAAAction")]
+    InvalidVAAAction,
+
+    #[error("RouterSetIndexIncreaseError")]
+    RouterSetIndexIncreaseError,
+
+    #[error("RouterSetAlreadyExists")]
+    RouterSetAlreadyExists,
 }
