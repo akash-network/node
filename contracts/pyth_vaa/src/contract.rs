@@ -205,6 +205,8 @@ mod tests {
     const EMITTER_CHAIN: u16 = 26;
     const EMITTER_ADDRESS: [u8; 32] = *b"PythnetPythnetPythnetPythnetPyth";
     const GOVERNANCE_TARGET_CHAIN: u16 = 29;
+    const HERMES_ASSEMBLED_ROUTER_SET_UPGRADE_VAA: &str =
+        "AQAAAAADAAa9huXuGzCpbxLN+sJP5aOAqf0Uwyu7aKJAupdZ4GB7MwGYo0APzJgI1w+DgX1ZPerVXLi3fF3564feAjdnSZMAAbWtL7THAmgF2+sUXhgejJ2apO9iW2eJeIFKjdhpMxBCDIuhIhO8BjfVgiXo0kZ5kse+Gfos4xaj1wkRxFnp1G0AArH0V+4gipHyaxn2q0u6hS2qhEZ0sq87Fb5hbEAvA9s9BLoKV7GavzMzSHNUdf4n0cnpiIS5tDIj/azV++Ifz5ABAAAAewAAAcgAGlB5dGhuZXRQeXRobmV0UHl0aG5ldFB5dGhuZXRQeXRoAAAAAAAAAxUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAENvcmUCAAAAAAABBQywMNEai+SLYEGIV4dN7uYdEHHgSmIxZiOtRX8CzcXZl97Wejg+xWmZyFHqo8OXaRTWO4IsZ+IB7Av7uFjamQqPSjpsp8tjFdaKFAEFkXNSwXEDPVy/9xdfKd/Tpj3aPW+POF4=";
 
     fn router_config() -> RouterVerifierConfigMsg {
         RouterVerifierConfigMsg {
@@ -548,6 +550,295 @@ mod tests {
     }
 
     #[test]
+    fn submit_v_a_a_accepts_hermes_assembled_router_set_upgrade() {
+        let mut deps = mock_dependencies();
+        let sender = deps.api.addr_make("sender");
+        let admin = deps.api.addr_make("admin");
+        let submitter = deps.api.addr_make("anyone");
+        let current_keys = router_keys(1);
+        let next_keys = router_keys(6);
+
+        instantiate_with_keys(deps.as_mut(), &sender, &admin, &current_keys);
+
+        execute(
+            deps.as_mut(),
+            mock_env(),
+            message_info(&submitter, &[]),
+            ExecuteMsg::SubmitVAA {
+                vaa: Binary::from_base64(HERMES_ASSEMBLED_ROUTER_SET_UPGRADE_VAA).unwrap(),
+            },
+        )
+        .unwrap();
+
+        assert_active_router_set(deps.as_ref(), 1, &next_keys);
+    }
+
+    #[test]
+    fn verify_v_a_a_uses_rotated_router_set() {
+        let mut deps = mock_dependencies();
+        let sender = deps.api.addr_make("sender");
+        let admin = deps.api.addr_make("admin");
+        let submitter = deps.api.addr_make("anyone");
+        let current_keys = router_keys(1);
+        let next_keys = router_keys(6);
+
+        instantiate_with_keys(deps.as_mut(), &sender, &admin, &current_keys);
+
+        let router_update_vaa = signed_vaa(
+            &current_keys,
+            &[0, 1, 2],
+            0,
+            EMITTER_CHAIN,
+            EMITTER_ADDRESS,
+            governance_packet(router_set_update_payload(1, &next_keys)),
+        );
+        execute(
+            deps.as_mut(),
+            mock_env(),
+            message_info(&submitter, &[]),
+            ExecuteMsg::SubmitVAA {
+                vaa: Binary::from(router_update_vaa),
+            },
+        )
+        .unwrap();
+
+        let old_set_price_vaa = signed_vaa(
+            &current_keys,
+            &[0, 1, 2],
+            0,
+            EMITTER_CHAIN,
+            EMITTER_ADDRESS,
+            b"price-update".to_vec(),
+        );
+        let err = verify_vaa(deps.as_ref(), Binary::from(old_set_price_vaa)).unwrap_err();
+        assert!(matches!(err, ContractError::InvalidRouterSetIndex));
+
+        let new_set_price_vaa = signed_vaa(
+            &next_keys,
+            &[0, 1, 2],
+            1,
+            EMITTER_CHAIN,
+            EMITTER_ADDRESS,
+            b"price-update".to_vec(),
+        );
+        verify_vaa(deps.as_ref(), Binary::from(new_set_price_vaa)).unwrap();
+    }
+
+    #[test]
+    fn submit_v_a_a_rejects_next_rotation_signed_by_previous_router_set() {
+        let mut deps = mock_dependencies();
+        let sender = deps.api.addr_make("sender");
+        let admin = deps.api.addr_make("admin");
+        let submitter = deps.api.addr_make("anyone");
+        let current_keys = router_keys(1);
+        let next_keys = router_keys(6);
+        let third_keys = router_keys(11);
+
+        instantiate_with_keys(deps.as_mut(), &sender, &admin, &current_keys);
+
+        let first_rotation = signed_vaa(
+            &current_keys,
+            &[0, 1, 2],
+            0,
+            EMITTER_CHAIN,
+            EMITTER_ADDRESS,
+            governance_packet(router_set_update_payload(1, &next_keys)),
+        );
+        execute(
+            deps.as_mut(),
+            mock_env(),
+            message_info(&submitter, &[]),
+            ExecuteMsg::SubmitVAA {
+                vaa: Binary::from(first_rotation),
+            },
+        )
+        .unwrap();
+
+        let old_set_signed_second_rotation = signed_vaa_with_keys(
+            &[
+                current_keys[0].clone(),
+                current_keys[1].clone(),
+                current_keys[2].clone(),
+            ],
+            &[0, 1, 2],
+            1,
+            EMITTER_CHAIN,
+            EMITTER_ADDRESS,
+            governance_packet(router_set_update_payload(2, &third_keys)),
+        );
+        let err = execute(
+            deps.as_mut(),
+            mock_env(),
+            message_info(&submitter, &[]),
+            ExecuteMsg::SubmitVAA {
+                vaa: Binary::from(old_set_signed_second_rotation),
+            },
+        )
+        .unwrap_err();
+
+        assert!(matches!(err, ContractError::RouterSignatureError));
+        assert_active_router_set(deps.as_ref(), 1, &next_keys);
+    }
+
+    #[test]
+    fn submit_v_a_a_accepts_multiple_sequential_rotations() {
+        let mut deps = mock_dependencies();
+        let sender = deps.api.addr_make("sender");
+        let admin = deps.api.addr_make("admin");
+        let submitter = deps.api.addr_make("anyone");
+        let current_keys = router_keys(1);
+        let next_keys = router_keys(6);
+        let third_keys = router_keys(11);
+
+        instantiate_with_keys(deps.as_mut(), &sender, &admin, &current_keys);
+
+        let first_rotation = signed_vaa(
+            &current_keys,
+            &[0, 1, 2],
+            0,
+            EMITTER_CHAIN,
+            EMITTER_ADDRESS,
+            governance_packet(router_set_update_payload(1, &next_keys)),
+        );
+        execute(
+            deps.as_mut(),
+            mock_env(),
+            message_info(&submitter, &[]),
+            ExecuteMsg::SubmitVAA {
+                vaa: Binary::from(first_rotation),
+            },
+        )
+        .unwrap();
+
+        let second_rotation = signed_vaa(
+            &next_keys,
+            &[0, 1, 2],
+            1,
+            EMITTER_CHAIN,
+            EMITTER_ADDRESS,
+            governance_packet(router_set_update_payload(2, &third_keys)),
+        );
+        execute(
+            deps.as_mut(),
+            mock_env(),
+            message_info(&submitter, &[]),
+            ExecuteMsg::SubmitVAA {
+                vaa: Binary::from(second_rotation),
+            },
+        )
+        .unwrap();
+
+        assert_active_router_set(deps.as_ref(), 2, &third_keys);
+    }
+
+    #[test]
+    fn submit_v_a_a_rejects_wrong_governance_module() {
+        let mut deps = mock_dependencies();
+        let sender = deps.api.addr_make("sender");
+        let admin = deps.api.addr_make("admin");
+        let submitter = deps.api.addr_make("anyone");
+        let current_keys = router_keys(1);
+        let next_keys = router_keys(6);
+
+        instantiate_with_keys(deps.as_mut(), &sender, &admin, &current_keys);
+
+        let mut payload = governance_packet(router_set_update_payload(1, &next_keys));
+        payload[28..32].copy_from_slice(b"Pyth");
+        let router_update_vaa = signed_vaa(
+            &current_keys,
+            &[0, 1, 2],
+            0,
+            EMITTER_CHAIN,
+            EMITTER_ADDRESS,
+            payload,
+        );
+
+        let err = execute(
+            deps.as_mut(),
+            mock_env(),
+            message_info(&submitter, &[]),
+            ExecuteMsg::SubmitVAA {
+                vaa: Binary::from(router_update_vaa),
+            },
+        )
+        .unwrap_err();
+
+        assert!(matches!(err, ContractError::InvalidVAAAction));
+        assert_active_router_set(deps.as_ref(), 0, &current_keys);
+    }
+
+    #[test]
+    fn submit_v_a_a_rejects_wrong_governance_action() {
+        let mut deps = mock_dependencies();
+        let sender = deps.api.addr_make("sender");
+        let admin = deps.api.addr_make("admin");
+        let submitter = deps.api.addr_make("anyone");
+        let current_keys = router_keys(1);
+        let next_keys = router_keys(6);
+
+        instantiate_with_keys(deps.as_mut(), &sender, &admin, &current_keys);
+
+        let mut payload = governance_packet(router_set_update_payload(1, &next_keys));
+        payload[32] = 1;
+        let router_update_vaa = signed_vaa(
+            &current_keys,
+            &[0, 1, 2],
+            0,
+            EMITTER_CHAIN,
+            EMITTER_ADDRESS,
+            payload,
+        );
+
+        let err = execute(
+            deps.as_mut(),
+            mock_env(),
+            message_info(&submitter, &[]),
+            ExecuteMsg::SubmitVAA {
+                vaa: Binary::from(router_update_vaa),
+            },
+        )
+        .unwrap_err();
+
+        assert!(matches!(err, ContractError::InvalidVAAAction));
+        assert_active_router_set(deps.as_ref(), 0, &current_keys);
+    }
+
+    #[test]
+    fn submit_v_a_a_rejects_duplicate_routers_in_update() {
+        let mut deps = mock_dependencies();
+        let sender = deps.api.addr_make("sender");
+        let admin = deps.api.addr_make("admin");
+        let submitter = deps.api.addr_make("anyone");
+        let current_keys = router_keys(1);
+        let mut next_keys = router_keys(6);
+        next_keys[1] = next_keys[0].clone();
+
+        instantiate_with_keys(deps.as_mut(), &sender, &admin, &current_keys);
+
+        let router_update_vaa = signed_vaa(
+            &current_keys,
+            &[0, 1, 2],
+            0,
+            EMITTER_CHAIN,
+            EMITTER_ADDRESS,
+            governance_packet(router_set_update_payload(1, &next_keys)),
+        );
+
+        let err = execute(
+            deps.as_mut(),
+            mock_env(),
+            message_info(&submitter, &[]),
+            ExecuteMsg::SubmitVAA {
+                vaa: Binary::from(router_update_vaa),
+            },
+        )
+        .unwrap_err();
+
+        assert!(matches!(err, ContractError::InvalidConfig));
+        assert_active_router_set(deps.as_ref(), 0, &current_keys);
+    }
+
+    #[test]
     fn migrate_splits_legacy_router_config_into_state_and_sets() {
         let mut deps = mock_dependencies();
         let admin = deps.api.addr_make("admin");
@@ -697,6 +988,32 @@ mod tests {
 
         for index in signer_indexes {
             let (signature, recovery_id) = sign_hash(&keys[*index as usize], &hash);
+            vaa.push(*index);
+            vaa.extend_from_slice(&signature.to_bytes());
+            vaa.push(recovery_id.to_byte());
+        }
+
+        vaa.extend_from_slice(&body);
+        vaa
+    }
+
+    fn signed_vaa_with_keys(
+        signing_keys: &[SigningKey],
+        signer_indexes: &[u8],
+        router_set_index: u32,
+        emitter_chain: u16,
+        emitter_address: [u8; 32],
+        payload: Vec<u8>,
+    ) -> Vec<u8> {
+        let body = vaa_body(emitter_chain, emitter_address, payload);
+        let hash = body_hash(&body);
+
+        let mut vaa = vec![1u8];
+        vaa.extend_from_slice(&router_set_index.to_be_bytes());
+        vaa.push(signer_indexes.len() as u8);
+
+        for (key, index) in signing_keys.iter().zip(signer_indexes.iter()) {
+            let (signature, recovery_id) = sign_hash(key, &hash);
             vaa.push(*index);
             vaa.extend_from_slice(&signature.to_bytes());
             vaa.push(recovery_id.to_byte());

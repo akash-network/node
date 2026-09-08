@@ -308,6 +308,41 @@ mod tests {
     }
 
     #[test]
+    fn rejects_wrong_version() {
+        let keys = router_keys();
+        let config = setup(&keys);
+        let mut vaa = signed_vaa(
+            &keys,
+            &[0, 1, 2],
+            ROUTER_SET_INDEX,
+            EMITTER_CHAIN,
+            EMITTER_ADDRESS,
+            vec![],
+        );
+        vaa[0] = 2;
+
+        let err = verify_vaa(&config, &vaa).unwrap_err();
+        assert!(matches!(err, ContractError::InvalidVersion));
+    }
+
+    #[test]
+    fn rejects_wrong_router_set_index() {
+        let keys = router_keys();
+        let config = setup(&keys);
+        let vaa = signed_vaa(
+            &keys,
+            &[0, 1, 2],
+            ROUTER_SET_INDEX + 1,
+            EMITTER_CHAIN,
+            EMITTER_ADDRESS,
+            vec![],
+        );
+
+        let err = verify_vaa(&config, &vaa).unwrap_err();
+        assert!(matches!(err, ContractError::InvalidRouterSetIndex));
+    }
+
+    #[test]
     fn rejects_duplicate_router_addresses() {
         let keys = router_keys();
         let mut routers: Vec<RouterAddress> = keys.iter().map(router_address_msg).collect();
@@ -339,6 +374,40 @@ mod tests {
 
         let err = verify_vaa(&config, &vaa).unwrap_err();
         assert!(matches!(err, ContractError::InvalidRouterIndex));
+    }
+
+    #[test]
+    fn rejects_duplicate_signature_indexes() {
+        let keys = router_keys();
+        let config = setup(&keys);
+        let vaa = signed_vaa(
+            &keys,
+            &[0, 0, 1],
+            ROUTER_SET_INDEX,
+            EMITTER_CHAIN,
+            EMITTER_ADDRESS,
+            vec![],
+        );
+
+        let err = verify_vaa(&config, &vaa).unwrap_err();
+        assert!(matches!(err, ContractError::WrongRouterIndexOrder));
+    }
+
+    #[test]
+    fn rejects_unsorted_signature_indexes() {
+        let keys = router_keys();
+        let config = setup(&keys);
+        let vaa = signed_vaa(
+            &keys,
+            &[0, 2, 1],
+            ROUTER_SET_INDEX,
+            EMITTER_CHAIN,
+            EMITTER_ADDRESS,
+            vec![],
+        );
+
+        let err = verify_vaa(&config, &vaa).unwrap_err();
+        assert!(matches!(err, ContractError::WrongRouterIndexOrder));
     }
 
     #[test]
