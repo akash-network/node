@@ -19,6 +19,11 @@ const GOVERNANCE_TARGET_CHAIN_POS: usize = 33;
 const GOVERNANCE_PAYLOAD_POS: usize = 35;
 const GOVERNANCE_ACTION_ROUTER_SET_UPGRADE: u8 = 2;
 const GOVERNANCE_TARGET_CHAIN_GLOBAL: u16 = 0;
+// Pyth Pro preserves the Core governance emitter used by guardian-set upgrades.
+const GOVERNANCE_EMITTER_CHAIN: u16 = 1;
+const GOVERNANCE_EMITTER_ADDRESS: [u8; 32] = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4,
+];
 
 pub struct RouterSetUpdate {
     pub router_set_index: u32,
@@ -132,6 +137,32 @@ fn parse_governance_router_set_update(
 }
 
 pub fn verify_vaa(config: &RouterVerifierConfig, data: &[u8]) -> Result<ParsedVAA, ContractError> {
+    verify_vaa_from_emitter(
+        config,
+        data,
+        config.expected_emitter_chain,
+        &config.expected_emitter_address,
+    )
+}
+
+pub fn verify_governance_vaa(
+    config: &RouterVerifierConfig,
+    data: &[u8],
+) -> Result<ParsedVAA, ContractError> {
+    verify_vaa_from_emitter(
+        config,
+        data,
+        GOVERNANCE_EMITTER_CHAIN,
+        &GOVERNANCE_EMITTER_ADDRESS,
+    )
+}
+
+fn verify_vaa_from_emitter(
+    config: &RouterVerifierConfig,
+    data: &[u8],
+    emitter_chain: u16,
+    emitter_address: &[u8],
+) -> Result<ParsedVAA, ContractError> {
     let vaa = ParsedVAA::deserialize(data)?;
 
     if vaa.version != 1 {
@@ -140,9 +171,7 @@ pub fn verify_vaa(config: &RouterVerifierConfig, data: &[u8]) -> Result<ParsedVA
     if vaa.guardian_set_index != config.router_set_index {
         return Err(ContractError::InvalidRouterSetIndex);
     }
-    if vaa.emitter_chain != config.expected_emitter_chain
-        || vaa.emitter_address != config.expected_emitter_address
-    {
+    if vaa.emitter_chain != emitter_chain || vaa.emitter_address != emitter_address {
         return Err(ContractError::InvalidEmitter);
     }
 

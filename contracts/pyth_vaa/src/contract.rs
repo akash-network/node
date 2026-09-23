@@ -56,6 +56,23 @@ pub fn instantiate(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
+    if ROUTER_STATE.may_load(deps.storage)?.is_some() {
+        let config = CONFIG.load(deps.storage)?;
+        if msg
+            .governance_target_chain
+            .is_some_and(|target| target != config.governance_target_chain)
+        {
+            return Err(ContractError::InvalidGovernanceTarget);
+        }
+        let router_verifier = load_router_verifier(deps.storage)?;
+        return Ok(Response::new()
+            .add_attribute("method", "migrate")
+            .add_attribute(
+                "router_set_index",
+                router_verifier.router_set_index.to_string(),
+            ));
+    }
+
     let legacy = LEGACY_CONFIG.load(deps.storage)?;
     let router_verifier = legacy.router_verifier;
     let router_set_index = router_verifier.router_set_index;
@@ -120,7 +137,7 @@ fn execute_submit_vaa(deps: DepsMut, vaa: Binary) -> Result<Response, ContractEr
     let config = CONFIG.load(deps.storage)?;
     let mut router_state = ROUTER_STATE.load(deps.storage)?;
     let current_router_verifier = load_router_verifier(deps.storage)?;
-    let parsed_vaa = router::verify_vaa(&current_router_verifier, vaa.as_slice())?;
+    let parsed_vaa = router::verify_governance_vaa(&current_router_verifier, vaa.as_slice())?;
     let router_set_update =
         router::parse_router_set_update(&parsed_vaa.payload, config.governance_target_chain)?;
     let expected_next_index = router_state
@@ -202,11 +219,18 @@ mod tests {
 
     use crate::msg::{RouterAddress, RouterVerifierConfigMsg};
 
-    const EMITTER_CHAIN: u16 = 26;
-    const EMITTER_ADDRESS: [u8; 32] = *b"PythnetPythnetPythnetPythnetPyth";
+    const PRICE_EMITTER_CHAIN: u16 = 26;
+    const PRICE_EMITTER_ADDRESS: [u8; 32] = *b"PythnetPythnetPythnetPythnetPyth";
+    const EMITTER_CHAIN: u16 = 1;
+    const EMITTER_ADDRESS: [u8; 32] = [
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 4,
+    ];
     const GOVERNANCE_TARGET_CHAIN: u16 = 29;
-    const HERMES_ASSEMBLED_ROUTER_SET_UPGRADE_VAA: &str =
-        "AQAAAAADAAa9huXuGzCpbxLN+sJP5aOAqf0Uwyu7aKJAupdZ4GB7MwGYo0APzJgI1w+DgX1ZPerVXLi3fF3564feAjdnSZMAAbWtL7THAmgF2+sUXhgejJ2apO9iW2eJeIFKjdhpMxBCDIuhIhO8BjfVgiXo0kZ5kse+Gfos4xaj1wkRxFnp1G0AArH0V+4gipHyaxn2q0u6hS2qhEZ0sq87Fb5hbEAvA9s9BLoKV7GavzMzSHNUdf4n0cnpiIS5tDIj/azV++Ifz5ABAAAAewAAAcgAGlB5dGhuZXRQeXRobmV0UHl0aG5ldFB5dGhuZXRQeXRoAAAAAAAAAxUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAENvcmUCAAAAAAABBQywMNEai+SLYEGIV4dN7uYdEHHgSmIxZiOtRX8CzcXZl97Wejg+xWmZyFHqo8OXaRTWO4IsZ+IB7Av7uFjamQqPSjpsp8tjFdaKFAEFkXNSwXEDPVy/9xdfKd/Tpj3aPW+POF4=";
+    // Unmodified VAA from pyth-network/pyth-crosschain commit 859113ec53e59a3abaeeb3333ae71ef1fa09615e:
+    // contract_manager/src/store/guardian_sets/ProCompatibleProductionGuardianSetVaas.json
+    const PRODUCTION_ROUTER_SET_UPGRADE_VAA: &str =
+        include_str!("../testdata/production-router-set-1.hex");
 
     fn router_config() -> RouterVerifierConfigMsg {
         RouterVerifierConfigMsg {
@@ -267,8 +291,8 @@ mod tests {
                 router_verifier: RouterVerifierConfigMsg {
                     router_set_index: 0,
                     routers: current_keys.iter().map(router_address_msg).collect(),
-                    expected_emitter_chain: EMITTER_CHAIN,
-                    expected_emitter_address: Binary::from(EMITTER_ADDRESS),
+                    expected_emitter_chain: PRICE_EMITTER_CHAIN,
+                    expected_emitter_address: Binary::from(PRICE_EMITTER_ADDRESS),
                 },
             },
         )
@@ -550,27 +574,110 @@ mod tests {
     }
 
     #[test]
-    fn submit_v_a_a_accepts_hermes_assembled_router_set_upgrade() {
+    fn submit_v_a_a_accepts_published_production_rotation() {
         let mut deps = mock_dependencies();
         let sender = deps.api.addr_make("sender");
         let admin = deps.api.addr_make("admin");
         let submitter = deps.api.addr_make("anyone");
-        let current_keys = router_keys(1);
-        let next_keys = router_keys(6);
+        instantiate(
+            deps.as_mut(),
+            mock_env(),
+            message_info(&sender, &[]),
+            InstantiateMsg {
+                admin: admin.to_string(),
+                governance_target_chain: Some(GOVERNANCE_TARGET_CHAIN),
+                router_verifier: router_config(),
+            },
+        )
+        .unwrap();
+        let vaa = Binary::from(hex::decode(PRODUCTION_ROUTER_SET_UPGRADE_VAA.trim()).unwrap());
+        let err = verify_vaa(deps.as_ref(), vaa.clone()).unwrap_err();
+        assert!(matches!(err, ContractError::InvalidEmitter));
 
-        instantiate_with_keys(deps.as_mut(), &sender, &admin, &current_keys);
+        let mut tampered = vaa.to_vec();
+        *tampered.last_mut().unwrap() ^= 1;
+        assert!(execute(
+            deps.as_mut(),
+            mock_env(),
+            message_info(&submitter, &[]),
+            ExecuteMsg::SubmitVAA {
+                vaa: tampered.into()
+            }
+        )
+        .is_err());
+        assert_eq!(
+            query_config(deps.as_ref()).unwrap().router_verifier,
+            router_config()
+        );
 
         execute(
             deps.as_mut(),
             mock_env(),
             message_info(&submitter, &[]),
-            ExecuteMsg::SubmitVAA {
-                vaa: Binary::from_base64(HERMES_ASSEMBLED_ROUTER_SET_UPGRADE_VAA).unwrap(),
-            },
+            ExecuteMsg::SubmitVAA { vaa: vaa.clone() },
         )
         .unwrap();
 
-        assert_active_router_set(deps.as_ref(), 1, &next_keys);
+        let config = query_config(deps.as_ref()).unwrap().router_verifier;
+        assert_eq!(config.router_set_index, 1);
+        assert_eq!(config.expected_emitter_chain, PRICE_EMITTER_CHAIN);
+        assert_eq!(
+            config.expected_emitter_address.as_slice(),
+            PRICE_EMITTER_ADDRESS
+        );
+        assert_eq!(
+            config
+                .routers
+                .iter()
+                .map(|router| hex::encode(&router.bytes))
+                .collect::<Vec<_>>(),
+            [
+                "41534bb176e461a3fb30479400f210549ecce638",
+                "6502987b62f21cab7eb5ccd8f0173084b60d5b41",
+                "44a3e8f6a382412cf6bb90a3f8106e68977476c9",
+                "13edc776d3063549fdb0702af182edc905a539d4",
+                "3af088854bb768065f4929e5bbdfa4cbb04c9af9",
+            ]
+        );
+        let err = execute(
+            deps.as_mut(),
+            mock_env(),
+            message_info(&submitter, &[]),
+            ExecuteMsg::SubmitVAA { vaa },
+        )
+        .unwrap_err();
+        assert!(matches!(err, ContractError::InvalidRouterSetIndex));
+    }
+
+    #[test]
+    fn submit_v_a_a_rejects_price_emitter_and_wrong_governance_address() {
+        let mut deps = mock_dependencies();
+        let sender = deps.api.addr_make("anyone");
+        let admin = deps.api.addr_make("admin");
+        let keys = router_keys(1);
+        instantiate_with_keys(deps.as_mut(), &sender, &admin, &keys);
+        for (chain, address) in [
+            (PRICE_EMITTER_CHAIN, PRICE_EMITTER_ADDRESS),
+            (EMITTER_CHAIN, [9; 32]),
+        ] {
+            let vaa = signed_vaa(
+                &keys,
+                &[0, 1, 2],
+                0,
+                chain,
+                address,
+                governance_packet(router_set_update_payload(1, &router_keys(6))),
+            );
+            let err = execute(
+                deps.as_mut(),
+                mock_env(),
+                message_info(&sender, &[]),
+                ExecuteMsg::SubmitVAA { vaa: vaa.into() },
+            )
+            .unwrap_err();
+            assert!(matches!(err, ContractError::InvalidEmitter));
+            assert_active_router_set(deps.as_ref(), 0, &keys);
+        }
     }
 
     #[test]
@@ -606,8 +713,8 @@ mod tests {
             &current_keys,
             &[0, 1, 2],
             0,
-            EMITTER_CHAIN,
-            EMITTER_ADDRESS,
+            PRICE_EMITTER_CHAIN,
+            PRICE_EMITTER_ADDRESS,
             b"price-update".to_vec(),
         );
         let err = verify_vaa(deps.as_ref(), Binary::from(old_set_price_vaa)).unwrap_err();
@@ -617,8 +724,8 @@ mod tests {
             &next_keys,
             &[0, 1, 2],
             1,
-            EMITTER_CHAIN,
-            EMITTER_ADDRESS,
+            PRICE_EMITTER_CHAIN,
+            PRICE_EMITTER_ADDRESS,
             b"price-update".to_vec(),
         );
         verify_vaa(deps.as_ref(), Binary::from(new_set_price_vaa)).unwrap();
@@ -849,8 +956,8 @@ mod tests {
                 .iter()
                 .map(|key| address_from_key(key.verifying_key()).to_vec())
                 .collect(),
-            expected_emitter_chain: EMITTER_CHAIN,
-            expected_emitter_address: EMITTER_ADDRESS.to_vec(),
+            expected_emitter_chain: PRICE_EMITTER_CHAIN,
+            expected_emitter_address: PRICE_EMITTER_ADDRESS.to_vec(),
         };
 
         LEGACY_CONFIG
@@ -875,9 +982,71 @@ mod tests {
         let config = CONFIG.load(deps.as_ref().storage).unwrap();
         assert_eq!(config.admin, admin);
         assert_eq!(config.governance_target_chain, GOVERNANCE_TARGET_CHAIN);
-        assert_eq!(config.expected_emitter_chain, EMITTER_CHAIN);
-        assert_eq!(config.expected_emitter_address, EMITTER_ADDRESS);
+        assert_eq!(config.expected_emitter_chain, PRICE_EMITTER_CHAIN);
+        assert_eq!(config.expected_emitter_address, PRICE_EMITTER_ADDRESS);
         assert_active_router_set(deps.as_ref(), 0, &current_keys);
+    }
+
+    #[test]
+    fn migrate_preserves_current_schema_and_rotated_sets() {
+        use cosmwasm_std::Order;
+        let mut deps = mock_dependencies();
+        let admin = deps.api.addr_make("admin");
+        let keys = router_keys(1);
+        instantiate_with_keys_and_target(
+            deps.as_mut(),
+            &admin,
+            &admin,
+            &keys,
+            Some(GOVERNANCE_TARGET_CHAIN),
+        );
+        let vaa = signed_vaa(
+            &keys,
+            &[0, 1, 2],
+            0,
+            EMITTER_CHAIN,
+            EMITTER_ADDRESS,
+            governance_packet(router_set_update_payload(1, &router_keys(6))),
+        );
+        execute(
+            deps.as_mut(),
+            mock_env(),
+            message_info(&admin, &[]),
+            ExecuteMsg::SubmitVAA { vaa: vaa.into() },
+        )
+        .unwrap();
+        let before: Vec<_> = deps.storage.range(None, None, Order::Ascending).collect();
+        for target in [None, Some(GOVERNANCE_TARGET_CHAIN)] {
+            migrate(
+                deps.as_mut(),
+                mock_env(),
+                MigrateMsg {
+                    governance_target_chain: target,
+                },
+            )
+            .unwrap();
+            assert_eq!(
+                before,
+                deps.storage
+                    .range(None, None, Order::Ascending)
+                    .collect::<Vec<_>>()
+            );
+        }
+        let err = migrate(
+            deps.as_mut(),
+            mock_env(),
+            MigrateMsg {
+                governance_target_chain: Some(30),
+            },
+        )
+        .unwrap_err();
+        assert!(matches!(err, ContractError::InvalidGovernanceTarget));
+        assert_eq!(
+            before,
+            deps.storage
+                .range(None, None, Order::Ascending)
+                .collect::<Vec<_>>()
+        );
     }
 
     fn instantiate_with_keys(
@@ -906,8 +1075,8 @@ mod tests {
                 router_verifier: RouterVerifierConfigMsg {
                     router_set_index: 0,
                     routers: keys.iter().map(router_address_msg).collect(),
-                    expected_emitter_chain: EMITTER_CHAIN,
-                    expected_emitter_address: Binary::from(EMITTER_ADDRESS),
+                    expected_emitter_chain: PRICE_EMITTER_CHAIN,
+                    expected_emitter_address: Binary::from(PRICE_EMITTER_ADDRESS),
                 },
             },
         )
