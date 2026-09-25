@@ -549,12 +549,13 @@ func (k *keeper) accountSettle(ctx sdk.Context, acc *account) ([]payment, bool, 
 		acc.State.SettledAt = ctx.BlockHeight()
 	}
 
+	// Open payments are always included so callers that finalize a
+	// payment (PaymentClose, PaymentWithdraw, AccountClose) can find it,
+	// even when no blocks elapsed since the last settle. The accrued
+	// transfer for a zero-height delta is zero, so this is a funds no-op.
 	pStates := []etypes.State{
 		etypes.StateOverdrawn,
-	}
-
-	if !heightDelta.IsZero() {
-		pStates = append(pStates, etypes.StateOpen)
+		etypes.StateOpen,
 	}
 
 	acc.dirty = true
