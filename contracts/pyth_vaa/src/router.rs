@@ -163,40 +163,51 @@ fn verify_router_signatures(
         return Err(ContractError::TooManySignatures);
     }
 
-    let mut last_index: i16 = -1;
-    let mut pos = ParsedVAA::HEADER_LEN;
-    for _ in 0..signer_count {
-        if pos + ParsedVAA::SIGNATURE_LEN > data.len() {
-            return Err(ContractError::InvalidVAA);
-        }
+    let signatures_end = ParsedVAA::HEADER_LEN + signer_count * ParsedVAA::SIGNATURE_LEN;
+    let signatures = data
+        .get(ParsedVAA::HEADER_LEN..signatures_end)
+        .ok_or(ContractError::InvalidVAA)?;
+    let mut signatures = signatures.chunks_exact(ParsedVAA::SIGNATURE_LEN);
+    let first = signatures.next().ok_or(ContractError::InvalidVAA)?;
 
-        let router_index = data[pos] as i16;
+    // Keep two call sites so wasm-opt does not inline the crypto helper into
+    // verify_vaa and exceed the VM's limit of 100 locals per Wasm function.
+    verify_router_signature(config, &vaa.hash, first)?;
+    let mut last_index = first[0];
+    for signature in signatures {
+        let router_index = signature[0];
         if router_index <= last_index {
             return Err(ContractError::WrongRouterIndexOrder);
         }
         last_index = router_index;
+        verify_router_signature(config, &vaa.hash, signature)?;
+    }
 
-        let router_index = router_index as usize;
-        if router_index >= config.routers.len() {
-            return Err(ContractError::InvalidRouterIndex);
-        }
+    Ok(())
+}
 
-        let signature = Signature::try_from(
-            &data[pos + ParsedVAA::SIG_DATA_POS
-                ..pos + ParsedVAA::SIG_DATA_POS + ParsedVAA::SIG_DATA_LEN],
-        )
+#[inline(never)]
+fn verify_router_signature(
+    config: &RouterVerifierConfig,
+    hash: &[u8],
+    data: &[u8],
+) -> Result<(), ContractError> {
+    let router_index = data[0] as usize;
+    if router_index >= config.routers.len() {
+        return Err(ContractError::InvalidRouterIndex);
+    }
+
+    let signature = Signature::try_from(
+        &data[ParsedVAA::SIG_DATA_POS..ParsedVAA::SIG_DATA_POS + ParsedVAA::SIG_DATA_LEN],
+    )
+    .map_err(|_| ContractError::CannotDecodeSignature)?;
+    let recovery_id = RecoveryId::try_from(data[ParsedVAA::SIG_RECOVERY_POS])
         .map_err(|_| ContractError::CannotDecodeSignature)?;
-        let recovery_id = RecoveryId::try_from(data[pos + ParsedVAA::SIG_RECOVERY_POS])
-            .map_err(|_| ContractError::CannotDecodeSignature)?;
-        let verify_key =
-            VerifyingKey::recover_from_prehash(vaa.hash.as_slice(), &signature, recovery_id)
-                .map_err(|_| ContractError::CannotRecoverKey)?;
+    let verify_key = VerifyingKey::recover_from_prehash(hash, &signature, recovery_id)
+        .map_err(|_| ContractError::CannotRecoverKey)?;
 
-        if router_address(&verify_key) != config.routers[router_index] {
-            return Err(ContractError::RouterSignatureError);
-        }
-
-        pos += ParsedVAA::SIGNATURE_LEN;
+    if router_address(&verify_key) != config.routers[router_index] {
+        return Err(ContractError::RouterSignatureError);
     }
 
     Ok(())
@@ -253,6 +264,38 @@ mod tests {
         assert_eq!(parsed.emitter_chain, EMITTER_CHAIN);
         assert_eq!(parsed.emitter_address, EMITTER_ADDRESS);
         assert_eq!(parsed.payload, payload);
+    }
+
+    #[test]
+    fn rejects_malformed_signatures_at_each_position() {
+        let keys = router_keys();
+        let config = setup(&keys);
+        let vaa = signed_vaa(
+            &keys,
+            &[0, 2, 4],
+            ROUTER_SET_INDEX,
+            EMITTER_CHAIN,
+            EMITTER_ADDRESS,
+            vec![],
+        );
+
+        for i in 0..3 {
+            let pos = ParsedVAA::HEADER_LEN + i * ParsedVAA::SIGNATURE_LEN;
+            let mut invalid_signature = vaa.clone();
+            invalid_signature[pos + ParsedVAA::SIG_DATA_POS..pos + ParsedVAA::SIG_RECOVERY_POS]
+                .fill(0);
+            assert!(matches!(
+                verify_vaa(&config, &invalid_signature),
+                Err(ContractError::CannotDecodeSignature)
+            ));
+
+            let mut invalid_recovery_id = vaa.clone();
+            invalid_recovery_id[pos + ParsedVAA::SIG_RECOVERY_POS] = 4;
+            assert!(matches!(
+                verify_vaa(&config, &invalid_recovery_id),
+                Err(ContractError::CannotDecodeSignature)
+            ));
+        }
     }
 
     #[test]
