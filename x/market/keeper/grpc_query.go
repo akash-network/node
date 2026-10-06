@@ -148,6 +148,35 @@ func (k Querier) ordersDirectGet(
 	}, nil
 }
 
+// ownerOrderPrefix extends the owner prefix with the dseq, gseq and oseq filters, in key order,
+// so a query for one deployment reads that deployment instead of everything the owner has in
+// state. A resume key outside the narrowed prefix keeps the wider one, or the range is invalid.
+func ownerOrderPrefix(owner string, dseq uint64, gseq, oseq uint32, resume *keys.OrderPrimaryKey) keys.OrderPrimaryKey {
+	if dseq == 0 || (resume != nil && resume.K2() != dseq) {
+		return collections.QuadPrefix[string, uint64, uint32, uint32](owner)
+	}
+
+	if gseq == 0 || (resume != nil && resume.K3() != gseq) {
+		return collections.QuadSuperPrefix[string, uint64, uint32, uint32](owner, dseq)
+	}
+
+	if oseq == 0 || (resume != nil && resume.K4() != oseq) {
+		return collections.QuadSuperPrefix3[string, uint64, uint32, uint32](owner, dseq, gseq)
+	}
+
+	return collections.Join4(owner, dseq, gseq, oseq)
+}
+
+// orderPartOf returns the order part of a bid or lease resume key, or nil when there is none.
+func orderPartOf(pk *collections.Pair[keys.OrderPrimaryKey, keys.ProviderPartKey]) *keys.OrderPrimaryKey {
+	if pk == nil {
+		return nil
+	}
+
+	order := pk.K1()
+	return &order
+}
+
 // ordersOwnerPath iterates the primary map with an owner prefix.
 func (k Querier) ordersOwnerPath(
 	ctx sdk.Context,
@@ -163,7 +192,7 @@ func (k Querier) ordersOwnerPath(
 	}
 
 	// Build range on primary map
-	prefix := collections.QuadPrefix[string, uint64, uint32, uint32](owner)
+	prefix := ownerOrderPrefix(owner, req.Filters.DSeq, req.Filters.GSeq, req.Filters.OSeq, resumePK)
 	r := new(collections.Range[keys.OrderPrimaryKey]).Prefix(prefix)
 	if resumePK != nil {
 		if req.Pagination.Reverse {
@@ -425,7 +454,7 @@ func (k Querier) bidsOwnerPath(
 		stateSet[types.Bid_State(s)] = true
 	}
 
-	orderPrefix := collections.QuadPrefix[string, uint64, uint32, uint32](owner)
+	orderPrefix := ownerOrderPrefix(owner, req.Filters.DSeq, req.Filters.GSeq, req.Filters.OSeq, orderPartOf(resumePK))
 	bidPrefix := collections.PairPrefix[keys.OrderPrimaryKey, keys.ProviderPartKey](orderPrefix)
 	r := new(collections.Range[keys.BidPrimaryKey]).Prefix(bidPrefix)
 	if resumePK != nil {
@@ -804,7 +833,7 @@ func (k Querier) leasesOwnerPath(
 		stateSet[v1.Lease_State(s)] = true
 	}
 
-	orderPrefix := collections.QuadPrefix[string, uint64, uint32, uint32](owner)
+	orderPrefix := ownerOrderPrefix(owner, req.Filters.DSeq, req.Filters.GSeq, req.Filters.OSeq, orderPartOf(resumePK))
 	leasePrefix := collections.PairPrefix[keys.OrderPrimaryKey, keys.ProviderPartKey](orderPrefix)
 	r := new(collections.Range[keys.LeasePrimaryKey]).Prefix(leasePrefix)
 	if resumePK != nil {
