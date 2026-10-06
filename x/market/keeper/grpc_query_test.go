@@ -9,10 +9,12 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/baseapp"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 
+	dv1 "pkg.akt.dev/go/node/deployment/v1"
 	mv1 "pkg.akt.dev/go/node/market/v1"
 	mvbeta "pkg.akt.dev/go/node/market/v1beta5"
 	"pkg.akt.dev/go/testutil"
@@ -1239,4 +1241,162 @@ func TestGRPCQueryLeases(t *testing.T) {
 			require.Equal(t, tc.expLen, len(res.Leases))
 		})
 	}
+}
+
+func TestGRPCQueryOwnerFiltersReadOnlyMatchingEntries(t *testing.T) {
+	suite := setupTest(t)
+	prepareBankMocks(suite)
+	querier := suite.keeper.NewQuerier()
+
+	owner := testutil.AccAddress(t).String()
+	target := dv1.MakeGroupID(dv1.DeploymentID{Owner: owner, DSeq: 50}, 1)
+	leaseID := createGroupLease(t, suite.TestSuite, target)
+
+	type idFilter struct {
+		dseq uint64
+		gseq uint32
+		oseq uint32
+	}
+
+	// gasByQuery runs the orders, bids and leases queries for the owner with the given ID filter,
+	// checks that each returns only the target, and returns the gas each one consumed.
+	gasByQuery := func(filter idFilter) [3]uint64 {
+		var gas [3]uint64
+
+		gas[0] = gasUsed(suite.ctx, func(ctx sdk.Context) {
+			res, err := querier.Orders(ctx, &mvbeta.QueryOrdersRequest{
+				Filters: mvbeta.OrderFilters{Owner: owner, DSeq: filter.dseq, GSeq: filter.gseq, OSeq: filter.oseq},
+			})
+			require.NoError(t, err)
+			require.Len(t, res.Orders, 1)
+			require.Equal(t, leaseID.OrderID(), res.Orders[0].ID)
+		})
+
+		gas[1] = gasUsed(suite.ctx, func(ctx sdk.Context) {
+			res, err := querier.Bids(ctx, &mvbeta.QueryBidsRequest{
+				Filters: mvbeta.BidFilters{Owner: owner, DSeq: filter.dseq, GSeq: filter.gseq, OSeq: filter.oseq},
+			})
+			require.NoError(t, err)
+			require.Len(t, res.Bids, 1)
+			require.Equal(t, leaseID.BidID(), res.Bids[0].Bid.ID)
+		})
+
+		gas[2] = gasUsed(suite.ctx, func(ctx sdk.Context) {
+			res, err := querier.Leases(ctx, &mvbeta.QueryLeasesRequest{
+				Filters: mv1.LeaseFilters{Owner: owner, DSeq: filter.dseq, GSeq: filter.gseq, OSeq: filter.oseq},
+			})
+			require.NoError(t, err)
+			require.Len(t, res.Leases, 1)
+			require.Equal(t, leaseID, res.Leases[0].Lease.ID)
+		})
+
+		return gas
+	}
+
+	byDeployment := idFilter{dseq: target.DSeq}
+	byGroup := idFilter{dseq: target.DSeq, gseq: target.GSeq}
+	byOrder := idFilter{dseq: target.DSeq, gseq: target.GSeq, oseq: leaseID.OSeq}
+
+	deploymentGas := gasByQuery(byDeployment)
+	groupGas := gasByQuery(byGroup)
+	orderGas := gasByQuery(byOrder)
+
+	// other deployments of the owner, sorting both before and after the target
+	for dseq := uint64(1); dseq <= 100; dseq++ {
+		if dseq != target.DSeq {
+			createGroupLease(t, suite.TestSuite, dv1.MakeGroupID(dv1.DeploymentID{Owner: owner, DSeq: dseq}, 1))
+		}
+	}
+
+	require.Equal(t, deploymentGas, gasByQuery(byDeployment), "dseq filter read other deployments")
+	require.Equal(t, groupGas, gasByQuery(byGroup), "gseq filter read other deployments")
+	require.Equal(t, orderGas, gasByQuery(byOrder), "oseq filter read other deployments")
+
+	// a second group in the target deployment, which only the gseq and oseq filters exclude
+	sibling, _ := createGroupBid(t, suite.TestSuite, dv1.MakeGroupID(target.DeploymentID(), 2))
+	require.NoError(t, suite.keeper.CreateLease(suite.ctx, sibling))
+
+	require.Equal(t, groupGas, gasByQuery(byGroup), "gseq filter read other groups")
+	require.Equal(t, orderGas, gasByQuery(byOrder), "oseq filter read other groups")
+}
+
+func TestGRPCQueryOwnerResumeKeyOutsideDSeqFilter(t *testing.T) {
+	suite := setupTest(t)
+	prepareBankMocks(suite)
+
+	owner := testutil.AccAddress(t).String()
+	for dseq := uint64(1); dseq <= 3; dseq++ {
+		createGroupLease(t, suite.TestSuite, dv1.MakeGroupID(dv1.DeploymentID{Owner: owner, DSeq: dseq}, 1))
+	}
+
+	// the first page ends on dseq 1, so the next key resumes at dseq 2, past a dseq 1 filter
+	firstPage := &sdkquery.PageRequest{Limit: 1}
+
+	orders, err := suite.queryClient.Orders(suite.ctx, &mvbeta.QueryOrdersRequest{
+		Filters:    mvbeta.OrderFilters{Owner: owner},
+		Pagination: firstPage,
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, orders.Pagination.NextKey)
+
+	resumedOrders, err := suite.queryClient.Orders(suite.ctx, &mvbeta.QueryOrdersRequest{
+		Filters:    mvbeta.OrderFilters{Owner: owner, DSeq: 1},
+		Pagination: &sdkquery.PageRequest{Key: orders.Pagination.NextKey},
+	})
+	require.NoError(t, err)
+	require.Empty(t, resumedOrders.Orders)
+
+	bids, err := suite.queryClient.Bids(suite.ctx, &mvbeta.QueryBidsRequest{
+		Filters:    mvbeta.BidFilters{Owner: owner},
+		Pagination: &sdkquery.PageRequest{Limit: 1},
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, bids.Pagination.NextKey)
+
+	resumedBids, err := suite.queryClient.Bids(suite.ctx, &mvbeta.QueryBidsRequest{
+		Filters:    mvbeta.BidFilters{Owner: owner, DSeq: 1},
+		Pagination: &sdkquery.PageRequest{Key: bids.Pagination.NextKey},
+	})
+	require.NoError(t, err)
+	require.Empty(t, resumedBids.Bids)
+
+	leases, err := suite.queryClient.Leases(suite.ctx, &mvbeta.QueryLeasesRequest{
+		Filters:    mv1.LeaseFilters{Owner: owner},
+		Pagination: &sdkquery.PageRequest{Limit: 1},
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, leases.Pagination.NextKey)
+
+	resumedLeases, err := suite.queryClient.Leases(suite.ctx, &mvbeta.QueryLeasesRequest{
+		Filters:    mv1.LeaseFilters{Owner: owner, DSeq: 1},
+		Pagination: &sdkquery.PageRequest{Key: leases.Pagination.NextKey},
+	})
+	require.NoError(t, err)
+	require.Empty(t, resumedLeases.Leases)
+}
+
+func prepareBankMocks(suite *grpcTestSuite) {
+	suite.PrepareMocks(func(ts *state.TestSuite) {
+		bkeeper := ts.BankKeeper()
+
+		bkeeper.
+			On("SendCoinsFromAccountToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToAccount", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+		bkeeper.
+			On("SendCoinsFromModuleToModule", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+
+		bkeeper.On("BurnCoins", mock.Anything, mock.Anything, mock.Anything).
+			Return(nil)
+	})
+}
+
+// gasUsed returns the store gas a query consumes, which grows with every key it reads.
+func gasUsed(ctx sdk.Context, query func(sdk.Context)) uint64 {
+	meter := storetypes.NewInfiniteGasMeter()
+	query(ctx.WithGasMeter(meter))
+	return meter.GasConsumed()
 }

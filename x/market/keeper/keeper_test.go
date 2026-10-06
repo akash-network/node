@@ -9,6 +9,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	dv1 "pkg.akt.dev/go/node/deployment/v1"
 	dtypes "pkg.akt.dev/go/node/deployment/v1beta4"
 	mv1 "pkg.akt.dev/go/node/market/v1"
 	mvbeta "pkg.akt.dev/go/node/market/v1beta5"
@@ -411,8 +412,14 @@ func Test_OnGroupClosed(t *testing.T) {
 
 func createLease(t testing.TB, suite *state.TestSuite) mv1.LeaseID {
 	t.Helper()
+	return createGroupLease(t, suite, dv1.MakeGroupID(testutil.DeploymentID(t), 0))
+}
+
+// createGroupLease creates an order, bid and lease for the given group.
+func createGroupLease(t testing.TB, suite *state.TestSuite, gid dv1.GroupID) mv1.LeaseID {
+	t.Helper()
 	ctx := suite.Context()
-	bid, order := createBid(t, suite)
+	bid, order := createGroupBid(t, suite, gid)
 	keeper := suite.MarketKeeper()
 
 	err := keeper.CreateLease(ctx, bid)
@@ -461,8 +468,14 @@ func createLease(t testing.TB, suite *state.TestSuite) mv1.LeaseID {
 
 func createBid(t testing.TB, suite *state.TestSuite) (mvbeta.Bid, mvbeta.Order) {
 	t.Helper()
+	return createGroupBid(t, suite, dv1.MakeGroupID(testutil.DeploymentID(t), 0))
+}
+
+// createGroupBid creates an order and a bid on it for the given group.
+func createGroupBid(t testing.TB, suite *state.TestSuite, gid dv1.GroupID) (mvbeta.Bid, mvbeta.Order) {
+	t.Helper()
 	ctx := suite.Context()
-	order, gspec := createOrder(t, suite.Context(), suite.MarketKeeper())
+	order, gspec := createGroupOrder(t, suite.Context(), suite.MarketKeeper(), gid)
 	provider := testutil.AccAddress(t)
 	price := testutil.ACTDecCoinRandom(t)
 	roffer := mvbeta.ResourceOfferFromRU(gspec.Resources)
@@ -498,7 +511,13 @@ func createBid(t testing.TB, suite *state.TestSuite) (mvbeta.Bid, mvbeta.Order) 
 
 func createOrder(t testing.TB, ctx sdk.Context, keeper keeper.IKeeper) (mvbeta.Order, dtypes.GroupSpec) {
 	t.Helper()
-	group := testutil.DeploymentGroup(t, testutil.DeploymentID(t), 0)
+	return createGroupOrder(t, ctx, keeper, dv1.MakeGroupID(testutil.DeploymentID(t), 0))
+}
+
+// createGroupOrder creates an order for the given group.
+func createGroupOrder(t testing.TB, ctx sdk.Context, keeper keeper.IKeeper, gid dv1.GroupID) (mvbeta.Order, dtypes.GroupSpec) {
+	t.Helper()
+	group := testutil.DeploymentGroup(t, gid.DeploymentID(), gid.GSeq)
 
 	order, err := keeper.CreateOrder(ctx, group.ID, group.GroupSpec, nil)
 	require.NoError(t, err)
