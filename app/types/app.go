@@ -75,6 +75,7 @@ import (
 	wtypes "pkg.akt.dev/go/node/wasm/v1"
 	"pkg.akt.dev/go/sdkutil"
 
+	sinktypes "pkg.akt.dev/go/node/sink/v1"
 	akeeper "pkg.akt.dev/node/v2/x/audit/keeper"
 	bmekeeper "pkg.akt.dev/node/v2/x/bme/keeper"
 	ckeeper "pkg.akt.dev/node/v2/x/cert/keeper"
@@ -85,6 +86,7 @@ import (
 	mkeeper "pkg.akt.dev/node/v2/x/market/keeper"
 	okeeper "pkg.akt.dev/node/v2/x/oracle/keeper"
 	pkeeper "pkg.akt.dev/node/v2/x/provider/keeper"
+	sinkkeeper "pkg.akt.dev/node/v2/x/sink/keeper"
 	awasm "pkg.akt.dev/node/v2/x/wasm"
 	wasmbindings "pkg.akt.dev/node/v2/x/wasm/bindings"
 	wkeeper "pkg.akt.dev/node/v2/x/wasm/keeper"
@@ -127,6 +129,7 @@ type AppKeepers struct {
 		Market     mkeeper.IKeeper
 		Oracle     okeeper.Keeper
 		Provider   pkeeper.IKeeper
+		Sink       sinkkeeper.Keeper
 		Wasm       wkeeper.Keeper
 	}
 
@@ -287,6 +290,11 @@ func (app *App) InitNormalKeepers(
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 		app.Log,
 	)
+
+	app.Keepers.Akash.Sink = sinkkeeper.NewKeeper(cdc, app.keys[sinktypes.StoreKey],
+		app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank,
+		authtypes.NewModuleAddress(govtypes.ModuleName).String())
+	app.Keepers.Cosmos.Bank.AppendSendRestriction(app.Keepers.Akash.Sink.SendRestriction)
 
 	app.Keepers.Cosmos.Crisis = crisiskeeper.NewKeeper( //nolint: staticcheck
 		cdc, runtime.NewKVStoreService(app.keys[crisistypes.StoreKey]),
@@ -631,6 +639,7 @@ func kvStoreKeys() []string {
 		awasm.StoreKey,
 		otypes.StoreKey,
 		bmetypes.StoreKey,
+		sinktypes.StoreKey,
 	}
 
 	return keys

@@ -43,6 +43,7 @@ import (
 	"pkg.akt.dev/node/v2/x/market"
 	"pkg.akt.dev/node/v2/x/oracle"
 	"pkg.akt.dev/node/v2/x/provider"
+	"pkg.akt.dev/node/v2/x/sink"
 	awasm "pkg.akt.dev/node/v2/x/wasm"
 )
 
@@ -207,6 +208,9 @@ func appModules(
 			app.Keepers.Akash.Bme,
 			app.Keepers.Cosmos.Acct,
 			app.Keepers.Cosmos.Bank,
+		),
+		sink.NewAppModule(
+			app.Keepers.Akash.Sink,
 		),
 		wasm.NewAppModule(
 			app.cdc,

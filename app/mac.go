@@ -9,6 +9,7 @@ import (
 	ibctransfertypes "github.com/cosmos/ibc-go/v10/modules/apps/transfer/types"
 	emodule "pkg.akt.dev/go/node/escrow/module"
 
+	sinktypes "pkg.akt.dev/go/node/sink/v1"
 	bmemodule "pkg.akt.dev/node/v2/x/bme"
 )
 
@@ -17,6 +18,7 @@ func ModuleAccountPerms() map[string][]string {
 		authtypes.FeeCollectorName:     nil,
 		bmemodule.ModuleName:           {authtypes.Burner, authtypes.Minter},
 		emodule.ModuleName:             nil,
+		sinktypes.ModuleName:           nil,
 		distrtypes.ModuleName:          nil,
 		minttypes.ModuleName:           {authtypes.Minter},
 		stakingtypes.BondedPoolName:    {authtypes.Burner, authtypes.Staking},
