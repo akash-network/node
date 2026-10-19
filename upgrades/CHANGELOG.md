@@ -40,6 +40,19 @@ Goal of the upgrade here
 Add new upgrades after this line based on the template above
 -----
 
+##### v2.2.0-sink-provisional
+
+###### Description
+
+Provisional name for the upgrade that installs x/sink. Replace it with the release version.
+The plan info must name `reserve_source`, the account that funds the 1,000,000 AKT launch reserve.
+Deposits and refunds stay disabled; governance enables them later.
+Any balance already held at the sink module address moves to the community pool.
+
+- Stores
+    - added
+        - `sink`: sink transfer records, settlement state and launch reserve accounting
+
 ##### v2.1.0
 
 ###### Description

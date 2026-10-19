@@ -1,4 +1,13 @@
 {
+    "v2.2.0-sink-provisional": {
+        "modules": {
+            "added": [
+                "sink"
+            ]
+        },
+        "migrations": {
+        }
+    },
     "v2.1.0": {
         "modules": {
 
