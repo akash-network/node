@@ -11,9 +11,12 @@ import (
 	types "pkg.akt.dev/go/node/sink/v1"
 )
 
-// CommunityPool receives coins found at the sink address before installation.
-type CommunityPool interface {
+// Distribution receives coins found at the sink address before installation
+// and holds the withdraw addresses that may point at it.
+type Distribution interface {
 	FundCommunityPool(ctx context.Context, amount sdk.Coins, sender sdk.AccAddress) error
+	IterateDelegatorWithdrawAddrs(ctx context.Context, handler func(del, addr sdk.AccAddress) (stop bool))
+	DeleteDelegatorWithdrawAddr(ctx context.Context, delAddr, withdrawAddr sdk.AccAddress) error
 }
 
 type sweepContextKey struct{}
@@ -28,8 +31,10 @@ type sweepAuthorization struct {
 // so neither may fail the upgrade. A non-module account becomes the sink
 // module account with the same account number. Its whole balance then moves
 // to the community pool, keeping reserve + pending + minted + voided equal to
-// the sink balance. It returns the moved coins.
-func (k Keeper) PrepareInstall(ctx sdk.Context, pool CommunityPool) (sdk.Coins, error) {
+// the sink balance. Withdraw addresses set to the sink address, which only
+// becomes a blocked address with this module, are cleared so rewards go to
+// the delegators themselves. It returns the moved coins.
+func (k Keeper) PrepareInstall(ctx sdk.Context, pool Distribution) (sdk.Coins, error) {
 	if ctx.KVStore(k.key).Has(paramsKey) {
 		return nil, fmt.Errorf("sink already initialized")
 	}
@@ -61,6 +66,22 @@ func (k Keeper) PrepareInstall(ctx sdk.Context, pool CommunityPool) (sdk.Coins, 
 		}
 		cache.EventManager().EmitEvent(sdk.NewEvent("sink_preexisting_balance",
 			sdk.NewAttribute("amount", balance.String()), sdk.NewAttribute("recipient", "community_pool")))
+	}
+	// A payment to a blocked address fails, which would break reward
+	// withdrawals, undelegations and zero-height export. Collect first, then
+	// delete, rather than deleting while iterating.
+	var delegators []sdk.AccAddress
+	pool.IterateDelegatorWithdrawAddrs(cache, func(del, withdraw sdk.AccAddress) bool {
+		if withdraw.Equals(addr) {
+			delegators = append(delegators, del)
+		}
+		return false
+	})
+	for _, del := range delegators {
+		if err := pool.DeleteDelegatorWithdrawAddr(cache, del, addr); err != nil {
+			return nil, err
+		}
+		cache.EventManager().EmitEvent(sdk.NewEvent("sink_withdraw_address_reset", sdk.NewAttribute("delegator", del.String())))
 	}
 	write()
 	return balance, nil

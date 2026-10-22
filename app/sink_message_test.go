@@ -154,7 +154,7 @@ func TestSinkQueryStatusAndCanonicalIDs(t *testing.T) {
 	require.Equal(t, types.QuerySinkResponse_void, held.Status)
 	require.Equal(t, types.Hold_HOLD_VETO, held.Transfer.Settlement.Hold)
 	require.NoError(t, h.resolve(t, 1, types.Decision_DECISION_CONFIRM_VOID))
-	h.now = h.now.Add(20 * time.Second)
+	h.now = time.Unix(h.settlement(t, 1).ChallengeEnd, 0)
 	res = h.refund(t, 1)
 	require.Zero(t, res.Code, res.Log)
 	refunded, err := q.Sink(h.ctx(), &types.QuerySink{Id: "1"})

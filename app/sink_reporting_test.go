@@ -22,7 +22,7 @@ func reportingHarness(t *testing.T) *sinkHarness {
 	return newSinkHarness(t, func(g *types.GenesisState) {
 		g.Params.MaxTransfer = 100
 		g.Params.DailyRefundCap = 100
-		g.Params.ChallengePeriodSeconds = 10
+		g.Params.ChallengePeriodSeconds = types.DefaultChallengePeriodSeconds
 		g.Params.RefundsEnabled = true
 	})
 }
@@ -93,6 +93,7 @@ func (h *sinkHarness) checkSettlementExport(t *testing.T) {
 	cache, _ := h.ctx().CacheContext()
 	s := cache.KVStore(h.a.GetKey(types.StoreKey))
 	before := storeEntries(s, []byte("open/"))
+	queue := storeEntries(s, []byte("refundq/"))
 	it := storetypes.KVStorePrefixIterator(s, nil)
 	var keys [][]byte
 	for ; it.Valid(); it.Next() {
@@ -105,8 +106,9 @@ func (h *sinkHarness) checkSettlementExport(t *testing.T) {
 	require.NoError(t, k.InitGenesis(cache, g))
 	require.Equal(t, g, k.ExportGenesis(cache))
 	require.NoError(t, k.CheckBalance(cache))
-	// InitGenesis rebuilds the derived open index exactly.
+	// InitGenesis rebuilds the derived open index and refund queue exactly.
 	require.Equal(t, before, storeEntries(s, []byte("open/")))
+	require.Equal(t, queue, storeEntries(s, []byte("refundq/")))
 	require.Equal(t, open, h.checkOpenIndex(t, cache))
 }
 
@@ -156,7 +158,9 @@ func TestSinkMintReportsCloseOnce(t *testing.T) {
 	res = h.refund(t, 1)
 	require.NotZero(t, res.Code)
 	require.Error(t, h.resolve(t, 1, types.Decision_DECISION_RESTART))
-	require.Error(t, h.resolve(t, 1, types.Decision_DECISION_CONFIRM_VOID))
+	// Without a void order governance cannot confirm a void, even to reopen a
+	// contested mint (TestSinkGovernanceReopensContestedMint).
+	require.ErrorContains(t, h.resolve(t, 1, types.Decision_DECISION_CONFIRM_VOID), "void order")
 	require.NoError(t, h.resolve(t, 1, types.Decision_DECISION_CONFIRM_MINT))
 	entry, _ := k.GetTransfer(h.ctx(), 1)
 	require.Equal(t, original.Record, entry.Record)
@@ -317,7 +321,7 @@ func TestSinkReporterRotationRestartsAuthorization(t *testing.T) {
 	s := h.settlement(t, 1)
 	require.Greater(t, s.ChallengeEnd, oldDeadline)
 	p = k.GetParams(h.ctx())
-	p.ChallengePeriodSeconds = 1
+	p.ChallengePeriodSeconds = types.DefaultChallengePeriodSeconds + 1
 	p.Reporters[0], p.Reporters[1] = p.Reporters[1], p.Reporters[0]
 	require.NoError(t, k.SetParams(h.ctx(), p))
 	require.Equal(t, old.ReporterEpoch+1, k.GetTotals(h.ctx()).ReporterEpoch) // Reordering is not rotation.
@@ -377,19 +381,21 @@ func TestSinkRefundPauseAndDailyCap(t *testing.T) {
 	res = h.refund(t, 2)
 	require.NotZero(t, res.Code)
 	require.Contains(t, res.Log, "daily refund cap")
+	gov := authtypes.NewModuleAddress(govtypes.ModuleName).String()
+	require.NoError(t, k.RequestVoid(h.ctx(), gov, 2))
 	require.NoError(t, h.resolve(t, 2, types.Decision_DECISION_CONFIRM_VOID))
-	h.now = time.Unix(h.settlement(t, 2).ChallengeEnd, 0)
 	require.NoError(t, k.SetParams(h.ctx(), p))
-	res = h.refund(t, 2)
-	require.NotZero(t, res.Code) // Neither governance nor params reset the cap.
+	// Neither governance nor params reset the day's refunds.
 	require.Equal(t, uint64(60), k.GetTotals(h.ctx()).RefundedToday)
+	res = h.refund(t, 2)
+	require.NotZero(t, res.Code) // the new window has not passed
 	oldDay := k.GetTotals(h.ctx()).RefundDay
-	h.now = time.Unix(int64(oldDay+1)*86400, 0) //nolint:gosec // small test day number
+	h.now = time.Unix(h.settlement(t, 2).ChallengeEnd, 0)
 	res = h.refund(t, 2)
 	require.Zero(t, res.Code, res.Log)
 	require.Equal(t, uint64(120), k.GetTotals(h.ctx()).RefundedAmount)
 	require.Equal(t, uint64(60), k.GetTotals(h.ctx()).RefundedToday)
-	require.Equal(t, oldDay+1, k.GetTotals(h.ctx()).RefundDay)
+	require.Greater(t, k.GetTotals(h.ctx()).RefundDay, oldDay)
 	h.checkSettlementExport(t)
 }
 
@@ -403,9 +409,10 @@ func TestSinkGovernanceWhenReportersUnavailable(t *testing.T) {
 	p.Reporters = nil
 	p.ReporterThreshold = 0
 	require.NoError(t, k.SetParams(h.ctx(), p))
+	gov := authtypes.NewModuleAddress(govtypes.ModuleName).String()
+	require.NoError(t, k.RequestVoid(h.ctx(), gov, 1))
 	require.NoError(t, h.resolve(t, 1, types.Decision_DECISION_CONFIRM_VOID))
 	h.now = time.Unix(h.settlement(t, 1).ChallengeEnd, 0)
-	gov := authtypes.NewModuleAddress(govtypes.ModuleName).String()
 	require.NoError(t, k.VetoVoid(h.ctx(), &types.MsgVetoVoid{Signer: gov, Id: 1, Reason: "stop before payment"}))
 	res = h.refund(t, 1)
 	require.NotZero(t, res.Code)

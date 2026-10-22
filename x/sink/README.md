@@ -28,6 +28,7 @@ Store key `sink`. Keys are ASCII unless noted.
 | `settlement/{id}`           | `Settlement`                                       |
 | `account/{20-byte address}` | `AccountUsage`                                     |
 | `open/{8-byte BE id}`       | `0x01`, index of transfers not minted or refunded  |
+| `refundq/{8-byte BE end}{8-byte BE id}` | `0x01`, refund queue by challenge end, then ID |
 
 `{id}` is the transfer ID in decimal without leading zeros. IDs start at 1 and
 are never reused.
@@ -50,8 +51,10 @@ Proofs use the standard ABCI query `/store/sink/key` with key `transfer/{id}`.
 The merkle path is `["sink", "transfer/{id}"]`.
 
 The `open/` index is derived. A deposit adds an entry; the first mint
-confirmation or refund removes it. InitGenesis rebuilds it from settlements and
-ExportGenesis omits it.
+confirmation or refund removes it. The `refundq/` index holds voided transfers
+without a hold. Both are rebuilt by InitGenesis from settlements and omitted by
+ExportGenesis. InitGenesis also rejects refund or account-usage days later than
+the genesis time.
 
 ## Accounting
 
@@ -70,7 +73,7 @@ Deposits cannot be enabled until it is funded.
 | -------------------- | -------------------------- | ---------------------------------------------------------------- |
 | `MsgSink`            | depositor                  | Escrow `amount` for Solana destination `dest`, return the ID     |
 | `MsgUpdateParams`    | governance                 | Replace all parameters                                           |
-| `MsgRequestVoid`     | governance                 | Write a void order for an unsettled transfer                     |
+| `MsgRequestVoid`     | governance                 | Write a void order for an unsettled transfer, or a held mint     |
 | `MsgReportOutcome`   | current reporter           | Vote that a transfer was minted or voided on Solana              |
 | `MsgVetoVoid`        | current reporter or gov    | Hold a void before its refund is paid                            |
 | `MsgResolveTransfer` | governance                 | Restart a held transfer, or confirm a mint or a void             |
@@ -79,24 +82,40 @@ Deposits cannot be enabled until it is funded.
 
 `MsgSink` must be the only message in its transaction, signed by an ordinary
 account. `dest_type` must be `1` (Solana). `dest` must be the canonical base58
-encoding of 32 nonzero bytes, on the ed25519 curve unless it is in
-`params.vault_allowlist`. Akash does not check the Solana account itself; the
+encoding of 32 nonzero bytes: a canonical ed25519 point that is not of small
+order, unless it is in `params.vault_allowlist`. Akash does not check the Solana account itself; the
 Solana program does that when it mints. `MsgSink.ValidateBasic` runs the
 stateless checks before fees are charged. The keeper enforces
 `min_transfer <= amount <= max_transfer`, the per-account daily count, pending
-count and daily amount limits, and checked uint64 arithmetic.
+count and daily amount limits, and checked uint64 arithmetic. A nonzero
+`min_transfer` is required while deposits are enabled.
 
 `MsgSinkResponse.id` is the decimal record ID. It is available from the
 included transaction's message responses, not from the initial broadcast reply.
-A `sink_deposit` event carries the same ID.
+A `sink_deposit` event carries the same ID with the sender, amount, recipient
+and height.
 
 Reports carry the reporter epoch, the transfer round and an observation: the
 outcome, a finalized Solana slot and the 64-byte transaction signature. They
 are attestations, not proofs. A mint quorum closes the transfer. A void quorum
 starts the challenge window, after which anyone can finalize the refund,
-subject to `refunds_enabled` and `daily_refund_cap`. Conflicting votes or a
-veto hold the transfer until governance resolves it. Minted and refunded are
-terminal and cannot be reopened.
+subject to `refunds_enabled` and `daily_refund_cap`. Refunds are paid oldest
+first: only the head of the refund queue (earliest challenge end, then lowest
+ID) can be paid, so a small refund cannot use up a day's cap ahead of an older,
+larger one. A head from an earlier reporter epoch blocks the queue until a
+current reporter reports on it. Conflicting votes or a veto hold the transfer
+until governance resolves it.
+
+Governance confirms a void only with a void order, so a proposal pairs
+`MsgRequestVoid` with `MsgResolveTransfer`. Refunded transfers are terminal. A
+Minted transfer is terminal unless it carries a conflict hold: governance can
+then confirm a void, which moves it back to voided with a new challenge window
+and restores its pending slot. This recovers a refund after a false mint quorum
+voted before Solana resolved the transfer. The amount must fit the daily refund
+cap.
+
+`akash query sink open-transfers --held-only` reads every page and lists the
+held transfers, for a proposal that removes a reporter and restarts them.
 
 `MsgGuardianPause` can only clear `enabled` and `refunds_enabled`. Only
 `MsgUpdateParams` can set them again or change the guardian. An empty
@@ -150,10 +169,10 @@ are capped at 500. Pass `next_start_after` to continue; 0 means no more.
 | `vault_allowlist`              | empty           | Up to 16 recipients exempt from the curve check     |
 | `reporters`                    | empty           | Up to 32 accounts                                   |
 | `reporter_threshold`           | 0               | More than two thirds of `reporters`                 |
-| `challenge_period_seconds`     | 86,400          | Positive                                            |
-| `daily_refund_cap`             | 1,000 AKT       | At least `max_transfer`                             |
+| `challenge_period_seconds`     | 259,200         | At least 72 hours; 1 s in builds with tag `sinkdev` |
+| `daily_refund_cap`             | 1,000 AKT       | At least `max_transfer`; lowered, at least the largest open transfer |
 | `refunds_enabled`              | false           |                                                     |
-| `min_transfer`                 | 0               | 0 means no minimum                                  |
+| `min_transfer`                 | 0               | Required while `enabled`; 0 only with deposits off   |
 | `max_daily_amount_per_account` | 0               | 0 means no cap; otherwise at least `min_transfer`   |
 | `pause_guardian`               | empty           | 20- or 32-byte account                              |
 
@@ -167,10 +186,17 @@ An upgrade that adds this module must:
 
 1. add the `sink` store,
 2. call `PrepareInstall` before migrations, which turns any account already at
-   the sink address into the module account (keeping its account number) and
-   moves its whole balance to the community pool,
+   the sink address into the module account (keeping its account number),
+   moves its whole balance to the community pool and deletes distribution
+   withdraw addresses set to the sink address,
 3. run migrations, which call InitGenesis with the default state,
-4. call `FundLaunchReserve` with the reserve source, which fails the upgrade if
-   the source holds less than 1,000,000 AKT.
+4. call `FundLaunchReserve` with the reserve source, a 20- or 32-byte account,
+   which fails the upgrade if the source holds less than 1,000,000 liquid AKT.
+
+The provisional handler reads the source from the plan info:
+`{"binaries": {...}, "configs": {...}, "reserve_source": "akash1..."}`.
+`util/cli.UpgradeInfo` and `tools/upgrade-info --reserve-source` emit that
+schema, and the e2e upgrade test passes `RESERVE_SOURCE`. Plan info without the
+field halts the chain at the upgrade height.
 
 Deposits stay disabled until governance enables them.

@@ -49,7 +49,10 @@ var (
 	openValue  = []byte{1}
 )
 
-func Address() sdk.AccAddress                 { return authtypes.NewModuleAddress(types.ModuleName) }
+// sinkAddress is computed once: SendRestriction checks it on every bank send.
+var sinkAddress = authtypes.NewModuleAddress(types.ModuleName)
+
+func Address() sdk.AccAddress                 { return bytes.Clone(sinkAddress) }
 func accountKey(sender sdk.AccAddress) []byte { return append([]byte("account/"), sender...) }
 
 // openKey indexes a transfer that is neither minted nor refunded. The
@@ -74,7 +77,18 @@ func (k Keeper) SetParams(ctx sdk.Context, p types.Params) error {
 	if p.Enabled && k.GetTotals(ctx).LaunchReserve != types.LaunchReserve {
 		return fmt.Errorf("launch reserve must be funded before enabling deposits")
 	}
-	if !p.SameReporterSet(k.GetParams(ctx)) {
+	old := k.GetParams(ctx)
+	// A transfer accepted under a larger max_transfer must stay refundable.
+	if p.DailyRefundCap < old.DailyRefundCap {
+		largest, err := k.largestOpenAmount(ctx)
+		if err != nil {
+			return err
+		}
+		if p.DailyRefundCap < largest {
+			return fmt.Errorf("daily refund cap %d is below open transfer amount %d", p.DailyRefundCap, largest)
+		}
+	}
+	if !p.SameReporterSet(old) {
 		totals := k.GetTotals(ctx)
 		if totals.ReporterEpoch == math.MaxUint64 {
 			return fmt.Errorf("reporter epoch exhausted")
@@ -136,7 +150,7 @@ type depositAuthorization struct {
 // SendRestriction guards every bank path into and out of escrow. It never
 // creates records: the MsgSink handler owns the complete atomic deposit.
 func (k Keeper) SendRestriction(goCtx context.Context, from, to sdk.AccAddress, coins sdk.Coins) (sdk.AccAddress, error) {
-	if from.Equals(Address()) {
+	if from.Equals(sinkAddress) {
 		ctx := sdk.UnwrapSDKContext(goCtx)
 		if refund, ok := ctx.Value(refundContextKey{}).(refundAuthorization); ok && to.Equals(refund.recipient) && coins.Equal(amountCoins(refund.amount)) {
 			return to, nil
@@ -148,7 +162,7 @@ func (k Keeper) SendRestriction(goCtx context.Context, from, to sdk.AccAddress, 
 		}
 		return nil, sdkerrors.ErrUnauthorized.Wrap("sink escrow cannot be sent")
 	}
-	if !to.Equals(Address()) {
+	if !to.Equals(sinkAddress) {
 		return to, nil
 	}
 	ctx := sdk.UnwrapSDKContext(goCtx)
@@ -187,7 +201,8 @@ func (k Keeper) Sink(ctx sdk.Context, msg *types.MsgSink) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	recipient, err := types.ParseDestination(msg.Dest, k.GetParams(ctx).VaultAllowlist)
+	p := k.GetParams(ctx)
+	recipient, err := types.ParseDestination(msg.Dest, p.VaultAllowlist)
 	if err != nil {
 		return 0, sdkerrors.ErrInvalidRequest.Wrap(err.Error())
 	}
@@ -196,7 +211,6 @@ func (k Keeper) Sink(ctx sdk.Context, msg *types.MsgSink) (uint64, error) {
 	if _, module := acc.(sdk.ModuleAccountI); module || acc == nil || len(sender) != 20 || acc.GetPubKey() == nil {
 		return 0, sdkerrors.ErrUnauthorized.Wrap("sink sender must be an ordinary signing account")
 	}
-	p := k.GetParams(ctx)
 	if !p.Enabled {
 		return 0, sdkerrors.ErrInvalidRequest.Wrap("sink deposits disabled")
 	}
@@ -275,7 +289,8 @@ func (k Keeper) Sink(ctx sdk.Context, msg *types.MsgSink) (uint64, error) {
 	}
 	cache.EventManager().EmitEvent(sdk.NewEvent("sink_deposit",
 		sdk.NewAttribute("transfer_id", strconv.FormatUint(t.ID, 10)),
-		sdk.NewAttribute("sender", sender.String()), sdk.NewAttribute("amount", strconv.FormatUint(amount, 10))))
+		sdk.NewAttribute("sender", sender.String()), sdk.NewAttribute("amount", strconv.FormatUint(amount, 10)),
+		sdk.NewAttribute("recipient", msg.Dest), sdk.NewAttribute("height", strconv.FormatUint(t.Height, 10))))
 	write()
 	return t.ID, nil
 }
@@ -287,7 +302,7 @@ func reserveCoins() sdk.Coins {
 // FundLaunchReserve is for native genesis/upgrade code only; it is not exposed
 // as a transaction. Insufficient backing fails atomically, never enables deposits.
 func (k Keeper) FundLaunchReserve(ctx sdk.Context, source sdk.AccAddress) error {
-	if len(source) != 20 || source.Equals(Address()) {
+	if !types.ValidReserveSourceLength(source) || source.Equals(sinkAddress) {
 		return fmt.Errorf("invalid reserve source")
 	}
 	if _, module := k.accounts.GetAccount(ctx, source).(sdk.ModuleAccountI); module {
@@ -304,6 +319,11 @@ func (k Keeper) FundLaunchReserve(ctx sdk.Context, source sdk.AccAddress) error 
 	}
 	totals.LaunchReserve = types.LaunchReserve
 	k.setTotals(cache, totals)
+	// A later send restriction could redirect the funding; never record a
+	// reserve the module does not hold.
+	if err := k.CheckBalance(cache); err != nil {
+		return err
+	}
 	write()
 	return nil
 }
@@ -318,7 +338,10 @@ func (k Keeper) RequestVoid(ctx sdk.Context, authority string, id uint64) error 
 	if !ok {
 		return sdkerrors.ErrNotFound.Wrap("sink transfer")
 	}
-	if entry.Settlement.Terminal() {
+	// A Minted transfer under a conflict hold may still be voided: a false mint
+	// quorum can close a transfer that Solana voided (ResolveTransfer).
+	s := entry.Settlement
+	if s.Status == types.Status_STATUS_REFUNDED || (s.Status == types.Status_STATUS_MINTED && s.Hold != types.Hold_HOLD_CONFLICT) {
 		return sdkerrors.ErrInvalidRequest.Wrap("sink transfer already closed")
 	}
 	ctx.KVStore(k.key).Set(types.VoidKey(id), types.VoidValue(id))
@@ -346,13 +369,23 @@ func (k Keeper) InitGenesis(ctx sdk.Context, g types.GenesisState) error {
 	if ctx.KVStore(k.key).Has(paramsKey) {
 		return fmt.Errorf("sink already initialized")
 	}
+	// Day counters from the future would stop deposits or refunds until then.
+	today := uint64(max(ctx.BlockTime().Unix(), 0) / 86400) //nolint:gosec // nonnegative
+	if g.Totals.RefundDay > today {
+		return fmt.Errorf("refund day is in the future")
+	}
+	for _, a := range g.Accounts {
+		if a.Day > today {
+			return fmt.Errorf("account usage day is in the future")
+		}
+	}
 	cache, write := ctx.CacheContext()
 	k.accounts.GetModuleAccount(cache, types.ModuleName)
 	k.setTotals(cache, g.Totals)
 	for _, e := range g.Transfers {
 		t, _ := types.DecodeTransfer(e.Record) // Validate checked every record.
 		cache.KVStore(k.key).Set(types.TransferKey(t.ID), e.Record)
-		k.setSettlement(cache, t.ID, e.Settlement)
+		k.putSettlement(cache, t.ID, types.Settlement{}, e.Settlement)
 		if !e.Settlement.Terminal() {
 			cache.KVStore(k.key).Set(openKey(t.ID), openValue)
 		}
