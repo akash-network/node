@@ -46,15 +46,52 @@ change on the Solana side:
 | ID  | Decision            | Context                                                                                                                                  | Recommendation                                                                  | Owner                 | Status |
 | --- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | --------------------- | ------ |
 | A1  | Upgrade name/height | `upgrades/software/v2.2.0-sink-provisional` is a placeholder in upstream's layout                                                       | Rename it, or fold the handler into the release's own upgrade                   | Akash maintainers     | Open   |
-| A2  | Reserve source      | Must hold 1,000,000 AKT, liquid, at the upgrade height, or the upgrade fails and the chain halts. Balances already at the sink address go to the community pool | Name the account in the proposal and state the community-pool disposition; add `reserve_source` to the CI upgrade test plan info | Akash governance      | Open   |
+| A2  | Reserve source      | Must hold 1,000,000 AKT, liquid, at the upgrade height, or the upgrade fails and the chain halts. Balances already at the sink address go to the community pool. The handler, `util/cli.UpgradeInfo`, `tools/upgrade-info --reserve-source` and the e2e harness (`RESERVE_SOURCE`) now share one plan-info schema | Name the account in the proposal, state the community-pool disposition and check its liquid balance before the height. Alternative: pin the account in the release instead of the plan info | Akash governance      | Open   |
 | A3  | chain-sdk release   | The `go.mod` commit is a placeholder until chain-sdk tags `pkg.akt.dev/go` and `pkg.akt.dev/go/cli` with sink                           | Tag chain-sdk, then replace commit 5 with `go get` of the tags and `go mod tidy` | chain-sdk maintainers | Open   |
 | A4  | Amino names         | `sink/MsgSink` and `sink/MsgGuardianPause` differ from bme's `akash/bme/v1/...` style; changing them changes wallet sign bytes           | Decide before any wallet integration ships                                      | Akash maintainers     | Open   |
-| A5  | Default parameters  | Deposits and refunds off, no reporters, `min_transfer` 0, no pause guardian, no per-account amount cap                                  | Keep; governance sets values after the upgrade                                  | Akash maintainers     | Open   |
+| A5  | Default parameters  | Deposits and refunds off, no reporters, `min_transfer` 0 (allowed only while deposits are off), 72-hour challenge period, no pause guardian, no per-account amount cap | Keep; governance sets values after the upgrade                                  | Akash maintainers     | Open   |
 | A6  | Previous handler    | Upstream usually drops the previous upgrade handler (`v2.1.0`) when adding the next                                                     | Follow the usual release practice                                               | Akash maintainers     | Open   |
+| A7  | Challenge floor tag | Release builds require a 72-hour challenge period. The `sinkdev` build tag lowers the floor to 1 second for test networks              | Keep; never build a release with `sinkdev`                                      | Akash maintainers     | Open   |
 
 Governance parameters to set after installation (reporters and threshold,
 challenge period, caps, minimum transfer, pause guardian) are chosen together
 with the Solana-side launch; ask the Solana-side owners for the agreed values.
+
+## Audit fixes, 2026-10-22
+
+The x/sink audit of `5193e546..4d21e5a0` found no critical or high findings.
+This branch fixes:
+
+| Finding | Fix |
+| ------- | --- |
+| M-01 | Plan info accepts every field the release tooling emits; the tooling and the e2e harness carry `reserve_source` (A2) |
+| M-02 | Refunds are paid oldest first from a derived `refundq/` queue |
+| M-03 | Holds stay for governance; `open-transfers --held-only` lists them for one restart proposal. Runbook: guardian pause, then one proposal that removes the reporter and restarts its holds |
+| M-04 | Governance can void a Minted transfer under a conflict hold, after a void order; the amount must fit the refund cap |
+| L-01 | `PrepareInstall` deletes withdraw addresses set to the sink address |
+| L-02 | Confirming a void requires a void order |
+| L-03 | Challenge period at least 72 hours (A7); a minimum transfer is required while deposits are enabled |
+| L-04 | A lowered refund cap must cover the largest open transfer |
+| I-01, I-09 | Refunds record state before paying and check the payment reached the sender |
+| I-02 | Reserve funding checks the bank balance after the send |
+| I-03 | Destinations must be canonical, non-small-order points (or listed vaults) |
+| I-04 | Tallies count only minted and voided votes |
+| I-08 | `sink_deposit` carries recipient and height |
+| I-10 | Genesis rejects future refund and usage days |
+| I-11 | The reserve source may be a 20- or 32-byte account |
+| G-01 to G-05 | Address computed once, params read once, bucket switch, totals written once, settlement reads skip the void key |
+
+`app/sink_audit_test.go` holds a regression test for each behavior change.
+
+Left for owners, because each changes the design or needs new protobuf fields:
+
+| Finding | Question |
+| ------- | -------- |
+| I-05 | Add a governance message that sweeps a surplus at the sink address to the community pool |
+| I-06 | Add a chain-wide daily deposit cap next to the per-account limits |
+| I-07 | Bump the reporter epoch only when a member is removed or the threshold rises |
+| I-12 | Measure the challenge window in blocks as well as seconds |
+| M-03 | Keep held transfers out of the per-account pending limit with a separate counter |
 
 ## How to test
 
