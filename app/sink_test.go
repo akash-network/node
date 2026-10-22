@@ -98,6 +98,7 @@ func newSinkHarness(t *testing.T, change func(*sinktypes.GenesisState)) *sinkHar
 		g := sinktypes.DefaultGenesis()
 		g.LaunchReserveSource = h.source.String()
 		g.Params.Enabled = true
+		g.Params.MinTransfer = 1 // deposits require a minimum
 		for _, key := range h.reporters[:4] {
 			g.Params.Reporters = append(g.Params.Reporters, sdk.AccAddress(key.PubKey().Address()).String())
 		}
@@ -424,7 +425,7 @@ func TestSinkMinimumTransfer(t *testing.T) {
 	require.Zero(t, res.Code, res.Log)
 	require.Equal(t, uint64(100), k.GetTotals(h.ctx()).PendingAmount)
 
-	// Governance validates the bound and can lower the minimum to zero again.
+	// Governance validates the bound. Deposits keep a minimum while enabled.
 	ctx := h.ctx()
 	server := sinkkeeper.MsgServer{Keeper: k}
 	gov := authtypes.NewModuleAddress(govtypes.ModuleName).String()
@@ -440,6 +441,9 @@ func TestSinkMinimumTransfer(t *testing.T) {
 	require.Contains(t, res.Log, "below the minimum")
 	p = k.GetParams(h.ctx())
 	p.MinTransfer = 0
+	_, err = server.UpdateParams(h.ctx(), &sinktypes.MsgUpdateParams{Authority: gov, Params: p})
+	require.ErrorContains(t, err, "min transfer must be set")
+	p.MinTransfer = 1
 	_, err = server.UpdateParams(h.ctx(), &sinktypes.MsgUpdateParams{Authority: gov, Params: p})
 	require.NoError(t, err)
 	res = h.deliver(t, "", h.deposit(1))

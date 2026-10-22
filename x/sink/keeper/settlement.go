@@ -27,13 +27,20 @@ func (k Keeper) setSettlement(ctx sdk.Context, id uint64, s types.Settlement) {
 	ctx.KVStore(k.key).Set(types.SettlementKey(id), k.cdc.MustMarshal(&s))
 }
 
+// settlement loads a transfer and its settlement. Unlike GetTransfer it skips
+// the void-order lookup, which settlement code reads only where it needs it.
 func (k Keeper) settlement(ctx sdk.Context, id uint64) (types.Transfer, types.Settlement, error) {
-	entry, ok := k.GetTransfer(ctx, id)
-	if !ok {
+	store := ctx.KVStore(k.key)
+	record := store.Get(types.TransferKey(id))
+	if record == nil {
 		return types.Transfer{}, types.Settlement{}, sdkerrors.ErrNotFound.Wrap("sink transfer")
 	}
-	t, err := types.DecodeTransfer(entry.Record)
-	return t, entry.Settlement, err
+	s := types.Settlement{Round: 1}
+	if value := store.Get(types.SettlementKey(id)); value != nil {
+		k.cdc.MustUnmarshal(value, &s)
+	}
+	t, err := types.DecodeTransfer(record)
+	return t, s, err
 }
 
 func reporterPolicy(p types.Params, epoch uint64) types.ReporterPolicy {
@@ -52,21 +59,31 @@ func settlementEvent(ctx sdk.Context, name string, id uint64, attrs ...sdk.Attri
 	ctx.EventManager().EmitEvent(sdk.NewEvent(name, append([]sdk.Attribute{sdk.NewAttribute("transfer_id", strconv.FormatUint(id, 10))}, attrs...)...))
 }
 
-// transition moves one amount between accounting buckets. Terminal outcomes
-// cannot be reopened, and only their first transition frees a pending slot.
-func (k Keeper) transition(ctx sdk.Context, t types.Transfer, s *types.Settlement, next types.Status) error {
+func bucket(t *types.Totals, s types.Status) *uint64 {
+	switch s {
+	case types.Status_STATUS_PENDING:
+		return &t.PendingAmount
+	case types.Status_STATUS_MINTED:
+		return &t.MintedAmount
+	case types.Status_STATUS_VOIDED:
+		return &t.VoidedAmount
+	case types.Status_STATUS_REFUNDED:
+		return &t.RefundedAmount
+	}
+	return nil
+}
+
+// transition moves one amount between accounting buckets in totals, which the
+// caller stores. Terminal outcomes cannot be reopened here, and only their
+// first transition frees a pending slot.
+func (k Keeper) transition(ctx sdk.Context, totals *types.Totals, t types.Transfer, s *types.Settlement, next types.Status) error {
 	if s.Status == next {
 		return nil
 	}
 	if s.Terminal() || (next == types.Status_STATUS_REFUNDED && s.Status != types.Status_STATUS_VOIDED) {
 		return fmt.Errorf("cannot change terminal sink outcome")
 	}
-	totals := k.GetTotals(ctx)
-	buckets := map[types.Status]*uint64{
-		types.Status_STATUS_PENDING: &totals.PendingAmount, types.Status_STATUS_MINTED: &totals.MintedAmount,
-		types.Status_STATUS_VOIDED: &totals.VoidedAmount, types.Status_STATUS_REFUNDED: &totals.RefundedAmount,
-	}
-	from, to := buckets[s.Status], buckets[next]
+	from, to := bucket(totals, s.Status), bucket(totals, next)
 	if from == nil || to == nil || *from < t.Amount || *to > math.MaxUint64-t.Amount {
 		return fmt.Errorf("invalid sink settlement accounting")
 	}
@@ -82,11 +99,30 @@ func (k Keeper) transition(ctx sdk.Context, t types.Transfer, s *types.Settlemen
 		ctx.KVStore(k.key).Set(accountKey(t.Sender[:]), k.cdc.MustMarshal(&u))
 		ctx.KVStore(k.key).Delete(openKey(t.ID))
 	}
-	k.setTotals(ctx, totals)
 	s.Status = next
 	if next != types.Status_STATUS_VOIDED {
 		s.ChallengeEnd = 0
 	}
+	return nil
+}
+
+// reopenMinted moves a Minted transfer under a conflict hold back to Voided.
+// A false mint quorum that votes before Solana resolves closes the transfer
+// at once; this is governance's way back. The pending slot and open-index
+// entry that the mint released come back.
+func (k Keeper) reopenMinted(ctx sdk.Context, totals *types.Totals, t types.Transfer, s *types.Settlement) error {
+	u := k.GetAccountUsage(ctx, t.Sender[:])
+	if totals.MintedAmount < t.Amount || totals.VoidedAmount > math.MaxUint64-t.Amount ||
+		totals.PendingCount == math.MaxUint64 || u.PendingCount == math.MaxUint32 {
+		return fmt.Errorf("invalid sink settlement accounting")
+	}
+	totals.MintedAmount -= t.Amount
+	totals.VoidedAmount += t.Amount
+	totals.PendingCount++
+	u.PendingCount++
+	ctx.KVStore(k.key).Set(accountKey(t.Sender[:]), k.cdc.MustMarshal(&u))
+	ctx.KVStore(k.key).Set(openKey(t.ID), openValue)
+	s.Status = types.Status_STATUS_VOIDED
 	return nil
 }
 
@@ -98,18 +134,21 @@ func (k Keeper) ReportOutcome(ctx sdk.Context, msg *types.MsgReportOutcome) erro
 		return err
 	}
 	p := k.GetParams(ctx)
-	epoch := k.GetTotals(ctx).ReporterEpoch
 	if !slices.Contains(p.Reporters, msg.Reporter) {
 		return sdkerrors.ErrUnauthorized.Wrap("not a current sink reporter")
 	}
+	cache, write := ctx.CacheContext()
+	totals := k.GetTotals(cache)
+	loaded := totals
+	epoch := totals.ReporterEpoch
 	if msg.ReporterEpoch != epoch {
 		return fmt.Errorf("stale reporter epoch")
 	}
-	cache, write := ctx.CacheContext()
 	t, s, err := k.settlement(cache, msg.Id)
 	if err != nil {
 		return err
 	}
+	before := s
 	if msg.Round != s.Round {
 		return fmt.Errorf("stale report round")
 	}
@@ -117,7 +156,7 @@ func (k Keeper) ReportOutcome(ctx sdk.Context, msg *types.MsgReportOutcome) erro
 		// Old quorums never carry across rotation. Holds require governance even
 		// after rotation, but an unfinished authorization returns to pending.
 		if !s.Terminal() {
-			if err := k.transition(cache, t, &s, types.Status_STATUS_PENDING); err != nil {
+			if err := k.transition(cache, &totals, t, &s, types.Status_STATUS_PENDING); err != nil {
 				return err
 			}
 			s.GovernanceObservation = nil
@@ -139,7 +178,7 @@ func (k Keeper) ReportOutcome(ctx sdk.Context, msg *types.MsgReportOutcome) erro
 	}
 	if s.Hold == types.Hold_HOLD_NONE && s.Status == types.Status_STATUS_PENDING {
 		if minted >= p.ReporterThreshold {
-			if err := k.transition(cache, t, &s, types.Status_STATUS_MINTED); err != nil {
+			if err := k.transition(cache, &totals, t, &s, types.Status_STATUS_MINTED); err != nil {
 				return err
 			}
 			settlementEvent(cache, "sink_mint_confirmed", t.ID)
@@ -148,14 +187,17 @@ func (k Keeper) ReportOutcome(ctx sdk.Context, msg *types.MsgReportOutcome) erro
 			if err != nil {
 				return err
 			}
-			if err := k.transition(cache, t, &s, types.Status_STATUS_VOIDED); err != nil {
+			if err := k.transition(cache, &totals, t, &s, types.Status_STATUS_VOIDED); err != nil {
 				return err
 			}
 			s.ChallengeEnd = deadline
 			settlementEvent(cache, "sink_void_confirmed", t.ID, sdk.NewAttribute("challenge_end", strconv.FormatInt(deadline, 10)))
 		}
 	}
-	k.setSettlement(cache, t.ID, s)
+	if totals != loaded {
+		k.setTotals(cache, totals)
+	}
+	k.putSettlement(cache, t.ID, before, s)
 	settlementEvent(cache, "sink_report", t.ID, sdk.NewAttribute("reporter", msg.Reporter), sdk.NewAttribute("outcome", msg.Observation.Outcome.String()))
 	write()
 	return nil
@@ -176,6 +218,7 @@ func (k Keeper) VetoVoid(ctx sdk.Context, msg *types.MsgVetoVoid) error {
 	if err != nil {
 		return err
 	}
+	before := s
 	if s.Status != types.Status_STATUS_VOIDED {
 		return fmt.Errorf("no pending void to veto")
 	}
@@ -186,7 +229,7 @@ func (k Keeper) VetoVoid(ctx sdk.Context, msg *types.MsgVetoVoid) error {
 		s.Hold = types.Hold_HOLD_VETO
 	}
 	s.VetoBy, s.VetoReason = msg.Signer, msg.Reason
-	k.setSettlement(ctx, t.ID, s)
+	k.putSettlement(ctx, t.ID, before, s)
 	settlementEvent(ctx, "sink_veto", t.ID, sdk.NewAttribute("signer", msg.Signer), sdk.NewAttribute("reason", msg.Reason))
 	return nil
 }
@@ -227,32 +270,58 @@ func (k Keeper) ResolveTransfer(ctx sdk.Context, msg *types.MsgResolveTransfer) 
 	if err != nil {
 		return err
 	}
+	before := s
+	p := k.GetParams(cache)
+	totals := k.GetTotals(cache)
+	loaded := totals
+	reopen := false
 	if s.Terminal() {
 		if s.Status == types.Status_STATUS_REFUNDED && target == types.Status_STATUS_VOIDED {
 			target = types.Status_STATUS_REFUNDED
 		}
-		if target != s.Status {
+		// Only a Minted transfer that an honest reporter contested can return.
+		reopen = s.Status == types.Status_STATUS_MINTED && s.Hold == types.Hold_HOLD_CONFLICT && target == types.Status_STATUS_VOIDED
+		if target != s.Status && !reopen {
 			return fmt.Errorf("cannot change terminal sink outcome")
 		}
+	}
+	// Akash can check only the observation's format. A void order lets anyone
+	// seal the record on Solana with void_transfer during the challenge window,
+	// so a governance-confirmed void cannot also be minted. Put MsgRequestVoid
+	// in the same proposal.
+	if target == types.Status_STATUS_VOIDED && !cache.KVStore(k.key).Has(types.VoidKey(msg.Id)) {
+		return fmt.Errorf("confirming a void requires a void order; include MsgRequestVoid in the proposal")
 	}
 	if s.Round == math.MaxUint64 {
 		return fmt.Errorf("report round exhausted")
 	}
-	if err := k.transition(cache, t, &s, target); err != nil {
+	if reopen {
+		// The refund queue pays only its head, so it must fit a day's cap.
+		if t.Amount > p.DailyRefundCap {
+			return fmt.Errorf("transfer amount %d exceeds the daily refund cap; raise the cap first", t.Amount)
+		}
+		if err := k.reopenMinted(cache, &totals, t, &s); err != nil {
+			return err
+		}
+	}
+	if err := k.transition(cache, &totals, t, &s, target); err != nil {
 		return err
 	}
 	s.Round++
-	s.Policy = reporterPolicy(k.GetParams(cache), k.GetTotals(cache).ReporterEpoch)
+	s.Policy = reporterPolicy(p, totals.ReporterEpoch)
 	s.Votes = nil
 	s.Hold, s.VetoBy, s.VetoReason = types.Hold_HOLD_NONE, "", ""
 	s.GovernanceObservation = msg.Observation
 	if target == types.Status_STATUS_VOIDED {
-		s.ChallengeEnd, err = challengeDeadline(cache, k.GetParams(cache))
+		s.ChallengeEnd, err = challengeDeadline(cache, p)
 		if err != nil {
 			return err
 		}
 	}
-	k.setSettlement(cache, t.ID, s)
+	if totals != loaded {
+		k.setTotals(cache, totals)
+	}
+	k.putSettlement(cache, t.ID, before, s)
 	settlementEvent(cache, "sink_resolved", t.ID, sdk.NewAttribute("decision", msg.Decision.String()), sdk.NewAttribute("reason", msg.Reason))
 	write()
 	return nil
@@ -269,6 +338,7 @@ func (k Keeper) FinalizeRefund(ctx sdk.Context, id uint64) error {
 	if s.Status == types.Status_STATUS_REFUNDED {
 		return nil
 	}
+	before := s
 	p := k.GetParams(cache)
 	totals := k.GetTotals(cache)
 	if !p.RefundsEnabled {
@@ -284,6 +354,17 @@ func (k Keeper) FinalizeRefund(ctx sdk.Context, id uint64) error {
 	if s.ChallengeEnd <= 0 || now < s.ChallengeEnd {
 		return fmt.Errorf("void challenge window not finished")
 	}
+	// Oldest first: a refund waits only for refunds that matured before it.
+	head, ok, err := k.refundQueueHead(cache)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return fmt.Errorf("sink refund queue is missing transfer %d", id)
+	}
+	if head != id {
+		return fmt.Errorf("sink refund %d must wait for older refund %d", id, head)
+	}
 	day := uint64(now / 86400) //nolint:gosec // now >= ChallengeEnd > 0
 	if day < totals.RefundDay {
 		return fmt.Errorf("sink clock moved backwards")
@@ -297,20 +378,28 @@ func (k Keeper) FinalizeRefund(ctx sdk.Context, id uint64) error {
 	if err := k.CheckBalance(cache); err != nil {
 		return err
 	}
-	cache = cache.WithValue(refundContextKey{}, refundAuthorization{recipient: t.Sender[:], amount: t.Amount})
-	if err := k.bank.SendCoinsFromModuleToAccount(cache, types.ModuleName, t.Sender[:], amountCoins(t.Amount)); err != nil {
-		return err
-	}
+	// Record the refund before paying it.
 	totals.RefundedToday += t.Amount
-	k.setTotals(cache, totals)
-	if err := k.transition(cache, t, &s, types.Status_STATUS_REFUNDED); err != nil {
+	if err := k.transition(cache, &totals, t, &s, types.Status_STATUS_REFUNDED); err != nil {
 		return err
 	}
-	k.setSettlement(cache, t.ID, s)
+	k.setTotals(cache, totals)
+	k.putSettlement(cache, t.ID, before, s)
+	recipient := sdk.AccAddress(t.Sender[:])
+	balance := k.bank.GetAllBalances(cache, recipient)
+	send := cache.WithValue(refundContextKey{}, refundAuthorization{recipient: recipient, amount: t.Amount})
+	if err := k.bank.SendCoinsFromModuleToAccount(send, types.ModuleName, recipient, amountCoins(t.Amount)); err != nil {
+		return err
+	}
+	// A send restriction added after the sink's could redirect the payment;
+	// the sink side would look the same either way.
+	if !k.bank.GetAllBalances(cache, recipient).Equal(balance.Add(amountCoins(t.Amount)...)) {
+		return fmt.Errorf("sink refund did not reach the original sender")
+	}
 	if err := k.CheckBalance(cache); err != nil {
 		return err
 	}
-	settlementEvent(cache, "sink_refunded", t.ID, sdk.NewAttribute("sender", sdk.AccAddress(t.Sender[:]).String()), sdk.NewAttribute("amount", strconv.FormatUint(t.Amount, 10)))
+	settlementEvent(cache, "sink_refunded", t.ID, sdk.NewAttribute("sender", recipient.String()), sdk.NewAttribute("amount", strconv.FormatUint(t.Amount, 10)))
 	write()
 	return nil
 }

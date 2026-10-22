@@ -32,7 +32,7 @@ func TestSinkGuardianPause(t *testing.T) {
 	h := newSinkHarness(t, func(g *types.GenesisState) {
 		g.Params.MaxTransfer = 100
 		g.Params.DailyRefundCap = 100
-		g.Params.ChallengePeriodSeconds = 10
+		g.Params.ChallengePeriodSeconds = types.DefaultChallengePeriodSeconds
 		g.Params.RefundsEnabled = true
 	})
 	k := h.a.Keepers.Akash.Sink

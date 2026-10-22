@@ -78,7 +78,7 @@ func TestSinkOpenTransfersFollowSettlement(t *testing.T) {
 	h := newSinkHarness(t, func(g *types.GenesisState) {
 		g.Params.MaxTransfer = 100
 		g.Params.DailyRefundCap = 100
-		g.Params.ChallengePeriodSeconds = 10
+		g.Params.ChallengePeriodSeconds = types.DefaultChallengePeriodSeconds
 		g.Params.RefundsEnabled = true
 		g.Params.MaxDailyPerAccount = 50
 		g.Params.MaxPendingPerAccount = 50
@@ -111,7 +111,8 @@ func TestSinkOpenTransfersFollowSettlement(t *testing.T) {
 	require.NoError(t, h.resolve(t, 6, types.Decision_DECISION_CONFIRM_MINT)) // closed
 	h.quorum(t, 7, types.Outcome_OUTCOME_VOIDED)                              // restarted: open
 	require.NoError(t, h.resolve(t, 7, types.Decision_DECISION_RESTART))
-	require.NoError(t, k.RequestVoid(h.ctx(), gov, 8))                        // void order only: open
+	require.NoError(t, k.RequestVoid(h.ctx(), gov, 8)) // void order only: open
+	require.NoError(t, k.RequestVoid(h.ctx(), gov, 9))
 	require.NoError(t, h.resolve(t, 9, types.Decision_DECISION_CONFIRM_VOID)) // voided: open
 	h.quorum(t, 11, types.Outcome_OUTCOME_MINTED)                             // closed
 	require.Equal(t, []uint64{1, 3, 4, 7, 8, 9, 10, 12}, h.checkOpenIndex(t, h.ctx()))
