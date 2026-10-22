@@ -237,6 +237,7 @@ var (
 	upgradeVersion = flag.String("upgrade-version", "local", "akash release to download. local if it is built locally")
 	upgradeName    = flag.String("upgrade-name", "", "name of the upgrade")
 	testCasesFile  = flag.String("test-cases", "", "")
+	reserveSource  = flag.String("reserve-source", "", "x/sink launch reserve source for the upgrade that installs x/sink")
 )
 
 func (cmd *commander) execute(ctx context.Context, args string) ([]byte, error) {
@@ -295,9 +296,17 @@ func TestUpgrade(t *testing.T) {
 
 	if *upgradeVersion != "local" {
 		t.Logf("generating upgradeinfo from release %s", *upgradeVersion)
-		upgradeInfo, err = cli.UpgradeInfoFromTag(ctx, *upgradeVersion, false)
+		upgradeInfo, err = cli.UpgradeInfoFromTag(ctx, *upgradeVersion, *reserveSource, false)
 		require.NoError(t, err)
 		require.NotEqual(t, "", upgradeInfo)
+	} else if *reserveSource != "" {
+		// Local builds have no release binaries to list, but the x/sink install
+		// still needs its reserve source.
+		bz, err := json.Marshal(struct {
+			ReserveSource string `json:"reserve_source"`
+		}{*reserveSource})
+		require.NoError(t, err)
+		upgradeInfo = string(bz)
 	}
 
 	var cfg testConfig
