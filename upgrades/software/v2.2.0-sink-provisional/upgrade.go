@@ -29,8 +29,13 @@ const (
 // PlanInfo is the JSON carried in the upgrade plan's info field. Binaries is
 // the standard cosmovisor download map. ReserveSource is the account that
 // funds the sink launch reserve.
+//
+// It accepts every field util/cli.UpgradeInfo can emit, because the release
+// tooling generates this info and a handler error halts the chain at the
+// upgrade height. TestSinkUpgradePlanInfo keeps the two in step.
 type PlanInfo struct {
 	Binaries      map[string]string `json:"binaries,omitempty"`
+	Configs       map[string]string `json:"configs,omitempty"`
 	ReserveSource string            `json:"reserve_source"`
 }
 
@@ -58,7 +63,7 @@ func (up *upgrade) StoreLoader() *storetypes.StoreUpgrades {
 }
 
 // ParsePlanInfo returns the reserve source named in the plan info. The info
-// must be a single JSON object with no fields other than binaries and
+// must be a single JSON object with no fields other than binaries, configs and
 // reserve_source, so a misspelled key cannot pass silently.
 func ParsePlanInfo(info string) (sdk.AccAddress, error) {
 	decoder := json.NewDecoder(strings.NewReader(info))
@@ -75,7 +80,7 @@ func ParsePlanInfo(info string) (sdk.AccAddress, error) {
 	}
 
 	address, err := sdk.AccAddressFromBech32(plan.ReserveSource)
-	if err != nil || len(address) != 20 || address.Equals(sinkkeeper.Address()) {
+	if err != nil || !sinktypes.ValidReserveSourceLength(address) || address.Equals(sinkkeeper.Address()) {
 		return nil, fmt.Errorf("sink upgrade requires a valid ordinary reserve_source address")
 	}
 

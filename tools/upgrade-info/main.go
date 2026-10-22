@@ -12,12 +12,13 @@ import (
 )
 
 func main() {
+	var reserveSource string
 	cmd := cobra.Command{
 		Use:     "upgrade-info",
-		Example: "upgrade-info <tag> <file>",
+		Example: "upgrade-info <tag> <file> [--reserve-source akash1...]",
 		Args:    cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			info, err := utilcli.UpgradeInfoFromTag(cmd.Context(), args[0], true)
+			info, err := utilcli.UpgradeInfoFromTag(cmd.Context(), args[0], reserveSource, true)
 			if err != nil {
 				return err
 			}
@@ -41,6 +42,7 @@ func main() {
 			return nil
 		},
 	}
+	cmd.Flags().StringVar(&reserveSource, "reserve-source", "", "x/sink launch reserve source, required by the upgrade that installs x/sink")
 	if err := cmd.ExecuteContext(context.Background()); err != nil {
 		log.Fatal(err)
 	}
