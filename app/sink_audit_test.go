@@ -212,7 +212,7 @@ func TestSinkRefundMustReachSender(t *testing.T) {
 	redirect := true
 	h.a.Keepers.Cosmos.Bank.AppendSendRestriction(func(_ context.Context, from, to sdk.AccAddress, _ sdk.Coins) (sdk.AccAddress, error) {
 		if redirect && from.Equals(sinkkeeper.Address()) {
-			return h.source, nil
+			return h.bystander, nil
 		}
 		return to, nil
 	})
@@ -269,14 +269,14 @@ func TestSinkUpgradeClearsSinkWithdrawAddresses(t *testing.T) {
 	other := sdk.AccAddress(h.reporters[0].PubKey().Address())
 	// The old binary does not block the sink address yet.
 	require.NoError(t, distr.SetDelegatorWithdrawAddr(ctx, h.sender, sinkkeeper.Address()))
-	require.NoError(t, distr.SetDelegatorWithdrawAddr(ctx, other, h.source))
+	require.NoError(t, distr.SetDelegatorWithdrawAddr(ctx, other, h.bystander))
 	require.NoError(t, runSinkUpgrade(t, h, ctx))
 	got, err := distr.GetDelegatorWithdrawAddr(ctx, h.sender)
 	require.NoError(t, err)
 	require.Equal(t, h.sender, got) // rewards go to the delegator again
 	got, err = distr.GetDelegatorWithdrawAddr(ctx, other)
 	require.NoError(t, err)
-	require.Equal(t, h.source, got) // unrelated records stay
+	require.Equal(t, h.bystander, got) // unrelated records stay
 	var reset []string
 	for _, event := range ctx.EventManager().Events() {
 		if event.Type == "sink_withdraw_address_reset" {
@@ -284,17 +284,4 @@ func TestSinkUpgradeClearsSinkWithdrawAddresses(t *testing.T) {
 		}
 	}
 	require.Equal(t, []string{h.sender.String()}, reset)
-}
-
-// I-02: reserve funding that a later send restriction redirects fails the
-// install instead of recording a reserve the module does not hold.
-func TestSinkReserveFundingMustArrive(t *testing.T) {
-	h, ctx := preSinkLedger(t)
-	h.a.Keepers.Cosmos.Bank.AppendSendRestriction(func(_ context.Context, from, to sdk.AccAddress, _ sdk.Coins) (sdk.AccAddress, error) {
-		if from.Equals(h.source) && to.Equals(sinkkeeper.Address()) {
-			return h.sender, nil
-		}
-		return to, nil
-	})
-	require.ErrorContains(t, runSinkUpgrade(t, h, ctx), "sink bank balance does not match")
 }

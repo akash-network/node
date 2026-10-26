@@ -9,7 +9,6 @@ import (
 	"os"
 	"strings"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/google/go-github/v62/github"
 	"github.com/gregjones/httpcache"
 	"golang.org/x/oauth2"
@@ -19,22 +18,12 @@ import (
 type UpgradeInfo struct {
 	Binaries map[string]string `json:"binaries"`
 	Configs  map[string]string `json:"configs,omitempty"`
-	// ReserveSource names the account that funds the x/sink launch reserve. Only
-	// the upgrade that installs x/sink reads it, and it halts without it.
-	ReserveSource string `json:"reserve_source,omitempty"`
 }
 
 // UpgradeInfoFromTag generate upgrade info from give tag
 // tag - release tag
-// reserveSource - x/sink launch reserve source, or empty for other upgrades
 // pretty - either prettify (true) json output or not (false)
-func UpgradeInfoFromTag(ctx context.Context, tag string, reserveSource string, pretty bool) (string, error) {
-	if reserveSource != "" {
-		if _, err := sdk.AccAddressFromBech32(reserveSource); err != nil {
-			return "", fmt.Errorf("invalid reserve source: %w", err)
-		}
-	}
-
+func UpgradeInfoFromTag(ctx context.Context, tag string, pretty bool) (string, error) {
 	tc := &http.Client{
 		Transport: &oauth2.Transport{
 			Base: httpcache.NewMemoryCacheTransport(),
@@ -73,8 +62,7 @@ func UpgradeInfoFromTag(ctx context.Context, tag string, reserveSource string, p
 	}()
 
 	info := &UpgradeInfo{
-		Binaries:      make(map[string]string),
-		ReserveSource: reserveSource,
+		Binaries: make(map[string]string),
 	}
 
 	urlBase := fmt.Sprintf("https://github.com/akash-network/node/releases/download/%s", tag)

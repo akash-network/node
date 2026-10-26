@@ -43,7 +43,7 @@ func TestSinkMessageValidationAndSigner(t *testing.T) {
 		{"zero amount", func(m *types.MsgSink) { m.Amount.Amount = sdkmath.ZeroInt() }},
 		{"negative amount", func(m *types.MsgSink) { m.Amount.Amount = sdkmath.NewInt(-1) }},
 		{"overflow amount", func(m *types.MsgSink) { m.Amount.Amount = overflow }},
-		{"mismatched signer", func(m *types.MsgSink) { m.Sender = h.source.String() }},
+		{"mismatched signer", func(m *types.MsgSink) { m.Sender = h.bystander.String() }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			msg := h.deposit(10)
@@ -92,13 +92,13 @@ func TestSinkDepositBankFailureAndRedirectRollback(t *testing.T) {
 			h.a.Keepers.Cosmos.Bank.AppendSendRestriction(func(_ context.Context, from, to sdk.AccAddress, _ sdk.Coins) (sdk.AccAddress, error) {
 				if from.Equals(h.sender) && to.Equals(sinkkeeper.Address()) {
 					if redirect {
-						return h.source, nil
+						return h.bystander, nil
 					}
 					return nil, fmt.Errorf("injected bank rejection")
 				}
 				return to, nil
 			})
-			before := h.a.Keepers.Cosmos.Bank.GetAllBalances(h.ctx(), h.source)
+			before := h.a.Keepers.Cosmos.Bank.GetAllBalances(h.ctx(), h.bystander)
 			res := h.deliver(t, "", h.deposit(10))
 			require.NotZero(t, res.Code, res.Log)
 			if redirect {
@@ -106,7 +106,7 @@ func TestSinkDepositBankFailureAndRedirectRollback(t *testing.T) {
 			} else {
 				require.Contains(t, res.Log, "injected bank rejection")
 			}
-			require.Equal(t, before, h.a.Keepers.Cosmos.Bank.GetAllBalances(h.ctx(), h.source))
+			require.Equal(t, before, h.a.Keepers.Cosmos.Bank.GetAllBalances(h.ctx(), h.bystander))
 			require.Zero(t, k.GetTotals(h.ctx()).LastTransferId)
 			require.Zero(t, k.GetAccountUsage(h.ctx(), h.sender).DailyCount)
 			require.NoError(t, k.CheckBalance(h.ctx()))
@@ -221,7 +221,7 @@ func TestSinkRequestBindingAndNativeCacheRollback(t *testing.T) {
 		name   string
 		change func(*types.MsgSink)
 	}{
-		{"sender", func(m *types.MsgSink) { m.Sender = h.source.String() }},
+		{"sender", func(m *types.MsgSink) { m.Sender = h.bystander.String() }},
 		{"destination type", func(m *types.MsgSink) { m.DestType = 2 }},
 		{"destination", func(m *types.MsgSink) { m.Dest = "another destination" }},
 		{"amount", func(m *types.MsgSink) { require.NoError(t, m.Amount.Amount.Unmarshal([]byte("20"))) }},
@@ -243,12 +243,12 @@ func TestSinkRequestBindingAndNativeCacheRollback(t *testing.T) {
 	// redirects the transfer. The local cache must undo even that bank write.
 	h.a.Keepers.Cosmos.Bank.AppendSendRestriction(func(_ context.Context, from, to sdk.AccAddress, _ sdk.Coins) (sdk.AccAddress, error) {
 		if from.Equals(h.sender) && to.Equals(sinkkeeper.Address()) {
-			return h.source, nil
+			return h.bystander, nil
 		}
 		return to, nil
 	})
 	beforeSender := h.a.Keepers.Cosmos.Bank.GetAllBalances(h.ctx(), h.sender)
-	beforeSource := h.a.Keepers.Cosmos.Bank.GetAllBalances(h.ctx(), h.source)
+	beforeSource := h.a.Keepers.Cosmos.Bank.GetAllBalances(h.ctx(), h.bystander)
 	beforeTotals := k.GetTotals(h.ctx())
 	msg := h.deposit(10)
 	builder := h.a.TxConfig().NewTxBuilder()
@@ -260,7 +260,7 @@ func TestSinkRequestBindingAndNativeCacheRollback(t *testing.T) {
 		})
 	require.ErrorContains(t, err, "bank balance does not match")
 	require.Equal(t, beforeSender, h.a.Keepers.Cosmos.Bank.GetAllBalances(h.ctx(), h.sender))
-	require.Equal(t, beforeSource, h.a.Keepers.Cosmos.Bank.GetAllBalances(h.ctx(), h.source))
+	require.Equal(t, beforeSource, h.a.Keepers.Cosmos.Bank.GetAllBalances(h.ctx(), h.bystander))
 	require.Equal(t, beforeTotals, k.GetTotals(h.ctx()))
 	require.NoError(t, k.CheckBalance(h.ctx()))
 }
