@@ -4,10 +4,7 @@ package v2_2_0_sink_provisional
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
-	"strings"
 
 	"cosmossdk.io/log"
 	storetypes "cosmossdk.io/store/types"
@@ -18,26 +15,12 @@ import (
 
 	apptypes "pkg.akt.dev/node/v2/app/types"
 	utypes "pkg.akt.dev/node/v2/upgrades/types"
-	sinkkeeper "pkg.akt.dev/node/v2/x/sink/keeper"
 )
 
 const (
 	// UpgradeName is a placeholder until the release that ships x/sink is chosen.
 	UpgradeName = "v2.2.0-sink-provisional"
 )
-
-// PlanInfo is the JSON carried in the upgrade plan's info field. Binaries is
-// the standard cosmovisor download map. ReserveSource is the account that
-// funds the sink launch reserve.
-//
-// It accepts every field util/cli.UpgradeInfo can emit, because the release
-// tooling generates this info and a handler error halts the chain at the
-// upgrade height. TestSinkUpgradePlanInfo keeps the two in step.
-type PlanInfo struct {
-	Binaries      map[string]string `json:"binaries,omitempty"`
-	Configs       map[string]string `json:"configs,omitempty"`
-	ReserveSource string            `json:"reserve_source"`
-}
 
 type upgrade struct {
 	*apptypes.App
@@ -62,40 +45,12 @@ func (up *upgrade) StoreLoader() *storetypes.StoreUpgrades {
 	}
 }
 
-// ParsePlanInfo returns the reserve source named in the plan info. The info
-// must be a single JSON object with no fields other than binaries, configs and
-// reserve_source, so a misspelled key cannot pass silently.
-func ParsePlanInfo(info string) (sdk.AccAddress, error) {
-	decoder := json.NewDecoder(strings.NewReader(info))
-	decoder.DisallowUnknownFields()
-
-	var plan PlanInfo
-	if err := decoder.Decode(&plan); err != nil {
-		return nil, fmt.Errorf("sink upgrade info: %w", err)
-	}
-
-	var extra any
-	if err := decoder.Decode(&extra); err != io.EOF {
-		return nil, fmt.Errorf("sink upgrade info must be one JSON object")
-	}
-
-	address, err := sdk.AccAddressFromBech32(plan.ReserveSource)
-	if err != nil || !sinktypes.ValidReserveSourceLength(address) || address.Equals(sinkkeeper.Address()) {
-		return nil, fmt.Errorf("sink upgrade requires a valid ordinary reserve_source address")
-	}
-
-	return address, nil
-}
-
 func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 	return func(ctx context.Context, plan upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
 		sctx := sdk.UnwrapSDKContext(ctx)
 
-		source, err := ParsePlanInfo(plan.Info)
-		if err != nil {
-			return nil, err
-		}
-
+		// plan.Info is standard cosmovisor info (binaries, configs) and is not
+		// read here.
 		if _, exists := fromVM[sinktypes.ModuleName]; exists {
 			return nil, fmt.Errorf("sink is already present in the pre-upgrade version map")
 		}
@@ -105,7 +60,7 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 		// The sink address is deterministic. Anyone can send it coins or create
 		// an account there before this height, so neither may halt the chain.
 		// Install the module account at that address and move any balance to the
-		// community pool; the reserve then backs the exact bank invariant alone.
+		// community pool, so the module starts with a zero balance.
 		// The upgrade proposal must state this disposition.
 		swept, err := up.Keepers.Akash.Sink.PrepareInstall(cache, up.Keepers.Cosmos.Distr)
 		if err != nil {
@@ -121,10 +76,6 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 		toVM, err := up.MM.RunMigrations(cache, up.Configurator, fromVM)
 		if err != nil {
 			return nil, err
-		}
-
-		if err = up.Keepers.Akash.Sink.FundLaunchReserve(cache, source); err != nil {
-			return nil, fmt.Errorf("sink launch reserve must be fully funded at upgrade: %w", err)
 		}
 
 		if err = up.Keepers.Akash.Sink.CheckBalance(cache); err != nil {

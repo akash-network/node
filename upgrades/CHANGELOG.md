@@ -45,13 +45,13 @@ Add new upgrades after this line based on the template above
 ###### Description
 
 Provisional name for the upgrade that installs x/sink. Replace it with the release version.
-The plan info must name `reserve_source`, the account that funds the 1,000,000 AKT launch reserve.
+The plan info is standard cosmovisor info. The handler does not read it.
 Deposits and refunds stay disabled; governance enables them later.
 Any balance already held at the sink module address moves to the community pool.
 
 - Stores
     - added
-        - `sink`: sink transfer records, settlement state and launch reserve accounting
+        - `sink`: sink transfer records, settlement state and escrow accounting
 
 ##### v2.1.0
 

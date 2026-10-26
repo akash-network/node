@@ -20,8 +20,6 @@ UPGRADE_TO              ?= $(shell $(ROOT_DIR)/script/upgrades.sh upgrade-from-r
 UPGRADE_FROM            := $(shell cat $(ROOT_DIR)/meta.json | jq -r --arg name $(UPGRADE_TO) '.upgrades[$$name].from_version' | tr -d '\n')
 GENESIS_BINARY_VERSION  := $(shell cat $(ROOT_DIR)/meta.json | jq -r --arg name $(UPGRADE_TO) '.upgrades[$$name].from_binary' | tr -d '\n')
 UPGRADE_BINARY_VERSION  ?= local
-# Funds the x/sink launch reserve; tests/upgrade/testnet.json gives it 1B AKT.
-RESERVE_SOURCE          ?= akash1dge0lcc5rqxkw52rgav4q0fyhx7arcufmrkyww
 
 SNAPSHOT_SOURCE         ?= sandbox
 
@@ -70,7 +68,6 @@ test: init
 		-config=$(TEST_CONFIG) \
 		-upgrade-name=$(UPGRADE_TO) \
 		-upgrade-version="$(UPGRADE_BINARY_VERSION)" \
-		-reserve-source=$(RESERVE_SOURCE) \
 		-test-cases=test-cases.json
 
 

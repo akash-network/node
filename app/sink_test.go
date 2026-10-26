@@ -44,7 +44,7 @@ type sinkHarness struct {
 	key       *secp256k1.PrivKey
 	reporters []*secp256k1.PrivKey
 	sender    sdk.AccAddress
-	source    sdk.AccAddress
+	bystander sdk.AccAddress // an ordinary funded account with no sink role
 	recipient [32]byte
 	height    int64
 	now       time.Time
@@ -56,7 +56,7 @@ func newSinkHarness(t *testing.T, change func(*sinktypes.GenesisState)) *sinkHar
 	t.Helper()
 	h := &sinkHarness{key: secp256k1.GenPrivKeyFromSecret([]byte("local sink sender")), now: time.Unix(1_750_000_000, 0).UTC()}
 	h.sender = sdk.AccAddress(h.key.PubKey().Address())
-	h.source = sdk.AccAddress(secp256k1.GenPrivKeyFromSecret([]byte("local reserve source")).PubKey().Address())
+	h.bystander = sdk.AccAddress(secp256k1.GenPrivKeyFromSecret([]byte("local bystander")).PubKey().Address())
 	for i := 0; i < 5; i++ {
 		h.reporters = append(h.reporters, secp256k1.GenPrivKeyFromSecret([]byte(fmt.Sprintf("local reporter %d", i))))
 	}
@@ -75,7 +75,7 @@ func newSinkHarness(t *testing.T, change func(*sinktypes.GenesisState)) *sinkHar
 		cdc.MustUnmarshalJSON(state[authtypes.ModuleName], &auth)
 		accounts, err := authtypes.UnpackAccounts(auth.Accounts)
 		require.NoError(t, err)
-		accounts = append(accounts, authtypes.NewBaseAccountWithAddress(h.sender), authtypes.NewBaseAccountWithAddress(h.source))
+		accounts = append(accounts, authtypes.NewBaseAccountWithAddress(h.sender), authtypes.NewBaseAccountWithAddress(h.bystander))
 		for _, key := range h.reporters {
 			accounts = append(accounts, authtypes.NewBaseAccountWithAddress(sdk.AccAddress(key.PubKey().Address())))
 		}
@@ -84,7 +84,7 @@ func newSinkHarness(t *testing.T, change func(*sinktypes.GenesisState)) *sinkHar
 		cdc.MustUnmarshalJSON(state[banktypes.ModuleName], &bank)
 		for _, b := range []banktypes.Balance{
 			{Address: h.sender.String(), Coins: sdk.NewCoins(sdk.NewInt64Coin("uakt", 2_000_000_000), sdk.NewInt64Coin("other", 100))},
-			{Address: h.source.String(), Coins: sdk.NewCoins(sdk.NewInt64Coin("uakt", int64(sinktypes.LaunchReserve)))},
+			{Address: h.bystander.String(), Coins: sdk.NewCoins(sdk.NewInt64Coin("uakt", 1_000_000_000))},
 		} {
 			bank.Balances = append(bank.Balances, b)
 			bank.Supply = bank.Supply.Add(b.Coins...)
@@ -96,7 +96,6 @@ func newSinkHarness(t *testing.T, change func(*sinktypes.GenesisState)) *sinkHar
 		}
 		state[banktypes.ModuleName] = cdc.MustMarshalJSON(&bank)
 		g := sinktypes.DefaultGenesis()
-		g.LaunchReserveSource = h.source.String()
 		g.Params.Enabled = true
 		g.Params.MinTransfer = 1 // deposits require a minimum
 		for _, key := range h.reporters[:4] {
@@ -178,8 +177,9 @@ func TestSinkSignedDepositAndProof(t *testing.T) {
 	h := newSinkHarness(t, nil)
 	k := h.a.Keepers.Akash.Sink
 	totalSupply := h.a.Keepers.Cosmos.Bank.GetSupply(h.ctx(), "uakt")
-	require.Equal(t, sinktypes.LaunchReserve, k.GetTotals(h.ctx()).LaunchReserve)
-	require.True(t, h.a.Keepers.Cosmos.Bank.GetBalance(h.ctx(), h.source, "uakt").IsZero())
+	// No launch reserve: escrow starts empty and holds only deposits.
+	require.True(t, h.a.Keepers.Cosmos.Bank.GetAllBalances(h.ctx(), sinkkeeper.Address()).IsZero())
+	require.NoError(t, k.CheckBalance(h.ctx()))
 	bz := h.tx(t, "", h.deposit(123456789))
 	// A simulation at height zero cannot create a transfer and never writes state.
 	_, _, _ = h.a.Simulate(bz)
@@ -211,7 +211,7 @@ func TestSinkSignedDepositAndProof(t *testing.T) {
 	depositGas := res.GasUsed
 	// The SDK disallows proof queries at height <= 1. Use the state committed
 	// at height 2, whose app hash belongs in header 3.
-	res = h.deliver(t, "", banktypes.NewMsgSend(h.sender, h.source, sdk.NewCoins(sdk.NewInt64Coin("uakt", 1))))
+	res = h.deliver(t, "", banktypes.NewMsgSend(h.sender, h.bystander, sdk.NewCoins(sdk.NewInt64Coin("uakt", 1))))
 	require.Zero(t, res.Code, res.Log)
 	appHash := bytes.Clone(h.a.CommitMultiStore().LastCommitID().Hash)
 	query, err := h.a.Query(context.Background(), &abci.RequestQuery{Path: "/store/sink/key", Data: sinktypes.TransferKey(1), Height: 2, Prove: true})
@@ -269,11 +269,11 @@ func TestSinkRejectedTransactionsAreAtomic(t *testing.T) {
 		msgs       []sdk.Msg
 	}{
 		{"direct bank deposit", "bad", []sdk.Msg{banktypes.NewMsgSend(h.sender, sinkkeeper.Address(), sdk.NewCoins(sdk.NewInt64Coin("uakt", 10)))}},
-		{"extra message", "", []sdk.Msg{h.deposit(10), banktypes.NewMsgSend(h.sender, h.source, sdk.NewCoins(sdk.NewInt64Coin("uakt", 1)))}},
+		{"extra message", "", []sdk.Msg{h.deposit(10), banktypes.NewMsgSend(h.sender, h.bystander, sdk.NewCoins(sdk.NewInt64Coin("uakt", 1)))}},
 		{"two deposits", "", []sdk.Msg{h.deposit(10), h.deposit(10)}},
 		{"wrong denom", "", []sdk.Msg{banktypes.NewMsgSend(h.sender, sinkkeeper.Address(), sdk.NewCoins(sdk.NewInt64Coin("other", 1)))}},
 		{"mixed denom", "", []sdk.Msg{banktypes.NewMsgSend(h.sender, sinkkeeper.Address(), sdk.NewCoins(sdk.NewInt64Coin("other", 1), sdk.NewInt64Coin("uakt", 1)))}},
-		{"oversize", "", []sdk.Msg{h.deposit(1_000_000_001)}},
+		{"oversize", "", []sdk.Msg{h.deposit(int64(sinktypes.DefaultParams().MaxTransfer) + 1)}}, //nolint:gosec // 1M AKT fits int64
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			before := k.GetTotals(h.ctx())
@@ -283,12 +283,9 @@ func TestSinkRejectedTransactionsAreAtomic(t *testing.T) {
 			require.NoError(t, k.CheckBalance(h.ctx()))
 		})
 	}
-	// Raising the limit permits validation to reach the bank's insufficient-
-	// funds check. Neither the record nor bank state may survive the failure.
-	p := k.GetParams(h.ctx())
-	p.MaxTransfer = 3_000_000_000
-	p.DailyRefundCap = p.MaxTransfer
-	require.NoError(t, k.SetParams(h.ctx(), p))
+	// The sender holds less than the 1M AKT default limit, so validation reaches
+	// the bank's insufficient-funds check. Neither the record nor bank state may
+	// survive the failure.
 	res := h.deliver(t, "", h.deposit(3_000_000_000))
 	require.NotZero(t, res.Code)
 	require.Contains(t, res.Log, "insufficient funds")
@@ -353,11 +350,9 @@ func TestSinkLimitsAndGovernanceVoid(t *testing.T) {
 	ctx = h.ctx()
 	exported := k.ExportGenesis(ctx)
 	require.NoError(t, exported.Validate())
-	require.Empty(t, exported.LaunchReserveSource)
 	require.True(t, exported.Transfers[0].VoidOrdered)
-	require.Error(t, k.FundLaunchReserve(ctx, h.source))
 	// Import into a fresh sink store with the exported bank state. Backing is
-	// already there; no second debit of the earmark account is allowed.
+	// already there.
 	cache, _ := ctx.CacheContext()
 	s := cache.KVStore(h.a.GetKey(sinktypes.StoreKey))
 	it := storetypes.KVStorePrefixIterator(s, nil)
@@ -374,8 +369,12 @@ func TestSinkLimitsAndGovernanceVoid(t *testing.T) {
 	require.NoError(t, k.CheckBalance(cache))
 }
 
-func TestSinkModuleIngressAndReserveFailure(t *testing.T) {
-	h := newSinkHarness(t, func(g *sinktypes.GenesisState) { g.LaunchReserveSource = ""; g.Params.Enabled = false })
+func TestSinkModuleIngressAndEnable(t *testing.T) {
+	h := newSinkHarness(t, func(g *sinktypes.GenesisState) {
+		g.Params.Enabled = false
+		g.Params.Reporters = nil
+		g.Params.ReporterThreshold = 0
+	})
 	k := h.a.Keepers.Akash.Sink
 	ctx := h.ctx()
 	bank := h.a.Keepers.Cosmos.Bank
@@ -384,17 +383,21 @@ func TestSinkModuleIngressAndReserveFailure(t *testing.T) {
 	require.Error(t, bank.SendCoinsFromModuleToModule(ctx, minttypes.ModuleName, sinktypes.ModuleName, coins))
 	require.Error(t, bank.SendCoinsFromModuleToAccount(ctx, minttypes.ModuleName, sinkkeeper.Address(), coins))
 	require.Error(t, bank.SendCoinsFromModuleToAccount(ctx, sinktypes.ModuleName, h.sender, coins))
+	// The sink holds nothing: pending, minted and voided are all zero.
+	require.True(t, bank.GetAllBalances(ctx, sinkkeeper.Address()).IsZero())
+	require.NoError(t, k.CheckBalance(ctx))
 	p := k.GetParams(ctx)
 	p.Enabled = true
-	require.Error(t, k.SetParams(ctx, p))
-	require.Error(t, k.FundLaunchReserve(ctx, h.sender)) // less than 1M AKT
-	require.Zero(t, k.GetTotals(ctx).LaunchReserve)
-	require.NoError(t, k.CheckBalance(ctx))
-	require.NoError(t, k.FundLaunchReserve(ctx, h.source))
-	require.NoError(t, k.CheckBalance(ctx))
+	require.ErrorContains(t, k.SetParams(ctx, p), "reporters must be configured")
+	// Reporters are the only precondition; there is no reserve to fund.
+	for _, key := range h.reporters[:4] {
+		p.Reporters = append(p.Reporters, sdk.AccAddress(key.PubKey().Address()).String())
+	}
+	p.ReporterThreshold = 3
 	require.NoError(t, k.SetParams(ctx, p))
-	require.Error(t, k.FundLaunchReserve(ctx, h.source))
-	require.Zero(t, k.GetTotals(ctx).PendingCount) // funding creates no transfer
+	require.True(t, k.GetParams(ctx).Enabled)
+	require.Zero(t, k.GetTotals(ctx).PendingCount)
+	require.NoError(t, k.CheckBalance(ctx))
 }
 
 func TestSinkIDNeverWraps(t *testing.T) {

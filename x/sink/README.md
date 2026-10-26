@@ -12,8 +12,9 @@ This module holds the keeper, message and query servers, the bank send
 restriction and the ante decorator.
 
 Deposits and refunds are disabled by default and the reporter set is empty.
-Governance enables them after the launch reserve is funded and reporters are
-configured.
+Governance enables them after reporters are configured. There is no launch
+reserve: Solana supply starts at zero, and every SPL AKT is minted from a
+proven transfer.
 
 ## State
 
@@ -59,13 +60,13 @@ the genesis time.
 ## Accounting
 
 The sink module account balance always equals
-`launch_reserve + pending_amount + minted_amount + voided_amount` in `uakt`.
-`refunded_amount` is cumulative and excluded. Deposits, reserve funding and
-refunds check this after each bank transfer, and InitGenesis checks it on import.
+`pending_amount + minted_amount + voided_amount` in `uakt`.
+`refunded_amount` is cumulative and excluded. Deposits and refunds check this
+after each bank transfer, and InitGenesis checks it on import. A fresh install
+holds nothing.
 
-The launch reserve is exactly 1,000,000 AKT. It is funded once, from genesis
-(`launch_reserve_source`) or an upgrade handler, never by a transaction.
-Deposits cannot be enabled until it is funded.
+`Totals` field 2 and `GenesisState` field 3 held the removed launch reserve.
+They stay reserved.
 
 ## Messages
 
@@ -127,7 +128,6 @@ The sink address is a blocked bank address, like other module accounts.
 A send restriction rejects every transfer into or out of it except:
 
 - the exact deposit authorized inside the `MsgSink` handler,
-- the exact reserve funding authorized by `FundLaunchReserve`,
 - the exact refund authorized by `FinalizeRefund`,
 - the sweep of a preexisting balance by `PrepareInstall` before the store is
   initialized.
@@ -161,16 +161,16 @@ are capped at 500. Pass `next_start_after` to continue; 0 means no more.
 
 | Parameter                      | Default         | Notes                                               |
 | ------------------------------ | --------------- | --------------------------------------------------- |
-| `enabled`                      | false           | Requires the reserve and a reporter set             |
-| `max_transfer`                 | 1,000 AKT       | At most `solana_daily_mint_cap`                     |
-| `solana_daily_mint_cap`        | 10,000 AKT      | Must match the Solana program's daily cap           |
+| `enabled`                      | false           | Requires a reporter set and `min_transfer`          |
+| `max_transfer`                 | 1,000,000 AKT   | At most `solana_daily_mint_cap`                     |
+| `solana_daily_mint_cap`        | 10,000,000 AKT  | Must match the Solana program's daily cap           |
 | `max_daily_per_account`        | 20              | Deposits per account per UTC day                    |
 | `max_pending_per_account`      | 3               | Unsettled transfers per account                     |
 | `vault_allowlist`              | empty           | Up to 16 recipients exempt from the curve check     |
 | `reporters`                    | empty           | Up to 32 accounts                                   |
 | `reporter_threshold`           | 0               | More than two thirds of `reporters`                 |
 | `challenge_period_seconds`     | 259,200         | At least 72 hours; 1 s in builds with tag `sinkdev` |
-| `daily_refund_cap`             | 1,000 AKT       | At least `max_transfer`; lowered, at least the largest open transfer |
+| `daily_refund_cap`             | 1,000,000 AKT   | At least `max_transfer`; lowered, at least the largest open transfer |
 | `refunds_enabled`              | false           |                                                     |
 | `min_transfer`                 | 0               | Required while `enabled`; 0 only with deposits off   |
 | `max_daily_amount_per_account` | 0               | 0 means no cap; otherwise at least `min_transfer`   |
@@ -190,13 +190,9 @@ An upgrade that adds this module must:
    moves its whole balance to the community pool and deletes distribution
    withdraw addresses set to the sink address,
 3. run migrations, which call InitGenesis with the default state,
-4. call `FundLaunchReserve` with the reserve source, a 20- or 32-byte account,
-   which fails the upgrade if the source holds less than 1,000,000 liquid AKT.
+4. check that the sink balance matches its totals, which are all zero.
 
-The provisional handler reads the source from the plan info:
-`{"binaries": {...}, "configs": {...}, "reserve_source": "akash1..."}`.
-`util/cli.UpgradeInfo` and `tools/upgrade-info --reserve-source` emit that
-schema, and the e2e upgrade test passes `RESERVE_SOURCE`. Plan info without the
-field halts the chain at the upgrade height.
+The provisional handler does not read the plan info. It carries only the
+standard cosmovisor `binaries` and `configs`.
 
 Deposits stay disabled until governance enables them.

@@ -8,7 +8,6 @@ import (
 	"math"
 	"strconv"
 
-	sdkmath "cosmossdk.io/math"
 	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -74,9 +73,6 @@ func (k Keeper) SetParams(ctx sdk.Context, p types.Params) error {
 	if err := p.Validate(); err != nil {
 		return err
 	}
-	if p.Enabled && k.GetTotals(ctx).LaunchReserve != types.LaunchReserve {
-		return fmt.Errorf("launch reserve must be funded before enabling deposits")
-	}
 	old := k.GetParams(ctx)
 	// A transfer accepted under a larger max_transfer must stay refundable.
 	if p.DailyRefundCap < old.DailyRefundCap {
@@ -131,10 +127,9 @@ func (k Keeper) GetTransfer(ctx sdk.Context, id uint64) (types.TransferState, bo
 }
 
 // Capabilities are private to this package. Ante authenticates transaction shape;
-// only Sink grants bank ingress, and reserve/refund authority stays separate.
+// only Sink grants bank ingress, and refund authority stays separate.
 type sinkRequestContextKey struct{}
 type depositContextKey struct{}
-type reserveContextKey struct{}
 type sinkRequest struct {
 	sender   string
 	destType uint32
@@ -166,12 +161,6 @@ func (k Keeper) SendRestriction(goCtx context.Context, from, to sdk.AccAddress, 
 		return to, nil
 	}
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	if source, ok := ctx.Value(reserveContextKey{}).(sdk.AccAddress); ok {
-		if !from.Equals(source) || !coins.Equal(reserveCoins()) || k.GetTotals(ctx).LaunchReserve != 0 {
-			return nil, sdkerrors.ErrUnauthorized.Wrap("invalid reserve funding")
-		}
-		return to, nil
-	}
 	d, ok := ctx.Value(depositContextKey{}).(depositAuthorization)
 	if !ok || !from.Equals(d.sender) || !coins.Equal(d.amount) {
 		return nil, sdkerrors.ErrUnauthorized.Wrap("sink deposits require MsgSink")
@@ -248,7 +237,7 @@ func (k Keeper) Sink(ctx sdk.Context, msg *types.MsgSink) (uint64, error) {
 		return 0, err
 	}
 	if totals.LastTransferId == math.MaxUint64 || totals.PendingCount == math.MaxUint64 ||
-		deposited > math.MaxUint64-types.LaunchReserve || amount > math.MaxUint64-types.LaunchReserve-deposited {
+		amount > math.MaxUint64-deposited {
 		return 0, sdkerrors.ErrInvalidRequest.Wrap("sink counter overflow")
 	}
 	t := types.Transfer{ID: totals.LastTransferId + 1, Sender: [20]byte(sender), Recipient: recipient, Amount: amount, Height: uint64(ctx.BlockHeight())} //nolint:gosec // height checked positive above
@@ -295,39 +284,6 @@ func (k Keeper) Sink(ctx sdk.Context, msg *types.MsgSink) (uint64, error) {
 	return t.ID, nil
 }
 
-func reserveCoins() sdk.Coins {
-	return sdk.NewCoins(sdk.NewCoin(types.Denom, sdkmath.NewIntFromUint64(types.LaunchReserve)))
-}
-
-// FundLaunchReserve is for native genesis/upgrade code only; it is not exposed
-// as a transaction. Insufficient backing fails atomically, never enables deposits.
-func (k Keeper) FundLaunchReserve(ctx sdk.Context, source sdk.AccAddress) error {
-	if !types.ValidReserveSourceLength(source) || source.Equals(sinkAddress) {
-		return fmt.Errorf("invalid reserve source")
-	}
-	if _, module := k.accounts.GetAccount(ctx, source).(sdk.ModuleAccountI); module {
-		return fmt.Errorf("reserve source must not be a module")
-	}
-	totals := k.GetTotals(ctx)
-	if totals.LaunchReserve != 0 {
-		return fmt.Errorf("launch reserve already funded")
-	}
-	cache, write := ctx.CacheContext()
-	cache = cache.WithValue(reserveContextKey{}, source)
-	if err := k.bank.SendCoinsFromAccountToModule(cache, source, types.ModuleName, reserveCoins()); err != nil {
-		return err
-	}
-	totals.LaunchReserve = types.LaunchReserve
-	k.setTotals(cache, totals)
-	// A later send restriction could redirect the funding; never record a
-	// reserve the module does not hold.
-	if err := k.CheckBalance(cache); err != nil {
-		return err
-	}
-	write()
-	return nil
-}
-
 // RequestVoid commits a governance order for proof on Solana. It does not
 // establish that Solana executed the void and cannot release any escrow.
 func (k Keeper) RequestVoid(ctx sdk.Context, authority string, id uint64) error {
@@ -357,7 +313,7 @@ func (k Keeper) CheckBalance(ctx sdk.Context) error {
 	}
 	expected := amountCoins(escrow)
 	if !k.bank.GetAllBalances(ctx, Address()).Equal(expected) {
-		return fmt.Errorf("sink bank balance does not match reserve plus pending, minted and voided escrow")
+		return fmt.Errorf("sink bank balance does not match pending, minted and voided escrow")
 	}
 	return nil
 }
@@ -398,12 +354,6 @@ func (k Keeper) InitGenesis(ctx sdk.Context, g types.GenesisState) error {
 	}
 	if err := k.CheckBalance(cache); err != nil {
 		return err
-	}
-	if g.LaunchReserveSource != "" {
-		source, _ := sdk.AccAddressFromBech32(g.LaunchReserveSource)
-		if err := k.FundLaunchReserve(cache, source); err != nil {
-			return err
-		}
 	}
 	// Genesis validates the complete configuration and must preserve an
 	// exported reporter epoch, rather than treating import as a rotation.

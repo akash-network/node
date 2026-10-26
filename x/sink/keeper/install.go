@@ -30,8 +30,8 @@ type sweepAuthorization struct {
 // coins to the address or create an account there before the upgrade height,
 // so neither may fail the upgrade. A non-module account becomes the sink
 // module account with the same account number. Its whole balance then moves
-// to the community pool, keeping reserve + pending + minted + voided equal to
-// the sink balance. Withdraw addresses set to the sink address, which only
+// to the community pool, keeping pending + minted + voided equal to the sink
+// balance. Withdraw addresses set to the sink address, which only
 // becomes a blocked address with this module, are cleared so rewards go to
 // the delegators themselves. It returns the moved coins.
 func (k Keeper) PrepareInstall(ctx sdk.Context, pool Distribution) (sdk.Coins, error) {

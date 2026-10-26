@@ -209,7 +209,6 @@ func TestSinkRefundExactOnceAndBankRollback(t *testing.T) {
 	require.Zero(t, res.Code, res.Log)
 	require.Equal(t, before.Add(sdk.NewInt64Coin("uakt", 60)), h.a.Keepers.Cosmos.Bank.GetBalance(h.ctx(), h.sender, "uakt"))
 	totals := k.GetTotals(h.ctx())
-	require.Equal(t, types.LaunchReserve, totals.LaunchReserve)
 	require.Equal(t, uint64(60), totals.RefundedAmount)
 	require.Equal(t, uint64(60), totals.RefundedToday)
 	require.Zero(t, totals.PendingCount)
