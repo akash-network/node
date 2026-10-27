@@ -92,8 +92,8 @@ func (h *sinkHarness) checkSettlementExport(t *testing.T) {
 	require.NoError(t, g.Validate())
 	cache, _ := h.ctx().CacheContext()
 	s := cache.KVStore(h.a.GetKey(types.StoreKey))
-	before := storeEntries(s, []byte("open/"))
-	queue := storeEntries(s, []byte("refundq/"))
+	before := storeEntries(s, sinkkeeper.OpenTransfersKey.Bytes())
+	queue := storeEntries(s, sinkkeeper.RefundQueueKey.Bytes())
 	it := storetypes.KVStorePrefixIterator(s, nil)
 	var keys [][]byte
 	for ; it.Valid(); it.Next() {
@@ -107,8 +107,8 @@ func (h *sinkHarness) checkSettlementExport(t *testing.T) {
 	require.Equal(t, g, k.ExportGenesis(cache))
 	require.NoError(t, k.CheckBalance(cache))
 	// InitGenesis rebuilds the derived open index and refund queue exactly.
-	require.Equal(t, before, storeEntries(s, []byte("open/")))
-	require.Equal(t, queue, storeEntries(s, []byte("refundq/")))
+	require.Equal(t, before, storeEntries(s, sinkkeeper.OpenTransfersKey.Bytes()))
+	require.Equal(t, queue, storeEntries(s, sinkkeeper.RefundQueueKey.Bytes()))
 	require.Equal(t, open, h.checkOpenIndex(t, cache))
 }
 

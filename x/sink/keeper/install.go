@@ -35,7 +35,7 @@ type sweepAuthorization struct {
 // becomes a blocked address with this module, are cleared so rewards go to
 // the delegators themselves. It returns the moved coins.
 func (k Keeper) PrepareInstall(ctx sdk.Context, pool Distribution) (sdk.Coins, error) {
-	if ctx.KVStore(k.key).Has(paramsKey) {
+	if k.initialized(ctx) {
 		return nil, fmt.Errorf("sink already initialized")
 	}
 	addr := Address()

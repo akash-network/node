@@ -235,10 +235,10 @@ func TestSinkSignedDepositAndProof(t *testing.T) {
 	require.Equal(t, entry.Record, sinkState.Transfer.Record)
 	proof, err := commitment.ConvertProofs(query.ProofOps)
 	require.NoError(t, err)
-	require.NoError(t, proof.VerifyMembership(commitment.GetSDKSpecs(), commitment.NewMerkleRoot(appHash), commitment.NewMerklePath([]byte("sink"), []byte("transfer/1")), entry.Record))
+	require.NoError(t, proof.VerifyMembership(commitment.GetSDKSpecs(), commitment.NewMerkleRoot(appHash), commitment.NewMerklePath([]byte("sink"), sinktypes.TransferKey(1)), entry.Record))
 	bad := bytes.Clone(entry.Record)
 	bad[61] ^= 1
-	require.Error(t, proof.VerifyMembership(commitment.GetSDKSpecs(), commitment.NewMerkleRoot(appHash), commitment.NewMerklePath([]byte("sink"), []byte("transfer/1")), bad))
+	require.Error(t, proof.VerifyMembership(commitment.GetSDKSpecs(), commitment.NewMerkleRoot(appHash), commitment.NewMerklePath([]byte("sink"), sinktypes.TransferKey(1)), bad))
 	proofBytes, err := proof.Marshal()
 	require.NoError(t, err)
 	t.Logf("real Akash app proof: %d bytes; transfer: %d bytes; tx gas: %d", len(proofBytes), len(entry.Record), depositGas)

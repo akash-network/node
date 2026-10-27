@@ -18,21 +18,25 @@ proven transfer.
 
 ## State
 
-Store key `sink`. Keys are ASCII unless noted.
+Store key `sink`. State is kept in `collections` with two-byte prefixes, as in
+x/bme. Integer keys are fixed-width big-endian, so iteration follows numeric
+order.
 
-| Key                         | Value                                              |
-| --------------------------- | -------------------------------------------------- |
-| `params`                    | `Params`                                           |
-| `totals`                    | `Totals`                                           |
-| `transfer/{id}`             | 77-byte transfer record, never rewritten           |
-| `void/{id}`                 | 9-byte governance void order                       |
-| `settlement/{id}`           | `Settlement`                                       |
-| `account/{20-byte address}` | `AccountUsage`                                     |
-| `open/{8-byte BE id}`       | `0x01`, index of transfers not minted or refunded  |
-| `refundq/{8-byte BE end}{8-byte BE id}` | `0x01`, refund queue by challenge end, then ID |
+| Prefix      | Key                                    | Value                                            |
+| ----------- | -------------------------------------- | ------------------------------------------------ |
+| `0x01 0x00` | none                                   | `Params`                                         |
+| `0x01 0x01` | none                                   | `Totals`                                         |
+| `0x02 0x00` | transfer ID, 8-byte BE                 | 77-byte transfer record, never rewritten         |
+| `0x02 0x01` | transfer ID, 8-byte BE                 | 9-byte governance void order                     |
+| `0x03 0x00` | transfer ID, 8-byte BE                 | `Settlement`                                     |
+| `0x03 0x01` | transfer ID, 8-byte BE                 | empty; index of transfers not minted or refunded |
+| `0x03 0x02` | challenge end, then ID, 8-byte BE each | empty; refund queue                              |
+| `0x04 0x00` | 20-byte sender address                 | `AccountUsage`                                   |
 
-`{id}` is the transfer ID in decimal without leading zeros. IDs start at 1 and
-are never reused.
+IDs start at 1 and are never reused. Solana proves the transfer and void keys,
+so their prefixes and encoding are fixed and published in the SDK as
+`TransferKey` and `VoidKey`. For ID 1 the transfer key is
+`02 00 00 00 00 00 00 00 00 01`.
 
 The transfer record is what the Solana verifier checks, so its layout is fixed:
 
@@ -48,11 +52,12 @@ The transfer record is what the Solana verifier checks, so its layout is fixed:
 A void order is version `1` followed by the ID as a little-endian uint64.
 Writing one never changes the transfer record or releases funds.
 
-Proofs use the standard ABCI query `/store/sink/key` with key `transfer/{id}`.
-The merkle path is `["sink", "transfer/{id}"]`.
+Proofs use the standard ABCI query `/store/sink/key` with the transfer key.
+The merkle path is `["sink", TransferKey(id)]`, or `["sink", VoidKey(id)]` for a
+void order.
 
-The `open/` index is derived. A deposit adds an entry; the first mint
-confirmation or refund removes it. The `refundq/` index holds voided transfers
+The open index is derived. A deposit adds an entry; the first mint
+confirmation or refund removes it. The refund queue holds voided transfers
 without a hold. Both are rebuilt by InitGenesis from settlements and omitted by
 ExportGenesis. InitGenesis also rejects refund or account-usage days later than
 the genesis time.

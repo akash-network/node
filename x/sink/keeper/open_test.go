@@ -16,12 +16,18 @@ import (
 	types "pkg.akt.dev/go/node/sink/v1"
 )
 
-func openTestKeeper(t *testing.T) (Keeper, sdk.Context) {
+func openTestStore(t *testing.T) (Keeper, sdk.Context, *storetypes.KVStoreKey) {
 	t.Helper()
 	key := storetypes.NewKVStoreKey(types.StoreKey)
 	ctx := testutil.DefaultContext(key, storetypes.NewTransientStoreKey("transient_sink"))
 	cdc := codec.NewProtoCodec(codectypes.NewInterfaceRegistry())
-	return NewKeeper(cdc, key, nil, nil, "authority"), ctx
+	return NewKeeper(cdc, key, nil, nil, "authority"), ctx, key
+}
+
+func openTestKeeper(t *testing.T) (Keeper, sdk.Context) {
+	t.Helper()
+	k, ctx, _ := openTestStore(t)
+	return k, ctx
 }
 
 // putTransfer writes a record and settlement directly, indexing it as open
@@ -30,10 +36,10 @@ func putTransfer(t *testing.T, k Keeper, ctx sdk.Context, id uint64, status type
 	t.Helper()
 	record, err := types.Transfer{ID: id, Recipient: [32]byte{1}, Amount: 1, Height: 1}.Marshal()
 	require.NoError(t, err)
-	ctx.KVStore(k.key).Set(types.TransferKey(id), record)
-	k.setSettlement(ctx, id, types.Settlement{Status: status, Round: 1})
+	require.NoError(t, k.transfers.Set(ctx, id, record))
+	require.NoError(t, k.settlements.Set(ctx, id, types.Settlement{Status: status, Round: 1}))
 	if status != types.Status_STATUS_MINTED && status != types.Status_STATUS_REFUNDED {
-		ctx.KVStore(k.key).Set(openKey(id), openValue)
+		require.NoError(t, k.open.Set(ctx, id))
 	}
 }
 
@@ -163,19 +169,22 @@ func TestOpenTransfersAtMaximumID(t *testing.T) {
 func TestOpenTransfersRejectsInconsistentIndex(t *testing.T) {
 	for _, tc := range []struct {
 		name  string
-		setup func(Keeper, sdk.Context)
+		setup func(Keeper, sdk.Context, *storetypes.KVStoreKey)
 	}{
-		{"missing record", func(k Keeper, ctx sdk.Context) { ctx.KVStore(k.key).Set(openKey(9), openValue) }},
-		{"terminal settlement", func(k Keeper, ctx sdk.Context) {
+		{"missing record", func(k Keeper, ctx sdk.Context, _ *storetypes.KVStoreKey) { require.NoError(t, k.open.Set(ctx, 9)) }},
+		{"terminal settlement", func(k Keeper, ctx sdk.Context, _ *storetypes.KVStoreKey) {
 			putTransfer(t, k, ctx, 9, types.Status_STATUS_MINTED)
-			ctx.KVStore(k.key).Set(openKey(9), openValue)
+			require.NoError(t, k.open.Set(ctx, 9))
 		}},
-		{"malformed key", func(k Keeper, ctx sdk.Context) { ctx.KVStore(k.key).Set([]byte("open/9"), openValue) }},
+		{"malformed key", func(_ Keeper, ctx sdk.Context, key *storetypes.KVStoreKey) {
+			// An ID shorter than eight bytes cannot be decoded.
+			ctx.KVStore(key).Set(append(append([]byte{}, OpenTransfersKey.Bytes()...), 0, 9), []byte{})
+		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			k, ctx := openTestKeeper(t)
+			k, ctx, key := openTestStore(t)
 			putTransfer(t, k, ctx, 1, types.Status_STATUS_PENDING)
-			tc.setup(k, ctx)
+			tc.setup(k, ctx, key)
 			_, err := QueryServer{Keeper: k}.OpenTransfers(ctx, &types.QueryOpenTransfersRequest{})
 			require.Equal(t, codes.Internal, status.Code(err))
 		})

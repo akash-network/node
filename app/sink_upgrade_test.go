@@ -235,5 +235,5 @@ func TestSinkUpgradeRejectsPresentModule(t *testing.T) {
 	plan := upgradetypes.Plan{Name: sinkupgrade.UpgradeName, Height: ctx.BlockHeight(), Info: cosmovisorInfo(t)}
 	_, err = up.UpgradeHandler()(ctx, plan, h.a.MM.GetVersionMap())
 	require.ErrorContains(t, err, "already present")
-	require.False(t, ctx.KVStore(h.a.GetKey(sinktypes.StoreKey)).Has([]byte("params")))
+	require.False(t, ctx.KVStore(h.a.GetKey(sinktypes.StoreKey)).Has(sinkkeeper.ParamsKey.Bytes()))
 }
