@@ -27,8 +27,9 @@ A Solana program verifies x/sink state with ICS23 membership proofs of this
 store. Changing any of the following breaks minting and needs a coordinated
 change on the Solana side:
 
-- Store name `sink`. Transfer records at `transfer/{id}` and governance void
-  orders at `void/{id}`, IDs in decimal without leading zeros.
+- Store name `sink`. Transfer records at `0x02 0x00` and governance void orders
+  at `0x02 0x01`, each followed by the ID as an 8-byte big-endian integer
+  (`TransferKey` and `VoidKey` in the SDK).
 - The 77-byte transfer record: version `1` (1 byte), ID (u64 LE), sender
   address bytes (20), Solana recipient (32), amount in uakt (u64 LE), creation
   height (u64 LE). Records are written once and never rewritten.
@@ -63,7 +64,7 @@ This branch fixes:
 | Finding | Fix |
 | ------- | --- |
 | M-01 | Superseded 2026-10-26: the handler no longer reads plan info (A2) |
-| M-02 | Refunds are paid oldest first from a derived `refundq/` queue |
+| M-02 | Refunds are paid oldest first from a derived refund queue |
 | M-03 | Holds stay for governance; `open-transfers --held-only` lists them for one restart proposal. Runbook: guardian pause, then one proposal that removes the reporter and restarts its holds |
 | M-04 | Governance can void a Minted transfer under a conflict hold, after a void order; the amount must fit the refund cap |
 | L-01 | `PrepareInstall` deletes withdraw addresses set to the sink address |

@@ -31,7 +31,9 @@ func (k Keeper) GuardianPause(ctx sdk.Context, msg *types.MsgGuardianPause) erro
 	if msg.Refunds {
 		p.RefundsEnabled = false
 	}
-	ctx.KVStore(k.key).Set(paramsKey, k.cdc.MustMarshal(&p))
+	if err := k.params.Set(ctx, p); err != nil {
+		return err
+	}
 	ctx.EventManager().EmitEvent(sdk.NewEvent("sink_guardian_pause",
 		sdk.NewAttribute("guardian", msg.Guardian),
 		sdk.NewAttribute("deposits", strconv.FormatBool(msg.Deposits)),

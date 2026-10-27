@@ -23,22 +23,14 @@ func amountCoins(amount uint64) sdk.Coins {
 	return sdk.NewCoins(sdk.NewCoin(types.Denom, sdkmath.NewIntFromUint64(amount)))
 }
 
-func (k Keeper) setSettlement(ctx sdk.Context, id uint64, s types.Settlement) {
-	ctx.KVStore(k.key).Set(types.SettlementKey(id), k.cdc.MustMarshal(&s))
-}
-
 // settlement loads a transfer and its settlement. Unlike GetTransfer it skips
 // the void-order lookup, which settlement code reads only where it needs it.
 func (k Keeper) settlement(ctx sdk.Context, id uint64) (types.Transfer, types.Settlement, error) {
-	store := ctx.KVStore(k.key)
-	record := store.Get(types.TransferKey(id))
-	if record == nil {
+	record, ok := get(ctx, k.transfers, id, nil)
+	if !ok {
 		return types.Transfer{}, types.Settlement{}, sdkerrors.ErrNotFound.Wrap("sink transfer")
 	}
-	s := types.Settlement{Round: 1}
-	if value := store.Get(types.SettlementKey(id)); value != nil {
-		k.cdc.MustUnmarshal(value, &s)
-	}
+	s, _ := get(ctx, k.settlements, id, types.Settlement{Round: 1})
 	t, err := types.DecodeTransfer(record)
 	return t, s, err
 }
@@ -96,8 +88,12 @@ func (k Keeper) transition(ctx sdk.Context, totals *types.Totals, t types.Transf
 		}
 		u.PendingCount--
 		totals.PendingCount--
-		ctx.KVStore(k.key).Set(accountKey(t.Sender[:]), k.cdc.MustMarshal(&u))
-		ctx.KVStore(k.key).Delete(openKey(t.ID))
+		if err := k.usage.Set(ctx, t.Sender[:], u); err != nil {
+			return err
+		}
+		if err := k.open.Remove(ctx, t.ID); err != nil {
+			return err
+		}
 	}
 	s.Status = next
 	if next != types.Status_STATUS_VOIDED {
@@ -120,8 +116,12 @@ func (k Keeper) reopenMinted(ctx sdk.Context, totals *types.Totals, t types.Tran
 	totals.VoidedAmount += t.Amount
 	totals.PendingCount++
 	u.PendingCount++
-	ctx.KVStore(k.key).Set(accountKey(t.Sender[:]), k.cdc.MustMarshal(&u))
-	ctx.KVStore(k.key).Set(openKey(t.ID), openValue)
+	if err := k.usage.Set(ctx, t.Sender[:], u); err != nil {
+		return err
+	}
+	if err := k.open.Set(ctx, t.ID); err != nil {
+		return err
+	}
 	s.Status = types.Status_STATUS_VOIDED
 	return nil
 }
@@ -195,9 +195,13 @@ func (k Keeper) ReportOutcome(ctx sdk.Context, msg *types.MsgReportOutcome) erro
 		}
 	}
 	if totals != loaded {
-		k.setTotals(cache, totals)
+		if err := k.setTotals(cache, totals); err != nil {
+			return err
+		}
 	}
-	k.putSettlement(cache, t.ID, before, s)
+	if err := k.putSettlement(cache, t.ID, before, s); err != nil {
+		return err
+	}
 	settlementEvent(cache, "sink_report", t.ID, sdk.NewAttribute("reporter", msg.Reporter), sdk.NewAttribute("outcome", msg.Observation.Outcome.String()))
 	write()
 	return nil
@@ -229,7 +233,9 @@ func (k Keeper) VetoVoid(ctx sdk.Context, msg *types.MsgVetoVoid) error {
 		s.Hold = types.Hold_HOLD_VETO
 	}
 	s.VetoBy, s.VetoReason = msg.Signer, msg.Reason
-	k.putSettlement(ctx, t.ID, before, s)
+	if err := k.putSettlement(ctx, t.ID, before, s); err != nil {
+		return err
+	}
 	settlementEvent(ctx, "sink_veto", t.ID, sdk.NewAttribute("signer", msg.Signer), sdk.NewAttribute("reason", msg.Reason))
 	return nil
 }
@@ -289,7 +295,7 @@ func (k Keeper) ResolveTransfer(ctx sdk.Context, msg *types.MsgResolveTransfer) 
 	// seal the record on Solana with void_transfer during the challenge window,
 	// so a governance-confirmed void cannot also be minted. Put MsgRequestVoid
 	// in the same proposal.
-	if target == types.Status_STATUS_VOIDED && !cache.KVStore(k.key).Has(types.VoidKey(msg.Id)) {
+	if target == types.Status_STATUS_VOIDED && !has(cache, k.voids, msg.Id) {
 		return fmt.Errorf("confirming a void requires a void order; include MsgRequestVoid in the proposal")
 	}
 	if s.Round == math.MaxUint64 {
@@ -319,9 +325,13 @@ func (k Keeper) ResolveTransfer(ctx sdk.Context, msg *types.MsgResolveTransfer) 
 		}
 	}
 	if totals != loaded {
-		k.setTotals(cache, totals)
+		if err := k.setTotals(cache, totals); err != nil {
+			return err
+		}
 	}
-	k.putSettlement(cache, t.ID, before, s)
+	if err := k.putSettlement(cache, t.ID, before, s); err != nil {
+		return err
+	}
 	settlementEvent(cache, "sink_resolved", t.ID, sdk.NewAttribute("decision", msg.Decision.String()), sdk.NewAttribute("reason", msg.Reason))
 	write()
 	return nil
@@ -383,8 +393,12 @@ func (k Keeper) FinalizeRefund(ctx sdk.Context, id uint64) error {
 	if err := k.transition(cache, &totals, t, &s, types.Status_STATUS_REFUNDED); err != nil {
 		return err
 	}
-	k.setTotals(cache, totals)
-	k.putSettlement(cache, t.ID, before, s)
+	if err := k.setTotals(cache, totals); err != nil {
+		return err
+	}
+	if err := k.putSettlement(cache, t.ID, before, s); err != nil {
+		return err
+	}
 	recipient := sdk.AccAddress(t.Sender[:])
 	balance := k.bank.GetAllBalances(cache, recipient)
 	send := cache.WithValue(refundContextKey{}, refundAuthorization{recipient: recipient, amount: t.Amount})

@@ -24,7 +24,7 @@ import (
 // refundQueue returns the IDs in the derived refund queue, head first.
 func (h *sinkHarness) refundQueue(t *testing.T) []uint64 {
 	t.Helper()
-	prefix := []byte("refundq/")
+	prefix := sinkkeeper.RefundQueueKey.Bytes()
 	it := storetypes.KVStorePrefixIterator(h.ctx().KVStore(h.a.GetKey(types.StoreKey)), prefix)
 	defer func() { require.NoError(t, it.Close()) }()
 	ids := []uint64{}

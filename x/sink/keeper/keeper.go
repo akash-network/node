@@ -3,13 +3,15 @@ package keeper
 import (
 	"bytes"
 	"context"
-	"encoding/binary"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
 
+	"cosmossdk.io/collections"
 	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec"
+	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
@@ -31,41 +33,93 @@ type BankKeeper interface {
 
 type Keeper struct {
 	cdc       codec.BinaryCodec
-	key       storetypes.StoreKey
 	accounts  AccountKeeper
 	bank      BankKeeper
 	authority string
+
+	schema      collections.Schema
+	params      collections.Item[types.Params]
+	totals      collections.Item[types.Totals]
+	transfers   collections.Map[uint64, []byte]
+	voids       collections.Map[uint64, []byte]
+	settlements collections.Map[uint64, types.Settlement]
+	usage       collections.Map[sdk.AccAddress, types.AccountUsage]
+	// open indexes transfers that are neither minted nor refunded.
+	open collections.KeySet[uint64]
+	// refunds indexes refundable transfers by challenge end, then ID.
+	refunds collections.KeySet[collections.Pair[uint64, uint64]]
 }
 
-func NewKeeper(cdc codec.BinaryCodec, key storetypes.StoreKey, accounts AccountKeeper, bank BankKeeper, authority string) Keeper {
-	return Keeper{cdc: cdc, key: key, accounts: accounts, bank: bank, authority: authority}
+func NewKeeper(cdc codec.BinaryCodec, key *storetypes.KVStoreKey, accounts AccountKeeper, bank BankKeeper, authority string) Keeper {
+	sb := collections.NewSchemaBuilder(runtime.NewKVStoreService(key))
+	k := Keeper{
+		cdc:         cdc,
+		accounts:    accounts,
+		bank:        bank,
+		authority:   authority,
+		params:      collections.NewItem(sb, ParamsKey, "params", codec.CollValue[types.Params](cdc)),
+		totals:      collections.NewItem(sb, TotalsKey, "totals", codec.CollValue[types.Totals](cdc)),
+		transfers:   collections.NewMap(sb, TransfersKey, "transfers", collections.Uint64Key, collections.BytesValue),
+		voids:       collections.NewMap(sb, VoidsKey, "voids", collections.Uint64Key, collections.BytesValue),
+		settlements: collections.NewMap(sb, SettlementsKey, "settlements", collections.Uint64Key, codec.CollValue[types.Settlement](cdc)),
+		usage:       collections.NewMap(sb, AccountsKey, "accounts", sdk.AccAddressKey, codec.CollValue[types.AccountUsage](cdc)),
+		open:        collections.NewKeySet(sb, OpenTransfersKey, "open_transfers", collections.Uint64Key),
+		refunds: collections.NewKeySet(sb, RefundQueueKey, "refund_queue",
+			collections.PairKeyCodec(collections.Uint64Key, collections.Uint64Key)),
+	}
+	schema, err := sb.Build()
+	if err != nil {
+		panic(err)
+	}
+	k.schema = schema
+	return k
 }
 
-var (
-	paramsKey  = []byte("params")
-	totalsKey  = []byte("totals")
-	openPrefix = []byte("open/")
-	openValue  = []byte{1}
-)
+func (k Keeper) Schema() collections.Schema { return k.schema }
 
 // sinkAddress is computed once: SendRestriction checks it on every bank send.
 var sinkAddress = authtypes.NewModuleAddress(types.ModuleName)
 
-func Address() sdk.AccAddress                 { return bytes.Clone(sinkAddress) }
-func accountKey(sender sdk.AccAddress) []byte { return append([]byte("account/"), sender...) }
+func Address() sdk.AccAddress { return bytes.Clone(sinkAddress) }
 
-// openKey indexes a transfer that is neither minted nor refunded. The
-// big-endian ID makes store order ascending ID order. The index is derived:
-// InitGenesis rebuilds it from settlements and export omits it.
-func openKey(id uint64) []byte { return binary.BigEndian.AppendUint64(bytes.Clone(openPrefix), id) }
+// get returns the stored value, fallback when there is none, and panics on
+// unreadable state, as unmarshalling raw values did before collections.
+func get[K, V any](ctx context.Context, m collections.Map[K, V], key K, fallback V) (V, bool) {
+	v, err := m.Get(ctx, key)
+	if errors.Is(err, collections.ErrNotFound) {
+		return fallback, false
+	}
+	if err != nil {
+		panic(err)
+	}
+	return v, true
+}
+
+func has[K, V any](ctx context.Context, m collections.Map[K, V], key K) bool {
+	ok, err := m.Has(ctx, key)
+	if err != nil {
+		panic(err)
+	}
+	return ok
+}
+
+// initialized reports whether genesis stored the params.
+func (k Keeper) initialized(ctx context.Context) bool {
+	ok, err := k.params.Has(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return ok
+}
 
 func (k Keeper) GetParams(ctx sdk.Context) types.Params {
-	b := ctx.KVStore(k.key).Get(paramsKey)
-	if b == nil {
+	p, err := k.params.Get(ctx)
+	if errors.Is(err, collections.ErrNotFound) {
 		return types.DefaultParams()
 	}
-	var p types.Params
-	k.cdc.MustUnmarshal(b, &p)
+	if err != nil {
+		panic(err)
+	}
 	return p
 }
 
@@ -90,40 +144,37 @@ func (k Keeper) SetParams(ctx sdk.Context, p types.Params) error {
 			return fmt.Errorf("reporter epoch exhausted")
 		}
 		totals.ReporterEpoch++
-		k.setTotals(ctx, totals)
+		if err := k.setTotals(ctx, totals); err != nil {
+			return err
+		}
 	}
-	ctx.KVStore(k.key).Set(paramsKey, k.cdc.MustMarshal(&p))
-	return nil
+	return k.params.Set(ctx, p)
 }
 
 func (k Keeper) GetTotals(ctx sdk.Context) types.Totals {
-	var t types.Totals
-	if b := ctx.KVStore(k.key).Get(totalsKey); b != nil {
-		k.cdc.MustUnmarshal(b, &t)
+	t, err := k.totals.Get(ctx)
+	if errors.Is(err, collections.ErrNotFound) {
+		return types.Totals{}
+	}
+	if err != nil {
+		panic(err)
 	}
 	return t
 }
 
-func (k Keeper) setTotals(ctx sdk.Context, totals types.Totals) {
-	ctx.KVStore(k.key).Set(totalsKey, k.cdc.MustMarshal(&totals))
+func (k Keeper) setTotals(ctx sdk.Context, totals types.Totals) error {
+	return k.totals.Set(ctx, totals)
 }
 
 func (k Keeper) GetAccountUsage(ctx sdk.Context, sender sdk.AccAddress) types.AccountUsage {
-	u := types.AccountUsage{Sender: sender}
-	if b := ctx.KVStore(k.key).Get(accountKey(sender)); b != nil {
-		k.cdc.MustUnmarshal(b, &u)
-	}
+	u, _ := get(ctx, k.usage, sender, types.AccountUsage{Sender: sender})
 	return u
 }
 
 func (k Keeper) GetTransfer(ctx sdk.Context, id uint64) (types.TransferState, bool) {
-	s := ctx.KVStore(k.key)
-	b := s.Get(types.TransferKey(id))
-	settlement := types.Settlement{Round: 1}
-	if value := s.Get(types.SettlementKey(id)); value != nil {
-		k.cdc.MustUnmarshal(value, &settlement)
-	}
-	return types.TransferState{Record: b, VoidOrdered: s.Has(types.VoidKey(id)), Settlement: settlement}, b != nil
+	record, ok := get(ctx, k.transfers, id, nil)
+	settlement, _ := get(ctx, k.settlements, id, types.Settlement{Round: 1})
+	return types.TransferState{Record: record, VoidOrdered: has(ctx, k.voids, id), Settlement: settlement}, ok
 }
 
 // Capabilities are private to this package. Ante authenticates transaction shape;
@@ -152,7 +203,7 @@ func (k Keeper) SendRestriction(goCtx context.Context, from, to sdk.AccAddress, 
 		}
 		// Only PrepareInstall sets this, and only before the store holds any escrow.
 		if sweep, ok := ctx.Value(sweepContextKey{}).(sweepAuthorization); ok && to.Equals(sweep.recipient) && coins.Equal(sweep.amount) &&
-			!ctx.KVStore(k.key).Has(paramsKey) {
+			!k.initialized(ctx) {
 			return to, nil
 		}
 		return nil, sdkerrors.ErrUnauthorized.Wrap("sink escrow cannot be sent")
@@ -245,8 +296,7 @@ func (k Keeper) Sink(ctx sdk.Context, msg *types.MsgSink) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	s := ctx.KVStore(k.key)
-	if s.Has(types.TransferKey(t.ID)) {
+	if has(ctx, k.transfers, t.ID) {
 		return 0, sdkerrors.ErrLogic.Wrap("sink ID already exists")
 	}
 	cache, write := ctx.CacheContext()
@@ -255,9 +305,12 @@ func (k Keeper) Sink(ctx sdk.Context, msg *types.MsgSink) (uint64, error) {
 	if err := k.bank.SendCoinsFromAccountToModule(cache, sender, types.ModuleName, coins); err != nil {
 		return 0, err
 	}
-	s = cache.KVStore(k.key)
-	s.Set(types.TransferKey(t.ID), record)
-	s.Set(openKey(t.ID), openValue)
+	if err := k.transfers.Set(cache, t.ID, record); err != nil {
+		return 0, err
+	}
+	if err := k.open.Set(cache, t.ID); err != nil {
+		return 0, err
+	}
 	u.DailyCount++
 	u.PendingCount++
 	// Only an uncapped account could reach uint64; a saturated total exceeds any cap.
@@ -266,11 +319,15 @@ func (k Keeper) Sink(ctx sdk.Context, msg *types.MsgSink) (uint64, error) {
 	} else {
 		u.DailyAmount += amount
 	}
-	s.Set(accountKey(sender), k.cdc.MustMarshal(&u))
+	if err := k.usage.Set(cache, sender, u); err != nil {
+		return 0, err
+	}
 	totals.LastTransferId = t.ID
 	totals.PendingAmount += amount
 	totals.PendingCount++
-	k.setTotals(cache, totals)
+	if err := k.setTotals(cache, totals); err != nil {
+		return 0, err
+	}
 	// Later bank restrictions may reject or redirect the transfer. No record
 	// may survive unless its exact escrow backing arrived in the module.
 	if err := k.CheckBalance(cache); err != nil {
@@ -300,7 +357,9 @@ func (k Keeper) RequestVoid(ctx sdk.Context, authority string, id uint64) error 
 	if s.Status == types.Status_STATUS_REFUNDED || (s.Status == types.Status_STATUS_MINTED && s.Hold != types.Hold_HOLD_CONFLICT) {
 		return sdkerrors.ErrInvalidRequest.Wrap("sink transfer already closed")
 	}
-	ctx.KVStore(k.key).Set(types.VoidKey(id), types.VoidValue(id))
+	if err := k.voids.Set(ctx, id, types.VoidValue(id)); err != nil {
+		return err
+	}
 	ctx.EventManager().EmitEvent(sdk.NewEvent("sink_void_order", sdk.NewAttribute("transfer_id", strconv.FormatUint(id, 10))))
 	return nil
 }
@@ -322,7 +381,7 @@ func (k Keeper) InitGenesis(ctx sdk.Context, g types.GenesisState) error {
 	if err := g.Validate(); err != nil {
 		return err
 	}
-	if ctx.KVStore(k.key).Has(paramsKey) {
+	if k.initialized(ctx) {
 		return fmt.Errorf("sink already initialized")
 	}
 	// Day counters from the future would stop deposits or refunds until then.
@@ -337,51 +396,69 @@ func (k Keeper) InitGenesis(ctx sdk.Context, g types.GenesisState) error {
 	}
 	cache, write := ctx.CacheContext()
 	k.accounts.GetModuleAccount(cache, types.ModuleName)
-	k.setTotals(cache, g.Totals)
+	if err := k.setTotals(cache, g.Totals); err != nil {
+		return err
+	}
 	for _, e := range g.Transfers {
 		t, _ := types.DecodeTransfer(e.Record) // Validate checked every record.
-		cache.KVStore(k.key).Set(types.TransferKey(t.ID), e.Record)
-		k.putSettlement(cache, t.ID, types.Settlement{}, e.Settlement)
+		if err := k.transfers.Set(cache, t.ID, e.Record); err != nil {
+			return err
+		}
+		if err := k.putSettlement(cache, t.ID, types.Settlement{}, e.Settlement); err != nil {
+			return err
+		}
 		if !e.Settlement.Terminal() {
-			cache.KVStore(k.key).Set(openKey(t.ID), openValue)
+			if err := k.open.Set(cache, t.ID); err != nil {
+				return err
+			}
 		}
 		if e.VoidOrdered {
-			cache.KVStore(k.key).Set(types.VoidKey(t.ID), types.VoidValue(t.ID))
+			if err := k.voids.Set(cache, t.ID, types.VoidValue(t.ID)); err != nil {
+				return err
+			}
 		}
 	}
 	for _, a := range g.Accounts {
-		cache.KVStore(k.key).Set(accountKey(a.Sender), k.cdc.MustMarshal(&a))
+		if err := k.usage.Set(cache, a.Sender, a); err != nil {
+			return err
+		}
 	}
 	if err := k.CheckBalance(cache); err != nil {
 		return err
 	}
 	// Genesis validates the complete configuration and must preserve an
 	// exported reporter epoch, rather than treating import as a rotation.
-	cache.KVStore(k.key).Set(paramsKey, k.cdc.MustMarshal(&g.Params))
+	if err := k.params.Set(cache, g.Params); err != nil {
+		return err
+	}
 	write()
 	return nil
 }
 
 func (k Keeper) ExportGenesis(ctx sdk.Context) types.GenesisState {
 	g := types.GenesisState{Params: k.GetParams(ctx), Totals: k.GetTotals(ctx)}
-	s := ctx.KVStore(k.key)
-	it := storetypes.KVStorePrefixIterator(s, []byte("transfer/"))
-	for ; it.Valid(); it.Next() {
-		t, err := types.DecodeTransfer(it.Value())
+	err := k.transfers.Walk(ctx, nil, func(id uint64, record []byte) (bool, error) {
+		t, err := types.DecodeTransfer(record)
 		if err != nil {
-			panic(err)
+			return true, err
 		}
-		entry, _ := k.GetTransfer(ctx, t.ID)
-		entry.Record = bytes.Clone(it.Value())
+		if t.ID != id {
+			return true, fmt.Errorf("sink transfer %d is stored under ID %d", t.ID, id)
+		}
+		entry, _ := k.GetTransfer(ctx, id)
+		entry.Record = bytes.Clone(record)
 		g.Transfers = append(g.Transfers, entry)
+		return false, nil
+	})
+	if err != nil {
+		panic(err)
 	}
-	_ = it.Close()
-	it = storetypes.KVStorePrefixIterator(s, []byte("account/"))
-	defer func() { _ = it.Close() }()
-	for ; it.Valid(); it.Next() {
-		var a types.AccountUsage
-		k.cdc.MustUnmarshal(it.Value(), &a)
-		g.Accounts = append(g.Accounts, a)
+	err = k.usage.Walk(ctx, nil, func(_ sdk.AccAddress, u types.AccountUsage) (bool, error) {
+		g.Accounts = append(g.Accounts, u)
+		return false, nil
+	})
+	if err != nil {
+		panic(err)
 	}
 	return g
 }
@@ -403,14 +480,17 @@ func (k Keeper) OpenTransfers(ctx sdk.Context, startAfter uint64, limit uint32) 
 	if startAfter == math.MaxUint64 {
 		return nil, 0, nil
 	}
-	it := ctx.KVStore(k.key).Iterator(openKey(startAfter+1), storetypes.PrefixEndBytes(openPrefix))
+	it, err := k.open.Iterate(ctx, new(collections.Range[uint64]).StartInclusive(startAfter+1))
+	if err != nil {
+		return nil, 0, err
+	}
 	defer func() { _ = it.Close() }()
 	var last uint64
 	for ; it.Valid(); it.Next() {
-		if len(it.Key()) != len(openPrefix)+8 {
-			return nil, 0, fmt.Errorf("malformed open sink transfer key")
+		id, err := it.Key()
+		if err != nil {
+			return nil, 0, fmt.Errorf("malformed open sink transfer key: %w", err)
 		}
-		id := binary.BigEndian.Uint64(it.Key()[len(openPrefix):])
 		if uint32(len(transfers)) == limit { //nolint:gosec // len(transfers) <= limit
 			return transfers, last, nil
 		}

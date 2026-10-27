@@ -1,26 +1,22 @@
 package keeper
 
 import (
-	"bytes"
-	"encoding/binary"
+	"context"
 	"fmt"
 
-	storetypes "cosmossdk.io/store/types"
+	"cosmossdk.io/collections"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	types "pkg.akt.dev/go/node/sink/v1"
 )
 
-// refundQueuePrefix indexes refundable transfers: voided with no hold. Keys
+// The refund queue indexes refundable transfers: voided with no hold. Keys
 // order by challenge end, then ID, so the head is the oldest matured refund.
 // Only the head may be paid, which stops a small refund from starving a
-// cap-sized one at the start of a day. Like open/, the index is derived:
-// InitGenesis rebuilds it and export omits it.
-var refundQueuePrefix = []byte("refundq/")
-
-func refundQueueKey(challengeEnd int64, id uint64) []byte {
-	key := binary.BigEndian.AppendUint64(bytes.Clone(refundQueuePrefix), uint64(challengeEnd)) //nolint:gosec // positive for a void
-	return binary.BigEndian.AppendUint64(key, id)
+// cap-sized one at the start of a day. Like the open index, the queue is
+// derived: InitGenesis rebuilds it and export omits it.
+func refundKey(s types.Settlement, id uint64) collections.Pair[uint64, uint64] {
+	return collections.Join(uint64(s.ChallengeEnd), id) //nolint:gosec // positive for a queued void
 }
 
 func queued(s types.Settlement) bool {
@@ -29,41 +25,52 @@ func queued(s types.Settlement) bool {
 
 // putSettlement stores a settlement and keeps the refund queue in step.
 // before is the settlement as loaded, after the one to store.
-func (k Keeper) putSettlement(ctx sdk.Context, id uint64, before, after types.Settlement) {
-	store := ctx.KVStore(k.key)
+func (k Keeper) putSettlement(ctx context.Context, id uint64, before, after types.Settlement) error {
 	if queued(before) {
-		store.Delete(refundQueueKey(before.ChallengeEnd, id))
+		if err := k.refunds.Remove(ctx, refundKey(before, id)); err != nil {
+			return err
+		}
 	}
 	if queued(after) {
-		store.Set(refundQueueKey(after.ChallengeEnd, id), openValue)
+		if err := k.refunds.Set(ctx, refundKey(after, id)); err != nil {
+			return err
+		}
 	}
-	k.setSettlement(ctx, id, after)
+	return k.settlements.Set(ctx, id, after)
 }
 
 // refundQueueHead returns the transfer that must be refunded next.
-func (k Keeper) refundQueueHead(ctx sdk.Context) (uint64, bool, error) {
-	it := storetypes.KVStorePrefixIterator(ctx.KVStore(k.key), refundQueuePrefix)
+func (k Keeper) refundQueueHead(ctx context.Context) (uint64, bool, error) {
+	it, err := k.refunds.Iterate(ctx, nil)
+	if err != nil {
+		return 0, false, err
+	}
 	defer func() { _ = it.Close() }()
 	if !it.Valid() {
 		return 0, false, nil
 	}
-	if len(it.Key()) != len(refundQueuePrefix)+16 {
-		return 0, false, fmt.Errorf("malformed sink refund queue key")
+	key, err := it.Key()
+	if err != nil {
+		return 0, false, fmt.Errorf("malformed sink refund queue key: %w", err)
 	}
-	return binary.BigEndian.Uint64(it.Key()[len(refundQueuePrefix)+8:]), true, nil
+	return key.K2(), true, nil
 }
 
 // largestOpenAmount is the largest transfer that is neither minted nor
 // refunded, so a lowered refund cap never strands an open transfer.
 func (k Keeper) largestOpenAmount(ctx sdk.Context) (uint64, error) {
-	it := storetypes.KVStorePrefixIterator(ctx.KVStore(k.key), openPrefix)
+	it, err := k.open.Iterate(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
 	defer func() { _ = it.Close() }()
 	var largest uint64
 	for ; it.Valid(); it.Next() {
-		if len(it.Key()) != len(openPrefix)+8 {
-			return 0, fmt.Errorf("malformed open sink transfer key")
+		id, err := it.Key()
+		if err != nil {
+			return 0, fmt.Errorf("malformed open sink transfer key: %w", err)
 		}
-		t, _, err := k.settlement(ctx, binary.BigEndian.Uint64(it.Key()[len(openPrefix):]))
+		t, _, err := k.settlement(ctx, id)
 		if err != nil {
 			return 0, err
 		}
