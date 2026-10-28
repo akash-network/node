@@ -1,0 +1,1248 @@
+{
+  "address": "FfFAPUKqjf68ggj1HvpyzMHFDRnT2cFAdZYYQb7mK9i5",
+  "instructions": [
+    {
+      "name": "append_proof",
+      "discriminator": [174, 126, 237, 6, 177, 246, 130, 168],
+      "accounts": [
+        {
+          "name": "submitter",
+          "signer": true,
+          "relations": ["proof_buffer"]
+        },
+        {
+          "name": "proof_buffer",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "offset",
+          "type": "u32"
+        },
+        {
+          "name": "chunk",
+          "type": "bytes"
+        }
+      ]
+    },
+    {
+      "name": "close_proof_buffer",
+      "discriminator": [130, 150, 6, 35, 193, 34, 243, 87],
+      "accounts": [
+        {
+          "name": "submitter",
+          "writable": true,
+          "signer": true,
+          "relations": ["proof_buffer"]
+        },
+        {
+          "name": "proof_buffer",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "configure_bridge",
+      "discriminator": [62, 212, 237, 254, 204, 203, 160, 208],
+      "accounts": [
+        {
+          "name": "admin",
+          "accounts": [
+            {
+              "name": "program",
+              "address": "FfFAPUKqjf68ggj1HvpyzMHFDRnT2cFAdZYYQb7mK9i5"
+            },
+            {
+              "name": "program_data"
+            },
+            {
+              "name": "authority",
+              "writable": true,
+              "signer": true
+            }
+          ]
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [99, 111, 110, 102, 105, 103]
+              }
+            ]
+          }
+        },
+        {
+          "name": "bridge",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [98, 114, 105, 100, 103, 101]
+              }
+            ]
+          }
+        },
+        {
+          "name": "light_client_program"
+        },
+        {
+          "name": "client_state"
+        },
+        {
+          "name": "latest_consensus"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "chain_id",
+          "type": "string"
+        },
+        {
+          "name": "policy",
+          "type": {
+            "defined": {
+              "name": "MintPolicy"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "create_proof_buffer",
+      "discriminator": [42, 36, 226, 19, 141, 70, 66, 141],
+      "accounts": [
+        {
+          "name": "submitter",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "proof_buffer",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [112, 114, 111, 111, 102]
+              },
+              {
+                "kind": "account",
+                "path": "submitter"
+              },
+              {
+                "kind": "arg",
+                "path": "nonce"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "nonce",
+          "type": "u64"
+        },
+        {
+          "name": "expected_len",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "guardian_pause",
+      "discriminator": [184, 93, 27, 13, 127, 100, 198, 238],
+      "accounts": [
+        {
+          "name": "guardian",
+          "signer": true
+        },
+        {
+          "name": "pause_guardian",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [103, 117, 97, 114, 100, 105, 97, 110]
+              }
+            ]
+          }
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [99, 111, 110, 102, 105, 103]
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize",
+      "discriminator": [175, 175, 109, 31, 13, 152, 155, 237],
+      "accounts": [
+        {
+          "name": "program",
+          "address": "FfFAPUKqjf68ggj1HvpyzMHFDRnT2cFAdZYYQb7mK9i5"
+        },
+        {
+          "name": "program_data"
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [99, 111, 110, 102, 105, 103]
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [109, 105, 110, 116]
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109, 105, 110, 116, 95, 97, 117, 116, 104, 111, 114, 105, 116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "mint_transfer",
+      "discriminator": [229, 169, 199, 50, 95, 117, 44, 245],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [99, 111, 110, 102, 105, 103]
+              }
+            ]
+          }
+        },
+        {
+          "name": "bridge",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [98, 114, 105, 100, 103, 101]
+              }
+            ]
+          }
+        },
+        {
+          "name": "proof_buffer"
+        },
+        {
+          "name": "status",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [116, 114, 97, 110, 115, 102, 101, 114]
+              },
+              {
+                "kind": "arg",
+                "path": "record.id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "light_client_program"
+        },
+        {
+          "name": "client_state"
+        },
+        {
+          "name": "latest_consensus"
+        },
+        {
+          "name": "proof_consensus"
+        },
+        {
+          "name": "mint",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [109, 105, 110, 116]
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109, 105, 110, 116, 95, 97, 117, 116, 104, 111, 114, 105, 116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "recipient"
+        },
+        {
+          "name": "recipient_token_account",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "record",
+          "type": {
+            "defined": {
+              "name": "TransferRecord"
+            }
+          }
+        },
+        {
+          "name": "proof_height",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "repin_light_client",
+      "discriminator": [33, 154, 83, 141, 208, 155, 113, 122],
+      "accounts": [
+        {
+          "name": "admin",
+          "accounts": [
+            {
+              "name": "program",
+              "address": "FfFAPUKqjf68ggj1HvpyzMHFDRnT2cFAdZYYQb7mK9i5"
+            },
+            {
+              "name": "program_data"
+            },
+            {
+              "name": "authority",
+              "writable": true,
+              "signer": true
+            }
+          ]
+        },
+        {
+          "name": "bridge",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [98, 114, 105, 100, 103, 101]
+              }
+            ]
+          }
+        },
+        {
+          "name": "light_client_program"
+        },
+        {
+          "name": "client_state"
+        },
+        {
+          "name": "latest_consensus"
+        }
+      ],
+      "args": [
+        {
+          "name": "chain_id",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "set_bridge_enabled",
+      "discriminator": [177, 240, 21, 76, 138, 104, 176, 29],
+      "accounts": [
+        {
+          "name": "admin",
+          "accounts": [
+            {
+              "name": "program",
+              "address": "FfFAPUKqjf68ggj1HvpyzMHFDRnT2cFAdZYYQb7mK9i5"
+            },
+            {
+              "name": "program_data"
+            },
+            {
+              "name": "authority",
+              "writable": true,
+              "signer": true
+            }
+          ]
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [99, 111, 110, 102, 105, 103]
+              }
+            ]
+          }
+        },
+        {
+          "name": "bridge",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [98, 114, 105, 100, 103, 101]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "enabled",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "set_mint_policy",
+      "discriminator": [12, 208, 252, 52, 166, 250, 137, 169],
+      "accounts": [
+        {
+          "name": "admin",
+          "accounts": [
+            {
+              "name": "program",
+              "address": "FfFAPUKqjf68ggj1HvpyzMHFDRnT2cFAdZYYQb7mK9i5"
+            },
+            {
+              "name": "program_data"
+            },
+            {
+              "name": "authority",
+              "writable": true,
+              "signer": true
+            }
+          ]
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [99, 111, 110, 102, 105, 103]
+              }
+            ]
+          }
+        },
+        {
+          "name": "bridge",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [98, 114, 105, 100, 103, 101]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "policy",
+          "type": {
+            "defined": {
+              "name": "MintPolicy"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "set_pause_guardian",
+      "discriminator": [192, 82, 193, 216, 26, 22, 10, 117],
+      "accounts": [
+        {
+          "name": "admin",
+          "accounts": [
+            {
+              "name": "program",
+              "address": "FfFAPUKqjf68ggj1HvpyzMHFDRnT2cFAdZYYQb7mK9i5"
+            },
+            {
+              "name": "program_data"
+            },
+            {
+              "name": "authority",
+              "writable": true,
+              "signer": true
+            }
+          ]
+        },
+        {
+          "name": "pause_guardian",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [103, 117, 97, 114, 100, 105, 97, 110]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "guardian",
+          "type": {
+            "option": "pubkey"
+          }
+        }
+      ]
+    },
+    {
+      "name": "set_token_metadata",
+      "discriminator": [218, 126, 122, 193, 220, 149, 103, 39],
+      "accounts": [
+        {
+          "name": "admin",
+          "accounts": [
+            {
+              "name": "program",
+              "address": "FfFAPUKqjf68ggj1HvpyzMHFDRnT2cFAdZYYQb7mK9i5"
+            },
+            {
+              "name": "program_data"
+            },
+            {
+              "name": "authority",
+              "writable": true,
+              "signer": true
+            }
+          ]
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [99, 111, 110, 102, 105, 103]
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [109, 105, 110, 116]
+              }
+            ]
+          },
+          "relations": ["config"]
+        },
+        {
+          "name": "mint_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109, 105, 110, 116, 95, 97, 117, 116, 104, 111, 114, 105, 116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "metadata",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [109, 101, 116, 97, 100, 97, 116, 97]
+              },
+              {
+                "kind": "account",
+                "path": "metadata_program"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "metadata_program"
+            }
+          }
+        },
+        {
+          "name": "metadata_program",
+          "address": "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "uri",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "void_transfer",
+      "discriminator": [242, 219, 72, 159, 81, 185, 100, 23],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "bridge",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [98, 114, 105, 100, 103, 101]
+              }
+            ]
+          }
+        },
+        {
+          "name": "proof_buffer"
+        },
+        {
+          "name": "status",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [116, 114, 97, 110, 115, 102, 101, 114]
+              },
+              {
+                "kind": "arg",
+                "path": "id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "light_client_program"
+        },
+        {
+          "name": "client_state"
+        },
+        {
+          "name": "latest_consensus"
+        },
+        {
+          "name": "proof_consensus"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "id",
+          "type": "u64"
+        },
+        {
+          "name": "proof_height",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "BridgeConfig",
+      "discriminator": [40, 206, 51, 233, 246, 40, 178, 85]
+    },
+    {
+      "name": "LaunchConfig",
+      "discriminator": [18, 161, 9, 224, 102, 145, 29, 94]
+    },
+    {
+      "name": "PauseGuardian",
+      "discriminator": [198, 150, 21, 87, 129, 78, 135, 183]
+    },
+    {
+      "name": "ProofBuffer",
+      "discriminator": [71, 133, 225, 94, 9, 130, 40, 161]
+    },
+    {
+      "name": "TransferStatus",
+      "discriminator": [32, 200, 30, 253, 33, 153, 127, 45]
+    }
+  ],
+  "events": [
+    {
+      "name": "BridgeConfigured",
+      "discriminator": [123, 128, 67, 78, 101, 146, 43, 25]
+    },
+    {
+      "name": "BridgeEnabledSet",
+      "discriminator": [184, 148, 37, 83, 66, 237, 7, 118]
+    },
+    {
+      "name": "GuardianPaused",
+      "discriminator": [170, 43, 221, 225, 225, 137, 249, 184]
+    },
+    {
+      "name": "LaunchInitialized",
+      "discriminator": [60, 143, 196, 55, 214, 166, 10, 63]
+    },
+    {
+      "name": "LightClientRepinned",
+      "discriminator": [150, 163, 24, 40, 214, 71, 171, 186]
+    },
+    {
+      "name": "MintPolicySet",
+      "discriminator": [194, 195, 143, 171, 251, 203, 243, 211]
+    },
+    {
+      "name": "PauseGuardianSet",
+      "discriminator": [65, 50, 111, 132, 193, 5, 19, 69]
+    },
+    {
+      "name": "TokenMetadataSet",
+      "discriminator": [203, 73, 184, 127, 183, 146, 2, 247]
+    },
+    {
+      "name": "TransferResolved",
+      "discriminator": [205, 27, 228, 215, 90, 3, 236, 176]
+    }
+  ],
+  "types": [
+    {
+      "name": "BridgeConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "light_client_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "chain_id",
+            "type": "string"
+          },
+          {
+            "name": "policy",
+            "type": {
+              "defined": {
+                "name": "MintPolicy"
+              }
+            }
+          },
+          {
+            "name": "mint_day",
+            "type": "u64"
+          },
+          {
+            "name": "minted_today",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BridgeConfigured",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "light_client_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "chain_id",
+            "type": "string"
+          },
+          {
+            "name": "policy",
+            "type": {
+              "defined": {
+                "name": "MintPolicy"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "BridgeEnabledSet",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "enabled",
+            "type": "bool"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GuardianPaused",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "guardian",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LaunchConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "version",
+            "type": "u8"
+          },
+          {
+            "name": "initializer",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "bridge_enabled",
+            "type": "bool"
+          },
+          {
+            "name": "initialized_at_slot",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "mint_authority_bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LaunchInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "initializer",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LightClientRepinned",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "previous_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "program",
+            "type": "pubkey"
+          },
+          {
+            "name": "previous_chain_id",
+            "type": "string"
+          },
+          {
+            "name": "chain_id",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MintPolicy",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "per_transfer_max",
+            "type": "u64"
+          },
+          {
+            "name": "daily_mint_cap",
+            "type": "u64"
+          },
+          {
+            "name": "vaults",
+            "type": {
+              "vec": "pubkey"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "MintPolicySet",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "previous",
+            "type": {
+              "defined": {
+                "name": "MintPolicy"
+              }
+            }
+          },
+          {
+            "name": "policy",
+            "type": {
+              "defined": {
+                "name": "MintPolicy"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "PauseGuardian",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "guardian",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PauseGuardianSet",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "previous",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "guardian",
+            "type": {
+              "option": "pubkey"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProofBuffer",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "submitter",
+            "type": "pubkey"
+          },
+          {
+            "name": "nonce",
+            "type": "u64"
+          },
+          {
+            "name": "expected_len",
+            "type": "u32"
+          },
+          {
+            "name": "data",
+            "type": "bytes"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TokenMetadataSet",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "metadata",
+            "type": "pubkey"
+          },
+          {
+            "name": "uri",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TransferOutcome",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Minted",
+            "fields": [
+              {
+                "name": "amount",
+                "type": "u64"
+              },
+              {
+                "name": "recipient",
+                "type": "pubkey"
+              }
+            ]
+          },
+          {
+            "name": "Voided",
+            "fields": [
+              {
+                "name": "reason",
+                "type": {
+                  "defined": {
+                    "name": "VoidReason"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "TransferRecord",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "version",
+            "type": "u8"
+          },
+          {
+            "name": "id",
+            "type": "u64"
+          },
+          {
+            "name": "sender",
+            "type": {
+              "array": ["u8", 20]
+            }
+          },
+          {
+            "name": "recipient",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "height",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TransferResolved",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "u64"
+          },
+          {
+            "name": "proof_height",
+            "type": "u64"
+          },
+          {
+            "name": "outcome",
+            "type": {
+              "defined": {
+                "name": "TransferOutcome"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "TransferStatus",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "u64"
+          },
+          {
+            "name": "proof_height",
+            "type": "u64"
+          },
+          {
+            "name": "resolved_at_slot",
+            "type": "u64"
+          },
+          {
+            "name": "outcome",
+            "type": {
+              "defined": {
+                "name": "TransferOutcome"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "VoidReason",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "InvalidRecipient"
+          },
+          {
+            "name": "Governance"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,173 @@
+--- a/ibc-solana/programs/ics07-tendermint/src/helpers.rs
++++ b/ibc-solana/programs/ics07-tendermint/src/helpers.rs
+@@ -51,3 +51,35 @@
+ 
+     Ok(())
+ }
++
++/// Local AKT extension: the `RELAYER_ROLE` check for header and misbehaviour
++/// relaying. It makes the checks of `access_manager::require_role`: the
++/// submitter signs, the instruction is not invoked by CPI and the submitter
++/// holds `RELAYER_ROLE` in the access manager. The role check also passes for
++/// any submitter while the access manager lists this program's ID as a
++/// `RELAYER_ROLE` member, the open relaying marker. `prune_consensus_state`
++/// keeps the member-only check.
++pub fn require_relayer(
++    access_manager_account: &AccountInfo,
++    submitter: &AccountInfo,
++    instructions_sysvar: &AccountInfo,
++) -> Result<()> {
++    use access_manager::{state::AccessManager, AccessManagerError};
++    use solana_ibc_types::roles::RELAYER_ROLE;
++
++    require!(submitter.is_signer, AccessManagerError::SignerRequired);
++
++    solana_ibc_types::reject_cpi(instructions_sysvar, &crate::ID)
++        .map_err(|_| error!(AccessManagerError::CpiNotAllowed))?;
++
++    let data = access_manager_account.try_borrow_data()?;
++    let manager = AccessManager::try_deserialize(&mut &data[..])?;
++
++    require!(
++        manager.has_role(RELAYER_ROLE, submitter.key)
++            || manager.has_role(RELAYER_ROLE, &crate::ID),
++        AccessManagerError::Unauthorized
++    );
++
++    Ok(())
++}
+--- a/ibc-solana/programs/ics07-tendermint/src/instructions/assemble_and_submit_misbehaviour.rs
++++ b/ibc-solana/programs/ics07-tendermint/src/instructions/assemble_and_submit_misbehaviour.rs
+@@ -71,12 +71,10 @@
+     _trusted_height_1: u64,
+     _trusted_height_2: u64,
+ ) -> Result<()> {
+-    access_manager::require_role(
++    crate::helpers::require_relayer(
+         &ctx.accounts.access_manager,
+-        solana_ibc_types::roles::RELAYER_ROLE,
+         &ctx.accounts.submitter,
+         &ctx.accounts.instructions_sysvar,
+-        &crate::ID,
+     )?;
+ 
+     require!(
+--- a/ibc-solana/programs/ics07-tendermint/src/instructions/assemble_and_update_client.rs
++++ b/ibc-solana/programs/ics07-tendermint/src/instructions/assemble_and_update_client.rs
+@@ -84,12 +84,10 @@
+     chunk_count: u8,
+     trusted_height: u64,
+ ) -> Result<UpdateResult> {
+-    access_manager::require_role(
++    crate::helpers::require_relayer(
+         &ctx.accounts.access_manager,
+-        solana_ibc_types::roles::RELAYER_ROLE,
+         &ctx.accounts.submitter,
+         &ctx.accounts.instructions_sysvar,
+-        &crate::ID,
+     )?;
+ 
+     require!(
+--- a/ibc-solana/programs/ics07-tendermint/src/instructions/pre_verify_signatures.rs
++++ b/ibc-solana/programs/ics07-tendermint/src/instructions/pre_verify_signatures.rs
+@@ -56,12 +56,10 @@
+     ctx: Context<'_, '_, '_, 'info, PreVerifySignature<'info>>,
+     signature: SignatureData,
+ ) -> Result<()> {
+-    access_manager::require_role(
++    crate::helpers::require_relayer(
+         &ctx.accounts.access_manager,
+-        solana_ibc_types::roles::RELAYER_ROLE,
+         &ctx.accounts.submitter,
+         &ctx.accounts.instructions_sysvar,
+-        &crate::ID,
+     )?;
+ 
+     let expected_hash =
+--- a/ibc-solana/programs/ics07-tendermint/src/instructions/prune_consensus_state.rs
++++ b/ibc-solana/programs/ics07-tendermint/src/instructions/prune_consensus_state.rs
+@@ -52,6 +52,13 @@
+         &ctx.accounts.instructions_sysvar,
+         &crate::ID,
+     )?;
++    // Local AKT open relaying patch: the marker entry is not a member, even
++    // when signed with the program keypair.
++    require_keys_neq!(
++        ctx.accounts.submitter.key(),
++        crate::ID,
++        access_manager::AccessManagerError::Unauthorized
++    );
+ 
+     let client_state = &ctx.accounts.client_state;
+     require!(
+--- a/ibc-solana/programs/ics07-tendermint/src/instructions/signature_batch.rs
++++ b/ibc-solana/programs/ics07-tendermint/src/instructions/signature_batch.rs
+@@ -11,7 +11,7 @@
+     pub signature_batch: Account<'info, SignatureBatch>,
+     #[account(seeds = [AppState::SEED], bump)]
+     pub app_state: Account<'info, AppState>,
+-    /// CHECK: program-owned access-manager PDA, checked by require_role.
++    /// CHECK: program-owned access-manager PDA, checked by require_relayer.
+     #[account(seeds = [access_manager::state::AccessManager::SEED], bump,
+         seeds::program = app_state.am_state.access_manager)]
+     pub access_manager: AccountInfo<'info>,
+@@ -27,12 +27,10 @@
+     ctx: Context<InitializeSignatureBatch>,
+     session: [u8; 32],
+ ) -> Result<()> {
+-    access_manager::require_role(
++    crate::helpers::require_relayer(
+         &ctx.accounts.access_manager,
+-        solana_ibc_types::roles::RELAYER_ROLE,
+         &ctx.accounts.submitter,
+         &ctx.accounts.instructions_sysvar,
+-        &crate::ID,
+     )?;
+     let batch = &mut ctx.accounts.signature_batch;
+     batch.version = SIGNATURE_BATCH_VERSION;
+@@ -64,12 +62,10 @@
+     ctx: Context<PreVerifySignatureBatch>,
+     signature: SignatureData,
+ ) -> Result<()> {
+-    access_manager::require_role(
++    crate::helpers::require_relayer(
+         &ctx.accounts.access_manager,
+-        solana_ibc_types::roles::RELAYER_ROLE,
+         &ctx.accounts.submitter,
+         &ctx.accounts.instructions_sysvar,
+-        &crate::ID,
+     )?;
+     require!(
+         ctx.accounts.signature_batch.to_account_info().data_len()
+--- a/ibc-solana/programs/ics07-tendermint/src/instructions/upload_header_chunk.rs
++++ b/ibc-solana/programs/ics07-tendermint/src/instructions/upload_header_chunk.rs
+@@ -67,12 +67,10 @@
+     ctx: Context<UploadHeaderChunk>,
+     params: UploadChunkParams,
+ ) -> Result<()> {
+-    access_manager::require_role(
++    crate::helpers::require_relayer(
+         &ctx.accounts.access_manager,
+-        solana_ibc_types::roles::RELAYER_ROLE,
+         &ctx.accounts.submitter,
+         &ctx.accounts.instructions_sysvar,
+-        &crate::ID,
+     )?;
+ 
+     require!(
+--- a/ibc-solana/programs/ics07-tendermint/src/instructions/upload_misbehaviour_chunk.rs
++++ b/ibc-solana/programs/ics07-tendermint/src/instructions/upload_misbehaviour_chunk.rs
+@@ -66,12 +66,10 @@
+     ctx: Context<UploadMisbehaviourChunk>,
+     params: UploadMisbehaviourChunkParams,
+ ) -> Result<()> {
+-    access_manager::require_role(
++    crate::helpers::require_relayer(
+         &ctx.accounts.access_manager,
+-        solana_ibc_types::roles::RELAYER_ROLE,
+         &ctx.accounts.submitter,
+         &ctx.accounts.instructions_sysvar,
+-        &crate::ID,
+     )?;
+ 
+     require!(

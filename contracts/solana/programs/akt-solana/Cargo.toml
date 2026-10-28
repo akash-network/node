@@ -1,0 +1,33 @@
+[package]
+name = "akt-solana"
+version = "0.1.0"
+description = "AKT on Solana: zero-supply genesis, then mints only for Akash x/sink records verified by an ICS07 light client"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "akt_solana"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+anchor-debug = []
+custom-heap = []
+custom-panic = []
+
+
+[dependencies]
+anchor-lang = { version = "=0.32.1", features = ["init-if-needed"] }
+anchor-spl = { version = "=0.32.1", features = ["metadata"] }
+solana-curve25519 = "=2.3.5"
+# The syscalls feature provides get_processed_sibling_instruction.
+solana-instruction = { version = "=2.3.0", features = ["syscalls"] }
+ics07-tendermint-interface = { path = "ics07-tendermint-interface" }
+
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }

@@ -1,0 +1,9 @@
+[package]
+name = "ics07-tendermint-interface"
+version = "0.1.0"
+description = "CPI and account types of the pinned ICS07 Tendermint client, generated from idls/ics07_tendermint.json"
+edition = "2021"
+publish = false
+
+[dependencies]
+anchor-lang = "=0.32.1"
