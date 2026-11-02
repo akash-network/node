@@ -30,9 +30,8 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
-	github.com/ianlancetaylor/cgosymbolizer v0.0.0-20250410214317-b8ecc8b6bbe6
-	github.com/mr-tron/base58 v1.2.0
 	github.com/ianlancetaylor/cgosymbolizer v0.0.0-20260903193033-d2f22a62e960
+	github.com/mr-tron/base58 v1.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.23.2
 	github.com/rakyll/statik v0.1.8
@@ -50,8 +49,8 @@ require (
 	google.golang.org/grpc v1.84.0
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.2
-	pkg.akt.dev/go v0.2.14
-	pkg.akt.dev/go/cli v0.2.4
+	pkg.akt.dev/go v0.5.0-rc0
+	pkg.akt.dev/go/cli v0.3.0-rc0
 	pkg.akt.dev/go/sdl v0.2.2
 )
 
