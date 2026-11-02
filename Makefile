@@ -23,6 +23,7 @@ GO_LINKMODE            ?= external
 GOMOD                  ?= readonly
 BUILD_TAGS             ?= osusergo,netgo,hidraw,ledger
 GORELEASER_STRIP_FLAGS ?=
+BUILDMODE               =pie
 
 ifeq ($(IS_PREREL), false)
 	IS_STABLE                  := true
@@ -37,7 +38,6 @@ endif
 BUILD_TAGS             := osusergo netgo ledger muslc gcc
 DB_BACKEND             := goleveldb
 BUILD_FLAGS            :=
-
 GORELEASER_STRIP_FLAGS ?=
 
 ifeq (cleveldb,$(findstring cleveldb,$(BUILD_OPTIONS)))
@@ -67,9 +67,13 @@ GORELEASER_LDFLAGS := $(ldflags)
 ldflags += -linkmode=external
 
 ifeq (static-link,$(findstring static-link,$(BUILD_OPTIONS)))
-	ldflags += -extldflags "-L$(AKASH_DEVCACHE_LIB) -lm -Wl,-z,muldefs"
+	ldflags += -extldflags "-L$(AKASH_DEVCACHE_LIB) -lm -Wl,-z,muldefs -Wl,-z,noexecstack"
 else
 	ldflags += -extldflags "-L$(AKASH_DEVCACHE_LIB)"
+endif
+
+ifeq (nopie,$(findstring nopie,$(BUILD_OPTIONS)))
+	BUILDMODE := exe
 endif
 
 # check for nostrip option
@@ -88,7 +92,7 @@ ldflags := $(strip $(ldflags))
 GORELEASER_TAGS  := $(BUILD_TAGS)
 GORELEASER_FLAGS := $(BUILD_FLAGS) -mod=$(GOMOD) -tags='$(build_tags)'
 
-BUILD_FLAGS += -mod=$(GOMOD) -tags='$(build_tags_cs)' -ldflags '$(ldflags)'
+BUILD_FLAGS += -buildmode=$(BUILDMODE) -mod=$(GOMOD) -tags='$(build_tags_cs)' -ldflags '$(ldflags)'
 
 .PHONY: all
 all: build bins
