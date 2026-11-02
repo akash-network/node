@@ -20,8 +20,8 @@ builds:
     env:
       - CC=o64-clang
       - CXX=o64-clang++
-      - CGO_CFLAGS=-mmacosx-version-min=10.12
-      - CGO_LDFLAGS=-L./.cache/lib -mmacosx-version-min=10.12
+      - MACOSX_DEPLOYMENT_TARGET=12.0
+      - CGO_LDFLAGS=-L./.cache/lib
     flags:
       - "-mod={{ .Env.MOD }}"
       - "-tags={{ .Env.BUILD_TAGS }} static_wasm"
@@ -40,8 +40,8 @@ builds:
     env:
       - CC=oa64-clang
       - CXX=oa64-clang++
-      - CGO_CFLAGS=-mmacosx-version-min=10.12
-      - CGO_LDFLAGS=-L./.cache/lib -mmacosx-version-min=10.12
+      - MACOSX_DEPLOYMENT_TARGET=12.0
+      - CGO_LDFLAGS=-L./.cache/lib
     flags:
       - "-mod={{ .Env.MOD }}"
       - "-tags={{ .Env.BUILD_TAGS }} static_wasm"
@@ -69,7 +69,7 @@ builds:
       - -s -w
       - -linkmode=external
       # yamllint disable-line rule:line-length
-      - -extldflags "-L./.cache/lib -lwasmvm_muslc.x86_64 -Wl,-z,muldefs -lm -lrt -lc"
+      - -extldflags "-L./.cache/lib -Wl,-z,muldefs -Wl,-z,noexecstack -lm -lrt -lc"
   - id: akash-linux-arm64
     binary: akash
     main: ./cmd/akash
@@ -89,7 +89,7 @@ builds:
       - -s -w
       - -linkmode=external
       # yamllint disable-line rule:line-length
-      - -extldflags "-L./.cache/lib -lwasmvm_muslc.aarch64 -Wl,-z,muldefs -lm -lrt -lc"
+      - -extldflags "-L./.cache/lib -Wl,-z,muldefs -Wl,-z,noexecstack -lm -lrt -lc"
 universal_binaries:
   - id: akash-darwin-universal
     ids:

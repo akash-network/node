@@ -154,6 +154,27 @@ func NewApp(
 		panic(fmt.Sprintf("error while reading wasm config: %s", err))
 	}
 
+	wasmLimits, err := ReadWasmLimits(appOpts)
+	if err != nil {
+		panic(fmt.Sprintf("error while reading wasm limits: %s", err))
+	}
+
+	if err = wasmLimits.Validate(); err != nil {
+		panic(err.Error())
+	}
+
+	if overrides := wasmLimits.Overrides(); len(overrides) > 0 {
+		for _, o := range overrides {
+			logger.Warn("wasm limit overridden",
+				"key", WasmLimitsKeyPrefix+"."+o.Key,
+				"default", o.Default,
+				"value", o.Value,
+			)
+		}
+
+		logger.Warn("wasm static-validation limits differ from chain defaults; all validators MUST run identical values or blocks storing wasm code will produce different results and halt the chain")
+	}
+
 	// Memory limits - prevent DoS
 	wasmConfig.MemoryCacheSize = 100 // 100 MB max
 	// Query gas limit - prevent expensive queries
@@ -180,6 +201,7 @@ func NewApp(
 		ModuleAccountPerms(),
 		wasmDir,
 		wasmConfig,
+		wasmtypes.VMConfig{WasmLimits: wasmLimits.ToVM()},
 		wasmOpts,
 		app.BlockedAddrs(),
 		invCheckPeriod,

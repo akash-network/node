@@ -1,5 +1,5 @@
 {
-    "v2.2.0-sink-provisional": {
+    "v2.2.0": {
         "modules": {
             "added": [
                 "sink"

@@ -23,12 +23,13 @@ builds:
       - "-mod={{ .Env.MOD }}"
       - "-tags={{ .Env.BUILD_TAGS }}"
       - -trimpath
+      - "-buildmode={{ .Env.BUILDMODE }}"
     ldflags:
       - "{{ .Env.BUILD_LDFLAGS }}"
       - -s -w
       - -linkmode=external
       # yamllint disable-line rule:line-length
-      - -extldflags "-L./.cache/lib -lwasmvm_muslc.x86_64 -Wl,-z,muldefs -lm -lrt -lc"
+      - -extldflags "-L./.cache/lib -Wl,-z,muldefs -Wl,-z,noexecstack -lm -lrt -lc"
   - id: akash-linux-arm64
     binary: akash
     main: ./cmd/akash
@@ -43,12 +44,13 @@ builds:
       - "-mod={{ .Env.MOD }}"
       - "-tags={{ .Env.BUILD_TAGS }}"
       - -trimpath
+      - "-buildmode={{ .Env.BUILDMODE }}"
     ldflags:
       - "{{ .Env.BUILD_LDFLAGS }}"
       - -s -w
       - -linkmode=external
       # yamllint disable-line rule:line-length
-      - -extldflags "-L./.cache/lib -lwasmvm_muslc.aarch64 -Wl,-z,muldefs -lm -lrt -lc"
+      - -extldflags "-L./.cache/lib -Wl,-z,muldefs -Wl,-z,noexecstack -lm -lrt -lc"
 
 dockers:
   - dockerfile: _build/akash.Dockerfile
