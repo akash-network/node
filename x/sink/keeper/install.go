@@ -64,8 +64,16 @@ func (k Keeper) PrepareInstall(ctx sdk.Context, pool Distribution) (sdk.Coins, e
 		if !k.bank.GetAllBalances(cache, addr).IsZero() {
 			return nil, fmt.Errorf("sink address balance was not cleared")
 		}
-		cache.EventManager().EmitEvent(sdk.NewEvent("sink_preexisting_balance",
-			sdk.NewAttribute("amount", balance.String()), sdk.NewAttribute("recipient", "community_pool")))
+
+		err := cache.EventManager().EmitTypedEvent(
+			&types.EventPreexistingBalanceMoved{
+				Amount:    balance,
+				Recipient: authtypes.NewModuleAddress(distrtypes.ModuleName).String(),
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
 	}
 	// A payment to a blocked address fails, which would break reward
 	// withdrawals, undelegations and zero-height export. Collect first, then
@@ -81,7 +89,15 @@ func (k Keeper) PrepareInstall(ctx sdk.Context, pool Distribution) (sdk.Coins, e
 		if err := pool.DeleteDelegatorWithdrawAddr(cache, del, addr); err != nil {
 			return nil, err
 		}
-		cache.EventManager().EmitEvent(sdk.NewEvent("sink_withdraw_address_reset", sdk.NewAttribute("delegator", del.String())))
+
+		err := cache.EventManager().EmitTypedEvent(
+			&types.EventWithdrawAddressReset{
+				Delegator: del.String(),
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
 	}
 	write()
 	return balance, nil

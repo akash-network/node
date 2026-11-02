@@ -14,6 +14,8 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	vestingtypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
 	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
+	distrtypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
+	"github.com/cosmos/gogoproto/proto"
 	"github.com/stretchr/testify/require"
 
 	sinktypes "pkg.akt.dev/go/node/sink/v1"
@@ -141,13 +143,10 @@ func TestSinkUpgradeSweepsDustAndKeepsAccountNumber(t *testing.T) {
 	requireInstalled(t, h, ctx, dusted.GetAccountNumber())
 	require.Equal(t, poolBefore.Add(sdk.NewDecCoinsFromCoins(dust...)...), communityPool(t, h, ctx))
 	require.Equal(t, supply, h.a.Keepers.Cosmos.Bank.GetSupply(ctx, "uakt"))
-	var swept []string
-	for _, event := range ctx.EventManager().Events() {
-		if event.Type == "sink_preexisting_balance" {
-			swept = append(swept, event.Attributes[0].Value)
-		}
-	}
-	require.Equal(t, []string{dust.String()}, swept)
+	require.Equal(t, []proto.Message{&sinktypes.EventPreexistingBalanceMoved{
+		Amount:    dust,
+		Recipient: authtypes.NewModuleAddress(distrtypes.ModuleName).String(),
+	}}, sinkEvents(t, ctx.EventManager().ABCIEvents()))
 }
 
 func TestSinkUpgradeConvertsEmptyBaseAccount(t *testing.T) {
@@ -186,9 +185,7 @@ func TestSinkUpgradeCleanAddressAndRestrictions(t *testing.T) {
 	require.NotNil(t, acc)
 	requireInstalled(t, h, ctx, acc.GetAccountNumber())
 	require.Equal(t, poolBefore, communityPool(t, h, ctx))
-	for _, event := range ctx.EventManager().Events() {
-		require.NotEqual(t, "sink_preexisting_balance", event.Type)
-	}
+	require.Empty(t, sinkEvents(t, ctx.EventManager().ABCIEvents()))
 
 	// Governance enables deposits once reporters and a minimum are set. No
 	// funding step comes first.

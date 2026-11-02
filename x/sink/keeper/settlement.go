@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math"
 	"slices"
-	"strconv"
 
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -45,10 +44,6 @@ func challengeDeadline(ctx sdk.Context, p types.Params) (int64, error) {
 		return 0, fmt.Errorf("invalid challenge deadline")
 	}
 	return now + int64(p.ChallengePeriodSeconds), nil //nolint:gosec // bounded by the check above
-}
-
-func settlementEvent(ctx sdk.Context, name string, id uint64, attrs ...sdk.Attribute) {
-	ctx.EventManager().EmitEvent(sdk.NewEvent(name, append([]sdk.Attribute{sdk.NewAttribute("transfer_id", strconv.FormatUint(id, 10))}, attrs...)...))
 }
 
 func bucket(t *types.Totals, s types.Status) *uint64 {
@@ -174,14 +169,31 @@ func (k Keeper) ReportOutcome(ctx sdk.Context, msg *types.MsgReportOutcome) erro
 	if (minted > 0 && voided > 0) || (s.Status == types.Status_STATUS_MINTED && voided > 0) ||
 		((s.Status == types.Status_STATUS_VOIDED || s.Status == types.Status_STATUS_REFUNDED) && minted > 0) {
 		s.Hold = types.Hold_HOLD_CONFLICT
-		settlementEvent(cache, "sink_conflict", t.ID, sdk.NewAttribute("reporter", msg.Reporter))
+
+		err = cache.EventManager().EmitTypedEvent(
+			&types.EventReportConflict{
+				ID:       t.ID,
+				Reporter: msg.Reporter,
+			},
+		)
+		if err != nil {
+			return err
+		}
 	}
 	if s.Hold == types.Hold_HOLD_NONE && s.Status == types.Status_STATUS_PENDING {
 		if minted >= p.ReporterThreshold {
 			if err := k.transition(cache, &totals, t, &s, types.Status_STATUS_MINTED); err != nil {
 				return err
 			}
-			settlementEvent(cache, "sink_mint_confirmed", t.ID)
+
+			err = cache.EventManager().EmitTypedEvent(
+				&types.EventMintConfirmed{
+					ID: t.ID,
+				},
+			)
+			if err != nil {
+				return err
+			}
 		} else if voided >= p.ReporterThreshold {
 			deadline, err := challengeDeadline(cache, p)
 			if err != nil {
@@ -191,7 +203,16 @@ func (k Keeper) ReportOutcome(ctx sdk.Context, msg *types.MsgReportOutcome) erro
 				return err
 			}
 			s.ChallengeEnd = deadline
-			settlementEvent(cache, "sink_void_confirmed", t.ID, sdk.NewAttribute("challenge_end", strconv.FormatInt(deadline, 10)))
+
+			err = cache.EventManager().EmitTypedEvent(
+				&types.EventVoidConfirmed{
+					ID:           t.ID,
+					ChallengeEnd: deadline,
+				},
+			)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	if totals != loaded {
@@ -202,7 +223,18 @@ func (k Keeper) ReportOutcome(ctx sdk.Context, msg *types.MsgReportOutcome) erro
 	if err := k.putSettlement(cache, t.ID, before, s); err != nil {
 		return err
 	}
-	settlementEvent(cache, "sink_report", t.ID, sdk.NewAttribute("reporter", msg.Reporter), sdk.NewAttribute("outcome", msg.Observation.Outcome.String()))
+
+	err = cache.EventManager().EmitTypedEvent(
+		&types.EventOutcomeReported{
+			ID:       t.ID,
+			Reporter: msg.Reporter,
+			Outcome:  msg.Observation.Outcome,
+		},
+	)
+	if err != nil {
+		return err
+	}
+
 	write()
 	return nil
 }
@@ -236,7 +268,18 @@ func (k Keeper) VetoVoid(ctx sdk.Context, msg *types.MsgVetoVoid) error {
 	if err := k.putSettlement(ctx, t.ID, before, s); err != nil {
 		return err
 	}
-	settlementEvent(ctx, "sink_veto", t.ID, sdk.NewAttribute("signer", msg.Signer), sdk.NewAttribute("reason", msg.Reason))
+
+	err = ctx.EventManager().EmitTypedEvent(
+		&types.EventVoidVetoed{
+			ID:     t.ID,
+			Signer: msg.Signer,
+			Reason: msg.Reason,
+		},
+	)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -332,7 +375,18 @@ func (k Keeper) ResolveTransfer(ctx sdk.Context, msg *types.MsgResolveTransfer) 
 	if err := k.putSettlement(cache, t.ID, before, s); err != nil {
 		return err
 	}
-	settlementEvent(cache, "sink_resolved", t.ID, sdk.NewAttribute("decision", msg.Decision.String()), sdk.NewAttribute("reason", msg.Reason))
+
+	err = cache.EventManager().EmitTypedEvent(
+		&types.EventTransferResolved{
+			ID:       t.ID,
+			Decision: msg.Decision,
+			Reason:   msg.Reason,
+		},
+	)
+	if err != nil {
+		return err
+	}
+
 	write()
 	return nil
 }
@@ -413,7 +467,18 @@ func (k Keeper) FinalizeRefund(ctx sdk.Context, id uint64) error {
 	if err := k.CheckBalance(cache); err != nil {
 		return err
 	}
-	settlementEvent(cache, "sink_refunded", t.ID, sdk.NewAttribute("sender", recipient.String()), sdk.NewAttribute("amount", strconv.FormatUint(t.Amount, 10)))
+
+	err = cache.EventManager().EmitTypedEvent(
+		&types.EventTransferRefunded{
+			ID:     t.ID,
+			Sender: recipient.String(),
+			Amount: sdk.NewCoin(types.Denom, sdkmath.NewIntFromUint64(t.Amount)),
+		},
+	)
+	if err != nil {
+		return err
+	}
+
 	write()
 	return nil
 }

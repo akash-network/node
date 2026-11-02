@@ -98,8 +98,9 @@ count and daily amount limits, and checked uint64 arithmetic. A nonzero
 
 `MsgSinkResponse.id` is the decimal record ID. It is available from the
 included transaction's message responses, not from the initial broadcast reply.
-A `sink_deposit` event carries the same ID with the sender, amount, recipient
-and height.
+An `akash.sink.v1.EventTransferCreated` event carries the same ID with the
+sender, amount, recipient and height. Every sink event is a typed event defined
+in chain-sdk `proto/node/akash/sink/v1/events.proto`.
 
 Reports carry the reporter epoch, the transfer round and an observation: the
 outcome, a finalized Solana slot and the 64-byte transaction signature. They

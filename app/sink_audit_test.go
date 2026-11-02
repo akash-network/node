@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
-	"strconv"
 	"testing"
 	"time"
 
@@ -14,6 +13,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	"github.com/cosmos/gogoproto/proto"
 	"github.com/mr-tron/base58"
 	"github.com/stretchr/testify/require"
 
@@ -233,20 +233,13 @@ func TestSinkDepositEventAndGenesisDays(t *testing.T) {
 	k := h.a.Keepers.Akash.Sink
 	res := h.deliver(t, "", h.deposit(10))
 	require.Zero(t, res.Code, res.Log)
-	attrs := map[string]string{}
-	for _, event := range res.Events {
-		if event.Type == "sink_deposit" {
-			for _, a := range event.Attributes {
-				attrs[a.Key] = a.Value
-			}
-		}
-	}
-	entry, ok := k.GetTransfer(h.ctx(), 1)
-	require.True(t, ok)
-	transfer, err := types.DecodeTransfer(entry.Record)
-	require.NoError(t, err)
-	require.Equal(t, base58.Encode(h.recipient[:]), attrs["recipient"])
-	require.Equal(t, strconv.FormatUint(transfer.Height, 10), attrs["height"])
+	require.Equal(t, []proto.Message{&types.EventTransferCreated{
+		ID:        1,
+		Sender:    h.sender.String(),
+		Recipient: base58.Encode(h.recipient[:]),
+		Amount:    sdk.NewInt64Coin(types.Denom, 10),
+		Height:    h.height,
+	}}, sinkEvents(t, res.Events))
 
 	ctx := h.ctx()
 	today := uint64(ctx.BlockTime().Unix() / 86400)
@@ -277,11 +270,7 @@ func TestSinkUpgradeClearsSinkWithdrawAddresses(t *testing.T) {
 	got, err = distr.GetDelegatorWithdrawAddr(ctx, other)
 	require.NoError(t, err)
 	require.Equal(t, h.bystander, got) // unrelated records stay
-	var reset []string
-	for _, event := range ctx.EventManager().Events() {
-		if event.Type == "sink_withdraw_address_reset" {
-			reset = append(reset, event.Attributes[0].Value)
-		}
-	}
-	require.Equal(t, []string{h.sender.String()}, reset)
+	require.Equal(t, []proto.Message{
+		&types.EventWithdrawAddressReset{Delegator: h.sender.String()},
+	}, sinkEvents(t, ctx.EventManager().ABCIEvents()))
 }

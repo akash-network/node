@@ -9,24 +9,12 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
+	"github.com/cosmos/gogoproto/proto"
 	"github.com/stretchr/testify/require"
 
 	types "pkg.akt.dev/go/node/sink/v1"
 	sinkkeeper "pkg.akt.dev/node/v2/x/sink/keeper"
 )
-
-func eventAttributes(res *abci.ExecTxResult, name string) map[string]string {
-	for _, event := range res.Events {
-		if event.Type == name {
-			attrs := map[string]string{}
-			for _, attr := range event.Attributes {
-				attrs[attr.Key] = attr.Value
-			}
-			return attrs
-		}
-	}
-	return nil
-}
 
 func TestSinkGuardianPause(t *testing.T) {
 	h := newSinkHarness(t, func(g *types.GenesisState) {
@@ -96,8 +84,9 @@ func TestSinkGuardianPause(t *testing.T) {
 	require.Contains(t, string(h.signBytes), `"type":"sink/MsgGuardianPause"`)
 	res = h.deliverBytes(t, bz)
 	require.Zero(t, res.Code, res.Log)
-	require.Equal(t, map[string]string{"guardian": guardian, "deposits": "true", "refunds": "false", "enabled": "false",
-		"refunds_enabled": "true", "msg_index": "0"}, eventAttributes(res, "sink_guardian_pause"))
+	require.Equal(t, []proto.Message{
+		&types.EventGuardianPaused{Guardian: guardian, Deposits: true, RefundsEnabled: true},
+	}, sinkEvents(t, res.Events))
 	want := configured
 	want.Enabled = false
 	require.Equal(t, want, k.GetParams(h.ctx())) // nothing else changes

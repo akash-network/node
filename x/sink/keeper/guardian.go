@@ -1,8 +1,6 @@
 package keeper
 
 import (
-	"strconv"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
@@ -34,11 +32,19 @@ func (k Keeper) GuardianPause(ctx sdk.Context, msg *types.MsgGuardianPause) erro
 	if err := k.params.Set(ctx, p); err != nil {
 		return err
 	}
-	ctx.EventManager().EmitEvent(sdk.NewEvent("sink_guardian_pause",
-		sdk.NewAttribute("guardian", msg.Guardian),
-		sdk.NewAttribute("deposits", strconv.FormatBool(msg.Deposits)),
-		sdk.NewAttribute("refunds", strconv.FormatBool(msg.Refunds)),
-		sdk.NewAttribute("enabled", strconv.FormatBool(p.Enabled)),
-		sdk.NewAttribute("refunds_enabled", strconv.FormatBool(p.RefundsEnabled))))
+
+	err := ctx.EventManager().EmitTypedEvent(
+		&types.EventGuardianPaused{
+			Guardian:       msg.Guardian,
+			Deposits:       msg.Deposits,
+			Refunds:        msg.Refunds,
+			Enabled:        p.Enabled,
+			RefundsEnabled: p.RefundsEnabled,
+		},
+	)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

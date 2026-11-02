@@ -75,7 +75,7 @@ This branch fixes:
 | I-02 | Superseded 2026-10-26: the launch reserve is gone (A2) |
 | I-03 | Destinations must be canonical, non-small-order points (or listed vaults) |
 | I-04 | Tallies count only minted and voided votes |
-| I-08 | `sink_deposit` carries recipient and height |
+| I-08 | `EventTransferCreated` carries recipient and height |
 | I-10 | Genesis rejects future refund and usage days |
 | I-11 | Superseded 2026-10-26: the launch reserve is gone (A2) |
 | G-01 to G-05 | Address computed once, params read once, bucket switch, totals written once, settlement reads skip the void key |

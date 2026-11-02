@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"strconv"
 
 	"cosmossdk.io/collections"
 	storetypes "cosmossdk.io/store/types"
@@ -333,10 +332,20 @@ func (k Keeper) Sink(ctx sdk.Context, msg *types.MsgSink) (uint64, error) {
 	if err := k.CheckBalance(cache); err != nil {
 		return 0, err
 	}
-	cache.EventManager().EmitEvent(sdk.NewEvent("sink_deposit",
-		sdk.NewAttribute("transfer_id", strconv.FormatUint(t.ID, 10)),
-		sdk.NewAttribute("sender", sender.String()), sdk.NewAttribute("amount", strconv.FormatUint(amount, 10)),
-		sdk.NewAttribute("recipient", msg.Dest), sdk.NewAttribute("height", strconv.FormatUint(t.Height, 10))))
+
+	err = cache.EventManager().EmitTypedEvent(
+		&types.EventTransferCreated{
+			ID:        t.ID,
+			Sender:    sender.String(),
+			Recipient: msg.Dest,
+			Amount:    msg.Amount,
+			Height:    ctx.BlockHeight(),
+		},
+	)
+	if err != nil {
+		return 0, err
+	}
+
 	write()
 	return t.ID, nil
 }
@@ -360,7 +369,16 @@ func (k Keeper) RequestVoid(ctx sdk.Context, authority string, id uint64) error 
 	if err := k.voids.Set(ctx, id, types.VoidValue(id)); err != nil {
 		return err
 	}
-	ctx.EventManager().EmitEvent(sdk.NewEvent("sink_void_order", sdk.NewAttribute("transfer_id", strconv.FormatUint(id, 10))))
+
+	err := ctx.EventManager().EmitTypedEvent(
+		&types.EventVoidOrdered{
+			ID: id,
+		},
+	)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
