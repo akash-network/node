@@ -1,0 +1,1716 @@
+{
+  "address": "4fMih2CidrXPeRx77kj3QcuBZwREYtxEbXjURUgadoe1",
+  "metadata": {
+    "name": "access_manager",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Role-based access manager for IBC on Solana",
+    "repository": "https://github.com/cosmos/solidity-ibc-eureka"
+  },
+  "instructions": [
+    {
+      "name": "accept_upgrade_authority_transfer",
+      "discriminator": [
+        95,
+        41,
+        116,
+        54,
+        102,
+        173,
+        111,
+        17
+      ],
+      "accounts": [
+        {
+          "name": "access_manager",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  99,
+                  99,
+                  101,
+                  115,
+                  115,
+                  95,
+                  109,
+                  97,
+                  110,
+                  97,
+                  103,
+                  101,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program_data",
+          "docs": [
+            "The target program's data account (BPF Loader Upgradeable PDA)."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "arg",
+                "path": "target_program"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                2,
+                168,
+                246,
+                145,
+                78,
+                136,
+                161,
+                176,
+                226,
+                16,
+                21,
+                62,
+                247,
+                99,
+                174,
+                43,
+                0,
+                194,
+                185,
+                61,
+                22,
+                193,
+                36,
+                210,
+                192,
+                83,
+                122,
+                16,
+                4,
+                128,
+                0,
+                0
+              ]
+            }
+          }
+        },
+        {
+          "name": "upgrade_authority",
+          "docs": [
+            "`AccessManager`'s PDA that acts as the current upgrade authority."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  112,
+                  103,
+                  114,
+                  97,
+                  100,
+                  101,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "target_program"
+              }
+            ]
+          }
+        },
+        {
+          "name": "new_authority",
+          "docs": [
+            "The proposed new upgrade authority. Must match the pending transfer."
+          ],
+          "signer": true
+        },
+        {
+          "name": "bpf_loader_upgradeable",
+          "address": "BPFLoaderUpgradeab1e11111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "target_program",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "cancel_upgrade_authority_transfer",
+      "discriminator": [
+        114,
+        97,
+        59,
+        64,
+        250,
+        180,
+        192,
+        135
+      ],
+      "accounts": [
+        {
+          "name": "access_manager",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  99,
+                  99,
+                  101,
+                  115,
+                  115,
+                  95,
+                  109,
+                  97,
+                  110,
+                  97,
+                  103,
+                  101,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "Must hold `ADMIN_ROLE` on the current access manager."
+          ],
+          "signer": true
+        },
+        {
+          "name": "instructions_sysvar",
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "target_program",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "claim_upgrade_authority",
+      "discriminator": [
+        102,
+        75,
+        224,
+        204,
+        8,
+        193,
+        89,
+        137
+      ],
+      "accounts": [
+        {
+          "name": "new_upgrade_authority",
+          "docs": [
+            "This access manager's upgrade authority PDA for the target program.",
+            "Signs the CPI as the new authority."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  112,
+                  103,
+                  114,
+                  97,
+                  100,
+                  101,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "target_program"
+              }
+            ]
+          }
+        },
+        {
+          "name": "source_access_manager_state",
+          "docs": [
+            "The source access manager's state PDA."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  99,
+                  99,
+                  101,
+                  115,
+                  115,
+                  95,
+                  109,
+                  97,
+                  110,
+                  97,
+                  103,
+                  101,
+                  114
+                ]
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "source_access_manager_program"
+            }
+          }
+        },
+        {
+          "name": "target_program_data",
+          "docs": [
+            "The target program's data account (BPF Loader Upgradeable PDA)."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "arg",
+                "path": "target_program"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                2,
+                168,
+                246,
+                145,
+                78,
+                136,
+                161,
+                176,
+                226,
+                16,
+                21,
+                62,
+                247,
+                99,
+                174,
+                43,
+                0,
+                194,
+                185,
+                61,
+                22,
+                193,
+                36,
+                210,
+                192,
+                83,
+                122,
+                16,
+                4,
+                128,
+                0,
+                0
+              ]
+            }
+          }
+        },
+        {
+          "name": "source_upgrade_authority",
+          "docs": [
+            "The source access manager's upgrade authority PDA for the target program."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  112,
+                  103,
+                  114,
+                  97,
+                  100,
+                  101,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "target_program"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "source_access_manager_program"
+            }
+          }
+        },
+        {
+          "name": "source_access_manager_program",
+          "docs": [
+            "The source access manager program (CPI target)."
+          ]
+        },
+        {
+          "name": "bpf_loader_upgradeable",
+          "address": "BPFLoaderUpgradeab1e11111111111111111111111"
+        },
+        {
+          "name": "am_state",
+          "docs": [
+            "Access manager state PDA used to verify the caller holds the admin role."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  99,
+                  99,
+                  101,
+                  115,
+                  115,
+                  95,
+                  109,
+                  97,
+                  110,
+                  97,
+                  103,
+                  101,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "Must hold `ADMIN_ROLE` on the current access manager."
+          ],
+          "signer": true
+        },
+        {
+          "name": "instructions_sysvar",
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "target_program",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "grant_role",
+      "discriminator": [
+        218,
+        234,
+        128,
+        15,
+        82,
+        33,
+        236,
+        253
+      ],
+      "accounts": [
+        {
+          "name": "access_manager",
+          "docs": [
+            "The access manager PDA storing all role assignments."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  99,
+                  99,
+                  101,
+                  115,
+                  115,
+                  95,
+                  109,
+                  97,
+                  110,
+                  97,
+                  103,
+                  101,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "The admin signer authorizing this role grant."
+          ],
+          "signer": true
+        },
+        {
+          "name": "instructions_sysvar",
+          "docs": [
+            "Instructions sysvar for CPI validation"
+          ],
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "role_id",
+          "type": "u64"
+        },
+        {
+          "name": "account",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "initialize",
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "access_manager",
+          "docs": [
+            "The access manager PDA to initialize (created here)."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  99,
+                  99,
+                  101,
+                  115,
+                  115,
+                  95,
+                  109,
+                  97,
+                  110,
+                  97,
+                  103,
+                  101,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "payer",
+          "docs": [
+            "Pays for account creation rent."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "docs": [
+            "Required for PDA account creation."
+          ],
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "instructions_sysvar",
+          "docs": [
+            "Instructions sysvar for CPI validation"
+          ],
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        },
+        {
+          "name": "program_data",
+          "docs": [
+            "BPF Loader Upgradeable `ProgramData` account for this program."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  54,
+                  102,
+                  142,
+                  239,
+                  64,
+                  150,
+                  35,
+                  184,
+                  58,
+                  55,
+                  175,
+                  62,
+                  246,
+                  200,
+                  67,
+                  254,
+                  235,
+                  183,
+                  190,
+                  141,
+                  66,
+                  189,
+                  81,
+                  48,
+                  98,
+                  84,
+                  59,
+                  36,
+                  146,
+                  209,
+                  8,
+                  170
+                ]
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                2,
+                168,
+                246,
+                145,
+                78,
+                136,
+                161,
+                176,
+                226,
+                16,
+                21,
+                62,
+                247,
+                99,
+                174,
+                43,
+                0,
+                194,
+                185,
+                61,
+                22,
+                193,
+                36,
+                210,
+                192,
+                83,
+                122,
+                16,
+                4,
+                128,
+                0,
+                0
+              ]
+            }
+          }
+        },
+        {
+          "name": "authority",
+          "docs": [
+            "The program's upgrade authority — must sign to prove deployer identity."
+          ],
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "admin",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "propose_upgrade_authority_transfer",
+      "discriminator": [
+        235,
+        222,
+        36,
+        145,
+        215,
+        244,
+        214,
+        152
+      ],
+      "accounts": [
+        {
+          "name": "access_manager",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  99,
+                  99,
+                  101,
+                  115,
+                  115,
+                  95,
+                  109,
+                  97,
+                  110,
+                  97,
+                  103,
+                  101,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "Must hold `ADMIN_ROLE` on the current access manager."
+          ],
+          "signer": true
+        },
+        {
+          "name": "instructions_sysvar",
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "target_program",
+          "type": "pubkey"
+        },
+        {
+          "name": "new_authority",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "renounce_role",
+      "discriminator": [
+        21,
+        253,
+        233,
+        162,
+        186,
+        216,
+        217,
+        26
+      ],
+      "accounts": [
+        {
+          "name": "access_manager",
+          "docs": [
+            "The access manager PDA storing all role assignments."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  99,
+                  99,
+                  101,
+                  115,
+                  115,
+                  95,
+                  109,
+                  97,
+                  110,
+                  97,
+                  103,
+                  101,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "caller",
+          "docs": [
+            "The signer renouncing their own role."
+          ],
+          "signer": true
+        },
+        {
+          "name": "instructions_sysvar",
+          "docs": [
+            "Instructions sysvar for CPI validation"
+          ],
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "role_id",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "revoke_role",
+      "discriminator": [
+        179,
+        232,
+        2,
+        180,
+        48,
+        227,
+        82,
+        7
+      ],
+      "accounts": [
+        {
+          "name": "access_manager",
+          "docs": [
+            "The access manager PDA storing all role assignments."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  99,
+                  99,
+                  101,
+                  115,
+                  115,
+                  95,
+                  109,
+                  97,
+                  110,
+                  97,
+                  103,
+                  101,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "The admin signer authorizing this role revocation."
+          ],
+          "signer": true
+        },
+        {
+          "name": "instructions_sysvar",
+          "docs": [
+            "Instructions sysvar for CPI validation"
+          ],
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "role_id",
+          "type": "u64"
+        },
+        {
+          "name": "account",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "set_whitelisted_programs",
+      "discriminator": [
+        215,
+        39,
+        132,
+        81,
+        64,
+        65,
+        123,
+        123
+      ],
+      "accounts": [
+        {
+          "name": "access_manager",
+          "docs": [
+            "The access manager PDA whose whitelist will be updated."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  99,
+                  99,
+                  101,
+                  115,
+                  115,
+                  95,
+                  109,
+                  97,
+                  110,
+                  97,
+                  103,
+                  101,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "The admin signer authorizing this whitelist update."
+          ],
+          "signer": true
+        },
+        {
+          "name": "instructions_sysvar",
+          "docs": [
+            "Instructions sysvar for CPI validation."
+          ],
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "whitelisted_programs",
+          "type": {
+            "vec": "pubkey"
+          }
+        }
+      ]
+    },
+    {
+      "name": "upgrade_program",
+      "discriminator": [
+        223,
+        236,
+        39,
+        89,
+        111,
+        204,
+        114,
+        37
+      ],
+      "accounts": [
+        {
+          "name": "access_manager",
+          "docs": [
+            "The access manager PDA for admin authorization."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  99,
+                  99,
+                  101,
+                  115,
+                  115,
+                  95,
+                  109,
+                  97,
+                  110,
+                  97,
+                  103,
+                  101,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program",
+          "docs": [
+            "The target program to upgrade.",
+            "Writable because BPF Loader Upgradeable requires it during upgrade."
+          ],
+          "writable": true
+        },
+        {
+          "name": "program_data",
+          "docs": [
+            "The target program's data account (BPF Loader Upgradeable PDA)."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "program"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                2,
+                168,
+                246,
+                145,
+                78,
+                136,
+                161,
+                176,
+                226,
+                16,
+                21,
+                62,
+                247,
+                99,
+                174,
+                43,
+                0,
+                194,
+                185,
+                61,
+                22,
+                193,
+                36,
+                210,
+                192,
+                83,
+                122,
+                16,
+                4,
+                128,
+                0,
+                0
+              ]
+            }
+          }
+        },
+        {
+          "name": "buffer",
+          "docs": [
+            "Buffer account containing the new program bytecode."
+          ],
+          "writable": true
+        },
+        {
+          "name": "upgrade_authority",
+          "docs": [
+            "`AccessManager`'s PDA that acts as the upgrade authority for the target program."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  112,
+                  103,
+                  114,
+                  97,
+                  100,
+                  101,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "target_program"
+              }
+            ]
+          }
+        },
+        {
+          "name": "spill",
+          "docs": [
+            "Account to receive refunded rent from the old buffer."
+          ],
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "docs": [
+            "The admin signer authorizing the upgrade."
+          ],
+          "signer": true
+        },
+        {
+          "name": "instructions_sysvar",
+          "address": "Sysvar1nstructions1111111111111111111111111"
+        },
+        {
+          "name": "bpf_loader_upgradeable",
+          "address": "BPFLoaderUpgradeab1e11111111111111111111111"
+        },
+        {
+          "name": "rent",
+          "docs": [
+            "Rent sysvar required by BPF Loader Upgradeable."
+          ],
+          "address": "SysvarRent111111111111111111111111111111111"
+        },
+        {
+          "name": "clock",
+          "docs": [
+            "Required by BPF Loader Upgradeable's upgrade instruction"
+          ],
+          "address": "SysvarC1ock11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "target_program",
+          "type": "pubkey"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "AccessManager",
+      "discriminator": [
+        129,
+        207,
+        58,
+        151,
+        47,
+        246,
+        92,
+        35
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "AccessManagerTransferAccepted",
+      "discriminator": [
+        244,
+        139,
+        47,
+        82,
+        213,
+        147,
+        38,
+        88
+      ]
+    },
+    {
+      "name": "AccessManagerTransferCancelled",
+      "discriminator": [
+        200,
+        239,
+        227,
+        176,
+        191,
+        21,
+        219,
+        62
+      ]
+    },
+    {
+      "name": "AccessManagerTransferProposed",
+      "discriminator": [
+        114,
+        132,
+        13,
+        147,
+        11,
+        198,
+        82,
+        88
+      ]
+    },
+    {
+      "name": "ProgramUpgradedEvent",
+      "discriminator": [
+        187,
+        15,
+        83,
+        36,
+        251,
+        96,
+        19,
+        210
+      ]
+    },
+    {
+      "name": "RoleGrantedEvent",
+      "discriminator": [
+        221,
+        21,
+        92,
+        108,
+        136,
+        12,
+        105,
+        112
+      ]
+    },
+    {
+      "name": "RoleRevokedEvent",
+      "discriminator": [
+        104,
+        105,
+        52,
+        114,
+        39,
+        94,
+        217,
+        251
+      ]
+    },
+    {
+      "name": "UpgradeAuthorityClaimedEvent",
+      "discriminator": [
+        89,
+        129,
+        108,
+        54,
+        149,
+        105,
+        39,
+        221
+      ]
+    },
+    {
+      "name": "UpgradeAuthorityTransferCancelledEvent",
+      "discriminator": [
+        35,
+        172,
+        94,
+        180,
+        37,
+        229,
+        123,
+        63
+      ]
+    },
+    {
+      "name": "UpgradeAuthorityTransferProposedEvent",
+      "discriminator": [
+        63,
+        200,
+        21,
+        91,
+        27,
+        82,
+        52,
+        61
+      ]
+    },
+    {
+      "name": "UpgradeAuthorityTransferredEvent",
+      "discriminator": [
+        79,
+        145,
+        216,
+        157,
+        39,
+        178,
+        134,
+        42
+      ]
+    },
+    {
+      "name": "WhitelistedProgramsUpdatedEvent",
+      "discriminator": [
+        174,
+        165,
+        182,
+        103,
+        180,
+        63,
+        131,
+        198
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "Unauthorized",
+      "msg": "Unauthorized: caller does not have required role"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidRoleId",
+      "msg": "Invalid role ID"
+    },
+    {
+      "code": 6002,
+      "name": "CannotRemoveLastAdmin",
+      "msg": "Cannot remove the last admin"
+    },
+    {
+      "code": 6003,
+      "name": "RoleNotGranted",
+      "msg": "Account does not have the specified role"
+    },
+    {
+      "code": 6004,
+      "name": "InvalidSysenv",
+      "msg": "Invalid sysenv: cross-program invocation from unexpected program"
+    },
+    {
+      "code": 6005,
+      "name": "SignerRequired",
+      "msg": "Account must be a signer"
+    },
+    {
+      "code": 6006,
+      "name": "CpiNotAllowed",
+      "msg": "CPI calls not allowed"
+    },
+    {
+      "code": 6007,
+      "name": "ProgramMismatch",
+      "msg": "Program account does not match target_program"
+    },
+    {
+      "code": 6008,
+      "name": "ZeroAccount",
+      "msg": "Zero account is not allowed"
+    },
+    {
+      "code": 6009,
+      "name": "DuplicateWhitelistedProgram",
+      "msg": "Duplicate entry in whitelisted programs list"
+    },
+    {
+      "code": 6010,
+      "name": "UnauthorizedDeployer",
+      "msg": "Only the program's upgrade authority can call initialize"
+    },
+    {
+      "code": 6011,
+      "name": "AuthorityMismatch",
+      "msg": "New authority account does not match instruction parameter"
+    },
+    {
+      "code": 6012,
+      "name": "PendingTransferAlreadyExists",
+      "msg": "A pending transfer for this target program already exists"
+    },
+    {
+      "code": 6013,
+      "name": "NoPendingTransfer",
+      "msg": "No pending transfer for this target program"
+    },
+    {
+      "code": 6014,
+      "name": "SelfTransfer",
+      "msg": "Cannot transfer upgrade authority to the current authority PDA"
+    },
+    {
+      "code": 6015,
+      "name": "TooManyPendingTransfers",
+      "msg": "Maximum number of concurrent pending transfers reached"
+    },
+    {
+      "code": 6016,
+      "name": "NoPendingAccessManagerTransfer",
+      "msg": "No pending access manager transfer to accept or cancel"
+    },
+    {
+      "code": 6017,
+      "name": "PendingAccessManagerTransferAlreadyExists",
+      "msg": "A pending access manager transfer already exists"
+    },
+    {
+      "code": 6018,
+      "name": "InvalidProposedAccessManager",
+      "msg": "Proposed access manager address is invalid"
+    },
+    {
+      "code": 6019,
+      "name": "AccessManagerSelfTransfer",
+      "msg": "Cannot transfer access manager to the current access manager"
+    }
+  ],
+  "types": [
+    {
+      "name": "AccessManager",
+      "docs": [
+        "Central role-based access control registry shared across all Solana IBC programs.",
+        "",
+        "Every program that requires permissioned operations (e.g. relaying, pausing,",
+        "admin configuration) delegates authorization checks to this account.",
+        "It stores a list of roles with their members and a whitelist of program IDs",
+        "that are allowed to invoke admin-gated instructions via CPI.",
+        "",
+        "Role IDs are opaque `u64` values — the access manager does not interpret them.",
+        "Consuming programs define and enforce what each role ID means."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "roles",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "RoleData"
+                }
+              }
+            }
+          },
+          {
+            "name": "whitelisted_programs",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "pending_authority_transfers",
+            "docs": [
+              "Pending upgrade authority transfers, one per managed program.",
+              "",
+              "Uses a bounded `Vec` rather than a single `Option` to support concurrent",
+              "transfers — with timelocked multisigs, a single `Option` would require",
+              "N sequential propose/accept cycles (N × timelock waits). With a `Vec`,",
+              "all proposes can be batched in one multisig vote.",
+              "",
+              "A single shared upgrade authority PDA (without `target_program` in the",
+              "seed) was considered but rejected: `SetAuthority` must be called once",
+              "per program regardless, so a shared PDA saves no transactions, while",
+              "per-program PDAs limit the blast radius of bugs and let Anchor's seeds",
+              "constraint tie each signer to exactly one target program."
+            ],
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "PendingAuthorityTransfer"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccessManagerTransferAccepted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "old_access_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_access_manager",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccessManagerTransferCancelled",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "access_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "cancelled_access_manager",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AccessManagerTransferProposed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "current_access_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposed_access_manager",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PendingAuthorityTransfer",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "target_program",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_authority",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ProgramUpgradedEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "program",
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RoleData",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "role_id",
+            "type": "u64"
+          },
+          {
+            "name": "members",
+            "type": {
+              "vec": "pubkey"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "RoleGrantedEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "role_id",
+            "type": "u64"
+          },
+          {
+            "name": "account",
+            "type": "pubkey"
+          },
+          {
+            "name": "granted_by",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RoleRevokedEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "role_id",
+            "type": "u64"
+          },
+          {
+            "name": "account",
+            "type": "pubkey"
+          },
+          {
+            "name": "revoked_by",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UpgradeAuthorityClaimedEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "program",
+            "type": "pubkey"
+          },
+          {
+            "name": "source_access_manager",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_authority",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UpgradeAuthorityTransferCancelledEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "program",
+            "type": "pubkey"
+          },
+          {
+            "name": "cancelled_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "cancelled_by",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UpgradeAuthorityTransferProposedEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "program",
+            "type": "pubkey"
+          },
+          {
+            "name": "current_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposed_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "proposed_by",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UpgradeAuthorityTransferredEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "program",
+            "type": "pubkey"
+          },
+          {
+            "name": "old_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "accepted_by",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WhitelistedProgramsUpdatedEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "old_programs",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "new_programs",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "updated_by",
+            "type": "pubkey"
+          }
+        ]
+      }
+    }
+  ]
+}

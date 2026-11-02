@@ -1,0 +1,15 @@
+[toolchain]
+package_manager = "npm"
+anchor_version = "0.32.1"
+solana_version = "2.3.13"
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.localnet]
+akt_solana = "FfFAPUKqjf68ggj1HvpyzMHFDRnT2cFAdZYYQb7mK9i5"
+
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"

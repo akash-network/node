@@ -1,0 +1,25 @@
+--- a/ibc-solana/programs/ics07-tendermint/src/instructions/assemble_and_update_client.rs
++++ b/ibc-solana/programs/ics07-tendermint/src/instructions/assemble_and_update_client.rs
+@@ -3,7 +3,7 @@
+ use crate::error::ErrorCode;
+ use crate::helpers::deserialize_header;
+ use crate::state::{ConsensusStateStore, HeaderChunk, CHUNK_DATA_SIZE};
+-use crate::types::{AppState, ClientState, ConsensusState, UpdateResult};
++use crate::types::{AppState, ClientState, ConsensusState, IbcHeight, UpdateResult};
+ use anchor_lang::prelude::*;
+ use anchor_lang::solana_program::program::set_return_data;
+ use ibc_client_tendermint::types::{ConsensusState as IbcConsensusState, Header};
+@@ -206,8 +206,11 @@
+         client_state,
+     });
+ 
+-    // Update latest height only on successful update
+-    if result == UpdateResult::UpdateSuccess {
++    // Update latest height only on successful update. Local AKT patch: like
++    // ibc-go, an older header fills in its consensus state without lowering it.
++    if result == UpdateResult::UpdateSuccess
++        && IbcHeight::from(new_height) > client_state.latest_height
++    {
+         client_state.latest_height = new_height.into();
+     }
+ 

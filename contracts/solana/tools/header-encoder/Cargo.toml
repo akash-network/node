@@ -1,0 +1,29 @@
+[package]
+name = "akt-header-encoder"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[dependencies]
+anyhow = "1"
+borsh = "0.10.4"
+hex = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+ed25519-dalek = "2"
+ibc-client-tendermint = "0.57"
+ibc-core-client-types = "0.57"
+tendermint = "0.40"
+tendermint-proto = "0.40"
+solana-ibc-borsh-header = { path = "../../.deps/ibc-contracts/ibc-solana/packages/solana-ibc-borsh-header", features = ["light-client"] }
+
+[dev-dependencies]
+tendermint-light-client-verifier = "0.40"
+
+[patch.crates-io]
+tendermint = { git = "https://github.com/cometbft/tendermint-rs", rev = "a2aa5bf" }
+tendermint-proto = { git = "https://github.com/cometbft/tendermint-rs", rev = "a2aa5bf" }
+tendermint-light-client-verifier = { git = "https://github.com/cometbft/tendermint-rs", rev = "a2aa5bf" }

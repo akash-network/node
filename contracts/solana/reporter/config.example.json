@@ -1,0 +1,14 @@
+{
+  "akashRpc": "http://127.0.0.1:26657",
+  "akashChainId": "akash-1",
+  "solanaRpc": "http://127.0.0.1:8899",
+  "solanaGenesisHash": "REPLACE_WITH_TRUSTED_LOCAL_GENESIS_HASH",
+  "programId": "FfFAPUKqjf68ggj1HvpyzMHFDRnT2cFAdZYYQb7mK9i5",
+  "mint": "EnEomHaBpuMZZLN4TPtVAsqVofzMSkrPWYhEQ1cFjKv1",
+  "reporter": "REPLACE_WITH_CONFIGURED_AKASH_REPORTER",
+  "maxAgeSeconds": 60,
+  "maxTransfers": 1000,
+  "pollSeconds": 15,
+  "feeAmountUakt": "10",
+  "gasLimit": "500000"
+}

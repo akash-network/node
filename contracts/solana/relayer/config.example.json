@@ -1,0 +1,15 @@
+{
+  "akashRpc": "http://127.0.0.1:26657",
+  "akashChainId": "akashnet-2",
+  "solanaRpc": "http://127.0.0.1:8899",
+  "solanaGenesisHash": "REPLACE_WITH_TRUSTED_SOLANA_GENESIS_HASH",
+  "programId": "FfFAPUKqjf68ggj1HvpyzMHFDRnT2cFAdZYYQb7mK9i5",
+  "payerKeyFile": "/etc/akt-relayer/payer-keypair.json",
+  "stateDir": "/var/lib/akt-relayer",
+  "maxLamportsPerTransfer": 5000000,
+  "refreshFraction": 0.2,
+  "retryMaxSeconds": 900,
+  "pruneIntervalSeconds": 600,
+  "maxAgeSeconds": 60,
+  "pollSeconds": 3
+}
