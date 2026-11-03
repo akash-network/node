@@ -6,9 +6,10 @@
 #
 # Usage: bash scripts/verifiable-build.sh [--rev <commit>] [output-dir]
 # Writes the three .so files, SHA256SUMS and build-info.txt to output-dir
-# (default .cache/verifiable-build/<commit>).
+# (default .cache/solana/verifiable-build/<commit> in the node repository).
 set -euo pipefail
-cd "$(dirname "$0")/.."
+source "$(dirname "$0")/workspace.sh"
+cd "$solana_repo"
 
 rev=HEAD
 if [[ "${1:-}" == --rev ]]; then
@@ -16,7 +17,7 @@ if [[ "${1:-}" == --rev ]]; then
   shift 2
 fi
 commit=$(git rev-parse --verify "$rev^{commit}")
-out=${1:-.cache/verifiable-build/$commit}
+out=${1:-$SOLANA_CACHE/verifiable-build/$commit}
 if [[ -e "$out" ]] && [[ -n "$(ls -A "$out")" ]]; then
   echo "Output directory is not empty: $out" >&2
   exit 1
@@ -38,8 +39,8 @@ docker build --platform linux/amd64 -t "$image" "$stage/context"
 docker run --rm --platform linux/amd64 \
   -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" \
   -v "$stage/source.tar:/input/source.tar:ro" -v "$out:/output" \
-  "$image" bash -c 'mkdir /build && tar -xf /input/source.tar -C /build &&
-    exec bash /build/tools/verifiable-build/build.sh'
+  "$image" bash -c 'mkdir -p /build/contracts/solana && tar -xf /input/source.tar -C /build/contracts/solana &&
+    exec bash /build/contracts/solana/tools/verifiable-build/build.sh'
 
 {
   echo "commit $commit"

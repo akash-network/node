@@ -1,4 +1,8 @@
-import { Sink_Status as Status } from "@akashnetwork/chain-sdk/private-types/akash.v1";
+import type { SinkId } from "../shared/id";
+import {
+  Sink_Status as Status,
+  Hold,
+} from "@akashnetwork/chain-sdk/private-types/akash.v1";
 
 // Reconciliation decisions without RPC access, so they can be tested directly.
 
@@ -22,8 +26,9 @@ export function inSnapshot(resolvedAtSlot: bigint, slot: number) {
 }
 
 export function transferAlerts(input: {
-  id: bigint;
+  id: SinkId;
   akash: Status;
+  hold: Hold;
   solana?: "minted" | "voided";
   resolvedAtSlot?: bigint;
   slot: number;
@@ -31,9 +36,13 @@ export function transferAlerts(input: {
 }) {
   const { id, akash, solana } = input;
   const alerts: string[] = [];
+  if (input.hold !== Hold.HOLD_NONE)
+    alerts.push(
+      `transfer ${id} requires governance review (${Hold[input.hold]})`,
+    );
   if (
     solana === "minted" &&
-    (akash === Status.STATUS_REFUNDED || akash === Status.STATUS_VOIDED)
+    (akash === Status.STATUS_REFUNDED || akash === Status.STATUS_REFUND_PENDING)
   )
     alerts.push(`minted transfer ${id} has ${Status[akash]} on Akash`);
   if (akash === Status.STATUS_MINTED && solana !== "minted")
@@ -42,11 +51,12 @@ export function transferAlerts(input: {
     alerts.push(`refund ${id} lacks finalized Solana void`);
   // Only a Solana void can authorize a refund. Without a status the transfer
   // can still mint, and the refund would then pay a second time.
-  if (akash === Status.STATUS_VOIDED && solana === undefined)
+  if (akash === Status.STATUS_REFUND_PENDING && solana === undefined)
     alerts.push(`void ${id} on Akash lacks any finalized Solana status`);
   if (
     solana !== undefined &&
-    akash === Status.STATUS_PENDING &&
+    (akash === Status.STATUS_TRANSFER_PENDING ||
+      akash === Status.STATUS_VOIDED) &&
     input.resolvedAtSlot !== undefined
   ) {
     const lag = Math.max(0, input.slot - Number(input.resolvedAtSlot));

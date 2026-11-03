@@ -4,8 +4,8 @@ import { Program, web3 } from "@coral-xyz/anchor";
 import { getMint } from "@solana/spl-token";
 import { TokenStandard } from "@metaplex-foundation/mpl-token-metadata";
 import { unwrapOption } from "@metaplex-foundation/umi";
-import idl from "../target/idl/akt_solana.json";
-import type { AktSolana } from "../target/types/akt_solana";
+import idl from "../../../.cache/solana/target/idl/akt_solana.json";
+import type { AktSolana } from "../../../.cache/solana/target/types/akt_solana";
 import {
   METADATA_PROGRAM_ID,
   metadataAddress,

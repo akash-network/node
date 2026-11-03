@@ -1,111 +1,96 @@
-import assert from "node:assert/strict";
-import test from "node:test";
-import { web3 } from "@coral-xyz/anchor";
-import Long from "long";
 import {
   Hold,
   Outcome,
-  Observation,
-  Sink_Params as Params,
-  Settlement,
+  SettlementData,
+  TransferState,
   Sink_Status as Status,
-  Totals,
 } from "@akashnetwork/chain-sdk/private-types/akash.v1";
+import assert from "node:assert/strict";
+import test from "node:test";
+import { testId, testSnapshot } from "../tests/sink-fixtures";
 import {
   minimumSlot,
   planOutcome,
-  refundQueueHead,
+  reporterThreshold,
   settledConsistently,
   type Snapshot,
 } from "./policy";
 import type { Observed } from "./solana";
-
-function fixture(): Snapshot {
-  const record = Buffer.alloc(77);
-  record[0] = 1;
-  record.writeBigUInt64LE(1n, 1);
-  web3.Keypair.generate().publicKey.toBuffer().copy(record, 29);
-  record.writeBigUInt64LE(60n, 61);
-  record.writeBigUInt64LE(1n, 69);
-  return {
-    params: Params.fromPartial({
-      reporters: ["reporter", "b", "c", "d"],
-      reporterThreshold: 3,
-      refundsEnabled: true,
-      dailyRefundCap: 100n,
-    }),
-    totals: Totals.fromPartial({ reporterEpoch: 1n, refundDay: 1n }),
-    time: 86410n,
-    transfer: {
-      record,
-      voidOrdered: false,
-      settlement: Settlement.fromPartial({
-        round: 1n,
-        policy: {
-          epoch: 1n,
-          members: ["reporter", "b", "c", "d"],
-          threshold: 3,
-        },
-      }),
-    },
-  };
-}
-function resolved(outcome: Outcome): Extract<Observed, { kind: "resolved" }> {
+function resolved(
+  outcome = Outcome.OUTCOME_VOIDED,
+): Extract<Observed, { kind: "resolved" }> {
   return {
     kind: "resolved",
     contextSlot: 110n,
-    observation: Observation.fromPartial({
+    observation: {
       outcome,
       slot: 100n,
       transactionSignature: new Uint8Array(64).fill(7),
-    }),
+    },
   };
 }
 function voided() {
-  const snapshot = fixture();
-  const settlement = Settlement.fromPartial({
+  const snapshot = testSnapshot();
+  const settlement = SettlementData.fromPartial({
     ...snapshot.transfer.settlement,
-    status: Status.STATUS_VOIDED,
     challengeEnd: snapshot.time,
     votes: ["reporter", "b", "c"].map((reporter) => ({
       reporter,
-      observation: resolved(Outcome.OUTCOME_VOIDED).observation,
+      policyVersion: 1n,
+      observation: resolved().observation,
     })),
   });
   snapshot.transfer.settlement = settlement;
+  snapshot.transfer.status = Status.STATUS_REFUND_PENDING;
   return { snapshot, settlement };
 }
-
-test("reports finalized mints with epoch/round and suppresses repeats after restart", () => {
-  const snapshot = fixture();
-  const observation = resolved(Outcome.OUTCOME_MINTED);
-  const plan = planOutcome("reporter", snapshot, observation);
-  assert.equal(plan.messages[0]?.typeUrl, "/akash.sink.v1.MsgReportOutcome");
+test("reports exact composite identity, current policy and round; dedupes only same outcome/version", () => {
+  const snapshot = testSnapshot(),
+    observed = resolved(Outcome.OUTCOME_MINTED);
+  const message = planOutcome("reporter", snapshot, observed).messages[0];
+  assert.ok(message?.typeUrl === "/akash.sink.v1.MsgReportOutcome");
+  assert.deepEqual(message.value.id, snapshot.transfer.id);
+  assert.deepEqual(message.value.observation, observed.observation);
+  assert.equal(message.value.policyVersion, 1n);
+  assert.equal(message.value.round, 1n);
   const settlement = snapshot.transfer.settlement;
   assert.ok(settlement);
   settlement.votes.push({
     reporter: "reporter",
-    observation: observation.observation,
+    policyVersion: 1n,
+    observation: observed.observation,
   });
-  assert.deepEqual(planOutcome("reporter", snapshot, observation).messages, []);
-  snapshot.totals.reporterEpoch = snapshot.totals.reporterEpoch.add(1);
-  settlement.round = settlement.round.add(1);
-  const next = planOutcome("reporter", snapshot, observation).messages[0];
+  assert.equal(planOutcome("reporter", snapshot, observed).messages.length, 0);
+  snapshot.policy.version = 9007199254740993n;
+  const next = planOutcome("reporter", snapshot, observed).messages[0];
   assert.ok(next?.typeUrl === "/akash.sink.v1.MsgReportOutcome");
-  assert.equal(next.value.reporterEpoch.toBigInt(), 2n);
-  assert.equal(next.value.round.toBigInt(), 2n);
+  assert.equal(next.value.policyVersion, snapshot.policy.version);
+  assert.equal(
+    planOutcome("reporter", snapshot, resolved()).messages.length,
+    1,
+  );
 });
-
-test("absence never becomes a void report or a timeout refund", () => {
-  const snapshot = fixture();
-  snapshot.transfer.voidOrdered = true;
+test("absence never creates a void or deadline refund", () => {
+  const snapshot = testSnapshot();
+  assert.ok(snapshot.transfer.settlement);
+  snapshot.transfer.status = Status.STATUS_VOIDED;
+  snapshot.transfer.settlement.voidAuthorization = {
+    requestedHeight: 1n,
+    requestedRound: 1n,
+  };
   assert.deepEqual(
     planOutcome("reporter", snapshot, { kind: "absent", contextSlot: 110n }),
     { messages: [], alerts: [] },
   );
+  const { snapshot: unpaid } = voided();
+  unpaid.time += 86400n;
+  assert.equal(
+    planOutcome("reporter", unpaid, { kind: "absent", contextSlot: 110n })
+      .messages.length,
+    0,
+  );
 });
-
-test("fresh absence vetoes a false void during its challenge, lagging reads fail", () => {
+test("fresh absence vetoes only during challenge and never behind plausible evidence", () => {
   const { snapshot, settlement } = voided();
   snapshot.time--;
   assert.equal(minimumSlot(snapshot.transfer), 100n);
@@ -114,254 +99,201 @@ test("fresh absence vetoes a false void during its challenge, lagging reads fail
       planOutcome("reporter", snapshot, { kind: "absent", contextSlot: 99n }),
     /behind/,
   );
+  assert.equal(
+    planOutcome("reporter", snapshot, { kind: "absent", contextSlot: 110n })
+      .messages[0]?.typeUrl,
+    "/akash.sink.v1.MsgVetoVoid",
+  );
+  settlement.votes[0].observation = {
+    outcome: Outcome.OUTCOME_VOIDED,
+    slot: 18446744073709551615n,
+    transactionSignature: new Uint8Array(64).fill(8),
+  };
   const plan = planOutcome("reporter", snapshot, {
     kind: "absent",
     contextSlot: 110n,
-  });
-  assert.equal(plan.messages[0]?.typeUrl, "/akash.sink.v1.MsgVetoVoid");
-  assert.equal(plan.alerts.length, 1);
-  settlement.hold = Hold.HOLD_VETO;
-  assert.deepEqual(
-    planOutcome("reporter", snapshot, { kind: "absent", contextSlot: 110n })
-      .messages,
-    [],
-  );
-  settlement.hold = Hold.HOLD_NONE;
-  snapshot.time++;
-  assert.deepEqual(
-    planOutcome("reporter", snapshot, { kind: "absent", contextSlot: 110n })
-      .messages,
-    [],
-  );
-});
-
-test("slots beyond a fresh node's plausible limit cannot block a veto", () => {
-  // SDK fromPartial reads bigint uint64 values as signed; use unsigned Longs.
-  function withSlots(...slots: string[]) {
-    const { snapshot, settlement } = voided();
-    snapshot.time--;
-    settlement.votes.forEach((vote, i) => {
-      vote.observation = Observation.fromPartial({
-        ...vote.observation,
-        slot: Long.fromString(slots[i] ?? slots[0], true),
-      });
-    });
-    return snapshot;
-  }
-  const absent: Observed = {
-    kind: "absent",
-    contextSlot: 110n,
     slotLimit: 710n,
-  };
-  const huge = withSlots("9223372036854775808");
-  assert.equal(minimumSlot(huge.transfer), 9_223_372_036_854_775_808n);
-  assert.equal(minimumSlot(huge.transfer, 710n), 0n);
-  const plan = planOutcome("reporter", huge, absent);
-  assert.equal(plan.messages[0]?.typeUrl, "/akash.sink.v1.MsgVetoVoid");
-  assert.deepEqual(plan.alerts, [
-    "Akash reports a Solana slot beyond any plausible finalized slot",
-    "Akash reports an outcome without a finalized Solana status",
-  ]);
+  });
+  assert.match(plan.alerts.join(), /beyond any plausible/);
+  assert.equal(plan.messages.length, 1);
+  settlement.hold = Hold.HOLD_VETO;
   assert.equal(
-    planOutcome("reporter", withSlots("711"), absent).messages[0]?.typeUrl,
-    "/akash.sink.v1.MsgVetoVoid",
-  );
-  // Without a limit every reported slot bounds absence, as before.
-  assert.throws(
-    () => planOutcome("reporter", huge, { kind: "absent", contextSlot: 110n }),
-    /behind/,
-  );
-  // A genuine slot slightly ahead of this node, alone or beside a fabricated
-  // one, still means the node is behind and must not veto.
-  for (const snapshot of [
-    withSlots("111"),
-    withSlots("710"),
-    withSlots("9223372036854775808", "400", "400"),
-  ])
-    assert.throws(() => planOutcome("reporter", snapshot, absent), /behind/);
-  assert.throws(
-    () =>
-      planOutcome("reporter", huge, {
-        kind: "absent",
-        contextSlot: 110n,
-        slotLimit: 109n,
-      }),
-    /invalid plausible slot limit/,
+    planOutcome("reporter", snapshot, {
+      kind: "absent",
+      contextSlot: 110n,
+      slotLimit: 710n,
+    }).messages.length,
+    0,
   );
 });
-
-test("contradictory finalized mint reports conflict even after a refund", () => {
+test("refund requires finalized void, queue head, authorization, challenge, cap, enablement and no hold", () => {
+  assert.equal(
+    planOutcome("reporter", voided().snapshot, resolved()).messages[0]?.typeUrl,
+    "/akash.sink.v1.MsgFinalizeRefund",
+  );
+  const changes: ((s: Snapshot) => void)[] = [
+    (s) => {
+      s.time--;
+    },
+    (s) => {
+      s.params.refundsEnabled = false;
+    },
+    (s) => {
+      s.refundUsage.amount = { denom: "uakt", amount: "41" };
+    },
+    (s) => {
+      s.policy.version++;
+    },
+    (s) => {
+      s.refundHead = testId(9);
+    },
+    (s) => {
+      s.refundHead = undefined;
+    },
+    (s) => {
+      assert.ok(s.transfer.settlement);
+      s.transfer.settlement.hold = Hold.HOLD_CONFLICT;
+    },
+  ];
+  for (const change of changes) {
+    const { snapshot } = voided();
+    change(snapshot);
+    assert.ok(
+      planOutcome("reporter", snapshot, resolved()).messages.every(
+        (m) => m.typeUrl !== "/akash.sink.v1.MsgFinalizeRefund",
+      ),
+    );
+  }
+});
+test("refund capacity follows the native epoch without shortening the challenge", () => {
   const { snapshot, settlement } = voided();
-  settlement.status = Status.STATUS_REFUNDED;
-  assert.ok(settlement.votes[0].observation);
-  settlement.votes[0].observation = Observation.fromPartial({
-    ...settlement.votes[0].observation,
-    slot: 18_446_744_073_709_551_615n,
-  });
-  const plan = planOutcome(
+  snapshot.refundUsage.amount = { denom: "uakt", amount: "100" };
+  snapshot.time += 86400n;
+  assert.equal(
+    planOutcome("reporter", snapshot, resolved()).messages.length,
+    0,
+  );
+
+  snapshot.epoch++;
+  snapshot.refundUsage = {
+    epoch: snapshot.epoch,
+    amount: { denom: "uakt", amount: "0" },
+  };
+  settlement.challengeEnd = snapshot.time + 1n;
+  assert.equal(
+    planOutcome("reporter", snapshot, resolved()).messages.length,
+    0,
+  );
+  snapshot.time++;
+  assert.equal(
+    planOutcome("reporter", snapshot, resolved()).messages[0]?.typeUrl,
+    "/akash.sink.v1.MsgFinalizeRefund",
+  );
+
+  snapshot.epoch = 0n;
+  snapshot.refundUsage.epoch = 0n;
+  assert.equal(
+    planOutcome("reporter", snapshot, resolved()).messages.length,
+    0,
+  );
+});
+test("governance refund authorization survives policy rotation; paid and minted authorization is retained", () => {
+  const { snapshot, settlement } = voided();
+  settlement.governanceObservation = resolved().observation;
+  settlement.votes = [];
+  snapshot.policy.version++;
+  assert.equal(
+    planOutcome("reporter", snapshot, resolved()).messages[0]?.typeUrl,
+    "/akash.sink.v1.MsgFinalizeRefund",
+  );
+  snapshot.transfer.status = Status.STATUS_REFUNDED;
+  settlement.challengeEnd = 0n;
+  assert.equal(
+    planOutcome("reporter", snapshot, resolved()).messages.length,
+    0,
+  );
+  const conflict = planOutcome(
     "reporter",
     snapshot,
     resolved(Outcome.OUTCOME_MINTED),
   );
-  assert.equal(plan.alerts.length, 1);
-  assert.equal(plan.messages[0]?.typeUrl, "/akash.sink.v1.MsgReportOutcome");
-  assert.equal(plan.messages.length, 1);
+  assert.match(conflict.alerts.join(), /contradicts/);
+  assert.equal(
+    conflict.messages[0]?.typeUrl,
+    "/akash.sink.v1.MsgReportOutcome",
+  );
+  assert.equal(settlement.policy?.version, 1n);
+  assert.ok(settlement.governanceObservation);
+});
+test("decimal quorum is exact and financial terminal state does not conceal holds or opposing votes", () => {
+  assert.equal(reporterThreshold("0.75", 4), 3);
+  assert.equal(reporterThreshold("0.6", 4), 3);
+  assert.equal(reporterThreshold("0.666666666666666666", 4), 3);
+  assert.equal(reporterThreshold("0.666666666666666667", 3), 3);
+  assert.throws(() => reporterThreshold("0.666666666666666666", 3));
+  assert.throws(() => reporterThreshold("1.01", 0));
+  for (const ratio of ["0.5", "1.01", "NaN"])
+    assert.throws(() => reporterThreshold(ratio, 4));
+  const transfer = TransferState.fromPartial({
+    status: Status.STATUS_MINTED,
+    settlement: { policy: { version: 1n } },
+  });
+  const settlement = transfer.settlement;
+  assert.ok(settlement);
+  assert.ok(settledConsistently(transfer, Outcome.OUTCOME_MINTED));
+  settlement.hold = Hold.HOLD_CONFLICT;
+  assert.ok(!settledConsistently(transfer, Outcome.OUTCOME_MINTED));
+  settlement.hold = Hold.HOLD_NONE;
+  settlement.votes.push({
+    reporter: "b",
+    policyVersion: 1n,
+    observation: resolved().observation,
+  });
+  assert.ok(!settledConsistently(transfer, Outcome.OUTCOME_MINTED));
 });
 
-test("refund needs observed void, current epoch, challenge, cap, no hold and enablement", () => {
-  const observed = resolved(Outcome.OUTCOME_VOIDED);
-  const { snapshot, settlement } = voided();
+test("a frozen certificate does not buy repeated same-outcome votes from the remaining reporter", () => {
+  const { snapshot } = voided();
+  snapshot.time--;
+  assert.equal(planOutcome("d", snapshot, resolved()).messages.length, 0);
+  const opposite = planOutcome("d", snapshot, resolved(Outcome.OUTCOME_MINTED));
   assert.equal(
-    planOutcome("reporter", snapshot, observed).messages[0]?.typeUrl,
-    "/akash.sink.v1.MsgFinalizeRefund",
+    opposite.messages[0]?.typeUrl,
+    "/akash.sink.v1.MsgReportOutcome",
   );
-  for (const change of [
-    (s: Snapshot) => {
-      s.time--;
-    },
-    (s: Snapshot) => {
-      s.params.refundsEnabled = false;
-    },
-    (s: Snapshot) => {
-      s.totals = Totals.fromPartial({ ...s.totals, refundedToday: 41n });
-    },
-    (s: Snapshot) => {
-      assert.ok(s.transfer.settlement);
-      s.transfer.settlement.hold = Hold.HOLD_VETO;
-    },
-    (s: Snapshot) => {
-      s.totals.reporterEpoch = s.totals.reporterEpoch.add(1);
-    },
-    (s: Snapshot) => {
-      s.refundHead = 999n; // x/sink pays an older refund first
-    },
-  ]) {
-    const next = voided().snapshot;
-    change(next);
-    assert.ok(
-      planOutcome("reporter", next, observed).messages.every(
-        (msg) => msg.typeUrl !== "/akash.sink.v1.MsgFinalizeRefund",
-      ),
-    );
+  const settlement = snapshot.transfer.settlement;
+  assert.ok(settlement);
+  settlement.hold = Hold.HOLD_CONFLICT;
+  settlement.votes.push({
+    reporter: "d",
+    policyVersion: snapshot.policy.version,
+    observation: resolved(Outcome.OUTCOME_MINTED).observation,
+  });
+  for (const outcome of [Outcome.OUTCOME_MINTED, Outcome.OUTCOME_VOIDED]) {
+    const plan = planOutcome("reporter", snapshot, resolved(outcome));
+    assert.equal(plan.messages.length, 0);
+    assert.match(plan.alerts.join(), /governance review/);
   }
-  snapshot.totals = Totals.fromPartial({
-    ...snapshot.totals,
-    refundedToday: 100n,
-    refundDay: 0n,
-  });
-  assert.equal(
-    planOutcome("reporter", snapshot, observed).messages[0]?.typeUrl,
-    "/akash.sink.v1.MsgFinalizeRefund",
-  );
-  settlement.status = Status.STATUS_REFUNDED;
-  assert.deepEqual(planOutcome("reporter", snapshot, observed).messages, []);
-  assert.throws(
-    () => planOutcome("outsider", snapshot, observed),
-    /not a current/,
-  );
 });
 
-test("SDK uint64 epochs and refund limits retain precision above Number.MAX_SAFE_INTEGER", () => {
-  const high = 9_007_199_254_740_993n;
+test("policy rotation refreshes only unheld unpaid attempts and retains held evidence", () => {
   const { snapshot, settlement } = voided();
-  const record = Buffer.from(snapshot.transfer.record);
-  record.writeBigUInt64LE(high, 61);
-  snapshot.transfer.record = record;
-  snapshot.params = Params.fromPartial({
-    ...snapshot.params,
-    dailyRefundCap: high,
-  });
-  snapshot.totals = Totals.fromPartial({
-    ...snapshot.totals,
-    reporterEpoch: high,
-  });
-  snapshot.transfer.settlement = Settlement.fromPartial({
-    ...settlement,
-    policy: { ...settlement.policy, epoch: high },
-  });
-  const observed = resolved(Outcome.OUTCOME_VOIDED);
+  snapshot.policy.version++;
   assert.equal(
-    planOutcome("reporter", snapshot, observed).messages[0]?.typeUrl,
-    "/akash.sink.v1.MsgFinalizeRefund",
+    planOutcome("d", snapshot, resolved()).messages[0]?.typeUrl,
+    "/akash.sink.v1.MsgReportOutcome",
   );
-  snapshot.params = Params.fromPartial({
-    ...snapshot.params,
-    dailyRefundCap: high - 1n,
-  });
-  assert.deepEqual(planOutcome("reporter", snapshot, observed).messages, []);
-});
-
-test("an audit skips evidence only where the plan would do nothing", () => {
-  const { MINTED, VOIDED } = {
-    MINTED: Outcome.OUTCOME_MINTED,
-    VOIDED: Outcome.OUTCOME_VOIDED,
-  };
-  let skipped = 0;
-  for (const status of [
-    Status.STATUS_PENDING,
-    Status.STATUS_MINTED,
-    Status.STATUS_VOIDED,
-    Status.STATUS_REFUNDED,
-  ])
-    for (const hold of [Hold.HOLD_NONE, Hold.HOLD_CONFLICT])
-      for (const votes of [[], [MINTED], [VOIDED], [MINTED, VOIDED]])
-        for (const governance of [undefined, MINTED, VOIDED])
-          for (const outcome of [MINTED, VOIDED]) {
-            const snapshot = fixture();
-            const settlement = Settlement.fromPartial({
-              ...snapshot.transfer.settlement,
-              status,
-              hold,
-              votes: votes.map((vote, i) => ({
-                reporter: ["b", "c"][i],
-                observation: resolved(vote).observation,
-              })),
-              governanceObservation:
-                governance === undefined
-                  ? undefined
-                  : resolved(governance).observation,
-            });
-            snapshot.transfer.settlement = settlement;
-            if (!settledConsistently(settlement, outcome)) continue;
-            skipped++;
-            assert.deepEqual(
-              planOutcome("reporter", snapshot, resolved(outcome)),
-              { messages: [], alerts: [] },
-            );
-          }
-  // Minted or refunded, unheld, with no report or only agreeing ones.
-  assert.equal(skipped, 2 * 2 * 2);
-});
-
-test("refund queue head is the oldest unheld void, then the lowest ID", () => {
-  const entry = (
-    id: bigint,
-    status: Status,
-    end: bigint,
-    hold = Hold.HOLD_NONE,
-  ) => ({
-    id,
-    transfer: {
-      record: new Uint8Array(),
-      voidOrdered: false,
-      settlement: Settlement.fromPartial({
-        status,
-        hold,
-        challengeEnd: Long.fromValue(end),
-        round: Long.fromValue(1),
-      }),
-    },
-  });
-  assert.equal(refundQueueHead([]), undefined);
+  settlement.hold = Hold.HOLD_VETO;
+  assert.equal(planOutcome("d", snapshot, resolved()).messages.length, 0);
   assert.equal(
-    refundQueueHead([
-      entry(1n, Status.STATUS_PENDING, 0n),
-      entry(2n, Status.STATUS_VOIDED, 50n, Hold.HOLD_VETO), // held: out of the queue
-      entry(4n, Status.STATUS_VOIDED, 60n),
-      entry(3n, Status.STATUS_VOIDED, 60n),
-      entry(5n, Status.STATUS_VOIDED, 70n),
-      entry(6n, Status.STATUS_REFUNDED, 0n),
-    ]),
-    3n,
+    planOutcome("d", snapshot, resolved(Outcome.OUTCOME_MINTED)).messages[0]
+      ?.typeUrl,
+    "/akash.sink.v1.MsgReportOutcome",
+  );
+  settlement.hold = Hold.HOLD_CONFLICT;
+  assert.equal(
+    planOutcome("d", snapshot, resolved(Outcome.OUTCOME_MINTED)).messages
+      .length,
+    0,
   );
 });

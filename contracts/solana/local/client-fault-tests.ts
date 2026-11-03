@@ -4,7 +4,7 @@ import { appendFile } from "node:fs/promises";
 import { join } from "node:path";
 import { AnchorProvider, BN, Program, web3 } from "@coral-xyz/anchor";
 import clientIdl from "../idls/ics07_tendermint.json";
-import type { Ics07Tendermint } from "../.deps/ibc-contracts/ibc-solana/target/types/ics07_tendermint";
+import type { Ics07Tendermint } from "../../../.cache/solana/deps/ibc-contracts/ibc-solana/target/types/ics07_tendermint";
 import { CLIENT_ID, ACCESS_ID, pda, LE64 } from "./common";
 import { assertClientActive } from "./client-status";
 import { decodePacket, uploadHeader } from "./header-upload";

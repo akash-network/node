@@ -1,3 +1,4 @@
+import { testId } from "../tests/sink-fixtures";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { openSync, closeSync } from "node:fs";
@@ -8,10 +9,13 @@ import { createHash } from "node:crypto";
 import { AnchorProvider, BN, Program, Wallet, web3 } from "@coral-xyz/anchor";
 import clientIdl from "../idls/ics07_tendermint.json";
 import accessIdl from "../idls/access_manager.json";
-import type { Ics07Tendermint } from "../.deps/ibc-contracts/ibc-solana/target/types/ics07_tendermint";
-import type { AccessManager } from "../.deps/ibc-contracts/ibc-solana/target/types/access_manager";
+import type { Ics07Tendermint } from "../../../.cache/solana/deps/ibc-contracts/ibc-solana/target/types/ics07_tendermint";
+import type { AccessManager } from "../../../.cache/solana/deps/ibc-contracts/ibc-solana/target/types/access_manager";
 import {
   REPO,
+  DEPS,
+  RUN,
+  TARGET,
   CLIENT_ID,
   ACCESS_ID,
   pda,
@@ -165,7 +169,7 @@ async function testPrune(
         .verifyMembership({
           height: new BN(1),
           proof: Buffer.from([0]),
-          path: [Buffer.from("sink"), Buffer.from(transferKey(1))],
+          path: [Buffer.from("sink"), Buffer.from(transferKey(testId()))],
           value: Buffer.from([1]),
         })
         .accountsStrict({
@@ -495,8 +499,8 @@ async function testOpenRelaying(
       JSON.parse(
         await readFile(
           join(
-            REPO,
-            ".deps/ibc-contracts/solana-keypairs/localnet/ics07_tendermint-keypair.json",
+            DEPS,
+            "ibc-contracts/solana-keypairs/localnet/ics07_tendermint-keypair.json",
           ),
           "utf8",
         ),
@@ -753,7 +757,7 @@ async function fixture({
   input.trusted_height = trusted;
   const raw = await new Promise<string>((resolve, reject) => {
     const child = spawn(
-      join(REPO, "tools/header-encoder/target/debug/akt-header-encoder"),
+      join(TARGET, "debug/akt-header-encoder"),
       ["--fixture", String(validators), String(signers), distribution],
       { stdio: ["pipe", "pipe", "pipe"] },
     );
@@ -828,14 +832,14 @@ async function main() {
     });
     assert.ok(!occupied, `benchmark port ${port} already occupied`);
   }
-  await mkdir(join(REPO, ".cache/scale"), { recursive: true, mode: 0o700 });
-  const root = await mkdtemp(join(REPO, ".cache/scale/run-"));
+  await mkdir(join(RUN, "scale"), { recursive: true, mode: 0o700 });
+  const root = await mkdtemp(join(RUN, "scale/run-"));
   const validators = small ? 4 : wide || 100;
   const wideQuorum = Math.floor((2 * wide) / 3) + 1;
   console.log(`Isolated ${mode} run with ${validators} validators: ${root}`);
   const key = web3.Keypair.generate();
   await save(join(root, "solana-keypair.json"), Array.from(key.secretKey));
-  const artifacts = join(REPO, ".deps/ibc-contracts/ibc-solana/target/deploy");
+  const artifacts = join(DEPS, "ibc-contracts/ibc-solana/target/deploy");
   const args = [
     "--ledger",
     join(root, "ledger"),

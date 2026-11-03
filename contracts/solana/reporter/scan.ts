@@ -1,12 +1,8 @@
 import assert from "node:assert/strict";
-import {
-  Sink_Status as Status,
-  type TransferState,
-} from "@akashnetwork/chain-sdk/private-types/akash.v1";
+import { Sink_Status as Status } from "@akashnetwork/chain-sdk/private-types/akash.v1";
 import type { AkashClient } from "./akash";
 import {
   planOutcome,
-  refundQueueHead,
   reportedObservations,
   settledConsistently,
   type Message,
@@ -16,10 +12,11 @@ import {
   decodeRecord,
   type SolanaObserver,
 } from "./solana";
-
+import { openTransfers, discoverTransfers } from "../local/open-transfers";
+import type { SinkId } from "../shared/id";
 export type ScanAkash = Pick<
   AkashClient,
-  "state" | "transfer" | "snapshot" | "openTransfers"
+  "state" | "transfer" | "snapshot" | "transfers" | "disputes"
 >;
 export type ScanObserver = Pick<
   SolanaObserver,
@@ -27,122 +24,23 @@ export type ScanObserver = Pick<
 >;
 export interface ScanOptions {
   reporter: string;
-  // Hard stop for the full scan used by nodes without OpenTransfers.
-  maxTransfers: number;
-  // Transfer IDs the rolling terminal audit visits per pass.
   auditPerScan: number;
   output: (value: unknown) => void;
   signal: AbortSignal;
   submit?: (message: Message) => Promise<string>;
 }
-
-// The node's open-transfer listing contradicts its own committed state.
-export class OpenIndexError extends Error {}
-
-export const OPEN_PAGE_LIMIT = 500;
-const PENDING = [Status.STATUS_PENDING, Status.STATUS_VOIDED];
-
-function message(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
-}
-
-function check(condition: boolean, reason: string): asserts condition {
-  if (!condition) throw new OpenIndexError(reason);
-}
-
-type State = Awaited<ReturnType<ScanAkash["state"]>>;
-type Entry = { id: bigint; transfer: TransferState };
-
+const PENDING = [
+  Status.STATUS_TRANSFER_PENDING,
+  Status.STATUS_VOIDED,
+  Status.STATUS_REFUND_PENDING,
+];
 export class Scanner {
-  // Last ID the terminal audit visited. Memory only; a restart starts over.
-  private auditCursor = 0n;
+  private auditCursor?: SinkId;
   constructor(
     private readonly akash: ScanAkash,
     private readonly observer: ScanObserver,
     private readonly options: ScanOptions,
   ) {}
-
-  // Every non-terminal transfer at the state height, checked against the
-  // pending count. Undefined when the node lacks the query.
-  async openTransfers(state: State): Promise<Entry[] | undefined> {
-    const last = state.totals.lastTransferId.toBigInt();
-    const pending = state.totals.pendingCount.toBigInt();
-    const pages = pending / BigInt(OPEN_PAGE_LIMIT) + 1n;
-    const result: Entry[] = [];
-    let startAfter = 0n;
-    for (let page = 0n; ; page++) {
-      const reply = await this.akash.openTransfers(
-        startAfter,
-        OPEN_PAGE_LIMIT,
-        state.height,
-      );
-      if (!reply && page === 0n) return undefined;
-      check(reply !== undefined, "open transfer query disappeared");
-      check(
-        reply.transfers.length <= OPEN_PAGE_LIMIT,
-        "open transfer page exceeds its limit",
-      );
-      for (const transfer of reply.transfers) {
-        let id: bigint;
-        try {
-          id = decodeRecord(transfer.record).id;
-        } catch {
-          throw new OpenIndexError("malformed open transfer record");
-        }
-        check(
-          id > (result.at(-1)?.id ?? startAfter) && id <= last,
-          "open transfer IDs out of order or range",
-        );
-        check(
-          transfer.settlement !== undefined &&
-            PENDING.includes(transfer.settlement.status),
-          `open transfer ${id} is terminal`,
-        );
-        result.push({ id, transfer });
-      }
-      if (reply.next === 0n) break;
-      check(
-        reply.transfers.length > 0 && reply.next === result.at(-1)?.id,
-        "open transfer cursor does not follow the page",
-      );
-      check(page + 1n < pages, "open transfer pages exceed pending count");
-      startAfter = reply.next;
-    }
-    check(
-      BigInt(result.length) === pending,
-      `open transfers (${result.length}) differ from pending count (${pending})`,
-    );
-    return result;
-  }
-
-  // The next auditPerScan IDs in round-robin order, skipping open transfers
-  // that this pass already reviews.
-  auditIds(last: bigint, open: ReadonlySet<bigint>) {
-    const ids: bigint[] = [];
-    const count = BigInt(this.options.auditPerScan);
-    for (let i = 0n; i < count && i < last; i++) {
-      this.auditCursor = this.auditCursor >= last ? 1n : this.auditCursor + 1n;
-      if (!open.has(this.auditCursor)) ids.push(this.auditCursor);
-    }
-    return ids;
-  }
-
-  private async fullScan(state: State) {
-    const last = state.totals.lastTransferId.toBigInt();
-    assert.ok(
-      last <= BigInt(this.options.maxTransfers),
-      "ledger exceeds scan limit; increase maxTransfers or use a node with OpenTransfers",
-    );
-    const transfers: Entry[] = [];
-    for (let id = 1n; id <= last && !this.options.signal.aborted; id++) {
-      transfers.push({
-        id,
-        transfer: await this.akash.transfer(id, state.height),
-      });
-    }
-    return transfers;
-  }
-
   private changes() {
     for (const change of this.observer.takeLightClientChanges())
       this.options.output({
@@ -152,33 +50,23 @@ export class Scanner {
         slot: change.contextSlot,
       });
   }
-
-  // Rereads one transfer and acts on it. An audited terminal transfer that
-  // agrees with its finalized Solana status needs no transaction evidence.
-  private async review(id: bigint, audit: boolean, refundHead?: bigint) {
+  private async review(id: SinkId, audit: boolean) {
     const { reporter, output, signal, submit } = this.options;
-    const mode = submit ? "broadcast" : "preview";
-    const snapshot = { ...(await this.akash.snapshot(id)), refundHead };
-    const record = decodeRecord(snapshot.transfer.record);
-    const settlement = snapshot.transfer.settlement;
+    const snapshot = await this.akash.snapshot(id),
+      record = decodeRecord(snapshot.transfer),
+      settlement = snapshot.transfer.settlement;
     assert.ok(settlement, "missing sink settlement");
-    if (audit && !PENDING.includes(settlement.status)) {
+    if (audit && !PENDING.includes(snapshot.transfer.status)) {
       const finalized = await this.observer.observeFinalized(record);
       this.changes();
       if (
         finalized.kind === "resolved" &&
-        settledConsistently(settlement, finalized.outcome)
+        settledConsistently(snapshot.transfer, finalized.outcome)
       ) {
         output({
           id,
-          mode,
           audit,
-          observed: {
-            kind: finalized.kind,
-            contextSlot: finalized.contextSlot,
-            outcome: finalized.outcome,
-            slot: finalized.slot,
-          },
+          observed: finalized.kind,
           messages: [],
           alerts: [],
         });
@@ -192,15 +80,17 @@ export class Scanner {
     );
     this.changes();
     const plan = planOutcome(reporter, snapshot, observed);
-    output({ id, mode, ...(audit && { audit }), observed, ...plan });
-    for (const message of plan.messages) {
+    output({
+      id,
+      mode: submit ? "broadcast" : "preview",
+      audit,
+      observed,
+      ...plan,
+    });
+    for (const message of plan.messages)
       if (submit && !signal.aborted)
         output({ id, transactionHash: await submit(message) });
-    }
   }
-
-  // One pass. Returns the number of failures. A light client other than the
-  // configured pin stops the pass before any further decision.
   async scan() {
     const { reporter, output, signal } = this.options;
     let failures = 0;
@@ -209,54 +99,49 @@ export class Scanner {
       this.changes();
       const state = await this.akash.state();
       assert.ok(
-        state.params.reporters.includes(reporter),
+        state.policy.members.includes(reporter),
         "not a current reporter",
       );
-      let open: Entry[] | undefined;
+      const open = await openTransfers(this.akash, state.height);
+      const queue = new Map(open.map((entry) => [entry.id, false]));
+      let audited = 0;
       try {
-        open = await this.openTransfers(state);
+        const audit = await discoverTransfers(
+          this.akash,
+          state.height,
+          this.auditCursor,
+          Math.min(500, this.options.auditPerScan + 1),
+        );
+        this.auditCursor = audit.hasMore ? audit.cursor : undefined;
+        audited = audit.entries.length;
+        for (const entry of audit.entries)
+          if (!queue.has(entry.id)) queue.set(entry.id, true);
       } catch (error) {
-        if (!(error instanceof OpenIndexError)) throw error;
-        // Every decision still rereads its transfer; only the listing is
-        // doubted, so fall back to reading every ID.
         failures++;
-        output({ alert: "open-transfers-inconsistent", error: error.message });
+        output({
+          alert: "audit-unavailable",
+          error: error instanceof Error ? error.message : "audit query failed",
+        });
       }
-      const transfers = open ?? (await this.fullScan(state));
-      const audit = open
-        ? this.auditIds(
-            state.totals.lastTransferId.toBigInt(),
-            new Set(open.map(({ id }) => id)),
-          )
-        : [];
-      // Review refund windows before normal pending/terminal bookkeeping.
-      transfers.sort(
-        (a, b) =>
-          Number(b.transfer.settlement?.status === Status.STATUS_VOIDED) -
-          Number(a.transfer.settlement?.status === Status.STATUS_VOIDED),
-      );
-      // Only the oldest matured refund can be paid; the next one waits for
-      // the following pass.
-      const refundHead = refundQueueHead(transfers);
-      const queue = [
-        ...transfers.map(({ id }) => ({ id, audit: false })),
-        ...audit.map((id) => ({ id, audit: true })),
-      ];
-      for (const { id, audit } of queue) {
+      for (const [id, isAudit] of queue) {
         if (signal.aborted) break;
         try {
-          await this.review(id, audit, refundHead);
+          await this.review(id, isAudit);
         } catch (error) {
           this.changes();
           if (error instanceof LightClientMismatchError) throw error;
           failures++;
-          output({ id, error: message(error, "observation failed") });
+          output({
+            id,
+            error:
+              error instanceof Error ? error.message : "observation failed",
+          });
         }
       }
       output({
-        scanned: transfers.length,
-        audited: audit.length,
-        index: open ? "open-transfers" : "full-scan",
+        scanned: open.length,
+        audited,
+        index: "canonical",
         failures,
         lightClientProgram: lightClientProgram.toBase58(),
       });
@@ -268,7 +153,7 @@ export class Scanner {
           pinned: error.pinned.toBase58(),
           current: error.current.toBase58(),
         });
-      output({ error: message(error, "scan failed") });
+      output({ error: error instanceof Error ? error.message : "scan failed" });
     }
     return failures;
   }

@@ -2,9 +2,8 @@
 //!
 //! `declare_program!` reads `idls/ics07_tendermint.json` at the repository
 //! root, the interface `npm run setup:light-client` checks against the patched
-//! upstream build. AKT uses only `cpi::verify_membership` and the
-//! `ClientState` and `ConsensusStateStore` account types. The bindings select
-//! no deployment: AKT passes the pinned program account to every CPI.
+//! upstream build. AKT uses the `ClientState` and `ConsensusStateStore`
+//! account types and authenticates their owner against its pinned program.
 //!
 //! The bindings live in their own crate because `declare_program!` also emits
 //! the client's `#[error_code]` enum. Anchor 0.32 builds a program's IDL from

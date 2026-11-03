@@ -17,6 +17,8 @@ import {
   AKASH_REST_PORT,
   SOLANA_RPC_PORT,
   REPO,
+  DEPS,
+  TARGET,
   AKASH,
   AKASH_HOME,
   CHAIN,
@@ -223,16 +225,24 @@ export async function init() {
     reporters: names
       .filter((name) => name.startsWith("reporter"))
       .map((name) => addresses.get(name)),
-    reporter_threshold: 3,
+    reporters_threshold: "0.75",
     // x/sink requires a minimum while deposits are on; 1 uakt changes nothing here.
-    min_transfer: "1",
-    challenge_period_seconds: "20",
-    // 1,000,000 AKT per transfer, 10,000,000 AKT minted on Solana and
-    // 1,000,000 AKT refunded per day, matching the Solana mint policy.
-    max_transfer: "1000000000000",
-    solana_daily_mint_cap: "10000000000000",
-    daily_refund_cap: "1000000000000",
+    min_amount_per_transfer: { denom: "uakt", amount: "1" },
+    reporter_challenge_period: "20s",
+    max_amount_per_transfer: { denom: "uakt", amount: "1000000000000" },
+    max_epoch_amount_per_account: { denom: "uakt", amount: "1000000000000" },
+    max_transfer_amount_per_epoch: { denom: "uakt", amount: "10000000000000" },
+    max_epoch_refund: { denom: "uakt", amount: "1000000000000" },
   };
+  assert.equal(sink.schema_version, 4, "local stack requires schema 4 genesis");
+  assert.ok(
+    Array.isArray(sink.records) && sink.records.length === 0,
+    "refusing populated genesis reconfiguration",
+  );
+  sink.current_policy_version = "1";
+  sink.policies = [
+    { version: "1", members: object(sink.params).reporters, threshold: 3 },
+  ];
   app.sink = sink;
   const mint = object(app.mint);
   mint.minter = {
@@ -301,7 +311,7 @@ export async function init() {
 export async function up(signal?: AbortSignal) {
   await init();
   const wallet = await provider();
-  const artifacts = join(REPO, ".deps/ibc-contracts/ibc-solana/target/deploy");
+  const artifacts = join(DEPS, "ibc-contracts/ibc-solana/target/deploy");
   if (PROFILE === "testnetify") {
     await (await import("./testnetify")).startNetwork();
   } else
@@ -358,7 +368,7 @@ export async function up(signal?: AbortSignal) {
       web3.Keypair.generate().publicKey.toBase58(),
       "--bpf-program",
       "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s",
-      join(REPO, ".deps/metaplex/mpl_token_metadata.so"),
+      join(DEPS, "metaplex/mpl_token_metadata.so"),
       "--upgradeable-program",
       CLIENT_ID.toBase58(),
       join(artifacts, "ics07_tendermint.so"),
@@ -369,7 +379,7 @@ export async function up(signal?: AbortSignal) {
       wallet.publicKey.toBase58(),
       "--upgradeable-program",
       PROGRAM_ID.toBase58(),
-      join(REPO, "target/deploy/akt_solana.so"),
+      join(TARGET, "deploy/akt_solana.so"),
       wallet.publicKey.toBase58(),
       "--quiet",
     ],
@@ -440,7 +450,6 @@ export async function up(signal?: AbortSignal) {
       // No lightClientProgram pin: reporters follow the bridge account.
       reporter,
       maxAgeSeconds: 60,
-      maxTransfers: 1000,
       pollSeconds: 3,
       feeAmountUakt: "12500",
       gasLimit: "500000",
@@ -506,12 +515,7 @@ async function status() {
         {
           akash: AKASH_RPC,
           height: state.height,
-          totals: Object.fromEntries(
-            Object.entries(state.totals).map(([key, value]) => [
-              key,
-              value.toString(),
-            ]),
-          ),
+          totals: state.totals,
         },
         (_, value: unknown) =>
           typeof value === "bigint" ? value.toString() : value,

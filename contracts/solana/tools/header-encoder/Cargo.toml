@@ -18,7 +18,7 @@ ibc-client-tendermint = "0.57"
 ibc-core-client-types = "0.57"
 tendermint = "0.40"
 tendermint-proto = "0.40"
-solana-ibc-borsh-header = { path = "../../.deps/ibc-contracts/ibc-solana/packages/solana-ibc-borsh-header", features = ["light-client"] }
+solana-ibc-borsh-header = { path = "../../../../.cache/solana/deps/ibc-contracts/ibc-solana/packages/solana-ibc-borsh-header", features = ["light-client"] }
 
 [dev-dependencies]
 tendermint-light-client-verifier = "0.40"

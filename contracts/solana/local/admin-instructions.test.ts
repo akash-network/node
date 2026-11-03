@@ -10,12 +10,12 @@ import {
   web3,
   type Idl,
 } from "@coral-xyz/anchor";
-import aktIdl from "../target/idl/akt_solana.json";
+import aktIdl from "../../../.cache/solana/target/idl/akt_solana.json";
 import clientIdl from "../idls/ics07_tendermint.json";
 import accessIdl from "../idls/access_manager.json";
-import type { AktSolana } from "../target/types/akt_solana";
-import type { Ics07Tendermint } from "../.deps/ibc-contracts/ibc-solana/target/types/ics07_tendermint";
-import type { AccessManager } from "../.deps/ibc-contracts/ibc-solana/target/types/access_manager";
+import type { AktSolana } from "../../../.cache/solana/target/types/akt_solana";
+import type { Ics07Tendermint } from "../../../.cache/solana/deps/ibc-contracts/ibc-solana/target/types/ics07_tendermint";
+import type { AccessManager } from "../../../.cache/solana/deps/ibc-contracts/ibc-solana/target/types/access_manager";
 import {
   ADMIN_ROLE,
   BPF_LOADER_UPGRADEABLE,

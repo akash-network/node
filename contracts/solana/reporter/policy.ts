@@ -4,15 +4,19 @@ import {
   Outcome,
   type Observation,
   Sink_Status as Status,
-  type Settlement,
+  type SettlementData,
   type Sink_Params as Params,
   type Totals,
+  type ReporterPolicy,
+  type EpochUsage,
   type TransferState,
   MsgReportOutcome,
   MsgVetoVoid,
   MsgFinalizeRefund,
 } from "@akashnetwork/chain-sdk/private-types/akash.v1";
 import { decodeRecord, type Observed } from "./solana";
+import { coinAmount } from "../shared/proof";
+import { sinkIdParts, type SinkId } from "../shared/id";
 
 export type Message =
   | { typeUrl: "/akash.sink.v1.MsgReportOutcome"; value: MsgReportOutcome }
@@ -21,36 +25,44 @@ export type Message =
 export interface Snapshot {
   params: Params;
   totals: Totals;
+  policy: ReporterPolicy;
+  refundUsage: EpochUsage;
+  epoch: bigint;
   transfer: TransferState;
   time: bigint;
   // x/sink pays refunds oldest first: only the head of its refund queue can be
-  // finalized. Undefined when the caller did not list open transfers.
-  refundHead?: bigint;
+  // finalized.
+  refundHead?: SinkId;
 }
 export type Plan = { messages: Message[]; alerts: string[] };
 
-// refundQueueHead mirrors x/sink's refund queue: voided transfers without a
-// hold, ordered by challenge end, then ID.
-export function refundQueueHead(
-  entries: { id: bigint; transfer: TransferState }[],
-): bigint | undefined {
-  let head: { id: bigint; end: bigint } | undefined;
-  for (const { id, transfer } of entries) {
-    const s = transfer.settlement;
-    if (s?.status !== Status.STATUS_VOIDED || s.hold !== Hold.HOLD_NONE)
-      continue;
-    const end = s.challengeEnd.toBigInt();
-    if (!head || end < head.end || (end === head.end && id < head.id))
-      head = { id, end };
-  }
-  return head?.id;
+export function challengeSeconds(settlement: SettlementData): bigint {
+  assert.ok(settlement.challengeEnd >= 0n, "invalid challenge deadline");
+  return settlement.challengeEnd;
+}
+
+export function reporterThreshold(ratio: string, count: number): number {
+  assert.match(ratio, /^(0|1)(\.[0-9]{1,18})?$/, "invalid reporter ratio");
+  const [whole, fraction = ""] = ratio.split(".");
+  const scale = 10n ** BigInt(fraction.length),
+    value = BigInt(whole) * scale + BigInt(fraction || "0");
+  assert.ok(value <= scale, "reporter ratio must be at most one");
+  const members = BigInt(count);
+  const threshold = (value * members + scale - 1n) / scale;
+  assert.ok(
+    count === 0 || 3n * threshold > 2n * members,
+    "reporter quorum must exceed two thirds of the members",
+  );
+  return Number(threshold);
 }
 
 export function reportedObservations(transfer: TransferState): Observation[] {
   const settlement = transfer.settlement;
   assert.ok(settlement, "missing settlement");
   return [
-    settlement.governanceObservation,
+    ...(settlement.governanceObservation
+      ? [settlement.governanceObservation]
+      : []),
     ...settlement.votes.map((vote) => vote.observation),
   ].filter((observation) => observation !== undefined);
 }
@@ -58,7 +70,7 @@ export function reportedObservations(transfer: TransferState): Observation[] {
 // Highest reported slot, ignoring slots above slotLimit when one is given.
 export function minimumSlot(transfer: TransferState, slotLimit?: bigint) {
   return reportedObservations(transfer).reduce((slot, observation) => {
-    const observedSlot = observation.slot.toBigInt();
+    const observedSlot = observation.slot;
     return observedSlot > slot &&
       (slotLimit === undefined || observedSlot <= slotLimit)
       ? observedSlot
@@ -68,31 +80,35 @@ export function minimumSlot(transfer: TransferState, slotLimit?: bigint) {
 
 // How a finalized Solana outcome relates to the Akash settlement and its
 // reported observations.
-export function compareOutcome(settlement: Settlement, outcome: Outcome) {
+export function compareOutcome(transfer: TransferState, outcome: Outcome) {
+  const settlement = transfer.settlement;
+  assert.ok(settlement, "missing settlement");
   const mint = outcome === Outcome.OUTCOME_MINTED;
   return {
     contradicts:
-      (settlement.status === Status.STATUS_MINTED && !mint) ||
-      ((settlement.status === Status.STATUS_VOIDED ||
-        settlement.status === Status.STATUS_REFUNDED) &&
+      (transfer.status === Status.STATUS_MINTED && !mint) ||
+      ((transfer.status === Status.STATUS_REFUND_PENDING ||
+        transfer.status === Status.STATUS_REFUNDED) &&
         mint) ||
-      settlement.votes.some(
-        (vote) => vote.observation && vote.observation.outcome !== outcome,
-      ) ||
-      (settlement.governanceObservation !== undefined &&
-        settlement.governanceObservation.outcome !== outcome),
+      reportedObservations(transfer).some(
+        (observation) => observation.outcome !== outcome,
+      ),
     terminalMatches:
-      (mint && settlement.status === Status.STATUS_MINTED) ||
-      (!mint && settlement.status === Status.STATUS_REFUNDED),
+      (mint && transfer.status === Status.STATUS_MINTED) ||
+      (!mint && transfer.status === Status.STATUS_REFUNDED),
   };
 }
 
 // A terminal, unheld settlement that agrees with the finalized outcome and
 // every report. planOutcome would return no message and no alert, so an audit
 // can skip transaction discovery and its block history.
-export function settledConsistently(settlement: Settlement, outcome: Outcome) {
-  const { contradicts, terminalMatches } = compareOutcome(settlement, outcome);
-  return terminalMatches && !contradicts && settlement.hold === Hold.HOLD_NONE;
+export function settledConsistently(transfer: TransferState, outcome: Outcome) {
+  const { contradicts, terminalMatches } = compareOutcome(transfer, outcome);
+  return (
+    terminalMatches &&
+    !contradicts &&
+    transfer.settlement?.hold === Hold.HOLD_NONE
+  );
 }
 
 // Pure policy; the chain remains authoritative for membership, rounds, caps,
@@ -102,18 +118,26 @@ export function planOutcome(
   snapshot: Snapshot,
   observed: Observed,
 ): Plan {
-  const { params, totals, transfer, time } = snapshot;
+  const { params, policy, refundUsage, transfer, time, epoch } = snapshot;
   const settlement = transfer.settlement;
   assert.ok(
-    settlement?.policy && settlement.round.greaterThan(0),
+    settlement &&
+      settlement.policy &&
+      settlement.policy.version > 0n &&
+      settlement.round > 0n,
     "invalid sink settlement",
   );
   assert.ok(
-    params.reporters.includes(reporter),
+    policy.members.includes(reporter),
     "account is not a current sink reporter",
   );
-  const record = decodeRecord(transfer.record);
-  const challengeEnd = settlement.challengeEnd.toBigInt();
+  assert.equal(
+    policy.threshold,
+    reporterThreshold(params.reportersThreshold, policy.members.length),
+    "current policy threshold mismatch",
+  );
+  const record = decodeRecord(transfer);
+  const challengeEnd = challengeSeconds(settlement);
   const result: Plan = { messages: [], alerts: [] };
   if (observed.kind === "absent") {
     // A slot beyond what any node could have finalized is false evidence. It
@@ -132,14 +156,15 @@ export function planOutcome(
         "Akash reports a Solana slot beyond any plausible finalized slot",
       );
     if (
-      settlement.status !== Status.STATUS_PENDING ||
-      settlement.votes.length > 0
+      (transfer.status !== Status.STATUS_TRANSFER_PENDING &&
+        transfer.status !== Status.STATUS_VOIDED) ||
+      reportedObservations(transfer).length > 0
     ) {
       result.alerts.push(
         "Akash reports an outcome without a finalized Solana status",
       );
       if (
-        settlement.status === Status.STATUS_VOIDED &&
+        transfer.status === Status.STATUS_REFUND_PENDING &&
         settlement.hold === Hold.HOLD_NONE &&
         time < challengeEnd
       ) {
@@ -147,7 +172,7 @@ export function planOutcome(
           typeUrl: "/akash.sink.v1.MsgVetoVoid",
           value: MsgVetoVoid.fromPartial({
             signer: reporter,
-            id: record.id,
+            id: sinkIdParts(record.id),
             reason: `No Solana status at finalized slot ${observed.contextSlot}`,
           }),
         });
@@ -163,56 +188,62 @@ export function planOutcome(
       observation.outcome === Outcome.OUTCOME_VOIDED,
   );
   const mint = observation.outcome === Outcome.OUTCOME_MINTED;
-  const { contradicts, terminalMatches } = compareOutcome(
-    settlement,
-    observation.outcome,
-  );
+  const { contradicts } = compareOutcome(transfer, observation.outcome);
   if (contradicts)
     result.alerts.push("Akash settlement contradicts finalized Solana outcome");
   if (settlement.hold !== Hold.HOLD_NONE)
     result.alerts.push("Transfer requires governance review");
-  const currentEpoch = settlement.policy.epoch.equals(totals.reporterEpoch);
-  const alreadyReported =
-    currentEpoch &&
-    settlement.votes.some(
-      (vote) =>
-        vote.reporter === reporter &&
-        vote.observation?.outcome === observation.outcome,
-    );
-  if (!alreadyReported && (!terminalMatches || contradicts)) {
+  const currentPolicy = settlement.policy.version === policy.version;
+  const alreadyReported = settlement.votes.some(
+    (vote) =>
+      vote.reporter === reporter &&
+      vote.policyVersion === policy.version &&
+      vote.observation?.outcome === observation.outcome,
+  );
+  const active =
+    settlement.hold === Hold.HOLD_NONE &&
+    (transfer.status === Status.STATUS_TRANSFER_PENDING ||
+      transfer.status === Status.STATUS_VOIDED);
+  const refresh =
+    !currentPolicy &&
+    settlement.hold === Hold.HOLD_NONE &&
+    !settlement.governanceObservation &&
+    (active || transfer.status === Status.STATUS_REFUND_PENDING);
+  if (
+    settlement.hold !== Hold.HOLD_CONFLICT &&
+    (refresh || (!alreadyReported && (contradicts || active)))
+  ) {
     result.messages.push({
       typeUrl: "/akash.sink.v1.MsgReportOutcome",
       value: MsgReportOutcome.fromPartial({
         reporter,
-        id: record.id,
-        reporterEpoch: totals.reporterEpoch,
+        id: sinkIdParts(record.id),
+        policyVersion: policy.version,
         round: settlement.round,
         observation,
       }),
     });
     return result; // Re-read after voting before considering any refund.
   }
-  const spent =
-    totals.refundDay.toBigInt() === time / 86400n
-      ? totals.refundedToday.toBigInt()
-      : 0n;
+  const spent = coinAmount(refundUsage.amount);
   if (
     !mint &&
-    settlement.status === Status.STATUS_VOIDED &&
+    transfer.status === Status.STATUS_REFUND_PENDING &&
     settlement.hold === Hold.HOLD_NONE &&
     !contradicts &&
-    currentEpoch &&
+    (currentPolicy || settlement.governanceObservation !== undefined) &&
     params.refundsEnabled &&
+    epoch > 0n &&
     time >= challengeEnd &&
     challengeEnd > 0n &&
-    spent + record.amount <= params.dailyRefundCap.toBigInt() &&
-    (snapshot.refundHead === undefined || snapshot.refundHead === record.id)
+    spent + record.amount <= coinAmount(params.maxEpochRefund, true) &&
+    snapshot.refundHead === record.id
   ) {
     result.messages.push({
       typeUrl: "/akash.sink.v1.MsgFinalizeRefund",
       value: MsgFinalizeRefund.fromPartial({
         executor: reporter,
-        id: record.id,
+        id: sinkIdParts(record.id),
       }),
     });
   }

@@ -7,7 +7,6 @@
   "mint": "EnEomHaBpuMZZLN4TPtVAsqVofzMSkrPWYhEQ1cFjKv1",
   "reporter": "REPLACE_WITH_CONFIGURED_AKASH_REPORTER",
   "maxAgeSeconds": 60,
-  "maxTransfers": 1000,
   "pollSeconds": 15,
   "feeAmountUakt": "10",
   "gasLimit": "500000"

@@ -3,8 +3,8 @@ import { createHash, createPrivateKey, sign } from "node:crypto";
 import { AnchorProvider, BN, Program, Wallet, web3 } from "@coral-xyz/anchor";
 import clientIdl from "../idls/ics07_tendermint.json";
 import accessIdl from "../idls/access_manager.json";
-import type { Ics07Tendermint } from "../.deps/ibc-contracts/ibc-solana/target/types/ics07_tendermint";
-import type { AccessManager } from "../.deps/ibc-contracts/ibc-solana/target/types/access_manager";
+import type { Ics07Tendermint } from "../../../.cache/solana/deps/ibc-contracts/ibc-solana/target/types/ics07_tendermint";
+import type { AccessManager } from "../../../.cache/solana/deps/ibc-contracts/ibc-solana/target/types/access_manager";
 import { CLIENT_ID, ACCESS_ID, pda } from "./common";
 
 // Actual SBF writer/cleanup checks, on the benchmark's isolated validator only.

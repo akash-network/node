@@ -1,7 +1,60 @@
+import {
+  Sink_Status as Status,
+  type TransferState,
+} from "@akashnetwork/chain-sdk/private-types/akash.v1";
+import { AnchorProvider, BN, Program, Wallet, web3 } from "@coral-xyz/anchor";
+import {
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  TOKEN_PROGRAM_ID,
+  getAssociatedTokenAddressSync,
+} from "@solana/spl-token";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { dirname, join, resolve } from "node:path";
-import { appendFile, readFile, rename, unlink } from "node:fs/promises";
+import {
+  appendFile,
+  readFile,
+  readdir,
+  rename,
+  unlink,
+} from "node:fs/promises";
+import { basename, dirname, join, resolve } from "node:path";
+import { parseArgs } from "node:util";
+import idl from "../../../.cache/solana/target/idl/akt_solana.json";
+import type { AktSolana } from "../../../.cache/solana/target/types/akt_solana";
+import { AkashClient } from "../reporter/akash";
+import { decodeRecord } from "../reporter/solana";
+import { parseSinkId, type SinkId } from "../shared/id";
+import {
+  anchorId,
+  encodeRecord,
+  authorizedSettlement,
+  settlementProofValue,
+  encodeMembershipProof,
+  PROOF_HEADER_SIZE,
+  matchesAnchorId,
+  proofAddress,
+  proofNonce,
+  statusAddress,
+} from "../shared/proof";
+import { transferKey } from "../shared/sink";
+import {
+  newProofJob,
+  parseProofJob,
+  sameProof,
+  type ProofJob,
+} from "./proof-job";
+import { assertClientActive } from "./client-status";
+import {
+  CLIENT_ID,
+  hex,
+  object,
+  pda,
+  programData,
+  provider,
+  save,
+  sleep,
+} from "./common";
+import { pruneExpiredConsensusStates } from "./consensus-prune";
 import { atomicJson, optionalJson, withUploadLock } from "./durable";
 import {
   HeaderUnsupported,
@@ -9,11 +62,6 @@ import {
   decodePacket,
   uploadHeader,
 } from "./header-upload";
-import { reclaimLookups } from "./lookup-cleanup";
-import { pruneExpiredConsensusStates } from "./consensus-prune";
-import { assertClientActive } from "./client-status";
-import { sendTransaction } from "./transactions";
-import { openTransfers } from "./open-transfers";
 import {
   LOCAL_LIGHT_CLIENT,
   accessProgram,
@@ -25,6 +73,8 @@ import {
   type LightClient,
   type RelayerAccess,
 } from "./light-client";
+import { reclaimLookups } from "./lookup-cleanup";
+import { discoverTransfers, openTransfers } from "./open-transfers";
 import {
   loadPayer,
   localRelayConfig,
@@ -32,50 +82,24 @@ import {
   type RelayConfig,
 } from "./relay-config";
 import {
-  Sink_Status as Status,
-  type TransferState,
-} from "@akashnetwork/chain-sdk/private-types/akash.v1";
-import {
   AlertSchedule,
   RetrySchedule,
   STATUS_BATCH,
   SpendLedger,
   finalCheck,
   headerRefresh,
-  idBatches,
   mintWait,
-  nextCursor,
   recipientMints,
   selectCommitSignatures,
-  unbackedSettlement,
+  unbackedMint,
   type CommitSignature,
   type SetMember,
 } from "./relay-policy";
-import { parseArgs } from "node:util";
-import { AnchorProvider, BN, Program, Wallet, web3 } from "@coral-xyz/anchor";
 import {
-  ASSOCIATED_TOKEN_PROGRAM_ID,
-  TOKEN_PROGRAM_ID,
-  getAssociatedTokenAddressSync,
-} from "@solana/spl-token";
-import { MerkleProof } from "cosmjs-types/ibc/core/commitment/v1/commitment";
-import { CommitmentProof } from "cosmjs-types/cosmos/ics23/v1/proofs";
-import idl from "../target/idl/akt_solana.json";
-import type { AktSolana } from "../target/types/akt_solana";
-import { AkashClient } from "../reporter/akash";
-import { decodeRecord } from "../reporter/solana";
-import { transferKey, voidKey } from "../shared/sink";
-import {
-  CLIENT_ID,
-  LE64,
-  pda,
-  programData,
-  provider,
-  object,
-  hex,
-  save,
-  sleep,
-} from "./common";
+  resumeTransaction,
+  sendTransaction,
+  type TransactionResult,
+} from "./transactions";
 
 type AkashNode = Pick<
   RelayConfig,
@@ -235,12 +259,9 @@ export async function relayContext(options?: {
     settings.maxAgeSeconds,
   );
   const at = (seed: string, suffix?: Buffer) => pda(seed, programId, suffix);
-  const statusAt = (id: bigint) => at("transfer", LE64(id));
-  const proofBufferAt = (id: bigint) =>
-    web3.PublicKey.findProgramAddressSync(
-      [Buffer.from("proof"), wallet.publicKey.toBuffer(), LE64(id)],
-      programId,
-    )[0];
+  const statusAt = (id: SinkId) => statusAddress(programId, id);
+  const proofBufferAt = (key: Uint8Array) =>
+    proofAddress(programId, wallet.publicKey, key);
   const config = at("config"),
     bridge = at("bridge"),
     mint = at("mint"),
@@ -262,11 +283,10 @@ export async function relayContext(options?: {
   // Failed transfers back off exponentially; each attempt can pay for several
   // proof transactions. Header failures back off separately and never block
   // relays that the latest verified height can already prove.
-  const retries = new RetrySchedule(6000, settings.retryMaxMs);
-  const headerRetries = new RetrySchedule(6000, 120_000);
+  const headerRetries = new RetrySchedule<bigint>(6000, 120_000);
   // An unsupported header fails the same way until the validator set or its
   // votes change, so it waits the longest transfer backoff.
-  const unsupported = new RetrySchedule(
+  const unsupported = new RetrySchedule<bigint>(
     settings.retryMaxMs,
     settings.retryMaxMs,
   );
@@ -285,7 +305,7 @@ export async function relayContext(options?: {
     client: clientProgram(wallet, found.program),
   });
   let followed: Followed | undefined;
-  const followAlerts = new AlertSchedule(15 * 60_000);
+  const followAlerts = new AlertSchedule<bigint>(15 * 60_000);
   async function follow() {
     const found = await discoverLightClient(wallet.connection, programId);
     const problem = lightClientProblem(found, {
@@ -528,7 +548,12 @@ export async function relayContext(options?: {
     });
   }
 
-  const headerDirectory = join(settings.stateDir, "header-uploads");
+  const headerDirectory = join(
+    settings.stateDir,
+    "header-uploads-v2",
+    genesis,
+    programId.toBase58(),
+  );
   const activeHeader = join(headerDirectory, "active.json");
   const payerLock = join(headerDirectory, "payer.lock");
   async function resumeHeader() {
@@ -605,8 +630,7 @@ export async function relayContext(options?: {
         job.trusted > 0 &&
         job.trusted < job.target,
     );
-    // Jobs written before discovery carry no client; they used the local ID.
-    const owner = job.client ?? CLIENT_ID.toBase58();
+    const owner = job.client;
     assert.ok(typeof owner === "string");
     if (owner !== lc.program.toBase58()) {
       // Governance re-pinned during this upload. Its temporary accounts stay
@@ -682,7 +706,7 @@ export async function relayContext(options?: {
   const identity = { genesis, programId: programId.toBase58() };
   const ledgerPath = join(
     settings.stateDir,
-    `relay-budget-${genesis}-${programId.toBase58()}.json`,
+    `relay-budget-v2-${genesis}-${programId.toBase58()}.json`,
   );
   const ledgerLock = join(settings.stateDir, "relay-budget.lock");
   const readLedger = async () =>
@@ -700,20 +724,101 @@ export async function relayContext(options?: {
       10_000,
     );
   }
-  async function resetBudget(id: bigint | "all") {
-    const removed = await updateLedger((ledger) => ledger.reset(id));
+  async function resetBudget(id: SinkId | "all") {
+    const removed = await withUploadLock(payerLock, async () => {
+      for (const pending of (await readLedger()).entries.keys())
+        if (id === "all" || pending === id) await resumePayment(pending);
+      return updateLedger((ledger) => ledger.reset(id));
+    });
     log({ event: "relay-budget-reset", id: id.toString(), path: ledgerPath });
     return removed;
+  }
+  const jobDirectory = join(
+    settings.stateDir,
+    "relay-jobs-v2",
+    genesis,
+    programId.toBase58(),
+  );
+  const jobPath = (id: SinkId) =>
+    join(jobDirectory, `${proofNonce(transferKey(id)).toString("hex")}.json`);
+  const proofIdentity = {
+    ...identity,
+    chainId,
+    payer: wallet.publicKey.toBase58(),
+  };
+  const proofJobPath = (id: SinkId) => `${jobPath(id)}.proof`;
+  async function readProofJob(id: SinkId) {
+    const saved = await optionalJson(proofJobPath(id));
+    return saved === undefined
+      ? undefined
+      : parseProofJob(saved, proofIdentity, id);
+  }
+  async function proofJobIds() {
+    let files: string[];
+    try {
+      files = await readdir(jobDirectory);
+    } catch (error) {
+      if (error instanceof Error && "code" in error && error.code === "ENOENT")
+        return [];
+      throw error;
+    }
+    const ids: SinkId[] = [];
+    for (const file of files.filter((name) => name.endsWith(".json.proof"))) {
+      const saved = await optionalJson(join(jobDirectory, file));
+      if (saved === undefined) continue;
+      const id = parseSinkId(object(saved).id);
+      parseProofJob(saved, proofIdentity, id);
+      assert.equal(
+        file,
+        basename(proofJobPath(id)),
+        "proof journal filename mismatch",
+      );
+      ids.push(id);
+    }
+    return ids;
+  }
+  async function chargeResult(id: SinkId, result: TransactionResult) {
+    const liquidity = ["proof-create", "proof-grow", "proof-close"].includes(
+      result.stage,
+    );
+    if (liquidity || result.stage === "resolve")
+      assert.ok(
+        Number.isSafeInteger(result.payerLamports),
+        "missing payer balance change",
+      );
+    const payerLamports = result.payerLamports ?? result.fee;
+    const spent = result.stage === "resolve" ? payerLamports : result.fee;
+    const bufferChange = liquidity ? payerLamports - result.fee : 0;
+    await updateLedger((ledger) => {
+      ledger.charge(id, spent, result.signature, bufferChange);
+      return true;
+    });
+    log({
+      event: "relay-payment",
+      id,
+      stage: result.stage,
+      signature: result.signature,
+      fee: result.fee,
+      payerLamports,
+      bufferChangeLamports: bufferChange,
+      spentLamports: spent,
+    });
+  }
+  async function resumePayment(id: SinkId) {
+    await resumeTransaction(wallet, jobPath(id), (result) =>
+      chargeResult(id, result),
+    );
   }
   // Each transaction is simulated before it is sent, so a failing one costs
   // nothing. Fees always count; rent counts for the resolving transaction.
   // Closing a proof buffer only returns rent and is allowed past the limit.
   async function paid(
-    id: bigint,
+    id: SinkId,
     stage: string,
     instructions: web3.TransactionInstruction[],
     reclaims = false,
   ) {
+    await resumePayment(id);
     const max = settings.maxLamportsPerTransfer;
     if (!reclaims && (await readLedger()).exhausted(id, max))
       throw new BudgetExhausted(`transfer ${id} is over its spend limit`);
@@ -722,13 +827,8 @@ export async function relayContext(options?: {
       stage,
       instructions,
       preflight: true,
-      observe: async () => {},
-    });
-    const spent =
-      stage === "resolve" ? (result.payerLamports ?? result.fee) : result.fee;
-    await updateLedger((ledger) => {
-      ledger.charge(id, spent);
-      return true;
+      pendingPath: jobPath(id),
+      observe: (result) => chargeResult(id, result),
     });
     assert.equal(
       result.error,
@@ -737,43 +837,228 @@ export async function relayContext(options?: {
     );
     return result.signature;
   }
-  async function closeProofBuffer(id: bigint) {
-    const proofBuffer = proofBufferAt(id);
-    if (!(await program.account.proofBuffer.fetchNullable(proofBuffer))) return;
-    await paid(
-      id,
-      "proof-close",
-      [
-        await program.methods
-          .closeProofBuffer()
-          .accountsStrict({ submitter: wallet.publicKey, proofBuffer })
-          .instruction(),
-      ],
-      true,
-    );
+  async function closeProofBuffer(id: SinkId) {
+    const job = await readProofJob(id);
+    if (!job) return;
+    const proofBuffer = proofBufferAt(Buffer.from(job.key, "hex"));
+    const account =
+      await program.account.proofBuffer.fetchNullable(proofBuffer);
+    if (account) {
+      assert.ok(
+        account.submitter.equals(wallet.publicKey),
+        "proof buffer submitter mismatch",
+      );
+      assert.deepEqual(
+        Buffer.from(account.nonce),
+        Buffer.from(job.nonce, "hex"),
+        "proof buffer nonce mismatch",
+      );
+      await paid(
+        id,
+        "proof-close",
+        [
+          await program.methods
+            .closeProofBuffer()
+            .accountsStrict({ submitter: wallet.publicKey, proofBuffer })
+            .instruction(),
+        ],
+        true,
+      );
+    }
+    await unlink(proofJobPath(id));
   }
 
+  async function finishProofBuffers(id: SinkId) {
+    await closeProofBuffer(id);
+    await updateLedger((ledger) => {
+      ledger.complete(id);
+      return true;
+    });
+  }
+
+  async function uploadProof(id: SinkId, wanted: ProofJob) {
+    let job = await readProofJob(id);
+    if (job && !sameProof(job, wanted)) {
+      await closeProofBuffer(id);
+      job = undefined;
+    }
+    if (!job) {
+      job = wanted;
+      await atomicJson(proofJobPath(id), job);
+    }
+    const proof = Buffer.from(job.proof, "hex");
+    const proofBuffer = proofBufferAt(Buffer.from(job.key, "hex"));
+    async function progress() {
+      const info = await wallet.connection.getAccountInfo(
+        proofBuffer,
+        "finalized",
+      );
+      if (!info) return undefined;
+      assert.ok(info.owner.equals(programId), "proof buffer owner mismatch");
+      const account = program.coder.accounts.decode<
+        Awaited<ReturnType<typeof program.account.proofBuffer.fetch>>
+      >("proofBuffer", info.data);
+      assert.ok(
+        account.submitter.equals(wallet.publicKey),
+        "proof buffer submitter mismatch",
+      );
+      assert.deepEqual(
+        Buffer.from(account.nonce),
+        Buffer.from(wanted.nonce, "hex"),
+        "proof buffer nonce mismatch",
+      );
+      assert.equal(
+        account.expectedLen,
+        proof.length,
+        "proof buffer length mismatch",
+      );
+      assert.deepEqual(
+        Buffer.from(account.data),
+        proof.subarray(0, account.data.length),
+        "proof upload prefix mismatch",
+      );
+      assert.ok(
+        account.data.length <= proof.length,
+        "proof buffer exceeds expected length",
+      );
+      const updated = {
+        ...wanted,
+        uploaded: account.data.length,
+        allocated: info.data.length,
+        lamports: info.lamports,
+      };
+      await atomicJson(proofJobPath(id), updated);
+      return updated;
+    }
+    let state = await progress();
+    if (!state) {
+      await paid(id, "proof-create", [
+        await program.methods
+          .createProofBuffer(
+            Array.from(proofNonce(Buffer.from(job.key, "hex"))),
+            proof.length,
+          )
+          .accountsStrict({
+            submitter: wallet.publicKey,
+            proofBuffer,
+            systemProgram: web3.SystemProgram.programId,
+          })
+          .instruction(),
+      ]);
+      state = await progress();
+      assert.ok(state, "created proof buffer missing");
+    }
+    while (state.allocated < PROOF_HEADER_SIZE + proof.length) {
+      const previous = state.allocated;
+      await paid(id, "proof-grow", [
+        await program.methods
+          .growProofBuffer()
+          .accountsStrict({
+            submitter: wallet.publicKey,
+            proofBuffer,
+            systemProgram: web3.SystemProgram.programId,
+          })
+          .instruction(),
+      ]);
+      state = await progress();
+      assert.ok(
+        state && state.allocated > previous,
+        "proof buffer did not grow",
+      );
+    }
+    while (state.uploaded < proof.length) {
+      const offset = state.uploaded;
+      await paid(id, "proof-append", [
+        await program.methods
+          .appendProof(offset, proof.subarray(offset, offset + 500))
+          .accountsStrict({ submitter: wallet.publicKey, proofBuffer })
+          .instruction(),
+      ]);
+      state = await progress();
+      assert.ok(
+        state && state.uploaded > offset,
+        "proof upload did not advance",
+      );
+    }
+    log({
+      event: "proof-buffer-ready",
+      id,
+      key: job.key,
+      nonce: job.nonce,
+      proofHeight: job.proofHeight,
+      bytes: proof.length,
+      allocatedBytes: state.allocated,
+      refundableLamports: state.lamports,
+    });
+    return proofBuffer;
+  }
+  async function recoverPayments() {
+    await withUploadLock(payerLock, async () => {
+      const ledger = await readLedger();
+      const saved = new Set(await proofJobIds());
+      for (const id of new Set([...ledger.entries.keys(), ...saved])) {
+        if (ledger.entries.get(id)?.completed && !saved.has(id)) continue;
+        await resumePayment(id);
+        const status = await program.account.transferStatus.fetchNullable(
+          statusAt(id),
+        );
+        if (status) {
+          assert.ok(matchesAnchorId(status.id, id), "status identity mismatch");
+          await finishProofBuffers(id);
+          continue;
+        }
+        const job = await readProofJob(id);
+        if (job) {
+          const state = await akash.state();
+          const transfer = await akash.transfer(id, state.height);
+          const expected = transfer.settlement?.voidAuthorization
+            ? authorizedSettlement(transfer, BigInt(state.height))
+            : { key: transferKey(id), value: encodeRecord(transfer.data) };
+          const lc = await follow();
+          const consensus = await wallet.connection.getAccountInfo(
+            lc.consensusAt(BigInt(job.proofHeight)),
+            "finalized",
+          );
+          if (
+            !consensus ||
+            !consensus.owner.equals(lc.program) ||
+            job.key !== Buffer.from(expected.key).toString("hex") ||
+            job.valueHash !== proofNonce(expected.value).toString("hex") ||
+            job.lightClient !== lc.program.toBase58() ||
+            unbackedMint(transfer)
+          )
+            await closeProofBuffer(id);
+        }
+      }
+    });
+  }
   async function relayWith(
     lc: Followed,
-    id: bigint,
+    id: SinkId,
     height: number,
   ): Promise<"resolved" | "already-resolved" | "skipped"> {
+    await resumePayment(id);
     const status = await wallet.connection.getAccountInfo(statusAt(id));
     if (status && status.owner.equals(programId) && status.data.length > 8) {
-      assert.equal(
-        (
-          await program.account.transferStatus.fetch(statusAt(id))
-        ).id.toString(),
-        id.toString(),
+      assert.ok(
+        matchesAnchorId(
+          (await program.account.transferStatus.fetch(statusAt(id))).id,
+          id,
+        ),
+        "status identity mismatch",
       );
+      await finishProofBuffers(id);
       return "already-resolved";
     }
     if ((await readLedger()).exhausted(id, settings.maxLamportsPerTransfer))
       return "skipped";
     const transfer = await akash.transfer(id, height - 1);
-    const record = decodeRecord(transfer.record);
+    const record = decodeRecord(transfer);
+    const authorization = transfer.settlement?.voidAuthorization;
     const key = Buffer.from(
-      transfer.voidOrdered ? voidKey(id) : transferKey(id),
+      authorization
+        ? authorizedSettlement(transfer, BigInt(height - 1)).key
+        : transferKey(id),
     );
     const reply = await akash.comet.abciQuery({
       path: "/store/sink/key",
@@ -788,32 +1073,28 @@ export async function relayContext(options?: {
       "missing committed sink proof",
     );
     assert.deepEqual(Buffer.from(reply.key), key);
-    if (!transfer.voidOrdered)
-      assert.deepEqual(Buffer.from(reply.value), Buffer.from(transfer.record));
-    const proof = Buffer.from(
-      MerkleProof.encode({
-        proofs: reply.proof.ops.map((op) => CommitmentProof.decode(op.data)),
-      }).finish(),
+    assert.ok(record.height < BigInt(height), "proof predates identity");
+    const value = authorization
+      ? settlementProofValue(transfer, BigInt(height - 1), reply.value)
+      : encodeRecord(transfer.data);
+    assert.deepEqual(
+      Buffer.from(reply.value),
+      value,
+      "record proof differs from snapshot",
     );
-    assert.ok(
-      proof.length > 0 && proof.length <= 4096,
-      "proof exceeds upload bound",
-    );
-    // Last Akash read before paying: a void or refund since planning means
-    // minting would leave the refund as unbacked supply.
+    const proof = encodeMembershipProof({ key, value, ops: reply.proof.ops });
+    // Last Akash read before paying: a void order or refund since planning
+    // means minting would leave the refund as unbacked supply.
     const latest = await akash.state();
     const now = await akash.transfer(id, latest.height);
     assert.ok(now.settlement, "missing sink settlement");
-    const changed = finalCheck(transfer.voidOrdered, {
-      voidOrdered: now.voidOrdered,
-      status: now.settlement.status,
-    });
+    const changed = finalCheck(transfer, now);
     if (changed) {
       alert({
         event: "relay-final-check",
         id: id.toString(),
         reason: changed,
-        akashStatus: Status[now.settlement.status],
+        akashStatus: Status[now.status],
         akashHeight: latest.height,
         action: "skipped",
       });
@@ -823,76 +1104,83 @@ export async function relayContext(options?: {
       ledger.attempt(id);
       return true;
     });
-    const proofBuffer = proofBufferAt(id);
-    await closeProofBuffer(id);
-    await paid(id, "proof-create", [
-      await program.methods
-        .createProofBuffer(new BN(id.toString()), proof.length)
-        .accountsStrict({
-          submitter: wallet.publicKey,
-          proofBuffer,
-          systemProgram: web3.SystemProgram.programId,
-        })
-        .instruction(),
-    ]);
-    let signature: string;
-    try {
-      for (let offset = 0; offset < proof.length; offset += 500)
-        await paid(id, "proof-append", [
-          await program.methods
-            .appendProof(offset, proof.subarray(offset, offset + 500))
-            .accountsStrict({ submitter: wallet.publicKey, proofBuffer })
-            .instruction(),
-        ]);
-      const shared = {
-        payer: wallet.publicKey,
-        config,
-        bridge,
-        proofBuffer,
-        status: statusAt(id),
-        lightClientProgram: lc.program,
-        clientState: lc.clientState,
-        latestConsensus: lc.consensusAt(BigInt(height)),
-        proofConsensus: lc.consensusAt(BigInt(height)),
-        systemProgram: web3.SystemProgram.programId,
-      };
-      const resolution = transfer.voidOrdered
-        ? await program.methods
-            .voidTransfer(new BN(id.toString()), new BN(height))
-            .accountsStrict(shared)
-            .instruction()
-        : await program.methods
-            .mintTransfer(
-              {
-                version: 1,
-                id: new BN(id.toString()),
-                sender: Array.from(transfer.record.subarray(9, 29)),
-                recipient: record.recipient,
-                amount: new BN(record.amount.toString()),
-                height: new BN(record.height.toString()),
-              },
-              new BN(height),
-            )
-            .accountsStrict({
-              ...shared,
-              mint,
-              mintAuthority,
-              recipient: record.recipient,
-              recipientTokenAccount: getAssociatedTokenAddressSync(
-                mint,
-                record.recipient,
-                true,
-              ),
-              tokenProgram: TOKEN_PROGRAM_ID,
-              associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-            })
-            .instruction();
-      signature = await paid(id, "resolve", [...compute(), resolution]);
-    } finally {
+    const proofBuffer = await uploadProof(
+      id,
+      newProofJob({
+        ...proofIdentity,
+        id,
+        lightClient: lc.program.toBase58(),
+        proofHeight: height,
+        key,
+        value,
+        proof,
+      }),
+    );
+    // Upload can span many blocks. Repeat the state and outcome guard immediately before resolution.
+    const finalState = await akash.state();
+    const finalTransfer = await akash.transfer(id, finalState.height);
+    if (finalCheck(transfer, finalTransfer)) {
       await closeProofBuffer(id);
+      return "skipped";
     }
+    const resolved = await program.account.transferStatus.fetchNullable(
+      statusAt(id),
+    );
+    if (resolved) {
+      assert.ok(matchesAnchorId(resolved.id, id), "status identity mismatch");
+      await finishProofBuffers(id);
+      return "already-resolved";
+    }
+    const latestClient = await lc.client.account.clientState.fetch(
+      lc.clientState,
+    );
+    const shared = {
+      payer: wallet.publicKey,
+      config,
+      bridge,
+      proofBuffer,
+      status: statusAt(id),
+      lightClientProgram: lc.program,
+      clientState: lc.clientState,
+      latestConsensus: lc.consensusAt(
+        BigInt(latestClient.latestHeight.revisionHeight.toString()),
+      ),
+      proofConsensus: lc.consensusAt(BigInt(height)),
+      systemProgram: web3.SystemProgram.programId,
+    };
+    const resolution = authorization
+      ? await program.methods
+          .voidTransfer(anchorId(id), transfer.status, new BN(height))
+          .accountsStrict(shared)
+          .instruction()
+      : await program.methods
+          .mintTransfer(
+            anchorId(id),
+            record.recipient,
+            new BN(record.amount.toString()),
+            new BN(height),
+          )
+          .accountsStrict({
+            ...shared,
+            mint,
+            mintAuthority,
+            recipient: record.recipient,
+            recipientTokenAccount: getAssociatedTokenAddressSync(
+              mint,
+              record.recipient,
+              true,
+            ),
+            tokenProgram: TOKEN_PROGRAM_ID,
+            associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+          })
+          .instruction();
+    const signature = await paid(id, "resolve", [...compute(), resolution]);
+    await closeProofBuffer(id);
+    await updateLedger((ledger) => {
+      ledger.complete(id);
+      return true;
+    });
     const ledger = await readLedger();
-    await updateLedger((entries) => entries.reset(id));
     log({
       event: "transfer-resolved",
       id: id.toString(),
@@ -904,11 +1192,13 @@ export async function relayContext(options?: {
     });
     return "resolved";
   }
-  const relay = async (id: bigint, height: number) =>
-    relayWith(await follow(), id, height);
+  const relay = async (id: SinkId, height: number) =>
+    withUploadLock(payerLock, async () =>
+      relayWith(await follow(), id, height),
+    );
 
-  async function withoutStatus(ids: bigint[]) {
-    const pending: bigint[] = [];
+  async function withoutStatus(ids: SinkId[]) {
+    const pending: SinkId[] = [];
     for (let i = 0; i < ids.length; i += STATUS_BATCH) {
       const batch = ids.slice(i, i + STATUS_BATCH);
       const infos = await wallet.connection.getMultipleAccountsInfo(
@@ -923,71 +1213,151 @@ export async function relayContext(options?: {
         const status = program.coder.accounts.decode<
           Awaited<ReturnType<typeof program.account.transferStatus.fetch>>
         >("transferStatus", info.data);
-        assert.equal(status.id.toString(), id.toString());
+        assert.ok(matchesAnchorId(status.id, id), "status identity mismatch");
       }
     }
     return pending;
   }
-  // Nodes with x/sink OpenTransfers list only non-terminal records. Older
-  // nodes get the cursor scan: Solana statuses are permanent, so IDs below
-  // the cursor are never read again. It restarts at 1 with each process and
-  // catches up in batched reads.
-  let cursor = 1n;
-  let index: string | undefined;
+  const discoveryPath = join(
+    settings.stateDir,
+    `relay-discovery-v2-${genesis}-${programId}.json`,
+  );
   async function unresolved(state: Awaited<ReturnType<typeof akash.state>>) {
-    const last = state.totals.lastTransferId.toBigInt();
-    const open = await openTransfers(akash.comet, state.height);
-    const mode = open ? "open-transfers" : "cursor-scan";
-    if (mode !== index) log({ event: "relay-index", mode });
-    index = mode;
-    if (open) {
-      const pending = await withoutStatus(open.map((entry) => entry.id));
-      return {
-        pending,
-        floor: nextCursor(pending, last),
-        known: new Map(open.map((entry) => [entry.id, entry.transfer])),
-      };
+    const saved = await optionalJson(discoveryPath);
+    let cursor: SinkId | undefined;
+    if (saved !== undefined) {
+      const value = object(saved);
+      assert.ok(
+        value.version === 2 &&
+          value.chainId === chainId &&
+          value.genesis === genesis &&
+          value.programId === programId.toBase58(),
+        "unsupported discovery state; preserve it and use a fresh v2 domain",
+      );
+      cursor = value.cursor === null ? undefined : parseSinkId(value.cursor);
     }
-    const pending: bigint[] = [];
-    for (const ids of idBatches(cursor, last))
-      pending.push(...(await withoutStatus(ids)));
-    cursor = nextCursor(pending, last);
-    return { pending, floor: cursor, known: new Map<bigint, TransferState>() };
+    const entries = new Map(
+      (await openTransfers(akash, state.height)).map((entry) => [
+        entry.id,
+        entry.transfer,
+      ]),
+    );
+    const unfinished = new Set(await proofJobIds());
+    for (const [id, entry] of (await readLedger()).entries)
+      if (!entry.completed) unfinished.add(id);
+    for (const id of unfinished)
+      if (!entries.has(id))
+        entries.set(id, await akash.transfer(id, state.height));
+    let discovered = true;
+    try {
+      for (;;) {
+        const page = await discoverTransfers(akash, state.height, cursor);
+        for (const entry of page.entries) entries.set(entry.id, entry.transfer);
+        cursor = page.cursor;
+        if (!page.hasMore) break;
+      }
+    } catch (error) {
+      // Open transfers still relay; the saved checkpoint retries this history.
+      discovered = false;
+      alert({ event: "relay-discovery-failed", error: message(error) });
+    }
+    const pending = await withoutStatus([...entries.keys()]);
+    if (discovered)
+      await atomicJson(discoveryPath, {
+        version: 2,
+        chainId,
+        ...identity,
+        cursor: cursor ?? null,
+      });
+    return { pending, known: entries };
   }
-  const waiting = new Map<bigint, string>();
+  const waiting = new Map<SinkId, string>();
   const unbacked = new AlertSchedule(15 * 60_000);
   const exhausted = new AlertSchedule(15 * 60_000);
-  const headerBlocked = new AlertSchedule(15 * 60_000);
+  const headerBlocked = new AlertSchedule<bigint>(15 * 60_000);
   // The lowest client height whose proof covers the record's current action.
   // A value above the target means no available header covers it yet.
   async function plan(
-    id: bigint,
+    id: SinkId,
     height: number,
     latest: number,
     known?: TransferState,
   ) {
     const transfer = known ?? (await akash.transfer(id, height));
-    const record = decodeRecord(transfer.record);
+    const record = decodeRecord(transfer);
+    assert.ok(
+      record.height < BigInt(Number.MAX_SAFE_INTEGER),
+      "Akash RPC cannot represent this height exactly",
+    );
     const created = Number(record.height);
     assert.ok(transfer.settlement, "missing sink settlement");
     const planned = {
       id,
       record,
-      voidOrdered: transfer.voidOrdered,
-      akash: transfer.settlement.status,
-      unbacked: unbackedSettlement(transfer.settlement.status),
+      authorization: transfer.settlement.voidAuthorization,
+      akash: transfer.status,
+      unbacked: unbackedMint(transfer),
     };
     // Header H proves state committed at H - 1.
-    if (!transfer.voidOrdered || planned.unbacked)
-      return { ...planned, height: created + 1 };
-    // Void orders carry no height; probe the verified and target headers.
-    for (const candidate of new Set([latest, height - 1]))
+    const saved = await readProofJob(id);
+    let resumeHeight = saved?.proofHeight;
+    let minimum = created + 1;
+    if (saved) {
+      const key = Buffer.from(saved.key, "hex");
+      const checkpoint = await akash.comet.abciQuery({
+        path: "/store/sink/key",
+        data: key,
+        height: saved.proofHeight - 1,
+        prove: false,
+      });
+      assert.equal(checkpoint.code, 0, "proof checkpoint query failed");
+      assert.equal(checkpoint.height, saved.proofHeight - 1);
+      assert.deepEqual(Buffer.from(checkpoint.key), key);
+      // IAVL's non-proof query reports a missing version separately from a missing key.
+      if (checkpoint.log === "version does not exist") {
+        assert.equal(checkpoint.codespace, "");
+        assert.equal(checkpoint.value.length, 0);
+        assert.equal(checkpoint.proof, undefined);
+        resumeHeight = undefined;
+        minimum = saved.proofHeight + 1;
+      } else {
+        assert.equal(checkpoint.log, "", "unrecognized checkpoint response");
+        assert.equal(
+          proofNonce(checkpoint.value).toString("hex"),
+          saved.valueHash,
+        );
+      }
+    }
+    if (!transfer.settlement.voidAuthorization)
+      return {
+        ...planned,
+        height: resumeHeight ?? minimum,
+        resumeHeight,
+      };
+    // Prefer a retained upload while its exact settlement is still current.
+    for (const candidate of new Set([resumeHeight, latest, height - 1])) {
       if (
-        candidate - 1 >= created &&
-        (await akash.transfer(id, candidate - 1)).voidOrdered
+        candidate === undefined ||
+        candidate > height - 1 ||
+        candidate < minimum
       )
-        return { ...planned, height: candidate };
-    return { ...planned, height };
+        continue;
+      const snapshot = await akash.transfer(id, candidate - 1);
+      if (
+        snapshot.settlement?.voidAuthorization &&
+        !finalCheck(snapshot, transfer)
+      )
+        return {
+          ...planned,
+          height: candidate,
+          resumeHeight: resumeHeight === candidate ? candidate : undefined,
+        };
+    }
+    return {
+      ...planned,
+      height: Math.max(height, minimum),
+      resumeHeight: undefined,
+    };
   }
   // Check pause, caps and recipients before paying for a proof upload.
   async function payable(plans: Awaited<ReturnType<typeof plan>>[]) {
@@ -1012,8 +1382,8 @@ export async function relayContext(options?: {
       mintDay: BigInt(configured.mintDay.toString()),
       mintedToday: BigInt(configured.mintedToday.toString()),
     };
-    const minting = plans.filter((entry) => !entry.voidOrdered);
-    const recipients = new Map<bigint, boolean>();
+    const minting = plans.filter((entry) => !entry.authorization);
+    const recipients = new Map<SinkId, boolean>();
     // Each record reads its recipient and ATA, two addresses per entry.
     for (let i = 0; i < minting.length; i += STATUS_BATCH / 2) {
       const batch = minting.slice(i, i + STATUS_BATCH / 2);
@@ -1041,7 +1411,7 @@ export async function relayContext(options?: {
     const ready = [];
     for (const entry of plans) {
       const mints = recipients.get(entry.id) ?? false;
-      const reason = entry.voidOrdered
+      const reason = entry.authorization
         ? undefined
         : mintWait(policy, now, entry.record.amount, mints, reserved);
       if (reason) {
@@ -1051,13 +1421,22 @@ export async function relayContext(options?: {
         continue;
       }
       waiting.delete(entry.id);
-      if (mints && !entry.voidOrdered) reserved += entry.record.amount;
+      if (mints && !entry.authorization) reserved += entry.record.amount;
       ready.push(entry);
     }
     return ready;
   }
-  function relayFailed(id: bigint, error: unknown) {
-    const { failures, delayMs } = retries.failed(id, Date.now());
+  async function relayFailed(id: SinkId, error: unknown) {
+    let failures = 0,
+      delayMs = 0;
+    await updateLedger((ledger) => {
+      ({ failures, delayMs } = ledger.failed(
+        id,
+        Date.now(),
+        settings.retryMaxMs,
+      ));
+      return true;
+    });
     alert({
       event: "relay-retry",
       id: id.toString(),
@@ -1068,7 +1447,7 @@ export async function relayContext(options?: {
   }
   // Paying stopped at the limit. Alert when first seen and every 15 minutes;
   // close a proof buffer a failed attempt left, which only returns rent.
-  async function overBudget(id: bigint, ledger: SpendLedger) {
+  async function overBudget(id: SinkId, ledger: SpendLedger) {
     if (!exhausted.due(id, Date.now())) return;
     alert({
       event: "relay-budget-exhausted",
@@ -1080,7 +1459,9 @@ export async function relayContext(options?: {
       action: "skipped",
     });
     try {
-      await closeProofBuffer(id);
+      await withUploadLock(payerLock, async () => {
+        await closeProofBuffer(id);
+      });
     } catch (error) {
       alert({
         event: "proof-buffer-close-failed",
@@ -1141,6 +1522,7 @@ export async function relayContext(options?: {
   }
   async function tick() {
     const lc = await follow();
+    await recoverPayments();
     const allowed = await relayerAccess(lc);
     // Without update rights a resumed upload would only pay for failures.
     if (allowed !== "none") await headerStep(resumeHeader);
@@ -1152,18 +1534,14 @@ export async function relayContext(options?: {
       throw error;
     }
     const state = await akash.state();
-    const { pending, floor, known } = await unresolved(state);
-    retries.forgetBelow(floor);
-    for (const id of waiting.keys()) if (id < floor) waiting.delete(id);
-    let ledger = await readLedger();
-    if (ledger.forgetBelow(floor))
-      ledger = await updateLedger((entries) => entries.forgetBelow(floor));
+    const { pending, known } = await unresolved(state);
+    const ledger = await readLedger();
     const trusted = await lc.client.account.clientState.fetch(lc.clientState);
     let current = trusted.latestHeight.revisionHeight.toNumber();
     const target = state.height - 1;
     const plans = [];
     for (const id of pending) {
-      if (!retries.ready(id, Date.now())) continue;
+      if (!ledger.ready(id, Date.now())) continue;
       if (ledger.exhausted(id, settings.maxLamportsPerTransfer)) {
         await overBudget(id, ledger);
         continue;
@@ -1187,7 +1565,7 @@ export async function relayContext(options?: {
         // A record newer than every available header waits; no update helps.
         if (entry.height <= target) plans.push(entry);
       } catch (error) {
-        relayFailed(id, error);
+        await relayFailed(id, error);
       }
     }
     const ready = await payable(plans);
@@ -1236,12 +1614,17 @@ export async function relayContext(options?: {
     for (const entry of ready) {
       if (entry.height > current) continue; // Wait for a covering header.
       try {
-        await relayWith(lc, entry.id, current);
-        retries.clear(entry.id);
+        await withUploadLock(payerLock, () =>
+          relayWith(lc, entry.id, entry.resumeHeight ?? current),
+        );
+        await updateLedger((ledger) => {
+          ledger.clearRetry(entry.id);
+          return true;
+        });
       } catch (error) {
         // The next pass alerts once and stops paying for it.
         if (error instanceof BudgetExhausted) continue;
-        relayFailed(entry.id, error);
+        await relayFailed(entry.id, error);
       }
     }
     // After relays have used the latest height, which is never pruned.
@@ -1321,11 +1704,7 @@ async function main() {
   try {
     const reset = values["reset-budget"];
     if (reset !== undefined) {
-      assert.ok(
-        reset === "all" || /^[1-9][0-9]*$/.test(reset),
-        "--reset-budget takes a record ID or all",
-      );
-      await context.resetBudget(reset === "all" ? "all" : BigInt(reset));
+      await context.resetBudget(reset === "all" ? "all" : parseSinkId(reset));
       return;
     }
     if (values.bootstrap) {

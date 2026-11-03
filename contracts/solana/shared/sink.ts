@@ -5,6 +5,7 @@ import {
   defaultRegistryTypes,
 } from "@cosmjs/stargate";
 import {
+  DestType,
   MsgGuardianPause,
   MsgSink,
   MsgSinkResponse,
@@ -13,56 +14,20 @@ import {
 export const SINK_MSG_TYPE = "/akash.sink.v1.MsgSink";
 export const GUARDIAN_PAUSE_TYPE = "/akash.sink.v1.MsgGuardianPause";
 export const SINK_RESPONSE_TYPE = "/akash.sink.v1.MsgSinkResponse";
-const MAX_UINT64 = 0xffffffffffffffffn;
-
-export function parseSinkId(value: unknown): string {
-  if (
-    typeof value !== "string" ||
-    !/^[1-9][0-9]{0,19}$/.test(value) ||
-    BigInt(value) > MAX_UINT64
-  )
-    throw new Error(
-      "Record ID must be a positive uint64 decimal without leading zeros",
-    );
-  return value;
-}
-
-const TRANSFER_KEY_PREFIX = [0x02, 0x00];
-const VOID_KEY_PREFIX = [0x02, 0x01];
-
-// An x/sink store key: a two-byte prefix, then the record ID as a big-endian
-// u64. Uint8Array rather than Buffer because the browser UI imports this
-// module.
-function sinkKey(prefix: readonly number[], id: bigint | number) {
-  const value = BigInt(id);
-  if (value < 0n || value > MAX_UINT64)
-    throw new RangeError("Record ID must be a uint64");
-  const key = new Uint8Array(prefix.length + 8);
-  key.set(prefix);
-  new DataView(key.buffer).setBigUint64(prefix.length, value);
-  return key;
-}
-
-// The 10-byte sink store key of transfer record `id`.
-export function transferKey(id: bigint | number): Uint8Array {
-  return sinkKey(TRANSFER_KEY_PREFIX, id);
-}
-
-// The 10-byte sink store key of the governance void order for `id`.
-export function voidKey(id: bigint | number): Uint8Array {
-  return sinkKey(VOID_KEY_PREFIX, id);
-}
+import { MAX_UINT64, parseSinkId, type SinkId } from "./id";
+export { parseSinkId } from "./id";
+export { transferKey, settlementKey } from "./proof";
 
 export function sinkMessage(input: {
   sender: string;
-  dest: string;
+  recipient: string;
   amountUakt: string;
 }): EncodeObject & { value: MsgSink } {
   return {
     typeUrl: SINK_MSG_TYPE,
     value: {
-      destType: 1,
-      dest: input.dest,
+      destType: DestType.DEST_TYPE_SOLANA,
+      dest: input.recipient,
       amount: { denom: "uakt", amount: input.amountUakt },
       sender: input.sender,
     },
@@ -97,7 +62,7 @@ function aminoMessage(value: unknown): MsgSink {
   const message = object(value);
   if (
     Object.keys(message).sort().join(",") !== "amount,dest,dest_type,sender" ||
-    message.dest_type !== 1 ||
+    message.dest_type !== DestType.DEST_TYPE_SOLANA ||
     typeof message.dest !== "string" ||
     typeof message.sender !== "string"
   )
@@ -112,7 +77,7 @@ function aminoMessage(value: unknown): MsgSink {
   )
     throw new Error("Invalid MsgSink Amino amount");
   return {
-    destType: 1,
+    destType: DestType.DEST_TYPE_SOLANA,
     dest: message.dest,
     sender: message.sender,
     amount: { denom: "uakt", amount: amount.amount },
@@ -175,7 +140,7 @@ export function sinkAminoTypes(): AminoTypes {
 // the global counter or substitute an event for a missing typed response.
 export function sinkResponseId(
   responses: readonly { typeUrl: string; value: Uint8Array }[],
-): string {
+): SinkId {
   if (responses.length !== 1 || responses[0].typeUrl !== SINK_RESPONSE_TYPE)
     throw new Error("Expected exactly one MsgSinkResponse");
   return parseSinkId(MsgSinkResponse.decode(responses[0].value).id);

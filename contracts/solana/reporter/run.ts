@@ -143,7 +143,6 @@ async function main() {
   process.once("SIGTERM", stop);
   const scanner = new Scanner(akash, observer, {
     reporter: config.reporter,
-    maxTransfers: config.maxTransfers,
     auditPerScan: config.auditPerScan,
     output,
     signal: abort.signal,

@@ -1,29 +1,30 @@
-import assert from "node:assert/strict";
-import { join } from "node:path";
-import { createHash } from "node:crypto";
+import { Sink_Status as Status } from "@akashnetwork/chain-sdk/private-types/akash.v1";
 import { Program, utils, web3 } from "@coral-xyz/anchor";
 import { TOKEN_PROGRAM_ID, unpackMint } from "@solana/spl-token";
 import {
   QueryBalanceRequest,
   QueryBalanceResponse,
 } from "cosmjs-types/cosmos/bank/v1beta1/query";
-import idl from "../target/idl/akt_solana.json";
-import type { AktSolana } from "../target/types/akt_solana";
+import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { join } from "node:path";
+import idl from "../../../.cache/solana/target/idl/akt_solana.json";
+import type { AktSolana } from "../../../.cache/solana/target/types/akt_solana";
 import { AkashClient } from "../reporter/akash";
 import { decodeRecord } from "../reporter/solana";
-import { Sink_Status as Status } from "@akashnetwork/chain-sdk/private-types/akash.v1";
+import { coinAmount, matchesAnchorId, statusAddress } from "../shared/proof";
 import {
-  ROOT,
-  CHAIN,
   AKASH_RPC,
+  CHAIN,
   PROGRAM_ID,
-  pda,
-  LE64,
-  provider,
+  ROOT,
   object,
+  pda,
+  provider,
   sleep,
 } from "./common";
 import { atomicJson, optionalJson, withUploadLock } from "./durable";
+import { collectPages } from "./open-transfers";
 import {
   inSnapshot,
   reconcileSettings,
@@ -191,17 +192,15 @@ async function reconcileSnapshot() {
   const akash = new AkashClient(AKASH_RPC, CHAIN, 60);
   try {
     const state = await akash.state();
-    const records = [];
-    for (let id = 1n; id <= state.totals.lastTransferId.toBigInt(); id++) {
-      const transfer = await akash.transfer(id, state.height);
-      records.push({ transfer, record: decodeRecord(transfer.record) });
-    }
+    const records = (
+      await collectPages((key) =>
+        akash.transfers(state.height, { key, limit: 500 }),
+      )
+    ).map(({ transfer }) => ({ transfer, record: decodeRecord(transfer) }));
     const mint = pda("mint");
     const addresses = [
       mint,
-      ...records.map(({ record }) =>
-        pda("transfer", PROGRAM_ID, LE64(record.id)),
-      ),
+      ...records.map(({ record }) => statusAddress(PROGRAM_ID, record.id)),
     ];
     // The first page pins the finalized slot for supply. Later pages may come
     // from a newer slot; statuses resolved after the pinned slot are excluded.
@@ -220,9 +219,13 @@ async function reconcileSnapshot() {
     }
     // Deposits created after the Akash snapshot could already have minted. Retry
     // rather than report a false supply gap from mismatched chain snapshots.
-    assert.equal(
-      (await akash.state()).totals.lastTransferId.toBigInt(),
-      state.totals.lastTransferId.toBigInt(),
+    const freshState = await akash.state();
+    const freshHistory = await collectPages((key) =>
+      akash.transfers(freshState.height, { key, limit: 500 }),
+    );
+    assert.deepEqual(
+      freshHistory.map((entry) => entry.id),
+      records.map((entry) => entry.record.id),
       "deposits advanced during reconciliation; retry snapshot",
     );
     const mintInfo = unpackMint(mint, infos[0], TOKEN_PROGRAM_ID);
@@ -244,7 +247,14 @@ async function reconcileSnapshot() {
         const status = program.coder.accounts.decode<
           Awaited<ReturnType<typeof program.account.transferStatus.fetch>>
         >("transferStatus", info.data);
-        assert.equal(status.id.toString(), record.id.toString());
+        assert.ok(
+          matchesAnchorId(status.id, record.id),
+          "status identity mismatch",
+        );
+        assert.ok(
+          BigInt(status.proofHeight.toString()) > record.height,
+          "proof predates deposit",
+        );
         resolvedAtSlot = BigInt(status.resolvedAtSlot.toString());
         if (!inSnapshot(resolvedAtSlot, snapshot.context.slot))
           resolvedAtSlot = undefined;
@@ -256,16 +266,24 @@ async function reconcileSnapshot() {
           assert.ok(status.outcome.minted.recipient.equals(record.recipient));
           solana = "minted";
           observedMinted += record.amount;
-          if (settlement.status === Status.STATUS_PENDING)
+          if (
+            transfer.status === Status.STATUS_TRANSFER_PENDING ||
+            transfer.status === Status.STATUS_VOIDED
+          )
             awaitingReports += record.amount;
         } else solana = "voided";
       }
-      if (solana !== "minted" && settlement.status === Status.STATUS_PENDING)
+      if (
+        solana !== "minted" &&
+        (transfer.status === Status.STATUS_TRANSFER_PENDING ||
+          transfer.status === Status.STATUS_VOIDED)
+      )
         pendingUnminted += record.amount;
       alerts.push(
         ...transferAlerts({
           id: record.id,
-          akash: settlement.status,
+          akash: transfer.status,
+          hold: settlement.hold,
           solana,
           resolvedAtSlot,
           slot: snapshot.context.slot,
@@ -291,9 +309,10 @@ async function reconcileSnapshot() {
       QueryBalanceResponse.decode(balanceReply.value).balance?.amount ?? "0",
     );
     const accounted =
-      state.totals.pendingAmount.toBigInt() +
-      state.totals.mintedAmount.toBigInt() +
-      state.totals.voidedAmount.toBigInt();
+      coinAmount(state.totals.pendingAmount) +
+      coinAmount(state.totals.mintedAmount) +
+      coinAmount(state.totals.voidedAmount) +
+      coinAmount(state.totals.refundPendingAmount);
     if (balance !== accounted)
       alerts.push("Akash bank escrow differs from sink totals");
     const burnIndex = await indexBurns(
@@ -322,7 +341,8 @@ async function reconcileSnapshot() {
       cumulativeBurnedUakt: burnIndex.burned,
       awaitingMintReportsUakt: awaitingReports.toString(),
       pendingUnmintedUakt: pendingUnminted.toString(),
-      voidedEscrowUakt: state.totals.voidedAmount.toString(),
+      voidRequestedEscrowUakt: coinAmount(state.totals.voidedAmount).toString(),
+      voidedEscrowUakt: coinAmount(state.totals.refundPendingAmount).toString(),
       alerts,
     };
     await atomicJson(join(ROOT, "reconciliation.json"), report);

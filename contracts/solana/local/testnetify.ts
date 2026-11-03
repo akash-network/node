@@ -19,6 +19,7 @@ import {
   AKASH_RPC,
   AKASH_RPC_PORT,
   AKASH_GRPC_PORT,
+  AKASH_REST_PORT,
   CHAIN,
   cosmosWallet,
   cosmosSigner,
@@ -105,7 +106,7 @@ export async function startValidator(index: number) {
         ? [
             "--api.enable",
             "--api.address",
-            "tcp://127.0.0.1:1317",
+            `tcp://127.0.0.1:${AKASH_REST_PORT}`,
             "--grpc.enable",
           ]
         : []),
@@ -115,6 +116,9 @@ export async function startValidator(index: number) {
       AKASH_RPC_PORT + index * 10,
       AKASH_RPC_PORT - 1 + index * 10,
       AKASH_GRPC_PORT + index * 10,
+      ...(index === 0 && process.env.AKT_TEAM_API === "1"
+        ? [AKASH_REST_PORT]
+        : []),
     ],
   );
 }

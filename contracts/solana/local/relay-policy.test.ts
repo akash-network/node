@@ -1,5 +1,7 @@
-import assert from "node:assert/strict";
-import { test } from "node:test";
+import {
+  Sink_Status as Status,
+  TransferState,
+} from "@akashnetwork/chain-sdk/private-types/akash.v1";
 import { web3 } from "@coral-xyz/anchor";
 import {
   ACCOUNT_SIZE,
@@ -7,28 +9,11 @@ import {
   TOKEN_2022_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
-import {
-  QueryOpenTransfersRequest,
-  Sink_Status as Status,
-  TransferState,
-} from "@akashnetwork/chain-sdk/private-types/akash.v1";
-import { BinaryWriter, WireType } from "@bufbuild/protobuf/wire";
-import {
-  AlertSchedule,
-  RetrySchedule,
-  SpendLedger,
-  finalCheck,
-  headerRefresh,
-  idBatches,
-  mintWait,
-  nextCursor,
-  recipientMints,
-  relaySettings,
-  selectCommitSignatures,
-  unbackedSettlement,
-  type CommitSignature,
-  type SetMember,
-} from "./relay-policy";
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import idl from "../../../.cache/solana/target/idl/akt_solana.json";
+import clientIdl from "../idls/ics07_tendermint.json";
+import { testId } from "../tests/sink-fixtures";
 import { assemblyExhaustion } from "./header-upload";
 import {
   decodeAppStateAccessManager,
@@ -37,30 +22,19 @@ import {
   relayerAccess,
 } from "./light-client";
 import {
-  OPEN_TRANSFERS_PATH,
-  decodeOpenTransfersResponse,
-  encodeOpenTransfersRequest,
-  openTransfers,
-} from "./open-transfers";
-import idl from "../target/idl/akt_solana.json";
-import clientIdl from "../idls/ics07_tendermint.json";
-
-test("status reads are batched from the cursor without a record limit", () => {
-  assert.deepEqual(idBatches(5n, 4n), []);
-  assert.deepEqual(idBatches(1n, 3n, 2), [[1n, 2n], [3n]]);
-  const batches = idBatches(1n, 1001n);
-  assert.equal(batches.length, 11);
-  assert.ok(batches.every((batch) => batch.length <= 100));
-  assert.equal(batches[0][0], 1n);
-  assert.equal(batches.at(-1)?.at(-1), 1001n);
-  assert.deepEqual(idBatches(1001n, 1001n), [[1001n]]);
-});
-
-test("cursor stops at the lowest unresolved record", () => {
-  assert.equal(nextCursor([7n, 9n], 12n), 7n);
-  assert.equal(nextCursor([], 12n), 13n);
-  assert.equal(nextCursor([], 0n), 1n);
-});
+  AlertSchedule,
+  RetrySchedule,
+  SpendLedger,
+  finalCheck,
+  headerRefresh,
+  mintWait,
+  recipientMints,
+  relaySettings,
+  selectCommitSignatures,
+  unbackedMint,
+  type CommitSignature,
+  type SetMember,
+} from "./relay-policy";
 
 test("headers refresh only for a needed proof or an aging client", () => {
   const base = {
@@ -113,19 +87,21 @@ test("settings default and reject bad values", () => {
 
 test("failed transfers back off exponentially up to the ceiling", () => {
   const retries = new RetrySchedule(6000, 60_000);
-  assert.ok(retries.ready(4n, 0));
-  const delays = [1, 2, 3, 4, 5, 6].map(() => retries.failed(4n, 0).delayMs);
+  assert.ok(retries.ready(testId(4), 0));
+  const delays = [1, 2, 3, 4, 5, 6].map(
+    () => retries.failed(testId(4), 0).delayMs,
+  );
   assert.deepEqual(delays, [6000, 12_000, 24_000, 48_000, 60_000, 60_000]);
-  assert.equal(retries.ready(4n, 59_999), false);
-  assert.ok(retries.ready(4n, 60_000));
+  assert.equal(retries.ready(testId(4), 59_999), false);
+  assert.ok(retries.ready(testId(4), 60_000));
   // Other transfers keep their own schedule.
-  assert.ok(retries.ready(5n, 0));
-  retries.clear(4n);
-  assert.equal(retries.failed(4n, 0).delayMs, 6000);
-  retries.failed(9n, 0);
-  retries.forgetBelow(5n);
-  assert.ok(retries.ready(4n, 0));
-  assert.equal(retries.ready(9n, 0), false);
+  assert.ok(retries.ready(testId(5), 0));
+  retries.clear(testId(4));
+  assert.equal(retries.failed(testId(4), 0).delayMs, 6000);
+  retries.failed(testId(9), 0);
+  retries.clear(testId(4));
+  assert.ok(retries.ready(testId(4), 0));
+  assert.equal(retries.ready(testId(9), 0), false);
 });
 
 test("recipient prediction mirrors mint_transfer", () => {
@@ -278,28 +254,50 @@ test("pause and caps wait without paying; invalid recipients still void", () => 
 
 test("records voided or refunded on Akash without a Solana status never mint", () => {
   assert.equal(
-    unbackedSettlement(Status.STATUS_VOIDED),
+    unbackedMint({
+      settlement: undefined,
+      status: Status.STATUS_REFUND_PENDING,
+    }),
     "akash-voided-without-solana-status",
   );
   assert.equal(
-    unbackedSettlement(Status.STATUS_REFUNDED),
+    unbackedMint({ settlement: undefined, status: Status.STATUS_REFUNDED }),
     "akash-refunded-without-solana-status",
   );
-  // Pending and minted records keep the normal relay path.
-  assert.equal(unbackedSettlement(Status.STATUS_PENDING), undefined);
-  assert.equal(unbackedSettlement(Status.STATUS_MINTED), undefined);
+  for (const status of [Status.STATUS_TRANSFER_PENDING, Status.STATUS_MINTED])
+    assert.equal(unbackedMint({ settlement: undefined, status }), undefined);
+});
+
+test("a permanent governance authorization permits sealing in every financial status", () => {
+  for (const status of [
+    Status.STATUS_TRANSFER_PENDING,
+    Status.STATUS_MINTED,
+    Status.STATUS_VOIDED,
+    Status.STATUS_REFUND_PENDING,
+    Status.STATUS_REFUNDED,
+  ]) {
+    const transfer = TransferState.fromPartial({
+      status,
+      settlement: {
+        round: 4n,
+        voidAuthorization: { requestedHeight: 1n, requestedRound: 1n },
+      },
+    });
+    assert.equal(unbackedMint(transfer), undefined);
+    assert.equal(finalCheck(transfer, transfer), undefined);
+  }
 });
 
 test("unbacked settlement alerts when first seen and while it persists", () => {
   const alerts = new AlertSchedule(900_000);
-  assert.ok(alerts.due(3n, 0));
-  assert.equal(alerts.due(3n, 3000), false);
-  assert.equal(alerts.due(3n, 899_999), false);
-  assert.ok(alerts.due(3n, 900_000));
-  assert.ok(alerts.due(4n, 900_000));
+  assert.ok(alerts.due(testId(3), 0));
+  assert.equal(alerts.due(testId(3), 3000), false);
+  assert.equal(alerts.due(testId(3), 899_999), false);
+  assert.ok(alerts.due(testId(3), 900_000));
+  assert.ok(alerts.due(testId(4), 900_000));
   // A record that leaves the state alerts again when it returns.
-  alerts.clear(3n);
-  assert.ok(alerts.due(3n, 900_001));
+  alerts.clear(testId(3));
+  assert.ok(alerts.due(testId(3), 900_001));
 });
 
 test("the spend limit defaults above a normal relay and is configurable", () => {
@@ -318,29 +316,31 @@ test("the spend limit defaults above a normal relay and is configurable", () => 
 test("the spend ledger stops paying past the limit and survives restarts", () => {
   const identity = { genesis: "G", programId: "P" };
   const ledger = new SpendLedger();
-  ledger.attempt(7n);
+  ledger.attempt(testId(7));
   // A normal mint: fees plus status and ATA rent.
-  ledger.charge(7n, 3_470_000);
-  assert.equal(ledger.exhausted(7n, 5_000_000), false);
-  for (let i = 0; i < 10; i++) ledger.charge(7n, 5_000);
-  ledger.attempt(7n);
-  assert.equal(ledger.spent(7n), 3_520_000);
-  ledger.charge(7n, 1_480_000);
+  ledger.charge(testId(7), 3_470_000);
+  assert.equal(ledger.exhausted(testId(7), 5_000_000), false);
+  for (let i = 0; i < 10; i++) ledger.charge(testId(7), 5_000);
+  ledger.attempt(testId(7));
+  assert.equal(ledger.spent(testId(7)), 3_520_000);
+  ledger.charge(testId(7), 1_480_000);
   // At the limit is still allowed; over it stops.
-  assert.equal(ledger.exhausted(7n, 5_000_000), false);
-  ledger.charge(7n, 1);
-  assert.equal(ledger.exhausted(7n, 5_000_000), true);
-  assert.equal(ledger.exhausted(8n, 5_000_000), false);
-  assert.throws(() => ledger.charge(7n, 0.5));
+  assert.equal(ledger.exhausted(testId(7), 5_000_000), false);
+  ledger.charge(testId(7), 1);
+  assert.equal(ledger.exhausted(testId(7), 5_000_000), true);
+  assert.equal(ledger.exhausted(testId(8), 5_000_000), false);
+  assert.throws(() => ledger.charge(testId(7), 0.5));
   // A restart reads the same state back.
   const saved = JSON.parse(JSON.stringify(ledger.toJSON(identity)));
-  assert.deepEqual(saved.transfers["7"], {
+  assert.deepEqual(saved.transfers[testId(7)], {
     spentLamports: 5_000_001,
     attempts: 2,
+    bufferFundedLamports: 0,
+    bufferReclaimedLamports: 0,
   });
   const restored = SpendLedger.parse(saved, identity);
-  assert.equal(restored.exhausted(7n, 5_000_000), true);
-  assert.equal(restored.entries.get(7n)?.attempts, 2);
+  assert.equal(restored.exhausted(testId(7), 5_000_000), true);
+  assert.equal(restored.entries.get(testId(7))?.attempts, 2);
   assert.equal(SpendLedger.parse(undefined, identity).entries.size, 0);
   for (const other of [
     { genesis: "X", programId: "P" },
@@ -354,45 +354,69 @@ test("the spend ledger stops paying past the limit and survives restarts", () =>
     { "7": { spentLamports: 1, attempts: -1 } },
   ])
     assert.throws(() => SpendLedger.parse({ ...saved, transfers }, identity));
-  // An operator reset, or resolution below the floor, clears entries.
-  restored.charge(9n, 10);
-  assert.equal(restored.reset(7n), true);
-  assert.equal(restored.reset(7n), false);
-  assert.equal(restored.exhausted(7n, 5_000_000), false);
-  assert.equal(restored.forgetBelow(9n), false);
-  assert.equal(restored.forgetBelow(10n), true);
-  assert.equal(restored.entries.size, 0);
-  restored.charge(3n, 1);
+  restored.charge(testId(9), 10);
+  assert.equal(restored.reset(testId(7)), true);
+  assert.equal(restored.reset(testId(7)), false);
+  assert.equal(restored.exhausted(testId(7), 5_000_000), false);
+  assert.equal(restored.reset(testId(9)), true);
+  restored.charge(testId(3), 1);
   assert.equal(restored.reset("all"), true);
   assert.equal(restored.reset("all"), false);
 });
 
-test("the final Akash check skips voids, refunds and changed void orders", () => {
-  const pending = Status.STATUS_PENDING;
+test("the final Akash check binds the exact authorization, status and round and refuses unbacked mints", () => {
+  const planned = TransferState.fromPartial({
+    status: Status.STATUS_TRANSFER_PENDING,
+  });
+  assert.equal(finalCheck(planned, planned), undefined);
   assert.equal(
-    finalCheck(false, { voidOrdered: false, status: pending }),
+    finalCheck(planned, { ...planned, status: Status.STATUS_MINTED }),
     undefined,
   );
   assert.equal(
-    finalCheck(true, { voidOrdered: true, status: pending }),
-    undefined,
-  );
-  // Governance may confirm a mint; Akash then backs it.
-  assert.equal(
-    finalCheck(false, { voidOrdered: false, status: Status.STATUS_MINTED }),
-    undefined,
-  );
-  assert.equal(
-    finalCheck(false, { voidOrdered: false, status: Status.STATUS_VOIDED }),
+    finalCheck(planned, { ...planned, status: Status.STATUS_REFUND_PENDING }),
     "akash-voided-without-solana-status",
   );
   assert.equal(
-    finalCheck(true, { voidOrdered: true, status: Status.STATUS_REFUNDED }),
+    finalCheck(planned, { ...planned, status: Status.STATUS_REFUNDED }),
     "akash-refunded-without-solana-status",
   );
+  const ordered = TransferState.fromPartial({
+    ...planned,
+    status: Status.STATUS_VOIDED,
+    settlement: {
+      round: 2n,
+      voidAuthorization: { requestedHeight: 1n, requestedRound: 1n },
+    },
+  });
+  assert.equal(finalCheck(planned, ordered), "void-authorization-changed");
+  assert.equal(finalCheck(ordered, planned), "void-authorization-changed");
   assert.equal(
-    finalCheck(false, { voidOrdered: true, status: pending }),
-    "void-order-changed",
+    finalCheck(ordered, { ...ordered, status: Status.STATUS_REFUND_PENDING }),
+    "settlement-changed",
+  );
+  assert.equal(
+    finalCheck(
+      ordered,
+      TransferState.fromPartial({
+        ...ordered,
+        settlement: { ...ordered.settlement, round: 3n },
+      }),
+    ),
+    "settlement-changed",
+  );
+  assert.equal(
+    finalCheck(
+      ordered,
+      TransferState.fromPartial({
+        ...ordered,
+        settlement: {
+          ...ordered.settlement,
+          voidAuthorization: { requestedHeight: 2n, requestedRound: 1n },
+        },
+      }),
+    ),
+    "void-authorization-changed",
   );
 });
 
@@ -473,120 +497,6 @@ test("the bridge account names the light client and chain", () => {
     lightClientProblem(found, { chainId: "akash-1", pin: program })?.event,
     "bridge-chain-mismatch",
   );
-});
-
-function transferState(id: bigint) {
-  const record = Buffer.alloc(77);
-  record[0] = 1;
-  record.writeBigUInt64LE(id, 1);
-  web3.Keypair.generate().publicKey.toBuffer().copy(record, 29);
-  record.writeBigUInt64LE(1_000_000n, 61);
-  record.writeBigUInt64LE(10n + id, 69);
-  return TransferState.fromPartial({ record, voidOrdered: false });
-}
-function openPage(ids: bigint[], next: bigint) {
-  const writer = new BinaryWriter();
-  for (const id of ids)
-    writer
-      .tag(1, WireType.LengthDelimited)
-      .bytes(TransferState.encode(transferState(id)).finish());
-  if (next) writer.tag(2, WireType.Varint).uint64(next);
-  // Unknown fields from a newer node are skipped.
-  writer.tag(9, WireType.Varint).uint32(1);
-  return writer.finish();
-}
-
-test("OpenTransfers request and response follow the x/sink wire format", () => {
-  assert.deepEqual(encodeOpenTransfersRequest(0n, 0), new Uint8Array());
-  assert.deepEqual(
-    encodeOpenTransfersRequest(300n, 100),
-    Uint8Array.from([0x08, 0xac, 0x02, 0x10, 0x64]),
-  );
-  const decoded = decodeOpenTransfersResponse(openPage([4n, 9n], 9n));
-  assert.equal(decoded.nextStartAfter, 9n);
-  assert.equal(decoded.transfers.length, 2);
-  assert.equal(Buffer.from(decoded.transfers[1].record).readBigUInt64LE(1), 9n);
-  assert.equal(
-    decodeOpenTransfersResponse(openPage([], 0n)).nextStartAfter,
-    0n,
-  );
-  // uint64 values above 2^63 - 1 stay unsigned both ways.
-  const high = 18_446_744_073_709_551_614n;
-  assert.equal(
-    QueryOpenTransfersRequest.decode(
-      encodeOpenTransfersRequest(high, 500),
-    ).startAfter.toString(),
-    high.toString(),
-  );
-  assert.equal(
-    decodeOpenTransfersResponse(openPage([], high)).nextStartAfter,
-    high,
-  );
-});
-
-test("OpenTransfers pages at one height and falls back on old nodes", async () => {
-  const replies: Record<string, Uint8Array> = {
-    "0": openPage([2n, 5n], 5n),
-    "5": openPage([7n], 0n),
-  };
-  const seen: { startAfter: string; height?: number }[] = [];
-  const node = {
-    async abciQuery(params: {
-      path: string;
-      data: Uint8Array;
-      height?: number;
-    }) {
-      assert.equal(params.path, OPEN_TRANSFERS_PATH);
-      const startAfter =
-        params.data.length && params.data[0] === 0x08
-          ? String(params.data[1])
-          : "0";
-      seen.push({ startAfter, height: params.height });
-      return { code: 0, height: params.height, value: replies[startAfter] };
-    },
-  };
-  const open = await openTransfers(node, 40, 2);
-  assert.deepEqual(
-    open?.map((entry) => entry.id),
-    [2n, 5n, 7n],
-  );
-  assert.deepEqual(seen, [
-    { startAfter: "0", height: 40 },
-    { startAfter: "5", height: 40 },
-  ]);
-  const old = {
-    async abciQuery() {
-      return { code: 6, codespace: "sdk", value: new Uint8Array() };
-    },
-  };
-  assert.equal(await openTransfers(old, 40), undefined);
-  const failing = {
-    async abciQuery() {
-      return { code: 18, codespace: "sdk", value: new Uint8Array() };
-    },
-  };
-  await assert.rejects(
-    () => openTransfers(failing, 40),
-    /OpenTransfers failed/,
-  );
-  const lagging = {
-    async abciQuery() {
-      return { code: 0, height: 39, value: openPage([1n], 0n) };
-    },
-  };
-  await assert.rejects(() => openTransfers(lagging, 40), /height mismatch/);
-  const unordered = {
-    async abciQuery() {
-      return { code: 0, height: 40, value: openPage([5n, 2n], 0n) };
-    },
-  };
-  await assert.rejects(() => openTransfers(unordered, 40), /out of ID order/);
-  const stuck = {
-    async abciQuery() {
-      return { code: 0, height: 40, value: openPage([], 3n) };
-    },
-  };
-  await assert.rejects(() => openTransfers(stuck, 40), /did not advance/);
 });
 
 const address = (i: number) => i.toString(16).toUpperCase().padStart(40, "0");
@@ -813,4 +723,36 @@ test("the header signature limit is configurable within one batch", () => {
     assert.throws(() =>
       relaySettings({ AKT_RELAY_MAX_HEADER_SIGNATURES: value }),
     );
+});
+
+test("v2 spending, signatures, retries and cleanup survive recovery without scalar conversion", () => {
+  const identity = { genesis: "fresh", programId: "program" },
+    id = testId(9007199254740993n);
+  const ledger = new SpendLedger();
+  ledger.attempt(id);
+  ledger.charge(id, 5000, "signature");
+  ledger.failed(id, 1000, 900000);
+  const restored = SpendLedger.parse(
+    JSON.parse(JSON.stringify(ledger.toJSON(identity))),
+    identity,
+  );
+  restored.charge(id, 5000, "signature");
+  assert.equal(restored.spent(id), 5000);
+  assert.equal(restored.ready(id, 6999), false);
+  assert.equal(restored.ready(id, 7000), true);
+  assert.equal(restored.failed(id, 7000, 900000).delayMs, 12000);
+  restored.complete(id);
+  assert.equal(restored.ready(id, 0), true);
+  assert.equal(
+    SpendLedger.parse(restored.toJSON(identity), identity).entries.get(id)
+      ?.completed,
+    true,
+  );
+  restored.attempt(id);
+  assert.equal(restored.entries.get(id)?.completed, undefined);
+  assert.throws(
+    () =>
+      SpendLedger.parse({ ...ledger.toJSON(identity), version: 1 }, identity),
+    /unsupported scalar-ID/,
+  );
 });

@@ -16,10 +16,9 @@ pub const MINT_AUTHORITY_SEED: &[u8] = b"mint_authority";
 pub const BRIDGE_SEED: &[u8] = b"bridge";
 /// `PauseGuardian`, created by the first `set_pause_guardian`.
 pub const GUARDIAN_SEED: &[u8] = b"guardian";
-/// `TransferStatus`, followed by the record ID as a little-endian u64.
+/// `TransferStatus`, followed by owner20, LE64(height), and LE64(sequence).
 pub const TRANSFER_SEED: &[u8] = b"transfer";
-/// `ProofBuffer`, followed by the submitter's key and a little-endian u64
-/// nonce.
+/// `ProofBuffer`, followed by the submitter's key and SHA-256(proven key).
 pub const PROOF_SEED: &[u8] = b"proof";
 
 // Seeds of other programs' PDAs, checked before the accounts are used.
@@ -50,7 +49,8 @@ pub const MAX_CHAIN_ID_LEN: usize = 64;
 /// Most vault addresses a mint policy may allowlist.
 pub const MAX_VAULTS: usize = 16;
 /// Largest ICS23 proof a proof buffer holds, in bytes.
-pub const MAX_PROOF_BYTES: usize = 4096;
+pub const MAX_PROOF_BYTES: usize = 16_384;
+pub const MAX_PROOF_CHUNK_BYTES: usize = 500;
 /// Length of a mint-cap day. Days start at multiples of this many seconds of
 /// Solana clock time, that is at 00:00 UTC.
 pub const SECONDS_PER_DAY: u64 = 86_400;

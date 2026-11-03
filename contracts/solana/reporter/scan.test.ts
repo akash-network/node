@@ -1,371 +1,438 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { web3 } from "@coral-xyz/anchor";
+import { toBech32 } from "@cosmjs/encoding";
 import {
-  Observation,
+  Hold,
   Outcome,
-  Settlement,
-  Sink_Params as Params,
   Sink_Status as Status,
-  Totals,
-  type TransferState,
+  TransferState,
 } from "@akashnetwork/chain-sdk/private-types/akash.v1";
+import { Scanner, type ScanAkash, type ScanObserver } from "./scan";
+import { LightClientMismatchError } from "./solana";
 import {
-  OPEN_PAGE_LIMIT,
-  Scanner,
-  type ScanAkash,
-  type ScanObserver,
-} from "./scan";
-import {
-  LightClientMismatchError,
-  type FinalizedObserved,
-  type LightClientChange,
-  type Observed,
-  type Record as SinkRecord,
-} from "./solana";
-
-const members = ["reporter", "b", "c", "d"];
-const { STATUS_PENDING: P, STATUS_VOIDED: V, STATUS_MINTED: M } = Status;
-const OPEN = [P, V];
-
-function transfer(id: bigint, status: Status): TransferState {
-  const record = Buffer.alloc(77);
-  record[0] = 1;
-  record.writeBigUInt64LE(id, 1);
-  record.writeBigUInt64LE(60n, 61);
-  record.writeBigUInt64LE(1n, 69);
-  return {
-    record,
-    voidOrdered: false,
-    settlement: Settlement.fromPartial({
-      round: 1n,
-      status,
-      policy: { epoch: 1n, members, threshold: 3 },
-    }),
+  collectPages,
+  discoverTransfers,
+  openTransfers,
+} from "../local/open-transfers";
+import { chronologicalKey, parseSinkId, type SinkId } from "../shared/id";
+import { testId, testSnapshot, testTransfer } from "../tests/sink-fixtures";
+test("chronological discovery retains EOF cursor and finds later earlier-sorting owners", async () => {
+  const first = testTransfer(1n, 10n),
+    later = testTransfer(
+      1n,
+      11n,
+      toBech32("akash", new Uint8Array(20).fill(1)),
+    );
+  let rows = [first];
+  const akash = {
+    async transfers(height: number, options: { key?: Uint8Array } = {}) {
+      assert.equal(height, 20);
+      if (options.key)
+        assert.deepEqual(options.key, chronologicalKey(testId(1n, 10n)));
+      return { transfers: rows, nextKey: new Uint8Array() };
+    },
   };
-}
-
-// statuses[i] belongs to transfer i + 1. `open: false` mimics an older node.
-function ledger(statuses: Status[], { open = true } = {}) {
-  const status = (id: bigint) => statuses[Number(id) - 1] ?? P;
-  const openIds = statuses.flatMap((value, i) =>
-    OPEN.includes(value) ? [BigInt(i + 1)] : [],
+  const start = await discoverTransfers(akash, 20);
+  assert.equal(start.cursor, parseSinkId(first.id));
+  assert.equal(start.hasMore, false);
+  assert.equal(
+    (await discoverTransfers(akash, 20, start.cursor)).entries.length,
+    0,
   );
+  rows = [first, later];
+  const next = await discoverTransfers(akash, 20, start.cursor);
+  assert.equal(next.entries.length, 1);
+  assert.equal(next.cursor, parseSinkId(later.id));
+});
+test("native pages preserve fixed height, reject duplicates, stalled cursors and pruned state", async () => {
+  const a = testTransfer(1),
+    b = testTransfer(2);
+  const keys: Uint8Array[] = [];
+  const result = await collectPages(async (key) => {
+    keys.push(key);
+    return key.length
+      ? { transfers: [b], nextKey: new Uint8Array() }
+      : { transfers: [a], nextKey: new Uint8Array([2]) };
+  });
+  assert.equal(result.length, 2);
+  assert.deepEqual(keys, [new Uint8Array(), new Uint8Array([2])]);
+  await assert.rejects(
+    () =>
+      collectPages(async () => ({
+        transfers: [a],
+        nextKey: new Uint8Array([2]),
+      })),
+    /duplicate/,
+  );
+  await assert.rejects(
+    () =>
+      collectPages(async () => ({
+        transfers: [],
+        nextKey: new Uint8Array([2]),
+      })),
+    /advance/,
+  );
+  await assert.rejects(
+    () =>
+      collectPages(async () => {
+        throw new Error("height pruned");
+      }),
+    /pruned/,
+  );
+});
+function fixture() {
+  const base = testSnapshot(),
+    held = testTransfer(2);
+  assert.ok(held.settlement);
+  held.status = Status.STATUS_REFUNDED;
+  held.settlement.hold = Hold.HOLD_CONFLICT;
+  const rows = [base.transfer, held],
+    reads: SinkId[] = [];
   const state = {
-    params: Params.fromPartial({ reporters: members, reporterThreshold: 3 }),
-    totals: Totals.fromPartial({
-      reporterEpoch: 1n,
-      lastTransferId: BigInt(statuses.length),
-      pendingCount: BigInt(openIds.length),
-    }),
-    height: 10,
-    time: 86_400n,
+    ...base,
+    height: 20,
+    epoch: 1n,
+    sendUsage: base.refundUsage,
+    refundHead: base.transfer.id,
   };
-  const reads: bigint[] = [];
-  const pages: bigint[] = [];
-  const akash: ScanAkash & { stateCalls: number; transferCalls: number } = {
-    stateCalls: 0,
-    transferCalls: 0,
+  const akash: ScanAkash = {
     async state() {
-      akash.stateCalls++;
       return state;
     },
     async transfer(id) {
-      akash.transferCalls++;
-      return transfer(id, status(id));
+      const value = rows.find((t) => parseSinkId(t.id) === id);
+      assert.ok(value);
+      return value;
     },
     async snapshot(id) {
       reads.push(id);
-      return { ...state, transfer: transfer(id, status(id)) };
+      return { ...base, transfer: await this.transfer(id, 20) };
     },
-    async openTransfers(startAfter, limit, height) {
-      assert.equal(height, 10);
-      if (!open) return undefined;
-      pages.push(startAfter);
-      const rest = openIds.filter((id) => id > startAfter);
-      const page = rest.slice(0, limit);
+    async transfers(_height, options = {}) {
       return {
-        transfers: page.map((id) => transfer(id, status(id))),
-        next: rest.length > limit ? page[page.length - 1]! : 0n,
+        transfers:
+          options.status === undefined
+            ? rows
+            : rows.filter((t) => t.status === options.status),
+        nextKey: new Uint8Array(),
       };
     },
+    async disputes() {
+      return { transfers: [held], nextKey: new Uint8Array() };
+    },
   };
-  return { akash, reads, pages, state };
-}
-
-class FakeObserver implements ScanObserver {
-  changes: LightClientChange[] = [];
-  program = web3.Keypair.generate().publicKey;
-  // Finalized Solana outcomes by transfer ID; others have no status.
-  solana = new Map<bigint, Outcome>();
-  evidence: bigint[] = [];
-  failAt?: bigint;
-  mismatch?: LightClientMismatchError;
-  async lightClient() {
-    if (this.mismatch) throw this.mismatch;
-    return this.program;
-  }
-  takeLightClientChanges() {
-    return this.changes.splice(0);
-  }
-  async observeFinalized(record: SinkRecord): Promise<FinalizedObserved> {
-    const outcome = this.solana.get(record.id);
-    if (outcome === undefined) return { kind: "absent", contextSlot: 100n };
-    return {
-      kind: "resolved",
-      contextSlot: 100n,
-      address: web3.PublicKey.default,
-      status: undefined as never,
-      outcome,
-      slot: 50n,
-      proofHeight: 2n,
-    };
-  }
-  async observe(record: SinkRecord): Promise<Observed> {
-    if (record.id === this.failAt && this.mismatch) throw this.mismatch;
-    this.evidence.push(record.id);
-    const outcome = this.solana.get(record.id);
-    if (outcome === undefined)
-      return { kind: "absent", contextSlot: 100n, slotLimit: 700n };
-    return {
-      kind: "resolved",
-      contextSlot: 100n,
-      observation: Observation.fromPartial({
-        outcome,
-        slot: 50n,
-        transactionSignature: new Uint8Array(64).fill(1),
-      }),
-    };
-  }
-}
-
-function scanner(
-  akash: ScanAkash,
-  observer: ScanObserver,
-  options: { maxTransfers?: number; auditPerScan?: number } = {},
-) {
-  const lines: Record<string, unknown>[] = [];
-  const instance = new Scanner(akash, observer, {
+  const observer: ScanObserver = {
+    async lightClient() {
+      return web3.PublicKey.default;
+    },
+    takeLightClientChanges() {
+      return [];
+    },
+    async observe() {
+      return { kind: "absent", contextSlot: 100n };
+    },
+    async observeFinalized() {
+      return { kind: "absent", contextSlot: 100n };
+    },
+  };
+  const output: unknown[] = [];
+  const scanner = new Scanner(akash, observer, {
     reporter: "reporter",
-    maxTransfers: options.maxTransfers ?? 100,
-    auditPerScan: options.auditPerScan ?? 100,
-    output: (value: unknown) => lines.push(value as Record<string, unknown>),
+    auditPerScan: 10,
+    output: (v) => output.push(v),
     signal: new AbortController().signal,
   });
-  return {
-    lines,
-    async run() {
-      lines.length = 0;
-      return { failures: await instance.scan(), lines: [...lines] };
-    },
+  return { base, akash, observer, reads, output, scanner };
+}
+test("all held terminal disputes are reviewed first and reread before decisions", async () => {
+  const f = fixture();
+  assert.equal((await openTransfers(f.akash, 20)).length, 2);
+  assert.equal(await f.scanner.scan(), 0);
+  assert.deepEqual(f.reads, [testId(2), testId()]);
+});
+test("pruned queries and light-client pin mismatches stop the scan without fallback", async () => {
+  const f = fixture();
+  f.akash.transfers = async () => {
+    throw new Error("height pruned");
+  };
+  assert.equal(await f.scanner.scan(), 1);
+  assert.equal(f.reads.length, 0);
+  const g = fixture();
+  g.observer.lightClient = async () => {
+    throw new LightClientMismatchError(
+      web3.PublicKey.default,
+      web3.Keypair.generate().publicKey,
+    );
+  };
+  assert.equal(await g.scanner.scan(), 1);
+  assert.equal(g.reads.length, 0);
+});
+function pages(rows: TransferState[]) {
+  return (key: Uint8Array | undefined, limit: number) => {
+    const start = key?.length ? Buffer.from(key).readUInt32BE(0) : 0,
+      next = start + limit,
+      nextKey = Buffer.alloc(next < rows.length ? 4 : 0);
+    if (nextKey.length) nextKey.writeUInt32BE(next);
+    return { transfers: rows.slice(start, next), nextKey };
   };
 }
-
-test("a pinned light-client mismatch stops the scan with an alert", async () => {
-  const { akash, reads } = ledger([P, P, P]);
-  const observer = new FakeObserver();
-  const pinned = observer.program;
-  const current = web3.Keypair.generate().publicKey;
-  observer.mismatch = new LightClientMismatchError(pinned, current);
-  const scan = scanner(akash, observer);
-  const before = await scan.run();
-  assert.equal(before.failures, 1);
-  assert.equal(akash.stateCalls, 0);
-  assert.deepEqual(before.lines[0], {
-    alert: "light-client-mismatch",
-    pinned: pinned.toBase58(),
-    current: current.toBase58(),
-  });
-  assert.match(String(before.lines[1]?.error), /differs from pinned/);
-  assert.deepEqual(reads, []);
-
-  // A re-pin observed mid-scan stops every later observation.
-  observer.lightClient = async () => pinned;
-  observer.failAt = 2n;
-  const during = await scan.run();
-  assert.equal(during.failures, 1);
-  assert.deepEqual(reads, [1n, 2n]);
-  assert.deepEqual(
-    during.lines.map((line) => line.alert ?? line.id ?? line.error),
-    [1n, "light-client-mismatch", during.lines[2]?.error],
+function backlog(counts: {
+  held: number;
+  refunds: number;
+  ordered: number;
+  pending: number;
+}) {
+  const owner = toBech32("akash", new Uint8Array(20).fill(9)),
+    row = (
+      sequence: number,
+      status: Status,
+      hold = Hold.HOLD_NONE,
+    ): TransferState => {
+      const transfer = testTransfer(sequence, 5n, owner);
+      assert.ok(transfer.settlement);
+      transfer.status = status;
+      transfer.settlement.hold = hold;
+      return transfer;
+    };
+  let sequence = 0;
+  const disputes = Array.from({ length: counts.held }, (_, i) =>
+    row(
+      ++sequence,
+      [
+        Status.STATUS_REFUND_PENDING,
+        Status.STATUS_TRANSFER_PENDING,
+        Status.STATUS_MINTED,
+      ][i % 3],
+      i % 3 === 2 ? Hold.HOLD_CONFLICT : Hold.HOLD_VETO,
+    ),
   );
-  assert.ok(!during.lines.some((line) => "scanned" in line));
-});
-
-test("an unpinned scan alerts on each light-client change and continues", async () => {
-  const { akash, reads } = ledger([P, P]);
-  const observer = new FakeObserver();
-  const previous = observer.program;
-  const current = web3.Keypair.generate().publicKey;
-  const observe = observer.observe.bind(observer);
-  observer.observe = async (record) => {
-    if (record.id === 1n)
-      observer.changes.push({ previous, current, contextSlot: 101n });
-    return observe(record);
+  const refunds = Array.from({ length: counts.refunds }, () =>
+    row(++sequence, Status.STATUS_REFUND_PENDING),
+  );
+  const ordered = Array.from({ length: counts.ordered }, () =>
+    row(++sequence, Status.STATUS_VOIDED),
+  );
+  const pending = Array.from({ length: counts.pending }, () =>
+    row(++sequence, Status.STATUS_TRANSFER_PENDING),
+  );
+  const all = [...disputes, ...refunds, ...ordered, ...pending];
+  const byStatus = (status: Status) =>
+    all.filter((transfer) => transfer.status === status);
+  const index = {
+    disputes: pages(disputes),
+    [Status.STATUS_REFUND_PENDING]: pages(
+      byStatus(Status.STATUS_REFUND_PENDING),
+    ),
+    [Status.STATUS_VOIDED]: pages(byStatus(Status.STATUS_VOIDED)),
+    [Status.STATUS_TRANSFER_PENDING]: pages(
+      byStatus(Status.STATUS_TRANSFER_PENDING),
+    ),
+    history: pages(all),
   };
-  const { failures, lines } = await scanner(akash, observer).run();
-  assert.equal(failures, 0);
-  assert.deepEqual(reads, [1n, 2n]);
-  // The change is reported before any decision made under it.
-  assert.deepEqual(lines[0], {
-    alert: "light-client-changed",
-    previous: previous.toBase58(),
-    current: current.toBase58(),
-    slot: 101n,
-  });
-  assert.equal(lines[1]?.id, 1n);
-  assert.equal(lines[2]?.id, 2n);
-  assert.deepEqual(lines.at(-1), {
-    scanned: 2,
-    audited: 0,
-    index: "open-transfers",
-    failures: 0,
-    lightClientProgram: previous.toBase58(),
-  });
-});
-
-test("open transfers replace the full scan and lift maxTransfers", async () => {
-  // 1,200 transfers; 553 open across two pages, two of them voided.
-  const statuses = Array.from({ length: 1200 }, (_, i): Status =>
-    i + 1 === 3 || (i + 1 >= 600 && i + 1 <= 1150) ? P : M,
-  );
-  statuses[699] = V;
-  statuses[1199] = V;
-  const { akash, reads, pages } = ledger(statuses);
-  const observer = new FakeObserver();
-  for (let id = 1n; id <= 1200n; id++)
-    if (statuses[Number(id) - 1] === M)
-      observer.solana.set(id, Outcome.OUTCOME_MINTED);
-  const { failures, lines } = await scanner(akash, observer, {
-    maxTransfers: 10,
-    auditPerScan: 5,
-  }).run();
-  assert.equal(failures, 0);
-  assert.equal(akash.transferCalls, 0);
-  assert.deepEqual(pages, [0n, 1098n]);
-  assert.ok(OPEN_PAGE_LIMIT === 500);
-  // Voided transfers come first, then pending, then the audit (1, 2, 4, 5).
-  assert.deepEqual(reads.slice(0, 3), [700n, 1200n, 3n]);
-  assert.equal(reads.length, 553 + 4);
-  assert.deepEqual(reads.slice(-4), [1n, 2n, 4n, 5n]);
-  // Consistent terminal audits need no transaction evidence.
-  assert.ok(!observer.evidence.some((id) => [1n, 2n, 4n, 5n].includes(id)));
-  assert.deepEqual(lines.at(-1), {
-    scanned: 553,
-    audited: 4,
-    index: "open-transfers",
-    failures: 0,
-    lightClientProgram: observer.program.toBase58(),
-  });
-});
-
-test("the terminal audit is round-robin and skips open transfers", async () => {
-  const { akash } = ledger([M, P, M, M, M, M]);
-  const observer = new FakeObserver();
-  for (const id of [1n, 3n, 4n, 5n, 6n])
-    observer.solana.set(id, Outcome.OUTCOME_MINTED);
-  const scan = scanner(akash, observer, { auditPerScan: 4 });
-  const audited = async () =>
-    (await scan.run()).lines.filter((line) => line.audit).map((l) => l.id);
-  assert.deepEqual(await audited(), [1n, 3n, 4n]);
-  assert.deepEqual(await audited(), [5n, 6n, 1n]);
-  assert.deepEqual(await audited(), [3n, 4n, 5n, 6n]);
-  // A budget above the ledger size visits each ID once per pass.
-  const all = scanner(akash, observer, { auditPerScan: 50 });
-  const lines = (await all.run()).lines.filter((line) => line.audit);
-  assert.deepEqual(
-    lines.map((line) => line.id),
-    [1n, 3n, 4n, 5n, 6n],
-  );
-});
-
-test("the audit reports a contradiction after a false terminal confirmation", async () => {
-  const { akash } = ledger([M, M, M]);
-  const observer = new FakeObserver();
-  observer.solana.set(1n, Outcome.OUTCOME_MINTED);
-  observer.solana.set(2n, Outcome.OUTCOME_VOIDED);
-  const { failures, lines } = await scanner(akash, observer).run();
-  assert.equal(failures, 0);
-  assert.deepEqual(observer.evidence, [2n, 3n]);
-  const byId = (id: bigint) => lines.find((line) => line.id === id);
-  assert.deepEqual(byId(1n)?.messages, []);
-  const contradiction = byId(2n);
-  assert.equal(contradiction?.audit, true);
-  assert.match(
-    String(contradiction?.alerts),
-    /contradicts finalized Solana outcome/,
-  );
-  assert.deepEqual(
-    (contradiction?.messages as { typeUrl: string }[]).map((m) => m.typeUrl),
-    ["/akash.sink.v1.MsgReportOutcome"],
-  );
-  assert.match(
-    String(byId(3n)?.alerts),
-    /outcome without a finalized Solana status/,
-  );
-  assert.deepEqual(byId(3n)?.messages, []);
-});
-
-test("an inconsistent open listing alerts and falls back to the full scan", async (t) => {
-  type Page = Awaited<ReturnType<ScanAkash["openTransfers"]>>;
-  const tampers: [string, (page: Page, startAfter: bigint) => Page][] = [
-    [
-      "missing transfer",
-      (page) => page && { ...page, transfers: page.transfers.slice(1) },
-    ],
-    [
-      "terminal transfer",
-      (page) =>
-        page && { ...page, transfers: [...page.transfers, transfer(1n, M)] },
-    ],
-    [
-      "unordered IDs",
-      (page) => page && { ...page, transfers: [...page.transfers].reverse() },
-    ],
-    [
-      "ID beyond the ledger",
-      (page) =>
-        page && { ...page, transfers: [...page.transfers, transfer(9n, P)] },
-    ],
-    ["looping cursor", (page) => page && { ...page, next: 1n }],
-    ["vanishing query", (page, startAfter) => (startAfter ? undefined : page)],
-  ];
-  for (const [name, tamper] of tampers)
-    await t.test(name, async () => {
-      const { akash, reads } = ledger([M, P, V, P]);
-      const listing = akash.openTransfers.bind(akash);
-      akash.openTransfers = async (startAfter, limit, height) => {
-        const page = await listing(startAfter, 2, height);
-        return tamper(page, startAfter);
-      };
-      const { failures, lines } = await scanner(akash, new FakeObserver(), {
-        maxTransfers: 4,
-      }).run();
-      assert.equal(lines[0]?.alert, "open-transfers-inconsistent", name);
-      assert.equal(failures, 1);
-      assert.equal(akash.transferCalls, 4);
-      assert.deepEqual(reads, [3n, 1n, 2n, 4n]);
-      assert.equal(lines.at(-1)?.index, "full-scan");
-      assert.equal(lines.at(-1)?.audited, 0);
-    });
-});
-
-test("without OpenTransfers the full scan and maxTransfers stop remain", async () => {
-  const { akash, reads } = ledger([P, V, M], { open: false });
-  const observer = new FakeObserver();
-  observer.solana.set(3n, Outcome.OUTCOME_MINTED);
-  const ok = await scanner(akash, observer, { maxTransfers: 3 }).run();
-  assert.equal(ok.failures, 0);
-  assert.deepEqual(reads, [2n, 1n, 3n]);
-  assert.equal(ok.lines.at(-1)?.index, "full-scan");
-  const capped = await scanner(akash, observer, { maxTransfers: 2 }).run();
-  assert.equal(capped.failures, 1);
-  assert.match(String(capped.lines.at(-1)?.error), /exceeds scan limit/);
-  // An RPC failure is not mistaken for a missing query.
-  akash.openTransfers = async () => {
-    throw new Error("connection reset");
+  const requests: string[] = [];
+  const akash = {
+    async transfers(
+      _height: number,
+      options: { key?: Uint8Array; limit?: number; status?: Status } = {},
+    ) {
+      requests.push(String(options.status ?? "history"));
+      const read =
+        options.status === Status.STATUS_REFUND_PENDING ||
+        options.status === Status.STATUS_VOIDED ||
+        options.status === Status.STATUS_TRANSFER_PENDING
+          ? index[options.status]
+          : index.history;
+      return read(options.key, options.limit ?? 100);
+    },
+    async disputes(_height: number, key?: Uint8Array, limit = 100) {
+      requests.push("disputes");
+      return index.disputes(key, limit);
+    },
   };
-  const failed = await scanner(akash, observer).run();
-  assert.equal(failed.failures, 1);
-  assert.deepEqual(failed.lines, [{ error: "connection reset" }]);
+  return { disputes, refunds, ordered, pending, all, akash, requests };
+}
+test("every open transfer past the old bounds is reviewed, disputes and refunds first", async () => {
+  const b = backlog({ held: 501, refunds: 501, ordered: 501, pending: 8_498 });
+  assert.equal(b.all.length, 10_001, "one more than the old maximum bound");
+  const f = fixture(),
+    byId = new Map(
+      b.all.map((transfer) => [parseSinkId(transfer.id), transfer]),
+    );
+  Object.assign(f.akash, b.akash);
+  f.akash.transfer = async (id) => {
+    const found = byId.get(id);
+    assert.ok(found);
+    return found;
+  };
+  assert.equal(await f.scanner.scan(), 0);
+  const order = [...b.disputes, ...b.refunds, ...b.ordered, ...b.pending].map(
+    (transfer) => parseSinkId(transfer.id),
+  );
+  assert.deepEqual(f.reads, order, "each open transfer once, urgent first");
+  for (const kind of ["disputes", "4", "3", "1"])
+    assert.ok(
+      b.requests.filter((request) => request === kind).length > 1,
+      `${kind} index read across pages`,
+    );
+  assert.deepEqual(f.output.at(-1), {
+    scanned: 10_001,
+    audited: 11,
+    index: "canonical",
+    failures: 0,
+    lightClientProgram: web3.PublicKey.default.toBase58(),
+  });
+});
+test("fixed-height listings return every record past the old 100,000 bound", async () => {
+  const owner = toBech32("akash", new Uint8Array(20).fill(5)),
+    rows = Array.from({ length: 100_001 }, (_, i) =>
+      TransferState.fromPartial({
+        id: { owner, height: 7n, sequence: BigInt(i + 1) },
+        status: Status.STATUS_TRANSFER_PENDING,
+      }),
+    ),
+    read = pages(rows);
+  const history = await collectPages((key) => Promise.resolve(read(key, 500)));
+  assert.equal(history.length, 100_001);
+  assert.equal(history.at(-1)?.id, parseSinkId(rows[100_000].id));
+  const open = await openTransfers(
+    {
+      async transfers(_height, options = {}) {
+        return options.status === Status.STATUS_TRANSFER_PENDING
+          ? read(options.key, options.limit ?? 100)
+          : { transfers: [], nextKey: new Uint8Array() };
+      },
+      async disputes() {
+        return { transfers: [], nextKey: new Uint8Array() };
+      },
+    },
+    20,
+  );
+  assert.equal(open.length, 100_001);
+});
+test("an audit query failure still reviews open transfers and retries its window", async () => {
+  const f = fixture(),
+    terminal = testTransfer(3);
+  assert.ok(terminal.settlement);
+  terminal.status = Status.STATUS_MINTED;
+  const pending = await f.akash.transfer(testId(), 20),
+    held = await f.akash.transfer(testId(2), 20),
+    history = [pending, held, terminal],
+    listed = f.akash.transfers.bind(f.akash),
+    found = f.akash.transfer.bind(f.akash),
+    auditKeys: (Uint8Array | undefined)[] = [];
+  let auditFails = false;
+  f.akash.transfer = async (id, height) =>
+    id === testId(3) ? terminal : found(id, height);
+  f.akash.transfers = async (height, options = {}) => {
+    if (options.status !== undefined) return listed(height, options);
+    auditKeys.push(options.key);
+    if (auditFails) throw new Error("history page unavailable");
+    const key = options.key,
+      start = key
+        ? history.findIndex((row) =>
+            chronologicalKey(parseSinkId(row.id)).every(
+              (byte, i) => byte === key[i],
+            ),
+          )
+        : 0;
+    return {
+      transfers: history.slice(start, start + 2),
+      nextKey:
+        start + 2 < history.length ? new Uint8Array([1]) : new Uint8Array(),
+    };
+  };
+  const scanner = new Scanner(f.akash, f.observer, {
+    reporter: "reporter",
+    auditPerScan: 1,
+    output: (value) => f.output.push(value),
+    signal: new AbortController().signal,
+  });
+  assert.equal(await scanner.scan(), 0);
+  auditFails = true;
+  f.reads.length = 0;
+  assert.equal(await scanner.scan(), 1);
+  assert.deepEqual(f.reads, [testId(2), testId()], "open work still reviewed");
+  assert.ok(
+    f.output.some(
+      (value) =>
+        typeof value === "object" &&
+        value !== null &&
+        "alert" in value &&
+        value.alert === "audit-unavailable",
+    ),
+  );
+  auditFails = false;
+  f.reads.length = 0;
+  assert.equal(await scanner.scan(), 0);
+  assert.deepEqual(auditKeys.slice(1), [
+    chronologicalKey(testId(2)),
+    chronologicalKey(testId(2)),
+  ]);
+  assert.deepEqual(f.reads, [testId(2), testId(), testId(3)]);
+});
+
+test("broadcast scans do not pay for bare void orders, frozen same-outcome votes or existing conflicts", async () => {
+  const f = fixture(),
+    settlement = f.base.transfer.settlement;
+  assert.ok(settlement);
+  f.base.transfer.status = Status.STATUS_VOIDED;
+  settlement.voidAuthorization = { requestedHeight: 1n, requestedRound: 1n };
+  const submitted: unknown[] = [];
+  const scanner = new Scanner(f.akash, f.observer, {
+    reporter: "d",
+    auditPerScan: 10,
+    signal: new AbortController().signal,
+    output: (value) => f.output.push(value),
+    submit: async (message) => {
+      submitted.push(message);
+      return "signature";
+    },
+  });
+  assert.equal(await scanner.scan(), 0);
+  assert.equal(submitted.length, 0);
+  const order = f.output.find(
+    (value) =>
+      typeof value === "object" &&
+      value !== null &&
+      "id" in value &&
+      value.id === testId(),
+  );
+  assert.ok(order && typeof order === "object" && "alerts" in order);
+  assert.deepEqual(order.alerts, []);
+  f.base.transfer.status = Status.STATUS_REFUND_PENDING;
+  settlement.challengeEnd = f.base.time + 100n;
+  const observation = {
+    outcome: Outcome.OUTCOME_VOIDED,
+    slot: 10n,
+    transactionSignature: new Uint8Array(64).fill(1),
+  };
+  settlement.votes = ["reporter", "b", "c"].map((reporter) => ({
+    reporter,
+    policyVersion: 1n,
+    observation,
+  }));
+  f.observer.observe = async () => ({
+    kind: "resolved",
+    contextSlot: 100n,
+    observation,
+  });
+  assert.equal(await scanner.scan(), 0);
+  assert.equal(await scanner.scan(), 0);
+  assert.equal(submitted.length, 0);
+  f.observer.observe = async () => ({
+    kind: "resolved",
+    contextSlot: 100n,
+    observation: { ...observation, outcome: Outcome.OUTCOME_MINTED },
+  });
+  assert.equal(await scanner.scan(), 0);
+  assert.equal(submitted.length, 1, "first opposite witness is actionable");
+  settlement.hold = Hold.HOLD_CONFLICT;
+  assert.equal(await scanner.scan(), 0);
+  assert.equal(await scanner.scan(), 0);
+  assert.equal(
+    submitted.length,
+    1,
+    "conflict never causes endless paid reports",
+  );
 });

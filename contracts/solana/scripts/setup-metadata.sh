@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd "$(dirname "$0")/.."
+source "$(dirname "$0")/workspace.sh"
+cd "$solana_repo"
 
 # Read only: download the publicly deployed Metaplex executable. Never deploy
 # our programs or send private accounts to this RPC. Refuse upstream changes.
 program=metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s
 expected=31f0a627dba051a938de650464e55cc5397a4be0fd496929c1f9cf02fe5e9011
-target=.deps/metaplex/mpl_token_metadata.so
-mkdir -p .deps/metaplex
+target=$SOLANA_DEPS/metaplex/mpl_token_metadata.so
+mkdir -p "$SOLANA_DEPS/metaplex"
 if [[ ! -f "$target" ]]; then
-  temp=$(mktemp .deps/metaplex/download.XXXXXX)
+  temp=$(mktemp "$SOLANA_DEPS/metaplex/download.XXXXXX")
   trap 'rm -f "$temp"' EXIT
   solana --url https://api.mainnet-beta.solana.com program dump "$program" "$temp"
   actual=$(shasum -a 256 "$temp" | cut -d ' ' -f 1)

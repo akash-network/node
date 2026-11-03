@@ -1,25 +1,25 @@
-import assert from "node:assert/strict";
-import test, { type TestContext } from "node:test";
+import type { TransferState } from "@akashnetwork/chain-sdk/private-types/akash.v1";
+import {
+  Observation,
+  Outcome,
+  SettlementData,
+  Sink_Status as Status,
+} from "@akashnetwork/chain-sdk/private-types/akash.v1";
 import { BN, Program, utils, web3, type IdlAccounts } from "@coral-xyz/anchor";
 import { MintLayout, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import idl from "../target/idl/akt_solana.json";
-import type { AktSolana } from "../target/types/akt_solana";
-import Long from "long";
+import assert from "node:assert/strict";
+import test, { type TestContext } from "node:test";
+import idl from "../../../.cache/solana/target/idl/akt_solana.json";
+import type { AktSolana } from "../../../.cache/solana/target/types/akt_solana";
+import { anchorId, statusAddress } from "../shared/proof";
+import { testSnapshot, testTransfer } from "../tests/sink-fixtures";
+import { planOutcome, reportedObservations, type Snapshot } from "./policy";
 import {
   LightClientMismatchError,
   SolanaObserver,
   decodeRecord,
   defaultSlotLead,
 } from "./solana";
-import { planOutcome, reportedObservations, type Snapshot } from "./policy";
-import {
-  Outcome,
-  Observation,
-  Sink_Params as Params,
-  Settlement,
-  Sink_Status as Status,
-  Totals,
-} from "@akashnetwork/chain-sdk/private-types/akash.v1";
 
 async function fixture(t: TestContext) {
   // Every RPC method used is mocked. Port 9 keeps a missed mock off any node.
@@ -38,18 +38,11 @@ async function fixture(t: TestContext) {
     akashChainId: "akash-1",
     maxAgeSeconds: 60,
   };
-  const raw = Buffer.alloc(77);
-  raw[0] = 1;
-  raw.writeBigUInt64LE(1n, 1);
-  raw.writeBigUInt64LE(60n, 61);
-  raw.writeBigUInt64LE(1n, 69);
-  web3.Keypair.generate().publicKey.toBuffer().copy(raw, 29);
+  const raw = testTransfer();
   const record = decodeRecord(raw);
-  const id = Buffer.alloc(8);
-  id.writeBigUInt64LE(record.id);
-  const address = pda("transfer", id);
+  const address = statusAddress(program.programId, record.id);
   const status: IdlAccounts<AktSolana>["transferStatus"] = {
-    id: new BN(1),
+    id: anchorId(record.id),
     proofHeight: new BN(3),
     resolvedAtSlot: new BN(100),
     outcome: { minted: { amount: new BN(60), recipient: record.recipient } },
@@ -118,6 +111,7 @@ async function fixture(t: TestContext) {
     program.coder.types.encode("transferResolved", {
       id: status.id,
       proofHeight: status.proofHeight,
+      resolvedAtSlot: status.resolvedAtSlot,
       outcome: status.outcome,
     }),
   ]);
@@ -205,37 +199,34 @@ async function fixture(t: TestContext) {
   };
 }
 
-// SDK fromPartial reads bigint uint64 values as signed; use unsigned Longs.
 function report(slot: string, outcome = Outcome.OUTCOME_VOIDED, fill = 5) {
   return Observation.fromPartial({
     outcome,
-    slot: Long.fromString(slot, true),
+    slot: BigInt(slot),
     transactionSignature: new Uint8Array(64).fill(fill),
   });
 }
 
 // A void reached threshold and is inside its challenge window.
-function voided(raw: Buffer, observations: Observation[]): Snapshot {
-  const members = ["reporter", "b", "c", "d"];
+function voided(raw: TransferState, observations: Observation[]): Snapshot {
+  const snapshot = testSnapshot();
   return {
-    params: Params.fromPartial({
-      reporters: members,
-      reporterThreshold: 3,
-      refundsEnabled: true,
-      dailyRefundCap: 100n,
-    }),
-    totals: Totals.fromPartial({ reporterEpoch: 1n, refundDay: 1n }),
+    ...snapshot,
     time: 86409n,
     transfer: {
-      record: raw,
-      voidOrdered: false,
-      settlement: Settlement.fromPartial({
+      ...raw,
+      status: Status.STATUS_REFUND_PENDING,
+      settlement: SettlementData.fromPartial({
         round: 1n,
-        status: Status.STATUS_VOIDED,
         challengeEnd: 86410n,
-        policy: { epoch: 1n, members, threshold: 3 },
+        policy: {
+          version: 1n,
+          members: ["reporter", "b", "c", "d"],
+          threshold: 3,
+        },
         votes: observations.map((observation, i) => ({
-          reporter: members[i + 1],
+          reporter: snapshot.policy.members[i + 1],
+          policyVersion: 1n,
           observation,
         })),
       }),
@@ -245,9 +236,9 @@ function voided(raw: Buffer, observations: Observation[]): Snapshot {
 
 test("observer chooses the successful resolution over a failed replay", async (t) => {
   const f = await fixture(t);
-  const result = await f.observer.observe(f.record, 100n);
+  const result = await f.observer.observe(f.record, [report("100")]);
   assert.ok(result.kind === "resolved");
-  assert.equal(result.observation.slot.toBigInt(), 100n);
+  assert.equal(result.observation.slot, 100n);
   assert.equal(result.observation.outcome, Outcome.OUTCOME_MINTED);
   assert.deepEqual(
     result.observation.transactionSignature,
@@ -273,7 +264,7 @@ test("a version 1 resolution transaction is evidence", async (t) => {
     compiledInstructions: legacy.compiledInstructions,
   });
   f.resolution.version = 1;
-  const result = await f.observer.observe(f.record, 100n);
+  const result = await f.observer.observe(f.record, [report("100")]);
   assert.ok(result.kind === "resolved");
   assert.equal(result.observation.outcome, Outcome.OUTCOME_MINTED);
   assert.deepEqual(
@@ -626,7 +617,7 @@ test("missing status stays absent; pruned transaction evidence never produces a 
   );
   f.accounts[4] = null;
   await assert.rejects(
-    () => f.observer.observe(f.record, 111n),
+    () => f.observer.observe(f.record, [report("111")]),
     /behind reported evidence/,
   );
   assert.deepEqual(await f.observer.observe(f.record), {
@@ -656,11 +647,6 @@ test("a fabricated slot beyond any plausible finalized slot cannot block a veto"
   const plan = planOutcome("reporter", snapshot, observed);
   assert.equal(plan.messages[0]?.typeUrl, "/akash.sink.v1.MsgVetoVoid");
   assert.match(plan.alerts.join(), /beyond any plausible finalized slot/);
-  // The legacy single-slot bound gets the same plausibility limit.
-  assert.deepEqual(
-    await f.observer.observe(f.record, 9_223_372_036_854_775_808n),
-    observed,
-  );
   // A configured lead replaces the default derived from maxAgeSeconds.
   const strict = new SolanaObserver(f.rpc, { ...f.config, maxSlotLead: 50 });
   const near = voided(f.raw, [report("161"), report("161"), report("161")]);
@@ -773,10 +759,9 @@ test("a stale node never vetoes, even against a fabricated slot", async (t) => {
 
 test("a fabricated future report slot cannot hide an existing finalized mint", async (t) => {
   const f = await fixture(t);
-  const observed = await f.observer.observe(
-    f.record,
-    18_446_744_073_709_551_615n,
-  );
+  const observed = await f.observer.observe(f.record, [
+    report("18446744073709551615"),
+  ]);
   assert.ok(observed.kind === "resolved");
   assert.equal(observed.observation.outcome, Outcome.OUTCOME_MINTED);
 });
@@ -787,19 +772,19 @@ test("own stored evidence survives pruned history while finalized status is rech
   assert.ok(initial.kind === "resolved");
   const history = t.mock.method(f.rpc, "getBlock", async () => null);
   assert.deepEqual(
-    await f.observer.observe(f.record, 0n, initial.observation),
+    await f.observer.observe(f.record, [], initial.observation),
     initial,
   );
   assert.equal(history.mock.callCount(), 0);
   f.record.amount++;
   await assert.rejects(
-    () => f.observer.observe(f.record, 0n, initial.observation),
+    () => f.observer.observe(f.record, [], initial.observation),
     /mint amount differs/,
   );
   f.record.amount--;
   t.mock.method(f.rpc, "getBlockTime", async () => 1);
   await assert.rejects(
-    () => f.observer.observe(f.record, 0n, initial.observation),
+    () => f.observer.observe(f.record, [], initial.observation),
     /stale Solana/,
   );
 });
@@ -810,16 +795,22 @@ test("different or malformed stored evidence cannot replace transaction discover
   assert.ok(initial.kind === "resolved");
   t.mock.method(f.rpc, "getBlock", async () => null);
   for (const change of [
-    { slot: 101n },
+    { ...initial.observation, slot: 101n },
     { outcome: Outcome.OUTCOME_VOIDED },
-    { transactionSignature: new Uint8Array(63).fill(7) },
-    { transactionSignature: new Uint8Array(64) },
+    {
+      ...initial.observation,
+      transactionSignature: new Uint8Array(63).fill(7),
+    },
+    {
+      ...initial.observation,
+      transactionSignature: new Uint8Array(64),
+    },
   ]) {
     await assert.rejects(
       () =>
         f.observer.observe(
           f.record,
-          0n,
+          [],
           Observation.fromPartial({ ...initial.observation, ...change }),
         ),
       /evidence unavailable/,
@@ -827,14 +818,14 @@ test("different or malformed stored evidence cannot replace transaction discover
   }
 });
 
-test("uint64 deposit amounts and IDs are decoded without floating point rounding", () => {
-  const raw = Buffer.alloc(77);
-  raw[0] = 1;
-  raw.writeBigUInt64LE(18_446_744_073_709_551_615n, 1);
-  raw.writeBigUInt64LE(9_007_199_254_740_993n, 61);
-  raw.writeBigUInt64LE(1n, 69);
-  assert.equal(decodeRecord(raw).amount, 9_007_199_254_740_993n);
-  assert.equal(decodeRecord(raw).id, 18_446_744_073_709_551_615n);
+test("uint64 deposit amounts and identity components retain precision", () => {
+  const transfer = testTransfer(18446744073709551615n, 9007199254740993n);
+  assert.ok(transfer.data);
+  transfer.data.amount = { denom: "uakt", amount: "9007199254740993" };
+  const record = decodeRecord(transfer);
+  assert.equal(record.amount, 9007199254740993n);
+  assert.equal(record.height, 9007199254740993n);
+  assert.match(record.id, /\/9007199254740993\/18446744073709551615$/);
 });
 
 test("a pinned light client fails closed when governance re-pins", async (t) => {
@@ -905,4 +896,67 @@ test("an unpinned observer follows the bridge light client and records changes",
       ]),
     [[second.toBase58(), first.toBase58(), 120n]],
   );
+});
+
+test("observer binds every composite component and proof height in finalized accounts", async (t) => {
+  for (const component of ["owner", "height", "sequence", "proof"] as const)
+    await t.test(component, async (t) => {
+      const f = await fixture(t);
+      if (component === "owner") f.status.id.owner = Array<number>(20).fill(9);
+      if (component === "height")
+        f.status.id.height = f.status.id.height.addn(1);
+      if (component === "sequence")
+        f.status.id.sequence = f.status.id.sequence.addn(1);
+      if (component === "proof") f.status.proofHeight = f.status.id.height;
+      assert.ok(f.accounts[4]);
+      f.accounts[4].data = await f.program.coder.accounts.encode(
+        "transferStatus",
+        f.status,
+      );
+      await assert.rejects(() => f.observer.observeFinalized(f.record));
+    });
+});
+
+test("resolution events must match identity, proof height, transaction slot and void reason", async (t) => {
+  for (const field of [
+    "owner",
+    "height",
+    "sequence",
+    "proof",
+    "slot",
+    "void-reason",
+  ] as const)
+    await t.test(field, async (t) => {
+      const f = await fixture(t);
+      const changed = { ...f.status, id: { ...f.status.id } };
+      if (field === "owner") changed.id.owner = Array<number>(20).fill(9);
+      if (field === "height") changed.id.height = changed.id.height.addn(1);
+      if (field === "sequence")
+        changed.id.sequence = changed.id.sequence.addn(1);
+      if (field === "proof") changed.proofHeight = changed.proofHeight.addn(1);
+      if (field === "slot")
+        changed.resolvedAtSlot = changed.resolvedAtSlot.addn(1);
+      if (field === "void-reason") {
+        f.status.outcome = { voided: { reason: { governance: {} } } };
+        changed.outcome = { voided: { reason: { invalidRecipient: {} } } };
+        assert.ok(f.accounts[4]);
+        f.accounts[4].data = await f.program.coder.accounts.encode(
+          "transferStatus",
+          f.status,
+        );
+      }
+      const event = f.program.idl.events?.find(
+        (event) => event.name === "transferResolved",
+      );
+      assert.ok(event && f.resolution.meta);
+      f.resolution.meta.logMessages = [
+        `Program ${f.program.programId} invoke [1]`,
+        `Program data: ${Buffer.concat([Buffer.from(event.discriminator), f.program.coder.types.encode("transferResolved", changed)]).toString("base64")}`,
+        `Program ${f.program.programId} success`,
+      ];
+      await assert.rejects(
+        () => f.observer.observe(f.record),
+        /resolution evidence unavailable/,
+      );
+    });
 });

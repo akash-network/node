@@ -36,7 +36,13 @@ export async function testReporterReturn(
   const transfer = QueryTransferResponse.decode(
     Buffer.from(fixture.transfer_response, "hex"),
   ).transfer;
-  assert.ok(state.params && state.totals && transfer);
+  assert.ok(
+    state.params &&
+      state.totals &&
+      state.policy &&
+      state.refundUsage &&
+      transfer,
+  );
   const programId = new web3.PublicKey(
     "FfFAPUKqjf68ggj1HvpyzMHFDRnT2cFAdZYYQb7mK9i5",
   );
@@ -52,9 +58,9 @@ export async function testReporterReturn(
       "HqPcGpVHxNNFfVatjhG78dFVMwjyZixoKPdZSt3d3TdD",
     ),
     akashChainId: "akash-1",
-    maxAgeSeconds: 60,
+    maxAgeSeconds: 600,
   });
-  const record = decodeRecord(transfer.record);
+  const record = decodeRecord(transfer);
   let observed = await observer.observe(record);
   const deadline = Date.now() + 30_000;
   while (
@@ -103,6 +109,9 @@ export async function testReporterReturn(
       {
         params: state.params,
         totals: state.totals,
+        policy: state.policy,
+        refundUsage: state.refundUsage,
+        epoch: state.epoch,
         transfer,
         time: 1_750_000_002n,
       },
@@ -138,7 +147,7 @@ export async function testReporterReturn(
         transactions,
         slot: Number(observed.observation.slot),
         signature: Buffer.from(
-          observed.observation.transactionSignature,
+          observed.observation.transactionSignature ?? new Uint8Array(),
         ).toString("base64"),
       },
       null,

@@ -1,3 +1,6 @@
+import { testId } from "./sink-fixtures";
+import { sinkIdParts } from "../shared/id";
+import { anchorId, statusAddress, proofNonce } from "../shared/proof";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -13,15 +16,23 @@ import {
   getAssociatedTokenAddressSync,
   getMint,
 } from "@solana/spl-token";
-import idl from "../target/idl/akt_solana.json";
+import idl from "../../../.cache/solana/target/idl/akt_solana.json";
 import clientIdl from "../idls/ics07_tendermint.json";
 import accessIdl from "../idls/access_manager.json";
-import type { AktSolana } from "../target/types/akt_solana";
-import type { Ics07Tendermint } from "../.deps/ibc-contracts/ibc-solana/target/types/ics07_tendermint";
-import type { AccessManager } from "../.deps/ibc-contracts/ibc-solana/target/types/access_manager";
+import type { AktSolana } from "../../../.cache/solana/target/types/akt_solana";
+import type { Ics07Tendermint } from "../../../.cache/solana/deps/ibc-contracts/ibc-solana/target/types/ics07_tendermint";
+import type { AccessManager } from "../../../.cache/solana/deps/ibc-contracts/ibc-solana/target/types/access_manager";
 import { SolanaObserver, decodeRecord } from "../reporter/solana";
-import { transferKey, voidKey } from "../shared/sink";
-import { Outcome } from "@akashnetwork/chain-sdk/private-types/akash.v1";
+import {
+  transferKey as canonicalTransferKey,
+  settlementKey as canonicalSettlementKey,
+} from "../shared/sink";
+import {
+  Outcome,
+  RecordData,
+  SettlementData,
+  Sink_Status as Status,
+} from "@akashnetwork/chain-sdk/private-types/akash.v1";
 import {
   emittedEvent,
   rejectsWithAnchorCode,
@@ -33,6 +44,10 @@ import { FROZEN_CLIENT, REPIN_CLIENT } from "./relocate-program";
 const LOADER = new web3.PublicKey(
   "BPFLoaderUpgradeab1e11111111111111111111111",
 );
+const transferKey = (sequence: number) =>
+  canonicalTransferKey(testId(sequence, 41n));
+const settlementKey = (sequence: number) =>
+  canonicalSettlementKey(testId(sequence, 41n), Status.STATUS_VOIDED);
 const HEIGHT = new BN(42);
 const CHAIN = "akash-local-1";
 // Upstream's test-cpi-proxy at the pinned revision; scripts/test-contract.sh loads it.
@@ -49,12 +64,9 @@ function hexKey(key: Uint8Array) {
 }
 function makeRecord(id: number, recipient: web3.PublicKey, amount: number) {
   return {
-    version: 1,
-    id: new BN(id),
-    sender: Array<number>(20).fill(42),
+    id: anchorId(testId(id, 41n)),
     recipient,
     amount: new BN(amount),
-    height: new BN(41),
   };
 }
 function u32(value: number) {
@@ -83,14 +95,12 @@ function viaProxy(inner: web3.TransactionInstruction, payer: web3.PublicKey) {
   });
 }
 function encodeRecord(record: ReturnType<typeof makeRecord>) {
-  return Buffer.concat([
-    Buffer.from([record.version]),
-    le64(record.id),
-    Buffer.from(record.sender),
-    record.recipient.toBuffer(),
-    le64(record.amount),
-    le64(record.height),
-  ]);
+  return Buffer.from(
+    RecordData.encode({
+      dest: record.recipient.toBase58(),
+      amount: { denom: "uakt", amount: record.amount.toString() },
+    }).finish(),
+  );
 }
 
 export async function runBridgeTests(t: TestContext) {
@@ -131,22 +141,40 @@ export async function runBridgeTests(t: TestContext) {
     // An executable recipient and the zero key.
     makeRecord(11, TOKEN_PROGRAM_ID, 10_000_000),
     makeRecord(12, web3.PublicKey.default, 10_000_000),
+    makeRecord(13, mint, 1_000_000),
   ];
   function record(id: number) {
-    const value = records.find((value) => value.id.eqn(id));
+    const value = records.find((value) => value.id.sequence.eqn(id));
     assert.ok(value);
     return value;
   }
+  const littleEndianKey = Buffer.from(transferKey(1));
+  littleEndianKey.set(le64(new BN(41)), 23);
+  littleEndianKey.set(le64(new BN(1)), 31);
   const input = [
+    {
+      key: hexKey(littleEndianKey),
+      value: encodeRecord(record(1)).toString("hex"),
+    },
     ...records.map((value) => ({
-      key: hexKey(transferKey(value.id.toNumber())),
+      key: hexKey(transferKey(value.id.sequence.toNumber())),
       value: encodeRecord(value).toString("hex"),
     })),
-    ...[1, 4].map((id) => ({
-      key: hexKey(voidKey(id)),
-      value: Buffer.concat([Buffer.from([1]), le64(new BN(id))]).toString(
-        "hex",
-      ),
+    ...[1, 4, 13].map((id) => ({
+      key: hexKey(settlementKey(id)),
+      value: Buffer.from(
+        SettlementData.encode(
+          SettlementData.fromPartial({
+            round: 1n,
+            policy: {
+              version: 1n,
+              members: [sinkIdParts(testId(id)).owner],
+              threshold: 1,
+            },
+            voidAuthorization: { requestedHeight: 41n, requestedRound: 1n },
+          }),
+        ).finish(),
+      ).toString("hex"),
     })),
   ];
   const fixture: unknown = JSON.parse(
@@ -215,8 +243,11 @@ export async function runBridgeTests(t: TestContext) {
     .rpc();
 
   // This is a deliberately chosen local checkpoint, not an authenticated Akash block.
-  const timestamp = Math.floor(Date.now() / 1000);
-  const trustingPeriod = 60;
+  const clock = await connection.getAccountInfo(web3.SYSVAR_CLOCK_PUBKEY);
+  assert.ok(clock);
+  const timestamp = Number(clock.data.readBigInt64LE(32));
+  assert.ok(Number.isSafeInteger(timestamp));
+  const trustingPeriod = 180;
   const latestConsensus = (owner: web3.PublicKey) =>
     web3.PublicKey.findProgramAddressSync(
       [Buffer.from("consensus_state"), le64(HEIGHT)],
@@ -392,45 +423,60 @@ export async function runBridgeTests(t: TestContext) {
   );
 
   let nonce = 0;
-  async function createBuffer(data: Buffer) {
-    const next = new BN(++nonce);
+  async function createBuffer(data: Buffer, key?: Uint8Array) {
+    const next = key
+      ? proofNonce(key)
+      : createHash("sha256").update(`test-buffer-${++nonce}`).digest();
     const address = web3.PublicKey.findProgramAddressSync(
-      [Buffer.from("proof"), provider.publicKey.toBuffer(), le64(next)],
+      [Buffer.from("proof"), provider.publicKey.toBuffer(), next],
       program.programId,
     )[0];
+    if (await program.account.proofBuffer.fetchNullable(address))
+      await program.methods
+        .closeProofBuffer()
+        .accountsStrict({ submitter: provider.publicKey, proofBuffer: address })
+        .preInstructions([
+          web3.ComputeBudgetProgram.requestHeapFrame({ bytes: 256 * 1024 }),
+        ])
+        .rpc();
     await program.methods
-      .createProofBuffer(next, data.length)
+      .createProofBuffer(Array.from(next), data.length)
       .accountsStrict({
         submitter: provider.publicKey,
         proofBuffer: address,
         systemProgram: web3.SystemProgram.programId,
       })
       .rpc();
-    return address;
-  }
-  async function upload(data: Buffer) {
-    const address = await createBuffer(data);
-    for (let offset = 0; offset < data.length; offset += 500) {
+    if (data.length + 80 > 10_240) {
       await program.methods
-        .appendProof(offset, data.subarray(offset, offset + 500))
-        .accountsStrict({ submitter: provider.publicKey, proofBuffer: address })
+        .growProofBuffer()
+        .accountsStrict({
+          submitter: provider.publicKey,
+          proofBuffer: address,
+          systemProgram: web3.SystemProgram.programId,
+        })
         .rpc();
     }
     return address;
   }
-  const proofBuffers = new Map<string, web3.PublicKey>();
-  async function buffer(key: Uint8Array) {
-    const existing = proofBuffers.get(hexKey(key));
-    if (existing) return existing;
-    const address = await upload(proof(key));
-    proofBuffers.set(hexKey(key), address);
+  async function upload(data: Buffer, key = transferKey(1)) {
+    const address = await createBuffer(data, key);
+    for (let offset = 0; offset < data.length; offset += 500) {
+      await program.methods
+        .appendProof(offset, data.subarray(offset, offset + 500))
+        .accountsStrict({ submitter: provider.publicKey, proofBuffer: address })
+        .preInstructions([
+          web3.ComputeBudgetProgram.requestHeapFrame({ bytes: 256 * 1024 }),
+        ])
+        .rpc();
+    }
     return address;
   }
-  const status = (id: BN) =>
-    web3.PublicKey.findProgramAddressSync(
-      [Buffer.from("transfer"), le64(id)],
-      program.programId,
-    )[0];
+  async function buffer(key: Uint8Array) {
+    return upload(proof(key), key);
+  }
+  const status = (sequence: BN) =>
+    statusAddress(program.programId, testId(BigInt(sequence.toString()), 41n));
   function mintAccounts(
     value: ReturnType<typeof makeRecord>,
     proofBuffer: web3.PublicKey,
@@ -440,7 +486,15 @@ export async function runBridgeTests(t: TestContext) {
       config,
       bridge,
       proofBuffer,
-      status: status(value.id),
+      status: web3.PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("transfer"),
+          Buffer.from(value.id.owner),
+          le64(value.id.height),
+          le64(value.id.sequence),
+        ],
+        program.programId,
+      )[0],
       lightClientProgram: client.programId,
       clientState,
       latestConsensus: consensus,
@@ -465,7 +519,7 @@ export async function runBridgeTests(t: TestContext) {
   async function mintRecord(id: number) {
     const value = record(id);
     return program.methods
-      .mintTransfer(value, HEIGHT)
+      .mintTransfer(value.id, value.recipient, value.amount, HEIGHT)
       .accountsStrict(mintAccounts(value, await buffer(transferKey(id))))
       .preInstructions(compute())
       .rpc();
@@ -474,7 +528,7 @@ export async function runBridgeTests(t: TestContext) {
     return {
       payer: provider.publicKey,
       bridge,
-      proofBuffer: await buffer(voidKey(id)),
+      proofBuffer: await buffer(settlementKey(id)),
       status: status(new BN(id)),
       lightClientProgram: client.programId,
       clientState,
@@ -485,7 +539,7 @@ export async function runBridgeTests(t: TestContext) {
   }
   async function voidRecord(id: number) {
     return program.methods
-      .voidTransfer(new BN(id), HEIGHT)
+      .voidTransfer(anchorId(testId(id, 41n)), Status.STATUS_VOIDED, HEIGHT)
       .accountsStrict(await voidAccounts(id))
       .preInstructions(compute())
       .rpc();
@@ -498,20 +552,18 @@ export async function runBridgeTests(t: TestContext) {
   await t.test(
     "protects proof uploads from other writers, gaps and oversize chunks",
     async () => {
-      for (const length of [0, 4097]) {
-        const next = new BN(++nonce);
+      for (const length of [0, 16_385]) {
+        const next = createHash("sha256")
+          .update(`test-buffer-${++nonce}`)
+          .digest();
         await rejectsWithAnchorCode(
           () =>
             program.methods
-              .createProofBuffer(next, length)
+              .createProofBuffer(Array.from(next), length)
               .accountsStrict({
                 submitter: provider.publicKey,
                 proofBuffer: web3.PublicKey.findProgramAddressSync(
-                  [
-                    Buffer.from("proof"),
-                    provider.publicKey.toBuffer(),
-                    le64(next),
-                  ],
+                  [Buffer.from("proof"), provider.publicKey.toBuffer(), next],
                   program.programId,
                 )[0],
                 systemProgram: web3.SystemProgram.programId,
@@ -531,7 +583,7 @@ export async function runBridgeTests(t: TestContext) {
             })
             .signers([outsider])
             .rpc(),
-        "ConstraintHasOne",
+        "ConstraintSeeds",
       );
       await rejectsWithAnchorCode(
         () =>
@@ -781,20 +833,32 @@ export async function runBridgeTests(t: TestContext) {
   await t.test(
     "rejects incomplete proofs and untrusted client accounts",
     async () => {
-      const accounts = mintAccounts(record(1), await buffer(transferKey(1)));
+      const pending = await createBuffer(proof(transferKey(1)), transferKey(1));
+      let accounts = mintAccounts(record(1), pending);
       await rejectsWithAnchorCode(
         () =>
           program.methods
-            .mintTransfer(record(1), HEIGHT)
-            .accountsStrict({ ...accounts, proofBuffer: incomplete })
+            .mintTransfer(
+              record(1).id,
+              record(1).recipient,
+              record(1).amount,
+              HEIGHT,
+            )
+            .accountsStrict(accounts)
             .preInstructions(compute())
             .rpc(),
         "IncompleteProof",
       );
+      accounts = mintAccounts(record(1), await buffer(transferKey(1)));
       await rejectsWithAnchorCode(
         () =>
           program.methods
-            .mintTransfer(record(1), HEIGHT)
+            .mintTransfer(
+              record(1).id,
+              record(1).recipient,
+              record(1).amount,
+              HEIGHT,
+            )
             .accountsStrict({
               ...accounts,
               lightClientProgram: access.programId,
@@ -806,7 +870,12 @@ export async function runBridgeTests(t: TestContext) {
       await rejectsWithAnchorCode(
         () =>
           program.methods
-            .mintTransfer(record(1), HEIGHT)
+            .mintTransfer(
+              record(1).id,
+              record(1).recipient,
+              record(1).amount,
+              HEIGHT,
+            )
             .accountsStrict({ ...accounts, proofConsensus: clientState })
             .preInstructions(compute())
             .rpc(),
@@ -815,7 +884,12 @@ export async function runBridgeTests(t: TestContext) {
       await rejectsWithAnchorCode(
         () =>
           program.methods
-            .mintTransfer(record(1), HEIGHT.addn(1))
+            .mintTransfer(
+              record(1).id,
+              record(1).recipient,
+              record(1).amount,
+              HEIGHT.addn(1),
+            )
             .accountsStrict(accounts)
             .preInstructions(compute())
             .rpc(),
@@ -831,16 +905,110 @@ export async function runBridgeTests(t: TestContext) {
       for (const changed of [
         { ...record(1), amount: new BN(251_000_000) },
         { ...record(1), recipient: outsider.publicKey },
-        { ...record(1), id: new BN(99) },
       ]) {
         await rejectsWithProgramLogs(
           () =>
             program.methods
-              .mintTransfer(changed, HEIGHT)
+              .mintTransfer(
+                changed.id,
+                changed.recipient,
+                changed.amount,
+                HEIGHT,
+              )
               .accountsStrict(mintAccounts(changed, firstProof))
               .preInstructions(compute())
               .rpc(),
-          /MembershipVerificationFailed/,
+          /InvalidMembershipProof/,
+        );
+      }
+      for (const id of [
+        anchorId(testId(99, 41n)),
+        anchorId(testId(1, 40n)),
+        { ...record(1).id, owner: Array<number>(20).fill(9) },
+      ]) {
+        const changed = { ...record(1), id };
+        const key = Buffer.concat([
+          Buffer.from([0x02, 0, 20]),
+          Buffer.from(id.owner),
+          id.height.toArrayLike(Buffer, "be", 8),
+          id.sequence.toArrayLike(Buffer, "be", 8),
+        ]);
+        const uploaded = await upload(proof(transferKey(1)), key);
+        await rejectsWithProgramLogs(
+          () =>
+            program.methods
+              .mintTransfer(id, changed.recipient, changed.amount, HEIGHT)
+              .accountsStrict(mintAccounts(changed, uploaded))
+              .preInstructions(compute())
+              .rpc(),
+          /InvalidMembershipProof/,
+        );
+        assert.equal(
+          await connection.getAccountInfo(
+            mintAccounts(changed, uploaded).status,
+          ),
+          null,
+        );
+      }
+      const wrongNonce = await buffer(settlementKey(1));
+      await rejectsWithAnchorCode(
+        () =>
+          program.methods
+            .mintTransfer(
+              record(1).id,
+              record(1).recipient,
+              record(1).amount,
+              HEIGHT,
+            )
+            .accountsStrict(mintAccounts(record(1), wrongNonce))
+            .preInstructions(compute())
+            .rpc(),
+        "InvalidProofNonce",
+      );
+      const endianBuffer = await upload(proof(littleEndianKey), transferKey(1));
+      await rejectsWithProgramLogs(
+        () =>
+          program.methods
+            .mintTransfer(
+              record(1).id,
+              record(1).recipient,
+              record(1).amount,
+              HEIGHT,
+            )
+            .accountsStrict(mintAccounts(record(1), endianBuffer))
+            .preInstructions(compute())
+            .rpc(),
+        /InvalidMembershipProof/,
+      );
+      for (const changed of [
+        { ...record(1), amount: new BN(0) },
+        {
+          ...record(1),
+          id: { ...record(1).id, owner: Array<number>(20).fill(0) },
+        },
+        { ...record(1), id: { ...record(1).id, height: new BN(0) } },
+        { ...record(1), id: { ...record(1).id, height: HEIGHT } },
+        { ...record(1), id: { ...record(1).id, sequence: new BN(0) } },
+      ]) {
+        await rejectsWithAnchorCode(
+          () =>
+            program.methods
+              .mintTransfer(
+                changed.id,
+                changed.recipient,
+                changed.amount,
+                HEIGHT,
+              )
+              .accountsStrict(mintAccounts(changed, endianBuffer))
+              .preInstructions(compute())
+              .rpc(),
+          "InvalidRecord",
+        );
+        assert.equal(
+          await connection.getAccountInfo(
+            mintAccounts(changed, endianBuffer).status,
+          ),
+          null,
         );
       }
       const damaged = Buffer.from(proof(transferKey(1)));
@@ -849,18 +1017,23 @@ export async function runBridgeTests(t: TestContext) {
       await rejectsWithProgramLogs(
         () =>
           program.methods
-            .mintTransfer(record(1), HEIGHT)
+            .mintTransfer(
+              record(1).id,
+              record(1).recipient,
+              record(1).amount,
+              HEIGHT,
+            )
             .accountsStrict(mintAccounts(record(1), damagedBuffer))
             .preInstructions(compute())
             .rpc(),
-        /MembershipVerificationFailed/,
+        /InvalidMembershipProof/,
       );
       await assertUnresolved(1);
       assert.equal((await getMint(connection, mint)).supply, 0n);
     },
   );
   await t.test(
-    "mints to the derived ATA only after upstream proof verification",
+    "mints to the derived ATA only after canonical membership verification",
     async () => {
       const signature = await mintRecord(1);
       const resolved = await emittedEvent(
@@ -868,7 +1041,7 @@ export async function runBridgeTests(t: TestContext) {
         signature,
         "transferResolved",
       );
-      assert.ok(resolved.id.eqn(1));
+      assert.ok(resolved.id.sequence.eqn(1));
       assert.ok(resolved.proofHeight.eq(HEIGHT));
       assert.equal(resolved.outcome.minted.amount.toString(), "250000000");
       assert.ok(resolved.outcome.minted.recipient.equals(recipient.publicKey));
@@ -878,11 +1051,7 @@ export async function runBridgeTests(t: TestContext) {
       });
       const metadata = transaction?.meta;
       assert.ok(metadata);
-      assert.ok(
-        metadata.logMessages?.some((line) =>
-          line.includes("Instruction: VerifyMembership"),
-        ),
-      );
+      assert.equal(metadata.err, null);
       t.diagnostic(
         `Verified mint: ${proof(transferKey(1)).length}-byte ICS23 proof, ${metadata.computeUnitsConsumed} compute units including ATA creation.`,
       );
@@ -903,6 +1072,36 @@ export async function runBridgeTests(t: TestContext) {
     },
   );
   await t.test(
+    "concurrent deposit and governance proofs resolve exactly once",
+    async () => {
+      const value = record(13);
+      const mintSide = mintAccounts(value, await buffer(transferKey(13)));
+      const voidSide = await voidAccounts(13);
+      const before = (await getMint(connection, mint)).supply;
+      const results = await Promise.allSettled([
+        program.methods
+          .mintTransfer(value.id, value.recipient, value.amount, HEIGHT)
+          .accountsStrict(mintSide)
+          .preInstructions(compute())
+          .rpc(),
+        program.methods
+          .voidTransfer(value.id, Status.STATUS_VOIDED, HEIGHT)
+          .accountsStrict(voidSide)
+          .preInstructions(compute())
+          .rpc(),
+      ]);
+      assert.equal(
+        results.filter((result) => result.status === "fulfilled").length,
+        1,
+      );
+      assert.ok(
+        (await program.account.transferStatus.fetch(status(new BN(13)))).outcome
+          .voided,
+      );
+      assert.equal((await getMint(connection, mint)).supply, before);
+    },
+  );
+  await t.test(
     "rejects replay and a governance void after minting",
     async () => {
       // A different compute budget gives replay a distinct transaction signature.
@@ -911,7 +1110,7 @@ export async function runBridgeTests(t: TestContext) {
       await rejectsWithProgramLogs(
         () =>
           program.methods
-            .mintTransfer(value, HEIGHT)
+            .mintTransfer(value.id, value.recipient, value.amount, HEIGHT)
             .accountsStrict(mintAccounts(value, firstProof))
             .preInstructions([
               web3.ComputeBudgetProgram.setComputeUnitLimit({
@@ -983,11 +1182,16 @@ export async function runBridgeTests(t: TestContext) {
       // would never see these resolutions. Both proofs are valid top-level.
       const inner = [
         await program.methods
-          .mintTransfer(record(6), HEIGHT)
+          .mintTransfer(
+            record(6).id,
+            record(6).recipient,
+            record(6).amount,
+            HEIGHT,
+          )
           .accountsStrict(mintAccounts(record(6), await buffer(transferKey(6))))
           .instruction(),
         await program.methods
-          .voidTransfer(new BN(4), HEIGHT)
+          .voidTransfer(anchorId(testId(4, 41n)), Status.STATUS_VOIDED, HEIGHT)
           .accountsStrict(await voidAccounts(4))
           .instruction(),
       ];
@@ -1019,11 +1223,16 @@ export async function runBridgeTests(t: TestContext) {
       // truncate the TransferResolved event.
       const inner = [
         await program.methods
-          .mintTransfer(record(6), HEIGHT)
+          .mintTransfer(
+            record(6).id,
+            record(6).recipient,
+            record(6).amount,
+            HEIGHT,
+          )
           .accountsStrict(mintAccounts(record(6), await buffer(transferKey(6))))
           .instruction(),
         await program.methods
-          .voidTransfer(new BN(4), HEIGHT)
+          .voidTransfer(anchorId(testId(4, 41n)), Status.STATUS_VOIDED, HEIGHT)
           .accountsStrict(await voidAccounts(4))
           .instruction(),
       ];
@@ -1065,7 +1274,7 @@ export async function runBridgeTests(t: TestContext) {
         await voidRecord(4),
         "transferResolved",
       );
-      assert.ok(voided.id.eqn(4));
+      assert.ok(voided.id.sequence.eqn(4));
       assert.ok(voided.outcome.voided.reason.governance);
       assert.ok(
         (await program.account.transferStatus.fetch(status(new BN(4)))).outcome
@@ -1153,7 +1362,7 @@ export async function runBridgeTests(t: TestContext) {
             })
             .signers([outsider])
             .rpc(),
-        "ConstraintHasOne",
+        "ConstraintSeeds",
       );
       await program.methods
         .closeProofBuffer()
@@ -1175,7 +1384,7 @@ export async function runBridgeTests(t: TestContext) {
       const value = record(9);
       const accounts = mintAccounts(value, await buffer(transferKey(9)));
       const expiry = timestamp + trustingPeriod;
-      const deadline = Date.now() + 90_000;
+      const deadline = Date.now() + 300_000;
       // Poll the validator clock. This exercises our expiry policy with real accounts.
       while (true) {
         assert.ok(
@@ -1190,7 +1399,7 @@ export async function runBridgeTests(t: TestContext) {
       await rejectsWithAnchorCode(
         () =>
           program.methods
-            .mintTransfer(value, HEIGHT)
+            .mintTransfer(value.id, value.recipient, value.amount, HEIGHT)
             .accountsStrict(accounts)
             .preInstructions(compute())
             .rpc(),
@@ -1209,11 +1418,20 @@ export async function runBridgeTests(t: TestContext) {
         mint,
         lightClientProgram: client.programId,
         akashChainId: CHAIN,
-        maxAgeSeconds: 60,
+        maxAgeSeconds: 600,
       });
       for (const id of [3, 4]) {
         const observed = await observer.observe(
-          decodeRecord(encodeRecord(record(id))),
+          decodeRecord({
+            id: sinkIdParts(testId(id, 41n)),
+            data: {
+              dest: record(id).recipient.toBase58(),
+              amount: { denom: "uakt", amount: record(id).amount.toString() },
+            },
+            settlement: undefined,
+            status:
+              id === 4 ? Status.STATUS_VOIDED : Status.STATUS_TRANSFER_PENDING,
+          }),
         );
         assert.ok(observed.kind === "resolved");
         assert.equal(observed.observation.outcome, Outcome.OUTCOME_VOIDED);
@@ -1278,7 +1496,12 @@ export async function runBridgeTests(t: TestContext) {
       });
       // The transfer blocked by expiry now mints through the new client.
       await program.methods
-        .mintTransfer(record(9), HEIGHT)
+        .mintTransfer(
+          record(9).id,
+          record(9).recipient,
+          record(9).amount,
+          HEIGHT,
+        )
         .accountsStrict(
           replacementAccounts(record(9), await buffer(transferKey(9))),
         )
@@ -1291,7 +1514,12 @@ export async function runBridgeTests(t: TestContext) {
       await rejectsWithProgramLogs(
         () =>
           program.methods
-            .mintTransfer(record(1), HEIGHT)
+            .mintTransfer(
+              record(1).id,
+              record(1).recipient,
+              record(1).amount,
+              HEIGHT,
+            )
             .accountsStrict(replacementAccounts(record(1), first))
             .preInstructions(compute())
             .rpc(),
@@ -1300,7 +1528,11 @@ export async function runBridgeTests(t: TestContext) {
       await rejectsWithProgramLogs(
         async () =>
           program.methods
-            .voidTransfer(new BN(4), HEIGHT)
+            .voidTransfer(
+              anchorId(testId(4, 41n)),
+              Status.STATUS_VOIDED,
+              HEIGHT,
+            )
             .accountsStrict({
               ...(await voidAccounts(4)),
               ...replacementClientAccounts,
@@ -1314,7 +1546,12 @@ export async function runBridgeTests(t: TestContext) {
       await rejectsWithAnchorCode(
         () =>
           program.methods
-            .mintTransfer(record(6), HEIGHT)
+            .mintTransfer(
+              record(6).id,
+              record(6).recipient,
+              record(6).amount,
+              HEIGHT,
+            )
             .accountsStrict(mintAccounts(record(6), sixth))
             .preInstructions(compute())
             .rpc(),

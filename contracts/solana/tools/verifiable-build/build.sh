@@ -7,7 +7,7 @@ revision=dc78ade828b766b218fb6bcb5417fdaf8e553021
 # Content hash of the upstream tarball's files and symlinks (tree_hash below).
 # GitHub may recompress tarballs; the content must not change.
 upstream_tree=6dd68161cdeee00d8dee67cb7fee48c76d14c38f8e75d0f48f64418f062c115f
-upstream=.deps/ibc-contracts
+upstream=/build/.cache/solana/deps/ibc-contracts
 out=/output
 
 tree_hash() {
@@ -25,7 +25,7 @@ if [[ "${1:-}" == --tree-hash ]]; then
   exit 0
 fi
 
-cd /build
+cd /build/contracts/solana
 
 mkdir -p "$upstream"
 curl -fsSL --retry 3 "https://api.github.com/repos/cosmos/ibc-contracts/tarball/$revision" |
@@ -36,7 +36,7 @@ if [[ "$actual" != "$upstream_tree" ]]; then
   exit 1
 fi
 printf '%s\n' "$revision" > "$upstream/.akt-revision"
-bash scripts/apply-light-client-patches.sh
+SOLANA_DEPS=/build/.cache/solana/deps bash scripts/apply-light-client-patches.sh
 
 locks=(Cargo.lock "$upstream/ibc-solana/Cargo.lock")
 before=$(sha256sum "${locks[@]}")

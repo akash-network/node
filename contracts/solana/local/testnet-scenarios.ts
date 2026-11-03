@@ -1,48 +1,48 @@
-import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
-import { createHash } from "node:crypto";
-import { join } from "node:path";
-import { promisify } from "node:util";
-import { web3 } from "@coral-xyz/anchor";
-import { reconcile } from "./reconcile";
-import { fromBech32, toBech32 } from "@cosmjs/encoding";
-import { sinkMessage, sinkResponseId } from "../shared/sink";
 import {
-  getMint,
+  Hold,
+  MsgRequestVoid,
+  Sink_Status as Status,
+} from "@akashnetwork/chain-sdk/private-types/akash.v1";
+import { web3 } from "@coral-xyz/anchor";
+import { toBech32 } from "@cosmjs/encoding";
+import {
   getAccount,
   getAssociatedTokenAddressSync,
+  getMint,
 } from "@solana/spl-token";
+import { VoteOption } from "cosmjs-types/cosmos/gov/v1/gov";
 import {
   MsgSubmitProposal,
   MsgSubmitProposalResponse,
   MsgVote,
 } from "cosmjs-types/cosmos/gov/v1/tx";
-import { VoteOption } from "cosmjs-types/cosmos/gov/v1/gov";
+import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
+import { join } from "node:path";
+import { promisify } from "node:util";
+import { decodeRecord } from "../reporter/solana";
+import { sinkIdParts, type SinkId } from "../shared/id";
+import { coinAmount, statusAddress } from "../shared/proof";
+import { sinkMessage, sinkResponseId } from "../shared/sink";
 import {
-  MsgRequestVoid,
-  Sink_Status as Status,
-  QuerySinkResponse_SinkStatus,
-  Hold,
-} from "@akashnetwork/chain-sdk/private-types/akash.v1";
-import {
-  ROOT,
-  REPO,
-  PROFILE,
   AKASH_RPC,
   CHAIN,
-  PROGRAM_ID,
-  LE64,
-  pda,
-  programData,
   cosmosSigner,
   fee,
   json,
   object,
+  pda,
+  PROFILE,
+  PROGRAM_ID,
+  programData,
+  REPO,
+  ROOT,
   save,
   sleep,
 } from "./common";
+import { reconcile } from "./reconcile";
 import { relayContext } from "./relay";
-import { decodeRecord } from "../reporter/solana";
 import { processes, stop } from "./stack";
 import { comet, startValidator, validatorName } from "./testnetify";
 
@@ -96,7 +96,7 @@ async function main() {
       [
         sinkMessage({
           sender: sender.address,
-          dest: recipient.publicKey.toBase58(),
+          recipient: recipient.publicKey.toBase58(),
           amountUakt: amount.toString(),
         }),
       ],
@@ -105,39 +105,29 @@ async function main() {
     );
     assert.equal(tx.code, 0, `deposit failed: ${tx.rawLog}`);
     const responseId = sinkResponseId(tx.msgResponses);
-    const id = BigInt(responseId);
-    const receipt = await relay.akash.sink(responseId, tx.height);
-    assert.equal(receipt.status, QuerySinkResponse_SinkStatus.transfer_pending);
-    assert.ok(receipt.transfer?.settlement);
-    assert.equal(receipt.transfer.settlement.status, Status.STATUS_PENDING);
-    const record = decodeRecord(receipt.transfer.record);
+    const id = responseId;
+    const receipt = await relay.akash.transfer(responseId, tx.height);
+    assert.ok(receipt?.settlement);
+    assert.equal(receipt.status, Status.STATUS_TRANSFER_PENDING);
+    const record = decodeRecord(receipt);
     assert.equal(record.id, id);
     assert.equal(record.amount, amount);
     assert.equal(record.height, BigInt(tx.height));
     assert.ok(record.recipient.equals(recipient.publicKey));
-    assert.deepEqual(
-      Buffer.from(receipt.transfer.record).subarray(9, 29),
-      Buffer.from(fromBech32(sender.address, 90).data),
-    );
+    assert.equal(sinkIdParts(id).owner, sender.address);
     return { id, recipient, tx };
   }
-  async function settlement(id: bigint, status: Status) {
+  async function settlement(id: SinkId, status: Status) {
     const deadline = Date.now() + 150_000;
     while (true) {
       const snapshot = await relay.akash.snapshot(id);
       assert.ok(snapshot.transfer.settlement);
       assert.equal(snapshot.transfer.settlement.hold, Hold.HOLD_NONE);
-      if (snapshot.transfer.settlement.status === status) {
+      if (snapshot.transfer.status === status) {
         const state = await relay.akash.state();
-        const receipt = await relay.akash.sink(id.toString(), state.height);
-        assert.equal(
-          receipt.status,
-          status === Status.STATUS_MINTED
-            ? QuerySinkResponse_SinkStatus.completed
-            : QuerySinkResponse_SinkStatus.void,
-        );
-        assert.equal(receipt.transfer?.settlement?.status, status);
-        assert.deepEqual(receipt.transfer.record, snapshot.transfer.record);
+        const receipt = await relay.akash.transfer(id, state.height);
+        assert.equal(receipt?.status, status);
+        assert.deepEqual(receipt.data, snapshot.transfer.data);
         return snapshot;
       }
       assert.ok(
@@ -155,7 +145,7 @@ async function main() {
   try {
     assert.equal((await node.validatorsAll()).validators.length, 4);
     assert.equal(
-      (await relay.akash.state()).totals.pendingCount.toBigInt(),
+      (await relay.akash.state()).totals.pendingCount,
       0n,
       "finish existing transfers before fault injection",
     );
@@ -221,13 +211,13 @@ async function main() {
     await relay.tick();
     assert.equal(
       await relay.program.account.transferStatus.fetchNullable(
-        pda("transfer", PROGRAM_ID, LE64(paused.id)),
+        statusAddress(PROGRAM_ID, paused.id),
       ),
       null,
     );
     assert.equal(
-      (await relay.akash.snapshot(paused.id)).transfer.settlement?.status,
-      Status.STATUS_PENDING,
+      (await relay.akash.snapshot(paused.id)).transfer.status,
+      Status.STATUS_TRANSFER_PENDING,
     );
     assert.equal(
       (await getMint(relay.wallet.connection, mint)).supply,
@@ -254,7 +244,7 @@ async function main() {
     await record({
       scenario: "pause-retry-and-replay",
       passed: true,
-      id: paused.id.toString(),
+      id: paused.id,
       mintedUakt: "2000000",
       deposit: paused.tx.transactionHash,
     });
@@ -265,12 +255,19 @@ async function main() {
       "/akash.sink.v1.MsgRequestVoid",
       MsgRequestVoid,
     );
+    const expectedRound = (await relay.akash.snapshot(governed.id)).transfer
+      .settlement?.round;
+    assert.ok(expectedRound);
     const forbidden = await sender.client.signAndBroadcast(
       sender.address,
       [
         {
           typeUrl: "/akash.sink.v1.MsgRequestVoid",
-          value: { authority: sender.address, id: governed.id },
+          value: {
+            authority: sender.address,
+            id: sinkIdParts(governed.id),
+            expectedRound,
+          },
         },
       ],
       fee,
@@ -281,8 +278,9 @@ async function main() {
       "ordinary sender authorized a governance void",
     );
     assert.equal(
-      (await relay.akash.snapshot(governed.id)).transfer.voidOrdered,
-      false,
+      (await relay.akash.snapshot(governed.id)).transfer.settlement
+        ?.voidAuthorization,
+      undefined,
     );
     const balanceAfterDeposit = BigInt(
       (await sender.client.getBalance(sender.address, "uakt")).amount,
@@ -311,7 +309,8 @@ async function main() {
                   value: MsgRequestVoid.encode(
                     MsgRequestVoid.fromPartial({
                       authority,
-                      id: governed.id,
+                      expectedRound,
+                      id: sinkIdParts(governed.id),
                     }),
                   ).finish(),
                 },
@@ -354,26 +353,28 @@ async function main() {
       }
     }
     const deadline = Date.now() + 45_000;
-    while (!(await relay.akash.snapshot(governed.id)).transfer.voidOrdered) {
+    while (
+      !(await relay.akash.snapshot(governed.id)).transfer.settlement
+        ?.voidAuthorization
+    ) {
       assert.ok(
         Date.now() < deadline,
         `governance proposal ${proposalId} did not create a void order`,
       );
       await sleep(500);
     }
-    const ordered = await relay.akash.sink(
-      governed.id.toString(),
+    const ordered = await relay.akash.transfer(
+      governed.id,
       (await relay.akash.state()).height,
     );
-    assert.equal(ordered.status, QuerySinkResponse_SinkStatus.transfer_pending);
-    assert.equal(ordered.transfer?.voidOrdered, true);
-    assert.equal(ordered.transfer.settlement?.status, Status.STATUS_PENDING);
+    assert.ok(ordered?.settlement?.voidAuthorization);
+    assert.equal(ordered.status, Status.STATUS_VOIDED);
     await waitHeight((await height()) + 3);
     // A proven governance void is allowed while minting is paused.
     await relay.tick();
     await settlement(governed.id, Status.STATUS_REFUNDED);
     const status = await relay.program.account.transferStatus.fetch(
-      pda("transfer", PROGRAM_ID, LE64(governed.id)),
+      statusAddress(PROGRAM_ID, governed.id),
     );
     assert.ok(status.outcome.voided?.reason.governance);
     assert.equal(
@@ -388,7 +389,7 @@ async function main() {
     await record({
       scenario: "governance-void-and-refund",
       passed: true,
-      id: governed.id.toString(),
+      id: sinkIdParts(governed.id),
       proposalId: proposalId.toString(),
       deposit: governed.tx.transactionHash,
       refundConfirmedByHeight: (await relay.akash.state()).height,
@@ -399,8 +400,10 @@ async function main() {
     const final = await relay.akash.state();
     const supply = (await getMint(relay.wallet.connection, mint, "finalized"))
       .supply;
-    assert.equal(final.totals.pendingAmount.toBigInt(), 0n);
-    assert.equal(final.totals.voidedAmount.toBigInt(), 0n);
+    assert.equal(coinAmount(final.totals.pendingAmount), 0n);
+    assert.equal(coinAmount(final.totals.voidedAmount), 0n);
+    assert.equal(final.totals.voidedCount, 0n);
+    assert.equal(coinAmount(final.totals.refundPendingAmount), 0n);
     const reconciliation = await reconcile();
     assert.equal(
       reconciliation.status,
@@ -408,7 +411,7 @@ async function main() {
       JSON.stringify(reconciliation.alerts),
     );
     const burned = BigInt(reconciliation.cumulativeBurnedUakt);
-    assert.equal(supply + burned, final.totals.mintedAmount.toBigInt());
+    assert.equal(supply + burned, coinAmount(final.totals.mintedAmount));
     assert.equal(
       BigInt((await sender.client.getBalance(sink, "uakt")).amount),
       supply + burned,

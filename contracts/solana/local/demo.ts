@@ -1,6 +1,9 @@
-import assert from "node:assert/strict";
-import { join } from "node:path";
-import { fromBech32 } from "@cosmjs/encoding";
+import {
+  DestType,
+  Hold,
+  MsgSink,
+  Sink_Status as Status,
+} from "@akashnetwork/chain-sdk/private-types/akash.v1";
 import { Program, web3 } from "@coral-xyz/anchor";
 import {
   createAccount,
@@ -8,33 +11,30 @@ import {
   getAssociatedTokenAddressSync,
   getMint,
 } from "@solana/spl-token";
-import idl from "../target/idl/akt_solana.json";
-import type { AktSolana } from "../target/types/akt_solana";
-import { sinkMessage, sinkResponseId } from "../shared/sink";
+import assert from "node:assert/strict";
+import { join } from "node:path";
+import idl from "../../../.cache/solana/target/idl/akt_solana.json";
+import type { AktSolana } from "../../../.cache/solana/target/types/akt_solana";
 import { AkashClient } from "../reporter/akash";
-import {
-  Sink_Status as Status,
-  Hold,
-  MsgSink,
-  QuerySinkResponse_SinkStatus,
-} from "@akashnetwork/chain-sdk/private-types/akash.v1";
 import { decodeRecord } from "../reporter/solana";
-import { reconcile } from "./reconcile";
+import { sinkIdParts, type SinkId } from "../shared/id";
+import { coinAmount, statusAddress } from "../shared/proof";
+import { sinkMessage, sinkResponseId } from "../shared/sink";
 import {
-  ROOT,
-  CHAIN,
   AKASH_RPC,
-  LE64,
-  PROGRAM_ID,
-  provider,
+  CHAIN,
   cosmosSigner,
   fee,
-  pda,
   json,
   object,
+  pda,
+  PROGRAM_ID,
+  provider,
+  ROOT,
   save,
   sleep,
 } from "./common";
+import { reconcile } from "./reconcile";
 
 async function main() {
   const local = object(await json(join(ROOT, "initialized.json")));
@@ -54,9 +54,7 @@ async function main() {
   );
   const results: object[] = [];
   try {
-    const beforeInvalid = (
-      await akash.state()
-    ).totals.lastTransferId.toBigInt();
+    const beforeInvalid = (await akash.state()).totals;
     await assert.rejects(async () => {
       const tx = await sender.client.sendTokens(
         sender.address,
@@ -79,7 +77,7 @@ async function main() {
             typeUrl: "/akash.sink.v1.MsgSink",
             value: MsgSink.fromPartial({
               sender: sender.address,
-              destType: 1,
+              destType: DestType.DEST_TYPE_SOLANA,
               dest: "bad-address",
               amount: { denom: "uakt", amount: "1000000" },
             }),
@@ -90,10 +88,7 @@ async function main() {
       );
       if (tx.code !== 0) throw new Error(tx.rawLog);
     }, /destination|address|base58/i);
-    assert.equal(
-      (await akash.state()).totals.lastTransferId.toBigInt(),
-      beforeInvalid,
-    );
+    assert.deepEqual((await akash.state()).totals, beforeInvalid);
     console.log(
       "Direct bank deposit and malformed MsgSink destination rejected without creating a transfer.",
     );
@@ -104,7 +99,7 @@ async function main() {
         [
           sinkMessage({
             sender: sender.address,
-            dest: address.toBase58(),
+            recipient: address.toBase58(),
             amountUakt: amount.toString(),
           }),
         ],
@@ -113,34 +108,27 @@ async function main() {
       );
       assert.equal(tx.code, 0, `deposit failed: ${tx.rawLog}`);
       const responseId = sinkResponseId(tx.msgResponses);
-      const id = BigInt(responseId);
-      const receipt = await akash.sink(responseId, tx.height);
-      assert.equal(
-        receipt.status,
-        QuerySinkResponse_SinkStatus.transfer_pending,
-      );
-      assert.ok(receipt.transfer?.settlement);
-      assert.equal(receipt.transfer.settlement.status, Status.STATUS_PENDING);
-      const record = decodeRecord(receipt.transfer.record);
+      const id = responseId;
+      const receipt = await akash.transfer(responseId, tx.height);
+      assert.ok(receipt?.settlement);
+      assert.equal(receipt.status, Status.STATUS_TRANSFER_PENDING);
+      const record = decodeRecord(receipt);
       assert.equal(record.id, id);
       assert.equal(record.amount, amount);
       assert.equal(record.height, BigInt(tx.height));
       assert.ok(record.recipient.equals(address));
-      assert.deepEqual(
-        Buffer.from(receipt.transfer.record).subarray(9, 29),
-        Buffer.from(fromBech32(sender.address, 90).data),
-      );
+      assert.equal(sinkIdParts(id).owner, sender.address);
       console.log(
         JSON.stringify({
           event: "deposit",
-          id: id.toString(),
+          id: id,
           amount: amount.toString(),
           akashTransaction: tx.transactionHash,
         }),
       );
       return { id, tx };
     }
-    async function wait(id: bigint, expected: Status) {
+    async function wait(id: SinkId, expected: Status) {
       // A deposit can arrive just after a keep-alive chose its proof height.
       // Allow two finalized upload cycles plus reporter voting and challenge.
       const end = Date.now() + 300_000;
@@ -154,22 +142,16 @@ async function main() {
           Hold.HOLD_NONE,
           "unexpected settlement dispute",
         );
-        const step = `${Status[settlement.status]} (${settlement.votes.length} reports)`;
+        const step = `${Status[snapshot.transfer.status]} (${settlement.votes.length} reports)`;
         if (step !== last) {
           console.log(`Transfer ${id}: ${step}`);
           last = step;
         }
-        if (settlement.status === expected) {
+        if (snapshot.transfer.status === expected) {
           const state = await akash.state();
-          const receipt = await akash.sink(id.toString(), state.height);
-          assert.equal(
-            receipt.status,
-            expected === Status.STATUS_MINTED
-              ? QuerySinkResponse_SinkStatus.completed
-              : QuerySinkResponse_SinkStatus.void,
-          );
-          assert.equal(receipt.transfer?.settlement?.status, expected);
-          assert.deepEqual(receipt.transfer.record, snapshot.transfer.record);
+          const receipt = await akash.transfer(id, state.height);
+          assert.equal(receipt?.status, expected);
+          assert.deepEqual(receipt.data, snapshot.transfer.data);
           return snapshot;
         }
         await sleep(1000);
@@ -188,7 +170,7 @@ async function main() {
     );
     assert.equal(token.amount, 10_000_000n);
     results.push({
-      id: good.id.toString(),
+      id: good.id,
       outcome: "minted",
       amount: "10000000",
       recipient: recipient.publicKey.toBase58(),
@@ -218,7 +200,7 @@ async function main() {
     );
     assert.equal(senderAfterRefund - senderAfterDeposit, 3_000_000n);
     const status = await program.account.transferStatus.fetch(
-      pda("transfer", PROGRAM_ID, LE64(bad.id)),
+      statusAddress(PROGRAM_ID, bad.id),
     );
     assert.ok(status.outcome.voided?.reason.invalidRecipient);
     assert.equal(
@@ -226,7 +208,7 @@ async function main() {
       0n,
     );
     results.push({
-      id: bad.id.toString(),
+      id: bad.id,
       outcome: "refunded",
       amount: "3000000",
       invalidRecipient: tokenAccount.toBase58(),
@@ -239,21 +221,21 @@ async function main() {
     const after = await akash.state();
     const mintAfter = await getMint(wallet.connection, mint, "finalized");
     assert.equal(
-      after.totals.mintedAmount.toBigInt() -
-        stateBefore.totals.mintedAmount.toBigInt(),
+      coinAmount(after.totals.mintedAmount) -
+        coinAmount(stateBefore.totals.mintedAmount),
       10_000_000n,
     );
     assert.equal(
-      after.totals.refundedAmount.toBigInt() -
-        stateBefore.totals.refundedAmount.toBigInt(),
+      coinAmount(after.totals.refundedAmount) -
+        coinAmount(stateBefore.totals.refundedAmount),
       3_000_000n,
     );
     assert.equal(mintAfter.supply - mintBefore.supply, 10_000_000n);
-    assert.equal(after.totals.pendingAmount.toBigInt(), 0n);
-    assert.equal(after.totals.voidedAmount.toBigInt(), 0n);
+    assert.equal(coinAmount(after.totals.pendingAmount), 0n);
+    assert.equal(coinAmount(after.totals.refundPendingAmount), 0n);
     assert.equal(
       BigInt((await sender.client.getBalance(sink, "uakt")).amount),
-      after.totals.mintedAmount.toBigInt(),
+      coinAmount(after.totals.mintedAmount),
     );
     const reconciliation = await reconcile();
     assert.equal(
@@ -263,7 +245,7 @@ async function main() {
     );
     assert.equal(
       mintAfter.supply + BigInt(reconciliation.cumulativeBurnedUakt),
-      after.totals.mintedAmount.toBigInt(),
+      coinAmount(after.totals.mintedAmount),
     );
     const report = {
       completedAt: new Date().toISOString(),
@@ -272,7 +254,7 @@ async function main() {
       results,
       solanaSupplyUakt: mintAfter.supply.toString(),
       cumulativeBurnedUakt: reconciliation.cumulativeBurnedUakt,
-      lockedUakt: after.totals.mintedAmount.toString(),
+      lockedUakt: coinAmount(after.totals.mintedAmount).toString(),
     };
     await save(join(ROOT, "demo-result.json"), report);
     console.log(JSON.stringify(report, null, 2));

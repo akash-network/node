@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
-upstream=.deps/ibc-contracts
+upstream=${SOLANA_DEPS:?SOLANA_DEPS is required}/ibc-contracts
 # Applied in order as a series. A later patch may change lines an earlier one
 # added, so the tree is checked against each prefix of the series.
 patches=(

@@ -8,8 +8,12 @@
 
 use anchor_lang::prelude::*;
 
+#[cfg(all(feature = "custom-heap", not(feature = "no-entrypoint")))]
+solana_allocator::custom_heap!();
+
 declare_id!("FfFAPUKqjf68ggj1HvpyzMHFDRnT2cFAdZYYQb7mK9i5");
 
+mod authorization;
 pub mod constants;
 pub mod errors;
 pub mod events;
@@ -23,7 +27,7 @@ pub use errors::*;
 pub use events::*;
 pub use instructions::*;
 pub use state::*;
-pub use wire::TransferRecord;
+pub use wire::TransferId;
 
 /// Entrypoints in lifecycle order. Handlers live in `instructions`.
 #[program]
@@ -127,10 +131,15 @@ pub mod akt_solana {
     /// Errors: `InvalidProofLength`.
     pub fn create_proof_buffer(
         ctx: Context<CreateProofBuffer>,
-        nonce: u64,
+        nonce: [u8; 32],
         expected_len: u32,
     ) -> Result<()> {
         instructions::proof_buffer::create_proof_buffer(ctx, nonce, expected_len)
+    }
+
+    /// Grows the caller's proof buffer toward its declared length and funds rent.
+    pub fn grow_proof_buffer(ctx: Context<GrowProofBuffer>) -> Result<()> {
+        instructions::proof_buffer::grow_proof_buffer(ctx)
     }
 
     /// Appends `chunk` at `offset` to the caller's proof buffer.
@@ -149,8 +158,8 @@ pub mod akt_solana {
     }
 
     /// Resolves an x/sink record: verifies through the pinned client that
-    /// the transfer key of `record.id` holds `record` at `proof_height`, then
-    /// mints `record.amount` to the recipient's associated token account, or
+    /// the transfer key of `id` holds native RecordData at `proof_height`, then
+    /// mints `amount` to the recipient's associated token account, or
     /// voids the record if the recipient cannot hold AKT.
     ///
     /// Caller: anyone, in a top-level instruction preceded only by
@@ -159,27 +168,36 @@ pub mod akt_solana {
     /// Event: `TransferResolved`.
     /// Errors: `BridgeDisabled`, `CpiNotAllowed`, `PrecedingInstruction`,
     /// `InvalidRecord`, the light-client and proof errors, `InvalidClock`,
-    /// `TransferLimit`, `DailyLimit`, and ICS07 errors from verification. A
+    /// `TransferLimit`, `DailyLimit`, and membership verification errors. A
     /// resolved record fails because its status exists.
     pub fn mint_transfer(
         ctx: Context<MintTransfer>,
-        record: TransferRecord,
+        id: TransferId,
+        recipient_key: Pubkey,
+        amount: u64,
         proof_height: u64,
     ) -> Result<()> {
-        instructions::mint_transfer::mint_transfer(ctx, record, proof_height)
+        instructions::mint_transfer::mint_transfer(ctx, id, recipient_key, amount, proof_height)
     }
 
-    /// Resolves an x/sink record as voided by Akash governance: verifies that
-    /// the void key of `id` holds `[1, id]` at `proof_height`. Works while
-    /// minting is disabled.
+    /// Resolves an x/sink record with a permanent governance authorization in
+    /// the native settlement at `settlement_status`. Works while minting is disabled.
     ///
     /// Caller: anyone, in a top-level instruction preceded only by
     /// ComputeBudget instructions. It pays rent for the status.
     /// Event: `TransferResolved`.
     /// Errors: `CpiNotAllowed`, `PrecedingInstruction`, `InvalidRecord`, the
-    /// light-client and proof errors, and ICS07 errors from verification. A
+    /// light-client and proof errors, and membership verification errors. A
     /// resolved record fails because its status exists.
-    pub fn void_transfer(ctx: Context<VoidTransfer>, id: u64, proof_height: u64) -> Result<()> {
-        instructions::void_transfer::void_transfer(ctx, id, proof_height)
+    pub fn void_transfer(
+        ctx: Context<VoidTransfer>,
+        id: TransferId,
+        settlement_status: u8,
+        proof_height: u64,
+    ) -> Result<()> {
+        instructions::void_transfer::void_transfer(ctx, id, settlement_status, proof_height)
     }
 }
+
+#[cfg(test)]
+mod proof_vectors;

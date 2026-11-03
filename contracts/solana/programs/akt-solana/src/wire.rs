@@ -1,194 +1,246 @@
-//! x/sink v1 record encoding and proof keys.
-//!
-//! The Akash x/sink module writes these bytes. Its store keys are fixed-width
-//! binary: a two-byte prefix, then the record ID as a big-endian u64.
-//! docs/bridge-protocol.md documents them and the tests below pin them. The
-//! program builds every proven key and value itself from instruction
-//! arguments.
+//! Native x/sink collection keys and protobuf RecordData values.
 
 use crate::errors::AktError;
 use anchor_lang::prelude::*;
+use solana_sha256_hasher::hash;
 
-/// Name of the Akash store that holds sink records: the first proof path
-/// segment.
 pub const SINK_STORE: &[u8] = b"sink";
-
-/// Sink store prefix of transfer record keys.
 pub const TRANSFER_KEY_PREFIX: &[u8] = &[0x02, 0x00];
+pub const SETTLEMENT_KEY_PREFIX: &[u8] = &[0x03, 0x01];
+pub const TRANSFER_KEY_SIZE: usize = 39;
+pub const SETTLEMENT_KEY_SIZE: usize = 40;
 
-/// Sink store prefix of void order keys.
-pub const VOID_KEY_PREFIX: &[u8] = &[0x02, 0x01];
-
-/// The value x/sink stores at the record's transfer key. Its borsh encoding
-/// is the 77-byte value proven against Akash state, so field order and types
-/// are fixed.
-#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
-pub struct TransferRecord {
-    /// Encoding version; must be 1.
-    pub version: u8,
-    /// x/sink record ID, unique on the chain and never reused.
-    pub id: u64,
-    /// Akash sender's 20 address bytes.
-    pub sender: [u8; 20],
-    /// Owner of the associated token account that receives the tokens.
-    pub recipient: Pubkey,
-    /// Base units (uakt) to mint.
-    pub amount: u64,
-    /// Akash height at which the record was created.
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug, PartialEq, Eq, InitSpace)]
+pub struct TransferId {
+    pub owner: [u8; 20],
     pub height: u64,
+    pub sequence: u64,
 }
 
-impl TransferRecord {
-    /// Checks made before the proof: version 1, nonzero ID and amount, and a
-    /// creation height between 1 and the proof height.
-    pub fn validate(&self, proof_height: u64) -> Result<()> {
+impl TransferId {
+    pub fn validate(&self) -> Result<()> {
         require!(
-            self.version == 1
-                && self.id > 0
-                && self.amount > 0
+            self.owner != [0; 20]
                 && self.height > 0
-                && self.height <= proof_height,
+                && self.height <= i64::MAX as u64
+                && self.sequence > 0,
             AktError::InvalidRecord
         );
         Ok(())
     }
 
-    /// This record's key in the sink store.
-    pub fn key(&self) -> Vec<u8> {
-        transfer_key(self.id)
+    // Header H commits state H-1, so a deposit at H needs a later header.
+    pub fn validate_proof_height(&self, proof_height: u64) -> Result<()> {
+        self.validate()?;
+        require!(self.height < proof_height, AktError::InvalidRecord);
+        Ok(())
+    }
+
+    fn key(&self, prefix: &[u8]) -> Result<Vec<u8>> {
+        self.validate()?;
+        let mut key = Vec::with_capacity(prefix.len() + 37);
+        key.extend_from_slice(prefix);
+        key.push(20);
+        key.extend_from_slice(&self.owner);
+        key.extend_from_slice(&self.height.to_be_bytes());
+        key.extend_from_slice(&self.sequence.to_be_bytes());
+        Ok(key)
     }
 }
 
-/// The 10-byte key of transfer record `id`: `TRANSFER_KEY_PREFIX`, then the
-/// ID as a big-endian u64.
-pub fn transfer_key(id: u64) -> Vec<u8> {
-    [TRANSFER_KEY_PREFIX, &id.to_be_bytes()].concat()
+pub fn transfer_key(id: &TransferId) -> Result<Vec<u8>> {
+    id.key(TRANSFER_KEY_PREFIX)
 }
 
-/// The 10-byte key of the Akash governance void order for `id`:
-/// `VOID_KEY_PREFIX`, then the ID as a big-endian u64.
-pub fn void_key(id: u64) -> Vec<u8> {
-    [VOID_KEY_PREFIX, &id.to_be_bytes()].concat()
+pub fn settlement_key(id: &TransferId, status: u8) -> Result<Vec<u8>> {
+    require!((1..=5).contains(&status), AktError::InvalidSettlementStatus);
+    id.key(&[SETTLEMENT_KEY_PREFIX[0], SETTLEMENT_KEY_PREFIX[1], status])
 }
 
-/// A void order's value: version 1, then the ID as a little-endian u64.
-pub fn void_value(id: u64) -> Vec<u8> {
-    let mut value = vec![1];
-    value.extend_from_slice(&id.to_le_bytes());
-    value
+pub fn record_value(recipient: &Pubkey, amount: u64) -> Result<Vec<u8>> {
+    require!(amount > 0, AktError::InvalidRecord);
+    let recipient = recipient.to_string();
+    let amount = amount.to_string();
+    // Canonical base58 and decimal u64 keep all native protobuf lengths below 128.
+    let mut value = Vec::with_capacity(recipient.len() + amount.len() + 12);
+    value.extend_from_slice(&[0x0a, recipient.len() as u8]);
+    value.extend_from_slice(recipient.as_bytes());
+    value.extend_from_slice(&[0x12, (amount.len() + 8) as u8, 0x0a, 4]);
+    value.extend_from_slice(b"uakt");
+    value.extend_from_slice(&[0x12, amount.len() as u8]);
+    value.extend_from_slice(amount.as_bytes());
+    Ok(value)
+}
+
+pub fn proof_nonce(key: &[u8]) -> [u8; 32] {
+    hash(key).to_bytes()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use anchor_lang::InstructionData;
 
-    /// The 77-byte layout in docs/bridge-protocol.md, written out by hand.
-    const ENCODED: [u8; 77] = [
-        // 0, 1 byte: version.
-        0x01, //
-        // 1, 8 bytes: ID 0x0102030405060708, little-endian.
-        0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
-        // 9, 20 bytes: Akash sender address bytes, no length prefix.
-        0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8, 0xa9, //
-        0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf, 0xb0, 0xb1, 0xb2, 0xb3, //
-        // 29, 32 bytes: Solana recipient.
-        0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7, //
-        0xc8, 0xc9, 0xca, 0xcb, 0xcc, 0xcd, 0xce, 0xcf, //
-        0xd0, 0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, //
-        0xd8, 0xd9, 0xda, 0xdb, 0xdc, 0xdd, 0xde, 0xdf, //
-        // 61, 8 bytes: amount 0x1112131415161718 uakt, little-endian.
-        0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11,
-        // 69, 8 bytes: Akash height 0x2122232425262728, little-endian.
-        0x28, 0x27, 0x26, 0x25, 0x24, 0x23, 0x22, 0x21,
-    ];
-
-    fn record() -> TransferRecord {
-        TransferRecord {
-            version: 1,
-            id: 0x0102_0304_0506_0708,
-            sender: std::array::from_fn(|i| 0xa0 + i as u8),
-            recipient: Pubkey::new_from_array(std::array::from_fn(|i| 0xc0 + i as u8)),
-            amount: 0x1112_1314_1516_1718,
-            height: 0x2122_2324_2526_2728,
+    fn id() -> TransferId {
+        TransferId {
+            owner: std::array::from_fn(|i| 0xa0 + i as u8),
+            height: 0x0102_0304_0506_0708,
+            sequence: 0x1112_1314_1516_1718,
         }
     }
 
     #[test]
-    fn transfer_record_encodes_to_the_documented_77_bytes() {
-        assert_eq!(record().try_to_vec().unwrap(), ENCODED);
-        let decoded = TransferRecord::try_from_slice(&ENCODED).unwrap();
-        assert_eq!(decoded.version, 1);
-        assert_eq!(decoded.id, 0x0102_0304_0506_0708);
-        assert_eq!(decoded.sender, ENCODED[9..29]);
-        assert_eq!(decoded.recipient.to_bytes(), ENCODED[29..61]);
-        assert_eq!(decoded.amount, 0x1112_1314_1516_1718);
-        assert_eq!(decoded.height, 0x2122_2324_2526_2728);
-        // Trailing or missing bytes are not a record.
-        assert!(TransferRecord::try_from_slice(&[&ENCODED[..], &[0]].concat()).is_err());
-        assert!(TransferRecord::try_from_slice(&ENCODED[..76]).is_err());
-    }
-
-    #[test]
-    fn proof_keys_and_void_value_use_the_documented_format() {
-        assert_eq!(SINK_STORE, b"sink");
-        // Prefix, then the ID as a big-endian u64.
+    fn native_record_uses_canonical_strings_and_positive_u64() {
+        for amount in [1, 127, 128, u64::MAX] {
+            let decimal = amount.to_string();
+            let mut expected = vec![10, 32];
+            expected.extend_from_slice(b"11111111111111111111111111111111");
+            expected.extend_from_slice(&[18, (8 + decimal.len()) as u8, 10, 4]);
+            expected.extend_from_slice(b"uakt");
+            expected.extend_from_slice(&[18, decimal.len() as u8]);
+            expected.extend_from_slice(decimal.as_bytes());
+            assert_eq!(record_value(&Pubkey::default(), amount).unwrap(), expected);
+        }
         assert_eq!(
-            record().key(),
-            [0x02, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08]
+            record_value(&Pubkey::default(), 0).unwrap_err(),
+            AktError::InvalidRecord.into()
         );
         assert_eq!(
-            transfer_key(1),
-            [0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01]
-        );
-        assert_eq!(
-            transfer_key(u64::MAX),
-            [0x02, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]
-        );
-        assert_eq!(
-            void_key(1),
-            [0x02, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01]
-        );
-        assert_eq!(
-            void_key(u64::MAX),
-            [0x02, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]
-        );
-        assert_eq!(
-            void_value(0x0102_0304_0506_0708),
-            [0x01, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01]
+            record_value(&Pubkey::new_from_array([255; 32]), u64::MAX)
+                .unwrap()
+                .len(),
+            76
         );
     }
 
     #[test]
-    fn records_must_be_version_1_with_nonzero_fields_at_or_below_the_proof_height() {
-        let valid = record();
-        assert!(valid.validate(valid.height).is_ok());
-        let invalid = [
-            TransferRecord {
-                version: 2,
-                ..valid.clone()
-            },
-            TransferRecord {
-                id: 0,
-                ..valid.clone()
-            },
-            TransferRecord {
-                amount: 0,
-                ..valid.clone()
-            },
-            TransferRecord {
-                height: 0,
-                ..valid.clone()
-            },
+    fn proof_keys_bind_identity_status_and_full_nonce() {
+        let key = [
+            0x02, 0x00, 0x14, 0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8, 0xa9, 0xaa,
+            0xab, 0xac, 0xad, 0xae, 0xaf, 0xb0, 0xb1, 0xb2, 0xb3, 0x01, 0x02, 0x03, 0x04, 0x05,
+            0x06, 0x07, 0x08, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
         ];
-        for record in invalid {
+        assert_eq!(transfer_key(&id()).unwrap(), key);
+        assert_eq!(key.len(), TRANSFER_KEY_SIZE);
+        let mut nonces = std::collections::BTreeSet::from([proof_nonce(&key)]);
+        for status in 1..=5 {
+            let expected = [&[3, 1, status][..], &key[2..]].concat();
+            assert_eq!(settlement_key(&id(), status).unwrap(), expected);
+            assert_eq!(expected.len(), SETTLEMENT_KEY_SIZE);
+            assert!(nonces.insert(proof_nonce(&expected)));
+        }
+        for status in [0, 6, 255] {
+            assert!(settlement_key(&id(), status).is_err());
+        }
+        for other in [
+            TransferId {
+                owner: [1; 20],
+                ..id()
+            },
+            TransferId {
+                height: id().height + 1,
+                ..id()
+            },
+            TransferId {
+                sequence: id().sequence + 1,
+                ..id()
+            },
+        ] {
+            assert_ne!(
+                proof_nonce(&transfer_key(&other).unwrap()),
+                proof_nonce(&key)
+            );
+        }
+    }
+
+    #[test]
+    fn identity_bounds_and_strict_header_height() {
+        let valid = id();
+        assert!(valid.validate_proof_height(valid.height + 1).is_ok());
+        for proof_height in [0, valid.height - 1, valid.height] {
             assert_eq!(
-                record.validate(valid.height).unwrap_err(),
+                valid.validate_proof_height(proof_height).unwrap_err(),
                 AktError::InvalidRecord.into()
             );
         }
+        let max = TransferId {
+            height: i64::MAX as u64,
+            sequence: u64::MAX,
+            ..valid
+        };
+        assert!(max.validate_proof_height(i64::MAX as u64 + 1).is_ok());
         assert_eq!(
-            valid.validate(valid.height - 1).unwrap_err(),
-            AktError::InvalidRecord.into()
+            &transfer_key(&max).unwrap()[23..],
+            &[&i64::MAX.to_be_bytes()[..], &u64::MAX.to_be_bytes()[..]].concat()
         );
+        for invalid in [
+            TransferId {
+                owner: [0; 20],
+                ..valid
+            },
+            TransferId { height: 0, ..valid },
+            TransferId {
+                height: i64::MAX as u64 + 1,
+                ..valid
+            },
+            TransferId {
+                height: u64::MAX,
+                ..valid
+            },
+            TransferId {
+                sequence: 0,
+                ..valid
+            },
+        ] {
+            assert_eq!(
+                invalid.validate_proof_height(u64::MAX).unwrap_err(),
+                AktError::InvalidRecord.into()
+            );
+            assert!(transfer_key(&invalid).is_err());
+            assert!(settlement_key(&invalid, 3).is_err());
+        }
+    }
+
+    #[test]
+    fn instruction_arguments_have_no_record_version() {
+        let id = id();
+        let recipient = Pubkey::new_unique();
+        let amount = u64::MAX;
+        let proof_height = id.height + 1;
+        let mint = crate::instruction::MintTransfer {
+            id,
+            recipient_key: recipient,
+            amount,
+            proof_height,
+        }
+        .data();
+        assert_eq!(mint.len(), 92);
+        assert_eq!(
+            &mint[8..],
+            [
+                &id.try_to_vec().unwrap()[..],
+                recipient.as_ref(),
+                &amount.to_le_bytes(),
+                &proof_height.to_le_bytes()
+            ]
+            .concat()
+        );
+        let void = crate::instruction::VoidTransfer {
+            id,
+            settlement_status: 5,
+            proof_height,
+        }
+        .data();
+        assert_eq!(void.len(), 53);
+        assert_eq!(
+            &void[8..],
+            [
+                &id.try_to_vec().unwrap()[..],
+                &[5],
+                &proof_height.to_le_bytes()
+            ]
+            .concat()
+        );
+        assert_eq!(crate::instruction::GrowProofBuffer {}.data().len(), 8);
     }
 }

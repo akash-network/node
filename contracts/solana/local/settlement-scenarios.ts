@@ -1,44 +1,115 @@
-import assert from "node:assert/strict";
-import { join } from "node:path";
-import { fromBech32 } from "@cosmjs/encoding";
-import { sinkMessage, sinkResponseId } from "../shared/sink";
+import {
+  Decision,
+  Hold,
+  MsgConfirmMint,
+  MsgConfirmVoid,
+  MsgRestartTransfer,
+  Sink_MsgUpdateParams as MsgUpdateParams,
+  Outcome,
+  Sink_Params as Params,
+  Sink_Status as Status,
+  type Observation,
+} from "@akashnetwork/chain-sdk/private-types/akash.v1";
+import type { DeliverTxResponse } from "@cosmjs/stargate";
 import { AnchorProvider, Wallet, web3 } from "@coral-xyz/anchor";
 import {
   burn,
   createAccount,
-  getMint,
   getAssociatedTokenAddressSync,
+  getMint,
 } from "@solana/spl-token";
-import { relayContext } from "./relay";
-import { processes, stop } from "./stack";
+import assert from "node:assert/strict";
+import { join } from "node:path";
+import type { AkashClient } from "../reporter/akash";
+import { planOutcome, reportedObservations } from "../reporter/policy";
+import { SolanaObserver, decodeRecord } from "../reporter/solana";
+import { sinkIdParts, type SinkId } from "../shared/id";
+import { coinAmount, statusAddress } from "../shared/proof";
+import { sinkMessage, sinkResponseId } from "../shared/sink";
 import {
-  ROOT,
-  PROFILE,
   CHAIN,
+  PROFILE,
   PROGRAM_ID,
-  pda,
-  LE64,
+  ROOT,
   cosmosSigner,
   cosmosWallet,
   fee,
+  pda,
   save,
   sleep,
 } from "./common";
-import { SolanaObserver, decodeRecord } from "../reporter/solana";
-import { planOutcome, reportedObservations } from "../reporter/policy";
-import {
-  Sink_Status as Status,
-  QuerySinkResponse_SinkStatus,
-  Hold,
-  Outcome,
-  Decision,
-  Sink_MsgUpdateParams as MsgUpdateParams,
-  MsgResolveTransfer,
-  type Observation,
-  Sink_Params as Params,
-} from "@akashnetwork/chain-sdk/private-types/akash.v1";
 import { govern, governanceAddress } from "./governance";
 import { reconcile } from "./reconcile";
+import { relayContext } from "./relay";
+import { processes, stop } from "./stack";
+export async function expectRefundError(
+  send: () => Promise<Pick<DeliverTxResponse, "code" | "rawLog">>,
+  expectedError: RegExp,
+) {
+  const tx = await send().catch((error: unknown) => ({
+    code: 1,
+    rawLog: error instanceof Error ? error.message : String(error),
+  }));
+  assert.notEqual(tx.code, 0);
+  assert.match(tx.rawLog ?? "", expectedError);
+}
+
+export async function refundCapScenario({
+  prepare,
+  state,
+  setCap,
+  finalize,
+  balance,
+  sleep,
+}: {
+  prepare: () => Promise<{ id: SinkId; challengeEnd: bigint }>;
+  state: () => Promise<
+    Pick<
+      Awaited<ReturnType<AkashClient["state"]>>,
+      "epoch" | "time" | "refundUsage"
+    >
+  >;
+  setCap: (amount: bigint) => Promise<void>;
+  finalize: (id: SinkId, expectedError?: RegExp) => Promise<void>;
+  balance: () => Promise<bigint>;
+  sleep: (ms: number) => Promise<void>;
+}) {
+  const candidates = [await prepare(), await prepare()];
+  for (const { challengeEnd } of candidates) {
+    while ((await state()).time < challengeEnd) await sleep(500);
+  }
+  const { epoch, refundUsage } = await state();
+  assert.ok(epoch > 0n, "refund quota epoch has not started");
+  const spent = coinAmount(refundUsage.amount);
+  const cap = spent + 2_000_000n;
+  async function consumption() {
+    const current = await state();
+    assert.equal(
+      current.epoch,
+      epoch,
+      "refund cap coverage inconclusive: quota epoch changed during cap assertions",
+    );
+    return coinAmount(current.refundUsage.amount);
+  }
+  await setCap(cap);
+  assert.equal(await consumption(), spent);
+  for (const [i, { id }] of candidates.entries()) {
+    const beforeBalance = await balance();
+    assert.equal(await consumption(), i === 0 ? spent : cap);
+    try {
+      await finalize(id, i === 1 ? /daily refund cap/ : undefined);
+      assert.equal(
+        (await balance()) - beforeBalance,
+        i === 0 ? 2_000_000n : 0n,
+      );
+    } finally {
+      await consumption();
+    }
+    assert.equal(await consumption(), cap);
+  }
+  return { refunds: candidates.map(({ id }) => id), epoch };
+}
+
 async function main() {
   assert.equal(PROFILE, "testnetify");
   for (const entry of await processes())
@@ -78,7 +149,7 @@ async function main() {
       [
         sinkMessage({
           sender: sender.address,
-          dest: address.toBase58(),
+          recipient: address.toBase58(),
           amountUakt: amount.toString(),
         }),
       ],
@@ -87,33 +158,27 @@ async function main() {
     );
     assert.equal(tx.code, 0, `deposit failed: ${tx.rawLog}`);
     const responseId = sinkResponseId(tx.msgResponses);
-    const id = BigInt(responseId);
-    const receipt = await relay.akash.sink(responseId, tx.height);
-    assert.equal(receipt.status, QuerySinkResponse_SinkStatus.transfer_pending);
-    assert.ok(receipt.transfer?.settlement);
-    assert.equal(receipt.transfer.settlement.status, Status.STATUS_PENDING);
-    const record = decodeRecord(receipt.transfer.record);
+    const id = responseId;
+    const receipt = await relay.akash.transfer(responseId, tx.height);
+    assert.ok(receipt?.settlement);
+    assert.equal(receipt.status, Status.STATUS_TRANSFER_PENDING);
+    const record = decodeRecord(receipt);
     assert.equal(record.id, id);
     assert.equal(record.amount, amount);
     assert.equal(record.height, BigInt(tx.height));
     assert.ok(record.recipient.equals(address));
-    assert.deepEqual(
-      Buffer.from(receipt.transfer.record).subarray(9, 29),
-      Buffer.from(fromBech32(sender.address, 90).data),
-    );
+    assert.equal(sinkIdParts(id).owner, sender.address);
     return id;
   }
-  async function relayDeposit(id: bigint) {
-    const record = decodeRecord(
-      (await relay.akash.snapshot(id)).transfer.record,
-    );
+  async function relayDeposit(id: SinkId) {
+    const record = decodeRecord((await relay.akash.snapshot(id)).transfer);
     while ((await relay.akash.state()).height <= Number(record.height) + 1)
       await sleep(500);
     const target = (await relay.akash.state()).height - 1;
     await relay.update(target);
     await relay.relay(id, target);
     const status = await relay.program.account.transferStatus.fetch(
-      pda("transfer", PROGRAM_ID, LE64(id)),
+      statusAddress(PROGRAM_ID, id),
     );
     while (
       (await relay.wallet.connection.getSlot("finalized")) <
@@ -121,7 +186,7 @@ async function main() {
     )
       await sleep(300);
   }
-  async function report(index: number, id: bigint) {
+  async function report(index: number, id: SinkId) {
     const signer = await cosmosWallet(`reporter${index}`);
     const address = (await signer.getAccounts())[0].address;
     const snapshot = await relay.akash.snapshot(id);
@@ -129,7 +194,7 @@ async function main() {
       (v) => v.reporter === address,
     )?.observation;
     const observed = await observer.observe(
-      decodeRecord(snapshot.transfer.record),
+      decodeRecord(snapshot.transfer),
       reportedObservations(snapshot.transfer),
       own,
     );
@@ -141,20 +206,19 @@ async function main() {
     for (const msg of plan.messages) await submit(msg);
     return observed;
   }
-  async function settleMint(id: bigint) {
+  async function settleMint(id: SinkId) {
     for (let i = 0; i < 3; i++) await report(i, id);
     assert.equal(
-      (await relay.akash.snapshot(id)).transfer.settlement?.status,
+      (await relay.akash.snapshot(id)).transfer.status,
       Status.STATUS_MINTED,
     );
-    const receipt = await relay.akash.sink(
-      id.toString(),
+    const receipt = await relay.akash.transfer(
+      id,
       (await relay.akash.state()).height,
     );
-    assert.equal(receipt.status, QuerySinkResponse_SinkStatus.completed);
-    assert.equal(receipt.transfer?.settlement?.status, Status.STATUS_MINTED);
+    assert.equal(receipt?.status, Status.STATUS_MINTED);
   }
-  async function falseVoid(index: number, id: bigint) {
+  async function falseVoid(index: number, id: SinkId) {
     const signer = await cosmosSigner(`reporter${index}`);
     const snapshot = await relay.akash.snapshot(id);
     assert.ok(snapshot.transfer.settlement);
@@ -166,8 +230,8 @@ async function main() {
             typeUrl: "/akash.sink.v1.MsgReportOutcome",
             value: {
               reporter: signer.address,
-              id,
-              reporterEpoch: snapshot.totals.reporterEpoch,
+              id: sinkIdParts(id),
+              policyVersion: snapshot.policy.version,
               round: snapshot.transfer.settlement.round,
               observation: {
                 outcome: Outcome.OUTCOME_VOIDED,
@@ -186,7 +250,7 @@ async function main() {
       signer.client.disconnect();
     }
   }
-  async function finalize(id: bigint, expectedError?: RegExp) {
+  async function finalize(id: SinkId, expectedError?: RegExp) {
     const signer = await cosmosSigner("reporter0");
     try {
       const send = () =>
@@ -195,64 +259,69 @@ async function main() {
           [
             {
               typeUrl: "/akash.sink.v1.MsgFinalizeRefund",
-              value: { executor: signer.address, id },
+              value: { executor: signer.address, id: sinkIdParts(id) },
             },
           ],
           fee,
         );
       if (expectedError) {
-        try {
-          const tx = await send();
-          assert.notEqual(tx.code, 0);
-          assert.match(tx.rawLog ?? "", expectedError);
-        } catch (error) {
-          assert.match(
-            error instanceof Error ? error.message : String(error),
-            expectedError,
-          );
-        }
+        await expectRefundError(send, expectedError);
       } else {
         const tx = await send();
         assert.equal(tx.code, 0, tx.rawLog);
-        const receipt = await relay.akash.sink(id.toString(), tx.height);
-        assert.equal(receipt.status, QuerySinkResponse_SinkStatus.void);
-        assert.equal(
-          receipt.transfer?.settlement?.status,
-          Status.STATUS_REFUNDED,
-        );
+        const receipt = await relay.akash.transfer(id, tx.height);
+        assert.equal(receipt?.status, Status.STATUS_REFUNDED);
       }
     } finally {
       signer.client.disconnect();
     }
   }
   async function resolve(
-    id: bigint,
+    id: SinkId,
     decision: Decision,
     observation?: Observation,
   ) {
     const before = (await relay.akash.snapshot(id)).transfer.settlement;
     assert.ok(before);
+    const common = {
+      authority: governanceAddress,
+      id: sinkIdParts(id),
+      expectedRound: before.round,
+      reason: "Reconciled against this local Solana validator",
+    };
+    const message =
+      decision === Decision.DECISION_RESTART
+        ? {
+            typeUrl: "/akash.sink.v1.MsgRestartTransfer",
+            value: MsgRestartTransfer.encode(common).finish(),
+          }
+        : decision === Decision.DECISION_CONFIRM_MINT
+          ? {
+              typeUrl: "/akash.sink.v1.MsgConfirmMint",
+              value: MsgConfirmMint.encode({
+                ...common,
+                evidence: observation && {
+                  slot: observation.slot,
+                  transactionSignature: observation.transactionSignature,
+                },
+              }).finish(),
+            }
+          : {
+              typeUrl: "/akash.sink.v1.MsgConfirmVoid",
+              value: MsgConfirmVoid.encode({
+                ...common,
+                evidence: observation && {
+                  slot: observation.slot,
+                  transactionSignature: observation.transactionSignature,
+                },
+              }).finish(),
+            };
     return govern(
       "Resolve local sink reporter dispute",
-      [
-        {
-          typeUrl: "/akash.sink.v1.MsgResolveTransfer",
-          value: MsgResolveTransfer.encode(
-            MsgResolveTransfer.fromPartial({
-              authority: governanceAddress,
-              id,
-              decision,
-              observation,
-              reason: "Reconciled against this local Solana validator",
-            }),
-          ).finish(),
-        },
-      ],
+      [message],
       async () =>
-        (
-          await relay.akash.snapshot(id)
-        ).transfer.settlement?.round.toBigInt() ===
-        before.round.toBigInt() + 1n,
+        (await relay.akash.snapshot(id)).transfer.settlement?.round ===
+        before.round + 1n,
     );
   }
   async function params(value: Params) {
@@ -270,15 +339,16 @@ async function main() {
       async () => {
         const live = (await relay.akash.state()).params;
         return (
-          live.maxTransfer.equals(value.maxTransfer) &&
-          live.dailyRefundCap.equals(value.dailyRefundCap)
+          coinAmount(live.maxAmountPerTransfer) ===
+            coinAmount(value.maxAmountPerTransfer) &&
+          coinAmount(live.maxEpochRefund) === coinAmount(value.maxEpochRefund)
         );
       },
     );
   }
   try {
     assert.equal(
-      (await relay.akash.state()).totals.pendingCount.toBigInt(),
+      (await relay.akash.state()).totals.pendingCount,
       0n,
       "finish prior scenarios first",
     );
@@ -290,8 +360,8 @@ async function main() {
     const offline = await deposit(5_000_000n, recipient.publicKey);
     await relayDeposit(offline);
     assert.equal(
-      (await relay.akash.snapshot(offline)).transfer.settlement?.status,
-      Status.STATUS_PENDING,
+      (await relay.akash.snapshot(offline)).transfer.status,
+      Status.STATUS_TRANSFER_PENDING,
     );
     let view = await reconcile();
     assert.equal(view.status, "healthy");
@@ -312,8 +382,8 @@ async function main() {
     await report(0, offline);
     await report(1, offline);
     assert.equal(
-      (await relay.akash.snapshot(offline)).transfer.settlement?.status,
-      Status.STATUS_PENDING,
+      (await relay.akash.snapshot(offline)).transfer.status,
+      Status.STATUS_TRANSFER_PENDING,
     );
     await report(2, offline);
     assert.equal((await reconcile()).awaitingMintReportsUakt, "0");
@@ -328,24 +398,20 @@ async function main() {
     const vetoed = await deposit(1_000_000n);
     for (let i = 0; i < 3; i++) await falseVoid(i, vetoed);
     assert.equal(
-      (await relay.akash.snapshot(vetoed)).transfer.settlement?.status,
-      Status.STATUS_VOIDED,
+      (await relay.akash.snapshot(vetoed)).transfer.status,
+      Status.STATUS_REFUND_PENDING,
     );
     await report(3, vetoed); // The independent fourth reporter sees no Solana status and vetoes.
     assert.equal(
       (await relay.akash.snapshot(vetoed)).transfer.settlement?.hold,
       Hold.HOLD_VETO,
     );
-    const vetoedReceipt = await relay.akash.sink(
-      vetoed.toString(),
+    const vetoedReceipt = await relay.akash.transfer(
+      vetoed,
       (await relay.akash.state()).height,
     );
-    assert.equal(vetoedReceipt.status, QuerySinkResponse_SinkStatus.void);
-    assert.equal(
-      vetoedReceipt.transfer?.settlement?.status,
-      Status.STATUS_VOIDED,
-    );
-    assert.equal(vetoedReceipt.transfer.settlement.hold, Hold.HOLD_VETO);
+    assert.equal(vetoedReceipt?.status, Status.STATUS_REFUND_PENDING);
+    assert.equal(vetoedReceipt.settlement?.hold, Hold.HOLD_VETO);
     const balanceBeforeVeto = await sender.client.getBalance(
       sender.address,
       "uakt",
@@ -361,7 +427,7 @@ async function main() {
     await record({
       scenario: "false-void-quorum-veto",
       passed: true,
-      id: vetoed.toString(),
+      id: vetoed,
       refunded: false,
       recoveredThroughGovernance: true,
     });
@@ -373,7 +439,7 @@ async function main() {
     );
     await finalize(offline, /unchallenged confirmed void/);
     const actual = await observer.observe(
-      decodeRecord((await relay.akash.snapshot(offline)).transfer.record),
+      decodeRecord((await relay.akash.snapshot(offline)).transfer),
     );
     assert.equal(actual.kind, "resolved");
     assert.ok(actual.kind === "resolved");
@@ -389,19 +455,13 @@ async function main() {
       governancePreservedMint: true,
     });
 
-    const state = await relay.akash.state();
-    const spent =
-      state.totals.refundDay.toBigInt() === state.time / 86400n
-        ? state.totals.refundedToday.toBigInt()
-        : 0n;
+    changedParams = true;
     await params(
       Params.fromPartial({
         ...original,
-        maxTransfer: 2_000_000n,
-        dailyRefundCap: spent + 2_000_000n,
+        maxAmountPerTransfer: { denom: "uakt", amount: "2000000" },
       }),
     );
-    changedParams = true;
     const tokenAccount = await createAccount(
       relay.wallet.connection,
       payer,
@@ -409,37 +469,38 @@ async function main() {
       relay.wallet.publicKey,
       web3.Keypair.generate(),
     );
-    const refunds: bigint[] = [];
-    for (let i = 0; i < 2; i++) {
-      const id = await deposit(2_000_000n, tokenAccount);
-      refunds.push(id);
-      await relayDeposit(id);
-      for (let r = 0; r < 3; r++) await report(r, id);
-      const until = (await relay.akash.snapshot(id)).transfer.settlement
-        ?.challengeEnd;
-      assert.ok(until);
-      const challenged = await relay.akash.sink(
-        id.toString(),
-        (await relay.akash.state()).height,
-      );
-      assert.equal(challenged.status, QuerySinkResponse_SinkStatus.void);
-      assert.equal(
-        challenged.transfer?.settlement?.status,
-        Status.STATUS_VOIDED,
-      );
-      assert.ok(challenged.transfer.settlement.challengeEnd.equals(until));
-      await finalize(id, /challenge window/);
-      while ((await relay.akash.state()).time < until.toBigInt())
-        await sleep(500);
-      const before = BigInt(
-        (await sender.client.getBalance(sender.address, "uakt")).amount,
-      );
-      await finalize(id, i === 1 ? /daily refund cap/ : undefined);
-      const after = BigInt(
-        (await sender.client.getBalance(sender.address, "uakt")).amount,
-      );
-      assert.equal(after - before, i === 0 ? 2_000_000n : 0n);
-    }
+    const { refunds, epoch } = await refundCapScenario({
+      state: () => relay.akash.state(),
+      setCap: async (amount) => {
+        await params(
+          Params.fromPartial({
+            ...original,
+            maxAmountPerTransfer: { denom: "uakt", amount: "2000000" },
+            maxEpochRefund: { denom: "uakt", amount: amount.toString() },
+          }),
+        );
+      },
+      prepare: async () => {
+        const id = await deposit(2_000_000n, tokenAccount);
+        await relayDeposit(id);
+        for (let r = 0; r < 3; r++) await report(r, id);
+        const until = (await relay.akash.snapshot(id)).transfer.settlement
+          ?.challengeEnd;
+        assert.ok(until);
+        const challenged = await relay.akash.transfer(
+          id,
+          (await relay.akash.state()).height,
+        );
+        assert.equal(challenged?.status, Status.STATUS_REFUND_PENDING);
+        assert.ok(challenged.settlement?.challengeEnd === until);
+        await finalize(id, /challenge window/);
+        return { id, challengeEnd: until };
+      },
+      finalize,
+      balance: async () =>
+        BigInt((await sender.client.getBalance(sender.address, "uakt")).amount),
+      sleep,
+    });
     await params(original);
     changedParams = false;
     await finalize(refunds[1]);
@@ -452,6 +513,7 @@ async function main() {
     await record({
       scenario: "challenge-and-refund-cap",
       passed: true,
+      epoch: epoch.toString(),
       ids: refunds.map(String),
       recoveredAfterGovernance: true,
       duplicateRefundPaidNothing: true,
@@ -459,7 +521,7 @@ async function main() {
 
     const unfunded = await deposit(1_000_000n);
     const native = decodeRecord(
-      (await relay.akash.snapshot(unfunded)).transfer.record,
+      (await relay.akash.snapshot(unfunded)).transfer,
     );
     while ((await relay.akash.state()).height <= Number(native.height) + 1)
       await sleep(500);
@@ -492,13 +554,13 @@ async function main() {
       );
       assert.equal(
         await relay.wallet.connection.getAccountInfo(
-          pda("transfer", PROGRAM_ID, LE64(unfunded)),
+          statusAddress(PROGRAM_ID, unfunded),
         ),
         null,
       );
       assert.equal(
-        (await relay.akash.snapshot(unfunded)).transfer.settlement?.status,
-        Status.STATUS_PENDING,
+        (await relay.akash.snapshot(unfunded)).transfer.status,
+        Status.STATUS_TRANSFER_PENDING,
       );
       assert.equal(
         (await getMint(relay.wallet.connection, mint)).supply,
@@ -523,7 +585,7 @@ async function main() {
       1_000_000n,
     );
     const last = await relay.program.account.transferStatus.fetch(
-      pda("transfer", PROGRAM_ID, LE64(unfunded)),
+      statusAddress(PROGRAM_ID, unfunded),
     );
     while (
       (await relay.wallet.connection.getSlot("finalized")) <
@@ -546,7 +608,8 @@ async function main() {
     relay.close();
   }
 }
-void main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+if (require.main === module)
+  void main().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });

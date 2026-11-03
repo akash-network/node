@@ -3,7 +3,11 @@
 //! Account names, field order and field types are part of the deployed
 //! interface; `tests/idl.test.ts` compares them with the deployed IDL.
 
-use crate::{constants::*, errors::AktError};
+use crate::{
+    constants::*,
+    errors::AktError,
+    wire::{proof_nonce, TransferId},
+};
 use anchor_lang::prelude::*;
 
 /// Launch record at `["config"]`. `initialize` creates it once and nothing
@@ -114,8 +118,8 @@ pub struct PauseGuardian {
 pub struct ProofBuffer {
     /// Creator. It paid the rent and receives it back on close.
     pub submitter: Pubkey,
-    /// Caller-chosen value that distinguishes the submitter's buffers.
-    pub nonce: u64,
+    /// Full SHA-256 of the sink key this buffer proves.
+    pub nonce: [u8; 32],
     /// Proof length declared at creation, 1 to `MAX_PROOF_BYTES`.
     pub expected_len: u32,
     /// Bytes written so far, in order.
@@ -124,20 +128,44 @@ pub struct ProofBuffer {
 }
 
 impl ProofBuffer {
+    pub const HEADER_LEN: usize = 8 + 32 + 32 + 4 + 4;
+
+    pub fn initial_space(expected_len: u32) -> Result<usize> {
+        require!(
+            expected_len > 0 && expected_len as usize <= MAX_PROOF_BYTES,
+            AktError::InvalidProofLength
+        );
+        Ok((Self::HEADER_LEN + expected_len as usize)
+            .min(anchor_lang::solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE))
+    }
+
+    pub fn grown_space(&self, current: usize) -> usize {
+        (Self::HEADER_LEN + self.expected_len as usize)
+            .min(current + anchor_lang::solana_program::entrypoint::MAX_PERMITTED_DATA_INCREASE)
+            .max(current)
+    }
+
+    pub fn validate_key(&self, key: &[u8]) -> Result<()> {
+        require!(self.nonce == proof_nonce(key), AktError::InvalidProofNonce);
+        Ok(())
+    }
+
     /// Whether every declared byte has been written.
     pub fn is_complete(&self) -> bool {
-        !self.data.is_empty() && self.data.len() == self.expected_len as usize
+        !self.data.is_empty()
+            && self.data.len() <= MAX_PROOF_BYTES
+            && self.data.len() == self.expected_len as usize
     }
 }
 
-/// Terminal outcome of one x/sink record at `["transfer", id]`.
+/// Terminal outcome of one x/sink record at `["transfer", owner, LE64(height), LE64(sequence)]`.
 /// `mint_transfer` and `void_transfer` both create it with `init`, and nothing
 /// closes it, so each record ID resolves exactly once.
 #[account]
 #[derive(InitSpace)]
 pub struct TransferStatus {
     /// x/sink record ID.
-    pub id: u64,
+    pub id: TransferId,
     /// Verified Akash height whose state proved the record or void order.
     pub proof_height: u64,
     /// Slot of resolution. Reporters read this slot's block for the event.
@@ -167,6 +195,99 @@ pub enum VoidReason {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{
+        events::TransferResolved,
+        wire::{settlement_key, transfer_key},
+    };
+
+    #[test]
+    fn proof_buffer_binds_the_full_nonce_to_the_operation() {
+        let id = TransferId {
+            owner: [1; 20],
+            height: 42,
+            sequence: 7,
+        };
+        let key = transfer_key(&id).unwrap();
+        let mut buffer = ProofBuffer {
+            submitter: Pubkey::new_unique(),
+            nonce: proof_nonce(&key),
+            expected_len: 3,
+            data: vec![1, 2, 3],
+        };
+        assert!(buffer.validate_key(&key).is_ok());
+        assert_eq!(
+            buffer
+                .validate_key(&settlement_key(&id, 3).unwrap())
+                .unwrap_err(),
+            AktError::InvalidProofNonce.into()
+        );
+        buffer.nonce[31] ^= 1;
+        assert_eq!(
+            buffer.validate_key(&key).unwrap_err(),
+            AktError::InvalidProofNonce.into()
+        );
+        assert!(buffer.is_complete());
+        buffer.data.pop();
+        assert!(!buffer.is_complete());
+        buffer.data.clear();
+        buffer.expected_len = 0;
+        assert!(!buffer.is_complete());
+    }
+
+    #[test]
+    fn status_and_event_retain_identity_and_resolution_evidence() {
+        let id = TransferId {
+            owner: [2; 20],
+            height: i64::MAX as u64,
+            sequence: u64::MAX,
+        };
+        for outcome in [
+            TransferOutcome::Minted {
+                amount: u64::MAX,
+                recipient: Pubkey::new_unique(),
+            },
+            TransferOutcome::Voided {
+                reason: VoidReason::InvalidRecipient,
+            },
+            TransferOutcome::Voided {
+                reason: VoidReason::Governance,
+            },
+        ] {
+            let status = TransferStatus {
+                id,
+                proof_height: id.height + 1,
+                resolved_at_slot: 99,
+                outcome: outcome.clone(),
+            };
+            let mut bytes = Vec::new();
+            status.try_serialize(&mut bytes).unwrap();
+            assert!(bytes.len() <= 8 + TransferStatus::INIT_SPACE);
+            bytes.resize(8 + TransferStatus::INIT_SPACE, 0);
+            let decoded = TransferStatus::try_deserialize(&mut bytes.as_slice()).unwrap();
+            assert_eq!(decoded.id, id);
+            assert_eq!(decoded.proof_height, id.height + 1);
+            assert_eq!(decoded.resolved_at_slot, 99);
+            assert_eq!(
+                decoded.outcome.try_to_vec().unwrap(),
+                outcome.try_to_vec().unwrap()
+            );
+
+            let event = TransferResolved {
+                id,
+                proof_height: status.proof_height,
+                resolved_at_slot: status.resolved_at_slot,
+                outcome: outcome.clone(),
+            };
+            let decoded = TransferResolved::try_from_slice(&event.try_to_vec().unwrap()).unwrap();
+            assert_eq!(decoded.id, id);
+            assert_eq!(decoded.proof_height, status.proof_height);
+            assert_eq!(decoded.resolved_at_slot, status.resolved_at_slot);
+            assert_eq!(
+                decoded.outcome.try_to_vec().unwrap(),
+                outcome.try_to_vec().unwrap()
+            );
+        }
+    }
 
     #[test]
     fn cap_rollover_overflow_and_clock_regression() {
@@ -238,14 +359,12 @@ mod tests {
         }
     }
 
-    /// Sizes in docs/audit.md, including the 8-byte discriminator. A change
-    /// would break existing accounts.
     #[test]
-    fn account_sizes_match_the_deployed_layout() {
+    fn account_sizes_match_the_v2_layout() {
         assert_eq!(8 + LaunchConfig::INIT_SPACE, 84);
         assert_eq!(8 + BridgeConfig::INIT_SPACE, 656);
         assert_eq!(8 + PauseGuardian::INIT_SPACE, 42);
-        assert_eq!(8 + ProofBuffer::INIT_SPACE, 4152);
-        assert_eq!(8 + TransferStatus::INIT_SPACE, 73);
+        assert_eq!(8 + ProofBuffer::INIT_SPACE, 16464);
+        assert_eq!(8 + TransferStatus::INIT_SPACE, 101);
     }
 }

@@ -8,6 +8,10 @@ import { SigningStargateClient } from "@cosmjs/stargate";
 import { reporterRegistry } from "../reporter/akash";
 
 export const REPO = resolve(__dirname, "..");
+export const CACHE = resolve(REPO, "../../.cache/solana");
+export const DEPS = join(CACHE, "deps");
+export const TARGET = join(CACHE, "target");
+export const RUN = join(CACHE, "run");
 export const PROFILE = process.env.AKT_LOCAL_PROFILE ?? "single";
 assert.ok(
   PROFILE === "single" || PROFILE === "testnetify",
@@ -19,29 +23,41 @@ assert.ok(
   "invalid isolated run name",
 );
 export const ROOT = join(
-  REPO,
-  (PROFILE === "single" ? ".cache/live-stack" : ".cache/testnetify-stack") +
+  RUN,
+  (PROFILE === "single" ? "live-stack-v2" : "testnetify-stack-v2") +
     (run ? `-${run}` : ""),
 );
 export const AKASH_HOME = join(ROOT, "akash");
 export const NODE_REPO = resolve(REPO, process.env.NODE_SINK_DIR ?? "../..");
-export const AKASH = join(NODE_REPO, ".cache/bin/akash");
+export const AKASH = join(NODE_REPO, ".cache/solana/bin/akash");
 export const CHAIN =
-  (PROFILE === "single" ? "akash-bridge-local" : "akash-bridge-testnetify") +
+  (PROFILE === "single"
+    ? "akash-bridge-v2-local"
+    : "akash-bridge-v2-testnetify") +
   (run ? `-${run}` : "") +
   "-1";
-export const AKASH_RPC_PORT = PROFILE === "single" ? 26657 : 27657;
-export const AKASH_GRPC_PORT = PROFILE === "single" ? 9090 : 9190;
-export const AKASH_REST_PORT = PROFILE === "single" ? 1318 : 1317;
+export const AKASH_RPC_PORT = Number(
+  process.env.AKT_AKASH_RPC_PORT ?? (PROFILE === "single" ? 26657 : 27657),
+);
+export const AKASH_GRPC_PORT = Number(
+  process.env.AKT_AKASH_GRPC_PORT ?? (PROFILE === "single" ? 9090 : 9190),
+);
+export const AKASH_REST_PORT = Number(
+  process.env.AKT_AKASH_REST_PORT ?? (PROFILE === "single" ? 1318 : 1317),
+);
 export const SOLANA_RPC_PORT = Number(
   process.env.AKT_SOLANA_RPC_PORT ?? (PROFILE === "single" ? 8899 : 18999),
 );
-assert.ok(
-  Number.isInteger(SOLANA_RPC_PORT) &&
-    SOLANA_RPC_PORT > 1024 &&
-    SOLANA_RPC_PORT < 65535,
-  "AKT_SOLANA_RPC_PORT must be an unprivileged port with room for WebSocket",
-);
+for (const [name, port] of Object.entries({
+  AKT_AKASH_RPC_PORT: AKASH_RPC_PORT,
+  AKT_AKASH_GRPC_PORT: AKASH_GRPC_PORT,
+  AKT_AKASH_REST_PORT: AKASH_REST_PORT,
+  AKT_SOLANA_RPC_PORT: SOLANA_RPC_PORT,
+}))
+  assert.ok(
+    Number.isInteger(port) && port > 1024 && port < 65535,
+    `${name} must be an unprivileged port with room for adjacent services`,
+  );
 export const AKASH_RPC = `http://127.0.0.1:${AKASH_RPC_PORT}`;
 export const SOLANA_RPC = `http://127.0.0.1:${SOLANA_RPC_PORT}`;
 export const CLIENT_ID = new web3.PublicKey(
@@ -81,7 +97,12 @@ export async function json(path: string): Promise<unknown> {
   return JSON.parse(await readFile(path, "utf8"));
 }
 export async function save(path: string, value: unknown) {
-  await writeFile(path, JSON.stringify(value, null, 2) + "\n", { mode: 0o600 });
+  const text = JSON.stringify(
+    value,
+    (_, item: unknown) => (typeof item === "bigint" ? item.toString() : item),
+    2,
+  );
+  await writeFile(path, text + "\n", { mode: 0o600 });
 }
 export function hex(value: unknown, length?: number) {
   assert.ok(

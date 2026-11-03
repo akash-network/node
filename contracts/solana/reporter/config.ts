@@ -8,6 +8,23 @@ import {
 } from "./signer";
 
 const SIGNER_FIELDS = ["command", "args", "timeoutSeconds", "publicKeyBase64"];
+const CONFIG_FIELDS = [
+  "akashRpc",
+  "solanaRpc",
+  "akashChainId",
+  "reporter",
+  "solanaGenesisHash",
+  "programId",
+  "mint",
+  "lightClientProgram",
+  "maxAgeSeconds",
+  "maxSlotLead",
+  "auditPerScan",
+  "pollSeconds",
+  "feeAmountUakt",
+  "gasLimit",
+  "externalSigner",
+];
 
 // The command runs without a shell, so require an absolute path.
 export function signerCommand(command: unknown) {
@@ -69,6 +86,8 @@ export function parseConfig(value: unknown) {
     "config must be an object",
   );
   const fields = value;
+  for (const name of Object.keys(fields))
+    assert.ok(CONFIG_FIELDS.includes(name), `unknown config field ${name}`);
   function field(name: string): unknown {
     assert.ok(name in fields, `missing config field ${name}`);
     return Reflect.get(fields, name);
@@ -151,8 +170,6 @@ export function parseConfig(value: unknown) {
     lightClientProgram: optionalPubkey("lightClientProgram"),
     maxAgeSeconds: integer("maxAgeSeconds", 600),
     maxSlotLead: optionalInteger("maxSlotLead", 100_000),
-    // Applies only to nodes without the OpenTransfers query.
-    maxTransfers: integer("maxTransfers", 10_000),
     // Transfer IDs the rolling terminal audit rechecks per pass.
     auditPerScan: optionalInteger("auditPerScan", 10_000) ?? 100,
     pollSeconds: integer("pollSeconds", 60),

@@ -1,3 +1,4 @@
+import { parseSinkId, type SinkId } from "../shared/id";
 import { web3 } from "@coral-xyz/anchor";
 import {
   ACCOUNT_SIZE,
@@ -6,29 +7,16 @@ import {
   TOKEN_2022_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
-import { Sink_Status as Status } from "@akashnetwork/chain-sdk/private-types/akash.v1";
+import {
+  Sink_Status as Status,
+  SettlementData,
+  type TransferState,
+} from "@akashnetwork/chain-sdk/private-types/akash.v1";
 
 // Relayer decisions without RPC access, so they can be tested directly.
 
 // getMultipleAccounts accepts at most 100 addresses per request.
 export const STATUS_BATCH = 100;
-
-export function idBatches(from: bigint, to: bigint, size = STATUS_BATCH) {
-  const batches: bigint[][] = [];
-  for (let start = from; start <= to; start += BigInt(size)) {
-    const batch: bigint[] = [];
-    for (let id = start; id <= to && id < start + BigInt(size); id++)
-      batch.push(id);
-    batches.push(batch);
-  }
-  return batches;
-}
-
-// Solana statuses are permanent. The cursor is the lowest scanned ID without
-// one, or the next unissued ID once every scanned record is resolved.
-export function nextCursor(unresolved: bigint[], last: bigint) {
-  return unresolved.length ? unresolved[0] : last + 1n;
-}
 
 // An idle client is refreshed after this share of its trusting period, below
 // the monitor's warning at 25%.
@@ -81,20 +69,20 @@ export function relaySettings(env: Record<string, string | undefined>) {
 export const DEFAULT_MAX_LAMPORTS_PER_TRANSFER = 5_000_000;
 
 // Exponential delay after each failure, capped. A success clears the entry.
-export class RetrySchedule {
+export class RetrySchedule<K = SinkId> {
   private readonly entries = new Map<
-    bigint,
+    K,
     { failures: number; retryAt: number }
   >();
   constructor(
     private readonly baseMs: number,
     private readonly maxMs: number,
   ) {}
-  ready(id: bigint, now: number) {
+  ready(id: K, now: number) {
     const entry = this.entries.get(id);
     return !entry || now >= entry.retryAt;
   }
-  failed(id: bigint, now: number) {
+  failed(id: K, now: number) {
     const failures = (this.entries.get(id)?.failures ?? 0) + 1;
     const delayMs = Math.min(
       this.maxMs,
@@ -103,12 +91,8 @@ export class RetrySchedule {
     this.entries.set(id, { failures, retryAt: now + delayMs });
     return { failures, delayMs };
   }
-  clear(id: bigint) {
+  clear(id: K) {
     this.entries.delete(id);
-  }
-  forgetBelow(id: bigint) {
-    for (const key of this.entries.keys())
-      if (key < id) this.entries.delete(key);
   }
 }
 
@@ -162,26 +146,32 @@ function ataUsable(
 
 // In the honest flow an Akash void or refund follows a Solana void. With no
 // Solana status, that state comes from false void reports or a governance
-// confirmation, and minting would leave the refund as unbacked supply.
-export function unbackedSettlement(akash: Status) {
-  if (akash === Status.STATUS_VOIDED)
+// confirmation, and minting would leave the refund as unbacked supply. A void
+// order is still relayed: a void creates no supply and blocks a later mint.
+export function unbackedMint(
+  akash: Pick<TransferState, "status" | "settlement">,
+) {
+  if (akash.settlement?.voidAuthorization) return undefined;
+  if (akash.status === Status.STATUS_VOIDED)
+    return "akash-void-request-without-authorization";
+  if (akash.status === Status.STATUS_REFUND_PENDING)
     return "akash-voided-without-solana-status";
-  if (akash === Status.STATUS_REFUNDED)
+  if (akash.status === Status.STATUS_REFUNDED)
     return "akash-refunded-without-solana-status";
   return undefined;
 }
 
 // Alert when a state is first seen and again every repeatMs while it lasts.
-export class AlertSchedule {
-  private readonly last = new Map<bigint, number>();
+export class AlertSchedule<K = SinkId> {
+  private readonly last = new Map<K, number>();
   constructor(private readonly repeatMs: number) {}
-  due(id: bigint, now: number) {
+  due(id: K, now: number) {
     const at = this.last.get(id);
     if (at !== undefined && now - at < this.repeatMs) return false;
     this.last.set(id, now);
     return true;
   }
-  clear(id: bigint) {
+  clear(id: K) {
     this.last.delete(id);
   }
 }
@@ -239,23 +229,39 @@ export function headerRefresh(input: {
   return undefined;
 }
 
-// The last read before the first paid transaction. Skip when Akash now shows
-// a void or refund, or when a void order appeared or vanished after planning.
-export function finalCheck(
-  plannedVoidOrdered: boolean,
-  latest: { voidOrdered: boolean; status: Status },
-) {
-  return (
-    unbackedSettlement(latest.status) ??
-    (latest.voidOrdered !== plannedVoidOrdered
-      ? "void-order-changed"
-      : undefined)
-  );
+// The last read before the first paid transaction. Skip when a void order
+// appeared or vanished after planning, or when a mint would be unbacked.
+export function finalCheck(planned: TransferState, latest: TransferState) {
+  const before = planned.settlement?.voidAuthorization;
+  const after = latest.settlement?.voidAuthorization;
+  if (!!before !== !!after) return "void-authorization-changed";
+  if (before && after) {
+    if (
+      before.requestedHeight !== after.requestedHeight ||
+      before.requestedRound !== after.requestedRound
+    )
+      return "void-authorization-changed";
+    if (
+      planned.status !== latest.status ||
+      !planned.settlement ||
+      !latest.settlement ||
+      !Buffer.from(SettlementData.encode(planned.settlement).finish()).equals(
+        Buffer.from(SettlementData.encode(latest.settlement).finish()),
+      )
+    )
+      return "settlement-changed";
+  }
+  return unbackedMint(latest);
 }
 
 export interface SpendEntry {
   spentLamports: number;
   attempts: number;
+  bufferFundedLamports?: number;
+  bufferReclaimedLamports?: number;
+  signatures?: string[];
+  completed?: boolean;
+  retry?: { failures: number; retryAt: number };
 }
 
 // Lamports paid per transfer: every fee, plus the rent the resolving
@@ -263,37 +269,67 @@ export interface SpendEntry {
 // returned when the buffer closes, so it is not spent. Past the limit the
 // relayer stops paying for that transfer until an operator resets it.
 export class SpendLedger {
-  readonly entries: Map<bigint, SpendEntry>;
-  constructor(entries: Iterable<[bigint, SpendEntry]> = []) {
+  readonly entries: Map<SinkId, SpendEntry>;
+  constructor(entries: Iterable<[SinkId, SpendEntry]> = []) {
     this.entries = new Map(entries);
   }
-  spent(id: bigint) {
+  ready(id: SinkId, now: number) {
+    return now >= (this.entries.get(id)?.retry?.retryAt ?? 0);
+  }
+  failed(id: SinkId, now: number, maxMs: number) {
+    const entry = this.entries.get(id) ?? { spentLamports: 0, attempts: 0 };
+    const failures = (entry.retry?.failures ?? 0) + 1;
+    const delayMs = Math.min(maxMs, 6000 * 2 ** Math.min(failures - 1, 30));
+    this.entries.set(id, {
+      ...entry,
+      retry: { failures, retryAt: now + delayMs },
+    });
+    return { failures, delayMs };
+  }
+  clearRetry(id: SinkId) {
+    const entry = this.entries.get(id);
+    if (entry) this.entries.set(id, { ...entry, retry: undefined });
+  }
+  complete(id: SinkId) {
+    const entry = this.entries.get(id);
+    if (entry)
+      this.entries.set(id, { ...entry, completed: true, retry: undefined });
+  }
+  spent(id: SinkId) {
     return this.entries.get(id)?.spentLamports ?? 0;
   }
-  exhausted(id: bigint, maxLamports: number) {
+  exhausted(id: SinkId, maxLamports: number) {
     return this.spent(id) > maxLamports;
   }
-  attempt(id: bigint) {
-    const entry = this.entries.get(id) ?? { spentLamports: 0, attempts: 0 };
-    this.entries.set(id, { ...entry, attempts: entry.attempts + 1 });
-  }
-  charge(id: bigint, lamports: number) {
-    if (!Number.isSafeInteger(lamports))
-      throw new Error("spend must be an integer");
+  attempt(id: SinkId) {
     const entry = this.entries.get(id) ?? { spentLamports: 0, attempts: 0 };
     this.entries.set(id, {
       ...entry,
-      spentLamports: entry.spentLamports + lamports,
+      completed: undefined,
+      attempts: entry.attempts + 1,
     });
   }
-  // Resolved transfers are never paid for again.
-  forgetBelow(id: bigint) {
-    let changed = false;
-    for (const key of this.entries.keys())
-      if (key < id) changed = this.entries.delete(key) || changed;
-    return changed;
+  charge(id: SinkId, lamports: number, signature?: string, bufferChange = 0) {
+    if (!Number.isSafeInteger(lamports) || !Number.isSafeInteger(bufferChange))
+      throw new Error("spend must be an integer");
+    const entry = this.entries.get(id) ?? { spentLamports: 0, attempts: 0 };
+    if (signature && entry.signatures?.includes(signature)) return;
+    const spentLamports = entry.spentLamports + lamports;
+    if (!Number.isSafeInteger(spentLamports))
+      throw new Error("spend total exceeds safe integer");
+    this.entries.set(id, {
+      ...entry,
+      signatures: signature
+        ? [...(entry.signatures ?? []), signature]
+        : entry.signatures,
+      spentLamports,
+      bufferFundedLamports:
+        (entry.bufferFundedLamports ?? 0) + Math.max(0, bufferChange),
+      bufferReclaimedLamports:
+        (entry.bufferReclaimedLamports ?? 0) + Math.max(0, -bufferChange),
+    });
   }
-  reset(id: bigint | "all") {
+  reset(id: SinkId | "all") {
     if (id !== "all") return this.entries.delete(id);
     const changed = this.entries.size > 0;
     this.entries.clear();
@@ -301,7 +337,7 @@ export class SpendLedger {
   }
   toJSON(identity: { genesis: string; programId: string }) {
     return {
-      version: 1,
+      version: 2,
       ...identity,
       transfers: Object.fromEntries(
         [...this.entries]
@@ -316,27 +352,66 @@ export class SpendLedger {
   ) {
     if (value === undefined) return new SpendLedger();
     const saved = record(value);
+    if (saved.version !== 2)
+      throw new Error(
+        "unsupported scalar-ID spend ledger; preserve it and choose a fresh v2 state directory",
+      );
     if (
-      saved.version !== 1 ||
+      saved.version !== 2 ||
       saved.genesis !== identity.genesis ||
       saved.programId !== identity.programId
     )
       throw new Error("spend ledger belongs to another deployment");
-    const entries: [bigint, SpendEntry][] = [];
+    const entries: [SinkId, SpendEntry][] = [];
     for (const [key, raw] of Object.entries(record(saved.transfers))) {
       const entry = record(raw);
       if (
-        !/^[1-9][0-9]*$/.test(key) ||
         !Number.isSafeInteger(entry.spentLamports) ||
         !Number.isSafeInteger(entry.attempts) ||
         Number(entry.attempts) < 0
       )
         throw new Error(`invalid spend ledger entry ${key}`);
+      for (const name of [
+        "bufferFundedLamports",
+        "bufferReclaimedLamports",
+      ] as const)
+        if (
+          entry[name] !== undefined &&
+          (!Number.isSafeInteger(entry[name]) || Number(entry[name]) < 0)
+        )
+          throw new Error("invalid buffer liquidity");
+      if (entry.completed !== undefined && typeof entry.completed !== "boolean")
+        throw new Error("invalid completion state");
+      if (
+        entry.signatures !== undefined &&
+        (!Array.isArray(entry.signatures) ||
+          !entry.signatures.every((s: unknown) => typeof s === "string"))
+      )
+        throw new Error("invalid charged signatures");
+      const retry = entry.retry === undefined ? undefined : record(entry.retry);
+      if (
+        retry &&
+        (!Number.isSafeInteger(retry.failures) ||
+          Number(retry.failures) < 1 ||
+          !Number.isSafeInteger(retry.retryAt) ||
+          Number(retry.retryAt) < 0)
+      )
+        throw new Error("invalid retry state");
       entries.push([
-        BigInt(key),
+        parseSinkId(key),
         {
           spentLamports: Number(entry.spentLamports),
           attempts: Number(entry.attempts),
+          bufferFundedLamports: Number(entry.bufferFundedLamports ?? 0),
+          bufferReclaimedLamports: Number(entry.bufferReclaimedLamports ?? 0),
+          signatures: entry.signatures,
+          completed: entry.completed,
+          retry: retry
+            ? {
+                failures: Number(retry.failures),
+                retryAt: Number(retry.retryAt),
+              }
+            : undefined,
         },
       ]);
     }

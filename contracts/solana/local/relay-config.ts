@@ -1,8 +1,15 @@
+import { web3 } from "@coral-xyz/anchor";
 import assert from "node:assert/strict";
 import { constants, open } from "node:fs/promises";
 import { isAbsolute, join, resolve } from "node:path";
-import { web3 } from "@coral-xyz/anchor";
-import { AKASH_RPC, CHAIN, PROGRAM_ID, REPO, ROOT, SOLANA_RPC } from "./common";
+import {
+  AKASH_RPC,
+  CHAIN,
+  PROGRAM_ID,
+  ROOT,
+  SOLANA_RPC,
+  TARGET,
+} from "./common";
 import {
   DEFAULT_MAX_HEADER_SIGNATURES,
   DEFAULT_MAX_LAMPORTS_PER_TRANSFER,
@@ -32,10 +39,7 @@ export interface RelayConfig {
   headerEncoder: string;
 }
 
-export const DEFAULT_HEADER_ENCODER = join(
-  REPO,
-  "tools/header-encoder/target/debug/akt-header-encoder",
-);
+export const DEFAULT_HEADER_ENCODER = join(TARGET, "debug/akt-header-encoder");
 
 const FIELDS = new Set([
   "akashRpc",

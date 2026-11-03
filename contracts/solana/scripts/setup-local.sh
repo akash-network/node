@@ -13,9 +13,8 @@ cd "$solana_repo"
 bash scripts/doctor.sh
 npm ci --prefix "$CHAIN_SDK_DIR/ts"
 npm run build --prefix "$CHAIN_SDK_DIR/ts"
-mkdir -p .cache
-sdk_package=$(cd "$CHAIN_SDK_DIR/ts" && npm pack --silent --pack-destination "$solana_repo/.cache")
-mv ".cache/$sdk_package" .cache/chain-sdk.tgz
+sdk_package=$(cd "$CHAIN_SDK_DIR/ts" && npm pack --silent --pack-destination "$SOLANA_CACHE")
+mv "$SOLANA_CACHE/$sdk_package" "$SOLANA_CACHE/chain-sdk.tgz"
 npm ci
 
 bash scripts/build-node.sh

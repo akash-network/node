@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { AnchorProvider, Program, web3 } from "@coral-xyz/anchor";
-import idl from "../target/idl/akt_solana.json";
+import idl from "../../../.cache/solana/target/idl/akt_solana.json";
 import clientIdl from "../idls/ics07_tendermint.json";
 import accessIdl from "../idls/access_manager.json";
-import type { Ics07Tendermint } from "../.deps/ibc-contracts/ibc-solana/target/types/ics07_tendermint";
-import type { AccessManager } from "../.deps/ibc-contracts/ibc-solana/target/types/access_manager";
+import type { Ics07Tendermint } from "../../../.cache/solana/deps/ibc-contracts/ibc-solana/target/types/ics07_tendermint";
+import type { AccessManager } from "../../../.cache/solana/deps/ibc-contracts/ibc-solana/target/types/access_manager";
 import { ACCESS_ID, CLIENT_ID, LE64, PROGRAM_ID, pda } from "./common";
 
 // The bridge account names the light client the AKT program trusts, and

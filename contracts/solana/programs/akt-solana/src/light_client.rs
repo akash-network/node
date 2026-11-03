@@ -1,23 +1,20 @@
-//! Checks on the pinned ICS07 Tendermint client, and the membership CPI.
-//!
-//! The upgrade authority chooses the light-client program in
-//! `configure_bridge` or `repin_light_client`; `BridgeConfig` stores it. No
-//! client account is trusted because a caller passed it: each must be owned by
-//! that program, sit at its PDA and deserialize as its account type. The
-//! generated bindings in `ics07-tendermint-interface` supply only the account
-//! layouts and the CPI.
+//! Authenticated ICS07 consensus accounts and inline pinned membership verification.
 
 use crate::{
+    authorization::void_authorization,
     constants::{ICS07_CLIENT_SEED, ICS07_CONSENSUS_STATE_SEED},
     errors::AktError,
     state::{BridgeConfig, ProofBuffer},
     wire::SINK_STORE,
 };
 use anchor_lang::prelude::*;
-use ics07_tendermint_interface::ics07_tendermint::{
-    self,
-    accounts::{ClientState, ConsensusStateStore},
+use ibc_core_commitment_types::merkle::MerkleProof;
+use ibc_proto::{
+    ibc::core::commitment::v1::MerkleProof as RawMerkleProof, ics23::commitment_proof::Proof,
+    Protobuf,
 };
+use ics07_tendermint_interface::ics07_tendermint::accounts::{ClientState, ConsensusStateStore};
+use tendermint_light_client_membership::KVPair;
 
 const NANOS_PER_SECOND: u128 = 1_000_000_000;
 
@@ -128,19 +125,18 @@ pub struct MembershipAccounts<'a, 'info> {
     pub consensus: &'a AccountInfo<'info>,
 }
 
-/// Verifies through the pinned client that sink store key `key` holds exactly
-/// `value` at verified height `height`. Before the CPI it requires the pinned,
-/// executable program, an active client (`check_active`), `1 <= height <=`
-/// the client's latest height, the client's consensus state at `height`, and
-/// a complete proof buffer. The program builds the path `["sink", key]` and
-/// the value itself; the caller supplies only the proof.
-pub fn verify_membership(
+pub(crate) enum ProvenValue {
+    Record(Vec<u8>),
+    AuthorizedVoid { deposit_height: u64 },
+}
+
+pub(crate) fn verify_membership(
     accounts: MembershipAccounts<'_, '_>,
     bridge: &BridgeConfig,
     buffer: &ProofBuffer,
     height: u64,
     key: Vec<u8>,
-    value: Vec<u8>,
+    expected: ProvenValue,
 ) -> Result<()> {
     // Account constraints already pin the program; this keeps the function
     // safe on its own.
@@ -161,30 +157,39 @@ pub fn verify_membership(
         height > 0 && height <= client.latest_height.revision_height,
         AktError::InvalidProofHeight
     );
-    load_consensus_state(accounts.consensus, &bridge.light_client_program, height)?;
+    let consensus = load_consensus_state(accounts.consensus, &bridge.light_client_program, height)?;
+    buffer.validate_key(&key)?;
     require!(buffer.is_complete(), AktError::IncompleteProof);
 
-    ics07_tendermint::cpi::verify_membership(
-        CpiContext::new(
-            accounts.program.clone(),
-            ics07_tendermint::cpi::accounts::VerifyMembership {
-                client_state: accounts.client.clone(),
-                consensus_state_at_height: accounts.consensus.clone(),
-            },
-        ),
-        ics07_tendermint::types::MembershipMsg {
-            height,
-            proof: buffer.data.clone(),
-            path: vec![SINK_STORE.to_vec(), key],
-            value,
-        },
+    let proof = <MerkleProof as Protobuf<RawMerkleProof>>::decode_vec(&buffer.data)
+        .map_err(|_| error!(AktError::InvalidMembershipProof))?;
+    let value = match expected {
+        ProvenValue::Record(value) => value,
+        ProvenValue::AuthorizedVoid { deposit_height } => {
+            let Some(Proof::Exist(leaf)) =
+                proof.proofs.first().and_then(|proof| proof.proof.as_ref())
+            else {
+                return err!(AktError::InvalidMembershipProof);
+            };
+            void_authorization(&leaf.value, deposit_height, height)?;
+            leaf.value.clone()
+        }
+    };
+    // An empty value selects non-membership in the pinned library.
+    require!(!value.is_empty(), AktError::InvalidMembershipProof);
+    let kv = KVPair::new(vec![SINK_STORE.to_vec(), key], value);
+    tendermint_light_client_membership::membership(
+        consensus.consensus_state.root,
+        std::iter::once((kv, proof)),
     )
+    .map_err(|_| error!(AktError::InvalidMembershipProof))?;
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ics07_tendermint::types::IbcHeight;
+    use ics07_tendermint_interface::ics07_tendermint::types::IbcHeight;
 
     fn client() -> ClientState {
         ClientState {

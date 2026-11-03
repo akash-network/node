@@ -1,3 +1,5 @@
+import { testId, testSnapshot } from "../tests/sink-fixtures";
+import { sinkIdParts } from "../shared/id";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
@@ -32,7 +34,11 @@ process.env.FAKE_SIGNER_KEY = Buffer.from(secret).toString("hex");
 const fee = { amount: [{ denom: "uakt", amount: "10" }], gas: "500000" };
 const message = {
   typeUrl: "/akash.sink.v1.MsgVetoVoid" as const,
-  value: MsgVetoVoid.fromPartial({ signer: address, id: 1n, reason: "test" }),
+  value: MsgVetoVoid.fromPartial({
+    signer: address,
+    id: sinkIdParts(testId()),
+    reason: "test",
+  }),
 };
 
 function signer(mode: string, timeoutMs = 10_000, key = publicKey) {
@@ -208,7 +214,10 @@ test("the broadcaster sends nothing unless the external signature verifies", asy
   t.after(() => akash.close());
   t.mock.method(akash, "state", async () => ({
     params: Params.fromPartial({ reporters: [address] }),
-    totals: Totals.fromPartial({ reporterEpoch: 1n }),
+    totals: Totals.fromPartial({}),
+    policy: { ...testSnapshot().policy, members: [address], threshold: 1 },
+    sendUsage: testSnapshot().refundUsage,
+    refundUsage: testSnapshot().refundUsage,
     height: 10,
     time: 1n,
   }));

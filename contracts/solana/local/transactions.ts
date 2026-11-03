@@ -55,7 +55,7 @@ async function settle(
   wallet: AnchorProvider,
   intent: Intent,
   submitted?: (signature: string) => Promise<void>,
-): Promise<TransactionResult | undefined> {
+): Promise<TransactionResult> {
   assert.equal(intent.genesis, await wallet.connection.getGenesisHash());
   assert.equal(intent.payer, wallet.publicKey.toBase58());
   const raw = Buffer.from(intent.raw, "base64");
@@ -84,7 +84,9 @@ async function settle(
       (!(
         intent.stage.startsWith("lookup-") ||
         intent.stage === "assembly" ||
-        intent.stage === "cleanup"
+        intent.stage === "cleanup" ||
+        intent.stage.startsWith("proof-") ||
+        intent.stage === "resolve"
       ) ||
         status?.confirmationStatus === "finalized")
     )
@@ -94,7 +96,9 @@ async function settle(
       (await wallet.connection.getBlockHeight("finalized")) >
         intent.lastValidBlockHeight
     )
-      return undefined;
+      throw new Error(
+        `${intent.stage}: expired transaction history unresolved (${intent.signature}); durable intent retained; restore signature history and transaction metadata`,
+      );
     assert.ok(
       Date.now() < deadline,
       `${intent.stage}: confirmation unresolved (${intent.signature}); durable intent retained`,
@@ -143,7 +147,7 @@ export async function resumeTransaction(
   if (pending === undefined) return;
   const intent = decodeIntent(pending);
   const result = await settle(wallet, intent);
-  if (result) await observe(result); // Persist terminal effects before dropping intent.
+  await observe(result); // Persist terminal effects before dropping intent.
   await unlink(path);
 }
 export async function sendTransaction({
@@ -163,11 +167,8 @@ export async function sendTransaction({
   pendingPath?: string;
   observe: (result: TransactionResult) => Promise<void>;
   submitted?: (signature: string) => Promise<void>;
-  // Simulate before the first send. A failing simulation throws and costs
-  // nothing; it is never used with a durable intent.
   preflight?: boolean;
 }) {
-  assert.ok(!(preflight && pendingPath), "preflight sends are not journaled");
   if (pendingPath)
     assert.equal(
       await optionalJson(pendingPath),
@@ -202,20 +203,15 @@ export async function sendTransaction({
     lastValidBlockHeight: hash.lastValidBlockHeight,
     accounts,
   };
-  if (pendingPath) await atomicJson(pendingPath, intent);
-  if (preflight)
-    await wallet.connection.sendRawTransaction(raw, {
-      skipPreflight: false,
-      preflightCommitment: "confirmed",
-      maxRetries: 0,
+  if (preflight) {
+    const simulation = await wallet.connection.simulateTransaction(tx, {
+      sigVerify: true,
+      commitment: "confirmed",
     });
-  const result = await settle(wallet, intent, submitted);
-  if (!result) {
-    if (pendingPath) await unlink(pendingPath);
-    throw new Error(
-      `${stage}: transaction expired without landing; retry permitted`,
-    );
+    assert.equal(simulation.value.err, null, `${stage}: simulation failed`);
   }
+  if (pendingPath) await atomicJson(pendingPath, intent);
+  const result = await settle(wallet, intent, submitted);
   await observe(result);
   if (pendingPath) await unlink(pendingPath);
   return result;

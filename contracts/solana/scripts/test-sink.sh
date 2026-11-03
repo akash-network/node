@@ -15,14 +15,17 @@ cd "$solana_repo"
 node_repo="$NODE_SINK_DIR"
 node_repo=$(cd "$node_repo" && pwd)
 
-export SINK_PROOF_FIXTURE="$node_repo/.cache/sink-proof.json"
-export SINK_REPORTER_FIXTURE="$node_repo/.cache/sink-reporter.json"
-
-mkdir -p "$node_repo/.cache"
+mkdir -p "$SOLANA_RUN"
+fixture_run=$(mktemp -d "$SOLANA_RUN/sink-proof-v2.XXXXXX")
+export SINK_PROOF_FIXTURE="$fixture_run/proof.json"
+export SINK_REPORTER_FIXTURE="$fixture_run/reporter.json"
+echo "Sink fixture evidence: $fixture_run"
 go_args=(-mod=readonly)
 
-if [[ -f "$node_repo/.cache/solana.mod" ]]; then
-  go_args+=(-modfile=.cache/solana.mod)
+if [[ -n ${AKT_NODE_MODFILE:-} ]]; then
+  go_args+=(-modfile="$AKT_NODE_MODFILE")
+elif [[ -f "$node_repo/.cache/solana/node.mod" ]]; then
+  go_args+=(-modfile=.cache/solana/node.mod)
 fi
 
 (

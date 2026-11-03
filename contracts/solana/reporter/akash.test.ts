@@ -1,32 +1,29 @@
+import { testTransfer, testId, testSnapshot } from "../tests/sink-fixtures";
+import { sinkIdParts } from "../shared/id";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import test from "node:test";
 import { BaseAccount } from "cosmjs-types/cosmos/auth/v1beta1/auth";
 import { QueryAccountResponse } from "cosmjs-types/cosmos/auth/v1beta1/query";
 import { PubKey } from "cosmjs-types/cosmos/crypto/secp256k1/keys";
-import { AkashClient } from "./akash";
-import Long from "long";
+import { AkashClient, SinkRecordNotFoundError } from "./akash";
 import {
-  QueryOpenTransfersRequest,
-  QueryOpenTransfersResponse,
+  QueryTransfersRequest,
+  QueryTransfersResponse,
   QueryStateResponse,
   QueryTransferRequest,
   QueryTransferResponse,
 } from "@akashnetwork/chain-sdk/private-types/akash.v1";
 
 test("queries sink state and transfer at one committed height; rejects stale/wrong-chain RPC", async (t) => {
-  const record = Buffer.alloc(77);
-  record[0] = 1;
-  record.writeBigUInt64LE(1n, 1);
-  record.writeBigUInt64LE(100n, 61);
-  record.writeBigUInt64LE(1n, 69);
+  const record = testTransfer();
+  const snapshotState = testSnapshot();
   const state = QueryStateResponse.fromPartial({
-    params: { reporters: ["reporter"] },
-    totals: { reporterEpoch: 1n, lastTransferId: 1n },
+    ...snapshotState,
+    sendUsage: snapshotState.refundUsage,
+    refundHead: sinkIdParts(testId()),
   });
-  const transfer = QueryTransferResponse.fromPartial({
-    transfer: { record, settlement: { round: 1n, policy: { epoch: 1n } } },
-  });
+  const transfer = QueryTransferResponse.fromPartial({ transfer: record });
   const status = {
     node_info: {
       id: "01".repeat(20),
@@ -55,19 +52,20 @@ test("queries sink state and transfer at one committed height; rejects stale/wro
     },
   };
   const requests: string[] = [];
-  const openRequests: [bigint, number][] = [];
+  const openRequests: [Uint8Array | undefined, bigint | undefined][] = [];
   let openReply: object = {
     code: 0,
     value: Buffer.from(
-      QueryOpenTransfersResponse.encode(
-        QueryOpenTransfersResponse.fromPartial({
-          transfers: [transfer.transfer!],
-          nextStartAfter: Long.fromString("18446744073709551615", true),
+      QueryTransfersResponse.encode(
+        QueryTransfersResponse.fromPartial({
+          transfers: [record],
+          pagination: { nextKey: new Uint8Array([1, 2]) },
         }),
       ).finish(),
     ).toString("base64"),
   };
   let queryHeight = "42";
+  let transferFailure: { code: number; codespace: string } | undefined;
   const key = Buffer.alloc(33, 2);
   const baseAccount = (pubKey?: Uint8Array) => ({
     typeUrl: "/cosmos.auth.v1beta1.BaseAccount",
@@ -157,11 +155,14 @@ test("queries sink state and transfer at one committed height; rejects stale/wro
         assert.ok(typeof params.path === "string");
         requests.push(params.path);
         let value: Uint8Array;
-        if (params.path === "/akash.sink.v1.Query/OpenTransfers") {
-          const request = QueryOpenTransfersRequest.decode(
+        if (params.path === "/akash.sink.v1.Query/Transfers") {
+          const request = QueryTransfersRequest.decode(
             Buffer.from(params.data.replace(/^0x/, ""), "hex"),
           );
-          openRequests.push([request.startAfter.toBigInt(), request.limit]);
+          openRequests.push([
+            request.pagination?.key,
+            request.pagination?.limit,
+          ]);
           result = { response: { height: queryHeight, ...openReply } };
           res.setHeader("content-type", "application/json");
           res.end(JSON.stringify({ jsonrpc: "2.0", id: body.id, result }));
@@ -173,12 +174,25 @@ test("queries sink state and transfer at one committed height; rejects stale/wro
           value = QueryAccountResponse.encode({ account }).finish();
         else {
           assert.equal(params.path, "/akash.sink.v1.Query/Transfer");
-          assert.equal(
+          assert.deepEqual(
             QueryTransferRequest.decode(
               Buffer.from(params.data.replace(/^0x/, ""), "hex"),
-            ).id.toBigInt(),
-            1n,
+            ).id,
+            sinkIdParts(testId()),
           );
+          if (transferFailure) {
+            res.setHeader("content-type", "application/json");
+            res.end(
+              JSON.stringify({
+                jsonrpc: "2.0",
+                id: body.id,
+                result: {
+                  response: { ...transferFailure, height: queryHeight },
+                },
+              }),
+            );
+            return;
+          }
           value = QueryTransferResponse.encode(transfer).finish();
         }
         result = {
@@ -211,38 +225,27 @@ test("queries sink state and transfer at one committed height; rejects stale/wro
     60,
   );
   t.after(() => client.close());
-  const snapshot = await client.snapshot(1n);
-  assert.equal(snapshot.totals.reporterEpoch.toBigInt(), 1n);
-  assert.deepEqual(Buffer.from(snapshot.transfer.record), record);
+  const snapshot = await client.snapshot(testId());
+  assert.equal(snapshot.policy.version, 1n);
+  assert.equal(snapshot.epoch, 57n);
+  assert.deepEqual(snapshot.transfer, record);
   assert.deepEqual(requests, [
     "/akash.sink.v1.Query/State",
     "/akash.sink.v1.Query/Transfer",
   ]);
-  // Open transfers page at the committed height with unsigned uint64 IDs.
-  const page = await client.openTransfers(18_446_744_073_709_551_614n, 500, 42);
-  assert.deepEqual(openRequests, [[18_446_744_073_709_551_614n, 500]]);
-  assert.equal(page?.next, 18_446_744_073_709_551_615n);
-  assert.deepEqual(Buffer.from(page?.transfers[0]?.record ?? []), record);
-  // Only the SDK's unknown-path reply means the node lacks the query.
-  openReply = {
-    code: 6,
-    codespace: "sdk",
-    log: "unknown query path: unknown request",
-  };
-  assert.equal(await client.openTransfers(0n, 500, 42), undefined);
-  for (const reply of [
-    {
-      code: 6,
-      codespace: "sdk",
-      log: "rpc error: code = Internal desc = open sink transfer index is inconsistent at 4: unknown request",
-    },
-    { code: 18, codespace: "sdk", log: "invalid request" },
-  ]) {
-    openReply = reply;
-    await assert.rejects(
-      () => client.openTransfers(0n, 500, 42),
-      /OpenTransfers query failed/,
-    );
+  const page = await client.transfers(42, {
+    key: new Uint8Array([9]),
+    limit: 500,
+  });
+  assert.deepEqual(
+    openRequests.map(([key, limit]) => [Array.from(key ?? []), limit]),
+    [[[9], 500n]],
+  );
+  assert.deepEqual(Array.from(page.nextKey), [1, 2]);
+  assert.deepEqual(page.transfers[0], record);
+  for (const code of [6, 18, 22]) {
+    openReply = { code, codespace: "sdk", log: "state unavailable or pruned" };
+    await assert.rejects(() => client.transfers(42));
   }
   // The account key comes from the same committed height.
   assert.deepEqual(
@@ -256,6 +259,31 @@ test("queries sink state and transfer at one committed height; rejects stale/wro
   account = baseAccount();
   assert.equal(await client.accountPublicKey("akash1test"), undefined);
   assert.equal(requests.at(-1), "/cosmos.auth.v1beta1.Query/Account");
+  transferFailure = { code: 22, codespace: "sdk" };
+  await assert.rejects(
+    () => client.transfer(testId(), 42),
+    SinkRecordNotFoundError,
+  );
+  for (const code of [6, 18, 26, 38]) {
+    transferFailure = { code, codespace: "sdk" };
+    await assert.rejects(
+      () => client.transfer(testId(), 42),
+      (error) =>
+        error instanceof Error && !(error instanceof SinkRecordNotFoundError),
+    );
+  }
+  transferFailure = undefined;
+  assert.ok(state.sendUsage && state.refundUsage);
+  state.refundUsage.epoch--;
+  await assert.rejects(() => client.state(), /quota usage epoch mismatch/);
+  state.refundUsage.epoch++;
+  state.epoch = 0n;
+  state.sendUsage.epoch = 0n;
+  state.refundUsage.epoch = 0n;
+  assert.equal((await client.state()).epoch, 0n);
+  state.refundUsage.amount = { denom: "uakt", amount: "1" };
+  await assert.rejects(() => client.state(), /usage before quota epoch starts/);
+  state.refundUsage.amount.amount = "0";
   queryHeight = "41";
   await assert.rejects(() => client.state(), /height mismatch/);
   status.node_info.network = "other-chain";

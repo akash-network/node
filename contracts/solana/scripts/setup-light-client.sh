@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd "$(dirname "$0")/.."
+source "$(dirname "$0")/workspace.sh"
+cd "$solana_repo"
 
 revision=dc78ade828b766b218fb6bcb5417fdaf8e553021
-upstream=.deps/ibc-contracts
+upstream=$SOLANA_DEPS/ibc-contracts
 if [[ ! -f "$upstream/.akt-revision" ]] || [[ "$(cat "$upstream/.akt-revision")" != "$revision" ]]; then
   if [[ -e "$upstream" ]]; then
     echo "Existing upstream directory has no matching revision marker: $upstream" >&2
@@ -22,8 +23,8 @@ bash scripts/apply-light-client-patches.sh
 
 (
   cd "$upstream/ibc-solana"
-  RUSTUP_TOOLCHAIN=1.89.0 anchor build --program-name ics07_tendermint
-  RUSTUP_TOOLCHAIN=1.89.0 anchor build --program-name access_manager
+  CARGO_TARGET_DIR="$PWD/target" RUSTUP_TOOLCHAIN=1.89.0 anchor build --program-name ics07_tendermint
+  CARGO_TARGET_DIR="$PWD/target" RUSTUP_TOOLCHAIN=1.89.0 anchor build --program-name access_manager
 )
 
 # The checked-in IDLs define the CPI ABI. Rebuilds must produce the same files.

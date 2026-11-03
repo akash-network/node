@@ -13,8 +13,9 @@
   },
   "include": [
     "tests/**/*.ts",
-    "target/types/**/*.ts",
+    "../../.cache/solana/target/types/**/*.ts",
     "reporter/**/*.ts",
-    "local/**/*.ts"
+    "local/**/*.ts",
+    "shared/**/*.ts"
   ]
 }

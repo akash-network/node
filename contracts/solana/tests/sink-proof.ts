@@ -1,3 +1,13 @@
+import { sinkIdParts } from "../shared/id";
+import {
+  anchorId,
+  idFromTransferKey,
+  decodeRecordData,
+  proofAddress,
+  proofNonce,
+  statusAddress,
+  transferKey,
+} from "../shared/proof";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import type { TestContext } from "node:test";
@@ -9,12 +19,12 @@ import {
   getAssociatedTokenAddressSync,
   getMint,
 } from "@solana/spl-token";
-import idl from "../target/idl/akt_solana.json";
+import idl from "../../../.cache/solana/target/idl/akt_solana.json";
 import clientIdl from "../idls/ics07_tendermint.json";
 import accessIdl from "../idls/access_manager.json";
-import type { AktSolana } from "../target/types/akt_solana";
-import type { Ics07Tendermint } from "../.deps/ibc-contracts/ibc-solana/target/types/ics07_tendermint";
-import type { AccessManager } from "../.deps/ibc-contracts/ibc-solana/target/types/access_manager";
+import type { AktSolana } from "../../../.cache/solana/target/types/akt_solana";
+import type { Ics07Tendermint } from "../../../.cache/solana/deps/ibc-contracts/ibc-solana/target/types/ics07_tendermint";
+import type { AccessManager } from "../../../.cache/solana/deps/ibc-contracts/ibc-solana/target/types/access_manager";
 import { testProvider } from "./helpers";
 import { testReporterReturn } from "./reporter";
 
@@ -46,20 +56,20 @@ export async function runSinkProofTests(t: TestContext, path: string) {
   const raw = hex(fixture.record);
   const proof = hex(fixture.proof);
   assert.equal(root.length, 32);
-  assert.equal(raw.length, 77);
-  assert.equal(raw[0], 1);
   assert.ok(Number.isSafeInteger(fixture.header_height));
   assert.equal(fixture.header_height, fixture.query_height + 1);
   const height = new BN(fixture.header_height);
   const le64 = (n: BN) => n.toArrayLike(Buffer, "le", 8);
-  const record = {
-    version: raw[0],
-    id: new BN(raw.subarray(1, 9), "le"),
-    sender: Array.from(raw.subarray(9, 29)),
-    recipient: new web3.PublicKey(raw.subarray(29, 61)),
-    amount: new BN(raw.subarray(61, 69), "le"),
-    height: new BN(raw.subarray(69, 77), "le"),
-  };
+  assert.ok(
+    "key" in fixture && typeof fixture.key === "string",
+    "full-chain fixture must provide the actual proven key",
+  );
+  const id = idFromTransferKey(hex(fixture.key));
+  assert.ok(
+    sinkIdParts(id).height < BigInt(fixture.header_height),
+    "proof predates composite identity",
+  );
+  const record = decodeRecordData(raw);
   const provider = testProvider();
   const program = new Program<AktSolana>(idl, provider);
   const client = new Program<Ics07Tendermint>(clientIdl, provider);
@@ -98,6 +108,10 @@ export async function runSinkProofTests(t: TestContext, path: string) {
   )[0];
   // Deliberately trusted test checkpoint. This tests app proofs and minting;
   // it does not authenticate an Akash header or test validator signatures.
+  const clock = await provider.connection.getAccountInfo(
+    web3.SYSVAR_CLOCK_PUBKEY,
+  );
+  assert.ok(clock);
   await client.methods
     .initialize(
       {
@@ -111,7 +125,7 @@ export async function runSinkProofTests(t: TestContext, path: string) {
         latestHeight: { revisionNumber: new BN(1), revisionHeight: height },
       },
       {
-        timestamp: new BN(Math.floor(Date.now() / 1000)).mul(
+        timestamp: new BN(clock.data.readBigInt64LE(32).toString()).mul(
           new BN(1_000_000_000),
         ),
         root: Array.from(root),
@@ -158,29 +172,40 @@ export async function runSinkProofTests(t: TestContext, path: string) {
     .accountsStrict({ admin, config, bridge })
     .rpc();
 
-  const nonce = new BN(1);
-  const proofBuffer = web3.PublicKey.findProgramAddressSync(
-    [Buffer.from("proof"), provider.publicKey.toBuffer(), le64(nonce)],
+  const nonce = proofNonce(transferKey(id));
+  const proofBuffer = proofAddress(
     program.programId,
-  )[0];
+    provider.publicKey,
+    transferKey(id),
+  );
   await program.methods
-    .createProofBuffer(nonce, proof.length)
+    .createProofBuffer(Array.from(nonce), proof.length)
     .accountsStrict({
       submitter: provider.publicKey,
       proofBuffer,
       systemProgram: web3.SystemProgram.programId,
     })
     .rpc();
+  if (proof.length + 80 > 10_240) {
+    await program.methods
+      .growProofBuffer()
+      .accountsStrict({
+        submitter: provider.publicKey,
+        proofBuffer,
+        systemProgram: web3.SystemProgram.programId,
+      })
+      .rpc();
+  }
   for (let offset = 0; offset < proof.length; offset += 500) {
     await program.methods
       .appendProof(offset, proof.subarray(offset, offset + 500))
       .accountsStrict({ submitter: provider.publicKey, proofBuffer })
+      .preInstructions([
+        web3.ComputeBudgetProgram.requestHeapFrame({ bytes: 256 * 1024 }),
+      ])
       .rpc();
   }
-  const status = web3.PublicKey.findProgramAddressSync(
-    [Buffer.from("transfer"), le64(record.id)],
-    program.programId,
-  )[0];
+  const status = statusAddress(program.programId, id);
   const recipientTokenAccount = getAssociatedTokenAddressSync(
     mint,
     record.recipient,
@@ -205,7 +230,12 @@ export async function runSinkProofTests(t: TestContext, path: string) {
   };
   const mintRecord = (value: typeof record) =>
     program.methods
-      .mintTransfer(value, height)
+      .mintTransfer(
+        anchorId(id),
+        value.recipient,
+        new BN(value.amount.toString()),
+        height,
+      )
       .accountsStrict(accounts)
       .preInstructions([
         web3.ComputeBudgetProgram.setComputeUnitLimit({ units: 1_400_000 }),
@@ -218,7 +248,7 @@ export async function runSinkProofTests(t: TestContext, path: string) {
     "rejects an amount altered after the Akash commitment",
     async () => {
       await assert.rejects(() =>
-        mintRecord({ ...record, amount: record.amount.addn(1) }),
+        mintRecord({ ...record, amount: record.amount + 1n }),
       );
       assert.equal(await provider.connection.getAccountInfo(status), null);
       assert.equal(

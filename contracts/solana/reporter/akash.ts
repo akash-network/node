@@ -1,30 +1,39 @@
 import assert from "node:assert/strict";
 import { type OfflineSigner } from "@cosmjs/proto-signing";
 import { Comet38Client, HttpClient } from "@cosmjs/tendermint-rpc";
-import Long from "long";
 import {
   QueryClient,
   SigningStargateClient,
   accountFromAny,
 } from "@cosmjs/stargate";
 import {
-  QueryAccountRequest,
-  QueryAccountResponse,
+  QueryAccountRequest as AuthAccountRequest,
+  QueryAccountResponse as AuthAccountResponse,
 } from "cosmjs-types/cosmos/auth/v1beta1/query";
 import {
   MsgReportOutcome,
   MsgVetoVoid,
   MsgFinalizeRefund,
-  QueryOpenTransfersRequest,
-  QueryOpenTransfersResponse,
+  QueryTransfersRequest,
+  QueryTransfersResponse,
+  QueryDisputesRequest,
+  QueryDisputesResponse,
+  QueryAccountRequest,
+  QueryAccountResponse,
+  Sink_Status as Status,
+  Hold,
   QueryStateResponse,
   QueryTransferRequest,
   QueryTransferResponse,
-  QuerySink,
-  QuerySinkResponse,
 } from "@akashnetwork/chain-sdk/private-types/akash.v1";
-import { parseSinkId, sinkRegistry } from "../shared/sink";
-import { decodeRecord } from "./solana";
+import { sinkRegistry } from "../shared/sink";
+import { coinAmount, decodeRecord } from "../shared/proof";
+import {
+  parseSinkId,
+  sinkIdParts,
+  ownerBytes,
+  type SinkId,
+} from "../shared/id";
 import type { Message, Snapshot } from "./policy";
 
 export class SinkRecordNotFoundError extends Error {}
@@ -87,89 +96,158 @@ export class AkashClient {
     );
     assert.equal(reply.height, height, "Akash query height mismatch");
     const state = QueryStateResponse.decode(reply.value);
-    assert.ok(state.params && state.totals, "missing sink state");
+    assert.ok(
+      state.params &&
+        state.totals &&
+        state.policy &&
+        state.sendUsage &&
+        state.refundUsage,
+      "missing sink state",
+    );
+    assert.ok(state.epoch <= 0x7fffffffffffffffn, "invalid quota epoch");
+    for (const usage of [state.sendUsage, state.refundUsage]) {
+      assert.equal(usage.epoch, state.epoch, "quota usage epoch mismatch");
+      const amount = coinAmount(usage.amount);
+      assert.ok(
+        state.epoch > 0n || amount === 0n,
+        "usage before quota epoch starts",
+      );
+    }
     return {
+      ...state,
       params: state.params,
+      policy: state.policy,
+      sendUsage: state.sendUsage,
+      refundUsage: state.refundUsage,
       totals: state.totals,
       height,
       time: BigInt(time),
     };
   }
 
-  async transfer(id: bigint, height: number) {
-    const reply = await this.query.queryAbci(
-      "/akash.sink.v1.Query/Transfer",
-      QueryTransferRequest.encode(
-        QueryTransferRequest.fromPartial({ id }),
-      ).finish(),
+  async transfer(id: SinkId, height: number) {
+    const reply = await this.comet.abciQuery({
+      path: "/akash.sink.v1.Query/Transfer",
+      data: QueryTransferRequest.encode({ id: sinkIdParts(id) }).finish(),
       height,
-    );
+      prove: false,
+    });
+    // BaseApp maps the service's gRPC NotFound to sdk/22. Pruned state is
+    // sdk/38 from CreateQueryContext and must remain an unavailable error.
+    if (reply.code === 22 && reply.codespace === "sdk")
+      throw new SinkRecordNotFoundError("Sink record not found");
+    assert.ok(!reply.code, `Transfer query failed (${reply.code})`);
     assert.equal(reply.height, height, "Akash transfer query height mismatch");
     const transfer = QueryTransferResponse.decode(reply.value).transfer;
     assert.ok(transfer?.settlement, "missing sink transfer");
-    assert.equal(
-      decodeRecord(transfer.record).id,
-      id,
-      "Akash transfer ID mismatch",
-    );
+    assert.equal(decodeRecord(transfer).id, id, "Akash transfer ID mismatch");
     return transfer;
   }
 
-  // One page of non-terminal transfers at `height`, in ascending ID order.
-  // Undefined when the node predates the query; other errors throw.
-  async openTransfers(startAfter: bigint, limit: number, height: number) {
-    const reply = await this.comet.abciQuery({
-      path: "/akash.sink.v1.Query/OpenTransfers",
-      data: QueryOpenTransfersRequest.encode(
-        QueryOpenTransfersRequest.fromPartial({
-          startAfter: Long.fromString(startAfter.toString(), true),
-          limit,
+  async transfers(
+    height: number,
+    options: {
+      key?: Uint8Array;
+      limit?: number;
+      owner?: string;
+      status?: Status;
+      reverse?: boolean;
+    } = {},
+  ) {
+    if (options.owner) ownerBytes(options.owner);
+    const limit = options.limit ?? 100;
+    assert.ok(
+      Number.isSafeInteger(limit) && limit > 0 && limit <= 500,
+      "invalid page limit",
+    );
+    const reply = await this.query.queryAbci(
+      "/akash.sink.v1.Query/Transfers",
+      QueryTransfersRequest.encode(
+        QueryTransfersRequest.fromPartial({
+          owner: options.owner,
+          status: options.status,
+          pagination: {
+            key: options.key,
+            limit: BigInt(limit),
+            reverse: options.reverse,
+          },
         }),
       ).finish(),
       height,
-      prove: false,
-    });
-    if (
-      reply.code === 6 &&
-      reply.codespace === "sdk" &&
-      reply.log?.startsWith("unknown query path")
-    )
-      return undefined;
-    assert.ok(!reply.code, `OpenTransfers query failed (${reply.code})`);
-    assert.equal(reply.height, height, "Akash open query height mismatch");
-    const result = QueryOpenTransfersResponse.decode(reply.value);
-    return {
-      transfers: result.transfers,
-      next: BigInt(result.nextStartAfter.toString()),
-    };
-  }
-
-  async snapshot(id: bigint): Promise<Snapshot> {
-    const state = await this.state();
-    return { ...state, transfer: await this.transfer(id, state.height) };
-  }
-
-  async sink(id: string, height: number) {
-    const canonicalId = parseSinkId(id);
-    const reply = await this.comet.abciQuery({
-      path: "/akash.sink.v1.Query/Sink",
-      data: QuerySink.encode({ id: canonicalId }).finish(),
-      height,
-      prove: false,
-    });
-    // The pinned SDK maps gRPC NotFound to sdk/22 (ErrKeyNotFound).
-    if (reply.code === 22 && reply.codespace === "sdk")
-      throw new SinkRecordNotFoundError("Sink record not found");
-    assert.ok(!reply.code, `Sink query failed (${reply.code})`);
-    assert.equal(reply.height, height, "Akash sink query height mismatch");
-    const result = QuerySinkResponse.decode(reply.value);
-    assert.ok(result.transfer?.settlement, "missing sink transfer");
-    assert.equal(
-      decodeRecord(result.transfer.record).id.toString(),
-      canonicalId,
-      "Akash sink record ID mismatch",
     );
+    assert.equal(reply.height, height, "Akash transfers query height mismatch");
+    const result = QueryTransfersResponse.decode(reply.value);
+    assert.ok(
+      result.pagination && result.transfers.length <= limit,
+      "invalid transfers page",
+    );
+    for (const transfer of result.transfers) {
+      const id = sinkIdParts(decodeRecord(transfer).id);
+      assert.ok(transfer.settlement, "missing settlement");
+      assert.ok(
+        !options.owner || id.owner === options.owner,
+        "owner filter mismatch",
+      );
+      assert.ok(
+        options.status === undefined ||
+          options.status === Status.STATUS_INVALID ||
+          transfer.status === options.status,
+        "status filter mismatch",
+      );
+    }
+    return { transfers: result.transfers, nextKey: result.pagination.nextKey };
+  }
+
+  async disputes(
+    height: number,
+    key: Uint8Array = new Uint8Array(),
+    limit = 100,
+  ) {
+    const reply = await this.query.queryAbci(
+      "/akash.sink.v1.Query/Disputes",
+      QueryDisputesRequest.encode(
+        QueryDisputesRequest.fromPartial({
+          pagination: { key, limit: BigInt(limit) },
+        }),
+      ).finish(),
+      height,
+    );
+    assert.equal(reply.height, height, "Akash disputes query height mismatch");
+    const result = QueryDisputesResponse.decode(reply.value);
+    assert.ok(
+      result.pagination && result.transfers.length <= limit,
+      "invalid disputes page",
+    );
+    for (const transfer of result.transfers) {
+      decodeRecord(transfer);
+      assert.ok(
+        transfer.settlement && transfer.settlement.hold !== Hold.HOLD_NONE,
+        "unheld dispute",
+      );
+    }
+    return { transfers: result.transfers, nextKey: result.pagination.nextKey };
+  }
+
+  async account(owner: string, height: number) {
+    ownerBytes(owner);
+    const reply = await this.query.queryAbci(
+      "/akash.sink.v1.Query/Account",
+      QueryAccountRequest.encode({ owner }).finish(),
+      height,
+    );
+    assert.equal(reply.height, height, "Akash account query height mismatch");
+    const result = QueryAccountResponse.decode(reply.value);
+    assert.ok(result.usage, "missing account usage");
     return result;
+  }
+
+  async snapshot(id: SinkId): Promise<Snapshot> {
+    const state = await this.state();
+    return {
+      ...state,
+      refundHead: state.refundHead && parseSinkId(state.refundHead),
+      transfer: await this.transfer(id, state.height),
+    };
   }
 
   // The account's secp256k1 key once it has signed a transaction, otherwise
@@ -178,11 +256,11 @@ export class AkashClient {
     const { height } = await this.state();
     const reply = await this.query.queryAbci(
       "/cosmos.auth.v1beta1.Query/Account",
-      QueryAccountRequest.encode({ address }).finish(),
+      AuthAccountRequest.encode({ address }).finish(),
       height,
     );
     assert.equal(reply.height, height, "Akash account query height mismatch");
-    const { account } = QueryAccountResponse.decode(reply.value);
+    const { account } = AuthAccountResponse.decode(reply.value);
     assert.ok(account, "missing Akash account");
     const parsed = accountFromAny(account);
     assert.equal(parsed.address, address, "Akash account address mismatch");
@@ -212,7 +290,7 @@ export class AkashClient {
       // refund eligibility are checked again by the native message handler.
       const state = await this.state();
       assert.ok(
-        state.params.reporters.includes(reporter),
+        state.policy.members.includes(reporter),
         "reporter was removed",
       );
       const tx = await client.signAndBroadcast(

@@ -51,6 +51,21 @@ test("config accepts an optional bounded maxSlotLead", () => {
     );
 });
 
+test("config rejects unknown fields, including the removed maxTransfers", () => {
+  const base = {
+    ...example,
+    reporter: toBech32("akash", new Uint8Array(20).fill(7)),
+    solanaGenesisHash: web3.Keypair.generate().publicKey.toBase58(),
+  };
+  assert.ok(!("maxTransfers" in example));
+  assert.equal(parseConfig(base).reporter, base.reporter);
+  for (const name of ["maxTransfers", "auditPerPass"])
+    assert.throws(
+      () => parseConfig({ ...base, [name]: 1000 }),
+      new RegExp(`unknown config field ${name}`),
+    );
+});
+
 test("config pins a light client only when one is set", () => {
   const base = {
     ...example,

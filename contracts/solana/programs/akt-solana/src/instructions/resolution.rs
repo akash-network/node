@@ -6,6 +6,7 @@ use crate::{
     errors::AktError,
     events::TransferResolved,
     state::{TransferOutcome, TransferStatus},
+    wire::TransferId,
 };
 use anchor_lang::prelude::*;
 use solana_instruction::{
@@ -54,19 +55,21 @@ fn compute_budget_only(mut programs: impl Iterator<Item = Pubkey>) -> Result<()>
 /// already has one.
 pub(crate) fn resolve(
     status: &mut Account<TransferStatus>,
-    id: u64,
+    id: TransferId,
     proof_height: u64,
     outcome: TransferOutcome,
 ) -> Result<()> {
+    let resolved_at_slot = Clock::get()?.slot;
     status.set_inner(TransferStatus {
         id,
         proof_height,
-        resolved_at_slot: Clock::get()?.slot,
+        resolved_at_slot,
         outcome: outcome.clone(),
     });
     emit!(TransferResolved {
         id,
         proof_height,
+        resolved_at_slot,
         outcome
     });
     Ok(())

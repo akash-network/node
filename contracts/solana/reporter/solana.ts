@@ -1,33 +1,23 @@
-import assert from "node:assert/strict";
-import { isDeepStrictEqual } from "node:util";
+import {
+  Observation,
+  Outcome,
+} from "@akashnetwork/chain-sdk/private-types/akash.v1";
 import {
   Program,
+  utils,
   web3,
   type IdlAccounts,
   type IdlEvents,
 } from "@coral-xyz/anchor";
-import { utils } from "@coral-xyz/anchor";
 import { TOKEN_PROGRAM_ID, unpackMint } from "@solana/spl-token";
-import idl from "../target/idl/akt_solana.json";
-import type { AktSolana } from "../target/types/akt_solana";
-import {
-  Outcome,
-  Observation,
-} from "@akashnetwork/chain-sdk/private-types/akash.v1";
+import assert from "node:assert/strict";
+import { isDeepStrictEqual } from "node:util";
+import idl from "../../../.cache/solana/target/idl/akt_solana.json";
+import type { AktSolana } from "../../../.cache/solana/target/types/akt_solana";
+import { matchesAnchorId } from "../shared/proof";
 
-export function decodeRecord(bytes: Uint8Array) {
-  const raw = Buffer.from(bytes);
-  assert.equal(raw.length, 77, "invalid sink record length");
-  assert.equal(raw[0], 1, "unsupported sink record version");
-  const record = {
-    id: raw.readBigUInt64LE(1),
-    recipient: new web3.PublicKey(raw.subarray(29, 61)),
-    amount: raw.readBigUInt64LE(61),
-    height: raw.readBigUInt64LE(69),
-  };
-  assert.ok(record.id > 0n && record.amount > 0n && record.height > 0n);
-  return record;
-}
+import { decodeRecord, statusAddress } from "../shared/proof";
+export { decodeRecord } from "../shared/proof";
 export type Record = ReturnType<typeof decodeRecord>;
 type TransferStatus = IdlAccounts<AktSolana>["transferStatus"];
 type TransferResolved = IdlEvents<AktSolana>["transferResolved"];
@@ -303,9 +293,7 @@ export class SolanaObserver {
   }
 
   private statusAddress(record: Record) {
-    const id = Buffer.alloc(8);
-    id.writeBigUInt64LE(record.id);
-    return this.pda("transfer", id);
+    return statusAddress(this.config.programId, record.id);
   }
 
   async observeFinalized(record: Record): Promise<FinalizedObserved> {
@@ -322,9 +310,8 @@ export class SolanaObserver {
       "transferStatus",
       statusAccount.data,
     );
-    assert.equal(
-      BigInt(status.id.toString()),
-      record.id,
+    assert.ok(
+      matchesAnchorId(status.id, record.id),
       "wrong status transfer ID",
     );
     assert.ok(
@@ -362,10 +349,10 @@ export class SolanaObserver {
   }
 
   // `reported` holds the Akash votes and governance observation for this
-  // transfer. A bare slot is the legacy highest-reported-slot bound.
+  // transfer.
   async observe(
     record: Record,
-    reported: readonly Observation[] | bigint = [],
+    reported: readonly Observation[] = [],
     previousOwnObservation?: Observation,
   ): Promise<Observed> {
     const observed = await this.observeFinalized(record);
@@ -378,7 +365,7 @@ export class SolanaObserver {
     const previous = previousOwnObservation;
     const signature =
       previous?.outcome === outcome &&
-      previous.slot.toBigInt() === slot &&
+      previous.slot === slot &&
       previous.transactionSignature.length === 64 &&
       previous.transactionSignature.some((byte) => byte !== 0)
         ? Uint8Array.from(previous.transactionSignature)
@@ -400,14 +387,10 @@ export class SolanaObserver {
   private async absent(
     record: Record,
     contextSlot: bigint,
-    reported: readonly Observation[] | bigint,
+    reported: readonly Observation[],
   ): Promise<Observed> {
     const slotLimit = contextSlot + this.slotLead;
-    const evidence = typeof reported === "bigint" ? [] : reported;
-    const slots =
-      typeof reported === "bigint"
-        ? [reported]
-        : reported.map((observation) => observation.slot.toBigInt());
+    const slots = reported.map((observation) => observation.slot);
     assert.ok(
       slots.every((slot) => slot <= contextSlot || slot > slotLimit),
       "Solana node is behind reported evidence; absence cannot authorize a veto",
@@ -415,8 +398,8 @@ export class SolanaObserver {
     // The status is permanent, so its absence already disproves evidence at or
     // below contextSlot. A finalized transaction that still shows it means this
     // node is inconsistent and must not support a veto.
-    for (const observation of evidence) {
-      if (observation.slot.toBigInt() > contextSlot) continue;
+    for (const observation of reported) {
+      if (observation.slot > contextSlot) continue;
       assert.ok(
         !(await this.showsReported(record, observation)),
         "reported Solana transaction contradicts missing status",
@@ -442,13 +425,20 @@ export class SolanaObserver {
     );
     return (
       tx !== null &&
-      BigInt(tx.slot) === observation.slot.toBigInt() &&
+      BigInt(tx.slot) === observation.slot &&
       tx.transaction.signatures[0] === signature &&
       this.resolves(
         tx,
         this.statusAddress(record),
         (event) =>
-          BigInt(event.id.toString()) === record.id && kind in event.outcome,
+          matchesAnchorId(event.id, record.id) &&
+          BigInt(event.proofHeight.toString()) > record.height &&
+          BigInt(event.resolvedAtSlot.toString()) === BigInt(tx.slot) &&
+          kind in event.outcome &&
+          (!("minted" in event.outcome) ||
+            (event.outcome.minted.recipient.equals(record.recipient) &&
+              BigInt(event.outcome.minted.amount.toString()) ===
+                record.amount)),
       )
     );
   }
@@ -508,13 +498,33 @@ export class SolanaObserver {
       throw new Error(
         "resolution evidence unavailable: block missing from owned node history",
       );
+    assert.equal(
+      BigInt(status.resolvedAtSlot.toString()),
+      BigInt(slot),
+      "resolution slot mismatch",
+    );
     const found = block.transactions.filter((tx) =>
-      this.resolves(tx, address, (event) =>
-        isDeepStrictEqual(event, {
-          id: status.id,
-          proofHeight: status.proofHeight,
-          outcome: status.outcome,
-        }),
+      this.resolves(
+        tx,
+        address,
+        (event) =>
+          Buffer.from(event.id.owner).equals(Buffer.from(status.id.owner)) &&
+          event.id.height.eq(status.id.height) &&
+          event.id.sequence.eq(status.id.sequence) &&
+          event.proofHeight.eq(status.proofHeight) &&
+          event.resolvedAtSlot.eq(status.resolvedAtSlot) &&
+          (event.outcome.minted && status.outcome.minted
+            ? event.outcome.minted.recipient.equals(
+                status.outcome.minted.recipient,
+              ) && event.outcome.minted.amount.eq(status.outcome.minted.amount)
+            : Boolean(
+                event.outcome.voided &&
+                status.outcome.voided &&
+                isDeepStrictEqual(
+                  event.outcome.voided.reason,
+                  status.outcome.voided.reason,
+                ),
+              )),
       ),
     );
     // The status account is created once, so one transaction can resolve it.

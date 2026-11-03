@@ -1,12 +1,6 @@
 use anchor_lang::prelude::*;
 
-/// AKT program errors, grouped by area.
-///
-/// Codes start at 7000: Anchor adds 6000 to the first variant's discriminant
-/// of 1000. `mint_transfer` and `void_transfer` call the ICS07 client, whose
-/// own errors start at 6000 and fail the AKT instruction with the same custom
-/// code, so the two ranges must not overlap. Anchor 0.32's
-/// `#[error_code(offset = ...)]` cannot be used: its IDL keeps the 6000 base.
+/// AKT errors retain their 7000 base and existing discriminants.
 #[error_code]
 pub enum AktError {
     // Authorities.
@@ -46,7 +40,9 @@ pub enum AktError {
     InvalidProofHeight,
 
     // Proof buffers.
-    #[msg("Proof must declare 1 to 4096 bytes; chunks must be nonempty and fit that length")]
+    #[msg(
+        "Proof must declare 1 to 16384 bytes; chunks must be 1 to 500 bytes and fit that length"
+    )]
     InvalidProofLength,
     #[msg("Proof chunk offset must equal the number of bytes already written")]
     InvalidProofOffset,
@@ -60,7 +56,7 @@ pub enum AktError {
     CpiNotAllowed,
     #[msg("Only compute budget instructions may precede mint or void")]
     PrecedingInstruction,
-    #[msg("Record needs version 1, nonzero ID and amount, and 0 < height <= proof height")]
+    #[msg("Record needs nonzero owner, sequence and amount, and 0 < height <= MaxInt64 with height < proof height")]
     InvalidRecord,
     #[msg("Solana clock is negative or earlier than the recorded mint day")]
     InvalidClock,
@@ -68,4 +64,14 @@ pub enum AktError {
     TransferLimit,
     #[msg("Amount would exceed the daily mint cap; retry on a later UTC day")]
     DailyLimit,
+    #[msg("Proof buffer nonce must be the full SHA-256 of the proven key")]
+    InvalidProofNonce,
+    #[msg("Canonical settlement status must be 1 through 5")]
+    InvalidSettlementStatus,
+    #[msg("Settlement must contain a unique, bounded permanent void authorization")]
+    InvalidVoidAuthorization,
+    #[msg("Full IAVL and multistore membership proof does not verify")]
+    InvalidMembershipProof,
+    #[msg("Grow the proof buffer before appending beyond its allocation")]
+    ProofBufferTooSmall,
 }

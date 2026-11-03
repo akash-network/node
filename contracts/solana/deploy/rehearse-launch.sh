@@ -16,14 +16,16 @@
 # and run it from the launch commit, built with `npm run setup`.
 # AKT_LOCALNET_RPC_PORT (default 17899) selects the validator's ports.
 set -euo pipefail
-cd "$(dirname "$0")/.."
+source "$(dirname "$0")/../scripts/workspace.sh"
+cd "$solana_repo"
 
 port=${AKT_LOCALNET_RPC_PORT:-17899}
 url=http://127.0.0.1:$port
-artifacts=.deps/ibc-contracts/ibc-solana/target/deploy
+upstream=$SOLANA_DEPS/ibc-contracts/ibc-solana
+artifacts=$upstream/target/deploy
 names=(akt_solana ics07_tendermint access_manager)
-mkdir -p .cache
-run=$(mktemp -d "$PWD/.cache/launch-rehearsal.XXXXXX")
+mkdir -p "$SOLANA_RUN"
+run=$(mktemp -d "$SOLANA_RUN/launch-rehearsal.XXXXXX")
 mkdir "$run/keys" "$run/tx" "$run/programs"
 echo "Rehearsal evidence: $run"
 
@@ -37,7 +39,7 @@ sha256() {
 # The program ID each build declares, from the IDLs it was built with.
 declared() {
   local idl=idls/$1.json
-  [[ $1 == akt_solana ]] && idl=target/idl/akt_solana.json
+  [[ $1 == akt_solana ]] && idl=$CARGO_TARGET_DIR/idl/akt_solana.json
   python3 -I -c 'import json, sys; print(json.load(open(sys.argv[1]))["address"])' "$idl"
 }
 # Rewrites a build's own program ID (tests/relocate-program.ts).
@@ -61,7 +63,7 @@ guardian=$(newkey guardian)
 # scripts/test-contract.sh.
 multisig_program=CtQLLKbDMt1XVNXtLKJEt1K8cstbckjqE6zyFqR37KTc
 if [[ ! -f "$artifacts/test_cpi_proxy.so" ]]; then
-  (cd .deps/ibc-contracts/ibc-solana && RUSTUP_TOOLCHAIN=1.89.0 anchor build --program-name test_cpi_proxy)
+  (cd "$upstream" && CARGO_TARGET_DIR="$upstream/target" RUSTUP_TOOLCHAIN=1.89.0 anchor build --program-name test_cpi_proxy)
 fi
 repin_id=$(newkey ics07_repin-keypair)
 
@@ -79,7 +81,7 @@ if [[ -n "${AKT_REHEARSAL_PROGRAMS:-}" ]]; then
 else
   for name in "${names[@]}"; do
     source=$artifacts/$name.so
-    [[ $name == akt_solana ]] && source=target/deploy/akt_solana.so
+    [[ $name == akt_solana ]] && source=$CARGO_TARGET_DIR/deploy/akt_solana.so
     test -f "$source" || { echo "Missing $source. Run npm run setup first." >&2; exit 1; }
     relocate "$source" "$(declared "$name")" "$(newkey "$name-keypair")" "$run/programs/$name.so"
   done

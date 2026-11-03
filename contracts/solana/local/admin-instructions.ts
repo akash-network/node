@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { BN, BorshCoder, web3, type Idl } from "@coral-xyz/anchor";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import aktJson from "../target/idl/akt_solana.json";
+import aktJson from "../../../.cache/solana/target/idl/akt_solana.json";
 import clientJson from "../idls/ics07_tendermint.json";
 import accessJson from "../idls/access_manager.json";
 import { programEvents } from "../reporter/solana";

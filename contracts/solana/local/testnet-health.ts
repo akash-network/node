@@ -1,3 +1,6 @@
+import { collectPages } from "./open-transfers";
+import { coinAmount } from "../shared/proof";
+import { parseSinkId } from "../shared/id";
 import assert from "node:assert/strict";
 import { join } from "node:path";
 import { web3 } from "@coral-xyz/anchor";
@@ -72,9 +75,11 @@ async function main() {
         assert.equal(validator.votingPower, 10_000n);
     }
     const state = await akash.state();
-    assert.equal(state.totals.pendingCount.toBigInt(), 0n);
-    assert.equal(state.totals.pendingAmount.toBigInt(), 0n);
-    assert.equal(state.totals.voidedAmount.toBigInt(), 0n);
+    assert.equal(state.totals.pendingCount, 0n);
+    assert.equal(coinAmount(state.totals.pendingAmount), 0n);
+    assert.equal(coinAmount(state.totals.voidedAmount), 0n);
+    assert.equal(state.totals.voidedCount, 0n);
+    assert.equal(coinAmount(state.totals.refundPendingAmount), 0n);
     // The client the bridge pins now, not the one genesis deployed.
     const wallet = await provider();
     const pinned = await discoverLightClient(wallet.connection);
@@ -98,7 +103,7 @@ async function main() {
       JSON.stringify(reconciliation.alerts),
     );
     const burns = BigInt(reconciliation.cumulativeBurnedUakt);
-    assert.equal(mint.supply + burns, state.totals.mintedAmount.toBigInt());
+    assert.equal(mint.supply + burns, coinAmount(state.totals.mintedAmount));
     const local = object(await json(join(ROOT, "initialized.json")));
     assert.ok(typeof local.sinkAddress === "string");
     const bank = await StargateClient.create(nodes[0]);
@@ -106,14 +111,16 @@ async function main() {
       (await bank.getBalance(local.sinkAddress, "uakt")).amount,
     );
     assert.equal(locked, mint.supply + burns);
+    const records = await collectPages((key) =>
+      akash.transfers(state.height, { key, limit: 500 }),
+    );
     const reporters = [];
     for (let i = 0; i < 3; i++) {
       const config = parseConfig(await json(join(ROOT, `reporter${i}.json`)));
       const observer = new SolanaObserver(solana, config);
-      for (let id = 1n; id <= state.totals.lastTransferId.toBigInt(); id++) {
-        const transfer = await akash.transfer(id, state.height);
+      for (const { transfer } of records) {
         const observation = await observer.observe(
-          decodeRecord(transfer.record),
+          decodeRecord(transfer),
           reportedObservations(transfer),
           transfer.settlement?.votes.find(
             (vote) => vote.reporter === config.reporter,
@@ -121,7 +128,11 @@ async function main() {
         );
         const plan = planOutcome(
           config.reporter,
-          { ...state, transfer },
+          {
+            ...state,
+            transfer,
+            refundHead: state.refundHead && parseSinkId(state.refundHead),
+          },
           observation,
         );
         assert.equal(
@@ -137,7 +148,7 @@ async function main() {
       }
       reporters.push({
         reporter: config.reporter,
-        scanned: state.totals.lastTransferId.toString(),
+        scanned: records.length.toString(),
         failures: 0,
       });
     }
@@ -156,8 +167,8 @@ async function main() {
       solanaSupplyUakt: mint.supply.toString(),
       cumulativeBurnedUakt: burns.toString(),
       lockedUakt: locked.toString(),
-      mintedUakt: state.totals.mintedAmount.toString(),
-      refundedUakt: state.totals.refundedAmount.toString(),
+      mintedUakt: coinAmount(state.totals.mintedAmount).toString(),
+      refundedUakt: coinAmount(state.totals.refundedAmount).toString(),
     };
     await save(join(ROOT, "health-result.json"), result);
     console.log(JSON.stringify(result, null, 2));

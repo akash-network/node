@@ -5,9 +5,9 @@ use super::resolution::{require_top_level_invocation, resolve};
 use crate::{
     constants::*,
     errors::AktError,
-    light_client::{self, MembershipAccounts},
+    light_client::{self, MembershipAccounts, ProvenValue},
     state::{BridgeConfig, LaunchConfig, ProofBuffer, TransferOutcome, TransferStatus, VoidReason},
-    wire::TransferRecord,
+    wire::{record_value, transfer_key, TransferId},
 };
 use anchor_lang::{prelude::*, solana_program::program_pack::Pack, system_program};
 use anchor_spl::{
@@ -22,7 +22,7 @@ use anchor_spl::{
 use solana_curve25519::edwards::{validate_edwards, PodEdwardsPoint};
 
 #[derive(Accounts)]
-#[instruction(record: TransferRecord)]
+#[instruction(id: TransferId, recipient_key: Pubkey)]
 pub struct MintTransfer<'info> {
     /// Pays rent for the status account and, on a mint, the recipient's
     /// associated token account if it does not exist.
@@ -34,12 +34,13 @@ pub struct MintTransfer<'info> {
     /// Pinned client and policy. A mint updates the day's usage.
     #[account(mut, seeds = [BRIDGE_SEED], bump)]
     pub bridge: Account<'info, BridgeConfig>,
-    /// A complete proof of the transfer key of `record.id`, from any
+    /// A complete proof of the transfer key of `id`, from any
     /// submitter's buffer.
+    #[account(seeds = [PROOF_SEED, proof_buffer.submitter.as_ref(), proof_buffer.nonce.as_ref()], bump)]
     pub proof_buffer: Box<Account<'info, ProofBuffer>>,
     /// Terminal status. `init` fails if the record already has one.
     #[account(init, payer = payer, space = 8 + TransferStatus::INIT_SPACE,
-        seeds = [TRANSFER_SEED, &record.id.to_le_bytes()], bump)]
+        seeds = [TRANSFER_SEED, id.owner.as_ref(), &id.height.to_le_bytes(), &id.sequence.to_le_bytes()], bump)]
     pub status: Account<'info, TransferStatus>,
     /// CHECK: Must be `bridge.light_client_program` and executable.
     #[account(address = bridge.light_client_program, executable)]
@@ -51,7 +52,7 @@ pub struct MintTransfer<'info> {
     /// (the client's latest) and that it is inside the trusting period.
     pub latest_consensus: UncheckedAccount<'info>,
     /// CHECK: `light_client::verify_membership` checks its owner, PDA and height
-    /// (`proof_height`); ICS07 verifies the proof against its root.
+    /// (`proof_height`); the pinned library verifies against its root.
     pub proof_consensus: UncheckedAccount<'info>,
     #[account(mut, seeds = [MINT_SEED], bump, address = config.mint,
         mint::authority = mint_authority, mint::token_program = token_program)]
@@ -60,32 +61,34 @@ pub struct MintTransfer<'info> {
     /// data and signs the mint CPI.
     #[account(seeds = [MINT_AUTHORITY_SEED], bump = config.mint_authority_bump)]
     pub mint_authority: UncheckedAccount<'info>,
-    /// CHECK: Must be `record.recipient`. After the proof, `accepts_recipient`
+    /// CHECK: Must be `recipient`. After the proof, `accepts_recipient`
     /// checks its owner, executable flag and curve point.
-    #[account(address = record.recipient)]
+    #[account(address = recipient_key)]
     pub recipient: UncheckedAccount<'info>,
     /// CHECK: Must be the recipient's legacy-token associated token account for
     /// the AKT mint. `ata_usable` checks any existing contents before a mint.
-    #[account(mut, address = associated_token::get_associated_token_address(&record.recipient, &mint.key()))]
+    #[account(mut, address = associated_token::get_associated_token_address(&recipient_key, &mint.key()))]
     pub recipient_token_account: UncheckedAccount<'info>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
 }
 
-/// Verifies that the transfer key of `record.id` holds `record` at
-/// `proof_height`, then mints `record.amount` to the recipient's associated
+/// Verifies native RecordData at the transfer key of `id` at
+/// `proof_height`, then mints `amount` to the recipient's associated
 /// token account if `accepts_recipient`, or records
 /// `Voided / InvalidRecipient`. Either way the status is permanent. Caps apply
 /// only to mints, and a cap failure reverts the instruction, so the record
 /// stays pending and can be retried.
 pub(crate) fn mint_transfer(
     ctx: Context<MintTransfer>,
-    record: TransferRecord,
+    id: TransferId,
+    recipient: Pubkey,
+    amount: u64,
     proof_height: u64,
 ) -> Result<()> {
     require_top_level_invocation()?;
-    record.validate(proof_height)?;
+    id.validate_proof_height(proof_height)?;
     let accounts = ctx.accounts;
     light_client::verify_membership(
         MembershipAccounts {
@@ -97,22 +100,19 @@ pub(crate) fn mint_transfer(
         &accounts.bridge,
         &accounts.proof_buffer,
         proof_height,
-        record.key(),
-        record.try_to_vec()?,
+        transfer_key(&id)?,
+        ProvenValue::Record(record_value(&recipient, amount)?),
     )?;
 
     let outcome = if accepts_recipient(accounts)? {
-        issue(accounts, record.amount)?;
-        TransferOutcome::Minted {
-            amount: record.amount,
-            recipient: record.recipient,
-        }
+        issue(accounts, amount)?;
+        TransferOutcome::Minted { amount, recipient }
     } else {
         TransferOutcome::Voided {
             reason: VoidReason::InvalidRecipient,
         }
     };
-    resolve(&mut accounts.status, record.id, proof_height, outcome)
+    resolve(&mut accounts.status, id, proof_height, outcome)
 }
 
 /// Whether the proven recipient may receive AKT.

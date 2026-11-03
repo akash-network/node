@@ -1,16 +1,6 @@
-import assert from "node:assert/strict";
-import { execFile, spawn, type ChildProcess } from "node:child_process";
-import { openSync, closeSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
-import { promisify } from "node:util";
-import { join, resolve } from "node:path";
-import { createHash } from "node:crypto";
+import { QueryStateResponse } from "@akashnetwork/chain-sdk/private-types/akash.v1";
 import { toBech32 } from "@cosmjs/encoding";
 import { Comet38Client, HttpClient } from "@cosmjs/tendermint-rpc";
-import {
-  QueryBalanceRequest,
-  QueryBalanceResponse,
-} from "cosmjs-types/cosmos/bank/v1beta1/query";
 import {
   BaseAccount,
   ModuleAccount,
@@ -20,16 +10,26 @@ import {
   QueryAccountResponse,
 } from "cosmjs-types/cosmos/auth/v1beta1/query";
 import {
+  QueryBalanceRequest,
+  QueryBalanceResponse,
+} from "cosmjs-types/cosmos/bank/v1beta1/query";
+import {
   QueryCommunityPoolRequest,
   QueryCommunityPoolResponse,
 } from "cosmjs-types/cosmos/distribution/v1beta1/query";
-import { QueryStateResponse } from "@akashnetwork/chain-sdk/private-types/akash.v1";
-import { REPO, NODE_REPO, AKASH, object, sleep, save } from "./common";
+import assert from "node:assert/strict";
+import { execFile, spawn, type ChildProcess } from "node:child_process";
+import { createHash } from "node:crypto";
+import { closeSync, openSync } from "node:fs";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { join, resolve } from "node:path";
+import { promisify } from "node:util";
+import { AKASH, NODE_REPO, RUN, object, save, sleep } from "./common";
 import { governanceAddress } from "./governance";
 const exec = promisify(execFile);
 const original = resolve(
   process.env.AKASH_UPGRADE_BASE ??
-    join(NODE_REPO, ".cache/upgrade-base/.cache/bin/akash"),
+    join(NODE_REPO, ".cache/solana/upgrade-base/.cache/solana/bin/akash"),
 );
 const rpc = "http://127.0.0.1:30657";
 const sink = toBech32(
@@ -37,8 +37,8 @@ const sink = toBech32(
   createHash("sha256").update("sink").digest().subarray(0, 20),
 );
 async function main() {
-  await mkdir(join(REPO, ".cache/upgrades"), { recursive: true, mode: 0o700 });
-  const root = await mkdtemp(join(REPO, ".cache/upgrades/run-"));
+  await mkdir(join(RUN, "upgrades"), { recursive: true, mode: 0o700 });
+  const root = await mkdtemp(join(RUN, "upgrades/run-"));
   console.log(`Existing-chain upgrade rehearsal: ${root}`);
   const results: object[] = [];
   // The upgrade installs sink with a zero balance: there is no launch
@@ -354,7 +354,7 @@ async function main() {
       assert.equal(reply.code, 0);
       const sinkState = QueryStateResponse.decode(reply.value);
       assert.equal(sinkState.params?.enabled, false);
-      assert.equal(sinkState.totals?.lastTransferId.toBigInt(), 0n);
+      assert.equal(sinkState.totals?.pendingCount, 0n);
       assert.equal(await bank(sink), "0");
       assert.equal(await bank(bystander), initial.bystander);
       const adopted = await account(sink);

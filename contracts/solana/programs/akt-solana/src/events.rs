@@ -5,7 +5,10 @@
 //! instructions do not: a multisig upgrade authority calls them through CPI,
 //! so monitors must attribute their events to the AKT invocation frame.
 
-use crate::state::{MintPolicy, TransferOutcome};
+use crate::{
+    state::{MintPolicy, TransferOutcome},
+    wire::TransferId,
+};
 use anchor_lang::prelude::*;
 
 /// `initialize` created the launch record and the AKT mint with zero supply.
@@ -70,10 +73,11 @@ pub struct LightClientRepinned {
     pub chain_id: String,
 }
 
-/// A record reached its terminal status, stored at `["transfer", id]`.
+/// A record reached its terminal status, stored at `["transfer", owner, LE64(height), LE64(sequence)]`.
 #[event]
 pub struct TransferResolved {
-    pub id: u64,
+    pub id: TransferId,
     pub proof_height: u64,
+    pub resolved_at_slot: u64,
     pub outcome: TransferOutcome,
 }
