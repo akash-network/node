@@ -7,8 +7,8 @@ import {
 } from "@akashnetwork/chain-sdk/private-types/akash.v1";
 import assert from "node:assert/strict";
 import test from "node:test";
-import vectors from "../../../../chain-sdk-sink-review/go/node/sink/v1/testdata/proof_vectors.json";
-import settlements from "../../../../chain-sdk-sink-review/go/node/sink/v1/testdata/settlement_vectors.json";
+import vectors from "../programs/akt-solana/tests/fixtures/proof_vectors.json";
+import settlements from "../programs/akt-solana/tests/fixtures/settlement_vectors.json";
 import {
   chronologicalKey,
   MAX_INT64,
