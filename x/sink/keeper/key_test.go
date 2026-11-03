@@ -154,7 +154,7 @@ func proofPolicy() types.ReporterPolicy {
 	return types.ReporterPolicy{
 		Version:   1,
 		Members:   []string{testOwner(1).String(), testOwner(2).String(), testOwner(3).String(), testOwner(4).String()},
-		Threshold: 3,
+		Threshold: sdkmath.LegacyMustNewDecFromStr("0.75"),
 	}
 }
 
@@ -174,7 +174,8 @@ func proofSettlement(status types.Status) types.SettlementData {
 	}
 
 	if outcome != types.OutcomeUnspecified {
-		for _, member := range s.Policy.Members[:s.Policy.Threshold] {
+		required := s.Policy.Threshold.MulInt64(int64(len(s.Policy.Members))).Ceil().TruncateInt64()
+		for _, member := range s.Policy.Members[:required] {
 			s.Votes = append(s.Votes, types.Vote{
 				Reporter:      member,
 				PolicyVersion: 1,
@@ -306,7 +307,7 @@ func TestSettlementProofVectors(t *testing.T) {
 		require.NoError(t, err)
 
 		if name == "maximum_evidence" {
-			require.Len(t, value, 6500)
+			require.Len(t, value, 6519)
 		}
 
 		js, err := cdc.MarshalJSON(&settlement)
@@ -351,13 +352,13 @@ func TestSettlementProofVectors(t *testing.T) {
 	primary := types.ReporterPolicy{
 		Version:   math.MaxUint64 - 1,
 		Members:   members,
-		Threshold: 32,
+		Threshold: sdkmath.LegacyOneDec(),
 	}
 
 	witness := types.ReporterPolicy{
 		Version:   math.MaxUint64,
 		Members:   []string{testOwner(33).String(), testOwner(34).String()},
-		Threshold: 2,
+		Threshold: sdkmath.LegacyOneDec(),
 	}
 
 	s := types.SettlementData{

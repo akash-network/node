@@ -147,7 +147,7 @@ func TestSettlementWritesRejectMissingPolicies(t *testing.T) {
 }
 
 func TestSettlementWriteGasIgnoresRetainedPolicies(t *testing.T) {
-	report := func(policies int) uint64 {
+	report := func(policies uint64) uint64 {
 		k, ctx, bank := testStore(t)
 		g := historyGenesis(policies, settlementIn(types.StatusTransferPending), 10, 0)
 		importTestGenesis(t, k, ctx, bank, g)

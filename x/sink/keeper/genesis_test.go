@@ -158,8 +158,9 @@ func testStore(t *testing.T) (*keeper, sdk.Context, *testBank) {
 }
 
 func quorum(p types.ReporterPolicy, outcome types.Outcome) []types.Vote {
-	votes := make([]types.Vote, 0, p.Threshold)
-	for _, r := range p.Members[:p.Threshold] {
+	required := p.Threshold.MulInt64(int64(len(p.Members))).Ceil().TruncateInt64()
+	votes := make([]types.Vote, 0, required)
+	for _, r := range p.Members[:required] {
 		votes = append(votes, types.Vote{
 			Reporter:      r,
 			PolicyVersion: p.Version,
@@ -177,9 +178,16 @@ func quorum(p types.ReporterPolicy, outcome types.Outcome) []types.Vote {
 func populatedGenesis() *types.GenesisState {
 	g := types.DefaultGenesis()
 	g.Params.Reporters = []string{testOwner(2).String(), testOwner(3).String(), testOwner(4).String(), testOwner(5).String()}
-	p1 := g.Params.Policy(1)
-	p1.Members = []string{testOwner(1).String(), testOwner(2).String(), testOwner(3).String(), testOwner(4).String()}
-	p2 := g.Params.Policy(2)
+	p1 := types.ReporterPolicy{
+		Version:   1,
+		Members:   []string{testOwner(1).String(), testOwner(2).String(), testOwner(3).String(), testOwner(4).String()},
+		Threshold: g.Params.ReportersThreshold,
+	}
+	p2 := types.ReporterPolicy{
+		Version:   2,
+		Members:   g.Params.Reporters,
+		Threshold: g.Params.ReportersThreshold,
+	}
 	g.Policies = []types.ReporterPolicy{p1, p2}
 	g.PolicySequence = 2
 	deadline := int64(86400 * 18)

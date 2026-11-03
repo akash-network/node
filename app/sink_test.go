@@ -147,7 +147,14 @@ func newSinkHarness(t *testing.T, change func(*sinktypes.GenesisState)) *sinkHar
 			change(g)
 		}
 
-		g.Policies = []sinktypes.ReporterPolicy{g.Params.Policy(1)}
+		g.PolicySequence = 1
+		g.Policies = []sinktypes.ReporterPolicy{
+			{
+				Version:   g.PolicySequence,
+				Members:   g.Params.Reporters,
+				Threshold: g.Params.ReportersThreshold,
+			},
+		}
 		state[sinktypes.ModuleName] = cdc.MustMarshalJSON(g)
 		return state
 	}))
@@ -279,6 +286,13 @@ func (h *sinkHarness) params() sinktypes.Params {
 
 func (h *sinkHarness) totals() sinktypes.Totals {
 	return sinkTotals(h.t, h.a.Keepers.Akash.Sink, h.ctx())
+}
+
+func (h *sinkHarness) policy() sinktypes.ReporterPolicy {
+	p, err := h.a.Keepers.Akash.Sink.GetCurrentPolicy(h.ctx())
+	require.NoError(h.t, err)
+
+	return p
 }
 
 func (h *sinkHarness) state() *sinktypes.QueryStateResponse {

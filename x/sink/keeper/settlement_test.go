@@ -20,10 +20,7 @@ func TestSettlementPolicyAndQueueRecovery(t *testing.T) {
 	importTestGenesis(t, k, ctx, bank, g)
 	p := g.Params
 	p.RefundsEnabled = true
-	require.NoError(t, k.UpdateParams(ctx, &types.MsgUpdateParams{
-		Authority: k.authority,
-		Params:    p,
-	}))
+	require.NoError(t, k.SetParams(ctx, p))
 
 	current, err := k.GetCurrentPolicy(ctx)
 	require.NoError(t, err)
@@ -71,10 +68,7 @@ func TestSettlementPolicyAndQueueRecovery(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, g.Records[7].ID, head)
 	p.Reporters = nil
-	require.NoError(t, k.UpdateParams(ctx, &types.MsgUpdateParams{
-		Authority: k.authority,
-		Params:    p,
-	}))
+	require.NoError(t, k.SetParams(ctx, p))
 
 	current, err = k.GetCurrentPolicy(ctx)
 	require.NoError(t, err)
@@ -223,10 +217,7 @@ func TestFinalizeRefundAuthorizationErrors(t *testing.T) {
 			if tc.rotate {
 				p := g.Params
 				p.Reporters = nil
-				require.NoError(t, k.UpdateParams(ctx, &types.MsgUpdateParams{
-					Authority: k.authority,
-					Params:    p,
-				}))
+				require.NoError(t, k.SetParams(ctx, p))
 			}
 
 			r := g.Records[tc.index]
@@ -327,10 +318,7 @@ func TestReportsRetainEvidenceAndVetoAcrossPolicies(t *testing.T) {
 	require.NotNil(t, got.Settlement.GovernanceObservation)
 	p := g.Params
 	p.Reporters = []string{testOwner(1).String(), testOwner(2).String(), testOwner(3).String(), testOwner(4).String()}
-	require.NoError(t, k.UpdateParams(ctx, &types.MsgUpdateParams{
-		Authority: k.authority,
-		Params:    p,
-	}))
+	require.NoError(t, k.SetParams(ctx, p))
 
 	veto := g.Records[8]
 	msg = &types.MsgReportOutcome{
@@ -423,10 +411,7 @@ func TestVetoDeadlineAndGovernanceRoundBoundaries(t *testing.T) {
 	require.Equal(t, deadline.Unix(), got.Settlement.ChallengeEnd)
 	p := g.Params
 	p.ReporterChallengePeriod += time.Hour
-	require.NoError(t, k.UpdateParams(ctx, &types.MsgUpdateParams{
-		Authority: k.authority,
-		Params:    p,
-	}))
+	require.NoError(t, k.SetParams(ctx, p))
 
 	got, err = k.GetTransfer(ctx, id)
 	require.NoError(t, err)

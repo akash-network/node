@@ -33,7 +33,14 @@ func TestAllocatorAtomicDepositAndReset(t *testing.T) {
 		g.Params.Reporters = append(g.Params.Reporters, testOwner(n).String())
 	}
 
-	g.Policies = []types.ReporterPolicy{g.Params.Policy(1)}
+	g.PolicySequence = 1
+	g.Policies = []types.ReporterPolicy{
+		{
+			Version:   g.PolicySequence,
+			Members:   g.Params.Reporters,
+			Threshold: g.Params.ReportersThreshold,
+		},
+	}
 	importTestGenesis(t, k, ctx, bank, g)
 	pub := ed25519.NewKeyFromSeed(bytes.Repeat([]byte{8}, 32)).Public().(ed25519.PublicKey)
 	var recipient types.SolanaAddress
@@ -109,7 +116,14 @@ func TestSenderAndPolicyEligibility(t *testing.T) {
 		g.Params.Reporters = append(g.Params.Reporters, testOwner(n).String())
 	}
 
-	g.Policies = []types.ReporterPolicy{g.Params.Policy(1)}
+	g.PolicySequence = 1
+	g.Policies = []types.ReporterPolicy{
+		{
+			Version:   g.PolicySequence,
+			Members:   g.Params.Reporters,
+			Threshold: g.Params.ReportersThreshold,
+		},
+	}
 	importTestGenesis(t, k, ctx, bank, g)
 	accounts := k.accounts.(genesisAccounts)
 	base := authtypes.NewBaseAccountWithAddress(testOwner(6))
@@ -131,28 +145,19 @@ func TestSenderAndPolicyEligibility(t *testing.T) {
 	p := g.Params
 	p.Reporters = []string{g.Params.Reporters[3], g.Params.Reporters[2], g.Params.Reporters[1], g.Params.Reporters[0]}
 	p.ReportersThreshold = sdkmath.LegacyMustNewDecFromStr("0.7")
-	require.NoError(t, k.UpdateParams(ctx, &types.MsgUpdateParams{
-		Authority: k.authority,
-		Params:    p,
-	}))
+	require.NoError(t, k.SetParams(ctx, p))
 
 	policy, err := k.GetCurrentPolicy(ctx)
 	require.NoError(t, err)
-	require.Equal(t, uint64(1), policy.Version)
+	require.Equal(t, uint64(2), policy.Version)
 	p.ReportersThreshold = sdkmath.LegacyMustNewDecFromStr("0.8")
-	require.NoError(t, k.UpdateParams(ctx, &types.MsgUpdateParams{
-		Authority: k.authority,
-		Params:    p,
-	}))
+	require.NoError(t, k.SetParams(ctx, p))
 
 	policy, err = k.GetCurrentPolicy(ctx)
 	require.NoError(t, err)
-	require.Equal(t, uint64(2), policy.Version)
-	require.Equal(t, uint32(4), policy.Threshold)
+	require.Equal(t, uint64(3), policy.Version)
+	require.True(t, p.ReportersThreshold.Equal(policy.Threshold))
 	accounts[testOwner(6).String()] = authtypes.NewModuleAccount(base, "reserved")
 	p.Reporters[0] = testOwner(6).String()
-	require.Error(t, k.UpdateParams(ctx, &types.MsgUpdateParams{
-		Authority: k.authority,
-		Params:    p,
-	}))
+	require.Error(t, k.SetParams(ctx, p))
 }

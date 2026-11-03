@@ -6,6 +6,7 @@ import (
 	"errors"
 	"testing"
 
+	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/stretchr/testify/require"
@@ -40,8 +41,11 @@ func (k *commandKeeper) Deposit(_ sdk.Context, msg *types.MsgSink) (types.ID, er
 	return k.id, k.commandErr
 }
 
-func (k *commandKeeper) UpdateParams(_ sdk.Context, msg *types.MsgUpdateParams) error {
-	k.calls = append(k.calls, msg)
+func (k *commandKeeper) SetParams(_ sdk.Context, params types.Params) error {
+	k.calls = append(k.calls, &types.MsgUpdateParams{
+		Authority: k.authority,
+		Params:    params,
+	})
 	return k.commandErr
 }
 
@@ -161,7 +165,7 @@ func TestMessageAuthorizationAndDispatch(t *testing.T) {
 	policy := types.ReporterPolicy{
 		Version:   2,
 		Members:   []string{reporter},
-		Threshold: 1,
+		Threshold: sdkmath.LegacyOneDec(),
 	}
 
 	ctx := sdk.Context{}.WithContext(context.Background())

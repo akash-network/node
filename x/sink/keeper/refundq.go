@@ -130,6 +130,10 @@ func (k *keeper) put(ctx sdk.Context, before *types.TransferState, after types.T
 		}
 	}
 
+	return k.setSettlement(ctx, before, after)
+}
+
+func (k *keeper) setSettlement(ctx context.Context, before *types.TransferState, after types.TransferState) error {
 	if before == nil {
 		if err := k.history.Set(ctx, after.ID); err != nil {
 			return err
