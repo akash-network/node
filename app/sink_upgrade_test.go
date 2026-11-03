@@ -400,7 +400,9 @@ func TestSinkUpgradePreservesNativeEpoch(t *testing.T) {
 
 		require.EqualValues(t, native.CurrentEpoch, state.Epoch)
 		require.True(t, state.SendUsage.Amount.IsZero())
+
 		require.False(t, pResp.Params.Enabled)
+		require.False(t, sinkParams(t, k, ctx).Enabled)
 	}
 }
 

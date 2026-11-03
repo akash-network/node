@@ -40,7 +40,7 @@ func (h *sinkHarness) reportMsg(t *testing.T, reporter, id int, outcome types.Ou
 	return &types.MsgReportOutcome{
 		Reporter:      h.reporterAddress(reporter),
 		ID:            h.id(id),
-		PolicyVersion: h.state().Policy.Version,
+		PolicyVersion: h.policy().Version,
 		Round:         entry.Settlement.Round,
 		Observation:   observation(outcome),
 	}

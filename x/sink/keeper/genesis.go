@@ -44,7 +44,7 @@ func (k *keeper) InitGenesis(ctx sdk.Context, g *types.GenesisState) error {
 			return err
 		}
 
-		if err := k.put(ctx, nil, types.TransferState(t)); err != nil {
+		if err := k.setSettlement(ctx, nil, types.TransferState(t)); err != nil {
 			return err
 		}
 	}

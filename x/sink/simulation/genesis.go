@@ -34,6 +34,7 @@ func RandomizedGenState(simState *module.SimulationState) {
 	params.MaxTransferAmountPerEpoch = sdk.NewInt64Coin(sdkutil.DenomUakt, maximum*20)
 	params.MaxEpochRefund = sdk.NewInt64Coin(sdkutil.DenomUakt, maximum*4)
 
+	genesis.PolicySequence = 1
 	genesis.Policies = []types.ReporterPolicy{
 		{
 			Version:   genesis.PolicySequence,

@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"math"
-	"slices"
 
 	"cosmossdk.io/collections"
 	"cosmossdk.io/collections/corecompat"
@@ -228,8 +227,6 @@ func (k *keeper) GetCurrentPolicy(ctx context.Context) (types.ReporterPolicy, er
 	if version != policy.Version {
 		return types.ReporterPolicy{}, types.ErrInternal.Wrap("policy key mismatch")
 	}
-
-	slices.Sort(policy.Members)
 
 	return policy, nil
 }

@@ -430,15 +430,15 @@ func TestSinkSimulationQuotaAndAnte(t *testing.T) {
 	quota, err := querier.State(ctx, nil)
 	require.NoError(t, err)
 
-	pResp, err := querier.Params(ctx, nil)
+	params, err := a.Keepers.Akash.Sink.GetParams(ctx)
 	require.NoError(t, err)
-
-	require.True(t, pResp.Params.MaxTransferAmountPerEpoch.Amount.Sub(quota.SendUsage.Amount.Amount).LT(pResp.Params.MinAmountPerTransfer.Amount))
+	require.True(t, params.MaxTransferAmountPerEpoch.Amount.Sub(quota.SendUsage.Amount.Amount).LT(params.MinAmountPerTransfer.Amount))
 
 	// A real rejected transaction must leave the same quota and transfer state.
 	before, err = a.Keepers.Akash.Sink.ExportGenesis(ctx)
 	require.NoError(t, err)
-	msg.Amount = pResp.Params.MaxAmountPerTransfer
+
+	msg.Amount = params.MaxAmountPerTransfer
 	acc = a.Keepers.Cosmos.Acct.GetAccount(ctx, owner)
 	tx, err = simtestutil.GenSignedMockTx(r, a.TxConfig(), []sdk.Msg{&msg}, nil, simtestutil.DefaultGenTxGas, AppChainID, []uint64{acc.GetAccountNumber()}, []uint64{acc.GetSequence()}, account.PrivKey)
 	require.NoError(t, err)
@@ -492,7 +492,7 @@ func TestSinkSimulationQuotaAndAnte(t *testing.T) {
 	_, err = handler(ctx, proposal)
 	require.NoError(t, err)
 
-	params, err := a.Keepers.Akash.Sink.GetParams(ctx)
+	params, err = a.Keepers.Akash.Sink.GetParams(ctx)
 	require.NoError(t, err)
 	require.Equal(t, proposal.Params, params)
 	require.Equal(t, types.DefaultParams().ReporterChallengePeriod, params.ReporterChallengePeriod)

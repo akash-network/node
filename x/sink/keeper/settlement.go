@@ -155,41 +155,33 @@ func (k *keeper) ReportOutcome(ctx sdk.Context, msg *types.MsgReportOutcome) err
 			return err
 		}
 	} else {
-		//minted, voided := s.Tallies()
+		minted, voided := s.Tallies()
+		required := s.Policy.Threshold.MulInt64(int64(len(s.Policy.Members))).Ceil().TruncateInt64()
+		if required > 0 && int64(minted) == required {
+			t.Status = types.StatusMinted
 
-		//if policy.Threshold > 0 {
-		//	if policy.Threshold == minted {
-		//
-		//	} else if {
-		//
-		//	}
-		//}
-		//
-		//if policy.Threshold > 0 && minted == policy.Threshold {
-		//	t.Status = types.StatusMinted
-		//
-		//	if err = cache.EventManager().EmitTypedEvent(&types.EventMintConfirmed{ID: msg.ID}); err != nil {
-		//		return err
-		//	}
-		//} else if policy.Threshold > 0 && voided == policy.Threshold {
-		//	p, err := k.params.Get(cache)
-		//	if err != nil {
-		//		return err
-		//	}
-		//
-		//	t.Status = types.StatusRefundPending
-		//	s.ChallengeEnd, err = challengeDeadline(cache, p)
-		//	if err != nil {
-		//		return err
-		//	}
-		//
-		//	if err = cache.EventManager().EmitTypedEvent(&types.EventVoidConfirmed{
-		//		ID:           msg.ID,
-		//		ChallengeEnd: time.Unix(s.ChallengeEnd, 0).UTC(),
-		//	}); err != nil {
-		//		return err
-		//	}
-		//}
+			if err = cache.EventManager().EmitTypedEvent(&types.EventMintConfirmed{ID: msg.ID}); err != nil {
+				return err
+			}
+		} else if required > 0 && int64(voided) == required {
+			p, err := k.params.Get(cache)
+			if err != nil {
+				return err
+			}
+
+			t.Status = types.StatusRefundPending
+			s.ChallengeEnd, err = challengeDeadline(cache, p)
+			if err != nil {
+				return err
+			}
+
+			if err = cache.EventManager().EmitTypedEvent(&types.EventVoidConfirmed{
+				ID:           msg.ID,
+				ChallengeEnd: time.Unix(s.ChallengeEnd, 0).UTC(),
+			}); err != nil {
+				return err
+			}
+		}
 	}
 
 	if err = k.put(cache, &before, t); err != nil {

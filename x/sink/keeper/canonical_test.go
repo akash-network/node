@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/stretchr/testify/require"
@@ -249,10 +248,8 @@ func TestPermanentOrderSurvivesMintConflictRotationRestartAndRefund(t *testing.T
 	require.Equal(t, types.HoldConflict, conflict.Settlement.Hold)
 	require.Equal(t, receipt, *conflict.Settlement.VoidAuthorization)
 
-	newThreshold := sdkmath.LegacyOneDec()
-	newThreshold.AddMut(g.Policies[0].Threshold)
-
-	require.Len(t, conflict.Settlement.Votes, int(newThreshold.TruncateInt64()))
+	required := g.Policies[0].Threshold.MulInt64(int64(len(g.Policies[0].Members))).Ceil().TruncateInt64()
+	require.Len(t, conflict.Settlement.Votes, int(required)+1)
 
 	opposite.Observation.Slot++
 	require.NoError(t, k.ReportOutcome(ctx, opposite))

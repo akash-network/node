@@ -83,7 +83,7 @@ func SimulateMsgSink(txConfig client.TxConfig, ak keeper.AccountKeeper, bk keepe
 			return noOp(msg, "get current policy"), nil, err
 		}
 
-		if !params.Enabled || policy.Threshold.Equal(sdkmath.LegacyZeroDec()) || state.Epoch == 0 {
+		if !params.Enabled || len(policy.Members) == 0 || state.Epoch == 0 {
 			return noOp(msg, "deposits disabled or quota epoch not started"), nil, nil
 		}
 

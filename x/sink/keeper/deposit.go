@@ -62,9 +62,9 @@ func (k *keeper) Deposit(ctx sdk.Context, msg *types.MsgSink) (types.ID, error) 
 		return types.ID{}, err
 	}
 
-	//if policy.Threshold == 0 {
-	//	return types.ID{}, types.ErrInvalidReporters
-	//}
+	if len(policy.Members) == 0 {
+		return types.ID{}, types.ErrInvalidReporters
+	}
 
 	vaults := make([]types.SolanaAddress, 0, len(p.AllowedDestinationVaults))
 	for _, v := range p.AllowedDestinationVaults {

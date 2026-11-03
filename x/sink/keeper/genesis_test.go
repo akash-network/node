@@ -141,7 +141,7 @@ func testStore(t *testing.T) (*keeper, sdk.Context, *testBank) {
 
 	bank := &testBank{key: bankKey}
 	cdc := codec.NewProtoCodec(codectypes.NewInterfaceRegistry())
-	epochs := epochskeeper.NewKeeper(cdc, runtime.NewKVStoreService(epochKey))
+	epochs := epochskeeper.NewKeeper(runtime.NewKVStoreService(epochKey), cdc)
 	epochs.SetHooks(epochstypes.NewMultiEpochHooks())
 	require.NoError(t, epochs.AddEpoch(ctx, epochstypes.EpochInfo{
 		ID:                      "day",
@@ -158,8 +158,9 @@ func testStore(t *testing.T) (*keeper, sdk.Context, *testBank) {
 }
 
 func quorum(p types.ReporterPolicy, outcome types.Outcome) []types.Vote {
-	votes := make([]types.Vote, 0, p.Threshold)
-	for _, r := range p.Members[:p.Threshold] {
+	required := p.Threshold.MulInt64(int64(len(p.Members))).Ceil().TruncateInt64()
+	votes := make([]types.Vote, 0, required)
+	for _, r := range p.Members[:required] {
 		votes = append(votes, types.Vote{
 			Reporter:      r,
 			PolicyVersion: p.Version,
@@ -176,29 +177,17 @@ func quorum(p types.ReporterPolicy, outcome types.Outcome) []types.Vote {
 
 func populatedGenesis() *types.GenesisState {
 	g := types.DefaultGenesis()
-
-	g.Params.Reporters = []string{
-		testOwner(2).String(),
-		testOwner(3).String(),
-		testOwner(4).String(),
-		testOwner(5).String(),
-	}
-
-	policyMembers := make([]string, len(g.Params.Reporters))
-	copy(policyMembers, g.Params.Reporters)
-
+	g.Params.Reporters = []string{testOwner(2).String(), testOwner(3).String(), testOwner(4).String(), testOwner(5).String()}
 	p1 := types.ReporterPolicy{
 		Version:   1,
-		Members:   policyMembers,
-		Threshold: g.Params.ReportersThreshold.Clone(),
+		Members:   []string{testOwner(1).String(), testOwner(2).String(), testOwner(3).String(), testOwner(4).String()},
+		Threshold: g.Params.ReportersThreshold,
 	}
-
 	p2 := types.ReporterPolicy{
 		Version:   2,
-		Members:   policyMembers,
-		Threshold: g.Params.ReportersThreshold.Clone(),
+		Members:   g.Params.Reporters,
+		Threshold: g.Params.ReportersThreshold,
 	}
-
 	g.Policies = []types.ReporterPolicy{p1, p2}
 	g.PolicySequence = 2
 	deadline := int64(86400 * 18)
@@ -581,7 +570,7 @@ func TestGenesisCommittedDatabaseRestart(t *testing.T) {
 	ctx := sdk.NewContext(first, header, false, log.NewNopLogger())
 	bank := &testBank{key: bankKey}
 	cdc := codec.NewProtoCodec(codectypes.NewInterfaceRegistry())
-	epochs := epochskeeper.NewKeeper(cdc, runtime.NewKVStoreService(epochKey))
+	epochs := epochskeeper.NewKeeper(runtime.NewKVStoreService(epochKey), cdc)
 	native := epochstypes.EpochInfo{
 		ID:                      "day",
 		Duration:                10 * time.Minute,
@@ -604,7 +593,7 @@ func TestGenesisCommittedDatabaseRestart(t *testing.T) {
 	require.Equal(t, int64(100), second.LastCommitID().Version)
 	header.Height = 101
 	restarted := sdk.NewContext(second, header, false, log.NewNopLogger())
-	restoredEpochs := epochskeeper.NewKeeper(cdc, runtime.NewKVStoreService(epochKey))
+	restoredEpochs := epochskeeper.NewKeeper(runtime.NewKVStoreService(epochKey), cdc)
 	restoredEpochs.SetHooks(epochstypes.NewMultiEpochHooks())
 	restored := NewKeeper(cdc, key, tkey, template.accounts, bank, restoredEpochs, template.authority).(*keeper)
 	gotEpoch, err := restoredEpochs.GetEpoch(restarted, "day")
