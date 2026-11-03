@@ -67,7 +67,6 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 		}
 		cache.EventManager().EmitEvent(sdk.NewEvent("escrow_orphan_payments_repaired",
 			sdk.NewAttribute("closed_payments", strconv.FormatUint(result.ClosedPayments, 10)),
-			sdk.NewAttribute("missing_leases", strconv.FormatUint(result.MissingLeases, 10)),
 		))
 
 		msgServer := wasmkeeper.NewMsgServerImpl(up.Keepers.Cosmos.Wasm)

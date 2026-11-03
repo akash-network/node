@@ -18,7 +18,6 @@ import (
 // not establish that a payment should be closed and require separate review.
 type EscrowRepairResult struct {
 	ClosedPayments uint64
-	MissingLeases  uint64
 }
 
 // RepairEscrowPayments closes open payments whose leases are already terminal.
@@ -71,9 +70,9 @@ func RepairEscrowPayments(ctx sdk.Context, escrow ekeeper.Keeper, market mkeeper
 			}
 			lease, found := market.GetLease(cached, leaseID)
 			if !found {
-				result.MissingLeases++
-				continue
+				return fmt.Errorf("lease for payment %s not found", id.Key())
 			}
+
 			if lease.State != mv1.LeaseClosed && lease.State != mv1.LeaseInsufficientFunds {
 				continue
 			}
@@ -106,6 +105,8 @@ func RepairEscrowPayments(ctx sdk.Context, escrow ekeeper.Keeper, market mkeeper
 		store.Set(entry.newKey, entry.value)
 	}
 	result.ClosedPayments = uint64(len(changes))
+
 	commit()
+
 	return result, nil
 }
