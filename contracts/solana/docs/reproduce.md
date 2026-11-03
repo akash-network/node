@@ -166,28 +166,25 @@ cargo test --locked --manifest-path ../../.cache/solana/deps/ibc-contracts/Cargo
 
 ## 5. Existing-chain upgrade
 
-Build the pre-sink revision once, using that revision's own dependencies and Makefile:
+Use the registered node release handler and node's existing
+[upgrade harness](../../../tests/upgrade) with
+[`make/test-upgrade.mk`](../../../make/test-upgrade.mk). Load the normal node
+environment, select the reviewed `UPGRADE_FROM`, `UPGRADE_TO`, snapshot and
+`TEST_CONFIG`, then run `make test` from `tests/upgrade`. The existing
+`network-upgrade` CI job runs this harness too. It manages the old/new binaries,
+Cosmovisor and validator processes.
 
-```bash
-(
-  . scripts/workspace.sh
-  git -C "$NODE_SINK_DIR" worktree add --detach .cache/solana/upgrade-base 5193e54672e49ef328f67758ef5c91e24990c09a
-  cd "$NODE_SINK_DIR/.cache/solana/upgrade-base"
-  direnv allow
-  GOWORK=off direnv exec . make bins
-)
-npm run test:upgrade
-```
-
-If that worktree already exists, inspect its revision and skip its creation. `AKASH_UPGRADE_BASE=/absolute/path/to/old/akash` selects an existing old binary. Ports 30657/30656/9390 must be free. The rehearsal submits a real governance upgrade, swaps binaries, and checks that sink installs with a zero balance, survives a restart and moves a preexisting sink balance to the community pool. Results go to `../../.cache/solana/run/upgrades/run-*/results.json`. The handler is restricted to rehearsal chains and is not production activation tooling.
+The native [`app/sink_upgrade_test.go`](../../../app/sink_upgrade_test.go) covers
+Sink installation and state invariants against the registered handler. A
+populated-state upgrade and restart rehearsal remains required for release;
+component tests alone do not establish it. Solana does not need a second Go
+checkout/build workflow or a separate native upgrade runner.
 
 ## Evidence and limits
 
 Save console output as well as JSON results, the node and chain-sdk revisions, tool versions and command exit status. In Bash, use `set -o pipefail` before piping a command through `tee`; otherwise a passing `tee` can hide a failed test. Use new evidence filenames for later runs. Never report success from a stale result file after a command failed.
 
 Generated directories also contain private development keys. Keep them ignored; share only reviewed result files. A new clone regenerates evidence and does not receive the original machine's `../../.cache/solana/run/`.
-
-The fresh-clone build, demo and core suites passed on 2026-10-13. Scale, recovery, consensus-fault, settlement and upgrade results predate that handoff. They were not all rerun then. The retained `milestones-v2` network later lost early Solana transaction history, so its full health check fails despite healthy supply reconciliation. Do not weaken evidence checks or reset trust to hide that failure. Complete fresh-run checks before ledger pruning or the 24-hour development trusting period becomes a factor.
 
 Audits, production authority/checkpoint ceremonies, real full-size validator rotations, sustained load, independent reporters, archival/indexed monitoring, metadata and launch operations remain.
 

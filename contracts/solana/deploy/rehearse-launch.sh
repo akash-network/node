@@ -62,9 +62,7 @@ guardian=$(newkey guardian)
 # Stand-in for the multisig program: upstream's generic CPI proxy, as in
 # scripts/test-contract.sh.
 multisig_program=CtQLLKbDMt1XVNXtLKJEt1K8cstbckjqE6zyFqR37KTc
-if [[ ! -f "$artifacts/test_cpi_proxy.so" ]]; then
-  (cd "$upstream" && CARGO_TARGET_DIR="$upstream/target" RUSTUP_TOOLCHAIN=1.89.0 anchor build --program-name test_cpi_proxy)
-fi
+bash scripts/setup-light-client.sh --test-proxy
 repin_id=$(newkey ics07_repin-keypair)
 
 if [[ -n "${AKT_REHEARSAL_PROGRAMS:-}" ]]; then
@@ -103,17 +101,19 @@ cleanup() {
   wait "$validator" 2> /dev/null || true
 }
 trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 for _ in $(seq 1 120); do
   kill -0 "$validator" 2> /dev/null || { echo "Validator exited; see $run/validator.log" >&2; exit 1; }
-  solana --url "$url" cluster-version > /dev/null 2>&1 && break
+  solana --url "$url" --keypair "$run/keys/ceremony.json" cluster-version > /dev/null 2>&1 && break
   sleep 1
 done
-genesis=$(solana --url "$url" genesis-hash)
+genesis=$(solana --url "$url" --keypair "$run/keys/ceremony.json" genesis-hash)
 echo "Genesis $genesis"
 
 sol() { solana --url "$url" --keypair "$run/keys/ceremony.json" --commitment finalized "$@"; }
 admin() { node_modules/.bin/tsx local/bridge-admin.ts "$@" --genesis "$genesis" --url "$url"; }
-verify() { bash deploy/verify-program.sh --url "$url" "$@"; }
+verify() { SOLANA_KEYPAIR="$run/keys/ceremony.json" bash deploy/verify-program.sh --url "$url" "$@"; }
 # Writes one multisig step to tx/NAME.json.
 emit() {
   local name=$1

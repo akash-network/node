@@ -50,11 +50,9 @@
     "test:prune": "tsx local/scale.ts prune",
     "test:batch-split": "tsx local/scale.ts split",
     "test:open-relaying": "tsx local/scale.ts open",
-    "test:upgrade": "tsx local/upgrade-rehearsal.ts",
     "testnet:settlement": "AKT_LOCAL_PROFILE=testnetify tsx local/settlement-scenarios.ts",
     "setup:metadata": "bash scripts/setup-metadata.sh",
     "local:metadata": "tsx local/token-metadata.ts",
-    "local:admin": "tsx local/bridge-admin.ts",
     "test:services": "tsx --test shared/*.test.ts reporter/*.test.ts local/*.test.ts",
     "portal:testnet": "AKT_TEAM_TESTNET=1 tsx local/team.ts",
     "test:portal-contract": "bash scripts/check-portal-contract.sh",
@@ -77,14 +75,14 @@
     "@noble/curves": "1.9.7",
     "@scure/base": "2.4.0",
     "@solana/spl-token": "0.4.15",
-    "long": "5.3.2"
+    "cosmjs-types": "0.11.0",
+    "long": "5.3.2",
+    "tsx": "4.23.15",
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@types/node": "24.19.1",
-    "cosmjs-types": "0.11.0",
     "prettier": "3.9.9",
-    "tsx": "4.23.15",
-    "typescript": "5.9.3",
-    "zod": "4.6.5"
+    "typescript": "5.9.3"
   }
 }

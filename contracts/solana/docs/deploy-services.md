@@ -25,7 +25,8 @@ npm run deploy:services -- /srv/launch/manifest.json /srv/releases/akt-services.
 
 The builder checks the reviewed commit and program bundle, then builds the
 header encoder from the commit-pinned Cargo dependency with its lockfile. It installs the locked JS dependencies and
-runs typechecking and deployment tests in an isolated staging tree. The archive
+runs typechecking and deployment tests in an isolated staging tree, then removes
+development dependencies with `npm prune --omit=dev`. The archive
 contains the runtime source, dependencies (including `tsx`), generated IDLs and
 types, SDK archive, native header encoder and `service-build-info.txt`.
 

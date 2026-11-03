@@ -158,27 +158,41 @@ actual artifact sizes and the current cluster rent; historical testnet SOL costs
 are not a launch budget. The deploy command reserves twice each binary's size.
 Review the priority fee explicitly in micro-lamports per compute unit.
 
+Use `solana program deploy` directly. For each name in preflight's `missing`
+list (`access_manager`, `ics07_tendermint`, then `akt_solana`), compare the
+ceremony and program public keys with the approved manifest, then deploy:
+
 ```bash
-npm run deploy:programs -- deploy --manifest "$MANIFEST" --url "$RPC" \
-  --keypair "$CEREMONY" --program-keys "$PROGRAM_KEYS" --compute-unit-price 0
+PROGRAM=access_manager
+solana-keygen pubkey "$CEREMONY"
+solana-keygen pubkey "$PROGRAM_KEYS/$PROGRAM-keypair.json"
+solana --config /dev/null --url "$RPC" --keypair "$CEREMONY" \
+  --commitment finalized program deploy "launch/build/$PROGRAM.so" \
+  --program-id "$PROGRAM_KEYS/$PROGRAM-keypair.json" \
+  --upgrade-authority "$CEREMONY" \
+  --max-len "$((2 * $(wc -c < "launch/build/$PROGRAM.so")))" \
+  --with-compute-unit-price 0
+```
+
+After all three programs are present, verify their finalized bytes, loader
+ownership and ceremony authority against the reviewed manifest:
+
+```bash
 npm run deploy:programs -- verify --manifest "$MANIFEST" --url "$RPC" --authority ceremony
 ```
 
-The command checks the entire release and every program key before its first
-write. It checks the cluster again before each deploy, passes the URL, signer,
-authority and finalized commitment explicitly, then checks the deployed bytes,
-zero padding, loader ownership and authority. It does not initialize the mint,
-change authority or enable the bridge; continue with those steps below.
+`deploy/programs.ts` only checks artifacts and on-chain state. Signing, upload
+buffers and transaction retries belong to the Solana CLI. Continue with
+initialization and authority handover below after verification passes.
 
 **Interrupted deployment.** Retain Solana CLI output privately: it may contain
-buffer recovery material. Check the finalized programs, then rerun with the
-same reviewed manifest and keys. Exact programs still under ceremony authority
-are skipped. A changed binary, occupied address or unexpected authority stops
-the run; the command never silently upgrades it. An interrupted upload may leave
-a paid buffer even if the program address is absent. Inspect/recover or close
-only that ceremony's buffers using the
-[Solana deployment procedure](https://solana.com/docs/programs/deploying) before
-retrying; do not repeatedly create new buffers or bulk-close unrelated ones.
+buffer recovery material. Rerun preflight to identify missing programs; do not
+redeploy a completed program as an implicit upgrade. A changed binary, occupied
+address or unexpected authority fails preflight and needs investigation. Recover
+or close only that ceremony's buffers using the
+[Solana deployment procedure](https://solana.com/docs/programs/deploying), then
+resume the affected deployment with the CLI's `--buffer` option. Do not bulk-close
+unrelated buffers.
 
 Keep the release directory immutable during the ceremony. Record each deployment
 signature and finalized verification with the approved manifest.

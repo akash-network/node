@@ -114,7 +114,7 @@ The suite requires a fresh ledger because initialization is deliberately irrever
 | `npm run test:reporter`             | Check observation, reporting, RPC and signer boundaries.       |
 | `npm run reporter -- --config PATH` | Preview reporter actions against configured nodes.             |
 | `npm run logs`                      | Stream program logs from the `localnet` validator.             |
-| `npm run local:admin`               | Admin commands, signed locally or `--emit`ted for a multisig.  |
+| `npm run admin`                     | Admin commands, signed locally or `--emit`ted for a multisig.  |
 | `npm run localnet`                  | Start an empty validator with Metaplex for deploy rehearsals.  |
 | `npm run rehearse:launch`           | Rehearse the full launch, multisig steps included, locally.    |
 | `npm run typecheck`                 | Check test types after building.                               |
@@ -137,7 +137,7 @@ Use `npm ci` to restore JavaScript dependencies from the lockfile.
 - `reporter/`: finalized observer, settlement decisions, Akash client and local runner. See [reporter setup](reporter.md).
 - `local/`: persistent paired chains, signed-header/proof relay and live scenarios.
 - `tools/header-encoder/`: host Rust encoder using the pinned upstream Tendermint and Borsh formats.
-- `tools/proof-fixtures/`: Go generator using IAVL and ICS23.
+- `tools/proof-fixtures/`: proof generator using node’s Go module, IAVL/ICS23 versions and generated MerkleProof encoder.
 - `idls/`: generated, pinned upstream interfaces used by Anchor's `declare_program!`.
 - `Anchor.toml`: program address, local wallet, toolchain and test command.
 - `rust-toolchain.toml`: Rust toolchain pin.

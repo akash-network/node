@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise packaging/cleanup with fixture compiler, package manager and fetcher."""
+"""Exercise packaging/cleanup with fixture compiler and package manager."""
 import json
 import os
 from pathlib import Path
@@ -35,6 +35,9 @@ elif name == "npm":
         modules = pathlib.Path("node_modules")
         modules.mkdir()
         (modules / "fixture").write_text("locked-dependency")
+        (modules / "development-only").write_text("compiler/test tooling")
+    elif args == ["prune", "--omit=dev"]:
+        pathlib.Path("node_modules/development-only").unlink()
     else: print("fixture npm: " + " ".join(args))
 '''
 
@@ -95,6 +98,7 @@ class ServiceArchiveTests(unittest.TestCase):
                      ".cache/solana/deps/ibc-contracts/ibc-solana/target/types/ics07_tendermint.ts",
                      "contracts/solana/node_modules/fixture", "service-build-info.txt", "launch-manifest.json"):
             self.assertIn("./" + name, files)
+        self.assertNotIn("./contracts/solana/node_modules/development-only", files)
         self.assertNotIn("./.cache/solana/target/release", files)
         self.assertNotIn("./.cache/solana/deps/ibc-contracts/README.md", files)
         original = self.output.read_bytes()
