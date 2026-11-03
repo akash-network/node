@@ -65,7 +65,6 @@ func orderInitGenesis(_ []string) []string {
 		authz.ModuleName,
 		banktypes.ModuleName,
 		epochs.ModuleName,
-		sink.ModuleName,
 		distrtypes.ModuleName,
 		stakingtypes.ModuleName,
 		slashingtypes.ModuleName,
@@ -91,5 +90,6 @@ func orderInitGenesis(_ []string) []string {
 		escrow.ModuleName,
 		awasm.ModuleName,
 		wasmtypes.ModuleName,
+		sink.ModuleName,
 	}
 }

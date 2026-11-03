@@ -56,7 +56,7 @@ func (s msgServer) UpdateParams(ctx context.Context, msg *types.MsgUpdateParams)
 
 	sctx := sdk.UnwrapSDKContext(ctx)
 
-	if err := s.keeper.SetParams(sctx, msg); err != nil {
+	if err := s.keeper.SetParams(sctx, msg.Params); err != nil {
 		return nil, err
 	}
 

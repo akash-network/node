@@ -166,7 +166,7 @@ func TestQuotaEpochRejectsFixedDayGenesis(t *testing.T) {
 		EpochCountingStarted: true,
 	}}
 	g := populatedGenesis()
-	g.SchemaVersion = 2
+
 	g.SendUsage.Epoch = 20759
 	g.RefundUsage.Epoch = 20759
 	for i := range g.Accounts {

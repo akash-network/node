@@ -13,83 +13,38 @@ func (k *keeper) InitGenesis(ctx sdk.Context, g *types.GenesisState) error {
 		return types.ErrInvalidGenesis.Wrap("nil genesis")
 	}
 
-	if err := k.validateGenesis(ctx, g); err != nil {
+	if err := g.Validate(); err != nil {
 		return err
 	}
 
-	it := ctx.KVStore(k.skey).Iterator(nil, nil)
-	nonempty := it.Valid()
-
-	if err := it.Close(); err != nil {
+	if err := k.SetParams(ctx, g.Params); err != nil {
 		return err
 	}
 
-	if nonempty {
-		return types.ErrInvalidGenesis.Wrap("sink store is not empty")
-	}
-
-	firstHeight := max(int64(1), ctx.BlockHeight())
-	for _, t := range g.Records {
-		if t.ID.Height >= firstHeight || t.Settlement.VoidAuthorization != nil && t.Settlement.VoidAuthorization.RequestedHeight >= firstHeight {
-			return types.ErrInvalidGenesis.Wrap("transfer height must precede first executable height")
-		}
-	}
-
-	cache, write := ctx.CacheContext()
-	var err error
-
-	if account := k.accounts.GetAccount(cache, Address()); account != nil {
-		module, ok := account.(sdk.ModuleAccountI)
-		if !ok || module.GetName() != types.ModuleName {
-			return types.ErrInvalidGenesis.Wrap("sink address must be its module account")
-		}
-	}
-
-	k.accounts.GetModuleAccount(cache, types.ModuleName)
-
-	if err = k.params.Set(cache, g.Params); err != nil {
-		return err
-	}
-
-	if err = k.totals.Set(cache, types.DefaultTotals()); err != nil {
+	if err := k.policySequence.Set(ctx, g.PolicySequence); err != nil {
 		return err
 	}
 
 	for _, p := range g.Policies {
-		for _, member := range p.Members {
-			addr, err := sdk.AccAddressFromBech32(member)
-			if err != nil {
-				return err
-			}
-
-			if _, module := k.accounts.GetAccount(cache, addr).(sdk.ModuleAccountI); module {
-				return types.ErrInvalidReporters.Wrap("reporters must be ordinary accounts")
-			}
-		}
-
-		if err = k.policies.Set(cache, p.Version, p); err != nil {
+		if err := k.policies.Set(ctx, p.Version, p); err != nil {
 			return err
 		}
 	}
 
-	if err = k.policySequence.Set(cache, g.PolicySequence); err != nil {
+	if err := k.sendUsage.Set(ctx, g.SendUsage); err != nil {
 		return err
 	}
 
-	if err = k.sendUsage.Set(cache, g.SendUsage); err != nil {
-		return err
-	}
-
-	if err = k.refundUsage.Set(cache, g.RefundUsage); err != nil {
+	if err := k.refundUsage.Set(ctx, g.RefundUsage); err != nil {
 		return err
 	}
 
 	for _, t := range g.Records {
-		if err = k.transfers.Set(cache, t.ID, t.Data); err != nil {
+		if err := k.transfers.Set(ctx, t.ID, t.Data); err != nil {
 			return err
 		}
 
-		if err = k.put(cache, nil, types.TransferState(t)); err != nil {
+		if err := k.put(ctx, nil, types.TransferState(t)); err != nil {
 			return err
 		}
 	}
@@ -100,29 +55,18 @@ func (k *keeper) InitGenesis(ctx sdk.Context, g *types.GenesisState) error {
 			return err
 		}
 
-		if err = k.usage.Set(cache, owner, a.Usage); err != nil {
+		if err = k.usage.Set(ctx, owner, a.Usage); err != nil {
 			return err
 		}
 	}
 
-	totals, err := k.totals.Get(cache)
-	if err != nil {
+	if err := k.totals.Set(ctx, g.Totals); err != nil {
 		return err
 	}
 
-	if !totals.Equal(g.Totals) {
-		return types.ErrInvalidGenesis.Wrap("recomputed totals differ")
-	}
-
-	if err = k.CheckBalance(cache); err != nil {
+	if err := k.CheckBalance(ctx); err != nil {
 		return err
 	}
-
-	if err = k.sequence.Set(cache, 0); err != nil {
-		return err
-	}
-
-	write()
 
 	return nil
 }
@@ -204,7 +148,7 @@ func (k *keeper) ExportGenesis(ctx sdk.Context) (*types.GenesisState, error) {
 		return nil, err
 	}
 
-	if err = k.validateGenesis(ctx, g); err != nil {
+	if err = g.Validate(); err != nil {
 		return nil, err
 	}
 
@@ -226,28 +170,4 @@ func (k *keeper) requireRecord(ctx context.Context, id types.ID) (bool, error) {
 	}
 
 	return false, nil
-}
-
-func (k *keeper) validateGenesis(ctx sdk.Context, g *types.GenesisState) error {
-	if err := g.Validate(); err != nil {
-		return err
-	}
-
-	for _, record := range g.Records {
-		s := record.Settlement
-		if s.VetoBy != "" && s.VetoPolicyVersion == types.GovernanceRefundScope && s.VetoBy != k.authority {
-			return types.ErrInvalidGenesis.Wrap("governance veto signer differs from authority")
-		}
-	}
-
-	epoch, err := k.quotaEpoch(ctx)
-	if err != nil {
-		return err
-	}
-
-	if g.SendUsage.Epoch > epoch || g.RefundUsage.Epoch > epoch {
-		return types.ErrInvalidGenesis.Wrap("future epoch usage")
-	}
-
-	return nil
 }
