@@ -20,6 +20,8 @@ import (
 
 	types "pkg.akt.dev/go/node/sink/v1"
 	"pkg.akt.dev/go/sdkutil"
+
+	sinkhandler "pkg.akt.dev/node/v2/x/sink/handler"
 	sinkkeeper "pkg.akt.dev/node/v2/x/sink/keeper"
 )
 
@@ -38,7 +40,13 @@ func TestSinkContractBankDepositRejected(t *testing.T) {
 	contract, _, err := wasm.Instantiate(ctx, codeID, h.sender, h.sender, init, "sink bank bypass fixture", sdk.NewCoins(sdk.NewInt64Coin(sdkutil.DenomUakt, 10)))
 	require.NoError(t, err)
 	before := captureSinkBankState(t, h, ctx, contract)
-	msg := &wasmtypes.MsgExecuteContract{Sender: h.sender.String(), Contract: contract.String(), Msg: []byte(`{"release":{}}`), Funds: sdk.NewCoins(coin(3))}
+	msg := &wasmtypes.MsgExecuteContract{
+		Sender:   h.sender.String(),
+		Contract: contract.String(),
+		Msg:      []byte(`{"release":{}}`),
+		Funds:    sdk.NewCoins(coin(3)),
+	}
+
 	res = h.deliver(t, "", msg)
 	require.NotZero(t, res.Code, res.Log)
 
@@ -78,7 +86,10 @@ func TestSinkContractDispatchRejected(t *testing.T) {
 				Bank: &wasmvmtypes.BankMsg{
 					Send: &wasmvmtypes.SendMsg{
 						ToAddress: sinkkeeper.Address().String(),
-						Amount:    []wasmvmtypes.Coin{{Denom: sdkutil.DenomUakt, Amount: "1"}},
+						Amount: []wasmvmtypes.Coin{{
+							Denom:  sdkutil.DenomUakt,
+							Amount: "1",
+						}},
 					},
 				},
 			},
@@ -91,7 +102,10 @@ func TestSinkContractDispatchRejected(t *testing.T) {
 					Execute: &wasmvmtypes.ExecuteMsg{
 						ContractAddr: sinkkeeper.Address().String(),
 						Msg:          []byte(`{}`),
-						Funds:        []wasmvmtypes.Coin{{Denom: sdkutil.DenomUakt, Amount: "1"}},
+						Funds: []wasmvmtypes.Coin{{
+							Denom:  sdkutil.DenomUakt,
+							Amount: "1",
+						}},
 					},
 				},
 			},
@@ -99,12 +113,18 @@ func TestSinkContractDispatchRejected(t *testing.T) {
 		},
 		{
 			name: "protobuf sink",
-			msg:  wasmvmtypes.CosmosMsg{Any: &wasmvmtypes.AnyMsg{TypeURL: sdk.MsgTypeURL(deposit), Value: depositBytes}},
+			msg: wasmvmtypes.CosmosMsg{Any: &wasmvmtypes.AnyMsg{
+				TypeURL: sdk.MsgTypeURL(deposit),
+				Value:   depositBytes,
+			}},
 			want: "Any message type " + sdk.MsgTypeURL(deposit) + " not allowed",
 		},
 		{
 			name: "protobuf authz sink",
-			msg:  wasmvmtypes.CosmosMsg{Any: &wasmvmtypes.AnyMsg{TypeURL: sdk.MsgTypeURL(&exec), Value: execBytes}},
+			msg: wasmvmtypes.CosmosMsg{Any: &wasmvmtypes.AnyMsg{
+				TypeURL: sdk.MsgTypeURL(&exec),
+				Value:   execBytes,
+			}},
 			want: "Any message type " + sdk.MsgTypeURL(&exec) + " not allowed",
 		},
 	} {
@@ -113,7 +133,13 @@ func TestSinkContractDispatchRejected(t *testing.T) {
 			require.NoError(t, err)
 			before := captureSinkBankState(t, h, h.ctx(), contract)
 			contractState := storeEntries(t, h.ctx().KVStore(h.a.GetKey(wasmtypes.StoreKey)), wasmtypes.GetContractStorePrefix(contract))
-			res := h.deliver(t, "", &wasmtypes.MsgExecuteContract{Sender: h.sender.String(), Contract: contract.String(), Msg: body, Funds: sdk.NewCoins(coin(3))})
+			res := h.deliver(t, "", &wasmtypes.MsgExecuteContract{
+				Sender:   h.sender.String(),
+				Contract: contract.String(),
+				Msg:      body,
+				Funds:    sdk.NewCoins(coin(3)),
+			})
+
 			require.NotZero(t, res.Code, res.Log)
 			require.Contains(t, res.Log, tc.want)
 			before.balances[h.sender.String()] = before.balances[h.sender.String()].Sub(coin(10))
@@ -126,7 +152,13 @@ func TestSinkContractDispatchRejected(t *testing.T) {
 	}
 
 	before := captureSinkBankState(t, h, h.ctx(), contract)
-	res = h.deliver(t, "", &wasmtypes.MsgExecuteContract{Sender: h.sender.String(), Contract: sinkkeeper.Address().String(), Msg: []byte(`{}`), Funds: sdk.NewCoins(coin(3))})
+	res = h.deliver(t, "", &wasmtypes.MsgExecuteContract{
+		Sender:   h.sender.String(),
+		Contract: sinkkeeper.Address().String(),
+		Msg:      []byte(`{}`),
+		Funds:    sdk.NewCoins(coin(3)),
+	})
+
 	require.NotZero(t, res.Code, res.Log)
 	require.Contains(t, res.Log, "no such contract")
 	before.balances[h.sender.String()] = before.balances[h.sender.String()].Sub(coin(10))
@@ -149,7 +181,7 @@ func TestSinkMessageValidationAndSigner(t *testing.T) {
 		require.Zero(t, h.totals().PendingCount)
 	}
 
-	_, err := h.a.Keepers.Akash.Sink.Deposit(h.ctx(), nil)
+	_, err := sinkhandler.NewServer(h.a.Keepers.Akash.Sink).Sink(h.ctx(), nil)
 	require.Error(t, err)
 	_, err = h.a.Keepers.Akash.Sink.Deposit(h.ctx(), h.deposit(10))
 	require.ErrorIs(t, err, types.ErrDepositNotSole)
@@ -205,7 +237,14 @@ func TestSinkQueryStatusAndCanonicalIDs(t *testing.T) {
 	_, err := q.Transfer(h.ctx(), nil)
 	require.Error(t, err)
 
-	for _, id := range []types.ID{{}, {Owner: h.sender.String(), Height: 1}, {Owner: h.sender.String(), Height: -1, Sequence: 1}} {
+	for _, id := range []types.ID{{}, {
+		Owner:  h.sender.String(),
+		Height: 1,
+	}, {
+		Owner:    h.sender.String(),
+		Height:   -1,
+		Sequence: 1,
+	}} {
 		_, err = q.Transfer(h.ctx(), &types.QueryTransferRequest{ID: id})
 		require.Error(t, err)
 	}
@@ -229,7 +268,11 @@ func TestSinkQueryLegacyWireRecord(t *testing.T) {
 	ctx, _ := h.ctx().CacheContext()
 	ctx = ctx.WithBlockHeight(2)
 	ctx.KVStore(h.a.GetKey(types.StoreKey)).Set([]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 42}, bytes.Repeat([]byte{1}, 77))
-	_, err := h.a.Keepers.Akash.Sink.NewQuerier().Transfer(ctx, &types.QueryTransferRequest{ID: types.ID{Owner: h.sender.String(), Height: 1, Sequence: 42}})
+	_, err := h.a.Keepers.Akash.Sink.NewQuerier().Transfer(ctx, &types.QueryTransferRequest{ID: types.ID{
+		Owner:    h.sender.String(),
+		Height:   1,
+		Sequence: 42,
+	}})
 	require.ErrorIs(t, err, types.ErrTransferNotFound)
 	clearSinkStore(t, h, ctx)
 	ctx.KVStore(h.a.GetKey(types.StoreKey)).Set([]byte{2, 0}, []byte{1})
@@ -245,7 +288,10 @@ func TestSinkRequestBindingAndNativeCacheRollback(t *testing.T) {
 		{delivered: func(m *types.MsgSink) { m.Sender = h.bystander.String() }},
 		{delivered: func(m *types.MsgSink) { m.Dest = types.SolanaAddress{1}.String() }},
 		{delivered: func(m *types.MsgSink) { require.NoError(t, m.Amount.Amount.Unmarshal([]byte("20"))) }},
-		{signed: func(m *types.MsgSink) { m.DestType = types.DestTypeInvalid }, delivered: func(m *types.MsgSink) { m.DestType = types.DestTypeSolana }},
+		{
+			signed:    func(m *types.MsgSink) { m.DestType = types.DestTypeInvalid },
+			delivered: func(m *types.MsgSink) { m.DestType = types.DestTypeSolana },
+		},
 	} {
 		msg := h.deposit(10)
 		if tc.signed != nil {

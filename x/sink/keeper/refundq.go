@@ -11,9 +11,13 @@ import (
 )
 
 func refundKey(t types.TransferState) (collections.Triple[uint64, int64, types.ID], bool) {
-	scope, ok := t.Settlement.RefundScope(t.Status)
-	if !ok || t.Settlement.ChallengeEnd <= 0 {
+	if t.Status != types.StatusRefundPending || t.Settlement.Hold != types.HoldNone || t.Settlement.ChallengeEnd <= 0 {
 		return collections.Triple[uint64, int64, types.ID]{}, false
+	}
+
+	scope := t.Settlement.Policy.Version
+	if t.Settlement.GovernanceObservation != nil {
+		scope = types.GovernanceRefundScope
 	}
 
 	return collections.Join3(scope, t.Settlement.ChallengeEnd, t.ID), true
@@ -55,7 +59,7 @@ func (k *keeper) put(ctx sdk.Context, before *types.TransferState, after types.T
 		}
 	} else {
 		for status := types.StatusTransferPending; status <= types.StatusRefunded; status++ {
-			exists, err := k.settlements.Has(ctx, types.NewSettlementID(status, after.ID))
+			exists, err := k.settlements.Has(ctx, *types.NewSettlementID(status, after.ID))
 			if err != nil {
 				return err
 			}
@@ -81,7 +85,7 @@ func (k *keeper) put(ctx sdk.Context, before *types.TransferState, after types.T
 				return types.ErrInternal.Wrap("invalid settlement accounting")
 			}
 
-			if err = k.settlements.Remove(ctx, types.NewSettlementID(before.Status, after.ID)); err != nil {
+			if err = k.settlements.Remove(ctx, *types.NewSettlementID(before.Status, after.ID)); err != nil {
 				return err
 			}
 		}
@@ -166,7 +170,7 @@ func (k *keeper) put(ctx sdk.Context, before *types.TransferState, after types.T
 		}
 	}
 
-	return k.settlements.Set(ctx, types.NewSettlementID(after.Status, after.ID), after.Settlement)
+	return k.settlements.Set(ctx, *types.NewSettlementID(after.Status, after.ID), after.Settlement)
 }
 
 func (k *keeper) refundHead(ctx context.Context, current uint64) (types.ID, bool, error) {
@@ -186,12 +190,12 @@ func (k *keeper) refundHead(ctx context.Context, current uint64) (types.ID, bool
 
 			earlier := !found || key.K2() < best.K2()
 			if found && key.K2() == best.K2() {
-				a, b := make([]byte, types.IDKeySize), make([]byte, types.IDKeySize)
-				if _, err = types.IDKey.Encode(a, key.K3()); err != nil {
+				a, b := make([]byte, RecordIDKey.Size(key.K3())), make([]byte, RecordIDKey.Size(best.K3()))
+				if _, err = RecordIDKey.Encode(a, key.K3()); err != nil {
 					return types.ID{}, false, errors.Join(err, it.Close())
 				}
 
-				if _, err = types.IDKey.Encode(b, best.K3()); err != nil {
+				if _, err = RecordIDKey.Encode(b, best.K3()); err != nil {
 					return types.ID{}, false, errors.Join(err, it.Close())
 				}
 

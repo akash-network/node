@@ -26,6 +26,7 @@ import (
 	epochstypes "pkg.akt.dev/go/node/epochs/v1beta1"
 	types "pkg.akt.dev/go/node/sink/v1"
 	"pkg.akt.dev/go/sdkutil"
+
 	epochskeeper "pkg.akt.dev/node/v2/x/epochs/keeper"
 )
 
@@ -118,7 +119,10 @@ func testCoin(n int64) sdk.Coin {
 }
 
 func testEvidence() types.SolanaEvidence {
-	return types.SolanaEvidence{Slot: 10, TransactionSignature: bytes.Repeat([]byte{1}, 64)}
+	return types.SolanaEvidence{
+		Slot:                 10,
+		TransactionSignature: bytes.Repeat([]byte{1}, 64),
+	}
 }
 
 func testStore(t *testing.T) (*keeper, sdk.Context, *testBank) {
@@ -139,7 +143,16 @@ func testStore(t *testing.T) (*keeper, sdk.Context, *testBank) {
 	cdc := codec.NewProtoCodec(codectypes.NewInterfaceRegistry())
 	epochs := epochskeeper.NewKeeper(runtime.NewKVStoreService(epochKey), cdc)
 	epochs.SetHooks(epochstypes.NewMultiEpochHooks())
-	require.NoError(t, epochs.AddEpoch(ctx, epochstypes.EpochInfo{ID: "day", StartTime: ctx.BlockTime().Add(-19 * 10 * time.Minute), Duration: 10 * time.Minute, CurrentEpoch: 20, CurrentEpochStartTime: ctx.BlockTime(), CurrentEpochStartHeight: 100, EpochCountingStarted: true}))
+	require.NoError(t, epochs.AddEpoch(ctx, epochstypes.EpochInfo{
+		ID:                      "day",
+		StartTime:               ctx.BlockTime().Add(-19 * 10 * time.Minute),
+		Duration:                10 * time.Minute,
+		CurrentEpoch:            20,
+		CurrentEpochStartTime:   ctx.BlockTime(),
+		CurrentEpochStartHeight: 100,
+		EpochCountingStarted:    true,
+	}))
+
 	k := NewKeeper(cdc, key, tkey, accounts, bank, epochs, authtypes.NewModuleAddress("gov").String()).(*keeper)
 	return k, ctx, bank
 }
@@ -147,7 +160,15 @@ func testStore(t *testing.T) (*keeper, sdk.Context, *testBank) {
 func quorum(p types.ReporterPolicy, outcome types.Outcome) []types.Vote {
 	votes := make([]types.Vote, 0, p.Threshold)
 	for _, r := range p.Members[:p.Threshold] {
-		votes = append(votes, types.Vote{Reporter: r, PolicyVersion: p.Version, Observation: types.Observation{Outcome: outcome, Slot: testEvidence().Slot, TransactionSignature: testEvidence().TransactionSignature}})
+		votes = append(votes, types.Vote{
+			Reporter:      r,
+			PolicyVersion: p.Version,
+			Observation: types.Observation{
+				Outcome:              outcome,
+				Slot:                 testEvidence().Slot,
+				TransactionSignature: testEvidence().TransactionSignature,
+			},
+		})
 	}
 
 	return votes
@@ -164,33 +185,155 @@ func populatedGenesis() *types.GenesisState {
 	deadline := int64(86400 * 18)
 	observe := func(outcome types.Outcome) types.Observation {
 		e := testEvidence()
-		return types.Observation{Outcome: outcome, Slot: e.Slot, TransactionSignature: e.TransactionSignature}
+		return types.Observation{
+			Outcome:              outcome,
+			Slot:                 e.Slot,
+			TransactionSignature: e.TransactionSignature,
+		}
 	}
 
 	opposite := func(p types.ReporterPolicy, outcome types.Outcome) types.Vote {
-		return types.Vote{Reporter: p.Members[0], PolicyVersion: p.Version, Observation: observe(outcome)}
+		return types.Vote{
+			Reporter:      p.Members[0],
+			PolicyVersion: p.Version,
+			Observation:   observe(outcome),
+		}
 	}
 
 	governance := observe(types.OutcomeVoided)
 	records := []types.GenesisRecord{
-		{Status: types.StatusTransferPending, Settlement: types.SettlementData{Round: 1, Policy: p2}},
-		{Status: types.StatusTransferPending, Settlement: types.SettlementData{Round: 1, Policy: p1, Hold: types.HoldConflict, Votes: []types.Vote{opposite(p1, types.OutcomeMinted), opposite(p2, types.OutcomeVoided)}}},
-		{Status: types.StatusVoided, Settlement: types.SettlementData{Round: 1, Policy: p1, Hold: types.HoldConflict, Votes: []types.Vote{opposite(p1, types.OutcomeMinted), opposite(p2, types.OutcomeVoided)}, VoidAuthorization: &types.VoidAuthorization{RequestedHeight: 7, RequestedRound: 1}}},
-		{Status: types.StatusMinted, Settlement: types.SettlementData{Round: 1, Policy: p1, Votes: quorum(p1, types.OutcomeMinted)}},
-		{Status: types.StatusMinted, Settlement: types.SettlementData{Round: 1, Policy: p1, Votes: append(quorum(p1, types.OutcomeMinted), opposite(p2, types.OutcomeVoided)), Hold: types.HoldConflict}},
-		{Status: types.StatusRefundPending, Settlement: types.SettlementData{Round: 1, Policy: p1, ChallengeEnd: deadline, Votes: quorum(p1, types.OutcomeVoided)}},
-		{Status: types.StatusRefundPending, Settlement: types.SettlementData{Round: 1, Policy: p2, ChallengeEnd: deadline, Votes: quorum(p2, types.OutcomeVoided)}},
-		{Status: types.StatusRefundPending, Settlement: types.SettlementData{Round: 2, Policy: p1, ChallengeEnd: deadline, GovernanceObservation: &governance, VoidAuthorization: &types.VoidAuthorization{RequestedHeight: 7, RequestedRound: 1}}},
-		{Status: types.StatusRefundPending, Settlement: types.SettlementData{Round: 1, Policy: p2, ChallengeEnd: deadline, Votes: quorum(p2, types.OutcomeVoided), Hold: types.HoldVeto, VetoBy: p1.Members[0], VetoReason: "retained after rotation", VetoPolicyVersion: 1}},
-		{Status: types.StatusRefundPending, Settlement: types.SettlementData{Round: 1, Policy: p2, ChallengeEnd: deadline, Votes: append(quorum(p2, types.OutcomeVoided), opposite(p2, types.OutcomeMinted)), Hold: types.HoldConflict}},
-		{Status: types.StatusRefunded, Settlement: types.SettlementData{Round: 1, Policy: p1, Votes: quorum(p1, types.OutcomeVoided)}},
-		{Status: types.StatusRefunded, Settlement: types.SettlementData{Round: 1, Policy: p1, Votes: append(quorum(p1, types.OutcomeVoided), opposite(p2, types.OutcomeMinted)), Hold: types.HoldConflict}},
+		{
+			Status: types.StatusTransferPending,
+			Settlement: types.SettlementData{
+				Round:  1,
+				Policy: p2,
+			},
+		},
+		{
+			Status: types.StatusTransferPending,
+			Settlement: types.SettlementData{
+				Round:  1,
+				Policy: p1,
+				Hold:   types.HoldConflict,
+				Votes:  []types.Vote{opposite(p1, types.OutcomeMinted), opposite(p2, types.OutcomeVoided)},
+			},
+		},
+		{
+			Status: types.StatusVoided,
+			Settlement: types.SettlementData{
+				Round:  1,
+				Policy: p1,
+				Hold:   types.HoldConflict,
+				Votes:  []types.Vote{opposite(p1, types.OutcomeMinted), opposite(p2, types.OutcomeVoided)},
+				VoidAuthorization: &types.VoidAuthorization{
+					RequestedHeight: 7,
+					RequestedRound:  1,
+				},
+			},
+		},
+		{
+			Status: types.StatusMinted,
+			Settlement: types.SettlementData{
+				Round:  1,
+				Policy: p1,
+				Votes:  quorum(p1, types.OutcomeMinted),
+			},
+		},
+		{
+			Status: types.StatusMinted,
+			Settlement: types.SettlementData{
+				Round:  1,
+				Policy: p1,
+				Votes:  append(quorum(p1, types.OutcomeMinted), opposite(p2, types.OutcomeVoided)),
+				Hold:   types.HoldConflict,
+			},
+		},
+		{
+			Status: types.StatusRefundPending,
+			Settlement: types.SettlementData{
+				Round:        1,
+				Policy:       p1,
+				ChallengeEnd: deadline,
+				Votes:        quorum(p1, types.OutcomeVoided),
+			},
+		},
+		{
+			Status: types.StatusRefundPending,
+			Settlement: types.SettlementData{
+				Round:        1,
+				Policy:       p2,
+				ChallengeEnd: deadline,
+				Votes:        quorum(p2, types.OutcomeVoided),
+			},
+		},
+		{
+			Status: types.StatusRefundPending,
+			Settlement: types.SettlementData{
+				Round:                 2,
+				Policy:                p1,
+				ChallengeEnd:          deadline,
+				GovernanceObservation: &governance,
+				VoidAuthorization: &types.VoidAuthorization{
+					RequestedHeight: 7,
+					RequestedRound:  1,
+				},
+			},
+		},
+		{
+			Status: types.StatusRefundPending,
+			Settlement: types.SettlementData{
+				Round:             1,
+				Policy:            p2,
+				ChallengeEnd:      deadline,
+				Votes:             quorum(p2, types.OutcomeVoided),
+				Hold:              types.HoldVeto,
+				VetoBy:            p1.Members[0],
+				VetoReason:        "retained after rotation",
+				VetoPolicyVersion: 1,
+			},
+		},
+		{
+			Status: types.StatusRefundPending,
+			Settlement: types.SettlementData{
+				Round:        1,
+				Policy:       p2,
+				ChallengeEnd: deadline,
+				Votes:        append(quorum(p2, types.OutcomeVoided), opposite(p2, types.OutcomeMinted)),
+				Hold:         types.HoldConflict,
+			},
+		},
+		{
+			Status: types.StatusRefunded,
+			Settlement: types.SettlementData{
+				Round:  1,
+				Policy: p1,
+				Votes:  quorum(p1, types.OutcomeVoided),
+			},
+		},
+		{
+			Status: types.StatusRefunded,
+			Settlement: types.SettlementData{
+				Round:  1,
+				Policy: p1,
+				Votes:  append(quorum(p1, types.OutcomeVoided), opposite(p2, types.OutcomeMinted)),
+				Hold:   types.HoldConflict,
+			},
+		},
 	}
 
 	sums := map[string]int64{}
 	for i, record := range records {
-		record.ID = types.ID{Owner: testOwner(byte(i%2 + 6)).String(), Height: 7, Sequence: uint64(i + 1)}
-		record.Data = types.RecordData{Dest: types.SolanaAddress{1}.String(), Amount: testCoin(10)}
+		record.ID = types.ID{
+			Owner:    testOwner(byte(i%2 + 6)).String(),
+			Height:   7,
+			Sequence: uint64(i + 1),
+		}
+
+		record.Data = types.RecordData{
+			Dest:   types.SolanaAddress{1}.String(),
+			Amount: testCoin(10),
+		}
+
 		g.Records = append(g.Records, record)
 		if err := g.Totals.Add(record.Status, record.Data.Amount); err != nil {
 			panic(err)
@@ -201,12 +344,35 @@ func populatedGenesis() *types.GenesisState {
 
 	for n := byte(6); n <= 7; n++ {
 		owner := testOwner(n).String()
-		g.Accounts = append(g.Accounts, types.GenesisAccount{Owner: owner, Usage: types.AccountUsage{TotalSent: testCoin(sums[owner]), EpochSent: testCoin(sums[owner]), LastEpoch: 19}})
+		g.Accounts = append(g.Accounts, types.GenesisAccount{
+			Owner: owner,
+			Usage: types.AccountUsage{
+				TotalSent: testCoin(sums[owner]),
+				EpochSent: testCoin(sums[owner]),
+				LastEpoch: 19,
+			},
+		})
 	}
 
-	g.Accounts = append(g.Accounts, types.GenesisAccount{Owner: testOwner(8).String(), Usage: types.AccountUsage{TotalSent: types.ZeroAmount(), EpochSent: types.ZeroAmount(), LastEpoch: 18}})
-	g.SendUsage = types.EpochUsage{Epoch: 19, Amount: testCoin(120)}
-	g.RefundUsage = types.EpochUsage{Epoch: 19, Amount: testCoin(20)}
+	g.Accounts = append(g.Accounts, types.GenesisAccount{
+		Owner: testOwner(8).String(),
+		Usage: types.AccountUsage{
+			TotalSent: types.ZeroAmount(),
+			EpochSent: types.ZeroAmount(),
+			LastEpoch: 18,
+		},
+	})
+
+	g.SendUsage = types.EpochUsage{
+		Epoch:  19,
+		Amount: testCoin(120),
+	}
+
+	g.RefundUsage = types.EpochUsage{
+		Epoch:  19,
+		Amount: testCoin(20),
+	}
+
 	return g
 }
 
@@ -229,8 +395,16 @@ func nativeQuotaGenesis() *types.GenesisState {
 	g.Accounts[0].Usage.LastEpoch = 57
 	g.Accounts[1].Usage.LastEpoch = 56
 	g.Accounts[2].Usage.LastEpoch = 55
-	g.SendUsage = types.EpochUsage{Epoch: 57, Amount: testCoin(60)}
-	g.RefundUsage = types.EpochUsage{Epoch: 57, Amount: testCoin(20)}
+	g.SendUsage = types.EpochUsage{
+		Epoch:  57,
+		Amount: testCoin(60),
+	}
+
+	g.RefundUsage = types.EpochUsage{
+		Epoch:  57,
+		Amount: testCoin(20),
+	}
+
 	return g
 }
 
@@ -260,7 +434,7 @@ func TestGenesisPopulatedRecovery(t *testing.T) {
 	require.Equal(t, native, native2)
 
 	for _, transfer := range exported.Records {
-		key, err := types.TransferKey(transfer.ID)
+		key, err := TransferKey(transfer.ID)
 		require.NoError(t, err)
 		require.Equal(t, ctx.KVStore(k.skey).Get(key), ctx2.KVStore(k2.skey).Get(key))
 	}
@@ -348,8 +522,13 @@ func TestGenesisZeroHeightEmptyAndCorruption(t *testing.T) {
 	importTestGenesis(t, k, ctx.WithBlockHeight(0), bank, types.DefaultGenesis())
 	_, err := k.ExportGenesis(ctx)
 	require.NoError(t, err)
-	id := types.ID{Owner: testOwner(1).String(), Height: 1, Sequence: 1}
-	require.NoError(t, k.settlements.Set(ctx, types.NewSettlementID(types.StatusTransferPending, id), types.SettlementData{}))
+	id := types.ID{
+		Owner:    testOwner(1).String(),
+		Height:   1,
+		Sequence: 1,
+	}
+
+	require.NoError(t, k.settlements.Set(ctx, *types.NewSettlementID(types.StatusTransferPending, id), types.SettlementData{}))
 	_, err = k.ExportGenesis(ctx)
 	require.ErrorContains(t, err, "orphaned")
 }
@@ -375,12 +554,25 @@ func TestGenesisCommittedDatabaseRestart(t *testing.T) {
 
 	first := mount()
 	require.NoError(t, first.SetInitialVersion(100))
-	header := cmtproto.Header{Height: 100, Time: time.Unix(20*86400, 0).UTC()}
+	header := cmtproto.Header{
+		Height: 100,
+		Time:   time.Unix(20*86400, 0).UTC(),
+	}
+
 	ctx := sdk.NewContext(first, header, false, log.NewNopLogger())
 	bank := &testBank{key: bankKey}
 	cdc := codec.NewProtoCodec(codectypes.NewInterfaceRegistry())
 	epochs := epochskeeper.NewKeeper(runtime.NewKVStoreService(epochKey), cdc)
-	native := epochstypes.EpochInfo{ID: "day", Duration: 10 * time.Minute, StartTime: header.Time.Add(-56 * 10 * time.Minute), CurrentEpochStartTime: header.Time, CurrentEpochStartHeight: 100, CurrentEpoch: 57, EpochCountingStarted: true}
+	native := epochstypes.EpochInfo{
+		ID:                      "day",
+		Duration:                10 * time.Minute,
+		StartTime:               header.Time.Add(-56 * 10 * time.Minute),
+		CurrentEpochStartTime:   header.Time,
+		CurrentEpochStartHeight: 100,
+		CurrentEpoch:            57,
+		EpochCountingStarted:    true,
+	}
+
 	require.NoError(t, epochs.AddEpoch(ctx, native))
 	k := NewKeeper(cdc, key, tkey, template.accounts, bank, epochs, template.authority).(*keeper)
 	importTestGenesis(t, k, ctx, bank, nativeQuotaGenesis())
@@ -412,7 +604,10 @@ func TestGenesisCommittedDatabaseRestart(t *testing.T) {
 	require.Equal(t, uint64(57), state.Epoch)
 	require.Equal(t, before.SendUsage, state.SendUsage)
 	require.Equal(t, before.RefundUsage, state.RefundUsage)
-	err = restored.FinalizeRefund(restarted, &types.MsgFinalizeRefund{Executor: testOwner(6).String(), ID: nativeQuotaGenesis().Records[6].ID})
+	err = restored.FinalizeRefund(restarted, &types.MsgFinalizeRefund{
+		Executor: testOwner(6).String(),
+		ID:       nativeQuotaGenesis().Records[6].ID,
+	})
 	require.ErrorIs(t, err, types.ErrRefundCapReached)
 	restarted = restarted.WithBlockTime(native.CurrentEpochStartTime.Add(native.Duration + time.Nanosecond))
 	require.NoError(t, restoredEpochs.BeginBlocker(restarted))
@@ -421,7 +616,10 @@ func TestGenesisCommittedDatabaseRestart(t *testing.T) {
 	require.Equal(t, uint64(58), state.Epoch)
 	require.True(t, state.SendUsage.Amount.IsZero())
 	require.True(t, state.RefundUsage.Amount.IsZero())
-	require.NoError(t, restored.FinalizeRefund(restarted, &types.MsgFinalizeRefund{Executor: testOwner(6).String(), ID: *state.RefundHead}))
+	require.NoError(t, restored.FinalizeRefund(restarted, &types.MsgFinalizeRefund{
+		Executor: testOwner(6).String(),
+		ID:       *state.RefundHead,
+	}))
 }
 
 func TestGenesisExportRejectsCanonicalCorruption(t *testing.T) {
@@ -433,19 +631,23 @@ func TestGenesisExportRejectsCanonicalCorruption(t *testing.T) {
 			id := g.Records[0].ID
 			switch kind {
 			case "missing settlement":
-				require.NoError(t, k.settlements.Remove(ctx, types.NewSettlementID(types.StatusTransferPending, id)))
+				require.NoError(t, k.settlements.Remove(ctx, *types.NewSettlementID(types.StatusTransferPending, id)))
 			case "bad record":
-				key, err := types.TransferKey(id)
+				key, err := TransferKey(id)
 				require.NoError(t, err)
 				ctx.KVStore(k.skey).Set(key, []byte{1})
 			case "bad settlement":
-				key, err := types.SettlementKey(types.NewSettlementID(types.StatusTransferPending, id))
+				key, err := SettlementKey(*types.NewSettlementID(types.StatusTransferPending, id))
 				require.NoError(t, err)
 				ctx.KVStore(k.skey).Set(key, []byte{1})
 			case "bad totals":
 				ctx.KVStore(k.skey).Set(TotalsKey.Bytes(), []byte{})
 			case "orphan settlement":
-				require.NoError(t, k.settlements.Set(ctx, types.NewSettlementID(types.StatusTransferPending, types.ID{Owner: testOwner(8).String(), Height: 2, Sequence: 1}), types.SettlementData{}))
+				require.NoError(t, k.settlements.Set(ctx, *types.NewSettlementID(types.StatusTransferPending, types.ID{
+					Owner:    testOwner(8).String(),
+					Height:   2,
+					Sequence: 1,
+				}), types.SettlementData{}))
 
 			}
 

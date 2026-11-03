@@ -25,7 +25,11 @@ func reportingHarness(t *testing.T) *sinkHarness {
 }
 
 func observation(outcome types.Outcome) types.Observation {
-	return types.Observation{Outcome: outcome, Slot: 100, TransactionSignature: bytes.Repeat([]byte{1}, 64)}
+	return types.Observation{
+		Outcome:              outcome,
+		Slot:                 100,
+		TransactionSignature: bytes.Repeat([]byte{1}, 64),
+	}
 }
 
 func (h *sinkHarness) reportMsg(t *testing.T, reporter, id int, outcome types.Outcome) *types.MsgReportOutcome {
@@ -33,7 +37,13 @@ func (h *sinkHarness) reportMsg(t *testing.T, reporter, id int, outcome types.Ou
 	entry, err := h.a.Keepers.Akash.Sink.GetTransfer(h.ctx(), h.id(id))
 	require.NoError(t, err)
 
-	return &types.MsgReportOutcome{Reporter: h.reporterAddress(reporter), ID: h.id(id), PolicyVersion: h.state().Policy.Version, Round: entry.Settlement.Round, Observation: observation(outcome)}
+	return &types.MsgReportOutcome{
+		Reporter:      h.reporterAddress(reporter),
+		ID:            h.id(id),
+		PolicyVersion: h.state().Policy.Version,
+		Round:         entry.Settlement.Round,
+		Observation:   observation(outcome),
+	}
 }
 
 func (h *sinkHarness) report(t *testing.T, reporter, id int, outcome types.Outcome) *abci.ExecTxResult {
@@ -50,7 +60,10 @@ func (h *sinkHarness) quorum(t *testing.T, id int, outcome types.Outcome) {
 }
 
 func (h *sinkHarness) refund(t *testing.T, id int) *abci.ExecTxResult {
-	return h.deliverBytes(t, h.txFrom(t, h.reporters[4], "", &types.MsgFinalizeRefund{Executor: h.reporterAddress(4), ID: h.id(id)}))
+	return h.deliverBytes(t, h.txFrom(t, h.reporters[4], "", &types.MsgFinalizeRefund{
+		Executor: h.reporterAddress(4),
+		ID:       h.id(id),
+	}))
 }
 
 func (h *sinkHarness) transfer(t *testing.T, id int) types.TransferState {
@@ -70,11 +83,34 @@ func (h *sinkHarness) resolve(t *testing.T, id types.ID, decision types.Decision
 	var msg types.Resolution
 	switch decision {
 	case types.DecisionRestart:
-		msg = &types.MsgRestartTransfer{Authority: authority, ID: id, ExpectedRound: round, Reason: "review"}
+		msg = &types.MsgRestartTransfer{
+			Authority:     authority,
+			ID:            id,
+			ExpectedRound: round,
+			Reason:        "review",
+		}
 	case types.DecisionConfirmMint:
-		msg = &types.MsgConfirmMint{Authority: authority, ID: id, ExpectedRound: round, Reason: "review", Evidence: types.SolanaEvidence{Slot: 100, TransactionSignature: bytes.Repeat([]byte{1}, 64)}}
+		msg = &types.MsgConfirmMint{
+			Authority:     authority,
+			ID:            id,
+			ExpectedRound: round,
+			Reason:        "review",
+			Evidence: types.SolanaEvidence{
+				Slot:                 100,
+				TransactionSignature: bytes.Repeat([]byte{1}, 64),
+			},
+		}
 	case types.DecisionConfirmVoid:
-		msg = &types.MsgConfirmVoid{Authority: authority, ID: id, ExpectedRound: round, Reason: "review", Evidence: types.SolanaEvidence{Slot: 100, TransactionSignature: bytes.Repeat([]byte{1}, 64)}}
+		msg = &types.MsgConfirmVoid{
+			Authority:     authority,
+			ID:            id,
+			ExpectedRound: round,
+			Reason:        "review",
+			Evidence: types.SolanaEvidence{
+				Slot:                 100,
+				TransactionSignature: bytes.Repeat([]byte{1}, 64),
+			},
+		}
 	}
 
 	_, err = h.a.MsgServiceRouter().Handler(msg)(h.ctx(), msg)
@@ -173,7 +209,11 @@ func TestSinkVetoConflictAndGovernanceResolution(t *testing.T) {
 	require.Zero(t, res.Code, res.Log)
 	h.quorum(t, 1, types.OutcomeVoided)
 	k := h.a.Keepers.Akash.Sink
-	require.NoError(t, k.VetoVoid(h.ctx(), &types.MsgVetoVoid{Signer: h.reporterAddress(0), ID: h.id(1), Reason: "check evidence"}))
+	require.NoError(t, k.VetoVoid(h.ctx(), &types.MsgVetoVoid{
+		Signer: h.reporterAddress(0),
+		ID:     h.id(1),
+		Reason: "check evidence",
+	}))
 	require.Equal(t, types.HoldVeto, h.transfer(t, 1).Settlement.Hold)
 	res = h.report(t, 0, 1, types.OutcomeMinted)
 	require.Zero(t, res.Code, res.Log)
@@ -183,7 +223,16 @@ func TestSinkVetoConflictAndGovernanceResolution(t *testing.T) {
 	require.Equal(t, round+1, h.transfer(t, 1).Settlement.Round)
 	require.Empty(t, h.transfer(t, 1).Settlement.Votes)
 	require.Empty(t, h.transfer(t, 1).Settlement.VetoBy)
-	stale := &types.MsgConfirmMint{Authority: authtypes.NewModuleAddress(govtypes.ModuleName).String(), ID: h.id(1), ExpectedRound: round, Reason: "stale proposal", Evidence: types.SolanaEvidence{Slot: 100, TransactionSignature: bytes.Repeat([]byte{1}, 64)}}
+	stale := &types.MsgConfirmMint{
+		Authority:     authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		ID:            h.id(1),
+		ExpectedRound: round,
+		Reason:        "stale proposal",
+		Evidence: types.SolanaEvidence{
+			Slot:                 100,
+			TransactionSignature: bytes.Repeat([]byte{1}, 64),
+		},
+	}
 	require.ErrorIs(t, k.Resolve(h.ctx(), stale), types.ErrStaleReport)
 	require.Error(t, h.resolve(t, h.id(1), types.DecisionConfirmVoid))
 	require.NoError(t, h.order(h.id(1)))
@@ -237,7 +286,11 @@ func TestSinkRotationCannotRemoveHold(t *testing.T) {
 	require.Zero(t, res.Code, res.Log)
 	h.quorum(t, 1, types.OutcomeVoided)
 	k := h.a.Keepers.Akash.Sink
-	require.NoError(t, k.VetoVoid(h.ctx(), &types.MsgVetoVoid{Signer: h.reporterAddress(0), ID: h.id(1), Reason: "keep me"}))
+	require.NoError(t, k.VetoVoid(h.ctx(), &types.MsgVetoVoid{
+		Signer: h.reporterAddress(0),
+		ID:     h.id(1),
+		Reason: "keep me",
+	}))
 	rotate(h)
 	res = h.report(t, 1, 1, types.OutcomeVoided)
 	require.Zero(t, res.Code, res.Log)

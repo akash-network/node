@@ -15,7 +15,13 @@ import (
 )
 
 func depositContext(ctx sdk.Context, msg *types.MsgSink) sdk.Context {
-	return ctx.WithValue(sinkRequestContextKey{}, sinkRequest{sender: msg.Sender, destType: msg.DestType, dest: msg.Dest, denom: msg.Amount.Denom, amount: msg.Amount.Amount.String()})
+	return ctx.WithValue(sinkRequestContextKey{}, sinkRequest{
+		sender:   msg.Sender,
+		destType: msg.DestType,
+		dest:     msg.Dest,
+		denom:    msg.Amount.Denom,
+		amount:   msg.Amount.Amount.String(),
+	})
 }
 
 func TestAllocatorAtomicDepositAndReset(t *testing.T) {
@@ -32,7 +38,13 @@ func TestAllocatorAtomicDepositAndReset(t *testing.T) {
 	pub := ed25519.NewKeyFromSeed(bytes.Repeat([]byte{8}, 32)).Public().(ed25519.PublicKey)
 	var recipient types.SolanaAddress
 	copy(recipient[:], pub)
-	msg := &types.MsgSink{Sender: testOwner(6).String(), DestType: types.DestTypeSolana, Dest: recipient.String(), Amount: testCoin(10)}
+	msg := &types.MsgSink{
+		Sender:   testOwner(6).String(),
+		DestType: types.DestTypeSolana,
+		Dest:     recipient.String(),
+		Amount:   testCoin(10),
+	}
+
 	bank.set(ctx, testOwner(6), sdk.NewCoins(testCoin(100)))
 	bank.set(ctx, testOwner(7), sdk.NewCoins(testCoin(100)))
 
@@ -102,7 +114,12 @@ func TestSenderAndPolicyEligibility(t *testing.T) {
 	accounts := k.accounts.(genesisAccounts)
 	base := authtypes.NewBaseAccountWithAddress(testOwner(6))
 	accounts[testOwner(6).String()] = authtypes.NewModuleAccount(base, "reserved")
-	msg := &types.MsgSink{Sender: testOwner(6).String(), DestType: types.DestTypeSolana, Dest: types.SolanaAddress{1}.String(), Amount: testCoin(1)}
+	msg := &types.MsgSink{
+		Sender:   testOwner(6).String(),
+		DestType: types.DestTypeSolana,
+		Dest:     types.SolanaAddress{1}.String(),
+		Amount:   testCoin(1),
+	}
 	_, err := k.Deposit(depositContext(ctx, msg), msg)
 	require.ErrorIs(t, err, types.ErrSenderNotSigningAccount)
 	accounts[testOwner(6).String()] = base
@@ -114,17 +131,28 @@ func TestSenderAndPolicyEligibility(t *testing.T) {
 	p := g.Params
 	p.Reporters = []string{g.Params.Reporters[3], g.Params.Reporters[2], g.Params.Reporters[1], g.Params.Reporters[0]}
 	p.ReportersThreshold = sdkmath.LegacyMustNewDecFromStr("0.7")
-	require.NoError(t, k.UpdateParams(ctx, &types.MsgUpdateParams{Authority: k.authority, Params: p}))
-	policy, err := k.currentPolicy(ctx)
+	require.NoError(t, k.UpdateParams(ctx, &types.MsgUpdateParams{
+		Authority: k.authority,
+		Params:    p,
+	}))
+
+	policy, err := k.GetCurrentPolicy(ctx)
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), policy.Version)
 	p.ReportersThreshold = sdkmath.LegacyMustNewDecFromStr("0.8")
-	require.NoError(t, k.UpdateParams(ctx, &types.MsgUpdateParams{Authority: k.authority, Params: p}))
-	policy, err = k.currentPolicy(ctx)
+	require.NoError(t, k.UpdateParams(ctx, &types.MsgUpdateParams{
+		Authority: k.authority,
+		Params:    p,
+	}))
+
+	policy, err = k.GetCurrentPolicy(ctx)
 	require.NoError(t, err)
 	require.Equal(t, uint64(2), policy.Version)
 	require.Equal(t, uint32(4), policy.Threshold)
 	accounts[testOwner(6).String()] = authtypes.NewModuleAccount(base, "reserved")
 	p.Reporters[0] = testOwner(6).String()
-	require.Error(t, k.UpdateParams(ctx, &types.MsgUpdateParams{Authority: k.authority, Params: p}))
+	require.Error(t, k.UpdateParams(ctx, &types.MsgUpdateParams{
+		Authority: k.authority,
+		Params:    p,
+	}))
 }

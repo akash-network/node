@@ -14,7 +14,12 @@ import (
 )
 
 func (h *sinkHarness) depositFrom(t *testing.T, key *secp256k1.PrivKey, amount int64) *abci.ExecTxResult {
-	return h.deliverBytes(t, h.txFrom(t, key, "", &types.MsgSink{DestType: types.DestTypeSolana, Dest: base58.Encode(h.recipient[:]), Amount: coin(amount), Sender: sdk.AccAddress(key.PubKey().Address()).String()}))
+	return h.deliverBytes(t, h.txFrom(t, key, "", &types.MsgSink{
+		DestType: types.DestTypeSolana,
+		Dest:     base58.Encode(h.recipient[:]),
+		Amount:   coin(amount),
+		Sender:   sdk.AccAddress(key.PubKey().Address()).String(),
+	}))
 }
 
 func TestSinkUnlimitedAccountRetainsUsage(t *testing.T) {

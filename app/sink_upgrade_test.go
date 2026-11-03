@@ -29,10 +29,12 @@ import (
 	markettypes "pkg.akt.dev/go/node/market/v1"
 	sinktypes "pkg.akt.dev/go/node/sink/v1"
 	"pkg.akt.dev/go/sdkutil"
+
 	sinkupgrade "pkg.akt.dev/node/v2/upgrades/software/v2.2.0"
 	utypes "pkg.akt.dev/node/v2/upgrades/types"
 	utilcli "pkg.akt.dev/node/v2/util/cli"
 	escrowkeeper "pkg.akt.dev/node/v2/x/escrow/keeper"
+	sinkhandler "pkg.akt.dev/node/v2/x/sink/handler"
 	sinkkeeper "pkg.akt.dev/node/v2/x/sink/keeper"
 )
 
@@ -89,7 +91,10 @@ func installPreUpgradeContract(t *testing.T, h *sinkHarness, ctx sdk.Context) {
 				Label:   "pre-upgrade Pyth state",
 				Created: created,
 			},
-			ContractState: []wasmtypes.Model{{Key: []byte("config"), Value: config}},
+			ContractState: []wasmtypes.Model{{
+				Key:   []byte("config"),
+				Value: config,
+			}},
 			ContractCodeHistory: []wasmtypes.ContractCodeHistoryEntry{{
 				Operation: wasmtypes.ContractCodeHistoryOperationTypeInit,
 				CodeID:    codeID,
@@ -123,10 +128,18 @@ func runSinkUpgradeWithInfo(t *testing.T, h *sinkHarness, ctx sdk.Context, info 
 	require.NotNil(t, ctor)
 	up, err := ctor(log.NewNopLogger(), h.a.App)
 	require.NoError(t, err)
-	require.Equal(t, &storetypes.StoreUpgrades{Added: []string{sinktypes.StoreKey}, Deleted: []string{}}, up.StoreLoader())
+	require.Equal(t, &storetypes.StoreUpgrades{
+		Added:   []string{sinktypes.StoreKey},
+		Deleted: []string{},
+	}, up.StoreLoader())
+
 	from := h.a.MM.GetVersionMap()
 	delete(from, sinktypes.ModuleName)
-	plan := upgradetypes.Plan{Name: sinkupgrade.UpgradeName, Height: ctx.BlockHeight(), Info: info}
+	plan := upgradetypes.Plan{
+		Name:   sinkupgrade.UpgradeName,
+		Height: ctx.BlockHeight(),
+		Info:   info,
+	}
 	versions, err := up.UpgradeHandler()(ctx, plan, from)
 	if err == nil {
 		require.Equal(t, h.a.MM.GetVersionMap(), versions)
@@ -296,14 +309,22 @@ func TestSinkUpgradeCleanAddressAndRestrictions(t *testing.T) {
 	p := sinkParams(t, k, ctx)
 	p.Enabled = true
 	p.MinAmountPerTransfer = coin(1)
-	require.ErrorContains(t, k.UpdateParams(ctx, &sinktypes.MsgUpdateParams{Authority: h.a.Keepers.Cosmos.Wasm.GetAuthority(), Params: p}), "deposits require reporters")
+	_, err := sinkhandler.NewServer(k).UpdateParams(ctx, &sinktypes.MsgUpdateParams{
+		Authority: h.a.Keepers.Cosmos.Wasm.GetAuthority(),
+		Params:    p,
+	})
+	require.ErrorContains(t, err, "deposits require reporters")
 
 	for _, key := range h.reporters[:4] {
 		p.Reporters = append(p.Reporters, sdk.AccAddress(key.PubKey().Address()).String())
 	}
 
 	p.ReportersThreshold = sdkmath.LegacyMustNewDecFromStr("0.75")
-	require.NoError(t, k.UpdateParams(ctx, &sinktypes.MsgUpdateParams{Authority: h.a.Keepers.Cosmos.Wasm.GetAuthority(), Params: p}))
+	_, err = sinkhandler.NewServer(k).UpdateParams(ctx, &sinktypes.MsgUpdateParams{
+		Authority: h.a.Keepers.Cosmos.Wasm.GetAuthority(),
+		Params:    p,
+	})
+	require.NoError(t, err)
 	require.True(t, sinkParams(t, k, ctx).Enabled)
 	require.NoError(t, k.CheckBalance(ctx))
 }
@@ -335,7 +356,11 @@ func TestSinkUpgradeRejectsPresentModule(t *testing.T) {
 	require.NotNil(t, ctor)
 	up, err := ctor(log.NewNopLogger(), h.a.App)
 	require.NoError(t, err)
-	plan := upgradetypes.Plan{Name: sinkupgrade.UpgradeName, Height: ctx.BlockHeight(), Info: cosmovisorInfo(t)}
+	plan := upgradetypes.Plan{
+		Name:   sinkupgrade.UpgradeName,
+		Height: ctx.BlockHeight(),
+		Info:   cosmovisorInfo(t),
+	}
 	_, err = up.UpgradeHandler()(ctx, plan, h.a.MM.GetVersionMap())
 	require.ErrorContains(t, err, "already present")
 	require.False(t, ctx.KVStore(h.a.GetKey(sinktypes.StoreKey)).Has(sinkkeeper.ParamsKey.Bytes()))
@@ -400,8 +425,10 @@ func TestSinkUpgradeRejectsUnusableNativeEpoch(t *testing.T) {
 				defer func() { failure = recover() }()
 				_ = runSinkUpgrade(t, h, ctx)
 			}()
+
 			err, ok := failure.(error)
 			require.True(t, ok, "expected genesis dependency failure, got %v", failure)
+
 			if name == "missing" {
 				require.ErrorIs(t, err, collections.ErrNotFound)
 			} else {
@@ -416,7 +443,14 @@ func TestSinkUpgradeRejectsUnusableNativeEpoch(t *testing.T) {
 
 func sinkUpgradeOrphanPayment(t *testing.T, h *sinkHarness, ctx sdk.Context) escrowtypes.Payment {
 	t.Helper()
-	id := markettypes.LeaseID{Owner: h.sender.String(), DSeq: 1, GSeq: 1, OSeq: 1, Provider: h.bystander.String()}
+	id := markettypes.LeaseID{
+		Owner:    h.sender.String(),
+		DSeq:     1,
+		GSeq:     1,
+		OSeq:     1,
+		Provider: h.bystander.String(),
+	}
+
 	payment := escrowtypes.Payment{
 		ID: id.ToEscrowPaymentID(),
 		State: escrowtypes.PaymentState{

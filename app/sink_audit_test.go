@@ -76,7 +76,11 @@ func TestSinkRefundQueueFollowsSettlement(t *testing.T) {
 	}
 
 	require.Equal(t, h.id(1), *h.state().RefundHead)
-	require.NoError(t, h.a.Keepers.Akash.Sink.VetoVoid(h.ctx(), &types.MsgVetoVoid{Signer: h.reporterAddress(0), ID: h.id(1), Reason: "review"}))
+	require.NoError(t, h.a.Keepers.Akash.Sink.VetoVoid(h.ctx(), &types.MsgVetoVoid{
+		Signer: h.reporterAddress(0),
+		ID:     h.id(1),
+		Reason: "review",
+	}))
 	require.Equal(t, h.id(2), *h.state().RefundHead)
 	rotate(h)
 	require.Nil(t, h.state().RefundHead)
@@ -153,7 +157,10 @@ func TestSinkRefundMustReachSender(t *testing.T) {
 	before := captureSinkBankState(t, h, h.ctx())
 	ctx := h.ctx().WithBlockTime(h.now)
 	events := ctx.EventManager().Events()
-	err := h.a.Keepers.Akash.Sink.FinalizeRefund(ctx, &types.MsgFinalizeRefund{Executor: h.sender.String(), ID: h.id(1)})
+	err := h.a.Keepers.Akash.Sink.FinalizeRefund(ctx, &types.MsgFinalizeRefund{
+		Executor: h.sender.String(),
+		ID:       h.id(1),
+	})
 	require.ErrorContains(t, err, "original sender")
 	require.Equal(t, before, captureSinkBankState(t, h, h.ctx()))
 	require.Equal(t, events, ctx.EventManager().Events())
@@ -164,7 +171,13 @@ func TestSinkDepositEventAndGenesisDays(t *testing.T) {
 	h := newSinkHarness(t, nil)
 	res := h.deliver(t, "", h.deposit(10))
 	require.Zero(t, res.Code, res.Log)
-	require.Contains(t, sinkEvents(t, res.Events), proto.Message(&types.EventTransferCreated{ID: h.id(1), Sender: h.sender.String(), Recipient: h.deposit(10).Dest, Amount: coin(10), Height: 1}))
+	require.Contains(t, sinkEvents(t, res.Events), proto.Message(&types.EventTransferCreated{
+		ID:        h.id(1),
+		Sender:    h.sender.String(),
+		Recipient: h.deposit(10).Dest,
+		Amount:    coin(10),
+		Height:    1,
+	}))
 	k := h.a.Keepers.Akash.Sink
 	g, err := k.ExportGenesis(h.ctx())
 	require.NoError(t, err)

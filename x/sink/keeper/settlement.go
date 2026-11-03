@@ -6,7 +6,6 @@ import (
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	gogotypes "github.com/cosmos/gogoproto/types"
 
 	types "pkg.akt.dev/go/node/sink/v1"
@@ -41,18 +40,6 @@ func challengeDeadline(ctx sdk.Context, p types.Params) (int64, error) {
 // RequestVoid commits a permanent governance order for proof on Solana.
 // The order cannot release escrow without a separate final void authorization.
 func (k *keeper) RequestVoid(ctx sdk.Context, msg *types.MsgRequestVoid) error {
-	if msg == nil {
-		return sdkerrors.ErrInvalidRequest.Wrap("nil request")
-	}
-
-	if err := msg.ValidateBasic(); err != nil {
-		return err
-	}
-
-	if msg.Authority != k.authority {
-		return sdkerrors.ErrUnauthorized.Wrap("sink authority must be governance")
-	}
-
 	cache, write := ctx.CacheContext()
 	t, err := k.GetTransfer(cache, msg.ID)
 	if err != nil {
@@ -99,22 +86,10 @@ func (k *keeper) RequestVoid(ctx sdk.Context, msg *types.MsgRequestVoid) error {
 }
 
 func (k *keeper) ReportOutcome(ctx sdk.Context, msg *types.MsgReportOutcome) error {
-	if msg == nil {
-		return sdkerrors.ErrInvalidRequest.Wrap("nil report")
-	}
-
-	if err := msg.ValidateBasic(); err != nil {
-		return err
-	}
-
 	cache, write := ctx.CacheContext()
-	policy, err := k.currentPolicy(cache)
+	policy, err := k.GetCurrentPolicy(cache)
 	if err != nil {
 		return err
-	}
-
-	if !slices.Contains(policy.Members, msg.Reporter) {
-		return types.ErrNotReporter
 	}
 
 	if msg.PolicyVersion != policy.Version {
@@ -226,25 +201,13 @@ func (k *keeper) ReportOutcome(ctx sdk.Context, msg *types.MsgReportOutcome) err
 }
 
 func (k *keeper) VetoVoid(ctx sdk.Context, msg *types.MsgVetoVoid) error {
-	if msg == nil {
-		return sdkerrors.ErrInvalidRequest.Wrap("nil veto")
-	}
-
-	if err := msg.ValidateBasic(); err != nil {
-		return err
-	}
-
 	cache, write := ctx.CacheContext()
-	policy, err := k.currentPolicy(cache)
+	policy, err := k.GetCurrentPolicy(cache)
 	if err != nil {
 		return err
 	}
 
 	gov := msg.Signer == k.authority
-	if !gov && !slices.Contains(policy.Members, msg.Signer) {
-		return types.ErrNotReporter
-	}
-
 	t, err := k.GetTransfer(cache, msg.ID)
 	if err != nil {
 		return err
@@ -293,45 +256,25 @@ func (k *keeper) VetoVoid(ctx sdk.Context, msg *types.MsgVetoVoid) error {
 }
 
 func (k *keeper) Resolve(ctx sdk.Context, msg types.Resolution) error {
-	var authority, reason string
+	var reason string
 	var id types.ID
 	var round uint64
 	var decision types.Decision
 	var evidence *types.SolanaEvidence
 	switch m := msg.(type) {
 	case *types.MsgRestartTransfer:
-		if m == nil {
-			return sdkerrors.ErrInvalidRequest.Wrap("nil restart")
-		}
-
-		authority, reason, id, round, decision = m.Authority, m.Reason, m.ID, m.ExpectedRound, types.DecisionRestart
+		reason, id, round, decision = m.Reason, m.ID, m.ExpectedRound, types.DecisionRestart
 	case *types.MsgConfirmMint:
-		if m == nil {
-			return sdkerrors.ErrInvalidRequest.Wrap("nil confirmation")
-		}
-
-		authority, reason, id, round, decision = m.Authority, m.Reason, m.ID, m.ExpectedRound, types.DecisionConfirmMint
+		reason, id, round, decision = m.Reason, m.ID, m.ExpectedRound, types.DecisionConfirmMint
 		evidence = &m.Evidence
 	case *types.MsgConfirmVoid:
-		if m == nil {
-			return sdkerrors.ErrInvalidRequest.Wrap("nil confirmation")
-		}
-
-		authority, reason, id, round, decision = m.Authority, m.Reason, m.ID, m.ExpectedRound, types.DecisionConfirmVoid
+		reason, id, round, decision = m.Reason, m.ID, m.ExpectedRound, types.DecisionConfirmVoid
 		evidence = &m.Evidence
 	default:
 		return types.ErrInvalidResolution
 	}
 
-	if err := msg.ValidateBasic(); err != nil {
-		return err
-	}
-
 	cache, write := ctx.CacheContext()
-
-	if authority != k.authority {
-		return sdkerrors.ErrUnauthorized.Wrap("sink authority must be governance")
-	}
 
 	t, err := k.GetTransfer(cache, id)
 	if err != nil {
@@ -387,7 +330,7 @@ func (k *keeper) Resolve(ctx sdk.Context, msg types.Resolution) error {
 		}
 	}
 
-	policy, err := k.currentPolicy(cache)
+	policy, err := k.GetCurrentPolicy(cache)
 	if err != nil {
 		return err
 	}
@@ -439,14 +382,6 @@ func (k *keeper) Resolve(ctx sdk.Context, msg types.Resolution) error {
 // FinalizeRefund pays exactly one original sender and never releases minted
 // escrow.
 func (k *keeper) FinalizeRefund(ctx sdk.Context, msg *types.MsgFinalizeRefund) error {
-	if msg == nil {
-		return sdkerrors.ErrInvalidRequest.Wrap("nil refund")
-	}
-
-	if err := msg.ValidateBasic(); err != nil {
-		return err
-	}
-
 	cache, write := ctx.CacheContext()
 	t, err := k.GetTransfer(cache, msg.ID)
 	if err != nil {
@@ -469,7 +404,7 @@ func (k *keeper) FinalizeRefund(ctx sdk.Context, msg *types.MsgFinalizeRefund) e
 		return types.ErrRefundsDisabled
 	}
 
-	policy, err := k.currentPolicy(cache)
+	policy, err := k.GetCurrentPolicy(cache)
 	if err != nil {
 		return err
 	}

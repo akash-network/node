@@ -87,8 +87,14 @@ func TestSinkNativeEpochBoundaries(t *testing.T) {
 			require.Equal(t, int64(2), h.quotaEpoch(t).CurrentEpoch)
 			before, err := h.a.Keepers.Akash.Sink.ExportGenesis(h.ctx())
 			require.NoError(t, err)
-			require.Equal(t, types.EpochUsage{Epoch: 1, Amount: coin(10)}, before.SendUsage)
-			require.Equal(t, types.EpochUsage{Epoch: 2, Amount: coin(0)}, h.state().SendUsage)
+			require.Equal(t, types.EpochUsage{
+				Epoch:  1,
+				Amount: coin(10),
+			}, before.SendUsage)
+			require.Equal(t, types.EpochUsage{
+				Epoch:  2,
+				Amount: coin(0),
+			}, h.state().SendUsage)
 			account, err := h.a.Keepers.Akash.Sink.NewQuerier().Account(h.ctx(), &types.QueryAccountRequest{Owner: h.sender.String()})
 			require.NoError(t, err)
 			require.Equal(t, uint64(2), account.Epoch)
@@ -97,15 +103,25 @@ func TestSinkNativeEpochBoundaries(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, before, after)
 
-			stateReply, err := h.a.Query(context.Background(), &abci.RequestQuery{Path: "/akash.sink.v1.Query/State", Height: exhaustedHeight})
+			stateReply, err := h.a.Query(context.Background(), &abci.RequestQuery{
+				Path:   "/akash.sink.v1.Query/State",
+				Height: exhaustedHeight,
+			})
 			require.NoError(t, err)
 			require.Zero(t, stateReply.Code, stateReply.Log)
 			var state types.QueryStateResponse
 			require.NoError(t, state.Unmarshal(stateReply.Value))
-			require.Equal(t, types.EpochUsage{Epoch: 1, Amount: coin(10)}, state.SendUsage)
+			require.Equal(t, types.EpochUsage{
+				Epoch:  1,
+				Amount: coin(10),
+			}, state.SendUsage)
 			request, err := (&epochstypes.QueryCurrentEpochRequest{Identifier: "day"}).Marshal()
 			require.NoError(t, err)
-			nativeReply, err := h.a.Query(context.Background(), &abci.RequestQuery{Path: "/akash.epochs.v1beta1.Query/CurrentEpoch", Data: request, Height: exhaustedHeight})
+			nativeReply, err := h.a.Query(context.Background(), &abci.RequestQuery{
+				Path:   "/akash.epochs.v1beta1.Query/CurrentEpoch",
+				Data:   request,
+				Height: exhaustedHeight,
+			})
 			require.NoError(t, err)
 			require.Zero(t, nativeReply.Code, nativeReply.Log)
 			var native epochstypes.QueryCurrentEpochResponse
@@ -182,7 +198,10 @@ func TestSinkChallengeIntervalCrossesNativeEpoch(t *testing.T) {
 	res = h.refund(t, 1)
 	require.NotZero(t, res.Code)
 	require.Contains(t, res.Log, "challenge")
-	res = h.commitBlock(t, deadline, h.txFrom(t, h.reporters[4], "", &types.MsgFinalizeRefund{Executor: h.reporterAddress(4), ID: h.id(1)}))[0]
+	res = h.commitBlock(t, deadline, h.txFrom(t, h.reporters[4], "", &types.MsgFinalizeRefund{
+		Executor: h.reporterAddress(4),
+		ID:       h.id(1),
+	}))[0]
 	require.Zero(t, res.Code, res.Log)
 	require.Equal(t, types.StatusRefunded, h.transfer(t, 1).Status)
 	require.Equal(t, coin(10), h.state().RefundUsage.Amount)

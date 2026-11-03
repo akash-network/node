@@ -3,6 +3,7 @@ package app_test
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"os"
@@ -15,6 +16,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	types "pkg.akt.dev/go/node/sink/v1"
+
+	sinkkeeper "pkg.akt.dev/node/v2/x/sink/keeper"
 )
 
 func TestSinkCanonicalSettlementMembershipProofs(t *testing.T) {
@@ -34,12 +37,17 @@ func TestSinkCanonicalSettlementMembershipProofs(t *testing.T) {
 			require.Equal(t, receipt, entry.Settlement.VoidAuthorization)
 		}
 
-		key, err := types.SettlementKey(types.NewSettlementID(status, entry.ID))
+		key, err := sinkkeeper.SettlementKey(*types.NewSettlementID(status, entry.ID))
 		require.NoError(t, err)
 		value, err := entry.Settlement.Marshal()
 		require.NoError(t, err)
 		root := bytes.Clone(h.a.CommitMultiStore().LastCommitID().Hash)
-		query, err := h.a.Query(context.Background(), &abci.RequestQuery{Path: "/store/sink/key", Data: key, Height: h.height, Prove: true})
+		query, err := h.a.Query(context.Background(), &abci.RequestQuery{
+			Path:   "/store/sink/key",
+			Data:   key,
+			Height: h.height,
+			Prove:  true,
+		})
 		require.NoError(t, err)
 		require.Zero(t, query.Code, query.Log)
 		require.Equal(t, value, query.Value)
@@ -51,12 +59,17 @@ func TestSinkCanonicalSettlementMembershipProofs(t *testing.T) {
 		require.Error(t, proof.VerifyMembership(commitment.GetSDKSpecs(), commitment.NewMerkleRoot(root), commitment.NewMerklePath([]byte(types.StoreKey), badKey), value))
 		proofBytes, err := proof.Marshal()
 		require.NoError(t, err)
-		nonce := types.ProofNonce(key)
+		nonce := sha256.Sum256(key)
 		fixtures = append(fixtures, map[string]any{"query_height": h.height, "status": status, "root": hex.EncodeToString(root), "key": hex.EncodeToString(key), "value": hex.EncodeToString(value), "nonce": hex.EncodeToString(nonce[:]), "proof": hex.EncodeToString(proofBytes)})
 		t.Logf("status %d: native key %d bytes, value %d bytes, IAVL/multistore proof %d bytes", status, len(key), len(value), len(proofBytes))
 
 		if previous != nil {
-			absent, err := h.a.Query(context.Background(), &abci.RequestQuery{Path: "/store/sink/key", Data: previous, Height: h.height, Prove: true})
+			absent, err := h.a.Query(context.Background(), &abci.RequestQuery{
+				Path:   "/store/sink/key",
+				Data:   previous,
+				Height: h.height,
+				Prove:  true,
+			})
 			require.NoError(t, err)
 			require.Zero(t, absent.Code, absent.Log)
 			require.Empty(t, absent.Value)
@@ -100,7 +113,12 @@ func TestSinkRequestVoidRoundIsBoundBySignature(t *testing.T) {
 			h := reportingHarness(t)
 			result := h.deliver(t, "", h.deposit(10))
 			require.Zero(t, result.Code, result.Log)
-			msg := &types.MsgRequestVoid{Authority: h.sender.String(), ID: h.id(1), ExpectedRound: 1}
+			msg := &types.MsgRequestVoid{
+				Authority:     h.sender.String(),
+				ID:            h.id(1),
+				ExpectedRound: 1,
+			}
+
 			cfg := h.a.TxConfig()
 			signed, err := cfg.TxDecoder()(h.txFromMode(t, h.key, mode, "", msg))
 			require.NoError(t, err)
