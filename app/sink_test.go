@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -37,7 +38,9 @@ import (
 	epochstypes "pkg.akt.dev/go/node/epochs/v1beta1"
 	sinktypes "pkg.akt.dev/go/node/sink/v1"
 	"pkg.akt.dev/go/sdkutil"
+
 	"pkg.akt.dev/node/v2/app"
+	sinkhandler "pkg.akt.dev/node/v2/x/sink/handler"
 	sinkkeeper "pkg.akt.dev/node/v2/x/sink/keeper"
 )
 
@@ -58,7 +61,18 @@ type sinkHarness struct {
 
 func newSinkHarness(t *testing.T, change func(*sinktypes.GenesisState)) *sinkHarness {
 	t.Helper()
-	h := &sinkHarness{t: t, key: secp256k1.GenPrivKeyFromSecret([]byte("local sink sender")), now: time.Unix(1_750_000_000, 0).UTC()}
+	root := filepath.Join("..", ".cache", "sink-review-corrections", "app-homes")
+	require.NoError(t, os.MkdirAll(root, 0o700))
+	home, err := os.MkdirTemp(root, "sink-")
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, os.RemoveAll(home)) })
+
+	h := &sinkHarness{
+		t:   t,
+		key: secp256k1.GenPrivKeyFromSecret([]byte("local sink sender")),
+		now: time.Unix(1_750_000_000, 0).UTC(),
+	}
+
 	h.sender = sdk.AccAddress(h.key.PubKey().Address())
 	h.bystander = sdk.AccAddress(secp256k1.GenPrivKeyFromSecret([]byte("local bystander")).PubKey().Address())
 	for i := 0; i < 5; i++ {
@@ -66,7 +80,7 @@ func newSinkHarness(t *testing.T, change func(*sinktypes.GenesisState)) *sinkHar
 	}
 
 	copy(h.recipient[:], ed25519.NewKeyFromSeed(bytes.Repeat([]byte{7}, 32)).Public().(ed25519.PublicKey))
-	h.a = app.Setup(app.WithHome(t.TempDir()), app.WithGenesis(func(cdc codec.Codec) app.GenesisState {
+	h.a = app.Setup(app.WithHome(home), app.WithGenesis(func(cdc codec.Codec) app.GenesisState {
 		state := app.GenesisStateWithValSet(cdc)
 		epochs := epochstypes.DefaultGenesis()
 		for i := range epochs.Epochs {
@@ -97,8 +111,14 @@ func newSinkHarness(t *testing.T, change func(*sinktypes.GenesisState)) *sinkHar
 		cdc.MustUnmarshalJSON(state[banktypes.ModuleName], &bank)
 
 		for _, b := range []banktypes.Balance{
-			{Address: h.sender.String(), Coins: sdk.NewCoins(sdk.NewInt64Coin(sdkutil.DenomUakt, 2_000_000_000), sdk.NewInt64Coin("other", 100))},
-			{Address: h.bystander.String(), Coins: sdk.NewCoins(sdk.NewInt64Coin(sdkutil.DenomUakt, 1_000_000_000))},
+			{
+				Address: h.sender.String(),
+				Coins:   sdk.NewCoins(sdk.NewInt64Coin(sdkutil.DenomUakt, 2_000_000_000), sdk.NewInt64Coin("other", 100)),
+			},
+			{
+				Address: h.bystander.String(),
+				Coins:   sdk.NewCoins(sdk.NewInt64Coin(sdkutil.DenomUakt, 1_000_000_000)),
+			},
 		} {
 			bank.Balances = append(bank.Balances, b)
 			bank.Supply = bank.Supply.Add(b.Coins...)
@@ -106,7 +126,11 @@ func newSinkHarness(t *testing.T, change func(*sinktypes.GenesisState)) *sinkHar
 
 		for _, key := range h.reporters {
 			coins := sdk.NewCoins(sdk.NewInt64Coin(sdkutil.DenomUakt, 1_000_000))
-			bank.Balances = append(bank.Balances, banktypes.Balance{Address: sdk.AccAddress(key.PubKey().Address()).String(), Coins: coins})
+			bank.Balances = append(bank.Balances, banktypes.Balance{
+				Address: sdk.AccAddress(key.PubKey().Address()).String(),
+				Coins:   coins,
+			})
+
 			bank.Supply = bank.Supply.Add(coins...)
 		}
 
@@ -138,11 +162,19 @@ func (h *sinkHarness) ctx() sdk.Context {
 		return h.a.NewContext(false)
 	}
 
-	return h.a.NewUncachedContext(false, cmtproto.Header{Height: h.height, Time: h.now})
+	return h.a.NewUncachedContext(false, cmtproto.Header{
+		Height: h.height,
+		Time:   h.now,
+	})
 }
 
 func (h *sinkHarness) deposit(amount int64) *sinktypes.MsgSink {
-	return &sinktypes.MsgSink{DestType: sinktypes.DestTypeSolana, Dest: base58.Encode(h.recipient[:]), Amount: sdk.NewInt64Coin(sdkutil.DenomUakt, amount), Sender: h.sender.String()}
+	return &sinktypes.MsgSink{
+		DestType: sinktypes.DestTypeSolana,
+		Dest:     base58.Encode(h.recipient[:]),
+		Amount:   sdk.NewInt64Coin(sdkutil.DenomUakt, amount),
+		Sender:   h.sender.String(),
+	}
 }
 
 func (h *sinkHarness) tx(t *testing.T, memo string, msgs ...sdk.Msg) []byte {
@@ -163,10 +195,21 @@ func (h *sinkHarness) txFromMode(t *testing.T, key *secp256k1.PrivKey, mode sign
 	b.SetGasLimit(500_000)
 	b.SetFeeAmount(sdk.NewCoins(sdk.NewInt64Coin(sdkutil.DenomUakt, 10)))
 	account := h.a.Keepers.Cosmos.Acct.GetAccount(h.ctx(), sender)
-	sig := signing.SignatureV2{PubKey: key.PubKey(), Data: &signing.SingleSignatureData{SignMode: mode}, Sequence: account.GetSequence()}
+	sig := signing.SignatureV2{
+		PubKey:   key.PubKey(),
+		Data:     &signing.SingleSignatureData{SignMode: mode},
+		Sequence: account.GetSequence(),
+	}
+
 	require.NoError(t, b.SetSignatures(sig))
 	signBytes, err := authsign.GetSignBytesAdapter(context.Background(), cfg.SignModeHandler(), mode,
-		authsign.SignerData{Address: sender.String(), ChainID: "akash-1", AccountNumber: account.GetAccountNumber(), Sequence: account.GetSequence(), PubKey: key.PubKey()}, b.GetTx())
+		authsign.SignerData{
+			Address:       sender.String(),
+			ChainID:       "akash-1",
+			AccountNumber: account.GetAccountNumber(),
+			Sequence:      account.GetSequence(),
+			PubKey:        key.PubKey(),
+		}, b.GetTx())
 	require.NoError(t, err)
 	h.signBytes = signBytes
 	signature, err := key.Sign(signBytes)
@@ -183,7 +226,11 @@ func (h *sinkHarness) commitBlock(t *testing.T, at time.Time, txs ...[]byte) []*
 	t.Helper()
 	h.height++
 	h.now = at
-	res, err := h.a.FinalizeBlock(&abci.RequestFinalizeBlock{Height: h.height, Time: h.now, Txs: txs})
+	res, err := h.a.FinalizeBlock(&abci.RequestFinalizeBlock{
+		Height: h.height,
+		Time:   h.now,
+		Txs:    txs,
+	})
 	require.NoError(t, err)
 	require.Len(t, res.TxResults, len(txs))
 	_, err = h.a.Commit()
@@ -271,7 +318,11 @@ func (h *sinkHarness) capture(t *testing.T, res *abci.ExecTxResult) {
 }
 
 func (h *sinkHarness) update(p sinktypes.Params) error {
-	return h.a.Keepers.Akash.Sink.UpdateParams(h.ctx(), &sinktypes.MsgUpdateParams{Authority: authtypes.NewModuleAddress(govtypes.ModuleName).String(), Params: p})
+	_, err := sinkhandler.NewServer(h.a.Keepers.Akash.Sink).UpdateParams(h.ctx(), &sinktypes.MsgUpdateParams{
+		Authority: authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		Params:    p,
+	})
+	return err
 }
 
 func (h *sinkHarness) order(id sinktypes.ID) error {
@@ -280,7 +331,12 @@ func (h *sinkHarness) order(id sinktypes.ID) error {
 		return err
 	}
 
-	return h.a.Keepers.Akash.Sink.RequestVoid(h.ctx(), &sinktypes.MsgRequestVoid{Authority: authtypes.NewModuleAddress(govtypes.ModuleName).String(), ID: id, ExpectedRound: entry.Settlement.Round})
+	_, err = sinkhandler.NewServer(h.a.Keepers.Akash.Sink).RequestVoid(h.ctx(), &sinktypes.MsgRequestVoid{
+		Authority:     authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		ID:            id,
+		ExpectedRound: entry.Settlement.Round,
+	})
+	return err
 }
 
 func TestSinkSignedDepositAndProof(t *testing.T) {
@@ -304,14 +360,23 @@ func TestSinkSignedDepositAndProof(t *testing.T) {
 	require.Equal(t, "/akash.sink.v1.MsgSinkResponse", responseData.MsgResponses[0].TypeUrl)
 	var depositResponse sinktypes.MsgSinkResponse
 	require.NoError(t, depositResponse.Unmarshal(responseData.MsgResponses[0].Value))
-	require.Equal(t, sinktypes.ID{Owner: h.sender.String(), Height: 1, Sequence: 1}, depositResponse.ID)
+	require.Equal(t, sinktypes.ID{
+		Owner:    h.sender.String(),
+		Height:   1,
+		Sequence: 1,
+	}, depositResponse.ID)
+
 	ctx := h.ctx()
 	entry, err := k.GetTransfer(ctx, depositResponse.ID)
 	require.NoError(t, err)
-	require.Equal(t, sinktypes.RecordData{Dest: base58.Encode(h.recipient[:]), Amount: coin(123456789)}, entry.Data)
+	require.Equal(t, sinktypes.RecordData{
+		Dest:   base58.Encode(h.recipient[:]),
+		Amount: coin(123456789),
+	}, entry.Data)
+
 	record, err := entry.Data.Marshal()
 	require.NoError(t, err)
-	proofKey, err := sinktypes.TransferKey(entry.ID)
+	proofKey, err := sinkkeeper.TransferKey(entry.ID)
 	require.NoError(t, err)
 	require.NoError(t, k.CheckBalance(ctx))
 	require.Equal(t, coin(123456789), sinkTotals(t, k, ctx).PendingAmount)
@@ -330,11 +395,20 @@ func TestSinkSignedDepositAndProof(t *testing.T) {
 	res = h.deliver(t, "", banktypes.NewMsgSend(h.sender, h.bystander, sdk.NewCoins(sdk.NewInt64Coin(sdkutil.DenomUakt, 1))))
 	require.Zero(t, res.Code, res.Log)
 	appHash := bytes.Clone(h.a.CommitMultiStore().LastCommitID().Hash)
-	query, err := h.a.Query(context.Background(), &abci.RequestQuery{Path: "/store/sink/key", Data: proofKey, Height: 2, Prove: true})
+	query, err := h.a.Query(context.Background(), &abci.RequestQuery{
+		Path:   "/store/sink/key",
+		Data:   proofKey,
+		Height: 2,
+		Prove:  true,
+	})
 	require.NoError(t, err)
 	require.Zero(t, query.Code, query.Log)
 	require.Equal(t, record, query.Value)
-	stateQuery, err := h.a.Query(context.Background(), &abci.RequestQuery{Path: "/akash.sink.v1.Query/State", Data: []byte{}, Height: 2})
+	stateQuery, err := h.a.Query(context.Background(), &abci.RequestQuery{
+		Path:   "/akash.sink.v1.Query/State",
+		Data:   []byte{},
+		Height: 2,
+	})
 	require.NoError(t, err)
 	require.Zero(t, stateQuery.Code, stateQuery.Log)
 	var state sinktypes.QueryStateResponse
@@ -342,7 +416,11 @@ func TestSinkSignedDepositAndProof(t *testing.T) {
 	require.Equal(t, coin(123456789), state.Totals.PendingAmount)
 	sinkRequest, err := (&sinktypes.QueryTransferRequest{ID: depositResponse.ID}).Marshal()
 	require.NoError(t, err)
-	sinkQuery, err := h.a.Query(context.Background(), &abci.RequestQuery{Path: "/akash.sink.v1.Query/Transfer", Data: sinkRequest, Height: 2})
+	sinkQuery, err := h.a.Query(context.Background(), &abci.RequestQuery{
+		Path:   "/akash.sink.v1.Query/Transfer",
+		Data:   sinkRequest,
+		Height: 2,
+	})
 	require.NoError(t, err)
 	require.Zero(t, sinkQuery.Code, sinkQuery.Log)
 	var sinkState sinktypes.QueryTransferResponse
@@ -456,7 +534,12 @@ func TestSinkLimitsAndGovernanceVoid(t *testing.T) {
 	h.now = h.now.Add(24 * time.Hour)
 	res = h.deliver(t, "", h.deposit(10))
 	require.Zero(t, res.Code, res.Log)
-	res = h.deliver(t, "", &sinktypes.MsgRequestVoid{Authority: h.sender.String(), ID: h.id(1), ExpectedRound: 1})
+	res = h.deliver(t, "", &sinktypes.MsgRequestVoid{
+		Authority:     h.sender.String(),
+		ID:            h.id(1),
+		ExpectedRound: 1,
+	})
+
 	require.NotZero(t, res.Code)
 	require.NoError(t, h.order(h.id(1)))
 	require.NoError(t, h.order(h.id(1)))
@@ -464,7 +547,7 @@ func TestSinkLimitsAndGovernanceVoid(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, got.Settlement.VoidAuthorization)
 	require.Equal(t, sinktypes.StatusVoided, got.Status)
-	key, err := sinktypes.SettlementKey(sinktypes.NewSettlementID(got.Status, h.id(1)))
+	key, err := sinkkeeper.SettlementKey(*sinktypes.NewSettlementID(got.Status, h.id(1)))
 	require.NoError(t, err)
 	value, err := got.Settlement.Marshal()
 	require.NoError(t, err)
@@ -536,7 +619,11 @@ func TestSinkSameBlockAllocationAndFailedDeposit(t *testing.T) {
 
 	h.height = 1
 	h.now = h.now.Add(time.Second)
-	block, err := h.a.FinalizeBlock(&abci.RequestFinalizeBlock{Height: 1, Time: h.now, Txs: transactions})
+	block, err := h.a.FinalizeBlock(&abci.RequestFinalizeBlock{
+		Height: 1,
+		Time:   h.now,
+		Txs:    transactions,
+	})
 	require.NoError(t, err)
 	require.Len(t, block.TxResults, 3)
 	require.NotZero(t, block.TxResults[0].Code)

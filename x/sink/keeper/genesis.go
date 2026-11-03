@@ -187,7 +187,7 @@ func (k *keeper) ExportGenesis(ctx sdk.Context) (*types.GenesisState, error) {
 	}
 
 	err = k.settlements.Walk(ctx, nil, func(id types.SettlementID, _ types.SettlementData) (bool, error) {
-		return k.requireRecord(ctx, id.ID())
+		return k.requireRecord(ctx, *id.GetID())
 	})
 	if err != nil {
 		return nil, err
@@ -222,7 +222,7 @@ func (k *keeper) requireRecord(ctx context.Context, id types.ID) (bool, error) {
 	}
 
 	if !exists {
-		return true, types.ErrInternal.Wrapf("orphaned sink state for %s", id)
+		return true, types.ErrInternal.Wrapf("orphaned sink state for %s", id.String())
 	}
 
 	return false, nil

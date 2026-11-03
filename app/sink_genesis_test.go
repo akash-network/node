@@ -3,6 +3,8 @@ package app_test
 import (
 	"bytes"
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -11,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	types "pkg.akt.dev/go/node/sink/v1"
+
 	"pkg.akt.dev/node/v2/app"
 	sinkkeeper "pkg.akt.dev/node/v2/x/sink/keeper"
 )
@@ -37,7 +40,12 @@ func TestSinkFullAppGenesisBankRestoration(t *testing.T) {
 	res := h.refund(t, 2)
 	require.Zero(t, res.Code, res.Log)
 	h.quorum(t, 3, types.OutcomeVoided)
-	require.NoError(t, h.a.Keepers.Akash.Sink.VetoVoid(h.ctx(), &types.MsgVetoVoid{Signer: h.reporterAddress(0), ID: h.id(3), Reason: "recovery hold"}))
+	require.NoError(t, h.a.Keepers.Akash.Sink.VetoVoid(h.ctx(), &types.MsgVetoVoid{
+		Signer: h.reporterAddress(0),
+		ID:     h.id(3),
+		Reason: "recovery hold",
+	}))
+
 	res = h.deliver(t, "", h.deposit(10))
 	require.Zero(t, res.Code, res.Log)
 	res = h.deliver(t, "", h.deposit(10))
@@ -62,10 +70,15 @@ func TestSinkFullAppGenesisBankRestoration(t *testing.T) {
 	epochsBefore, err := h.a.Keepers.Akash.Epochs.ExportGenesis(h.ctx())
 	require.NoError(t, err)
 	stateBefore := h.state()
-	key, err := types.TransferKey(h.id(1))
+	key, err := sinkkeeper.TransferKey(h.id(1))
 	require.NoError(t, err)
 	record := bytes.Clone(h.ctx().KVStore(h.a.GetKey(types.StoreKey)).Get(key))
-	proofReply, err := h.a.Query(context.Background(), &abci.RequestQuery{Path: "/store/sink/key", Data: key, Height: h.height, Prove: true})
+	proofReply, err := h.a.Query(context.Background(), &abci.RequestQuery{
+		Path:   "/store/sink/key",
+		Data:   key,
+		Height: h.height,
+		Prove:  true,
+	})
 	require.NoError(t, err)
 	require.Zero(t, proofReply.Code, proofReply.Log)
 	proof, err := commitment.ConvertProofs(proofReply.ProofOps)
@@ -74,9 +87,20 @@ func TestSinkFullAppGenesisBankRestoration(t *testing.T) {
 	exported, err := h.a.ExportAppStateAndValidators(false, nil, nil)
 	require.NoError(t, err)
 	require.Greater(t, exported.Height, h.height)
-	restored := app.Setup(app.WithHome(t.TempDir()), app.WithCheckTx(true))
+	root := filepath.Join("..", ".cache", "sink-review-corrections", "app-homes")
+	require.NoError(t, os.MkdirAll(root, 0o700))
+	home, err := os.MkdirTemp(root, "sink-genesis-")
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, os.RemoveAll(home)) })
+
+	restored := app.Setup(app.WithHome(home), app.WithCheckTx(true))
 	t.Cleanup(func() { require.NoError(t, restored.Close()) })
-	_, err = restored.InitChain(&abci.RequestInitChain{ChainId: "akash-1", Time: h.now, InitialHeight: exported.Height, AppStateBytes: exported.AppState})
+	_, err = restored.InitChain(&abci.RequestInitChain{
+		ChainId:       "akash-1",
+		Time:          h.now,
+		InitialHeight: exported.Height,
+		AppStateBytes: exported.AppState,
+	})
 	require.NoError(t, err)
 	ctx := restored.NewContext(false)
 	after, err := restored.Keepers.Akash.Sink.ExportGenesis(ctx)
@@ -112,7 +136,12 @@ func TestSinkFullAppGenesisBankRestoration(t *testing.T) {
 	res = clone.refund(t, 5)
 	require.Zero(t, res.Code, res.Log)
 	require.NoError(t, restored.Keepers.Akash.Sink.CheckBalance(clone.ctx()))
-	proofReply, err = restored.Query(context.Background(), &abci.RequestQuery{Path: "/store/sink/key", Data: key, Height: clone.height, Prove: true})
+	proofReply, err = restored.Query(context.Background(), &abci.RequestQuery{
+		Path:   "/store/sink/key",
+		Data:   key,
+		Height: clone.height,
+		Prove:  true,
+	})
 	require.NoError(t, err)
 	require.Zero(t, proofReply.Code, proofReply.Log)
 	require.Equal(t, record, proofReply.Value)

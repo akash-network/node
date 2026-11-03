@@ -1,28 +1,19 @@
 package keeper
 
 import (
+	"errors"
 	"math"
 
+	"cosmossdk.io/collections"
+	storetypes "cosmossdk.io/store/types"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	types "pkg.akt.dev/go/node/sink/v1"
 )
 
 func (k *keeper) UpdateParams(ctx sdk.Context, msg *types.MsgUpdateParams) error {
-	if msg == nil {
-		return sdkerrors.ErrInvalidRequest.Wrap("nil request")
-	}
-
-	if err := msg.ValidateBasic(); err != nil {
-		return err
-	}
-
 	cache, write := ctx.CacheContext()
-
-	if msg.Authority != k.authority {
-		return sdkerrors.ErrUnauthorized.Wrap("sink authority must be governance")
-	}
 
 	p := msg.Params
 	for _, member := range p.Reporters {
@@ -43,25 +34,45 @@ func (k *keeper) UpdateParams(ctx sdk.Context, msg *types.MsgUpdateParams) error
 
 	if p.MaxEpochRefund.IsLT(old.MaxEpochRefund) {
 		for _, status := range []types.Status{types.StatusTransferPending, types.StatusVoided, types.StatusRefundPending} {
-			err = k.settlements.Walk(cache, statusRange(status), func(key types.SettlementID, _ types.SettlementData) (bool, error) {
-				data, err := k.transfers.Get(cache, key.ID())
+			err = func() (err error) {
+				prefix, err := SettlementIDKey.ToPrefix(types.SettlementID{Status: status})
 				if err != nil {
-					return true, err
+					return err
 				}
 
-				if data.Amount.IsGT(p.MaxEpochRefund) {
-					return true, types.ErrInvalidParam.Wrap("refund cap below unpaid transfer amount")
+				it, err := k.settlements.IterateRaw(cache, prefix, storetypes.PrefixEndBytes(prefix), collections.OrderAscending)
+				if err != nil {
+					return err
+				}
+				defer func() {
+					err = errors.Join(err, it.Close())
+				}()
+
+				for ; it.Valid(); it.Next() {
+					entry, err := it.KeyValue()
+					if err != nil {
+						return err
+					}
+
+					data, err := k.transfers.Get(cache, *entry.Key.GetID())
+					if err != nil {
+						return err
+					}
+
+					if data.Amount.IsGT(p.MaxEpochRefund) {
+						return types.ErrInvalidParam.Wrap("refund cap below unpaid transfer amount")
+					}
 				}
 
-				return false, nil
-			})
+				return nil
+			}()
 			if err != nil {
 				return err
 			}
 		}
 	}
 
-	policy, err := k.currentPolicy(cache)
+	policy, err := k.GetCurrentPolicy(cache)
 	if err != nil {
 		return err
 	}

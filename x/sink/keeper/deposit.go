@@ -4,7 +4,6 @@ import (
 	"math"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	types "pkg.akt.dev/go/node/sink/v1"
 )
@@ -22,14 +21,6 @@ type sinkRequest struct {
 // Deposit validates and escrows one deposit, writes its immutable proof record
 // and returns that record's ID.
 func (k *keeper) Deposit(ctx sdk.Context, msg *types.MsgSink) (types.ID, error) {
-	if msg == nil {
-		return types.ID{}, sdkerrors.ErrInvalidRequest.Wrap("nil request")
-	}
-
-	if err := msg.ValidateBasic(); err != nil {
-		return types.ID{}, err
-	}
-
 	cache, write := ctx.CacheContext()
 
 	// Simulation uses committed state after the transient allocator has been cleared.
@@ -66,7 +57,7 @@ func (k *keeper) Deposit(ctx sdk.Context, msg *types.MsgSink) (types.ID, error) 
 		return types.ID{}, types.ErrDepositsDisabled
 	}
 
-	policy, err := k.currentPolicy(cache)
+	policy, err := k.GetCurrentPolicy(cache)
 	if err != nil {
 		return types.ID{}, err
 	}

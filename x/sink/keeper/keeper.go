@@ -39,6 +39,8 @@ type Keeper interface {
 	NewQuerier() Querier
 	BeginBlocker(context.Context) error
 
+	GetAuthority() string
+	GetCurrentPolicy(context.Context) (types.ReporterPolicy, error)
 	GetParams(context.Context) (types.Params, error)
 	GetTotals(context.Context) (types.Totals, error)
 	GetAccountUsage(context.Context, sdk.AccAddress) (types.AccountUsage, error)
@@ -109,12 +111,12 @@ func NewKeeper(
 		currentPolicyVersion: collections.NewItem(sb, CurrentPolicyKey, "current_policy_version", collections.Uint64Value),
 		sendUsage:            collections.NewItem(sb, SendUsageKey, "send_usage", codec.CollValue[types.EpochUsage](cdc)),
 		refundUsage:          collections.NewItem(sb, RefundUsageKey, "refund_usage", codec.CollValue[types.EpochUsage](cdc)),
-		transfers:            collections.NewMap(sb, TransfersKey, "transfers", types.IDKey, codec.CollValue[types.RecordData](cdc)),
-		settlements:          collections.NewMap(sb, SettlementsKey, "settlements", types.SettlementIDKey, codec.CollValue[types.SettlementData](cdc)),
+		transfers:            collections.NewMap(sb, TransfersKey, "transfers", RecordIDKey, codec.CollValue[types.RecordData](cdc)),
+		settlements:          collections.NewMap(sb, SettlementsKey, "settlements", SettlementIDKey, codec.CollValue[types.SettlementData](cdc)),
 		usage:                collections.NewMap(sb, AccountsKey, "accounts", sdk.AccAddressKey, codec.CollValue[types.AccountUsage](cdc)),
 		history:              collections.NewKeySet(sb, HistoryKey, "history", chronoIDKey),
 		disputes:             collections.NewKeySet(sb, DisputesKey, "disputes", chronoIDKey),
-		refunds:              collections.NewKeySet(sb, RefundQueueKey, "refund_queue", collections.TripleKeyCodec(collections.Uint64Key, collections.Int64Key, types.IDKey)),
+		refunds:              collections.NewKeySet(sb, RefundQueueKey, "refund_queue", collections.TripleKeyCodec(collections.Uint64Key, collections.Int64Key, RecordIDKey)),
 		sequence:             collections.NewSequence(tsb, SequenceKey, "sequence"),
 	}
 
@@ -145,6 +147,10 @@ func Address() sdk.AccAddress {
 
 func (k *keeper) initialized(ctx context.Context) (bool, error) {
 	return k.params.Has(ctx)
+}
+
+func (k *keeper) GetAuthority() string {
+	return k.authority
 }
 
 func (k *keeper) GetParams(ctx context.Context) (types.Params, error) {
@@ -179,7 +185,7 @@ func (k *keeper) GetTransfer(ctx context.Context, id types.ID) (types.TransferSt
 	var settlement types.SettlementData
 	status := types.StatusInvalid
 	for candidate := types.StatusTransferPending; candidate <= types.StatusRefunded; candidate++ {
-		value, err := k.settlements.Get(ctx, types.NewSettlementID(candidate, id))
+		value, err := k.settlements.Get(ctx, *types.NewSettlementID(candidate, id))
 		if errors.Is(err, collections.ErrNotFound) {
 			continue
 		}
@@ -188,14 +194,14 @@ func (k *keeper) GetTransfer(ctx context.Context, id types.ID) (types.TransferSt
 		}
 
 		if status != types.StatusInvalid {
-			return types.TransferState{}, types.ErrInternal.Wrapf("multiple canonical settlements for %s", id)
+			return types.TransferState{}, types.ErrInternal.Wrapf("multiple canonical settlements for %s", id.String())
 		}
 
 		status, settlement = candidate, value
 	}
 
 	if status == types.StatusInvalid {
-		return types.TransferState{}, types.ErrInternal.Wrapf("missing canonical settlement for %s", id)
+		return types.TransferState{}, types.ErrInternal.Wrapf("missing canonical settlement for %s", id.String())
 	}
 
 	return types.TransferState{
@@ -206,7 +212,7 @@ func (k *keeper) GetTransfer(ctx context.Context, id types.ID) (types.TransferSt
 	}, nil
 }
 
-func (k *keeper) currentPolicy(ctx context.Context) (types.ReporterPolicy, error) {
+func (k *keeper) GetCurrentPolicy(ctx context.Context) (types.ReporterPolicy, error) {
 	version, err := k.currentPolicyVersion.Get(ctx)
 	if err != nil {
 		return types.ReporterPolicy{}, err

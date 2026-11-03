@@ -40,10 +40,19 @@ func sinkBankMessages(from, to, other sdk.AccAddress) map[string]sdk.Msg {
 	return map[string]sdk.Msg{
 		"send": banktypes.NewMsgSend(from, to, sdk.NewCoins(coin(10))),
 		"multisend": &banktypes.MsgMultiSend{
-			Inputs: []banktypes.Input{{Address: from.String(), Coins: sdk.NewCoins(coin(10))}},
+			Inputs: []banktypes.Input{{
+				Address: from.String(),
+				Coins:   sdk.NewCoins(coin(10)),
+			}},
 			Outputs: []banktypes.Output{
-				{Address: other.String(), Coins: sdk.NewCoins(coin(3))},
-				{Address: to.String(), Coins: sdk.NewCoins(coin(7))},
+				{
+					Address: other.String(),
+					Coins:   sdk.NewCoins(coin(3)),
+				},
+				{
+					Address: to.String(),
+					Coins:   sdk.NewCoins(coin(7)),
+				},
 			},
 		},
 	}

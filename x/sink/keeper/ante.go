@@ -29,7 +29,11 @@ func (d DepositDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, 
 			amount = sink.Amount.Amount.String()
 		}
 		ctx = ctx.WithValue(sinkRequestContextKey{}, sinkRequest{
-			sender: sink.Sender, destType: sink.DestType, dest: sink.Dest, denom: sink.Amount.Denom, amount: amount,
+			sender:   sink.Sender,
+			destType: sink.DestType,
+			dest:     sink.Dest,
+			denom:    sink.Amount.Denom,
+			amount:   amount,
 		})
 	}
 	return next(ctx, tx, simulate)

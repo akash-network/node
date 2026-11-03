@@ -5,16 +5,20 @@ import (
 	"context"
 	"errors"
 
-	storetypes "cosmossdk.io/store/types"
-
 	collcodec "cosmossdk.io/collections/codec"
 	"cosmossdk.io/store/prefix"
+	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	types "pkg.akt.dev/go/node/sink/v1"
+)
+
+const (
+	defaultPageLimit uint64 = 100
+	maxPageLimit     uint64 = 500
 )
 
 type Querier struct {
@@ -88,7 +92,7 @@ func (q Querier) State(ctx context.Context, _ *types.QueryStateRequest) (*types.
 		return nil, err
 	}
 
-	result.Policy, err = q.k.currentPolicy(ctx)
+	result.Policy, err = q.k.GetCurrentPolicy(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -139,37 +143,35 @@ func (q Querier) Transfers(ctx context.Context, req *types.QueryTransfersRequest
 		return nil, err
 	}
 
-	var owner sdk.AccAddress
+	if p := req.Pagination; p != nil && (p.Offset != 0 || p.CountTotal || p.Limit > maxPageLimit) {
+		return nil, types.ErrInvalidPagination.Wrapf("use key, reverse and limit up to %d; offset and count_total are unsupported", maxPageLimit)
+	}
+
+	if req.Owner != "" && req.Status == types.StatusInvalid {
+		return q.ownerTransfers(ctx, req)
+	}
+
 	var err error
-	if req.Owner != "" {
-		owner, err = sdk.AccAddressFromBech32(req.Owner)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if owner != nil && req.Status == types.StatusInvalid {
-		return q.ownerTransfers(ctx, req, owner)
-	}
-
 	domain := HistoryKey.Bytes()
 	var filter []byte
 	decode := exactID(chronoIDKey)
 	if req.Status != types.StatusInvalid {
 		domain = SettlementsKey.Bytes()
-		filter = []byte{byte(req.Status)} //nolint:gosec // ValidateBasic admits only statuses 1 through 5 here.
+		filter, err = SettlementIDKey.ToPrefix(types.SettlementID{
+			Status: req.Status,
+			Owner:  req.Owner,
+		})
+		if err != nil {
+			return nil, err
+		}
+
 		decode = func(key []byte) (types.ID, error) {
-			n, sid, err := types.SettlementIDKey.Decode(key)
+			n, sid, err := SettlementIDKey.Decode(key)
 			if err == nil && (n != len(key) || sid.Status != req.Status) {
 				err = status.Error(codes.InvalidArgument, "cursor outside status filter")
 			}
 
-			return sid.ID(), err
-		}
-
-		if owner != nil {
-			filter = append(filter, types.AccountLength)
-			filter = append(filter, owner...)
+			return *sid.GetID(), err
 		}
 	}
 
@@ -193,6 +195,10 @@ func (q Querier) Disputes(ctx context.Context, req *types.QueryDisputesRequest) 
 		return nil, err
 	}
 
+	if p := req.Pagination; p != nil && (p.Offset != 0 || p.CountTotal || p.Limit > maxPageLimit) {
+		return nil, types.ErrInvalidPagination.Wrapf("use key, reverse and limit up to %d; offset and count_total are unsupported", maxPageLimit)
+	}
+
 	transfers, page, err := q.page(ctx, DisputesKey.Bytes(), nil, req.Pagination, exactID(chronoIDKey))
 	if err != nil {
 		return nil, err
@@ -205,13 +211,13 @@ func (q Querier) Disputes(ctx context.Context, req *types.QueryDisputesRequest) 
 }
 
 func (q Querier) page(ctx context.Context, domain, filter []byte, request *sdkquery.PageRequest, decode func([]byte) (types.ID, error)) ([]types.TransferState, *sdkquery.PageResponse, error) {
-	page := sdkquery.PageRequest{Limit: types.DefaultPageLimit}
+	page := sdkquery.PageRequest{Limit: defaultPageLimit}
 	if request != nil {
 		page = *request
 	}
 
 	if page.Limit == 0 {
-		page.Limit = types.DefaultPageLimit
+		page.Limit = defaultPageLimit
 	}
 
 	if len(page.Key) > 0 {
@@ -269,21 +275,25 @@ func exactID(codec collcodec.KeyCodec[types.ID]) func([]byte) (types.ID, error) 
 	}
 }
 
-func (q Querier) ownerTransfers(ctx context.Context, req *types.QueryTransfersRequest, owner sdk.AccAddress) (response *types.QueryTransfersResponse, err error) {
-	page := sdkquery.PageRequest{Limit: types.DefaultPageLimit}
+func (q Querier) ownerTransfers(ctx context.Context, req *types.QueryTransfersRequest) (response *types.QueryTransfersResponse, err error) {
+	page := sdkquery.PageRequest{Limit: defaultPageLimit}
 	if req.Pagination != nil {
 		page = *req.Pagination
 	}
 
 	if page.Limit == 0 {
-		page.Limit = types.DefaultPageLimit
+		page.Limit = defaultPageLimit
 	}
 
-	ownerPrefix := append([]byte{types.AccountLength}, owner...)
+	ownerPrefix, err := RecordIDKey.ToPrefix(types.ID{Owner: req.Owner})
+	if err != nil {
+		return nil, err
+	}
+
 	var cursor []byte
 	if len(page.Key) > 0 {
-		id, decodeErr := exactID(types.IDKey)(page.Key)
-		if decodeErr != nil || id.Owner != req.Owner {
+		id, decodeErr := exactID(RecordIDKey)(page.Key)
+		if decodeErr != nil || !bytes.HasPrefix(page.Key, ownerPrefix) {
 			return nil, status.Error(codes.InvalidArgument, "cursor outside owner filter or malformed")
 		}
 
@@ -306,8 +316,15 @@ func (q Querier) ownerTransfers(ctx context.Context, req *types.QueryTransfersRe
 	}()
 
 	for financial := types.StatusTransferPending; financial <= types.StatusRefunded; financial++ {
-		domain := append(bytes.Clone(SettlementsKey.Bytes()), byte(financial))
-		domain = append(domain, ownerPrefix...)
+		filter, prefixErr := SettlementIDKey.ToPrefix(types.SettlementID{
+			Status: financial,
+			Owner:  req.Owner,
+		})
+		if prefixErr != nil {
+			return nil, prefixErr
+		}
+
+		domain := append(bytes.Clone(SettlementsKey.Bytes()), filter...)
 		store := prefix.NewStore(sdk.UnwrapSDKContext(ctx).KVStore(q.k.skey), domain)
 		var it storetypes.Iterator
 		if page.Reverse {
@@ -357,7 +374,7 @@ func (q Querier) ownerTransfers(ctx context.Context, req *types.QueryTransfersRe
 
 		it := iterators[selected]
 		key := append(bytes.Clone(ownerPrefix), it.Key()...)
-		id, decodeErr := exactID(types.IDKey)(key)
+		id, decodeErr := exactID(RecordIDKey)(key)
 		if decodeErr != nil {
 			return nil, decodeErr
 		}

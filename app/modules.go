@@ -211,6 +211,8 @@ func appModules(
 		),
 		sink.NewAppModule(
 			app.Keepers.Akash.Sink,
+			app.Keepers.Cosmos.Acct,
+			app.Keepers.Cosmos.Bank,
 		),
 		wasm.NewAppModule(
 			app.cdc,
@@ -354,6 +356,11 @@ func appSimModules(
 		bme.NewAppModule(
 			app.cdc,
 			app.Keepers.Akash.Bme,
+			app.Keepers.Cosmos.Acct,
+			app.Keepers.Cosmos.Bank,
+		),
+		sink.NewAppModule(
+			app.Keepers.Akash.Sink,
 			app.Keepers.Cosmos.Acct,
 			app.Keepers.Cosmos.Bank,
 		),

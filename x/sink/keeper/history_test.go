@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 	"time"
 
@@ -14,8 +15,8 @@ import (
 )
 
 func historyMembers() []string {
-	members := make([]string, 0, types.MaxReporters)
-	for i := 0; i < types.MaxReporters; i++ {
+	members := make([]string, 0, 32)
+	for i := 0; i < 32; i++ {
 		members = append(members, sdk.AccAddress(bytes.Repeat([]byte{byte(100 + i)}, 20)).String())
 	}
 
@@ -24,7 +25,10 @@ func historyMembers() []string {
 
 func settlementIn(status types.Status) func(types.ReporterPolicy) types.GenesisRecord {
 	return func(p types.ReporterPolicy) types.GenesisRecord {
-		s := types.SettlementData{Round: 1, Policy: p}
+		s := types.SettlementData{
+			Round:  1,
+			Policy: p,
+		}
 		switch status {
 		case types.StatusMinted:
 			s.Votes = quorum(p, types.OutcomeMinted)
@@ -38,10 +42,16 @@ func settlementIn(status types.Status) func(types.ReporterPolicy) types.GenesisR
 		}
 
 		if status == types.StatusVoided {
-			s.VoidAuthorization = &types.VoidAuthorization{RequestedHeight: 7, RequestedRound: 1}
+			s.VoidAuthorization = &types.VoidAuthorization{
+				RequestedHeight: 7,
+				RequestedRound:  1,
+			}
 		}
 
-		return types.GenesisRecord{Status: status, Settlement: s}
+		return types.GenesisRecord{
+			Status:     status,
+			Settlement: s,
+		}
 	}
 }
 
@@ -62,8 +72,15 @@ func historyGenesis(policies int, first func(types.ReporterPolicy) types.Genesis
 	total := types.ZeroAmount()
 	add := func(sequence uint64, amount int64, record types.GenesisRecord) {
 		g.Records = append(g.Records, types.GenesisRecord{
-			ID:         types.ID{Owner: owner, Height: 7, Sequence: sequence},
-			Data:       types.RecordData{Dest: types.SolanaAddress{1}.String(), Amount: testCoin(amount)},
+			ID: types.ID{
+				Owner:    owner,
+				Height:   7,
+				Sequence: sequence,
+			},
+			Data: types.RecordData{
+				Dest:   types.SolanaAddress{1}.String(),
+				Amount: testCoin(amount),
+			},
 			Settlement: record.Settlement,
 			Status:     record.Status,
 		})
@@ -81,8 +98,18 @@ func historyGenesis(policies int, first func(types.ReporterPolicy) types.Genesis
 		add(uint64(i+2), 10, settlementIn(types.StatusMinted)(current))
 	}
 
-	g.Accounts = []types.GenesisAccount{{Owner: owner, Usage: types.AccountUsage{TotalSent: total, EpochSent: total, LastEpoch: 19}}}
-	g.SendUsage = types.EpochUsage{Epoch: 19, Amount: total}
+	g.Accounts = []types.GenesisAccount{{
+		Owner: owner,
+		Usage: types.AccountUsage{
+			TotalSent: total,
+			EpochSent: total,
+			LastEpoch: 19,
+		},
+	}}
+	g.SendUsage = types.EpochUsage{
+		Epoch:  19,
+		Amount: total,
+	}
 	return g
 }
 
@@ -98,7 +125,15 @@ func TestSettlementWritesRejectMissingPolicies(t *testing.T) {
 	require.ErrorIs(t, err, types.ErrInvalidSettlement)
 	require.ErrorContains(t, err, "missing policy version 2")
 	outsider := transfer
-	outsider.Settlement.Votes = []types.Vote{{Reporter: g.Policies[0].Members[0], PolicyVersion: 2, Observation: types.Observation{Outcome: types.OutcomeMinted, Slot: testEvidence().Slot, TransactionSignature: testEvidence().TransactionSignature}}}
+	outsider.Settlement.Votes = []types.Vote{{
+		Reporter:      g.Policies[0].Members[0],
+		PolicyVersion: 2,
+		Observation: types.Observation{
+			Outcome:              types.OutcomeMinted,
+			Slot:                 testEvidence().Slot,
+			TransactionSignature: testEvidence().TransactionSignature,
+		},
+	}}
 	err = k.put(ctx, &transfer, outsider)
 	require.ErrorIs(t, err, types.ErrInvalidSettlement)
 	require.ErrorContains(t, err, "missing policy version 2")
@@ -119,7 +154,11 @@ func TestSettlementWriteGasIgnoresRetainedPolicies(t *testing.T) {
 			ID:            g.Records[0].ID,
 			PolicyVersion: current.Version,
 			Round:         1,
-			Observation:   types.Observation{Outcome: types.OutcomeMinted, Slot: testEvidence().Slot, TransactionSignature: testEvidence().TransactionSignature},
+			Observation: types.Observation{
+				Outcome:              types.OutcomeMinted,
+				Slot:                 testEvidence().Slot,
+				TransactionSignature: testEvidence().TransactionSignature,
+			},
 		}))
 
 		return ctx.GasMeter().GasConsumed()
@@ -141,21 +180,28 @@ func TestRefundCapReductionChecksOnlyUnpaidTransfers(t *testing.T) {
 		{types.StatusMinted, false},
 		{types.StatusRefunded, false},
 	} {
-		t.Run(tc.status.String(), func(t *testing.T) {
-			k, ctx, bank := testStore(t)
-			g := historyGenesis(1, settlementIn(tc.status), 1_000_000_000_000, 0)
-			importTestGenesis(t, k, ctx, bank, g)
-			p := g.Params
-			p.MaxAmountPerTransfer = testCoin(999_999_999_999)
-			p.MaxEpochRefund = testCoin(999_999_999_999)
-			err := k.UpdateParams(ctx, &types.MsgUpdateParams{Authority: authtypes.NewModuleAddress("gov").String(), Params: p})
-			if tc.rejected {
-				require.ErrorContains(t, err, "refund cap below unpaid transfer amount")
-				return
-			}
+		for _, owner := range []sdk.AccAddress{testOwner(6), make(sdk.AccAddress, 20), sdk.AccAddress(bytes.Repeat([]byte{6}, 32)), sdk.AccAddress(bytes.Repeat([]byte{6}, 255))} {
+			t.Run(fmt.Sprintf("%s/%d/%d", tc.status, len(owner), owner[0]), func(t *testing.T) {
+				k, ctx, bank := testStore(t)
+				g := historyGenesis(1, settlementIn(tc.status), 1_000_000_000_000, 0)
+				g.Records[0].ID.Owner = owner.String()
+				g.Accounts[0].Owner = owner.String()
+				importTestGenesis(t, k, ctx, bank, g)
+				p := g.Params
+				p.MaxAmountPerTransfer = testCoin(999_999_999_999)
+				p.MaxEpochRefund = testCoin(999_999_999_999)
+				err := k.UpdateParams(ctx, &types.MsgUpdateParams{
+					Authority: authtypes.NewModuleAddress("gov").String(),
+					Params:    p,
+				})
+				if tc.rejected {
+					require.ErrorContains(t, err, "refund cap below unpaid transfer amount")
+					return
+				}
 
-			require.NoError(t, err)
-		})
+				require.NoError(t, err)
+			})
+		}
 	}
 }
 
@@ -167,7 +213,10 @@ func TestRefundCapReductionGasIgnoresTerminalHistory(t *testing.T) {
 		p := g.Params
 		p.MaxEpochRefund = testCoin(1_000_000_000_000)
 		ctx = ctx.WithGasMeter(storetypes.NewInfiniteGasMeter())
-		require.NoError(t, k.UpdateParams(ctx, &types.MsgUpdateParams{Authority: authtypes.NewModuleAddress("gov").String(), Params: p}))
+		require.NoError(t, k.UpdateParams(ctx, &types.MsgUpdateParams{
+			Authority: authtypes.NewModuleAddress("gov").String(),
+			Params:    p,
+		}))
 
 		return ctx.GasMeter().GasConsumed()
 	}

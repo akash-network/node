@@ -4,7 +4,7 @@ Sink escrows native AKT for minting on Solana. A deposit creates an immutable pr
 
 ## Authority and bank accounting
 
-`handler.NewServer` unwraps a message, calls the keeper command once, and returns its response. Each command calls SDK `ValidateBasic` before state checks and owns one cache. Its bank changes, records, counters, indexes, allocation, and events commit together.
+`handler.NewServer` rejects nil messages, calls SDK `ValidateBasic`, and checks caller authorization before invoking a keeper command. Keeper commands accept validated messages and enforce state, account-kind, balance, and settlement rules within one cache. Their bank changes, records, counters, indexes, allocation, and events commit together.
 
 The ante decorator records the exact sole top-level `MsgSink` request. `Deposit` matches the sender, destination type, destination, denomination, and amount against that private marker. It also requires an ordinary account with a public key. Nested authz and contract calls receive no matching request marker.
 
