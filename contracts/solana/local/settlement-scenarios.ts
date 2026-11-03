@@ -97,7 +97,7 @@ export async function refundCapScenario({
     const beforeBalance = await balance();
     assert.equal(await consumption(), i === 0 ? spent : cap);
     try {
-      await finalize(id, i === 1 ? /daily refund cap/ : undefined);
+      await finalize(id, i === 1 ? /epoch refund cap reached/ : undefined);
       assert.equal(
         (await balance()) - beforeBalance,
         i === 0 ? 2_000_000n : 0n,
@@ -416,7 +416,7 @@ async function main() {
       sender.address,
       "uakt",
     );
-    await finalize(vetoed, /unchallenged confirmed void/);
+    await finalize(vetoed, /settlement requires governance resolution/);
     assert.deepEqual(
       await sender.client.getBalance(sender.address, "uakt"),
       balanceBeforeVeto,
@@ -437,7 +437,10 @@ async function main() {
       (await relay.akash.snapshot(offline)).transfer.settlement?.hold,
       Hold.HOLD_CONFLICT,
     );
-    await finalize(offline, /unchallenged confirmed void/);
+    await finalize(
+      offline,
+      /refund needs current authorization without a hold: invalid settlement/,
+    );
     const actual = await observer.observe(
       decodeRecord((await relay.akash.snapshot(offline)).transfer),
     );
@@ -493,7 +496,7 @@ async function main() {
         );
         assert.equal(challenged?.status, Status.STATUS_REFUND_PENDING);
         assert.ok(challenged.settlement?.challengeEnd === until);
-        await finalize(id, /challenge window/);
+        await finalize(id, /challenge window has not elapsed/);
         return { id, challengeEnd: until };
       },
       finalize,
@@ -550,7 +553,7 @@ async function main() {
     try {
       await assert.rejects(
         () => relay.relay(unfunded, proofHeight),
-        /insufficient|debit|credit|lamports/i,
+        /insufficient|debit|credit|lamports|proof-create: simulation failed[\s\S]*\bAccountNotFound\b/i,
       );
       assert.equal(
         await relay.wallet.connection.getAccountInfo(

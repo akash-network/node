@@ -57,6 +57,7 @@ async function main() {
   const relay = await relayContext();
   const sender = await cosmosSigner("sender");
   const results: object[] = [];
+  const errors: unknown[] = [];
   const local = object(await json(join(ROOT, "initialized.json")));
   assert.ok(typeof local.sinkAddress === "string");
   const sink = local.sinkAddress;
@@ -168,6 +169,7 @@ async function main() {
         .length,
       1,
     );
+    await startValidator(3);
     await assert.rejects(
       () => relay.update(target, true),
       /UpdateClientFailed/,
@@ -181,7 +183,6 @@ async function main() {
       signatures: 3,
       alteredHeaderRejected: true,
     });
-    await startValidator(3);
     await waitHeight((await height()) + 3);
 
     await stopService(validatorName(2));
@@ -389,7 +390,7 @@ async function main() {
     await record({
       scenario: "governance-void-and-refund",
       passed: true,
-      id: sinkIdParts(governed.id),
+      id: governed.id,
       proposalId: proposalId.toString(),
       deposit: governed.tx.transactionHash,
       refundConfirmedByHeight: (await relay.akash.state()).height,
@@ -425,21 +426,35 @@ async function main() {
       cumulativeBurnedUakt: burned.toString(),
       lockedUakt: (supply + burned).toString(),
     });
+  } catch (error) {
+    errors.push(error);
   } finally {
-    // Restore the owned development services even after a failed assertion.
-    await startValidator(2);
-    await startValidator(3);
-    await enabled(true);
-    relay.close();
-    node.disconnect();
-    sender.client.disconnect();
-    const result = await exec(
-      process.execPath,
-      ["--import", "tsx", join(REPO, "local/stack.ts"), "up"],
-      { timeout: 120_000, maxBuffer: 2 * 1024 * 1024 },
-    );
-    console.log(result.stdout.trim());
+    for (const restore of [
+      () => startValidator(2),
+      () => startValidator(3),
+      () => enabled(true),
+      () => relay.close(),
+      () => node.disconnect(),
+      () => sender.client.disconnect(),
+      async () => {
+        const result = await exec(
+          process.execPath,
+          ["--import", "tsx", join(REPO, "local/stack.ts"), "up"],
+          { timeout: 120_000, maxBuffer: 2 * 1024 * 1024 },
+        );
+        console.log(result.stdout.trim());
+      },
+    ]) {
+      try {
+        await restore();
+      } catch (error) {
+        errors.push(error);
+      }
+    }
   }
+  if (errors.length === 1) throw errors[0];
+  if (errors.length > 1)
+    throw new AggregateError(errors, "Testnet scenarios or cleanup failed");
 }
 void main().catch((error: unknown) => {
   console.error(error);

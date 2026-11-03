@@ -1,8 +1,39 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { runInNewContext } from "node:vm";
+import ts from "typescript";
 import type { SinkId } from "../shared/id";
 import { testId } from "../tests/sink-fixtures";
 import { expectRefundError, refundCapScenario } from "./settlement-scenarios";
+
+const refundErrors = {
+  held: {
+    code: 38,
+    rawLog:
+      "failed to execute message; message index: 0: settlement requires governance resolution",
+  },
+  ineligible: {
+    code: 7,
+    rawLog:
+      "failed to execute message; message index: 0: refund needs current authorization without a hold: invalid settlement",
+  },
+  cap: {
+    code: 21,
+    rawLog:
+      "failed to execute message; message index: 0: epoch refund cap reached",
+  },
+  immature: {
+    code: 27,
+    rawLog:
+      "failed to execute message; message index: 0: challenge window has not elapsed",
+  },
+  ended: {
+    code: 26,
+    rawLog:
+      "failed to execute message; message index: 0: challenge window ended",
+  },
+};
 
 function refundChain(rollover?: "preparation" | "maturity") {
   let epoch = 57n;
@@ -44,17 +75,17 @@ function refundChain(rollover?: "preparation" | "maturity") {
         deadline !== undefined && time >= deadline,
         "full challenge must mature",
       );
-      const error = spent + 2_000_000n > cap ? "daily refund cap" : undefined;
-      if (error) {
+      const tx =
+        spent + 2_000_000n > cap ? refundErrors.cap : { code: 0, rawLog: "" };
+      if (tx.code) {
         rejections.push({ id, epoch });
       } else {
         spent += 2_000_000n;
         balance += 2_000_000n;
         payments.push({ id, epoch });
       }
-      if (expectedError)
-        assert.match(error ?? "refund succeeded", expectedError);
-      else assert.equal(error, undefined);
+      if (expectedError) await expectRefundError(async () => tx, expectedError);
+      else assert.equal(tx.code, 0, tx.rawLog);
     },
     balance: async () => balance,
     sleep: async () => {
@@ -139,7 +170,10 @@ test("two same-epoch payments cannot pass the cap scenario", async () => {
   const chain = refundChain();
   const setCap = chain.scenario.setCap;
   chain.scenario.setCap = (amount) => setCap(amount + 2_000_000n);
-  await assert.rejects(refundCapScenario(chain.scenario), /refund succeeded/);
+  await assert.rejects(
+    refundCapScenario(chain.scenario),
+    assert.AssertionError,
+  );
   assert.equal(chain.payments.length, 2);
   assert.deepEqual(chain.rejections, []);
 });
@@ -147,30 +181,30 @@ test("two same-epoch payments cannot pass the cap scenario", async () => {
 test("a non-cap transaction rejection cannot masquerade as a cap rejection", async () => {
   await assert.rejects(
     expectRefundError(
-      async () => ({ code: 7, rawLog: "challenge window" }),
-      /daily refund cap/,
+      async () => refundErrors.immature,
+      /epoch refund cap reached/,
     ),
   );
 });
 
 test("refund rejection checks accept a returned cap error", async () => {
   await expectRefundError(
-    async () => ({ code: 7, rawLog: "daily refund cap" }),
-    /daily refund cap/,
+    async () => refundErrors.cap,
+    /epoch refund cap reached/,
   );
 });
 
 test("refund rejection checks accept a thrown cap error", async () => {
   await expectRefundError(async () => {
-    throw new Error("daily refund cap");
-  }, /daily refund cap/);
+    throw new Error(refundErrors.cap.rawLog);
+  }, /epoch refund cap reached/);
 });
 
 test("refund rejection checks propagate unrelated broadcast failures", async () => {
   await assert.rejects(
     expectRefundError(async () => {
       throw new Error("RPC unavailable");
-    }, /daily refund cap/),
+    }, /epoch refund cap reached/),
   );
 });
 
@@ -178,7 +212,121 @@ test("a successful transaction cannot masquerade as a cap rejection", async () =
   await assert.rejects(
     expectRefundError(
       async () => ({ code: 0, rawLog: "" }),
-      /daily refund cap/,
+      /epoch refund cap reached/,
     ),
   );
+});
+
+test("held and immature refunds require their specific rejection in the actual scenarios", async () => {
+  const source = ts.createSourceFile(
+    "settlement-scenarios.ts",
+    await readFile(
+      new URL("./settlement-scenarios.ts", import.meta.url),
+      "utf8",
+    ),
+    ts.ScriptTarget.Latest,
+    true,
+  );
+  const calls: ts.CallExpression[] = [];
+  function visit(node: ts.Node) {
+    if (
+      ts.isCallExpression(node) &&
+      node.expression.getText(source) === "finalize" &&
+      node.arguments.length === 2 &&
+      ts.isRegularExpressionLiteral(node.arguments[1])
+    )
+      calls.push(node);
+    ts.forEachChild(node, visit);
+  }
+  visit(source);
+  assert.equal(calls.length, 3);
+  for (const call of calls) {
+    const name = call.arguments[0].getText(source);
+    assert.ok(name === "vetoed" || name === "offline" || name === "id");
+    const expected =
+      name === "id"
+        ? refundErrors.immature
+        : name === "vetoed"
+          ? refundErrors.held
+          : refundErrors.ineligible;
+    const id = testId();
+    for (const thrown of [false, true]) {
+      const check = (tx: { code: number; rawLog: string }) =>
+        runInNewContext(`(async () => { await ${call.getText(source)}; })()`, {
+          [name]: id,
+          finalize: async (actualId: SinkId, expectedError: RegExp) => {
+            assert.equal(actualId, id);
+            await expectRefundError(async () => {
+              if (thrown) throw new Error(tx.rawLog);
+              return tx;
+            }, expectedError);
+          },
+        });
+      await check(expected);
+      for (const other of Object.values(refundErrors)) {
+        if (other !== expected)
+          await assert.rejects(check(other), assert.AssertionError);
+      }
+      await assert.rejects(
+        check({ code: 0, rawLog: "" }),
+        assert.AssertionError,
+      );
+      await assert.rejects(
+        check({ code: 1, rawLog: "RPC unavailable" }),
+        assert.AssertionError,
+      );
+    }
+  }
+});
+
+test("a drained payer can be absent without accepting an unrelated relay failure", async () => {
+  const source = ts.createSourceFile(
+    "settlement-scenarios.ts",
+    await readFile(
+      new URL("./settlement-scenarios.ts", import.meta.url),
+      "utf8",
+    ),
+    ts.ScriptTarget.Latest,
+    true,
+  );
+  const calls: ts.CallExpression[] = [];
+  function visit(node: ts.Node) {
+    if (
+      ts.isCallExpression(node) &&
+      node.expression.getText(source) === "assert.rejects" &&
+      node.arguments[0]
+        ?.getText(source)
+        .includes("relay.relay(unfunded, proofHeight)")
+    )
+      calls.push(node);
+    ts.forEachChild(node, visit);
+  }
+  visit(source);
+  assert.equal(calls.length, 1);
+  const check = (error?: Error) =>
+    runInNewContext(`(async () => { await ${calls[0].getText(source)}; })()`, {
+      assert,
+      unfunded: testId(),
+      proofHeight: 10,
+      relay: {
+        relay: async () => {
+          if (error) throw error;
+        },
+      },
+    });
+  await check(
+    new Error(
+      "proof-create: simulation failed\n+ actual - expected\n\n+ 'AccountNotFound'\n- null\n",
+    ),
+  );
+  await check(new Error("insufficient lamports"));
+  await assert.rejects(
+    check(new Error("RPC unavailable")),
+    assert.AssertionError,
+  );
+  await assert.rejects(
+    check(new Error("status-fetch: AccountNotFound")),
+    assert.AssertionError,
+  );
+  await assert.rejects(check(), assert.AssertionError);
 });
