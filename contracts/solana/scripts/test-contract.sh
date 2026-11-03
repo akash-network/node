@@ -41,9 +41,7 @@ done
 
 # Upstream's generic CPI proxy, at the pinned revision, calls mint and void
 # from another program.
-if [[ ! -f "$artifacts/test_cpi_proxy.so" ]]; then
-	(cd "$upstream" && CARGO_TARGET_DIR="$upstream/target" RUSTUP_TOOLCHAIN=1.89.0 anchor build --program-name test_cpi_proxy)
-fi
+bash scripts/setup-light-client.sh --test-proxy
 
 mkdir -p "$SOLANA_RUN"
 run=$(mktemp -d "$SOLANA_RUN/contract-test.XXXXXX")

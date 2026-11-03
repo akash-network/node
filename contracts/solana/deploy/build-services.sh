@@ -50,6 +50,7 @@ rm -rf "$stage/root/.cache/solana/target/release" "$stage/root/.cache/solana/tar
   npm ci --include=dev
   npm run typecheck
   npm run test:deployment
+  npm prune --omit=dev
 )
 {
   echo "commit $commit"

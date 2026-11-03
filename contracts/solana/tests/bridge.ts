@@ -3,6 +3,7 @@ import { sinkIdParts } from "../shared/id";
 import { anchorId, statusAddress, proofNonce } from "../shared/proof";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { resolve } from "node:path";
 import { createHash } from "node:crypto";
 import type { TestContext } from "node:test";
 import { BN, Program, web3 } from "@coral-xyz/anchor";
@@ -178,11 +179,15 @@ export async function runBridgeTests(t: TestContext) {
     })),
   ];
   const fixture: unknown = JSON.parse(
-    execFileSync("go", ["run", "."], {
-      cwd: "tools/proof-fixtures",
-      input: JSON.stringify(input),
-      encoding: "utf8",
-    }),
+    execFileSync(
+      "go",
+      ["run", "-mod=readonly", "./contracts/solana/tools/proof-fixtures"],
+      {
+        cwd: resolve(__dirname, "../../.."),
+        input: JSON.stringify(input),
+        encoding: "utf8",
+      },
+    ),
   );
   assert.ok(
     typeof fixture === "object" &&

@@ -33,17 +33,25 @@ check_version() {
 	fi
 }
 
-check_version "$(node --version)" 'v24.' Node
-check_version "$(go version)" 'go1.26.2 ' Go
-check_version "$(rustc --version)" 'rustc 1.89.0 ' Rust
-check_version "$(anchor --version)" 'anchor-cli 0.32.1' Anchor
-check_version "$(solana --version)" 'solana-cli 2.3.13 ' Solana
+versions=$(python3 - <<'PY'
+import tomllib
+with open("Anchor.toml", "rb") as source:
+    anchor = tomllib.load(source)["toolchain"]
+with open("rust-toolchain.toml", "rb") as source:
+    rust = tomllib.load(source)["toolchain"]["channel"]
+print(anchor["anchor_version"], anchor["solana_version"], rust)
+PY
+)
+read -r anchor_version solana_version rust_version <<< "$versions"
+check_version "$(node --version)" "v$(cut -d. -f1 .nvmrc)." Node
+check_version "$(go version)" "$("$NODE_SINK_DIR/script/tools.sh" gotoolchain) " Go
+check_version "$(rustc --version)" "rustc $rust_version " Rust
+check_version "$(anchor --version)" "anchor-cli $anchor_version" Anchor
+check_version "$(solana --version)" "solana-cli $solana_version " Solana
 
 if [[ ! -f "$NODE_SINK_DIR/x/sink/module.go" ]]; then
 	echo "Missing node/x/sink; use the matching node checkout." >&2
 	failed=1
 fi
-python3 -c 'import tomllib' || failed=1
-
 test "$failed" == 0
 echo 'Toolchain and repositories are ready.'

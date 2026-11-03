@@ -161,17 +161,10 @@ npm run testnet:verify
 
 Rebuild native changes with `make bins` from the node root, Solana changes with `npm run build`. A retained ledger contains its previously loaded programs. Stop it and choose a new paired run name to test rebuilt code, or explicitly upgrade the local programs. Never reset a checkpoint to hide a failure. The client expires after 24 hours without sufficient updates; preserve the old evidence and choose a new run name for a new experiment.
 
-### Optional old-node upgrade rehearsal
+### Native upgrade tests
 
-The ordinary demo does not need the old binary. For upgrade tests:
-
-```bash
-git -C ../.. worktree add --detach .cache/solana/upgrade-base 5193e54672e49ef328f67758ef5c91e24990c09a
-(cd ../../.cache/solana/upgrade-base && direnv allow && direnv exec . make bins)
-npm run test:upgrade
-```
-
-Create the worktree only once. `AKASH_UPGRADE_BASE=/absolute/path/to/akash` selects an existing old binary instead. The rehearsal starts an old chain, passes a real upgrade proposal, swaps binaries, and checks funding and failure cases. It uses ports 30657/30656/9390 and writes `../../.cache/solana/run/upgrades/`.
+Use node's existing upgrade harness and the registered release handler; see
+[existing-chain upgrade checks](reproduce.md#5-existing-chain-upgrade).
 
 ## Troubleshooting
 
