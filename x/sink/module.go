@@ -9,19 +9,24 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
 
 	types "pkg.akt.dev/go/node/sink/v1"
+
 	"pkg.akt.dev/node/v2/x/sink/handler"
 	"pkg.akt.dev/node/v2/x/sink/keeper"
+	"pkg.akt.dev/node/v2/x/sink/simulation"
 )
 
 const ModuleName = types.ModuleName
 
 var (
-	_ module.AppModuleBasic = AppModuleBasic{}
-	_ module.HasGenesis     = AppModule{}
-	_ module.HasServices    = AppModule{}
+	_ module.AppModuleBasic      = AppModuleBasic{}
+	_ module.AppModuleSimulation = AppModule{}
+	_ module.HasGenesis          = AppModule{}
+	_ module.HasProposalMsgs     = AppModule{}
+	_ module.HasServices         = AppModule{}
 )
 
 type AppModuleBasic struct{}
@@ -57,11 +62,17 @@ func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, _ client.TxEncodingCo
 
 type AppModule struct {
 	AppModuleBasic
-	keeper keeper.Keeper
+	keeper   keeper.Keeper
+	accounts keeper.AccountKeeper
+	bank     keeper.BankKeeper
 }
 
-func NewAppModule(k keeper.Keeper) AppModule {
-	return AppModule{keeper: k}
+func NewAppModule(k keeper.Keeper, ak keeper.AccountKeeper, bk keeper.BankKeeper) AppModule {
+	return AppModule{
+		keeper:   k,
+		accounts: ak,
+		bank:     bk,
+	}
 }
 
 func (AppModule) IsAppModule() {}
@@ -95,4 +106,24 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 
 func (am AppModule) BeginBlock(ctx context.Context) error {
 	return am.keeper.BeginBlocker(ctx)
+}
+
+// GenerateGenesisState creates randomized Sink parameters and reporter policy.
+func (AppModule) GenerateGenesisState(simState *module.SimulationState) {
+	simulation.RandomizedGenState(simState)
+}
+
+// ProposalMsgs returns Sink governance messages for simulations.
+func (am AppModule) ProposalMsgs(_ module.SimulationState) []simtypes.WeightedProposalMsg {
+	return simulation.ProposalMsgs(am.keeper)
+}
+
+// RegisterStoreDecoder registers the Sink collections schema for state comparisons.
+func (am AppModule) RegisterStoreDecoder(sdr simtypes.StoreDecoderRegistry) {
+	sdr[types.StoreKey] = simtypes.NewStoreDecoderFuncFromCollectionsSchema(am.keeper.Schema())
+}
+
+// WeightedOperations returns signed Sink deposit, report and refund operations.
+func (am AppModule) WeightedOperations(simState module.SimulationState) []simtypes.WeightedOperation {
+	return simulation.WeightedOperations(simState.AppParams, simState.TxConfig, am.accounts, am.bank, am.keeper)
 }
