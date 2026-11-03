@@ -6,12 +6,12 @@ FROM docker.io/library/rust:1.89.0-slim-trixie@sha256:9553b8397715ff026f47422662
 
 # Debian packages come from a fixed snapshot. protoc parses upstream .proto
 # files for prost; make and perl build the vendored OpenSSL in Anchor's host
-# IDL builds; the others fetch, unpack and patch sources.
+# IDL builds; the others fetch and unpack sources.
 RUN rm -f /etc/apt/sources.list.d/debian.sources \
  && echo 'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian/20251001T000000Z trixie main' \
       > /etc/apt/sources.list \
  && apt-get update \
- && apt-get install -y --no-install-recommends bzip2 curl libudev1 make patch perl protobuf-compiler \
+ && apt-get install -y --no-install-recommends bzip2 curl libudev1 make git python3 perl protobuf-compiler \
  && rm -rf /var/lib/apt/lists/*
 
 ARG AGAVE_VERSION=2.3.13

@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import test, { type TestContext } from "node:test";
+import { temporaryDirectory } from "./test-workspace";
 import { AnchorProvider, Wallet, web3 } from "@coral-xyz/anchor";
 import { optionalJson } from "./durable";
 import { object } from "./common";
@@ -17,7 +17,7 @@ async function journalRecovery(
   const genesis = web3.Keypair.generate().publicKey.toBase58();
   let blockhash = web3.Keypair.generate().publicKey.toBase58();
   let blockHeight = 10;
-  const directory = await mkdtemp(join(tmpdir(), "sink-v2-transaction-"));
+  const directory = await temporaryDirectory("sink-v2-transaction-");
   t.after(() => rm(directory, { recursive: true, force: true }));
   const path = join(directory, "pending.json");
   let broadcasts = 0,

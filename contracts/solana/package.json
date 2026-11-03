@@ -2,7 +2,7 @@
   "name": "akt-solana",
   "version": "0.1.0",
   "private": true,
-  "description": "Local development workspace for AKT on Solana",
+  "description": "AKT on Solana programs, production operations, and development tooling",
   "engines": {
     "node": ">=24 <25"
   },
@@ -19,8 +19,8 @@
     "rehearse:launch": "bash deploy/rehearse-launch.sh",
     "logs": "solana logs --url http://127.0.0.1:${AKT_LOCALNET_RPC_PORT:-17899}",
     "typecheck": "tsc --noEmit",
-    "format": "cargo fmt --all && cargo fmt --manifest-path tools/header-encoder/Cargo.toml && prettier --write tests reporter local shared package.json tsconfig.json README.md docs idls/README.md",
-    "format:check": "cargo fmt --all --check && cargo fmt --manifest-path tools/header-encoder/Cargo.toml --check && prettier --check tests reporter local shared package.json tsconfig.json README.md docs idls/README.md",
+    "format": "cargo fmt --all && cargo fmt --manifest-path tools/header-encoder/Cargo.toml && prettier --write tests reporter local shared deploy package.json tsconfig.json README.md docs idls/README.md",
+    "format:check": "cargo fmt --all --check && cargo fmt --manifest-path tools/header-encoder/Cargo.toml --check && prettier --check tests reporter local shared deploy package.json tsconfig.json README.md docs idls/README.md",
     "reporter": "tsx reporter/run.ts",
     "relayer": "tsx local/relay.ts --watch",
     "test:reporter": "tsx --test reporter/*.test.ts",
@@ -57,7 +57,12 @@
     "local:admin": "tsx local/bridge-admin.ts",
     "test:services": "tsx --test shared/*.test.ts reporter/*.test.ts local/*.test.ts",
     "portal:testnet": "AKT_TEAM_TESTNET=1 tsx local/team.ts",
-    "test:portal-contract": "bash scripts/check-portal-contract.sh"
+    "test:portal-contract": "bash scripts/check-portal-contract.sh",
+    "deploy:programs": "tsx deploy/programs.ts",
+    "deploy:services": "bash deploy/build-services.sh",
+    "test:deployment": "tsx --test deploy/*.test.ts && python3 deploy/test-build-services.py",
+    "admin": "tsx local/bridge-admin.ts",
+    "test:build": "python3 scripts/test-build-conventions.py && python3 scripts/test-temp-paths.py"
   },
   "dependencies": {
     "@akashnetwork/chain-sdk": "file:../../.cache/solana/chain-sdk.tgz",

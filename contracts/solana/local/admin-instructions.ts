@@ -14,7 +14,6 @@ import { LE64, pda, programData } from "./common";
 // launch ceremony) or written unsigned for a multisig to execute. Nothing here
 // reads the chain or signs.
 
-export const MAINNET_GENESIS = "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp";
 export const BPF_LOADER_UPGRADEABLE = new web3.PublicKey(
   "BPFLoaderUpgradeab1e11111111111111111111111",
 );

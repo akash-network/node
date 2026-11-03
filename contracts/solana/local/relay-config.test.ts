@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { chmod, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { chmod, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { temporaryDirectory } from "./test-workspace";
 import { web3 } from "@coral-xyz/anchor";
 import example from "../relayer/config.example.json";
 import {
@@ -14,9 +14,13 @@ import {
 import { AKASH_RPC, CHAIN, PROGRAM_ID, ROOT, SOLANA_RPC } from "./common";
 
 const genesis = web3.Keypair.generate().publicKey.toBase58();
-const base = { ...example, solanaGenesisHash: genesis };
+const base = {
+  ...example,
+  programId: PROGRAM_ID.toBase58(),
+  solanaGenesisHash: genesis,
+};
 
-test("the example config parses once its genesis hash is filled in", () => {
+test("the example config parses once its deployment ID is filled in", () => {
   assert.throws(
     () => parseRelayConfig(example, "/srv"),
     /invalid|Non-base58|Invalid public key/,
@@ -31,7 +35,7 @@ test("the example config parses once its genesis hash is filled in", () => {
   assert.equal(config.retryMaxMs, 900_000);
   assert.equal(config.pruneIntervalMs, 600_000);
   assert.equal(config.pollMs, 3000);
-  assert.equal(config.headerEncoder, DEFAULT_HEADER_ENCODER);
+  assert.equal(config.headerEncoder, example.headerEncoder);
 });
 
 test("optional settings default and relative paths follow the config", () => {
@@ -45,8 +49,13 @@ test("optional settings default and relative paths follow the config", () => {
           "pruneIntervalSeconds",
           "maxAgeSeconds",
           "pollSeconds",
+          "headerEncoder",
         ].includes(key),
     ),
+  );
+  assert.equal(
+    parseRelayConfig(minimal, "/srv").headerEncoder,
+    DEFAULT_HEADER_ENCODER,
   );
   const config = parseRelayConfig(
     {
@@ -129,7 +138,7 @@ test("the local stack derives the same settings without a file", () => {
 });
 
 test("the payer key must be an owner-only keypair file", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "akt-relay-config-"));
+  const directory = await temporaryDirectory("akt-relay-config-");
   try {
     const key = web3.Keypair.generate();
     const path = join(directory, "payer.json");

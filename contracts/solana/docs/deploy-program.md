@@ -32,11 +32,13 @@ be emitted for the multisig.
 
 ```bash
 export RPC=https://your-mainnet-rpc.example
-export GENESIS=5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp   # mainnet-beta
-export VAULT=<multisig vault address>
-export MULTISIG_PROGRAM=<multisig program ID>       # check it against the deployed multisig
-export CEREMONY=launch/keys/ceremony.json
-admin() { npx tsx local/bridge-admin.ts "$@" --genesis "$GENESIS" --url "$RPC"; }
+export GENESIS=5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d   # full mainnet genesis hash
+export VAULT='REPLACE_WITH_MULTISIG_VAULT'
+export MULTISIG_PROGRAM='REPLACE_WITH_MULTISIG_PROGRAM'       # check it against the deployed multisig
+export CEREMONY=/secure/akash-launch/ceremony.json
+export PROGRAM_KEYS=/secure/akash-launch/program-keys
+export MANIFEST="$PWD/launch/manifest.json"
+admin() { node --import tsx local/bridge-admin.ts "$@" --genesis "$GENESIS" --url "$RPC"; }
 ```
 
 Prove control of `VAULT` before step 6: execute a small SOL transfer from it
@@ -50,19 +52,27 @@ Generate the three program keypairs on an offline machine:
 
 ```bash
 umask 077
-mkdir -p launch/keys
+mkdir -p "$PROGRAM_KEYS"
 for program in akt_solana ics07_tendermint access_manager; do
   solana-keygen new --no-bip39-passphrase --silent \
-    --outfile "launch/keys/$program-keypair.json" > /dev/null
-  echo "$program $(solana-keygen pubkey "launch/keys/$program-keypair.json")"
+    --outfile "$PROGRAM_KEYS/$program-keypair.json" > /dev/null
+  echo "$program $(solana-keygen pubkey "$PROGRAM_KEYS/$program-keypair.json")"
 done
 ```
 
-Record the three IDs as `AKT_ID`, `ICS07_ID` and `AM_ID`. A program keypair is
+Record the three IDs as `AKT_ID`, `ICS07_ID` and `AM_ID`. Generate the ceremony
+key now so its public key can be reviewed in the manifest:
+
+```bash
+solana-keygen new --no-bip39-passphrase --silent --outfile "$CEREMONY"
+solana-keygen pubkey "$CEREMONY"
+```
+
+A program keypair is
 only needed for the first deploy. Delete all three after
 [step 6](#6-upgrade-authorities-to-the-multisig). The ICS07 keypair matters most:
 open relaying grants `RELAYER_ROLE` to the verifier's own ID, so whoever holds
-that keypair holds the role ([verifier patches](verifier-patches.md)).
+that keypair holds the role ([IBC verifier](verifier.md)).
 
 ## 2. Launch commit
 
@@ -70,42 +80,28 @@ Program IDs are compiled in, so the launch build is a commit that changes only
 them. Branch from the audited commit:
 
 1. AKT: set `declare_id!` in `programs/akt-solana/src/lib.rs` to `AKT_ID`.
-2. Verifier and access manager: their IDs live in the pinned upstream source.
-   Add a patch that changes both `declare_id!` lines and append it to the
-   series in `scripts/apply-light-client-patches.sh`:
+2. Verifier and access manager: change their `declare_id!` values in the
+   **IBC contracts repository**, update its `Anchor.toml` program mappings,
+   build with its pinned Anchor toolchain and review that commit there. Do not
+   patch the downloaded cache. Pin both Cargo dependencies in node
+   (`programs/akt-solana/Cargo.toml` and `tools/header-encoder/Cargo.toml`) to
+   that reviewed full commit and regenerate both Cargo lockfiles.
+3. Update this workspace's `Anchor.toml` AKT program mapping to `AKT_ID`.
+   Regenerate the two IBC IDLs using the IBC repository's Anchor build and
+   copy the generated files to `idls/`. Review that only the intended address
+   fields changed. Preserve or move aside the previous cached IBC checkout,
+   then run `npm run setup:light-client` to verify the pin and IDLs, followed
+   by `npm run build` to generate the AKT IDL and TypeScript interface.
+4. Review both repositories against their audited revisions. The launch
+   changes should contain the program IDs, source pins, regenerated lockfiles
+   and interfaces. Run `npm run test:unit`, `npm run typecheck`,
+   `npm run test:build` and `npm run test:deployment`. The contract suite
+   preloads development IDs: run it on the audited parent and separately
+   rehearse the launch artifacts at their actual IDs.
 
-   ```bash
-   up=../../.cache/solana/deps/ibc-contracts
-   for program in ics07-tendermint:HqPcGpVHxNNFfVatjhG78dFVMwjyZixoKPdZSt3d3TdD:$ICS07_ID \
-                  access-manager:4fMih2CidrXPeRx77kj3QcuBZwREYtxEbXjURUgadoe1:$AM_ID; do
-     IFS=: read -r dir old new <<< "$program"
-     file=ibc-solana/programs/$dir/src/lib.rs
-     sed "s/declare_id!(\"$old\")/declare_id!(\"$new\")/" "$up/$file" > "$up/$file.new"
-     diff -u --label "a/$file" --label "b/$file" "$up/$file" "$up/$file.new" || true
-     mv "$up/$file.new" "$up/$file"
-   done > patches/program-ids.patch
-   ```
-
-   Start from a tree that `npm run setup:light-client` just patched. The diff
-   must contain exactly two changed lines.
-
-3. Regenerate the CPI interfaces. The setup's `cmp` fails once, because the
-   IDL `address` fields change; copy the new IDLs and run it again:
-
-   ```bash
-   npm run setup:light-client || true
-   cp ../../.cache/solana/deps/ibc-contracts/ibc-solana/target/idl/{ics07_tendermint,access_manager}.json idls/
-   git diff --stat idls/          # only the two "address" lines
-   npm run setup:light-client
-   npm run build                  # ../../.cache/solana/target/idl/akt_solana.json now names AKT_ID
-   ```
-
-4. Check and commit. `git diff` against the audited commit must show only the
-   IDs, the patch and its entry in the series. Then run
-   `cargo test -p akt-solana --lib`, `npm run typecheck` and
-   `npx tsx --test local/admin-instructions.test.ts`. The contract suite
-   (`npm test`) preloads the development IDs, so run it on the audited parent
-   commit.
+The IBC source revision must be available to an independent builder. Record
+both commits in the release evidence. Local source changes and mutable branch
+names are not release inputs.
 
 ## 3. Reproducible build and hashes
 
@@ -115,8 +111,34 @@ cat launch/build/SHA256SUMS launch/build/build-info.txt
 ```
 
 At least two people build on different machines and compare `SHA256SUMS`.
-Publish the launch commit, `SHA256SUMS` and `build-info.txt` before deploying.
-Every later check compares on-chain bytes with these files.
+The bundle contains all three ELF binaries, IDLs and generated TypeScript
+interfaces. Publish the launch commit, `SHA256SUMS` and `build-info.txt` before
+deploying. Every later check compares against these reviewed artifacts.
+
+Copy [`deploy/manifest.example.json`](../deploy/manifest.example.json) to
+`launch/manifest.json`. Set the source commit, all three program IDs, ceremony
+public key and multisig vault. `buildDirectory` resolves relative to the
+manifest. Set `checksumsSha256` to the SHA-256 of `SHA256SUMS` and
+`buildInfoSha256` to the SHA-256 of `build-info.txt`, after the independent
+builders agree. Do not regenerate these pins merely to bypass a mismatch.
+
+```bash
+cp deploy/manifest.example.json "$MANIFEST"
+# Edit the public manifest and record its approval.
+npm run deploy:programs -- check --manifest "$MANIFEST"
+npm run deploy:programs -- preflight --manifest "$MANIFEST" --url "$RPC"
+```
+
+`check` is offline. It rejects placeholder/development IDs, mismatched IDs/IDLs,
+unreviewed hashes, missing artifacts and inconsistent source provenance.
+`preflight` checks the full genesis hash and finalized program state without
+loading a signer. Missing programs are listed; occupied addresses must hold the
+exact reviewed bytes and the ceremony authority. RPC errors fail the check.
+After authority handover, use `verify --authority multisig` instead.
+
+Use the full RPC genesis hash above, not Solana's shortened CAIP-2 network
+identifier. The distinction is documented by
+[Solana](https://solana.com/docs/payments/agentic-payments/x402#solana-networks-and-assets).
 
 ### Dress rehearsal
 
@@ -124,34 +146,42 @@ Deploy the exact artifacts with the real program keypairs on a local validator,
 through every step below:
 
 ```bash
-AKT_REHEARSAL_PROGRAMS=launch/build AKT_REHEARSAL_KEYPAIRS=launch/keys \
+AKT_REHEARSAL_PROGRAMS=launch/build AKT_REHEARSAL_KEYPAIRS="$PROGRAM_KEYS" \
   bash deploy/rehearse-launch.sh
 ```
 
 ## 4. Deploy
 
-Generate the ceremony key and fund it. At their exact sizes the three programs
-hold about 17 SOL of rent. `--max-len` reserves room for larger fixes; at twice
-the build size they hold about 34 SOL. The largest deploy buffer, about 10 SOL,
-is refunded after each deploy. `solana program extend` can grow a program
-later instead.
+Fund the ceremony key created in step 1 from
+an approved estimate of rent, buffer space and fees. Calculate funding from the
+actual artifact sizes and the current cluster rent; historical testnet SOL costs
+are not a launch budget. The deploy command reserves twice each binary's size.
+Review the priority fee explicitly in micro-lamports per compute unit.
 
 ```bash
-solana-keygen new --no-bip39-passphrase --silent --outfile "$CEREMONY"
-for program in akt_solana:$AKT_ID ics07_tendermint:$ICS07_ID access_manager:$AM_ID; do
-  name=${program%%:*}
-  solana program deploy "launch/build/$name.so" \
-    --program-id "launch/keys/$name-keypair.json" \
-    --upgrade-authority "$CEREMONY" --keypair "$CEREMONY" --url "$RPC" \
-    --max-len $((2 * $(wc -c < "launch/build/$name.so"))) --commitment finalized
-  bash deploy/verify-program.sh --url "$RPC" "${program#*:}" "launch/build/$name.so" \
-    "$(solana-keygen pubkey "$CEREMONY")"
-done
+npm run deploy:programs -- deploy --manifest "$MANIFEST" --url "$RPC" \
+  --keypair "$CEREMONY" --program-keys "$PROGRAM_KEYS" --compute-unit-price 0
+npm run deploy:programs -- verify --manifest "$MANIFEST" --url "$RPC" --authority ceremony
 ```
 
-`verify-program.sh` dumps the program, compares the build's SHA-256 with the
-first bytes, checks that the rest is zero padding and checks the upgrade
-authority. Add `--with-compute-unit-price` to the deploys if mainnet is busy.
+The command checks the entire release and every program key before its first
+write. It checks the cluster again before each deploy, passes the URL, signer,
+authority and finalized commitment explicitly, then checks the deployed bytes,
+zero padding, loader ownership and authority. It does not initialize the mint,
+change authority or enable the bridge; continue with those steps below.
+
+**Interrupted deployment.** Retain Solana CLI output privately: it may contain
+buffer recovery material. Check the finalized programs, then rerun with the
+same reviewed manifest and keys. Exact programs still under ceremony authority
+are skipped. A changed binary, occupied address or unexpected authority stops
+the run; the command never silently upgrades it. An interrupted upload may leave
+a paid buffer even if the program address is absent. Inspect/recover or close
+only that ceremony's buffers using the
+[Solana deployment procedure](https://solana.com/docs/programs/deploying) before
+retrying; do not repeatedly create new buffers or bulk-close unrelated ones.
+
+Keep the release directory immutable during the ceremony. Record each deployment
+signature and finalized verification with the approved manifest.
 
 ## 5. Access manager and genesis
 
@@ -187,13 +217,12 @@ through the light client's state.
 
 ```bash
 for id in "$AKT_ID" "$ICS07_ID" "$AM_ID"; do
+  test "$(solana genesis-hash --url "$RPC")" = "$GENESIS" || exit 1
   solana program set-upgrade-authority "$id" --upgrade-authority "$CEREMONY" \
     --new-upgrade-authority "$VAULT" --skip-new-upgrade-authority-signer-check \
-    --keypair "$CEREMONY" --url "$RPC"
+    --keypair "$CEREMONY" --url "$RPC" --commitment finalized
 done
-bash deploy/verify-program.sh --url "$RPC" "$AKT_ID" launch/build/akt_solana.so "$VAULT"
-bash deploy/verify-program.sh --url "$RPC" "$ICS07_ID" launch/build/ics07_tendermint.so "$VAULT"
-bash deploy/verify-program.sh --url "$RPC" "$AM_ID" launch/build/access_manager.so "$VAULT"
+npm run deploy:programs -- verify --manifest "$MANIFEST" --url "$RPC" --authority multisig
 ```
 
 The vault cannot sign this transfer, hence the skipped signer check. Then retire
@@ -205,6 +234,7 @@ keypairs. From here on, every change below is a multisig transaction.
 Each step emits a file, reviewers check it, and the multisig executes it:
 
 ```bash
+mkdir -p launch/tx
 admin <command> [options] --emit launch/tx/NN-name.json --authority "$VAULT"
 admin decode launch/tx/NN-name.json      # every reviewer, independently
 ```
@@ -292,7 +322,7 @@ admin configure-bridge --akt-program "$AKT_ID" --program "$ICS07_ID" \
 admin bundle --emit launch/tx/08-bridge.json launch/tx/08a-client.json launch/tx/08b-bridge.json
 ```
 
-The policy shown is the launch default in base units: 1,000,000 AKT per
+The example policy is expressed in base units, not an approved launch limit: 1,000,000 AKT per
 transfer and 10,000,000 AKT per UTC day. Set the x/sink `max_amount_per_transfer` and
 `max_transfer_amount_per_epoch` to independently chosen sending capacity. Solana keeps its own `daily_mint_cap`; neither amount cap schedules mints.
 

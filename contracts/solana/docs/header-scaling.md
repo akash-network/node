@@ -21,7 +21,7 @@ Run these sequentially. Each starts its own validator on port 19999, preserves e
 
 See [the test guide](reproduce.md#4-verifier-scale-recovery-and-consensus-failures) for expected result files and host verifier tests.
 
-The base is `cosmos/ibc-contracts` commit `dc78ade828b766b218fb6bcb5417fdaf8e553021`, with the checked-in [verifier patches](verifier-patches.md). Setup verifies the revision, applies the patches idempotently, builds SBF and checks the generated IDLs. A changed source tree fails rather than being overwritten.
+The verifier is `akash-network/ibc-contracts` commit `0da3165d8428a1b7792cc17551ecd1d3985761e6`, which contains the [merged verifier changes](verifier.md). Setup verifies the pinned clean checkout, builds SBF and checks generated IDLs. It never reapplies patches or overwrites an existing source tree.
 
 ## Runtime results
 
@@ -37,7 +37,7 @@ Agave 2.3.13, at most 64 accounts, 1,232 serialized transaction bytes, 1.4M CU p
 | Weighted, 20/100               |       16,398 |     19 |     517,738 | Quorum rejected; trust unchanged |
 | Weighted, 21 with altered root |       16,494 |     19 |     417,908 | Rejected; trust unchanged        |
 
-Evidence: `../../.cache/solana/run/scale/run-1BcQsE/results.json` and `../../.cache/solana/run/scale/run-3Gd1mx/results.json`. CU varies with fixture bytes and account derivation. Manifests record program and patch hashes so historical results stay attributable after changes.
+Evidence: `../../.cache/solana/run/scale/run-1BcQsE/results.json` and `../../.cache/solana/run/scale/run-3Gd1mx/results.json`. CU varies with fixture bytes and account derivation. Historical manifests record program and patch hashes. Current runs record the detached IBC commit and program hashes.
 
 Commits keep all 100 entries, using `Absent` for omitted votes. All present signatures are preverified into a submitter/session batch before assembly. Up to 100 signatures the live driver submits full commits, avoiding dependence on a favorable stake distribution; larger commits are trimmed to a quorum (see below). Actual full-set rotation, key-type assumptions and production throughput still need rehearsal.
 
@@ -85,7 +85,7 @@ For equal-power updates, excluding bootstrap and without priority fees:
 | Temporary upload rent returned |          0.2090088 |          0.23139216 |
 | Lookup rent awaiting cooldown  |         0.00907584 |          0.00974400 |
 
-Consensus-state rent stays locked until the state expires; [pruning](verifier-patches.md#consensus-state-pruning) then returns it. The benchmark checks exact payer deltas. Its returned temporary rent excludes lookup tables until they actually close. The live relayer journals a delayed-close queue and reclaims one table per tick after the deactivation slot leaves SlotHashes. The recovery test waits through this real cooldown and checks closure.
+Consensus-state rent stays locked until the state expires; [pruning](verifier.md#consensus-state-pruning) then returns it. The benchmark checks exact payer deltas. Its returned temporary rent excludes lookup tables until they actually close. The live relayer journals a delayed-close queue and reclaims one table per tick after the deactivation slot leaves SlotHashes. The recovery test waits through this real cooldown and checks closure.
 
 ## Recovery and adversarial checks
 

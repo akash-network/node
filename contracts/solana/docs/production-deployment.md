@@ -1,48 +1,30 @@
 # Production deployment
 
-Canonical Sink schema 4 must start in a fresh chain/program/mint namespace. This is an operator planning guide, not a production deployment record. Read [canonical launch and recovery](sink-migration-v2.md) before preparing a deployment. The receipt server in `local/team.ts` is explicitly a testnet adapter.
+This is the launch and operating runbook for Akash Sink on `akashnet-2` and
+Solana mainnet-beta. It is a deployment process, not a record of a mainnet launch.
+Use reviewed schema-4 node, SDK, Solana and service artifacts together. Read
+[canonical launch and recovery](sink-migration-v2.md) before preparing a new
+program/mint namespace; never reuse one against a reset or forked Akash chain.
 
-This guide covers what changes between a test network and an Akash mainnet
-launch. The testnet deliberately runs on one host with one key.
-Those shortcuts are listed here so nobody copies them. Nothing in this guide has
-been executed on mainnet. Local and testnet values are not launch
-recommendations. The 2026-10-18 and 2026-10-19 test records describe the earlier scalar-ID deployment. They do not establish readiness of schema 4. Repeat the launch gates with the final artifacts and obtain an external audit.
+## Deployment workflow
 
-Akash mainnet values were read from `api.akashnet.net` on 2026-10-18. Recheck
-them before launch.
+1. Agree the authority holders, checkpoint procedure, network parameters,
+   upgrade plan and activation criteria below.
+2. Produce the launch commit, reproducible program artifacts and reviewed
+   manifest. Run offline checks, cluster preflight and the
+   [program deployment ceremony](deploy-program.md).
+3. Build and install the immutable [service release](deploy-services.md).
+   Keep reporters in preview until governance authorizes them.
+4. Complete the Akash upgrade, checkpoint, bridge configuration and activation
+   sequence below. Record signatures and finalized verification after each step.
+5. Retain the artifacts, manifest, service configuration and acceptance evidence
+   for recovery and future upgrades.
 
-## Testnet shortcuts
-
-The table describes the preserved scalar-ID deployment. Fresh schema-4 testnets use the amounts in [local setup](local-stack.md#what-runs-on-chain), a new chain identity and a new Solana ledger. Do not reuse the existing deployment state.
-
-| Area                   | Test network                                                                                         | Production                                                                                       |
-| ---------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| Solana                 | `solana-test-validator` on one host, 20M-shred retention                                             | mainnet-beta; the relayer uses two RPC sources; each reporter runs its own node                  |
-| Akash                  | Four testnetify validators on one host, `akash-bridge-testnetify-team-1`, x/sink in genesis          | `akashnet-2`, x/sink added by a governance software upgrade                                      |
-| Program IDs            | AKT `FfFAP…`; ICS07 `HqPc…` and access manager `4fMih…` use upstream's published localnet keypairs   | Fresh keypairs for all three programs, generated during the [deploy ceremony](deploy-program.md) |
-| Solana authorities     | One wallet holds every upgrade authority, bridge admin, access-manager admin, relayer role and payer | Separate holders; see [authorities and keys](#authorities-and-keys)                              |
-| Reporters              | Four processes, threshold 3, one host, one Solana node, keys in one directory                        | Independent operators with their own nodes and KMS/HSM keys                                      |
-| Client trusting period | 24 hours                                                                                             | Up to 14 days                                                                                    |
-| Challenge period       | 20 seconds                                                                                           | At least 72 hours                                                                                |
-| Amount caps            | uint64 maximum on both chains                                                                        | 1,000,000 AKT per transfer, 10,000,000 AKT minted and 1,000,000 AKT refunded per day             |
-| Relayers               | One config-driven `local/relay.ts` on the host; open relaying on                                     | Several independent relayers; open relaying or granted roles, a governance choice                |
-| Monitoring             | `local/supervise.ts` restarts processes and logs disk, chain, client and payer alerts to the journal | The [alerts](#monitoring) below, routed to a person                                              |
-| Metadata URI           | Private portal                                                                                       | Public, versioned HTTPS; see the [metadata gate](token-metadata.md#mainnet-launch-gate)          |
-
-These audit findings come only from the shortcuts. Following this guide avoids
-them without code changes:
-
-- One hot key holds every Solana power, and all reporter keys share a directory
-  with the portal user.
-- Rebuilt testnets reuse the chain ID and validator keys, so record IDs repeat
-  while the permanent status PDA is scoped to the program and composite owner/height/sequence ID. `akashnet-2` is never reset.
-  Never point an existing Solana deployment at a reset or forked chain.
-- The test host's `ExecStartPre` ran as root with bridge-owned directories first in
-  `PATH`. It now runs with a clean environment and absolute paths. Production
-  units must not run root steps that resolve binaries from service-writable
-  paths.
-- The 2026-10-18 outage: a full disk halted Akash for 29 hours and expired the
-  24-hour client.
+[Hosting](hosting.md) specifies infrastructure and custody boundaries.
+[Development setup](setup.md), [local stack](local-stack.md) and
+[testnet scenarios](testnetify.md) are separate rehearsal workflows. Their
+keys, timing overrides, historical results and amount limits are not production
+configuration. Recheck chain parameters and runtime versions before each launch.
 
 ## Operator neutrality
 
@@ -65,88 +47,69 @@ operator role without code changes:
 - **Pauses.** The Solana guardian and the x/sink `pause_guardian` are set by
   their governance authorities and can only turn things off.
 
-## Launch blockers
+## Build ownership and release inputs
 
-Each item says what the fixes changed and what remains.
+| Artifact                    | Existing build path                               | Release input                                          |
+| --------------------------- | ------------------------------------------------- | ------------------------------------------------------ |
+| Akash node                  | Root `make bins` and existing GoReleaser workflow | Committed Go pins, `GOWORK=off`, no `sinkdev`          |
+| AKT program                 | Anchor and Cargo in this workspace                | Reviewed node commit and Cargo lockfile                |
+| IBC verifier/access manager | Anchor in `akash-network/ibc-contracts`           | Full commit pinned by both Cargo manifests             |
+| Header encoder              | `cargo build --locked --release`                  | Same IBC commit and its own committed lockfile         |
+| Services                    | npm lockfile and service archive builder          | Same node commit, reviewed IDLs and locked SDK archive |
 
-### Settlement safety
+The program build wrapper fixes the toolchain and paths for both Anchor
+workspaces and collects the artifacts. It does not replace Anchor's compiler
+or Solana's deployment CLI. Public source verification must independently
+reproduce the deployed bytes; see [verifier build details](verifier.md#verifiable-builds).
 
-1. **CPI-invoked resolutions.** Fixed. `mint_transfer` and `void_transfer`
-   reject CPI, and only ComputeBudget instructions may precede them, so earlier
-   instructions cannot truncate the event. Reporters attribute events by
-   invocation frame and accept log truncation only after a completed top-level
-   AKT frame.
-2. **Fabricated future slots blocked honest vetoes.** Fixed. Reporters ignore
-   slots beyond their fresh finalized slot plus `maxSlotLead`, alert on them and
-   look up reported signatures directly. Remaining: plausibility
-   uses the check time, not the report's block time, so a fabricated slot just
-   inside the lead delays a veto by up to about 4 minutes.
-3. **No minimum deposit.** Fixed: x/sink `min_amount_per_transfer` and a per-transfer lamport budget in the relayer. Set the minimum well above the relayer's cost of about
-   0.0035 SOL per mint.
-4. **Evidence search window.** Fixed. Reporters read the block at the status
-   account's `resolved_at_slot` instead of paging signatures. Their
-   Solana node must serve finalized blocks at resolution slots.
-5. **Reassigned recipient ATA.** Fixed. The transfer voids as
-   `InvalidRecipient`, and the relayer checks this before paying.
-6. **Mints over Akash refunds.** The honest relayer skips records that Akash
-   shows as refund-pending or refunded without a Solana status, rechecks Akash just
-   before paying, and alerts. Remaining:
-   `mint_transfer` is permissionless, so anyone else can still submit that
-   proof. The reconciler flags the state.
+The SDK archive is an explicit temporary packaging dependency until the matching
+TypeScript SDK is published. Never rebuild it silently during installation.
+Likewise, a local Go workspace is a development choice, not evidence that the
+committed node dependencies are ready for release.
 
-### Chain upgrade
+`npm run test:build` checks that setup delegates to the node Makefile, fixture
+tests ignore stale modfiles, and IBC checkouts preserve local changes and reject
+mismatched pins. These checks run in the existing node CI workflow. They use
+local fixtures; real locked builds and the launch rehearsal are separate gates.
 
-7. **Sink as a receiving module account.** Fixed. The sink is a blocked bank
-   address, so it cannot be a withdraw address.
-8. **Dust at the sink address halted the upgrade.** Fixed in the handler. It
-   adopts an existing account at the address, keeping its account number, and
-   moves the balance to the community pool, so sink starts
-   with a zero balance; there is no launch reserve to fund. The upgrade tests cover a dusted address. Repeat the old-to-new binary rehearsal with the final artifacts. Remaining: the production upgrade name and height.
+## Launch acceptance gates
 
-### Operations
+Keep deposits and minting disabled until these gates have recorded owners and
+evidence for the final release:
 
-9. **Development relayer.** Fixed:
-   - It pages canonical pending-status and dispute indexes, plus chronological history with a durable full-ID checkpoint. It rejects missing or pruned state.
-   - Failed transfers back off, pause and cap limits wait without paying, and a
-     per-transfer lamport budget stops runaway spend.
-   - Header updates happen only when a proof needs one or a fifth of the
-     trusting period has passed. Commits above 100
-     signatures are trimmed to a verifying quorum.
-   - A patched verifier instruction closes expired consensus states and returns
-     their rent.
+- The normal node release build and native Sink tests pass with committed Go
+  dependencies and `GOWORK=off`. The locked service SDK agrees with the deployed
+  node's query responses; run the native proof and reporter integration tests
+  with that exact pair.
+- External review of the AKT program, pinned IBC verifier, x/sink and services;
+  independent program builds with matching hashes and IDLs.
+- Fresh production program IDs, proven control of the multisig vault, reviewed
+  time lock and members, and successful finalized authority handover for all
+  three programs. No hot service key holds upgrade authority.
+- The final Akash upgrade name/height and a rehearsal against populated state,
+  including a preexisting balance at the sink address. Verify the zero-reserve
+  installation, escrow invariant, native epochs and restart behavior.
+- Independent checkpoint agreement and client initialization, then continuous
+  relaying before the trusting period expires. Rehearse expiry/freeze recovery
+  through the real multisig and time lock.
+- Independent reporter operators, funded accounts, tested external signers,
+  preview observations and archive retention covering the challenge period.
+- Production monitoring/reconciliation, proven alert delivery, on-call guardian
+  access, backups and a service restart/rollback exercise.
+- Production portal and public versioned token metadata. `local/team.ts` is a
+  testnet adapter with a faucet; it is not the production API.
+- Canary mint, void/refund after the production challenge period, cap boundaries
+  and supply reconciliation using the exact deployed artifacts.
 
-   Remaining: production hosting with alert delivery.
+The manifest checks artifact identity and cluster identity, not these operational
+or protocol gates. Rehearsal evidence must name the source and artifact hashes
+it covers. Earlier scalar-ID testnet results do not accept schema 4.
 
-10. **Emergency stop.** Fixed. Solana has a pause-only guardian and
-    x/sink has a governance-set `pause_guardian` that can only turn deposits
-    and refunds off. Remaining: choose
-    who holds each.
-11. **Client recovery.** Fixed. `repin_light_client` works at any time under
-    the upgrade authority, and every tool follows the pin. The admin CLI fetches and compares checkpoints and emits the
-    client and re-pin instructions for the multisig
-    ([deploying](deploy-program.md#later-changes)). Remaining: the checkpoint
-    ceremony and a rehearsal under the real multisig and time lock.
-12. **Reproducible builds.** Fixed. A pinned linux/amd64 container builds all
-    three programs at a fixed path with identical hashes from any checkout
-    (`17238fe`, `npm run build:verifiable`), and `akash version` reports the
-    commit. Remaining: publish the hashes at launch, built
-    for the fresh production program keypairs
-    ([launch commit](deploy-program.md#2-launch-commit)).
-13. **Portal amount parsing.** Fixed. The amount field uses the
-    browser locale's decimal mark only, so decimal-comma keypads work.
-
-Also fixed: unsigned uint64 decoding for the sink SDK package (chain-sdk
-`f85b5fff`), exact CLI amounts and `ValidateBasic`,
-reconciler voids without a Solana status and paging beyond 99 transfers, a monotonic verifier latest height, the refund-driver
-docs, a per-account epoch amount cap and
-reporters paging open transfers with a rolling audit of settled ones.
-
-Still open at lower priority:
-
-- Reporter slot plausibility uses check time (blocker 2).
-- Full commits above about 100 signatures exceed compute; the relayer trims to
-  a quorum, which fits up to at least 150 validators. Recheck before Akash's
-  active set grows past 100.
+Remaining protocol considerations belong in the launch review: reporter slot
+plausibility is measured at observation time; permissionless proof submission
+must be reconciled against Akash refund/dispute state; large validator sets need
+the supported verifying signature subset. See [audit](audit.md),
+[reporters](reporter.md) and [header scaling](header-scaling.md).
 
 ## Authorities and keys
 
@@ -243,7 +206,7 @@ Change caps in this order:
 ### 0. Readiness
 
 - Close the remaining blockers. Complete audits of the AKT program, the ICS07
-  [patches](verifier-patches.md), x/sink, the reporter and the relayer.
+  [IBC verifier](verifier.md), x/sink, the reporter and the relayer.
 - Rehearse the whole sequence on a fresh testnet with production settings: the
   multisig and time lock, real trusting and challenge periods, separate reporter
   hosts, and the production upgrade handler run against a dusted sink address.
@@ -279,7 +242,7 @@ them on a local validator.
 
 ### 2. Akash upgrade
 
-1. Submit the software-upgrade proposal. Voting takes 7 days. State the
+1. Submit the software-upgrade proposal. Confirm the current governance voting period and upgrade timing. State the
    preexisting-balance disposition.
 2. The handler adds the store with a zero balance and leaves deposits disabled
    with no reporters.
@@ -338,7 +301,7 @@ events of an executed multisig transaction.
 | Client age, now minus latest consensus time | Warn at 25% of the trusting period, page at 50%                                                                                                                                                                                                     |
 | Client frozen                               | Page                                                                                                                                                                                                                                                |
 | Pending transfer age                        | Page well past the normal 2 to 3 minutes                                                                                                                                                                                                            |
-| Solana status present, Akash still pending  | Page. Reporters missed the evidence (blocker 1)                                                                                                                                                                                                     |
+| Solana status present, Akash still pending  | Page and investigate missing reporter evidence                                                                                                                                                                                                      |
 | Void in its challenge window                | Review every one until the reporters have a track record                                                                                                                                                                                            |
 | Supply                                      | Page on any mismatch in `escrow behind mints = Solana supply + burns` or the x/sink bank invariant                                                                                                                                                  |
 | Authority and configuration changes         | Any `ProgramData` change for the three programs; AKT `BridgeConfigured`, `BridgeEnabledSet`, `MintPolicySet` or `TokenMetadataSet`; access-manager `RoleGrantedEvent`, `RoleRevokedEvent` or `WhitelistedProgramsUpdatedEvent`; any x/sink proposal |
@@ -346,7 +309,7 @@ events of an executed multisig transaction.
 | Relayer alerts                              | `relay-unbacked-settlement`, `relay-discovery-failed`, `relay-budget-exhausted`, `header-unsupported`, `light-client-changed`, repeated `relay-retry`, `consensus-prune-failed`                                                                     |
 | Fee balances                                | Relayer payer and each reporter account below a few days of spend                                                                                                                                                                                   |
 | Reporter liveness                           | Each reporter's last vote age, `audit-unavailable`, any conflict hold, and each reporter's rate of conflicting votes and vetoes                                                                                                                     |
-| Cap usage                                   | Daily mint, deposit and refund usage above 80%                                                                                                                                                                                                      |
+| Cap usage                                   | Solana daily mint and Akash native-epoch deposit/refund usage above 80%                                                                                                                                                                             |
 | Infrastructure                              | Disk above 70%, stalled node height, oldest Solana history within the challenge period of now                                                                                                                                                       |
 
 ## Incident runbooks

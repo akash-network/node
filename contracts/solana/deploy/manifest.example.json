@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "sourceCommit": "REPLACE_WITH_REVIEWED_40_CHARACTER_COMMIT",
+  "buildDirectory": "./build",
+  "buildInfoSha256": "REPLACE_WITH_REVIEWED_SHA256_OF_BUILD_INFO",
+  "checksumsSha256": "REPLACE_WITH_REVIEWED_SHA256_OF_SHA256SUMS",
+  "solanaGenesisHash": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
+  "ceremonyAuthority": "REPLACE_WITH_CEREMONY_PUBLIC_KEY",
+  "upgradeAuthority": "REPLACE_WITH_MULTISIG_VAULT_PUBLIC_KEY",
+  "programs": {
+    "access_manager": "REPLACE_WITH_LAUNCH_ACCESS_MANAGER_ID",
+    "ics07_tendermint": "REPLACE_WITH_LAUNCH_ICS07_ID",
+    "akt_solana": "REPLACE_WITH_LAUNCH_AKT_ID"
+  }
+}

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import test from "node:test";
+import { temporaryDirectory } from "./test-workspace";
 import {
   EpochUsage,
   QueryStateResponse,
@@ -47,7 +47,7 @@ function events(lines: string[], event: string) {
 }
 
 test("a discovery failure still relays open transfers and retries history from the saved checkpoint", async (t) => {
-  const stateDir = await mkdtemp(join(tmpdir(), "relay-discovery-"));
+  const stateDir = await temporaryDirectory("relay-discovery-");
   t.after(() => rm(stateDir, { recursive: true, force: true }));
   const connection = new FakeSolana();
   const wallet = new AnchorProvider(

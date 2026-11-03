@@ -11,13 +11,13 @@ fi
 cd "$solana_repo"
 
 bash scripts/doctor.sh
-npm ci --prefix "$CHAIN_SDK_DIR/ts"
-npm run build --prefix "$CHAIN_SDK_DIR/ts"
-sdk_package=$(cd "$CHAIN_SDK_DIR/ts" && npm pack --silent --pack-destination "$SOLANA_CACHE")
-mv "$SOLANA_CACHE/$sdk_package" "$SOLANA_CACHE/chain-sdk.tgz"
+# The reviewed SDK archive is an explicit input until its package is published.
+test -f "$SOLANA_CACHE/chain-sdk.tgz" || {
+	echo 'Supply the locked SDK archive; see docs/sdk-integration.md.' >&2
+	exit 1
+}
 npm ci
-
-bash scripts/build-node.sh
+make -C "$NODE_SINK_DIR" bins
 
 npm run setup:light-client
 npm run setup:metadata
@@ -25,4 +25,4 @@ npm run build
 npm run build:header-encoder
 npm run typecheck
 
-echo 'Build complete. Run npm run testnet:up, then npm run testnet:demo.'
+echo 'Build complete. See docs/setup.md for the explicit accelerated-testnet build.'

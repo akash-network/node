@@ -1,16 +1,10 @@
 #!/bin/bash
 
-# Ignore file
-IGNORE="godownloader.sh"
+set -eu
 
-unset FAILED
+root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 
-FILES=$(find /shellcheck/ -type f -name "*.sh" ! -path "/shellcheck/vendor/*" ! -path "/shellcheck/.git/*")
-
-for file in $FILES; do
-    name="$(basename "$file")";
-    if [[ $name != "$IGNORE"  ]] && ! shellcheck --format=gcc "${file}" --exclude=SC1091; then
-        export FAILED=true
-    fi
-done
-if [ "${FAILED}" != "" ]; then exit 1; fi
+find "$root" \
+    -type d \( -name .git -o -name .cache -o -name node_modules -o -name vendor \) -prune -o \
+    -type f -name '*.sh' ! -name godownloader.sh \
+    -exec shellcheck -x --source-path=SCRIPTDIR --format=gcc --exclude=SC1091 {} +

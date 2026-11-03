@@ -1,78 +1,54 @@
 # AKT on Solana
 
-The Solana side of Akash Sink, a one-way transfer of AKT from Akash to Solana.
-It contains the AKT mint program, patches to the upstream Tendermint light
-client, the relayer, the reporters and scripts to run both chains locally. The
-Akash side is the [`x/sink` module](../../x/sink/README.md) in this repository.
+This workspace contains the Solana programs and operator services for Akash
+Sink, a one-way transfer of AKT from Akash to Solana. The AKT mint starts with
+zero supply. Each mint requires an authenticated proof of an Akash deposit;
+reporters observe finalized Solana outcomes and settle them on Akash.
 
-Genesis creates the AKT mint with zero supply. Every mint requires an
-authenticated Akash state proof of a deposit. The demo exercises a deposit,
-mint, confirmation, invalid-recipient void and refund.
+The Akash implementation is [`x/sink`](../../x/sink/README.md). Schema, generated
+clients and CLI ownership are described in [SDK integration](docs/sdk-integration.md).
+The transfer portal is maintained in its own repository.
 
-The transfer portal lives in its own repository.
+## Production deployment
 
-## Build and run
+Start with the [production runbook](docs/production-deployment.md). It links the
+program ceremony, service installation, activation checks and incident response.
+Production uses `akashnet-2` and Solana mainnet-beta, fresh program IDs, a reviewed
+release manifest, and separate ceremony, multisig, relayer and reporter keys.
 
-Install the [pinned toolchain](docs/setup.md), then check out
-[chain-sdk](https://github.com/akash-network/chain-sdk) next to this node
-checkout, on the branch or tag that matches node's sink API:
+| Task                                        | Entry point                                                      |
+| ------------------------------------------- | ---------------------------------------------------------------- |
+| Build committed program artifacts           | `npm run build:verifiable -- --rev COMMIT OUTPUT`                |
+| Check a reviewed release offline            | `npm run deploy:programs -- check --manifest FILE`               |
+| Check the cluster and existing programs     | `npm run deploy:programs -- preflight --manifest FILE --url RPC` |
+| Deploy and verify program bytes             | [Program deployment](docs/deploy-program.md)                     |
+| Build and install relayers/reporters        | [Service deployment](docs/deploy-services.md)                    |
+| Emit reviewed multisig instructions         | `npm run admin -- COMMAND ...`                                   |
+| Test deployment guards without transactions | `npm run test:deployment`                                        |
 
-```bash
-git clone https://github.com/akash-network/node.git
-git clone https://github.com/akash-network/chain-sdk.git
-cd node/contracts/solana
-npm run setup
-export AKT_LOCAL_RUN=dev
-npm run testnet:up
-npm run testnet:demo
-npm run testnet:verify
-```
+The manifest template intentionally contains invalid placeholders. Fill it from
+independently reviewed build output and ceremony public keys. Neither a passing
+preflight nor a successful upload establishes launch readiness: initialize the
+programs, transfer authorities, configure the checkpoint and policy, validate the
+services, and complete the activation gates. No mainnet deployment is claimed.
 
-`NODE_SINK_DIR` and `CHAIN_SDK_DIR` override the node and chain-sdk paths.
-`setup` installs JS dependencies and builds the Akash node with
-`scripts/build-node.sh`, the upstream verifier, the AKT program and the header
-encoder. First builds take several minutes. It does not start a chain or send a
-public-chain transaction.
+## Development and testnets
 
-`testnet:up` starts four Akash validators, one Solana test validator, a relayer,
-three reporters and a reconciliation monitor. It creates development keys
-automatically. Initial startup and the demo each take a few minutes while signed
-headers and transfer outcomes reach finalized Solana state.
+Follow [development setup](docs/setup.md) to build with the existing Akash
+Makefile, install the locked SDK package, and build the pinned IBC programs.
+Accelerated refund tests require an explicitly selected `sinkdev` binary.
+The ordinary build retains the production challenge-period floor.
 
-```bash
-npm run testnet:status   # process status, chain heights and balances
-npm run testnet:down     # stop; preserve keys and ledgers
-npm run testnet:up       # resume the same network
-```
+`testnet:up` creates development keys and starts both test chains and services.
+`testnet:down` preserves keys and ledgers for restart. See
+[local stack](docs/local-stack.md), [four-validator testnet](docs/testnetify.md),
+and [test suites](docs/reproduce.md).
 
-Keep `AKT_LOCAL_RUN=dev` set in each terminal. Akash RPC is
-`http://127.0.0.1:27657`; Solana RPC is `http://127.0.0.1:18999`. Logs and
-results are under `../../.cache/solana/run/testnetify-stack-v2-dev/`. See
-[setup and troubleshooting](docs/setup.md) and
-[testnet scenarios](docs/testnetify.md).
+## Reference
 
-The sink schema, generated clients and CLI live in chain-sdk. The node executes
-the handlers and exposes the generated REST routes; the reporters consume the
-SDK package. [SDK integration notes](docs/sdk-integration.md) cover ownership,
-generation and local dependency updates.
-
-## Guides
-
-| Guide                                                                                          | Brief synopsis                                                                        |
-| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| [Setup](docs/setup.md)                                                                         | Pinned tools, clean builds, paths, ports and troubleshooting.                         |
-| [Testing](docs/reproduce.md)                                                                   | Ordered commands and expected outcomes for every suite.                               |
-| [Mint implementation](docs/implementation.md)                                                  | Canonical mint identity, zero-supply genesis and authority rules.                     |
-| [Bridge protocol](docs/bridge-protocol.md)                                                     | How signed Akash headers and ICS23 proofs authorize mint or void.                     |
-| [Settlement rules](docs/sink-reporting.md)                                                     | Record-ID tracking, escrow and refunds on Akash.                                      |
-| [Reporters](docs/reporter.md)                                                                  | Finalized Solana evidence, signed Akash reports and failure handling.                 |
-| [Operators](docs/operators.md)                                                                 | Running an independent relayer against any deployment.                                |
-| [Local stack](docs/local-stack.md) / [four-validator rehearsal](docs/testnetify.md)            | Both chains, relayer, reporters, reconciliation and live fault scenarios.             |
-| [100-validator results](docs/header-scaling.md) / [verifier patches](docs/verifier-patches.md) | Signature batches, consensus-state pruning, runtime costs and recovery checks.        |
-| [Audit package](docs/audit.md)                                                                 | Scope, trust model, instructions, accounts, invariants and accepted risks.            |
-| [Deploying the programs](docs/deploy-program.md)                                               | Launch commands: program IDs, verifiable build, deploy, multisig handover and checks. |
-| [Production deployment](docs/production-deployment.md)                                         | Testnet shortcuts, launch blockers, authorities, parameters and launch order.         |
-| [Hosting](docs/hosting.md)                                                                     | Hosts, versions, ports, monitoring and the launch order for DevOps.                   |
-| [Token metadata](docs/token-metadata.md)                                                       | Metaplex metadata, hosting and the mainnet launch gate.                               |
-
-The sink service and wire contract is now version 2. Follow [launch and recovery](docs/sink-migration-v2.md) before running these commands against a new namespace. Existing numeric-ID deployments remain separate.
+- [Protocol and proofs](docs/bridge-protocol.md), [mint implementation](docs/implementation.md),
+  [settlement rules](docs/sink-reporting.md), [canonical launch/recovery](docs/sink-migration-v2.md).
+- [Relayer operations](docs/operators.md), [reporters and key custody](docs/reporter.md),
+  [infrastructure](docs/hosting.md), [token metadata](docs/token-metadata.md).
+- [Audit scope](docs/audit.md), [IBC verifier](docs/verifier.md),
+  [header scaling](docs/header-scaling.md), [signature batches](docs/signature-batches.md).

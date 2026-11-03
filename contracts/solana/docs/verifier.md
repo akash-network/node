@@ -1,25 +1,26 @@
-# Verifier patches
+# IBC verifier source
 
-The ICS07 Tendermint client and access manager are built from
-`cosmos/ibc-contracts` at `dc78ade828b766b218fb6bcb5417fdaf8e553021`.
-`scripts/apply-light-client-patches.sh` applies these patches in order:
+The ICS07 Tendermint client and access manager come from
+[akash-network/ibc-contracts](https://github.com/akash-network/ibc-contracts/tree/0da3165d8428a1b7792cc17551ecd1d3985761e6),
+commit `0da3165d8428a1b7792cc17551ecd1d3985761e6` on `space/akash`.
+Artur merged the four changes into that repository:
 
-| Patch                                 | Change                                                                     |
-| ------------------------------------- | -------------------------------------------------------------------------- |
-| `ics07-signature-batches.patch`       | Compact signature receipts; see [signature batches](signature-batches.md)  |
-| `ics07-monotonic-latest-height.patch` | An accepted header older than the latest no longer lowers `latest_height`  |
-| `ics07-consensus-pruning.patch`       | Adds `prune_consensus_state` to reclaim rent from expired consensus states |
-| `ics07-open-relaying.patch`           | An access-manager marker lets any signer relay headers and misbehaviour    |
+| Commit     | Change                                                                    |
+| ---------- | ------------------------------------------------------------------------- |
+| `c8cf7fa6` | Compact signature receipts; see [signature batches](signature-batches.md) |
+| `9af99b68` | Keep the latest height monotonic                                          |
+| `a573c29f` | Reclaim rent from expired, non-latest consensus states                    |
+| `0da3165d` | Allow open relaying when enabled by the administrator                     |
 
-The patches form a series and must match exactly (`--fuzz=0`). A later patch may
-change lines an earlier one added: the open relaying patch edits
-`signature_batch.rs`, which the signature-batch patch creates. Setup copies the
-files the series touches to a scratch tree, finds how many patches the tree
-holds by reversing them in order to the base, checks that the whole series then
-applies, and applies the rest. A tree that holds no exact prefix of the series,
-such as a partial or edited one, fails without changes. A host with the first
-three patches applied gains only the fourth. Setup records the patch hashes in
-`../../.cache/solana/deps/ibc-contracts/.akt-patch-sha256`.
+Node no longer carries or applies a patch series. Cargo pins the membership
+library and header codec to this exact revision. `scripts/fetch-light-client.py`
+reads those manifests and checks out the same revision for the Anchor program
+builds. It refuses mismatched pins, old archive directories and dirty checkouts.
+Future verifier changes belong in the IBC repository, followed by an explicit
+pin update here and regenerated interfaces through Anchor.
+
+The explanations below describe the merged changes. Historical measurements
+refer to their recorded source revisions, not to a current release qualification.
 
 ## Monotonic latest height
 
@@ -140,7 +141,7 @@ limited to approved operators, and the client's liveness depended on them.
 ibc-go has no such permission: any signer may send `MsgUpdateClient` or
 `MsgSubmitMisbehaviour`.
 
-`ics07-open-relaying.patch` adds a switch. The relaying role check passes if
+The merged open-relaying change adds a switch. The relaying role check passes if
 the signer holds `RELAYER_ROLE` (role 1), or if the access manager lists the
 ICS07 program's own ID as a `RELAYER_ROLE` member. That entry is the open
 relaying marker:
@@ -232,7 +233,7 @@ library tests. The check costs one more role scan. The split run's two-batch,
 searches for each run's random payer move that figure by thousands of CU. One
 prune used 19,467 CU against 19,434.
 
-## Builds and in-place upgrade
+## Builds
 
 SBF output depends on the absolute build path. The verifier crates in
 `../../.cache/solana/deps/ibc-contracts/packages` sit outside the `ibc-solana` Cargo workspace, so
@@ -242,8 +243,7 @@ path gave the same size and strings but different code layout.
 
 ### Verifiable builds
 
-`scripts/verifiable-build.sh` fixes the build path and toolchain, which closes
-the build-path part of [blocker 12](production-deployment.md#operations):
+`scripts/verifiable-build.sh` fixes the build path and toolchain:
 
 ```bash
 bash scripts/verifiable-build.sh --rev <commit> [output-dir]
@@ -255,56 +255,30 @@ linux/amd64, because Agave publishes x86_64 Linux binaries only. The image pins:
 
 - `rust:1.89.0-slim-trixie` by digest, for Rust 1.89.0 and the glibc 2.39 that
   Anchor's release binary needs;
-- Debian packages (`bzip2`, `curl`, `libudev1`, `make`, `patch`, `perl`,
+- Debian packages (`bzip2`, `curl`, `libudev1`, `make`, `git`, `python3`, `perl`,
   `protobuf-compiler`) from snapshot.debian.org at 2025-10-01;
 - the Agave 2.3.13 release, platform tools v1.48 and the Anchor 0.32.1 release
   binary, each checked against a SHA-256 in the Dockerfile.
 
-The container unpacks the archive at `/build`, fetches the pinned upstream
-revision and checks its content hash (`6dd68161…`, files and symlinks, so a
-recompressed GitHub tarball still matches), applies the patch series, and runs
-`anchor build` for `ics07_tendermint`, `access_manager` and `akt_solana`. It
-fails if a build changes a committed `Cargo.lock` or if a generated IDL differs
-from `idls/`. The output directory, by default
-`../../.cache/solana/verifiable-build/<commit>`, receives the three `.so` files,
-`SHA256SUMS`, and `build-info.txt` with the commit, local image ID, upstream
-content hash, patch hashes and tool versions. The image is tagged
-`akt-solana-verifiable-build:<commit prefix>` locally and must never be pushed.
+The container unpacks the node commit at `/build`, checks out the IBC commit
+from the Cargo manifests, and uses the same build scripts as local setup for all three programs.
+Anchor 0.32 forwards SBF and IDL arguments differently: the scripts use
+`anchor build --no-idl -- -- --locked` and `anchor idl build -- --locked`. It fails if a build changes a committed `Cargo.lock` or if a generated
+CPI IDL differs from `idls/`. The output contains the programs, IDLs, generated
+TypeScript interfaces, `SHA256SUMS`, and `build-info.txt` with both source
+revisions, the local image ID and tool versions.
 
-On 2026-10-18, commit `17238fe` built from this checkout and from a
-`git worktree` under a scratch path produced identical files
-(`../../.cache/solana/verifiable-build/17238fe-*`). An earlier build of the same files from
-an uncommitted copy matched too.
+This wrapper fixes paths for the multi-workspace build. It does not confer
+public verification status. See [Anchor verifiable builds](https://www.anchor-lang.com/docs/references/verifiable-builds)
+and [Solana verified builds](https://solana.com/docs/programs/verified-builds).
+Public reproducibility and Explorer verification remain release gates; any
+public verification must reproduce the exact deployed bytes and record both
+repository revisions. Deployment uses `solana program deploy`; upgrade authority
+changes use `solana program set-upgrade-authority` through the approved custody
+procedure. See [program deployment](deploy-program.md).
 
-| File                  |     Bytes | SHA-256                                                            |
-| --------------------- | --------: | ------------------------------------------------------------------ |
-| `akt_solana.so`       |   578,696 | `157de9b647bcaf740e429d0cc5dcd4c633a8bc377b0673cc3713f592c688ef22` |
-| `ics07_tendermint.so` | 1,442,552 | `75aad2305e16e8f2d5b42cdcb32f184f4645a93140ac71e6cb8a180d3f188b6b` |
-| `access_manager.so`   |   429,928 | `c334e3d6ff81da93e8faba8f23593efe66790f5971e30020e77dacb364d83ed6` |
-
-The ICS07 and access-manager hashes hold for any commit with the same patches,
-upstream revision and Dockerfile; `akt_solana.so` also depends on `programs/`,
-`Cargo.lock` and `idls/`. The verifiable ICS07 and access-manager files also
-passed `npx tsx local/scale.ts open` (`../../.cache/solana/run/scale/run-2CyyD4`). On the Apple
-Silicon workstation under Docker Desktop's x86_64 emulation, the image took
-about two minutes to build and each run about ten, mostly Anchor's host IDL
-builds.
-
-To check a deployment, build its commit and compare `SHA256SUMS` with
-`solana program dump` truncated to the file's length, as in the upgrade below.
-
-### Workstation builds
-
-`npm run setup:light-client` still builds in place for local tests. Its hashes
-depend on the checkout path. Builds on one development
-workstation, for attribution of test runs only:
-
-| Patches applied                | `ics07_tendermint.so` SHA-256                                      |
-| ------------------------------ | ------------------------------------------------------------------ |
-| Signature batches (2026-10-12) | `06546f1c8a2bf794312972d5fe364b4eb017349df315a758d292348550d565c9` |
-| Plus monotonic latest height   | `a81c91bc15ef39a52266f07600ae71652730cc25490caebc3c4a9eb43575f3df` |
-| Plus consensus pruning         | `39ce504cb7adfdc522ddd3623b7f563afeb4c1f7ee6a45a9b2c32152bf7b875e` |
-| Plus open relaying             | `c63107495aa1a8c2ea02dea5cc73c46b3ac82e3becd5bba2a5171548ca4861e1` |
-
-`access_manager.so` is unchanged at
-`23a5674d60a2097446d7bbe26b2a93dc06049344f35bd1cbc2bcba452060fb7a`.
+Workstation builds from `npm run setup:light-client` are for local tests. Their
+hashes depend on the checkout path. Historical binaries built before the merged
+source pin do not qualify a release. Build the final source commits independently,
+compare the complete bundle, and verify finalized on-chain bytes and upgrade
+authorities against that bundle after deployment.

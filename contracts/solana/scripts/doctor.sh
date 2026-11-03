@@ -11,7 +11,7 @@ fi
 cd "$solana_repo"
 
 failed=0
-for tool in git curl tar patch python3 cc make lsof node npm go rustup cargo rustc anchor solana solana-keygen solana-test-validator; do
+for tool in git curl tar python3 cc direnv make lsof node npm go rustup cargo rustc anchor solana solana-keygen solana-test-validator; do
 	if ! command -v "$tool" >/dev/null; then
 		echo "Missing command: $tool" >&2
 		failed=1
@@ -39,12 +39,11 @@ check_version "$(rustc --version)" 'rustc 1.89.0 ' Rust
 check_version "$(anchor --version)" 'anchor-cli 0.32.1' Anchor
 check_version "$(solana --version)" 'solana-cli 2.3.13 ' Solana
 
-for file in "$NODE_SINK_DIR/x/sink/module.go" "$CHAIN_SDK_DIR/go/go.mod" "$CHAIN_SDK_DIR/proto/node/akash/sink/v1/msgs.proto" "$CHAIN_SDK_DIR/go/cli/sink_tx.go"; do
-	if [[ ! -f "$file" ]]; then
-		echo "Missing $file; see README.md for the chain-sdk checkout." >&2
-		failed=1
-	fi
-done
+if [[ ! -f "$NODE_SINK_DIR/x/sink/module.go" ]]; then
+	echo "Missing node/x/sink; use the matching node checkout." >&2
+	failed=1
+fi
+python3 -c 'import tomllib' || failed=1
 
 test "$failed" == 0
 echo 'Toolchain and repositories are ready.'

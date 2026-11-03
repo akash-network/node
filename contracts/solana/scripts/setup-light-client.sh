@@ -3,28 +3,18 @@ set -euo pipefail
 source "$(dirname "$0")/workspace.sh"
 cd "$solana_repo"
 
-revision=dc78ade828b766b218fb6bcb5417fdaf8e553021
+python3 scripts/fetch-light-client.py
 upstream=$SOLANA_DEPS/ibc-contracts
-if [[ ! -f "$upstream/.akt-revision" ]] || [[ "$(cat "$upstream/.akt-revision")" != "$revision" ]]; then
-  if [[ -e "$upstream" ]]; then
-    echo "Existing upstream directory has no matching revision marker: $upstream" >&2
-    echo "Move it aside before fetching the pinned source." >&2
-    exit 1
-  fi
-  archive=$(mktemp "${TMPDIR:-/tmp}/akt-ibc.XXXXXX")
-  trap 'rm -f "$archive"' EXIT
-  curl -fL --retry 3 "https://api.github.com/repos/cosmos/ibc-contracts/tarball/$revision" -o "$archive"
-  mkdir -p "$upstream"
-  tar -xzf "$archive" --strip-components=1 -C "$upstream"
-  printf '%s\n' "$revision" > "$upstream/.akt-revision"
-fi
-
-bash scripts/apply-light-client-patches.sh
 
 (
   cd "$upstream/ibc-solana"
-  CARGO_TARGET_DIR="$PWD/target" RUSTUP_TOOLCHAIN=1.89.0 anchor build --program-name ics07_tendermint
-  CARGO_TARGET_DIR="$PWD/target" RUSTUP_TOOLCHAIN=1.89.0 anchor build --program-name access_manager
+  export CARGO_TARGET_DIR="$PWD/target" RUSTUP_TOOLCHAIN=1.89.0
+  mkdir -p target/idl target/types
+  for program in ics07_tendermint access_manager; do
+    anchor build --program-name "$program" --no-idl -- -- --locked
+    anchor idl build --program-name "$program" \
+      --out "target/idl/$program.json" --out-ts "target/types/$program.ts" -- --locked
+  done
 )
 
 # The checked-in IDLs define the CPI ABI. Rebuilds must produce the same files.

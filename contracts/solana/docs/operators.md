@@ -76,6 +76,10 @@ quickly.
 
 ## Run
 
+For production installation, supervision and rollback use
+[service deployment](deploy-services.md). The generic commands below also
+support explicitly configured development networks.
+
 ```bash
 npm run relayer -- --config /etc/akt-relayer/config.json
 ```
@@ -125,7 +129,7 @@ With `none`, the relayer relays only transfers the latest verified height
 already proves, and logs `relay-header-blocked` when an update is needed. It
 does not resume a stored upload. [Relayers](bridge-protocol.md#relayers)
 describes the role and the test network's `grant-relayer` and `open-relaying`
-commands; [verifier patches](verifier-patches.md) covers the program change.
+commands; [IBC verifier](verifier.md) covers the program change.
 
 ## Large validator sets
 

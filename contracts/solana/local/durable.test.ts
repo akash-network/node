@@ -1,17 +1,17 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { spawn } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import { once } from "node:events";
+import { temporaryDirectory } from "./test-workspace";
 import { withUploadLock } from "./durable";
 
 test(
   "payer lock excludes another process and releases after SIGKILL",
   { timeout: 10000 },
   async () => {
-    const directory = await mkdtemp(join(tmpdir(), "akt-lock-"));
+    const directory = await temporaryDirectory("akt-lock-");
     const path = join(directory, "payer.lock");
     const child = spawn(
       process.execPath,

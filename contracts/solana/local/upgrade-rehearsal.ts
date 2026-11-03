@@ -29,7 +29,7 @@ import { governanceAddress } from "./governance";
 const exec = promisify(execFile);
 const original = resolve(
   process.env.AKASH_UPGRADE_BASE ??
-    join(NODE_REPO, ".cache/solana/upgrade-base/.cache/solana/bin/akash"),
+    join(NODE_REPO, ".cache/solana/upgrade-base/.cache/bin/akash"),
 );
 const rpc = "http://127.0.0.1:30657";
 const sink = toBech32(

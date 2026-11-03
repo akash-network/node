@@ -29,7 +29,7 @@ export const ROOT = join(
 );
 export const AKASH_HOME = join(ROOT, "akash");
 export const NODE_REPO = resolve(REPO, process.env.NODE_SINK_DIR ?? "../..");
-export const AKASH = join(NODE_REPO, ".cache/solana/bin/akash");
+export const AKASH = process.env.AKASH ?? join(NODE_REPO, ".cache/bin/akash");
 export const CHAIN =
   (PROFILE === "single"
     ? "akash-bridge-v2-local"
