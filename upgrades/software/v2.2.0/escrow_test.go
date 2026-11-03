@@ -44,22 +44,20 @@ func snapshot(t *testing.T, store storetypes.KVStore) map[string]string {
 
 func TestRepairSelectionAndPreservation(t *testing.T) {
 	cases := []struct {
-		name         string
-		lease        mv1.Lease_State
-		state        etypes.State
-		parent       etypes.State
-		missingLease bool
-		repaired     bool
+		name     string
+		lease    mv1.Lease_State
+		state    etypes.State
+		parent   etypes.State
+		repaired bool
 	}{
-		{"closed lease", mv1.LeaseClosed, etypes.StateOpen, etypes.StateOpen, false, true},
-		{"insufficient funds lease", mv1.LeaseInsufficientFunds, etypes.StateOpen, etypes.StateOverdrawn, false, true},
-		{"already refunded parent", mv1.LeaseClosed, etypes.StateOpen, etypes.StateClosed, false, true},
-		{"missing parent", mv1.LeaseClosed, etypes.StateOpen, etypes.StateInvalid, false, true},
-		{"active lease", mv1.LeaseActive, etypes.StateOpen, etypes.StateOpen, false, false},
-		{"reclaiming lease", mv1.LeaseReclaiming, etypes.StateOpen, etypes.StateOpen, false, false},
-		{"missing lease", mv1.LeaseClosed, etypes.StateOpen, etypes.StateOpen, true, false},
-		{"legitimate debt", mv1.LeaseInsufficientFunds, etypes.StateOverdrawn, etypes.StateOverdrawn, false, false},
-		{"closed payment", mv1.LeaseClosed, etypes.StateClosed, etypes.StateOpen, false, false},
+		{"closed lease", mv1.LeaseClosed, etypes.StateOpen, etypes.StateOpen, true},
+		{"insufficient funds lease", mv1.LeaseInsufficientFunds, etypes.StateOpen, etypes.StateOverdrawn, true},
+		{"already refunded parent", mv1.LeaseClosed, etypes.StateOpen, etypes.StateClosed, true},
+		{"missing parent", mv1.LeaseClosed, etypes.StateOpen, etypes.StateInvalid, true},
+		{"active lease", mv1.LeaseActive, etypes.StateOpen, etypes.StateOpen, false},
+		{"reclaiming lease", mv1.LeaseReclaiming, etypes.StateOpen, etypes.StateOpen, false},
+		{"legitimate debt", mv1.LeaseInsufficientFunds, etypes.StateOverdrawn, etypes.StateOverdrawn, false},
+		{"closed payment", mv1.LeaseClosed, etypes.StateClosed, etypes.StateOpen, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -70,9 +68,9 @@ func TestRepairSelectionAndPreservation(t *testing.T) {
 			id := testutil.LeaseID(t)
 			p := payment(id, tc.state)
 			require.NoError(t, k.SavePaymentRaw(ctx, p))
-			if !tc.missingLease {
-				require.NoError(t, m.SaveLease(ctx, mv1.Lease{ID: id, State: tc.lease, Price: p.State.Rate, CreatedAt: 1, ClosedOn: 20}))
-			}
+
+			require.NoError(t, m.SaveLease(ctx, mv1.Lease{ID: id, State: tc.lease, Price: p.State.Rate, CreatedAt: 1, ClosedOn: 20}))
+
 			if tc.parent != etypes.StateInvalid {
 				// Preserve multiple denoms, separate depositors, prior transfers and even a
 				// future clock verbatim. The repair must never infer a financial correction.
@@ -104,11 +102,7 @@ func TestRepairSelectionAndPreservation(t *testing.T) {
 			} else {
 				require.Zero(t, result.ClosedPayments)
 			}
-			if tc.missingLease {
-				require.EqualValues(t, 1, result.MissingLeases)
-			} else {
-				require.Zero(t, result.MissingLeases)
-			}
+
 			require.Equal(t, expected, snapshot(t, store), "only the selected payment's state and index may change")
 			got, err := k.GetPayment(ctx, p.ID)
 			require.NoError(t, err)

@@ -141,7 +141,7 @@ func testStore(t *testing.T) (*keeper, sdk.Context, *testBank) {
 
 	bank := &testBank{key: bankKey}
 	cdc := codec.NewProtoCodec(codectypes.NewInterfaceRegistry())
-	epochs := epochskeeper.NewKeeper(runtime.NewKVStoreService(epochKey), cdc)
+	epochs := epochskeeper.NewKeeper(cdc, runtime.NewKVStoreService(epochKey))
 	epochs.SetHooks(epochstypes.NewMultiEpochHooks())
 	require.NoError(t, epochs.AddEpoch(ctx, epochstypes.EpochInfo{
 		ID:                      "day",
@@ -176,10 +176,29 @@ func quorum(p types.ReporterPolicy, outcome types.Outcome) []types.Vote {
 
 func populatedGenesis() *types.GenesisState {
 	g := types.DefaultGenesis()
-	g.Params.Reporters = []string{testOwner(2).String(), testOwner(3).String(), testOwner(4).String(), testOwner(5).String()}
-	p1 := g.Params.Policy(1)
-	p1.Members = []string{testOwner(1).String(), testOwner(2).String(), testOwner(3).String(), testOwner(4).String()}
-	p2 := g.Params.Policy(2)
+
+	g.Params.Reporters = []string{
+		testOwner(2).String(),
+		testOwner(3).String(),
+		testOwner(4).String(),
+		testOwner(5).String(),
+	}
+
+	policyMembers := make([]string, len(g.Params.Reporters))
+	copy(policyMembers, g.Params.Reporters)
+
+	p1 := types.ReporterPolicy{
+		Version:   1,
+		Members:   policyMembers,
+		Threshold: g.Params.ReportersThreshold.Clone(),
+	}
+
+	p2 := types.ReporterPolicy{
+		Version:   2,
+		Members:   policyMembers,
+		Threshold: g.Params.ReportersThreshold.Clone(),
+	}
+
 	g.Policies = []types.ReporterPolicy{p1, p2}
 	g.PolicySequence = 2
 	deadline := int64(86400 * 18)
@@ -562,7 +581,7 @@ func TestGenesisCommittedDatabaseRestart(t *testing.T) {
 	ctx := sdk.NewContext(first, header, false, log.NewNopLogger())
 	bank := &testBank{key: bankKey}
 	cdc := codec.NewProtoCodec(codectypes.NewInterfaceRegistry())
-	epochs := epochskeeper.NewKeeper(runtime.NewKVStoreService(epochKey), cdc)
+	epochs := epochskeeper.NewKeeper(cdc, runtime.NewKVStoreService(epochKey))
 	native := epochstypes.EpochInfo{
 		ID:                      "day",
 		Duration:                10 * time.Minute,
@@ -585,7 +604,7 @@ func TestGenesisCommittedDatabaseRestart(t *testing.T) {
 	require.Equal(t, int64(100), second.LastCommitID().Version)
 	header.Height = 101
 	restarted := sdk.NewContext(second, header, false, log.NewNopLogger())
-	restoredEpochs := epochskeeper.NewKeeper(runtime.NewKVStoreService(epochKey), cdc)
+	restoredEpochs := epochskeeper.NewKeeper(cdc, runtime.NewKVStoreService(epochKey))
 	restoredEpochs.SetHooks(epochstypes.NewMultiEpochHooks())
 	restored := NewKeeper(cdc, key, tkey, template.accounts, bank, restoredEpochs, template.authority).(*keeper)
 	gotEpoch, err := restoredEpochs.GetEpoch(restarted, "day")

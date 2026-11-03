@@ -76,6 +76,7 @@ import (
 	"pkg.akt.dev/go/sdkutil"
 
 	sinktypes "pkg.akt.dev/go/node/sink/v1"
+
 	akeeper "pkg.akt.dev/node/v2/x/audit/keeper"
 	bmekeeper "pkg.akt.dev/node/v2/x/bme/keeper"
 	ckeeper "pkg.akt.dev/node/v2/x/cert/keeper"
@@ -293,16 +294,22 @@ func (app *App) InitNormalKeepers(
 	)
 
 	app.Keepers.Akash.Epochs = epochskeeper.NewKeeper(
-		runtime.NewKVStoreService(app.keys[epochstypes.StoreKey]),
 		cdc,
+		runtime.NewKVStoreService(app.keys[epochstypes.StoreKey]),
 	)
 
-	app.Keepers.Akash.Sink = sinkkeeper.NewKeeper(cdc, app.keys[sinktypes.StoreKey], app.tkeys[sinktypes.TStoreKey],
-		app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank, app.Keepers.Akash.Epochs,
+	app.Keepers.Akash.Sink = sinkkeeper.NewKeeper(
+		cdc,
+		app.keys[sinktypes.StoreKey],
+		app.tkeys[sinktypes.TStoreKey],
+		app.Keepers.Cosmos.Acct,
+		app.Keepers.Cosmos.Bank,
+		app.Keepers.Akash.Epochs,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String())
 
 	app.Keepers.Cosmos.Crisis = crisiskeeper.NewKeeper( //nolint: staticcheck
-		cdc, runtime.NewKVStoreService(app.keys[crisistypes.StoreKey]),
+		cdc,
+		runtime.NewKVStoreService(app.keys[crisistypes.StoreKey]),
 		invCheckPeriod,
 		app.Keepers.Cosmos.Bank,
 		authtypes.FeeCollectorName,

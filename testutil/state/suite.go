@@ -7,7 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cosmos/cosmos-sdk/runtime"
 	"github.com/stretchr/testify/mock"
+	epochstypes "pkg.akt.dev/go/node/epochs/v1beta1"
+	sinktypes "pkg.akt.dev/go/node/sink/v1"
 
 	"cosmossdk.io/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -30,11 +33,13 @@ import (
 	akeeper "pkg.akt.dev/node/v2/x/audit/keeper"
 	bmekeeper "pkg.akt.dev/node/v2/x/bme/keeper"
 	dkeeper "pkg.akt.dev/node/v2/x/deployment/keeper"
+	epochskeeper "pkg.akt.dev/node/v2/x/epochs/keeper"
 	ekeeper "pkg.akt.dev/node/v2/x/escrow/keeper"
 	mhooks "pkg.akt.dev/node/v2/x/market/hooks"
 	mkeeper "pkg.akt.dev/node/v2/x/market/keeper"
 	oraclekeeper "pkg.akt.dev/node/v2/x/oracle/keeper"
 	pkeeper "pkg.akt.dev/node/v2/x/provider/keeper"
+	skeeper "pkg.akt.dev/node/v2/x/sink/keeper"
 )
 
 // TestSuite encapsulates a functional Akash nodes data stores for
@@ -53,12 +58,14 @@ type Keepers struct {
 	Audit      akeeper.IKeeper
 	Authz      *emocks.AuthzKeeper
 	Bank       *emocks.BankKeeper
+	Epochs     epochskeeper.Keeper
 	BME        bmekeeper.Keeper
 	Deployment dkeeper.IKeeper
 	Escrow     ekeeper.Keeper
 	Market     mkeeper.IKeeper
 	Oracle     oraclekeeper.Keeper
 	Provider   pkeeper.IKeeper
+	Sink       skeeper.Keeper
 }
 
 // SetupTestSuite provides toolkit for accessing stores and keepers
@@ -179,6 +186,10 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 		keepers.Audit = akeeper.NewKeeper(cdc, app.GetKey(atypes.StoreKey))
 	}
 
+	if keepers.Epochs == nil {
+		keepers.Epochs = epochskeeper.NewKeeper(cdc, runtime.NewKVStoreService(app.GetKey(epochstypes.StoreKey)))
+	}
+
 	if keepers.Oracle == nil {
 		keepers.Oracle = oraclekeeper.NewKeeper(cdc, app.GetKey(oracletypes.StoreKey), app.GetTKey(oracletypes.TStoreKey), authtypes.NewModuleAddress(govtypes.ModuleName).String())
 	}
@@ -217,6 +228,18 @@ func SetupTestSuiteWithKeepers(t testing.TB, keepers Keepers) *TestSuite {
 	}
 	if keepers.Provider == nil {
 		keepers.Provider = pkeeper.NewKeeper(cdc, app.GetKey(ptypes.StoreKey))
+	}
+
+	if keepers.Sink == nil {
+		keepers.Sink = skeeper.NewKeeper(
+			cdc,
+			app.GetKey(sinktypes.StoreKey),
+			app.GetTKey(sinktypes.TStoreKey),
+			keepers.Account,
+			keepers.Bank,
+			keepers.Epochs,
+			authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		)
 	}
 
 	hook := mhooks.New(keepers.Deployment, keepers.Market)

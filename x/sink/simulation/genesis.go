@@ -14,6 +14,8 @@ import (
 func RandomizedGenState(simState *module.SimulationState) {
 	genesis := types.DefaultGenesis()
 	params := &genesis.Params
+	genesis.PolicySequence = 1
+
 	if len(simState.Accounts) > 0 {
 		params.Enabled = true
 		params.RefundsEnabled = true

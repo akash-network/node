@@ -390,11 +390,17 @@ func TestSinkUpgradePreservesNativeEpoch(t *testing.T) {
 		exported, err := k.ExportGenesis(ctx)
 		require.NoError(t, err)
 		require.Equal(t, sinktypes.DefaultGenesis(), exported)
-		state, err := k.NewQuerier().State(ctx, nil)
+		q := k.NewQuerier()
+
+		state, err := q.State(ctx, nil)
 		require.NoError(t, err)
+
+		pResp, err := q.Params(ctx, nil)
+		require.NoError(t, err)
+
 		require.EqualValues(t, native.CurrentEpoch, state.Epoch)
 		require.True(t, state.SendUsage.Amount.IsZero())
-		require.False(t, state.Params.Enabled)
+		require.False(t, pResp.Params.Enabled)
 	}
 }
 

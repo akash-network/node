@@ -19,9 +19,9 @@ func TestRandomizedGenesis(t *testing.T) {
 	cdc := sdkutil.MakeEncodingConfig().Codec
 	for _, count := range []int{0, 1, 3, 8} {
 		var previous []byte
-		for seed := int64(0); seed < 10; seed++ {
+		for seed := range int64(10) {
 			var first []byte
-			for run := 0; run < 2; run++ {
+			for run := range 2 {
 				r := rand.New(rand.NewSource(seed)) //nolint:gosec
 				state := &module.SimulationState{
 					Cdc:      cdc,
@@ -32,8 +32,11 @@ func TestRandomizedGenesis(t *testing.T) {
 
 				simulation.RandomizedGenState(state)
 				var genesis types.GenesisState
+
 				cdc.MustUnmarshalJSON(state.GenState[types.ModuleName], &genesis)
+
 				require.NoError(t, genesis.Validate())
+
 				require.Equal(t, count > 0, genesis.Params.Enabled)
 				require.Equal(t, types.DefaultParams().ReporterChallengePeriod, genesis.Params.ReporterChallengePeriod)
 

@@ -43,7 +43,7 @@ type keeper struct {
 }
 
 // NewKeeper returns a new keeper by codec and storeKey inputs.
-func NewKeeper(storeService store.KVStoreService, cdc codec.BinaryCodec) Keeper {
+func NewKeeper(cdc codec.BinaryCodec, storeService store.KVStoreService) Keeper {
 	sb := collections.NewSchemaBuilder(storeService)
 	k := &keeper{
 		storeService: storeService,
