@@ -29,7 +29,7 @@ validator.
 - `commit` and `validators` at the client's latest height plus one and at the
   newest block.
 - Not catching up, with its latest block younger than `maxAgeSeconds`.
-- x/sink `OpenTransfers` is optional; see [pending transfers](#pending-transfers).
+- x/sink schema 4 and its canonical queries are required. See [canonical Sink](sink-migration-v2.md).
 
 **Solana RPC.** HTTP JSON-RPC only; the relayer polls and opens no WebSocket. It
 uses `getAccountInfo`, `getMultipleAccounts`, `getProgramAccounts` on the ICS07
@@ -51,24 +51,24 @@ interrupted upload from it. Never point two running relayers at one directory.
 Copy [`relayer/config.example.json`](../relayer/config.example.json). Relative
 paths resolve against the config file's directory. Unknown fields are rejected.
 
-| Field                    | Required | Meaning                                                                        |
-| ------------------------ | -------- | ------------------------------------------------------------------------------ |
-| `akashRpc`               | yes      | CometBFT RPC URL                                                               |
-| `akashChainId`           | yes      | Akash chain; the node and the bridge account must both match                   |
-| `solanaRpc`              | yes      | Solana JSON-RPC URL; no credentials in the URL                                 |
-| `solanaGenesisHash`      | yes      | Checked at startup; get it from a trusted source, not the RPC you configure    |
-| `programId`              | yes      | AKT program                                                                    |
-| `payerKeyFile`           | yes      | Owner-only keypair file                                                        |
-| `stateDir`               | yes      | Journals and spend ledger                                                      |
-| `lightClientProgram`     | no       | Pin. Unset follows the bridge account                                          |
-| `maxLamportsPerTransfer` | no       | [Spend limit](#spend-limit), default 5,000,000                                 |
-| `maxHeaderSignatures`    | no       | [Large commits](#large-validator-sets) above this are trimmed, default 100     |
-| `refreshFraction`        | no       | Update an idle client after this share of its trusting period, default 1/5     |
-| `retryMaxSeconds`        | no       | Longest backoff for a failed transfer, default 900                             |
-| `pruneIntervalSeconds`   | no       | Consensus-state pruning interval, default 600                                  |
-| `maxAgeSeconds`          | no       | Oldest acceptable Akash block, default 60                                      |
-| `pollSeconds`            | no       | Pause between passes, default 3                                                |
-| `headerEncoder`          | no       | Encoder binary, default `tools/header-encoder/target/debug/akt-header-encoder` |
+| Field                    | Required | Meaning                                                                       |
+| ------------------------ | -------- | ----------------------------------------------------------------------------- |
+| `akashRpc`               | yes      | CometBFT RPC URL                                                              |
+| `akashChainId`           | yes      | Akash chain; the node and the bridge account must both match                  |
+| `solanaRpc`              | yes      | Solana JSON-RPC URL; no credentials in the URL                                |
+| `solanaGenesisHash`      | yes      | Checked at startup; get it from a trusted source, not the RPC you configure   |
+| `programId`              | yes      | AKT program                                                                   |
+| `payerKeyFile`           | yes      | Owner-only keypair file                                                       |
+| `stateDir`               | yes      | Journals and spend ledger                                                     |
+| `lightClientProgram`     | no       | Pin. Unset follows the bridge account                                         |
+| `maxLamportsPerTransfer` | no       | [Spend limit](#spend-limit), default 5,000,000                                |
+| `maxHeaderSignatures`    | no       | [Large commits](#large-validator-sets) above this are trimmed, default 100    |
+| `refreshFraction`        | no       | Update an idle client after this share of its trusting period, default 1/5    |
+| `retryMaxSeconds`        | no       | Longest backoff for a failed transfer, default 900                            |
+| `pruneIntervalSeconds`   | no       | Consensus-state pruning interval, default 600                                 |
+| `maxAgeSeconds`          | no       | Oldest acceptable Akash block, default 60                                     |
+| `pollSeconds`            | no       | Pause between passes, default 3                                               |
+| `headerEncoder`          | no       | Encoder binary, default `../../.cache/solana/target/debug/akt-header-encoder` |
 
 Skipping trust across a long interval needs the old validator set to hold more
 than a third of the new voting power. Lower `refreshFraction` if the set changes
@@ -144,45 +144,34 @@ same validator set fails the same way.
 
 ## Costs and funding
 
-Costs at the 5,000-lamport base fee, without priority fees. A proof under 500
-bytes takes four transactions: create, append, resolve and close. Measured on
-a local stack on 2026-10-19:
+A relay pays for proof creation, optional growth, each 500-byte upload chunk, resolution and close. Query the actual cluster fee and rent schedules when funding the payer.
 
-| Action                        | Lamports                    | Notes                                                     |
-| ----------------------------- | --------------------------- | --------------------------------------------------------- |
-| Mint to a wallet without ATA  | 3,458,240 measured          | Status 1,398,960 and ATA 2,039,280 rent, four fees        |
-| Mint to an existing ATA, void | 1,418,960 measured          | Status rent and fees                                      |
-| Proof buffer                  | about 29,800,000, temporary | Returned when it closes                                   |
-| Header update                 | 1,503,360 plus fees         | Consensus-state rent; chunk, batch and lookup rent return |
-| Pruning                       | returns 1,503,360 per state | To the pruning payer, whoever paid                        |
+Proof buffers contain an 80-byte header and at most 16,384 proof bytes. Creation allocates at most 10,240 bytes, and one growth funds the remaining allocation when needed. This rent is temporary liquidity. Resolution also locks permanent outcome-account rent and, for a new recipient token account, ATA rent.
 
-Updates happen only when a pending transfer needs a newer proof height, or
-when the client has aged `refreshFraction` of its trusting period. Hold a few
-days of spend plus 0.05 SOL for temporary accounts. The relayer does not watch
-its own balance; alert on it.
+Read `proof-buffer-ready` for the actual allocation and refundable balance. `relay-payment` records fees, payer balance deltas and buffer funding or reclamation. The ledger's `bufferFundedLamports` and `bufferReclaimedLamports` accumulate until an explicit budget reset. After a reset, inspect the proof journal's observed lamports and the on-chain buffer balance for liquidity still held. Allow enough payer liquidity for the full proof buffer in addition to the net-spend budget. A 0.05 SOL balance can be insufficient for a large proof.
+
+Header updates store consensus accounts and use separate temporary accounts. Updates occur when a transfer needs a newer proof height or when the client reaches `refreshFraction` of its trusting period. Monitor the payer balance and reclaim expired consensus states under the existing permissions.
 
 ## Spend limit
 
 The relayer records the lamports it pays per transfer: every fee, plus the
-rent its resolving transaction locks. Proof-buffer rent is not counted: each
-attempt closes its buffer, and the next attempt closes one a failure left.
+rent its resolving transaction locks. Refundable proof-buffer rent is tracked separately. An interrupted upload resumes its existing allocation and byte prefix. A changed canonical proof closes the exact journaled buffer before replacement.
 Header updates serve all transfers and are not charged.
 
 When a transfer's total exceeds `maxLamportsPerTransfer`, the relayer stops
 paying for it and logs `relay-budget-exhausted` with the total and attempt
 count, then every 15 minutes. It still closes a leftover proof buffer, which
-only returns rent. The default 5,000,000 lamports is about 1.4 times a mint to a
-new ATA, which leaves room for dozens of failed attempts.
+only returns rent. The default net-spend limit remains 5,000,000 lamports. Buffer liquidity does not authorize increasing that limit.
 
-The ledger is `<stateDir>/relay-budget-<genesis>-<programId>.json`, so restarts
+The ledger is `<stateDir>/relay-budget-v2-<genesis>-<programId>.json`, so restarts
 keep it. Investigate the transfer's `relay-retry` errors first, then reset:
 
 ```bash
-npx tsx local/relay.ts --config /etc/akt-relayer/config.json --reset-budget 42
+npx tsx local/relay.ts --config /etc/akt-relayer/config.json --reset-budget 'akash1.../9001/42'
 npx tsx local/relay.ts --config /etc/akt-relayer/config.json --reset-budget all
 ```
 
-The running relayer reads the ledger every pass. Resolved transfers leave it
+The running relayer reads the ledger every pass. Resolved transfers remain recorded in it
 automatically.
 
 ## Checks before paying
@@ -191,11 +180,12 @@ For each transfer without a Solana status, the relayer:
 
 1. Waits without paying while the bridge is paused or the per-transfer maximum
    or daily cap applies (`relay-wait`).
-2. Never relays a record Akash shows as voided or refunded without a Solana
-   status (`relay-unbacked-settlement`).
+2. Never mints a record Akash shows as refund-pending or refunded without a
+   Solana status. It still relays a governance void order in either status.
+   Without that order, it reports `relay-unbacked-settlement`.
 3. Right before the first paid transaction, re-reads the transfer at the newest
-   Akash height. It skips if the transfer became voided or refunded, or its void
-   order changed (`relay-final-check`).
+   Akash height. It skips if a planned mint became unbacked or the void order
+   changed (`relay-final-check`).
 4. Simulates every transaction before sending it, so a failing one costs
    nothing.
 
@@ -204,12 +194,9 @@ relayers. The reconciler reports unbacked records.
 
 ## Pending transfers
 
-Nodes with x/sink `OpenTransfers` list every non-terminal transfer: pending,
-voided or held. The relayer reads Solana statuses for those only. Older nodes
-get a cursor scan of Solana statuses from the lowest unresolved record ID; it
-restarts at 1 with each process. `relay-index` logs the mode in use. In
-`OpenTransfers` mode a refunded record without a Solana status is terminal and
-not listed, so only the reconciler reports it.
+The relayer queries every dispute, then refund-pending, then transfer-pending transfer. It also discovers immutable history in chronological order. Every page uses one committed height. A durable full-ID checkpoint survives empty `next_key` pages and restarts. No numeric fallback exists. An open-set listing error stops the pass. A history discovery failure raises `relay-discovery-failed` and retains the checkpoint; open transfers still run.
+
+A terminal conflict is still discoverable. An Akash refund-pending or paid refund without a finalized Solana status produces an alert and no mint. An immutable governance order is a distinct proof action, not a changed deposit value.
 
 ## Alerts
 
@@ -223,7 +210,8 @@ Route these to a person.
 | `relayer-access` with `none`, `relay-header-blocked`  | Payer cannot update the client                     | Request the role, or rely on another updater     |
 | `relay-budget-exhausted`                              | Spend limit reached for one transfer               | Read its `relay-retry` errors, fix, reset        |
 | `relay-final-check`                                   | Akash changed between planning and paying          | Review the transfer; usually a governance action |
-| `relay-unbacked-settlement`                           | Akash void or refund without a Solana status       | Investigate the reporters or governance          |
+| `relay-unbacked-settlement`                           | Refund state without a Solana status or void order | Investigate the reporters or governance          |
+| `relay-discovery-failed`                              | History scan failed; open relays continue          | Restore access to the required history           |
 | repeated `relay-retry`, `header-retry`                | Transfers or updates keep failing                  | Check RPCs, payer balance and client status      |
 | `header-upload-abandoned`                             | Re-pin during an upload                            | None; the new client gets a fresh upload         |
 | `header-unsupported`                                  | No commit subset fits one update                   | The client will expire; plan a verifier change   |
@@ -231,3 +219,11 @@ Route these to a person.
 
 Watch the light client's age as well. The relayer stops at expiry with
 `light client expired`; recovery is a governance re-pin.
+
+## V2 durable recovery
+
+Follow [the complete recovery contract](sink-migration-v2.md#recovery-contract). Start v2 in a fresh namespace. Preserve scalar-ID state files. Budget files bind the new deployment and reject old versions. Signed transaction jobs and charged-signature dedupe survive restart; retries retain their deadline. Never delete a pending job to bypass an ambiguous transaction.
+
+An expired blockhash with no signature history cannot establish whether the transaction landed earlier. The relayer retains the exact signed intent and reports `expired transaction history unresolved`. This stops the recovery pass, including proof-buffer cleanup and ledger completion, until the configured Solana RPC supplies the signature outcome and transaction metadata. Restore access to retained or archival history for the same genesis and retry. A permanent transfer-status account establishes the business outcome but supplies neither the transaction fee nor the payer balance change. A budget reset cannot resolve this history gap. Even an expired transaction that never landed stays blocked when the available RPC evidence cannot establish that fact.
+
+For an unfinished proof, the relayer checks the exact saved key at its old Akash state height. Only the store's explicit `version does not exist` response at that key and height permits moving past a lost checkpoint. Signed Solana intent reconciliation runs first. The relayer obtains a newer exact native proof and rechecks current state before closing the owned old buffer and replacing the job. Fees and returned rent use transaction metadata as usual. If no newer usable checkpoint exists, the job remains. Unknown RPC failures, ambiguous Solana history, and invalid replacement proofs preserve the evidence for retry. Final on-chain proof verification and clock checks remain required.

@@ -19,7 +19,7 @@ holds by reversing them in order to the base, checks that the whole series then
 applies, and applies the rest. A tree that holds no exact prefix of the series,
 such as a partial or edited one, fails without changes. A host with the first
 three patches applied gains only the fourth. Setup records the patch hashes in
-`.deps/ibc-contracts/.akt-patch-sha256`.
+`../../.cache/solana/deps/ibc-contracts/.akt-patch-sha256`.
 
 ## Monotonic latest height
 
@@ -126,7 +126,7 @@ limit prunes two states in one transaction, the next call prunes the last
 expired state, and an idle call sends nothing. Reclaimed rent and fees reconcile
 exactly with the payer balance, and the latest state remains.
 
-The run passed on 2026-10-18 (`.cache/scale/run-ywjzKy`). One prune used 19,434
+The run passed on 2026-10-18 (`../../.cache/solana/run/scale/run-ywjzKy`). One prune used 19,434
 compute units; two in one transaction used 47,868. The host unit test
 `expiry_boundary_matches_ibc_go` checks the boundary. With
 `test_cpi_target` built, all 89 upstream `ics07-tendermint` library tests pass
@@ -176,7 +176,7 @@ receive lamports when `remove_accounts_executable_flag_checks` is active, as on
 `solana-test-validator`. On a build without the check, with the marker granted,
 a transaction signed with that keypair and listing the upgradeable loader, which
 keeps the program account writable, pruned an expired state and moved its rent
-into the program account (`.cache/scale/run-h3Ufs7`).
+into the program account (`../../.cache/solana/run/scale/run-h3Ufs7`).
 
 A program ID can sign whenever its keypair is known, so the marker is a real
 `RELAYER_ROLE` member to any other program that checks that role on the same
@@ -223,7 +223,7 @@ validators. It checks that:
 - with the marker granted again, the non-member submits conflicting headers and
   freezes the client.
 
-It passed on 2026-10-18 (`.cache/scale/run-dHYQ8v`). The receipts, recovery,
+It passed on 2026-10-18 (`../../.cache/solana/run/scale/run-dHYQ8v`). The receipts, recovery,
 misbehaviour, expiry, latest-height, prune and split runs also passed with this
 build (`run-cRLUFp`, `run-gIdkCR`, `run-donLTA`, `run-UnuKfX`, `run-B41eI8`,
 `run-NX20eZ`, `run-j1UB2e`), and so did all 89 upstream `ics07-tendermint`
@@ -235,7 +235,7 @@ prune used 19,467 CU against 19,434.
 ## Builds and in-place upgrade
 
 SBF output depends on the absolute build path. The verifier crates in
-`.deps/ibc-contracts/packages` sit outside the `ibc-solana` Cargo workspace, so
+`../../.cache/solana/deps/ibc-contracts/packages` sit outside the `ibc-solana` Cargo workspace, so
 their crate metadata hashes, and with them symbol order and code layout, include
 that path. The same sources built at the workstation checkout and at a scratch
 path gave the same size and strings but different code layout.
@@ -266,14 +266,14 @@ recompressed GitHub tarball still matches), applies the patch series, and runs
 `anchor build` for `ics07_tendermint`, `access_manager` and `akt_solana`. It
 fails if a build changes a committed `Cargo.lock` or if a generated IDL differs
 from `idls/`. The output directory, by default
-`.cache/verifiable-build/<commit>`, receives the three `.so` files,
+`../../.cache/solana/verifiable-build/<commit>`, receives the three `.so` files,
 `SHA256SUMS`, and `build-info.txt` with the commit, local image ID, upstream
 content hash, patch hashes and tool versions. The image is tagged
 `akt-solana-verifiable-build:<commit prefix>` locally and must never be pushed.
 
 On 2026-10-18, commit `17238fe` built from this checkout and from a
 `git worktree` under a scratch path produced identical files
-(`.cache/verifiable-build/17238fe-*`). An earlier build of the same files from
+(`../../.cache/solana/verifiable-build/17238fe-*`). An earlier build of the same files from
 an uncommitted copy matched too.
 
 | File                  |     Bytes | SHA-256                                                            |
@@ -285,7 +285,7 @@ an uncommitted copy matched too.
 The ICS07 and access-manager hashes hold for any commit with the same patches,
 upstream revision and Dockerfile; `akt_solana.so` also depends on `programs/`,
 `Cargo.lock` and `idls/`. The verifiable ICS07 and access-manager files also
-passed `npx tsx local/scale.ts open` (`.cache/scale/run-2CyyD4`). On the Apple
+passed `npx tsx local/scale.ts open` (`../../.cache/solana/run/scale/run-2CyyD4`). On the Apple
 Silicon workstation under Docker Desktop's x86_64 emulation, the image took
 about two minutes to build and each run about ten, mostly Anchor's host IDL
 builds.

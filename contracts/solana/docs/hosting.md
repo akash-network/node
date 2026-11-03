@@ -57,17 +57,17 @@ and the portal on one machine, and keep no keys on the portal host.
 
 ## Versions and artifacts
 
-| Item                        | Version                                                                                       | Source                                                                              |
-| --------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| Akash node with x/sink      | **TBD**: release `v2.2.0` from public `akash-network/node` `feat/sink` (tested at `f7d52ce3`) | Akash release binary, **TBD** link                                                  |
-| Akash chain SDK             | **TBD**: release from public `akash-network/chain-sdk` `feat/sink` (tested at `b6a12d9e`)     | Built into the node                                                                 |
-| Agave (Solana)              | Match mainnet's majority version at launch; 4.3.2 on 2026-10-23                               | `agave-validator` is built from the public tag; Anza no longer ships it in releases |
-| Relayer, reporter and tools | **TBD**: release of `akash-network/node` `contracts/solana`                                   | Built in CI                                                                         |
-| Node.js                     | 24.14.1                                                                                       | nodejs.org                                                                          |
-| Rust                        | 1.89.0 (`contracts/solana/rust-toolchain.toml`)                                               | rustup                                                                              |
-| Anchor CLI                  | 0.32.1                                                                                        | build host only                                                                     |
-| Go                          | 1.26.2 (node `go.mod`)                                                                        | build host only                                                                     |
-| Program hashes              | Published at launch from `npm run build:verifiable`                                           | Release notes, **TBD**                                                              |
+| Item                        | Version                                                                                  | Source                                                             |
+| --------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Akash node with x/sink      | Reviewed schema 4 source and matching SDK dependency                                     | Build the reviewed node checkout and retain its source fingerprint |
+| Akash chain SDK             | Same local archive in the bridge and portal; retain its package version and archive hash | [SDK integration](sdk-integration.md)                              |
+| Agave (Solana)              | Pin the runtime and build tools in the reviewed deployment manifest                      | Retain the exact binary and its hash                               |
+| Relayer, reporter and tools | Reviewed `contracts/solana` source paired with that SDK and program IDL                  | Build with the checked-in package lock                             |
+| Node.js                     | 24.14.1                                                                                  | nodejs.org                                                         |
+| Rust                        | 1.89.0 (`contracts/solana/rust-toolchain.toml`)                                          | rustup                                                             |
+| Anchor CLI                  | 0.32.1                                                                                   | build host only                                                    |
+| Go                          | 1.26.2 (node `go.mod`)                                                                   | build host only                                                    |
+| Program hashes              | Record the ELF, IDL and generated TypeScript hashes from one build                       | `npm run build:verifiable` output and the deployment manifest      |
 
 Build once in CI and ship artifacts; do not build on production hosts. A
 `contracts/solana` build needs `npm ci`, `npm run build` (program IDL),
@@ -176,19 +176,19 @@ Every alert goes to a person on call. The full list is in
 [production deployment](production-deployment.md#monitoring). The ones DevOps
 owns:
 
-| Signal                                                                                                               | Alert                               |
-| -------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| Light-client age (now minus latest verified Akash time)                                                              | Warn at 25% of 14 days, page at 50% |
-| Transfer pending on Akash too long                                                                                   | Page well past a few minutes        |
-| Supply mismatch (Solana supply vs AKT locked on Akash)                                                               | Page on any mismatch                |
-| Program or configuration change on Solana, any x/sink proposal                                                       | Page                                |
-| Relayer alerts (`relay-unbacked-settlement`, `relay-budget-exhausted`, `header-unsupported`, `light-client-changed`) | Page                                |
-| Reporter alerts (see [reporter alerts](reporter.md#alerts))                                                          | Page                                |
-| Relayer payer and reporter fee balances                                                                              | Below a few days of spend           |
-| Node height stalled, node catching up                                                                                | Page                                |
-| Solana history no longer covers the challenge period                                                                 | Page                                |
-| Disk above 70% on any host                                                                                           | Page                                |
-| Clock drift (NTP)                                                                                                    | Page                                |
+| Signal                                                                                                                                         | Alert                               |
+| ---------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| Light-client age (now minus latest verified Akash time)                                                                                        | Warn at 25% of 14 days, page at 50% |
+| Transfer pending on Akash too long                                                                                                             | Page well past a few minutes        |
+| Supply mismatch (Solana supply vs AKT locked on Akash)                                                                                         | Page on any mismatch                |
+| Program or configuration change on Solana, any x/sink proposal                                                                                 | Page                                |
+| Relayer alerts (`relay-unbacked-settlement`, `relay-discovery-failed`, `relay-budget-exhausted`, `header-unsupported`, `light-client-changed`) | Page                                |
+| Reporter alerts, including `audit-unavailable` (see [reporter alerts](reporter.md#alerts))                                                     | Page                                |
+| Relayer payer and reporter fee balances                                                                                                        | Below a few days of spend           |
+| Node height stalled, node catching up                                                                                                          | Page                                |
+| Solana history no longer covers the challenge period                                                                                           | Page                                |
+| Disk above 70% on any host                                                                                                                     | Page                                |
+| Clock drift (NTP)                                                                                                                              | Page                                |
 
 ### Portal
 
@@ -254,7 +254,7 @@ disk halted the test network for 29 hours and expired its light client.
 | ------------------------------------ | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Relayer down                         | Transfers wait; nothing is lost                       | Restart; it resumes an interrupted upload from its state directory; a second relayer covers it                                                                          |
 | Relayer down near 14 days            | Light client expires; mints stop                      | Page early (client age alert). Recovery: deploy a new ICS07 instance, `init-client` from a new checkpoint and `repin` through the multisig; waiting transfers then mint |
-| More than 2 of 7 reporters down      | Transfers mint on Solana but stay pending on Akash    | Restore reporters; governance can settle a stalled transfer with `MsgResolveTransfer`                                                                                   |
+| More than 2 of 7 reporters down      | Transfers mint on Solana but stay pending on Akash    | Restore reporters; governance can settle a stalled transfer with `MsgRestartTransfer`, `MsgConfirmMint` or `MsgConfirmVoid`, using the current `expected_round`         |
 | Daily mint cap reached               | Transfers wait with their AKT locked on Akash         | None needed; they mint once the cap allows                                                                                                                              |
 | Solana RPC history gap               | Reporters cannot confirm older transfers              | Archive source; never shrink retention                                                                                                                                  |
 | Akash node misses upgrade height     | That service stops following the chain                | Manual cosmovisor switch (above)                                                                                                                                        |
@@ -280,9 +280,29 @@ disk halted the test network for 29 hours and expired its light client.
 
 ## Open items
 
-- Release versions and binary links (node `v2.2.0`, chain SDK, `contracts/solana`).
+- Reviewed source fingerprints, binary hashes and artifact locations for the node, SDK and services.
 - Production portal server.
 - Configured production monitor and reconciler.
 - Reporter operators and their custody setup.
 - Who holds the guardians and multisig seats (decisions L1, L2, L3).
 - Production upgrade name and height (decision A1).
+
+## Maintained testnet receipt adapter
+
+Run `npm run portal:testnet` with `AKT_TEAM_TESTNET=1`, `AKT_TEAM_HOST`, `AKT_TEAM_ORIGIN` and `AKT_PORTAL_DIST` set explicitly. `AKT_PORTAL_DIST` names a separately built portal dist directory. The server binds loopback port 18080. Configure your existing authenticated proxy separately. This adapter does not claim production ownership or provide production deployment automation.
+
+When the proxy publishes Solana on a different port, set `AKT_TEAM_SOLANA_RPC_PORT` to that public RPC port. Status responses advertise it and the next port for WebSocket; local service connections still use `AKT_SOLANA_RPC_PORT`. For the hosted testnet, public 18999/19000 forward to loopback 18799/18800. Keep those forwarding and firewall rules in place.
+
+The API is version 2. Configuration reports the transfer minimum and maximum, account epoch cap, and aggregate epoch cap in uakt. The minimum is positive while deposits are enabled. Zero disables the account cap. Both sending caps may be below the transfer maximum. Limits use Akash's configured native quota period. Owner history returns the newest 100 records, newest first, at one committed height, with a required `truncated` flag. Older records remain accessible by ID. Discovered rows have `txHash: null` and a required composite ID. Their `createdAt` is null only when the creation height is below the node's earliest retained block; other block or status failures return 503. ID receipts need no transaction index. Transaction receipts retain byte/hash/message/response/record binding. Missing and pruned state fail instead of becoming an empty history.
+
+`local/team-contracts.ts` mirrors the portal's public contract. Holds and the five financial statuses remain separate. On-chain status 3 maps to HTTP `void_requested`; Solana `voided` remains a confirmed outcome. Origin allowlists, bounded proxy requests and responses, network genesis pins and concise errors remain enforced. The adapter logs error classes without secret-bearing messages, stacks or request bodies.
+
+Run `SINK_PORTAL_DIR=/path/to/sink-portal npm run test:portal-contract` when
+integrating either repository. The check compares the service copy with the
+portal's authoritative `contracts.ts` and fails on any difference.
+
+Origin checks do not authenticate native clients. Keep the loopback listener
+behind an authenticated proxy or a tailnet with explicit access-control rules.
+Requests without an Origin header rely on that access boundary.
+
+The adapter binds loopback at `AKT_TEAM_PORT` (default 18080). API and proxy responses are bounded to 2 MiB. The history page limit is independent of native sending amount limits.

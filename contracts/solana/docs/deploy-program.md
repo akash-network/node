@@ -75,7 +75,7 @@ them. Branch from the audited commit:
    series in `scripts/apply-light-client-patches.sh`:
 
    ```bash
-   up=.deps/ibc-contracts
+   up=../../.cache/solana/deps/ibc-contracts
    for program in ics07-tendermint:HqPcGpVHxNNFfVatjhG78dFVMwjyZixoKPdZSt3d3TdD:$ICS07_ID \
                   access-manager:4fMih2CidrXPeRx77kj3QcuBZwREYtxEbXjURUgadoe1:$AM_ID; do
      IFS=: read -r dir old new <<< "$program"
@@ -94,10 +94,10 @@ them. Branch from the audited commit:
 
    ```bash
    npm run setup:light-client || true
-   cp .deps/ibc-contracts/ibc-solana/target/idl/{ics07_tendermint,access_manager}.json idls/
+   cp ../../.cache/solana/deps/ibc-contracts/ibc-solana/target/idl/{ics07_tendermint,access_manager}.json idls/
    git diff --stat idls/          # only the two "address" lines
    npm run setup:light-client
-   npm run build                  # target/idl/akt_solana.json now names AKT_ID
+   npm run build                  # ../../.cache/solana/target/idl/akt_solana.json now names AKT_ID
    ```
 
 4. Check and commit. `git diff` against the audited commit must show only the
@@ -293,8 +293,8 @@ admin bundle --emit launch/tx/08-bridge.json launch/tx/08a-client.json launch/tx
 ```
 
 The policy shown is the launch default in base units: 1,000,000 AKT per
-transfer and 10,000,000 AKT per UTC day. Set the x/sink `max_transfer` and
-`solana_daily_mint_cap` to the same values.
+transfer and 10,000,000 AKT per UTC day. Set the x/sink `max_amount_per_transfer` and
+`max_transfer_amount_per_epoch` to independently chosen sending capacity. Solana keeps its own `daily_mint_cap`; neither amount cap schedules mints.
 
 `init-client` refuses a checkpoint older than the trusting period and notes
 when the client expires without an update. The trusting period runs from the
@@ -377,7 +377,7 @@ A larger build needs `solana program extend` first.
 | Access manager | `grant_role`, `revoke_role` | `grant-relayer`, `revoke-relayer`, `open-relaying`, `close-relaying` | AM admin                       |
 | Loader         | `Upgrade`                   | `upgrade-program`                                                    | Program upgrade authority      |
 
-The instructions are built from the IDLs (`target/idl/akt_solana.json` and
+The instructions are built from the IDLs (`../../.cache/solana/target/idl/akt_solana.json` and
 `idls/`), so a rebuilt program changes them only where its interface
 changes. `local/admin-instructions.test.ts` checks each against Anchor's own
 builder and decodes it back.

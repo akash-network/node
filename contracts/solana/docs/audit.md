@@ -1,316 +1,127 @@
-# Audit package: AKT Solana program
+# AKT Solana audit reference
 
-This package prepares the AKT issuance program for an external audit. It gives
-the scope, how to build and test, the trust model, every instruction and
-account, the invariants with where each is enforced and tested, the threat
-model, and the accepted risks. Paths under `src/` are relative to
-`programs/akt-solana`.
+This reference describes the native protobuf proof contract used with Sink schema 4. The earlier `audit-v1` artifact hashes and validator results do not certify this program. A deployment needs a matching node, SDK archive, program, IDL, services and portal, with their commits and artifact hashes recorded together.
 
-## Audit commit
+[Bridge protocol](bridge-protocol.md) specifies the keys and proven values. [Launch and recovery](sink-migration-v2.md) specifies the service journals, budgets and recovery rules. [Production deployment](production-deployment.md) covers authorities and operational acceptance.
 
-Frozen on 2026-10-19 as `audit-v1`. Running `npm run build:verifiable` on that
-snapshot reproduces:
+## Scope and trust
 
-| File                  | SHA-256                                                            |
-| --------------------- | ------------------------------------------------------------------ |
-| `akt_solana.so`       | `961612a9aa0ee6de4a0ccc208665bc960430fa7c5544766fcf612d7bffd640dc` |
-| `ics07_tendermint.so` | `75aad2305e16e8f2d5b42cdcb32f184f4645a93140ac71e6cb8a180d3f188b6b` |
-| `access_manager.so`   | `c334e3d6ff81da93e8faba8f23593efe66790f5971e30020e77dacb364d83ed6` |
+The program verifies membership using the pinned `tendermint-light-client-membership` library inside AKT. It reads the authenticated ICS07 client and consensus accounts. It does not call the verifier's membership instruction through CPI. ICS07 still owns header verification, consensus roots, freezing and pruning.
 
-Later commits change no program input unless this section names a new tag.
+The program's audit scope includes `programs/akt-solana`, its membership dependencies in `Cargo.lock`, the generated ICS07 account types, and the patch series applied by `scripts/apply-light-client-patches.sh`. The upstream client, access manager, Anchor, Solana runtime, SPL Token and Metaplex remain dependencies to review. Akash, reporters and the relayer have separate code and trust boundaries.
 
-## Scope
+| Actor                                        | Authority                                                                                                                             |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| AKT upgrade authority                        | Replaces the program, configures the bridge and mint policy, changes the light-client pin, sets the guardian and controls metadata.   |
+| ICS07 and access-manager upgrade authorities | Control the code and trust configuration that produce the consensus roots AKT accepts.                                                |
+| Pause guardian                               | Disables minting. It cannot enable minting or change policy.                                                                          |
+| Relayers                                     | Submit headers and proofs and pay fees and rent. Their honest operation affects liveness; every resolution still needs a valid proof. |
+| Reporters                                    | Observe finalized Solana outcomes and authorize Akash settlement under its reporter policy. They have no Solana mint authority.       |
+| Akash governance                             | Orders a void in canonical settlement state and can resolve Akash disputes using asserted Solana evidence.                            |
 
-In scope:
-
-- `programs/akt-solana` at the audit commit, including the
-  `ics07-tendermint-interface` crate it depends on. That crate only runs
-  Anchor's `declare_program!` over `idls/ics07_tendermint.json`.
-- The ICS07 patch series in `patches/`, applied in this order by
-  `scripts/apply-light-client-patches.sh` to `cosmos/ibc-contracts` at
-  `dc78ade828b766b218fb6bcb5417fdaf8e553021`:
-  1. `ics07-signature-batches.patch`
-  2. `ics07-monotonic-latest-height.patch`
-  3. `ics07-consensus-pruning.patch`
-  4. `ics07-open-relaying.patch`
-
-  [Verifier patches](verifier-patches.md) and
-  [signature batches](signature-batches.md) give their design and test record.
-
-Out of scope:
-
-- The upstream ICS07 Tendermint client and access manager at the pinned
-  commit, apart from the patched lines.
-- SPL Token, the Associated Token Account program and Metaplex Token Metadata.
-- Anchor 0.32.1, Agave 2.3 and its syscalls.
-- The Akash x/sink module, relayer, reporters, monitor and portal. This
-  package states only what the program assumes of them.
-
-## Build and test
-
-| Tool             | Version       |
-| ---------------- | ------------- |
-| Rust             | 1.89.0        |
-| Solana / Agave   | 2.3.13        |
-| Anchor           | 0.32.1        |
-| Node             | 24            |
-| Go, for fixtures | 1.23 or later |
-
-```bash
-npm ci
-npm run setup:light-client # fetch, patch and build the pinned verifier
-npm run build              # build AKT and its IDL
-npm run test:unit          # cargo test -p akt-solana --lib
-npm test                   # fresh local validator and the integration suite
-npm run build:verifiable   # pinned container build of a commit
-```
-
-`npm run setup:light-client` downloads the pinned upstream source into
-`.deps/`, applies the patch series, builds the verifier and access manager and
-checks their IDLs against `idls/`. These commands need only this repository;
-`npm run setup` also builds the Akash node from this repository.
-
-`npm run build:verifiable` runs `scripts/verifiable-build.sh [--rev <commit>]`.
-It archives the commit, so uncommitted files never reach the build, and builds
-`akt_solana.so`, `ics07_tendermint.so` and `access_manager.so` at a fixed path
-in a pinned linux/amd64 image. It writes `SHA256SUMS` and `build-info.txt`,
-and fails if a build changes a committed `Cargo.lock` or if the verifier's
-generated IDL differs from `idls/`. To check a deployment, compare
-`SHA256SUMS` with `solana program dump` truncated to the file's length. See
-[verifiable builds](verifier-patches.md#verifiable-builds).
-
-`npm test` runs `scripts/test-contract.sh`. It builds AKT, starts its own
-validator with a fresh wallet and preloads Metaplex, the verifier, the access
-manager, two relocated copies of the verifier for re-pin tests (one frozen) and
-upstream's `test_cpi_proxy`. The tests then take about 70 seconds, mostly
-waiting for a client to expire. Real Akash proofs are covered separately
-by `npm run test:sink`.
-
-[Production deployment](production-deployment.md) covers authorities,
-parameters, the launch sequence, monitoring and incident runbooks.
+Upgrade authorities are trusted for issuance. A malicious AKT upgrade can bypass caps, and a malicious verifier or checkpoint can authenticate false state. Production authority controls are specified in [production deployment](production-deployment.md#authorities-and-keys).
 
 ## Source map
 
-| Path                                    | Contents                                                                          |
-| --------------------------------------- | --------------------------------------------------------------------------------- |
-| `src/lib.rs`                            | Entrypoints in lifecycle order, each with caller, effect, event and errors        |
-| `src/constants.rs`                      | PDA seeds, token parameters and limits                                            |
-| `src/state.rs`                          | Accounts, mint-cap accounting and policy validation                               |
-| `src/events.rs`, `src/errors.rs`        | Events and errors                                                                 |
-| `src/wire.rs`                           | x/sink record encoding, proof keys and void value                                 |
-| `src/light_client.rs`                   | Checks on pinned-client accounts, expiry, and the membership CPI                  |
-| `src/instructions/upgrade_authority.rs` | Upgrade-authority check shared by admin instructions                              |
-| `src/instructions/genesis.rs`           | `initialize`                                                                      |
-| `src/instructions/token_metadata.rs`    | `set_token_metadata`                                                              |
-| `src/instructions/bridge_admin.rs`      | `configure_bridge`, `set_bridge_enabled`, `set_mint_policy`, `repin_light_client` |
-| `src/instructions/pause_guardian.rs`    | `set_pause_guardian`, `guardian_pause`                                            |
-| `src/instructions/proof_buffer.rs`      | `create_proof_buffer`, `append_proof`, `close_proof_buffer`                       |
-| `src/instructions/mint_transfer.rs`     | `mint_transfer` and the recipient rules                                           |
-| `src/instructions/void_transfer.rs`     | `void_transfer`                                                                   |
-| `src/instructions/resolution.rs`        | Invocation rules and terminal status shared by mint and void                      |
-| `ics07-tendermint-interface/`           | Generated ICS07 CPI and account types                                             |
-| `tests/genesis.test.ts`                 | Genesis; runs `metadata.ts` and `bridge.ts` on the same validator                 |
-| `tests/idl.test.ts`                     | Deployed-interface and error-table checks                                         |
+Paths beginning with `src/` are relative to `programs/akt-solana`.
 
-## Architecture
+| Source                                                              | Responsibility                                                                                |
+| ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `src/lib.rs`                                                        | Entrypoints and the SBF allocator.                                                            |
+| `src/constants.rs`                                                  | PDA seeds, token parameters and proof limits.                                                 |
+| `src/state.rs`                                                      | Accounts, mint-cap accounting, proof-buffer sizing and policy validation.                     |
+| `src/wire.rs`                                                       | Composite IDs, canonical record encoding, status keys and full-key nonces.                    |
+| `src/authorization.rs`                                              | Bounded parsing of the permanent void authorization in native settlement bytes.               |
+| `src/light_client.rs`                                               | Authenticated client and consensus accounts, time checks and both ICS23 membership levels.    |
+| `src/instructions/proof_buffer.rs`                                  | Creation, bounded growth, sequential upload and rent reclamation.                             |
+| `src/instructions/mint_transfer.rs`                                 | Record membership, recipient checks, caps and issuance or recipient void.                     |
+| `src/instructions/void_transfer.rs`                                 | Settlement membership and governance void.                                                    |
+| `src/instructions/resolution.rs`                                    | Invocation restrictions and permanent outcome storage.                                        |
+| `src/instructions/upgrade_authority.rs`                             | Upgrade-authority check shared by admin instructions.                                         |
+| `src/instructions/bridge_admin.rs`                                  | Bridge configuration, policy, pause switch and re-pinning.                                    |
+| `src/instructions/pause_guardian.rs`                                | Guardian assignment and pause.                                                                |
+| `src/instructions/genesis.rs`, `src/instructions/token_metadata.rs` | Zero-supply initialization and metadata.                                                      |
+| `tests/idl.test.ts`                                                 | The instruction, account, event and error interface.                                          |
+| `tests/bridge.ts`                                                   | Validator scenarios, including proof failures, recipient rules, pause, replay and re-pinning. |
 
-```text
-Akash x/sink                ICS07 client on Solana         AKT program on Solana
-MsgSink writes              relayers submit signed         anyone uploads an ICS23
-transfer_key(id)            headers; each stored           proof to a proof buffer
-(77-byte record)            consensus state holds a        and calls mint_transfer
-                            verified app hash              or void_transfer:
-governance writes                                            CPI verify_membership
-void_key(id)                                                 then mint to the
-                                                             recipient's ATA or void
-reporters read TransferResolved and report the outcome back to Akash
-```
+## Proofs and identity
 
-Genesis creates the AKT mint with zero supply and mints nothing. The only mint
-is `mint_transfer`: exactly the amount of an x/sink record whose membership in
-Akash state the pinned light client verifies. Each record ID gets one
-permanent `TransferStatus`, `Minted` or `Voided`. A record is voided when its
-proven recipient cannot receive AKT, or when Akash governance writes a void
-order that `void_transfer` proves. Akash refunds a voided deposit after
-reporters observe the status; that path is outside this program.
+A transfer ID contains a nonzero 20-byte owner, positive int64 height and positive uint64 per-block sequence. The permanent status PDA uses `transfer`, owner20, LE64 height and LE64 sequence. Mint and void initialize that same account, and no instruction closes it. Re-pinning does not create a new outcome namespace.
 
-[Bridge protocol](bridge-protocol.md) specifies the x/sink encoding, proof
-heights and outcomes. `transfer_key(id)` and `void_key(id)` in `src/wire.rs`
-build the 10-byte sink store keys: a two-byte prefix, then the ID as a
-big-endian u64.
+The mint key is `0200 || 14 || owner20 || BE64(height) || BE64(sequence)`. The program constructs the expected native protobuf `RecordData` from the recipient and amount. Its Coin denomination is `uakt`; the positive amount fits uint64. There is no custom 41-byte record or record-version argument.
 
-## Roles and trust
+The governance key is `0301 || status || 14 || owner20 || BE64(height) || BE64(sequence)`. A void proves the entire native protobuf `SettlementData` value, including its permanent `void_authorization`. Status is in the key. The program rejects ambiguous or malformed authorization fields and enforces `deposit_height <= requested_height < proof_height` and `0 < requested_round <= settlement_round`.
 
-| Role                  | Power in this program                                                                                             | Trust                                                                                        |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| AKT upgrade authority | Every admin instruction; replacing the code                                                                       | Full. It can mint without limit by upgrading AKT or by re-pinning a client it controls       |
-| Pause guardian        | `guardian_pause` sets `bridge_enabled` to false                                                                   | None beyond pausing. It cannot enable minting or change anything else                        |
-| Pinned light client   | Its `verify_membership` decides whether a record or void order is in Akash state at a stored height               | Full for issuance. Its upgrade authority and checkpoint are trust decisions of the same tier |
-| Relayers              | Submit headers to the client with `RELAYER_ROLE` or open relaying; submit proofs and pay rent for mints and voids | Liveness only. They cannot forge headers or records                                          |
-| Any signer            | Its own proof buffers; `mint_transfer` and `void_transfer` with valid proofs                                      | None. Mint and void are permissionless                                                       |
-| Reporters             | None on Solana. They read `TransferResolved` and status accounts and report to Akash                              | Off-chain, under an Akash threshold                                                          |
-| Akash governance      | Writes `void_key(id)` orders and x/sink parameters                                                                | Trusted to void only transfers it means to refund                                            |
+Both paths authenticate the store path `["sink", key]` against the root in the pinned consensus account. Header H proves state at H-1, so the proof height must be strictly greater than the deposit height. The program checks the pinned executable program, account ownership, PDA addresses, discriminators, chain ID, frozen state, latest height, trusting period and clock drift before membership verification.
 
-The program assumes that x/sink writes each `transfer_key(id)` value once and
-never changes it, that IDs are never reused on the pinned chain, and that only
-governance writes `void_key(id)`. The ICS07 and access-manager upgrade
-authorities belong to the same tier as AKT's; production holds all three in
-one time-locked multisig
-([authorities](production-deployment.md#authorities-and-keys)).
+The program assumes Akash never rewrites immutable transfer data or reuses an ID. Akash import validation rejects record heights at or above the restarted chain's initial height. A reset chain or unrelated fork needs a fresh program namespace, not a re-pin that reuses identities.
 
-## Instructions
+## Instructions and storage
 
-Each entrypoint's doc comment in `src/lib.rs` gives the same information.
-Errors list AKT errors; Anchor constraint errors and an `init` on an existing
-account ("already in use") also apply.
+The generated IDL is the complete interface, including account order, mutability and error codes. The principal lifecycle operations are listed below.
 
-| Instruction           | Caller                                                             | Writable accounts                                              | Effect                                                                                                                                            | Event                 | Main errors                                                                                                                                              |
-| --------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `initialize`          | Upgrade authority, once; pays                                      | `authority`, `config`, `mint`                                  | Creates `LaunchConfig` with minting off and the mint (6 decimals, PDA mint authority, no freeze authority) with zero supply; mints nothing        | `LaunchInitialized`   | `InvalidProgramData`, `UnauthorizedInitializer`                                                                                                          |
-| `set_token_metadata`  | Upgrade authority; pays on creation                                | `admin.authority`, `metadata`                                  | Creates or rewrites Metaplex metadata: name, symbol, URI; mutable; update authority is the mint-authority PDA                                     | `TokenMetadataSet`    | `InvalidAuthority`, `InvalidMetadataUri`, `InvalidMetadata`                                                                                              |
-| `configure_bridge`    | Upgrade authority, once; pays                                      | `admin.authority`, `bridge`                                    | Pins light client and chain ID after checking the client is active; stores the policy and zero usage                                              | `BridgeConfigured`    | `InvalidChainId`, `InvalidPolicy`, `InvalidLightClient`, `WrongChain`, `ClientFrozen`, `ClientExpired`, `InvalidConsensusTimestamp`                      |
-| `set_bridge_enabled`  | Upgrade authority                                                  | `admin.authority`, `config`, `bridge`                          | Sets `bridge_enabled`; needs a configured bridge                                                                                                  | `BridgeEnabledSet`    | `InvalidAuthority`                                                                                                                                       |
-| `set_mint_policy`     | Upgrade authority                                                  | `admin.authority`, `config`, `bridge`                          | Replaces the policy; the day's usage carries over                                                                                                 | `MintPolicySet`       | `InvalidAuthority`, `InvalidPolicy`                                                                                                                      |
-| `set_pause_guardian`  | Upgrade authority; pays on first call                              | `admin.authority`, `pause_guardian`                            | Creates or overwrites the guardian; `None` clears it                                                                                              | `PauseGuardianSet`    | `InvalidAuthority`                                                                                                                                       |
-| `guardian_pause`      | Pause guardian                                                     | `config`                                                       | Sets `bridge_enabled` to false                                                                                                                    | `GuardianPaused`      | `UnauthorizedGuardian`                                                                                                                                   |
-| `repin_light_client`  | Upgrade authority, any time                                        | `admin.authority`, `bridge`                                    | Replaces the pinned program and chain ID after the checks of `configure_bridge`; never reads the old pin; policy and usage carry over             | `LightClientRepinned` | As `configure_bridge`, without `InvalidPolicy`                                                                                                           |
-| `create_proof_buffer` | Anyone; pays and owns the buffer                                   | `submitter`, `proof_buffer`                                    | Creates an empty buffer for 1 to 4,096 bytes                                                                                                      | none                  | `InvalidProofLength`                                                                                                                                     |
-| `append_proof`        | The buffer's submitter                                             | `proof_buffer`                                                 | Appends a nonempty chunk at the next offset, within the declared length                                                                           | none                  | `InvalidProofOffset`, `InvalidProofLength`                                                                                                               |
-| `close_proof_buffer`  | The buffer's submitter                                             | `submitter`, `proof_buffer`                                    | Closes the buffer and returns its rent                                                                                                            | none                  | Anchor `ConstraintHasOne`                                                                                                                                |
-| `mint_transfer`       | Anyone, top-level, after ComputeBudget only; minting enabled; pays | `payer`, `bridge`, `status`, `mint`, `recipient_token_account` | Verifies `transfer_key(id)` = record at `proof_height`; mints to the recipient's ATA (creating it) or voids `InvalidRecipient`; writes the status | `TransferResolved`    | `BridgeDisabled`, `CpiNotAllowed`, `PrecedingInstruction`, `InvalidRecord`, light-client and proof errors, `InvalidClock`, `TransferLimit`, `DailyLimit` |
-| `void_transfer`       | Anyone, top-level, after ComputeBudget only; pays                  | `payer`, `status`                                              | Verifies `void_key(id)` = `[1, id]` at `proof_height`; writes `Voided / Governance`; runs while minting is paused                                 | `TransferResolved`    | `CpiNotAllowed`, `PrecedingInstruction`, `InvalidRecord`, light-client and proof errors                                                                  |
+| Instruction                            | Effect                                                                                                                                            |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `initialize`                           | Creates the mint and launch configuration once, under the upgrade authority. Supply starts at zero and bridge minting is disabled.                |
+| `configure_bridge`                     | Pins an active client and chain ID, and stores the mint policy.                                                                                   |
+| `set_bridge_enabled`, `guardian_pause` | Control issuance. Only the upgrade authority can enable it.                                                                                       |
+| `set_mint_policy`                      | Changes the independent Solana per-transfer and daily caps and vault list without erasing consumed capacity.                                      |
+| `repin_light_client`                   | Checks and selects a new active client without reading the old deployment. Permanent resolution accounts remain.                                  |
+| `create_proof_buffer`                  | Creates a submitter-owned buffer for 1 to 16,384 proof bytes. The first allocation is at most 10,240 bytes.                                       |
+| `grow_proof_buffer`                    | Funds and allocates the remaining capacity. The current maximum needs at most one growth.                                                         |
+| `append_proof`                         | Appends at most 500 bytes at the exact next offset within the declared length.                                                                    |
+| `close_proof_buffer`                   | Returns the buffer's rent to its submitter.                                                                                                       |
+| `mint_transfer`                        | Proves the native record, then mints to its valid legacy ATA or records an invalid-recipient void. Cap or proof failures roll back the operation. |
+| `void_transfer`                        | Proves the canonical settlement's permanent governance order and records a void, including while issuance is paused.                              |
 
-Light-client and proof errors are `InvalidLightClient`, `WrongChain`,
-`ClientFrozen`, `ClientExpired`, `InvalidConsensusTimestamp`,
-`InvalidProofHeight` and `IncompleteProof`, plus ICS07 errors such as
-`MembershipVerificationFailed` from the CPI.
+A proof buffer uses `proof`, submitter32 and all 32 bytes of `SHA256(proven_key)` as seeds. Each status key has a different nonce. The account needs an 80-byte header plus the declared proof length, up to 16,464 bytes. Only the submitter grows, appends or closes it. Another payer may use a complete buffer, but membership and nonce checks still bind its contents to the operation.
 
-AKT's error codes run from 7000 to 7023 so they never share a number with
-ICS07's, which start at 6000 and reach clients as the same custom error of the
-AKT instruction. The first variant has an explicit discriminant because
-Anchor 0.32's `#[error_code(offset)]` leaves the IDL at 6000.
-
-`admin` is the `UpgradeAuthority` account group: this program, its
-ProgramData, and the signer recorded there as upgrade authority. Its signer is
-writable in every admin instruction because some of them pay rent with it.
-
-A verified mint with a 620-byte proof used 133,000 to 152,000 compute units,
-including ATA creation, in the local suite. Relayers request 1,400,000 units
-and a 256 KB heap frame for the verifier.
-
-## Accounts and PDAs
-
-Sizes include the 8-byte discriminator.
-`state::tests::account_sizes_match_the_deployed_layout` pins them.
-
-| Account                 | Address                                          | Owner      |  Bytes | Created by                         | Changed by                                                                   | Closed by            |
-| ----------------------- | ------------------------------------------------ | ---------- | -----: | ---------------------------------- | ---------------------------------------------------------------------------- | -------------------- |
-| `LaunchConfig`          | `["config"]`                                     | AKT        |     84 | `initialize`                       | `bridge_enabled`: `set_bridge_enabled`, `guardian_pause`                     | Never                |
-| AKT mint                | `["mint"]`                                       | SPL Token  |     82 | `initialize`                       | Supply: `mint_transfer`; holders burn                                        | Never                |
-| Mint authority          | `["mint_authority"]`                             | No account |      0 | Never; it only signs               | None                                                                         | None                 |
-| `BridgeConfig`          | `["bridge"]`                                     | AKT        |    656 | `configure_bridge`                 | Pin: `repin_light_client`; policy: `set_mint_policy`; usage: `mint_transfer` | Never                |
-| `PauseGuardian`         | `["guardian"]`                                   | AKT        |     42 | First `set_pause_guardian`         | `set_pause_guardian`                                                         | Never                |
-| `ProofBuffer`           | `["proof", submitter, nonce as u64 LE]`          | AKT        |  4,152 | `create_proof_buffer`              | `append_proof`                                                               | `close_proof_buffer` |
-| `TransferStatus`        | `["transfer", record ID as u64 LE]`              | AKT        |     73 | `mint_transfer` or `void_transfer` | Never                                                                        | Never                |
-| Recipient token account | ATA of recipient and mint, legacy SPL Token      | SPL Token  |    165 | `mint_transfer`, if absent         | Holder                                                                       | Holder               |
-| Token metadata          | Metaplex `["metadata", Metaplex, mint]`          | Metaplex   | Varies | `set_token_metadata`               | `set_token_metadata`                                                         | Never                |
-| ICS07 client state      | `["client"]` under the pinned program            | ICS07      |        | ICS07                              | Read only                                                                    |                      |
-| ICS07 consensus state   | `["consensus_state", height as u64 LE]` under it | ICS07      |        | ICS07                              | Read only; ICS07 prunes expired ones                                         |                      |
-
-Account names, field order and types, PDA seeds, instruction names, arguments
-and account lists are the deployed interface. The zero-supply genesis build
-removed the treasury from `initialize`, `LaunchConfig` (now version 2) and the
-genesis event, so a network launched with the earlier 1,000,000 AKT genesis
-mint is redeployed, not upgraded in place. `tests/idl.test.ts` requires every
-instruction, account, event and type of this build's IDL to stay unchanged and
-allows only additions.
+Upload and resolution transactions request a 256 KiB heap and the configured compute limit. Full-capacity uploads also need the larger heap. Refundable proof-buffer rent is temporary liquidity. The permanent status account's rent and transaction fees are lasting costs. Service budget accounting and crash recovery are described in [launch and recovery](sink-migration-v2.md#buffer-funding-and-recovery).
 
 ## Invariants
 
-| #   | Invariant                                                                                                                                                                                                                                                           | Enforced in                                                                                                                                                                                                                            | Tested by                                                                                                                                                                                                                                                                  |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Genesis runs once, only for the upgrade authority, and mints nothing: supply starts at zero                                                                                                                                                                         | `genesis.rs`: `init` on `config` and `mint`, no `mint_to`; no instruction closes either                                                                                                                                                | `genesis.test.ts`: "creates the mint with zero supply and disables bridge issuance", "rejects repeating genesis", "rejects repeating genesis from a non-upgrade-authority signer"                                                                                          |
-| 2   | Only this program can mint, and no one can freeze                                                                                                                                                                                                                   | Mint authority is the `["mint_authority"]` PDA, no freeze authority; no instruction changes token authorities                                                                                                                          | `genesis.test.ts`: genesis assertions, "rejects direct minting by another signer", "rejects taking over the mint authority", "rejects a substituted mint authority"                                                                                                        |
-| 3   | Supply equals the amounts of all `Minted` statuses, minus burns                                                                                                                                                                                                     | The only `mint_to` call is in `mint_transfer::issue`; `issue` mints `record.amount` and the same instruction stores `Minted { amount: record.amount }`                                                                                 | Supply checks after every step in `bridge.ts`                                                                                                                                                                                                                              |
-| 4   | Each record ID resolves at most once, across pauses and re-pins                                                                                                                                                                                                     | Mint and void `init` `["transfer", id]`; nothing closes it; the seed holds the ID alone                                                                                                                                                | `bridge.ts`: "rejects replay and a governance void after minting", "honors a proven governance void while minting is paused", "re-pins away from an expired, closed deployment without replay"                                                                             |
-| 5   | AKT is issued only for a record proven in Akash state at a verified height of an active, unfrozen, pinned client                                                                                                                                                    | `mint_transfer` runs `TransferRecord::validate` and `light_client::verify_membership` (pinned executable program, owned PDAs, `check_active`, height at most the latest, complete buffer, program-built path and value) before `issue` | `bridge.ts`: "rejects modified amounts, recipients, IDs and proof bytes in the real verifier", "rejects incomplete proofs and untrusted client accounts", "rejects an expired client even though its membership proof remains valid"; `light_client` and `wire` unit tests |
-| 6   | Each mint is at most `per_transfer_max`, and each UTC day's mints at most `daily_mint_cap`; a cap failure leaves the record pending                                                                                                                                 | `BridgeConfig::next_mint_total` in `issue`, with a checked add and a clock-regression check; `MintPolicy::validate`                                                                                                                    | `state` unit tests; `bridge.ts`: "retries transfer limits and daily caps without voiding or resetting usage"                                                                                                                                                               |
-| 7   | While `bridge_enabled` is false no `mint_transfer` succeeds, including recipient voids; `void_transfer` still does. Only the upgrade authority enables; the guardian can only disable                                                                               | `MintTransfer::config` constraint; `VoidTransfer` does not read `config`; `ManageBridge` requires `UpgradeAuthority`; `guardian_pause` writes only `false`                                                                             | `bridge.ts`: "rejects disabled bridge issuance and unauthorized activation", "lets the pause guardian disable but never enable minting", "honors a proven governance void while minting is paused"                                                                         |
-| 8   | `Voided / Governance` requires a proven void order `void_key(id)` = `[1, id as u64 LE]`                                                                                                                                                                             | `void_transfer` with `wire::void_key` and `wire::void_value`                                                                                                                                                                           | `bridge.ts` governance void; `wire::tests::proof_keys_and_void_value_use_the_documented_format`                                                                                                                                                                            |
-| 9   | Tokens go only to the recipient's legacy ATA for the AKT mint. The recipient is a System-owned on-curve key or an allowlisted vault, and never an executable, the zero key, the mint authority or a token account. Otherwise the record voids and no ATA is created | `MintTransfer` address constraints; `accepts_recipient`; `ata_usable`                                                                                                                                                                  | `bridge.ts`: "voids an invalid recipient without creating its ATA or minting" (token account, executable, zero key), "voids a recipient whose ATA owner was reassigned", "allows registered vault PDAs and voids unregistered PDAs"; `ata_usable` unit test                |
-| 10  | Mint and void run only as top-level instructions preceded by ComputeBudget instructions alone, so `TransferResolved` is decodable and not truncated                                                                                                                 | `resolution::require_top_level_invocation`                                                                                                                                                                                             | `bridge.ts`: "rejects mint and void called through another program", "rejects mint and void after an instruction other than compute budget"; `resolution` unit tests                                                                                                       |
-| 11  | Only the upgrade authority configures; the pin changes only through `configure_bridge` and `repin_light_client`, each requiring an active client for the given chain                                                                                                | `UpgradeAuthority`; `check_chain_id`; `light_client::check_active`; `BridgeConfig` `init`                                                                                                                                              | `bridge.ts`: "rejects unauthorized configuration and a wrong chain", "pins the real client once and keeps minting disabled", "re-pins an active client only to a checked deployment"; `metadata.ts`                                                                        |
-| 12  | Only a buffer's submitter writes or closes it; writes are sequential and within the declared length                                                                                                                                                                 | `has_one = submitter`; `append_proof` offset and length checks                                                                                                                                                                         | `bridge.ts`: "protects proof uploads from other writers, gaps and oversize chunks", "returns upload rent only to its owner and retains permanent transfer status"                                                                                                          |
-| 13  | The record encoding and proof keys match x/sink                                                                                                                                                                                                                     | `wire.rs`                                                                                                                                                                                                                              | `wire` unit tests against a hand-written 77-byte vector; `npm run test:sink` against the real Akash app                                                                                                                                                                    |
+| Invariant                                                   | Enforcement and checks                                                                                                                                                          |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Genesis cannot mint or repeat.                              | `genesis.rs` initializes the mint and config and has no mint CPI. Genesis validator tests check supply and authority.                                                           |
+| Each ID resolves at most once.                              | Mint and void initialize the same permanent status PDA. Replay and re-pin scenarios test this behavior.                                                                         |
+| Only authenticated transfer amounts can mint.               | `wire.rs` builds the canonical value and `light_client.rs` checks both membership levels before `mint_transfer.rs` issues tokens. Shared SDK vectors check the encoding.        |
+| A governance order cannot itself pay a refund.              | Solana records a void outcome. Akash separately requires finalized evidence, authorization, no hold, an elapsed challenge and available refund capacity.                        |
+| A permanent Solana void prevents a later mint.              | Both resolution instructions require the same uninitialized status PDA.                                                                                                         |
+| Mint caps are independent of Akash quota epochs.            | `BridgeConfig::next_mint_total` uses checked Solana-clock accounting. Akash uses the configured native `day` epoch. Neither delays immediate submission until a batch boundary. |
+| Pause prevents minting, including recipient voids.          | `MintTransfer` requires the enabled flag. Governance void does not require it.                                                                                                  |
+| Recipients receive only legacy SPL Token AKT.               | Recipient and ATA checks reject unusable destinations; an invalid recipient becomes a void without issuance.                                                                    |
+| Resolution evidence remains attributable.                   | Mint and void require a top-level instruction preceded only by ComputeBudget instructions.                                                                                      |
+| Uploads cannot skip, overwrite or exceed their declaration. | Buffer ownership, offset, allocation and length checks run before writing. Buffer tests cover growth and reclamation.                                                           |
 
-## Threat model
+## Build and verification
 
-| Threat                                                                      | Mitigation                                                                                                                                                                                                              |
-| --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Forged or altered record                                                    | The program builds the path `["sink", transfer_key(id)]` and the borsh value from the instruction's record. Any changed field changes the proven value and fails ICS23 verification                                     |
-| Substituted light client or client accounts                                 | The program account must equal the pin and be executable. Client and consensus accounts must be owned by it, sit at its PDAs, carry ICS07 discriminators and, for consensus states, the expected height                 |
-| Proof against an unverified height                                          | `proof_height` must be at most the client's latest height and have a consensus state under the pinned program; ICS07 reads the root from that account                                                                   |
-| Stale or compromised client                                                 | Every resolution rejects a frozen client, one whose latest consensus state is outside the trusting period, and a consensus timestamp ahead of the clock plus drift. The guardian can pause and the authority can re-pin |
-| Double issuance, or mint after void                                         | One `init`-only status PDA per record ID for both instructions; re-pinning cannot reset it                                                                                                                              |
-| Resolution hidden from reporters                                            | CPI is rejected by stack height; only ComputeBudget instructions may precede, so earlier logs cannot push `TransferResolved` past the 10 KB limit                                                                       |
-| Recipient that cannot hold AKT, or a recipient that blocks its own transfer | Unusable recipients void instead of minting. An ATA whose owner was reassigned would make `create_idempotent` fail forever, so it voids too                                                                             |
-| Excess issuance from a verifier bug or bad checkpoint                       | Per-transfer and daily caps bound the loss; the guardian pauses without the time lock                                                                                                                                   |
-| Unrecoverable client (expired, frozen, closed)                              | `repin_light_client` moves the pin without reading the old deployment                                                                                                                                                   |
-| Proof upload interference                                                   | Buffers are PDAs of the submitter's key; only the submitter appends or closes. Using another submitter's complete buffer is allowed: the proof is still verified against the record                                     |
-| Mint takeover                                                               | The PDA mint authority signs only in `mint_transfer` and `set_token_metadata`; no instruction changes token authorities                                                                                                 |
-| Metadata hijack                                                             | Metaplex lets only the mint authority create metadata; updates check the account's owner, mint and update authority                                                                                                     |
-| Admin key compromise                                                        | Not mitigated on-chain. Production uses a time-locked multisig and an out-of-band guardian ([production deployment](production-deployment.md))                                                                          |
+The pinned build uses Solana 2.3.13 with platform-tools 1.48 and SBF Rust 1.84.1. Host tests and IDL generation use Rust 1.89.0 and Anchor 0.32.1. Scripts use Node 24. Commands run from `contracts/solana` after placing the matching SDK archive at `.cache/solana/chain-sdk.tgz` relative to the node root.
 
-## Accepted risks and known limitations
+```bash
+npm ci
+npm run setup:light-client
+npm run build
+npm run test:unit
+npm run typecheck
+npm run test:services
+npm run test:portal-contract
+npm test
+npm run test:sink
+npm run build:verifiable
+```
 
-- **Upgrade authorities.** Whoever holds the AKT, ICS07 or access-manager
-  upgrade authority can mint without limit. The test network uses one hot key
-  for all of them.
-- **Re-pinning trusts a new checkpoint.** Statuses are keyed by record ID
-  alone. Re-pinning to a reset or forked chain that reuses IDs could mint IDs
-  not yet resolved on Solana for different records. Never re-pin to such a
-  chain.
-- **Permissionless minting races Akash refunds.** Anyone with a valid proof
-  can mint a record that Akash voided or refunded before a Solana status
-  existed. The honest relayer checks Akash first and the reconciler alerts
-  ([blocker 6](production-deployment.md#settlement-safety)).
-- **Wallet check is a format check.** An on-curve System-owned key passes
-  whether or not anyone holds it.
-- **Fixed UTC days.** The daily cap resets at 00:00 UTC on the Solana clock,
-  so up to twice the cap can mint within 24 hours around midnight. A cap
-  lowered below the day's usage blocks mints until the next day.
-- **Lowering `per_transfer_max`** below a pending record's amount stalls it
-  until the policy changes or governance voids it.
-- **Pause also blocks recipient voids,** which go through `mint_transfer`.
-- **Expiry stops resolutions.** Mints and voids fail until a re-pin, while
-  Akash keeps accepting deposits unless its guardian pauses them.
-- **Rent.** Status accounts are permanent and their rent is never returned.
-  Open proof buffers keep their rent until the submitter closes them.
-- **Guardian key is not validated.** `set_pause_guardian(Some(key))` accepts
-  a key no one can sign for, which acts like `None`.
-- **Writable accounts in shared structs.** `ManageBridge` marks `config`
-  writable in `set_mint_policy` and `bridge` writable in `set_bridge_enabled`,
-  and `UpgradeAuthority` marks its signer writable in instructions that pay no
-  rent. Changing them would change the deployed interface; a writable flag
-  grants nothing by itself.
-- **`init_if_needed`** creates the guardian account on the first
-  `set_pause_guardian`. Only the upgrade authority reaches it, the handler
-  rewrites every field and nothing closes the account.
-- **Admin events inside a CPI.** A multisig upgrade authority calls admin
-  instructions through CPI. Anchor's TypeScript `EventParser` ignores events
-  logged inside a CPI, so monitors must attribute `Program data` lines by
-  invocation frame, as the reporters do for resolutions.
-- **Token program.** Only legacy SPL Token accounts receive AKT; Token-2022
-  ATAs are not supported.
-- **The record's `sender` and `height`** are not interpreted on Solana beyond
-  `0 < height <= proof_height`; they matter only as part of the proven value.
-- **Old verified heights.** Any stored consensus state up to the latest height
-  can prove a record while the client is active and the state is not pruned.
-- **Upstream ICS07.** The build emits stack-size diagnostics in curve and
-  misbehaviour conversion code. Membership verification, updates with up to
-  100 validators and misbehaviour freezing pass runtime tests; any reachable
-  stack violation still needs resolution.
-- **Not covered by integration tests:** a Token-2022-owned recipient, the
-  `InvalidMetadata` update path, a negative or regressing Solana clock and day
-  rollover on a live clock. Unit tests cover the underlying rules where they
-  are pure functions.
+`npm test` starts an isolated validator. `npm run test:sink` uses a real Akash proof. The verifiable build archives a commit and excludes uncommitted changes. Its recorded program hash, IDL, dependency lockfiles and toolchain must match the deployed artifact. A host unit test, a synthetic proof, a validator run and a populated fork exercise establish different facts and must be recorded separately.
+
+Canonical implementation checks include native proof vectors, program unit tests and SBF execution of the built ELF. The measured synthetic 127-step mint used 530,878 compute units. That case is not a universal compute bound or a live-chain result. Fresh validator, signed-header, cross-host, wallet and populated fork acceptance remains required for deployment evidence.
+
+## Limitations and operational risks
+
+- Governance evidence and reporter quorum are Akash trust decisions. Solana cannot prove that Akash has not refunded a transfer. Honest refund processing needs a real finalized Solana void first. A false governance confirmation can violate that assumption.
+- Solana mint-cap days reset at UTC midnight. Two adjacent windows can permit twice the daily cap within a rolling 24-hour interval. This clock does not define Akash's configurable quota epochs or its challenge Duration.
+- Lowering a cap preserves usage and can stall pending transfers. Lowering the per-transfer cap below a deposit's amount requires a later policy change or governance void.
+- Expired, frozen or invalid light clients stop both resolution paths. Akash deposits must be paused operationally when recovery cannot keep pace.
+- Status accounts are permanent. Open buffers retain refundable rent until their submitter closes them.
+- A System-owned on-curve address proves format, not that anyone controls its private key. The guardian address is also not a proof of key possession.
+- Token-2022 accounts are not supported. Metadata and admin authority remain separate from holder balances.
+- Old verified heights can authenticate records while their consensus accounts remain available and the client is active. Pruned heights fail; services must obtain a fresh proof without discarding unresolved signed transaction intents.
+- The SBF dependency build emits stack diagnostics in transitive curve code. The canonical program's inspected ELF excludes the reported functions. Live client updates, misbehaviour handling and all deployed dependency artifacts still need their own runtime verification.

@@ -4,7 +4,7 @@ Individual signature receipts exceeded the account and compute limits for an equ
 
 ## Design decision
 
-Three independent candidates and a separate review converged on direct preverification into a compact account. The selected design uses bounded, sorted hashes validated once by the signature verifier. It incorporates explicit initialization and durable upload identity from the receipt candidate and strict parser failure handling from the verifier candidate. Candidate sketches and the review are retained in `.cache/design/`; decisions are logged in `.cache/live-stack-decisions.tsv`.
+Three independent candidates and a separate review converged on direct preverification into a compact account. The selected design uses bounded, sorted hashes validated once by the signature verifier. It incorporates explicit initialization and durable upload identity from the receipt candidate and strict parser failure handling from the verifier candidate. Candidate sketches and the review are retained in `../../.cache/solana/run/design/`; decisions are logged in `../../.cache/solana/run/live-stack-decisions.tsv`.
 
 The batch is an Anchor account with version, submitter, 32-byte session, bump and at most 128 SHA256 digests. A digest covers the exact Ed25519 public key, canonical vote bytes and signature. Its PDA uses `sig_batch`, submitter and session. Initialize explicitly; append only after the existing Ed25519 instruction-introspection check returns true. Duplicate insertion succeeds without mutation. A full batch rejects a new digest. Cleanup requires its submitter and returns rent only to that signer. Creating and filling a batch passes the relaying role check, which [open relaying](verifier-patches.md#open-relaying) extends to any signer; batches stay keyed by submitter.
 
@@ -35,7 +35,7 @@ compute or heap before the batch limit matters: 129/129 runs out of compute and
 signatures per batch, so assembly reads two batches, and checks that a
 257-signature packet spends nothing. On 2026-10-18 the two-batch assembly used
 1,079,492 CU and 39 accounts, against 1,050,586 CU with one batch
-(`.cache/scale/run-PNJVFK`, `run-bLNX0Z`).
+(`../../.cache/solana/run/scale/run-PNJVFK`, `run-bLNX0Z`).
 
 ## Verification gates
 

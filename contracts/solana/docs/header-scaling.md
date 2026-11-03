@@ -17,7 +17,7 @@ npm run test:misbehaviour
 npm run test:expiry
 ```
 
-Run these sequentially. Each starts its own validator on port 19999, preserves evidence under `.cache/scale/run-*`, and stops that validator on completion. Occupied ports fail before startup. Every run creates a separate explicit test checkpoint. It never resets a retained bridge checkpoint or sends public-chain transactions.
+Run these sequentially. Each starts its own validator on port 19999, preserves evidence under `../../.cache/solana/run/scale/run-*`, and stops that validator on completion. Occupied ports fail before startup. Every run creates a separate explicit test checkpoint. It never resets a retained bridge checkpoint or sends public-chain transactions.
 
 See [the test guide](reproduce.md#4-verifier-scale-recovery-and-consensus-failures) for expected result files and host verifier tests.
 
@@ -37,7 +37,7 @@ Agave 2.3.13, at most 64 accounts, 1,232 serialized transaction bytes, 1.4M CU p
 | Weighted, 20/100               |       16,398 |     19 |     517,738 | Quorum rejected; trust unchanged |
 | Weighted, 21 with altered root |       16,494 |     19 |     417,908 | Rejected; trust unchanged        |
 
-Evidence: `.cache/scale/run-1BcQsE/results.json` and `.cache/scale/run-3Gd1mx/results.json`. CU varies with fixture bytes and account derivation. Manifests record program and patch hashes so historical results stay attributable after changes.
+Evidence: `../../.cache/solana/run/scale/run-1BcQsE/results.json` and `../../.cache/solana/run/scale/run-3Gd1mx/results.json`. CU varies with fixture bytes and account derivation. Manifests record program and patch hashes so historical results stay attributable after changes.
 
 Commits keep all 100 entries, using `Absent` for omitted votes. All present signatures are preverified into a submitter/session batch before assembly. Up to 100 signatures the live driver submits full commits, avoiding dependence on a favorable stake distribution; larger commits are trimmed to a quorum (see below). Actual full-set rotation, key-type assumptions and production throughput still need rehearsal.
 
@@ -62,7 +62,7 @@ only the below-quorum case must never authenticate. Runs on 2026-10-18 and
 | Equal, 134/200 |       41,242 |     46 |       58 |   1,230,843 | Heap exhausted           |
 | Equal, 200/200 |       47,578 |     53 |       65 |           0 | Refused before sending   |
 
-Evidence: `.cache/scale/run-mdXm3r`, `run-oheZzi`, `run-gFyPPw` and
+Evidence: `../../.cache/solana/run/scale/run-mdXm3r`, `run-oheZzi`, `run-gFyPPw` and
 `run-JWFO0X`. No commit with more than 128 present signatures authenticated, so
 the verifier's 256-signature limit is not reachable: compute or heap runs out
 first. A full commit fits at 100 validators and fails at 129; the limit between

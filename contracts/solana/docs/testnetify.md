@@ -29,7 +29,7 @@ Run the commands sequentially. The scenario runner deliberately stops validators
 | Solana RPC            | `http://127.0.0.1:18999` |
 | Solana WebSocket      | `ws://127.0.0.1:19000`   |
 
-The default Akash chain ID is `akash-bridge-testnetify-1`. `AKT_LOCAL_RUN=dev` selects `akash-bridge-testnetify-dev-1` and `.cache/testnetify-stack-dev/`. Keep that variable set for every command; all run names share these ports. The mint has the same development PDA as the single-validator profile but lives on a different Solana cluster. Reporter configurations pin that cluster's genesis hash.
+The default Akash chain ID is `akash-bridge-v2-testnetify-1`. `AKT_LOCAL_RUN=dev` selects `akash-bridge-v2-testnetify-dev-1` and `../../.cache/solana/run/testnetify-stack-v2-dev/`. Keep that variable set for every command; all run names share these ports. The mint has the same development PDA as the single-validator profile but lives on a different Solana cluster. Reporter configurations pin that cluster's genesis hash.
 
 ```bash
 npm run testnet:down
@@ -67,13 +67,13 @@ The native tool currently logs a repeated database-close error after its complet
 | Governance void        | A real proposal receives validator votes, writes a void order, and its proof permanently voids a 5 AKT deposit on Solana. Reporters refund it after the challenge, including while minting is paused. |
 | Health and restart     | Four nodes agree on a committed block, all services run, all reporters agree with terminal outcomes and propose no duplicate actions, and supply equals accounted escrow.                             |
 
-The first complete rehearsal minted 12 AKT and refunded 8 AKT. Its final Solana supply and Akash escrow were both **1,000,012 AKT**, including the untouched 1,000,000 AKT launch reserve. Later runs add to these cumulative amounts.
+Fresh schema-4 genesis has zero Sink escrow and zero Solana supply. Run this rehearsal with the matching SDK, node and program. Earlier scalar-ID results do not validate the new schema.
 
 `testnet:verify` is read-only apart from writing its local result file. It checks actual RPC state, balances and reporter decisions. Run it after all deposits settle; it includes independently indexed finalized SPL burns in the escrow/supply check.
 
 ## Evidence
 
-Everything generated lives under the ignored `.cache/testnetify-stack/` directory, or `.cache/testnetify-stack-<run>/` when `AKT_LOCAL_RUN` is set:
+Everything generated lives under the ignored `../../.cache/solana/run/testnetify-stack-v2/` directory, or `../../.cache/solana/run/testnetify-stack-v2-<run>/` when `AKT_LOCAL_RUN` is set:
 
 - `testnetify.log`, `testnetify-started.json`, `testnetify-completed.json` and `seed-snapshot/` show the fork lifecycle.
 - `validator-transition-1.json` through `validator-transition-3.json` record validator additions and authenticated headers.
@@ -90,4 +90,6 @@ The directory also contains development private keys. Share individual public re
 
 The [100-validator benchmark](header-scaling.md) now passes equal and weighted commits through the same patched uploader. Separate runtime tests prove conflicting-header freezing and expired-client rejection. Recovery tests interrupt uploads, race operators and wait for actual lookup closure. They use separate synthetic checkpoints, never an expired retained bridge checkpoint.
 
-All live validators and reporters run on one machine. Production key custody, independent nodes, full-size validator changes, approved upgrade policy, metadata, multisig/time locks and audits remain. The monitor is intentionally bounded to 99 transfers and fails closed on missing history.
+All live validators and reporters run on one machine. Production key custody, independent nodes, full-size validator changes, approved upgrade policy, metadata, multisig/time locks and audits remain. The monitor scans complete chronological history without a record-count limit. Missing or pruned history still fails closed. Scan time and memory grow with history.
+
+The Sink service uses the canonical schema 4 and native protobuf proofs. Follow [launch and recovery](sink-migration-v2.md) before running these commands against a new namespace. Existing numeric-ID deployments remain separate.

@@ -51,7 +51,25 @@ npm run testnet:demo
 npm run testnet:verify
 ```
 
-`doctor` checks versions and the node and chain-sdk checkouts. `setup` builds `chain-sdk/ts`, packs it with `npm pack` into `.cache/chain-sdk.tgz`, runs `npm ci`, and builds `.cache/bin/akash` in the node repository against `chain-sdk/go` and `chain-sdk/go/cli`. It then downloads and patches the pinned verifier, builds the programs and encoder, and checks TypeScript. The local npm archive is ignored and verified against `package-lock.json`; no registry publication is needed. Go SDK substitution lives in the ignored `node/.cache/solana.mod`; committed dependency files stay unchanged. `node/.cache/solana-sdk.json` records the SDK path used.
+`doctor` checks versions and the node and chain-sdk checkouts. `setup` builds `chain-sdk/ts`, packs it with `npm pack` into `../../.cache/solana/chain-sdk.tgz`, runs `npm ci`, and builds `.cache/solana/bin/akash` in the node repository against `chain-sdk/go` and `chain-sdk/go/cli`. It then downloads and patches the pinned verifier, builds the programs and encoder, and checks TypeScript. The local npm archive is ignored and verified against `package-lock.json`; no registry publication is needed. Go SDK substitution lives in the ignored `node/.cache/solana/node.mod`; committed dependency files stay unchanged. `node/.cache/solana/node-sdk.json` records the SDK path used.
+
+### Generated files
+
+Everything the build and local networks generate goes to the node repository's
+ignored `.cache/`, never into `contracts/solana`, except `node_modules`, which
+npm always installs next to `package.json`:
+
+| Path                          | Contents                                                                 |
+| ----------------------------- | ------------------------------------------------------------------------ |
+| `.cache/solana/bin/akash`     | Node binary from `scripts/build-node.sh`, with its `solana.mod` modfile  |
+| `.cache/solana/chain-sdk.tgz` | Packed chain-sdk TypeScript package                                      |
+| `.cache/solana/deps/`         | Pinned light client sources and Metaplex program, downloaded and patched |
+| `.cache/solana/target/`       | Cargo and Anchor output: programs, IDL, TypeScript types, header encoder |
+| `.cache/solana/run/`          | Local networks and test runs, including their development keys and logs  |
+
+`rm -rf .cache/solana contracts/solana/node_modules` from the node repository
+resets everything. Run directories hold private development keys; share
+individual result files, not the directory.
 
 No direnv setup or separate wasm library download is needed for this local build. The Go wasmvm dependency includes native dynamic libraries. Advanced node build commands can still use direnv.
 
@@ -68,9 +86,9 @@ Keep `NODE_SINK_DIR` set for runtime commands with a custom path. By default nod
 The demo deposits 10 AKT and confirms its mint, then deposits 3 AKT to an invalid recipient and waits for a void/refund. A fresh successful run leaves 1,000,010 AKT on Solana and the same amount escrowed on Akash. Later runs add transfers. Health checks read finalized state and reconcile supply, escrow and independently indexed burns.
 
 ```bash
-tail -f .cache/testnetify-stack-dev/relayer.log
-cat .cache/testnetify-stack-dev/demo-result.json
-cat .cache/testnetify-stack-dev/reconciliation.json
+tail -f ../../.cache/solana/run/testnetify-stack-v2-dev/relayer.log
+cat ../../.cache/solana/run/testnetify-stack-v2-dev/demo-result.json
+cat ../../.cache/solana/run/testnetify-stack-v2-dev/reconciliation.json
 npm run testnet:status
 npm run testnet:down
 ```
@@ -98,12 +116,12 @@ Rebuild native changes with `bash scripts/build-node.sh`, Solana changes with `n
 The ordinary demo does not need the old binary. For upgrade tests:
 
 ```bash
-git -C ../.. worktree add --detach .cache/upgrade-base 5193e54672e49ef328f67758ef5c91e24990c09a
-bash scripts/build-node.sh ../../.cache/upgrade-base
+git -C ../.. worktree add --detach .cache/solana/upgrade-base 5193e54672e49ef328f67758ef5c91e24990c09a
+bash scripts/build-node.sh ../../.cache/solana/upgrade-base
 npm run test:upgrade
 ```
 
-Create the worktree only once. `AKASH_UPGRADE_BASE=/absolute/path/to/akash` selects an existing old binary instead. The rehearsal starts an old chain, passes a real upgrade proposal, swaps binaries, and checks funding and failure cases. It uses ports 30657/30656/9390 and writes `.cache/upgrades/`.
+Create the worktree only once. `AKASH_UPGRADE_BASE=/absolute/path/to/akash` selects an existing old binary instead. The rehearsal starts an old chain, passes a real upgrade proposal, swaps binaries, and checks funding and failure cases. It uses ports 30657/30656/9390 and writes `../../.cache/solana/run/upgrades/`.
 
 ## Troubleshooting
 
@@ -116,3 +134,5 @@ is unavailable, the full check fails even when supply reconciliation is healthy.
 Increasing retention cannot recover deleted history. Preserve the old run for
 investigation and use a new run name for a fresh experiment. Production requires
 retained transaction history and indexed evidence.
+
+The sink service and wire contract is now version 2. Follow [launch and recovery](sink-migration-v2.md) before running these commands against a new namespace. Existing numeric-ID deployments remain separate.

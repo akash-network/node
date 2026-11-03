@@ -47,7 +47,7 @@ npm run testnet:up       # resume the same network
 
 Keep `AKT_LOCAL_RUN=dev` set in each terminal. Akash RPC is
 `http://127.0.0.1:27657`; Solana RPC is `http://127.0.0.1:18999`. Logs and
-results are under `.cache/testnetify-stack-dev/`. See
+results are under `../../.cache/solana/run/testnetify-stack-v2-dev/`. See
 [setup and troubleshooting](docs/setup.md) and
 [testnet scenarios](docs/testnetify.md).
 
@@ -74,3 +74,5 @@ generation and local dependency updates.
 | [Production deployment](docs/production-deployment.md)                                         | Testnet shortcuts, launch blockers, authorities, parameters and launch order.         |
 | [Hosting](docs/hosting.md)                                                                     | Hosts, versions, ports, monitoring and the launch order for DevOps.                   |
 | [Token metadata](docs/token-metadata.md)                                                       | Metaplex metadata, hosting and the mainnet launch gate.                               |
+
+The sink service and wire contract is now version 2. Follow [launch and recovery](docs/sink-migration-v2.md) before running these commands against a new namespace. Existing numeric-ID deployments remain separate.

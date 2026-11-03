@@ -1,6 +1,6 @@
 # Running the complete local bridge
 
-`npm run local:up` starts a native Akash validator with `x/sink`, a Solana test validator, the authenticated header/proof relayer, three signing reporters, and the continuous reconciliation monitor. Everything uses loopback RPCs and newly generated development keys under the ignored `.cache/live-stack/` directory. These keys and addresses are for local testing only.
+`npm run local:up` starts a native Akash validator with `x/sink`, a Solana test validator, the authenticated header/proof relayer, three signing reporters, and the continuous reconciliation monitor. Everything uses loopback RPCs and newly generated development keys under the ignored `../../.cache/solana/run/live-stack-v2/` directory. These keys and addresses are for local testing only.
 
 For native `testnetify`, four Akash validators, live validator additions, outage tests and a governance-void rehearsal, use the separate [testnetify profile](testnetify.md). Both profiles can run together on different ports.
 
@@ -14,7 +14,7 @@ npm run local:demo
 npm run local:status
 ```
 
-The demo rejects a direct bank deposit and a malformed destination, deposits 10 AKT with MsgSink to a fresh Solana wallet, waits for a proof-backed mint and three native reporter confirmations, then deposits 3 AKT to an on-curve token account. Solana permanently voids the latter transfer. Reporters confirm the void, wait through the 20-second local challenge and refund the original sender on Akash. The demo checks exact balances, the permanent void, the untouched launch reserve and aggregate supply. It leaves both chains and all services running.
+The demo rejects a direct bank deposit and a malformed destination, deposits 10 AKT with MsgSink to a fresh Solana wallet, waits for a proof-backed mint and three native reporter confirmations, then deposits 3 AKT to an on-curve token account. Solana permanently voids the latter transfer. Reporters confirm the void, wait through the 20-second local challenge and refund the original sender on Akash. The demo checks exact balances, the permanent void, aggregate supply. It leaves both chains and all services running.
 
 Each demo creates new transfers. The demo requires no concurrent deposits or burns during its own balance-delta checks. Its final reconciliation includes prior SPL burns. Per-account deposit limits still apply; repeatedly running the demo can reach them.
 
@@ -32,9 +32,9 @@ The local AKT mint is `EnEomHaBpuMZZLN4TPtVAsqVofzMSkrPWYhEQ1cFjKv1`. It is a de
 Inspect the services and test result:
 
 ```bash
-tail -f .cache/live-stack/relayer.log
-tail -f .cache/live-stack/reporter0.log
-cat .cache/live-stack/demo-result.json
+tail -f ../../.cache/solana/run/live-stack-v2/relayer.log
+tail -f ../../.cache/solana/run/live-stack-v2/reporter0.log
+cat ../../.cache/solana/run/live-stack-v2/demo-result.json
 ```
 
 Logs also exist for `akash`, `solana`, `reporter1` and `reporter2`. `checkpoint.json` records the initial trusted height, block hash and app root. `initialized.json` records public Akash account addresses. Do not publish the directory: it also contains development signing keys.
@@ -56,7 +56,7 @@ On a fresh checkout, install the pinned toolchain and build first:
 npm run setup
 ```
 
-Setup also builds `../node/.cache/bin/akash` against the matching local SDK branch. The host header encoder links the pinned upstream Borsh codec from `.deps/ibc-contracts`; setup builds these in order. Local preloading uses fixed program IDs and needs no original deployment key.
+Setup also builds `../../.cache/solana/bin/akash` against the matching local SDK branch. The host header encoder links the pinned upstream Borsh codec from `../../.cache/solana/deps/ibc-contracts`; setup builds these in order. Local preloading uses fixed program IDs and needs no original deployment key.
 
 Program files are preloaded when the Solana ledger is first created. Rebuilding `.so` files alone does not upgrade a running or retained ledger. A code-change rehearsal needs an explicit local program upgrade or a fresh paired test environment. There is no automatic reset command that could erase a running chain.
 
@@ -77,11 +77,11 @@ The initial light-client checkpoint is explicitly trusted. Later app roots come 
 
 The relayer fetches an ICS23 proof at application height H and submits it against verified header H+1. It chooses committed application state and waits for a canonical CometBFT commit. Proofs are uploaded in chunks before the mint or void instruction. Permanent Solana status prevents a retry from issuing tokens twice.
 
-Each pass re-reads the bridge account for the light client it pins and follows a governance re-pin, logging `light-client-changed`. The local IDs in `local/common.ts` are used only to deploy and bootstrap a fresh network. On a node with x/sink `OpenTransfers`, the relayer reads Solana statuses only for open transfers; otherwise it reads them in batches of 100, starting from the lowest record ID without one, so resolved records cost nothing. Before paying for an upload, the relayer checks the bridge pause, the per-transfer maximum, the remaining daily mint cap and whether the recipient would mint or void. It logs `relay-wait` and waits without paying while one of these retryable limits applies. A failed transfer backs off exponentially from 6 seconds up to `AKT_RELAY_RETRY_MAX_SECONDS`, default 900, and logs `relay-retry`. Header update failures back off separately, up to two minutes, and never stop relays that the latest verified height can already prove. Commits with more than `AKT_RELAY_MAX_HEADER_SIGNATURES` votes, default 100, submit only the highest-power signers the verifier needs and mark the rest `Absent`; see [large validator sets](operators.md#large-validator-sets).
+Each pass re-reads the bridge account for the light client it pins and follows a governance re-pin, logging `light-client-changed`. The local IDs in `local/common.ts` are used only to deploy and bootstrap a fresh network. The relayer queries canonical status buckets and the dispute index, then continues chronological history discovery from its durable full-ID checkpoint. Every page uses one committed height. Before paying for an upload, the relayer checks the bridge pause, the per-transfer maximum, the remaining daily mint cap and whether the recipient would mint or void. It logs `relay-wait` and waits without paying while one of these retryable limits applies. A failed transfer backs off exponentially from 6 seconds up to `AKT_RELAY_RETRY_MAX_SECONDS`, default 900, and logs `relay-retry`. Header update failures back off separately, up to two minutes, and never stop relays that the latest verified height can already prove. Commits with more than `AKT_RELAY_MAX_HEADER_SIGNATURES` votes, default 100, submit only the highest-power signers the verifier needs and mark the rest `Absent`; see [large validator sets](operators.md#large-validator-sets).
 
-Every transaction is simulated before it is sent. The relayer records the fees and resolution rent it pays per transfer in `relay-budget-<genesis>-<program>.json`. Past `AKT_RELAY_MAX_LAMPORTS_PER_TRANSFER`, default 5,000,000, it stops paying for that transfer and logs `relay-budget-exhausted`. After investigating, reset it with `npx tsx local/relay.ts --reset-budget ID` under the stack's `AKT_LOCAL_PROFILE` and `AKT_LOCAL_RUN`. The same relayer runs against any deployment from a config file; see [running a relayer](operators.md).
+Every transaction is simulated before it is sent. The relayer records the fees and resolution rent it pays per transfer in `relay-budget-v2-<genesis>-<program>.json`. Past `AKT_RELAY_MAX_LAMPORTS_PER_TRANSFER`, default 5,000,000, it stops paying for that transfer and logs `relay-budget-exhausted`. After investigating, reset it with `npx tsx local/relay.ts --reset-budget ID` under the stack's `AKT_LOCAL_PROFILE` and `AKT_LOCAL_RUN`. The same relayer runs against any deployment from a config file; see [running a relayer](operators.md).
 
-The relayer never relays a record that Akash shows as voided or refunded while Solana has no status for it. It re-reads the record at the newest Akash height just before its first paid transaction and skips it with `relay-final-check` if it became voided or refunded or its void order changed. In the honest flow an Akash void or refund follows a Solana void, so this state means false void reports or a governance confirmation. Minting it would leave the refund as unbacked supply. The relayer pays nothing for such a record and logs `relay-unbacked-settlement` when it first sees the state and every 15 minutes while it lasts; the reconciler reports it as a mismatch. `mint_transfer` remains permissionless, so this protects only the honest relayer. Anyone else can still submit the proof and mint.
+The relayer never mints a record that Akash shows as refund-pending or refunded while Solana has no status for it. It still relays a governance void order in either status, because a permanent Solana void blocks minting without creating supply. It re-reads the record at the newest Akash height before its first paid transaction and skips with `relay-final-check` if the void order changed or a planned mint became unbacked. Without a void order, it pays nothing and logs `relay-unbacked-settlement` when it first sees the state and every 15 minutes while it lasts; the reconciler reports the mismatch. `mint_transfer` remains permissionless, so the mint guard protects only the honest relayer. A governance confirmation must still carry verified Solana evidence.
 
 Each client update stores a consensus state that holds about 0.0015 SOL of rent, so updates are rare. The relayer updates when a record without a Solana status needs a proof height above the latest verified height, or when the client's age on the Solana clock reaches a share of its trusting period. That share is `AKT_RELAY_REFRESH_FRACTION`, default one fifth, so an idle refresh comes before the monitor's 25% warning. One update to the newest canonical header serves every pending record in that pass, and later relays prove at the latest verified height. Every `AKT_RELAY_PRUNE_INTERVAL_SECONDS`, default 600, the relayer closes up to 20 expired consensus states other than the latest and recovers their rent through the [patched verifier](verifier-patches.md); it logs `consensus-pruned`. The relayer's Akash node must therefore keep state back to that height. Skipping trust across a long interval also requires the old validator set to hold more than a third of the new voting power; lower the fraction if the set changes quickly. This development client has a 24-hour trusting period. A long shutdown can expire it; the launcher does not replace an expired checkpoint. Production expiry recovery remains a separate governance and security decision.
 
@@ -89,7 +89,7 @@ Three reporters use separate funded Akash keys and submit real signed transactio
 
 ## Verified locally and still outstanding
 
-The live run verified signed header updates, rejection of an altered app root, successful mint and confirmation, automatic void followed by a refund, and preservation of the 1M reserve. The demo result records amounts and deposit transaction hashes. Accounting includes all earlier local runs, so cumulative supply can exceed the single demo's 10 AKT issuance.
+A successful `local:demo` writes `demo-result.json` with both mint and refund results. A timed-out run does not establish the complete lifecycle. Earlier scalar-ID rehearsals do not validate this schema; rerun the checks against matching node, SDK and program artifacts.
 
 The live driver and [100-validator benchmark](header-scaling.md) share compact signature batches, lookup-table uploads, durable transaction journals and delayed rent reclamation. Equal and weighted fixtures now pass. Real four-validator transitions exercise the same uploader. The benchmark uses an isolated payer for exact accounting; live payer deltas may include other activity.
 
@@ -97,9 +97,17 @@ The monitor stores `reconciliation.json`, `burn-index.json` and one atomic evide
 
 For a fresh separate run use `AKT_LOCAL_RUN=<short-name>` on every lifecycle command. It changes the chain ID and storage directory, not ports. Stop the previous profile first. The validator retains one million shreds from startup for the accounting tests. Reconfiguration cannot recover already-pruned history.
 
+If a default port is occupied, set `AKT_AKASH_RPC_PORT`, `AKT_AKASH_GRPC_PORT`,
+`AKT_AKASH_REST_PORT` or `AKT_SOLANA_RPC_PORT` on every command for that run.
+The Akash peer port is one below its RPC port; the Solana WebSocket port is one
+above its RPC port. The four-validator profile adds ten per validator to Akash
+RPC, peer and gRPC ports. Reserve those ranges before starting a second stack.
+
 Before public deployment, finish the production checkpoint/expiry ceremony, full-set transitions and long-running throughput tests, protected signer custody, independent reporter nodes and alerts. Select approved upgrade parameters, multisig/time locks and metadata, resolve reachable upstream build diagnostics, and audit all new code.
 
 The single-validator profile also exposes Akash REST on `127.0.0.1:1318`
 (the four-validator profile uses `1317`). Portal RPC, REST and developer
 endpoints follow the selected profile, so parallel local stacks cannot route
 wallet requests to the other Akash chain.
+
+The Sink service uses the canonical schema 4 and native protobuf proofs. Follow [launch and recovery](sink-migration-v2.md) before running these commands against a new namespace. Existing numeric-ID deployments remain separate.

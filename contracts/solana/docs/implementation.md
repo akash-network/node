@@ -80,7 +80,7 @@ npm run local:status
 
 Use `npm run local:down` to stop its processes while preserving state. See [local stack setup and limits](local-stack.md) for build prerequisites and logs. The standalone validator tests below use RPC port 19899 and ports 19800 to 19850, not port 8899.
 
-Build the pinned upstream programs once. This downloads their source under the ignored `.deps/` directory and checks the generated interfaces against `idls/`:
+Build the pinned upstream programs once. This downloads their source under the ignored `../../.cache/solana/deps/` directory and checks the generated interfaces against `idls/`:
 
 ```bash
 npm run setup:light-client
@@ -141,7 +141,7 @@ Use `npm ci` to restore JavaScript dependencies from the lockfile.
 - `idls/`: generated, pinned upstream interfaces used by Anchor's `declare_program!`.
 - `Anchor.toml`: program address, local wallet, toolchain and test command.
 - `rust-toolchain.toml`: Rust toolchain pin.
-- `target/idl/` and `target/types/`: generated client interface and types.
+- `../../.cache/solana/target/idl/` and `../../.cache/solana/target/types/`: generated client interface and types.
 
 ## Remaining launch work
 

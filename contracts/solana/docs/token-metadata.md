@@ -26,7 +26,7 @@ Metaplex JavaScript account decoder. It introduces no custom metadata format.
 Fresh validators preload the standard Token Metadata program at
 `metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s`. Setup downloads its public
 mainnet executable with a read-only `program dump`, checks its pinned SHA-256,
-and caches it in ignored `.deps/metaplex/`. No private accounts, code, keys or
+and caches it in ignored `../../.cache/solana/deps/metaplex/`. No private accounts, code, keys or
 transactions are sent to that RPC.
 
 ```bash

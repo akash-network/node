@@ -1,16 +1,19 @@
 # Production deployment
 
+Canonical Sink schema 4 must start in a fresh chain/program/mint namespace. This is an operator planning guide, not a production deployment record. Read [canonical launch and recovery](sink-migration-v2.md) before preparing a deployment. The receipt server in `local/team.ts` is explicitly a testnet adapter.
+
 This guide covers what changes between a test network and an Akash mainnet
 launch. The testnet deliberately runs on one host with one key.
 Those shortcuts are listed here so nobody copies them. Nothing in this guide has
 been executed on mainnet. Local and testnet values are not launch
-recommendations. The 2026-10-18 and 2026-10-19 fixes are implemented and tested
-locally and on a test network; they still need the external audit.
+recommendations. The 2026-10-18 and 2026-10-19 test records describe the earlier scalar-ID deployment. They do not establish readiness of schema 4. Repeat the launch gates with the final artifacts and obtain an external audit.
 
 Akash mainnet values were read from `api.akashnet.net` on 2026-10-18. Recheck
 them before launch.
 
 ## Testnet shortcuts
+
+The table describes the preserved scalar-ID deployment. Fresh schema-4 testnets use the amounts in [local setup](local-stack.md#what-runs-on-chain), a new chain identity and a new Solana ledger. Do not reuse the existing deployment state.
 
 | Area                   | Test network                                                                                         | Production                                                                                       |
 | ---------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
@@ -32,7 +35,7 @@ them without code changes:
 - One hot key holds every Solana power, and all reporter keys share a directory
   with the portal user.
 - Rebuilt testnets reuse the chain ID and validator keys, so record IDs repeat
-  while the mint-once key is only `(id, chain_id)`. `akashnet-2` is never reset.
+  while the permanent status PDA is scoped to the program and composite owner/height/sequence ID. `akashnet-2` is never reset.
   Never point an existing Solana deployment at a reset or forked chain.
 - The test host's `ExecStartPre` ran as root with bridge-owned directories first in
   `PATH`. It now runs with a clean environment and absolute paths. Production
@@ -78,7 +81,7 @@ Each item says what the fixes changed and what remains.
    look up reported signatures directly. Remaining: plausibility
    uses the check time, not the report's block time, so a fabricated slot just
    inside the lead delays a veto by up to about 4 minutes.
-3. **No minimum deposit.** Fixed: x/sink `min_transfer` and a per-transfer lamport budget in the relayer. Set the minimum well above the relayer's cost of about
+3. **No minimum deposit.** Fixed: x/sink `min_amount_per_transfer` and a per-transfer lamport budget in the relayer. Set the minimum well above the relayer's cost of about
    0.0035 SOL per mint.
 4. **Evidence search window.** Fixed. Reporters read the block at the status
    account's `resolved_at_slot` instead of paging signatures. Their
@@ -86,7 +89,7 @@ Each item says what the fixes changed and what remains.
 5. **Reassigned recipient ATA.** Fixed. The transfer voids as
    `InvalidRecipient`, and the relayer checks this before paying.
 6. **Mints over Akash refunds.** The honest relayer skips records that Akash
-   shows as voided or refunded without a Solana status, rechecks Akash just
+   shows as refund-pending or refunded without a Solana status, rechecks Akash just
    before paying, and alerts. Remaining:
    `mint_transfer` is permissionless, so anyone else can still submit that
    proof. The reconciler flags the state.
@@ -98,15 +101,12 @@ Each item says what the fixes changed and what remains.
 8. **Dust at the sink address halted the upgrade.** Fixed in the handler. It
    adopts an existing account at the address, keeping its account number, and
    moves the balance to the community pool, so sink starts
-   with a zero balance; there is no launch reserve to fund. The old-to-new
-   binary rehearsal passes with a dusted address. Remaining: the production
-   upgrade name and height.
+   with a zero balance; there is no launch reserve to fund. The upgrade tests cover a dusted address. Repeat the old-to-new binary rehearsal with the final artifacts. Remaining: the production upgrade name and height.
 
 ### Operations
 
 9. **Development relayer.** Fixed:
-   - It pages x/sink `OpenTransfers`, backed by an on-chain index, and falls
-     back to a cursor scan on older nodes.
+   - It pages canonical pending-status and dispute indexes, plus chronological history with a durable full-ID checkpoint. It rejects missing or pruned state.
    - Failed transfers back off, pause and cap limits wait without paying, and a
      per-transfer lamport budget stops runaway spend.
    - Header updates happen only when a proof needs one or a fifth of the
@@ -138,7 +138,7 @@ Each item says what the fixes changed and what remains.
 Also fixed: unsigned uint64 decoding for the sink SDK package (chain-sdk
 `f85b5fff`), exact CLI amounts and `ValidateBasic`,
 reconciler voids without a Solana status and paging beyond 99 transfers, a monotonic verifier latest height, the refund-driver
-docs, a per-account daily amount cap and
+docs, a per-account epoch amount cap and
 reporters paging open transfers with a rolling audit of settled ones.
 
 Still open at lower priority:
@@ -164,7 +164,7 @@ security tier.
 | x/sink pause guardian                      | `MsgGuardianPause`: turns deposits and/or refunds off; only governance turns them on                                                                      | An on-call key, multisig or group policy set by governance                                   |
 | Relayer fee payer                          | Proof buffers, status and ATA rent, header updates                                                                                                        | Hot key holding a few days of spend, with a top-up alert                                     |
 | Reporters                                  | `ReportOutcome`, `VetoVoid` and `FinalizeRefund` on Akash                                                                                                 | One per independent operator, in KMS/HSM, each with its own fees                             |
-| Akash governance                           | x/sink parameters, `RequestVoid`, `ResolveTransfer`                                                                                                       | `akashnet-2` governance                                                                      |
+| Akash governance                           | x/sink parameters, `RequestVoid`, `RestartTransfer`, `ConfirmMint`, `ConfirmVoid`                                                                         | `akashnet-2` governance                                                                      |
 | Metadata update authority                  | Mint-authority PDA; changes only through `set_token_metadata`                                                                                             | Unchanged                                                                                    |
 
 Keep the upgrade authorities. `repin_light_client` needs the AKT authority, and
@@ -195,24 +195,27 @@ fraction if the validator set changes quickly.
   1,000,000 AKT per transfer and 10,000,000 AKT per UTC day; the tooling and
   the launch rehearsal use these values.
 - Leave `vaults` empty unless a vault has been reviewed. It must match the x/sink
-  `vault_allowlist`.
+  `allowed_destination_vaults`.
 
 ### x/sink
 
-| Parameter                                          | Testnet    | Production                                                                                                                                                                                          |
-| -------------------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `enabled`                                          | true       | false until activation                                                                                                                                                                              |
-| `max_transfer`                                     | uint64 max | 1,000,000 AKT, at most the Solana `per_transfer_max`                                                                                                                                                |
-| `solana_daily_mint_cap`                            | uint64 max | 10,000,000 AKT, equal to the Solana `daily_mint_cap`. Akash cannot read Solana, so keep them equal by procedure                                                                                     |
-| `max_daily_per_account`, `max_pending_per_account` | defaults   | Bound per-account spam. Both count transfers, not amounts                                                                                                                                           |
-| `vault_allowlist`                                  | empty      | The Solana `vaults` list                                                                                                                                                                            |
-| `reporters`, `reporter_threshold`                  | 4, 3       | At least 7 independent operators with threshold 5. The threshold must exceed two thirds; the limit is 32                                                                                            |
-| `challenge_period_seconds`                         | 20         | At least 259,200 (72 hours), which release builds enforce. Governance is the fallback when reporters cannot check evidence, so it must have time to act. The testnet's 20 s needs a `sinkdev` build |
-| `daily_refund_cap`                                 | uint64 max | 1,000,000 AKT, at least `max_transfer`, and never lowered below an open transfer, as x/sink requires                                                                                                |
-| `refunds_enabled`                                  | true       | true                                                                                                                                                                                                |
-| `min_transfer`                                     | 1 AKT      | Well above the relayer's per-transfer cost; see blocker 3                                                                                                                                           |
-| `max_daily_amount_per_account`                     | 0 (none)   | Bound one depositor's share of the daily cap; at least `min_transfer`                                                                                                                               |
-| `pause_guardian`                                   | test key   | The on-call holder chosen by governance                                                                                                                                                             |
+Amount parameters use `uakt` Coins. Zero disables the account epoch cap. The minimum may be zero while deposits are disabled; the other limits remain positive. Account and aggregate caps may be below the transfer maximum. Choose launch values through governance; local test values are not recommendations.
+
+| Parameter                                                       | Meaning                                                                                                                                     |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `enabled`, `refunds_enabled`                                    | Independent switches; keep deposits off until validation completes                                                                          |
+| `min_amount_per_transfer`, `max_amount_per_transfer`            | Positive transfer bounds; align maximum with Solana's independent per-transfer cap                                                          |
+| `max_epoch_amount_per_account`, `max_transfer_amount_per_epoch` | Account and aggregate sending caps; zero disables only the account cap, and usage remains tracked                                           |
+| `max_epoch_refund`                                              | Independent positive refund cap within the native quota epoch                                                                               |
+| `reporters`, `reporters_threshold`                              | Members and decimal ratio; ceil(ratio × members) must exceed two thirds of the members. State supplies the effective current ReporterPolicy |
+| `reporter_challenge_period`                                     | Protobuf duration with the production build's required minimum                                                                              |
+| `pause_guardian`                                                | Governance-selected account that may only disable switches                                                                                  |
+
+Policy rotation advances its version. Terminal evidence and governance refund authorization remain historical; unpaid quorum refunds require current-policy authorization. Lowered caps do not reset consumption.
+
+Sink reads the existing `x/epochs` record named `day`. Configure its duration and start in epochs genesis, and preserve that record on recovery. A started epoch advances in the first block strictly after its end time. After downtime it catches up one epoch per block, so successive recovery blocks can each open a new allowance. Do not calculate Sink usage from UTC dates or replace the native record on a populated chain.
+
+The reporter challenge period remains an elapsed duration from authorization. An epoch boundary does not shorten it, and changing the parameter does not change an existing deadline.
 
 Change caps in this order:
 
@@ -231,7 +234,7 @@ Change caps in this order:
 - Solana transaction history must cover at least the challenge period plus
   reporting lag. Pruned history broke health checks for old testnet transfers.
   Keep an archival source for older evidence.
-- Alert on disk use above 70% on every node. Never copy chain data into release
+- Alert on disk use above 70% on every node. Never copy chain data into artifact
   or evidence directories on the same disk.
 - Run NTP on every host.
 
@@ -340,22 +343,22 @@ events of an executed multisig transaction.
 | Supply                                      | Page on any mismatch in `escrow behind mints = Solana supply + burns` or the x/sink bank invariant                                                                                                                                                  |
 | Authority and configuration changes         | Any `ProgramData` change for the three programs; AKT `BridgeConfigured`, `BridgeEnabledSet`, `MintPolicySet` or `TokenMetadataSet`; access-manager `RoleGrantedEvent`, `RoleRevokedEvent` or `WhitelistedProgramsUpdatedEvent`; any x/sink proposal |
 | Guardian and recovery actions               | AKT `PauseGuardianSet`, `GuardianPaused` or `LightClientRepinned`; `akash.sink.v1.EventGuardianPaused`; open or close relaying, a role change for the light client's own ID                                                                         |
-| Relayer alerts                              | `relay-unbacked-settlement`, `relay-budget-exhausted`, `header-unsupported`, `light-client-changed`, repeated `relay-retry`, `consensus-prune-failed`                                                                                               |
+| Relayer alerts                              | `relay-unbacked-settlement`, `relay-discovery-failed`, `relay-budget-exhausted`, `header-unsupported`, `light-client-changed`, repeated `relay-retry`, `consensus-prune-failed`                                                                     |
 | Fee balances                                | Relayer payer and each reporter account below a few days of spend                                                                                                                                                                                   |
-| Reporter liveness                           | Each reporter's last vote age, any conflict hold, and each reporter's rate of conflicting votes and vetoes, so a reporter that holds many transfers is removed fast                                                                                 |
+| Reporter liveness                           | Each reporter's last vote age, `audit-unavailable`, any conflict hold, and each reporter's rate of conflicting votes and vetoes                                                                                                                     |
 | Cap usage                                   | Daily mint, deposit and refund usage above 80%                                                                                                                                                                                                      |
 | Infrastructure                              | Disk above 70%, stalled node height, oldest Solana history within the challenge period of now                                                                                                                                                       |
 
 ## Incident runbooks
 
-| Incident                           | First action                                                                                         | Follow-up                                                                                                                                                                             |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Suspected bad mint or verifier bug | Solana guardian pauses minting; x/sink guardian pauses deposits                                      | Reconcile supply and prepare a fix upgrade or re-pin                                                                                                                                  |
-| Suspicious void quorum             | Any honest reporter vetoes. If evidence cannot be checked, the x/sink guardian pauses refunds        | Governance settles it with `ResolveTransfer`                                                                                                                                          |
-| Client close to expiry             | Restart the relayer, switch RPC and check the payer balance                                          | Find why updates stopped                                                                                                                                                              |
-| Client expired or frozen           | Mints and voids stop while Akash still accepts deposits, so disable deposits                         | Re-pin a new client after a new checkpoint ceremony ([commands](deploy-program.md#later-changes))                                                                                     |
-| Relayer key leaked                 | Multisig revokes its `RELAYER_ROLE` and grants a new key                                             | Loss is limited to the payer balance; it cannot forge headers                                                                                                                         |
-| Reporter key leaked                | Governance replaces the reporter. The epoch increments, so earlier void authorizations cannot refund | Other reporters watch for false votes                                                                                                                                                 |
-| One reporter holds many transfers  | The x/sink guardian pauses deposits, so no new transfers are held                                    | One proposal: `MsgUpdateParams` removing the reporter, then `MsgResolveTransfer` RESTART for each transfer from `akash query sink open-transfers --held-only`                         |
-| A mint quorum contradicts Solana   | An honest reporter's voided vote holds the Minted transfer                                           | One proposal: `MsgRequestVoid` and `MsgResolveTransfer` CONFIRM_VOID. The transfer returns to Voided with a new challenge window, then refunds; replace the reporters that voted mint |
-| Multisig member key leaked         | Rotate the member                                                                                    | Review pending multisig transactions                                                                                                                                                  |
+| Incident                           | First action                                                                                                                                           | Follow-up                                                                                                                                                                                                                |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Suspected bad mint or verifier bug | Solana guardian pauses minting; x/sink guardian pauses deposits                                                                                        | Reconcile supply and prepare a fix upgrade or re-pin                                                                                                                                                                     |
+| Suspicious void quorum             | Any honest reporter vetoes. If evidence cannot be checked, the x/sink guardian pauses refunds                                                          | Governance uses `MsgConfirmMint` or `MsgConfirmVoid` with current `expected_round` and checked evidence                                                                                                                  |
+| Client close to expiry             | Restart the relayer, switch RPC and check the payer balance                                                                                            | Find why updates stopped                                                                                                                                                                                                 |
+| Client expired or frozen           | Mints and voids stop while Akash still accepts deposits, so disable deposits                                                                           | Re-pin a new client after a new checkpoint ceremony ([commands](deploy-program.md#later-changes))                                                                                                                        |
+| Relayer key leaked                 | Multisig revokes its `RELAYER_ROLE` and grants a new key                                                                                               | Loss is limited to the payer balance; it cannot forge headers                                                                                                                                                            |
+| Reporter key leaked                | Governance replaces the reporter. The policy version advances; unpaid quorum refunds need new authorization while governance authorization is retained | Other reporters watch for false votes                                                                                                                                                                                    |
+| One reporter holds many transfers  | The x/sink guardian pauses deposits, so no new transfers are held                                                                                      | One proposal: `MsgUpdateParams` removing the reporter, then `MsgRestartTransfer` with `expected_round` for each reviewed unpaid transfer from `akash query sink disputes`                                                |
+| A mint quorum contradicts Solana   | An honest reporter's voided vote holds the Minted transfer                                                                                             | One proposal: `MsgRequestVoid` and `MsgConfirmVoid` with `expected_round` and finalized evidence. The transfer returns to RefundPending with a new challenge window, then refunds; replace the reporters that voted mint |
+| Multisig member key leaked         | Rotate the member                                                                                                                                      | Review pending multisig transactions                                                                                                                                                                                     |
