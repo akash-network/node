@@ -2,7 +2,7 @@ package keeper
 
 import (
 	"errors"
-	"math"
+	"slices"
 
 	"cosmossdk.io/collections"
 	storetypes "cosmossdk.io/store/types"
@@ -12,15 +12,11 @@ import (
 	types "pkg.akt.dev/go/node/sink/v1"
 )
 
-func (k *keeper) UpdateParams(ctx sdk.Context, msg *types.MsgUpdateParams) error {
+func (k *keeper) SetParams(ctx sdk.Context, p types.Params) error {
 	cache, write := ctx.CacheContext()
 
-	p := msg.Params
 	for _, member := range p.Reporters {
-		addr, err := sdk.AccAddressFromBech32(member)
-		if err != nil {
-			return err
-		}
+		addr, _ := sdk.AccAddressFromBech32(member)
 
 		if _, module := k.accounts.GetAccount(cache, addr).(sdk.ModuleAccountI); module {
 			return types.ErrInvalidReporters.Wrap("reporters must be ordinary accounts")
@@ -28,11 +24,11 @@ func (k *keeper) UpdateParams(ctx sdk.Context, msg *types.MsgUpdateParams) error
 	}
 
 	old, err := k.params.Get(cache)
-	if err != nil {
+	if err != nil && !errors.Is(err, collections.ErrNotFound) {
 		return err
 	}
 
-	if p.MaxEpochRefund.IsLT(old.MaxEpochRefund) {
+	if (err == nil) && p.MaxEpochRefund.IsLT(old.MaxEpochRefund) {
 		for _, status := range []types.Status{types.StatusTransferPending, types.StatusVoided, types.StatusRefundPending} {
 			err = func() (err error) {
 				prefix, err := SettlementIDKey.ToPrefix(types.SettlementID{Status: status})
@@ -72,22 +68,28 @@ func (k *keeper) UpdateParams(ctx sdk.Context, msg *types.MsgUpdateParams) error
 		}
 	}
 
-	policy, err := k.GetCurrentPolicy(cache)
+	newMembers := make([]string, len(p.Reporters))
+	copy(newMembers, p.Reporters)
+
+	slices.Sort(newMembers)
+
+	currPolicy, err := k.GetCurrentPolicy(cache)
 	if err != nil {
 		return err
 	}
 
-	if !policy.SameRule(p.Policy(policy.Version)) {
-		if policy.Version == math.MaxUint64 {
-			return types.ErrOverflow.Wrap("policy version")
-		}
-
-		next := p.Policy(policy.Version + 1)
-		if err = k.policies.Set(cache, next.Version, next); err != nil {
+	if slices.Equal(currPolicy.Members, newMembers) || !p.ReportersThreshold.Equal(currPolicy.Threshold) {
+		version, err := k.policySequence.Next(cache)
+		if err != nil {
 			return err
 		}
 
-		if err = k.currentPolicyVersion.Set(cache, next.Version); err != nil {
+		newPolicy := types.ReporterPolicy{
+			Version:   version,
+			Members:   newMembers,
+			Threshold: p.ReportersThreshold,
+		}
+		if err = k.policies.Set(cache, version, newPolicy); err != nil {
 			return err
 		}
 	}

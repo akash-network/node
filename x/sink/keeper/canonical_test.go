@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/stretchr/testify/require"
@@ -227,10 +228,7 @@ func TestPermanentOrderSurvivesMintConflictRotationRestartAndRefund(t *testing.T
 	require.Equal(t, minted, frozen)
 	p := g.Params
 	p.Reporters = []string{testOwner(2).String()}
-	require.NoError(t, k.UpdateParams(ctx, &types.MsgUpdateParams{
-		Authority: k.authority,
-		Params:    p,
-	}))
+	require.NoError(t, k.SetParams(ctx, p))
 
 	e := testEvidence()
 	opposite := &types.MsgReportOutcome{
@@ -250,7 +248,12 @@ func TestPermanentOrderSurvivesMintConflictRotationRestartAndRefund(t *testing.T
 	require.NoError(t, err)
 	require.Equal(t, types.HoldConflict, conflict.Settlement.Hold)
 	require.Equal(t, receipt, *conflict.Settlement.VoidAuthorization)
-	require.Len(t, conflict.Settlement.Votes, int(g.Policies[0].Threshold)+1)
+
+	newThreshold := sdkmath.LegacyOneDec()
+	newThreshold.AddMut(g.Policies[0].Threshold)
+
+	require.Len(t, conflict.Settlement.Votes, int(newThreshold.TruncateInt64()))
+
 	opposite.Observation.Slot++
 	require.NoError(t, k.ReportOutcome(ctx, opposite))
 	frozen, err = k.GetTransfer(ctx, id)
@@ -286,10 +289,7 @@ func TestPermanentOrderSurvivesMintConflictRotationRestartAndRefund(t *testing.T
 	authorized, err := k.GetTransfer(ctx, id)
 	require.NoError(t, err)
 	p.Reporters = []string{testOwner(3).String()}
-	require.NoError(t, k.UpdateParams(ctx, &types.MsgUpdateParams{
-		Authority: k.authority,
-		Params:    p,
-	}))
+	require.NoError(t, k.SetParams(ctx, p))
 
 	retained, err := k.GetTransfer(ctx, id)
 	require.NoError(t, err)

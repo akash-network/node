@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"math"
+	"slices"
 
 	"cosmossdk.io/collections"
 	"cosmossdk.io/collections/corecompat"
@@ -41,13 +42,14 @@ type Keeper interface {
 
 	GetAuthority() string
 	GetCurrentPolicy(context.Context) (types.ReporterPolicy, error)
+	SetParams(sdk.Context, types.Params) error
 	GetParams(context.Context) (types.Params, error)
 	GetTotals(context.Context) (types.Totals, error)
 	GetAccountUsage(context.Context, sdk.AccAddress) (types.AccountUsage, error)
 	GetTransfer(context.Context, types.ID) (types.TransferState, error)
 
 	Deposit(sdk.Context, *types.MsgSink) (types.ID, error)
-	UpdateParams(sdk.Context, *types.MsgUpdateParams) error
+
 	GuardianPause(sdk.Context, *types.MsgGuardianPause) error
 	RequestVoid(sdk.Context, *types.MsgRequestVoid) error
 	ReportOutcome(sdk.Context, *types.MsgReportOutcome) error
@@ -68,20 +70,20 @@ type keeper struct {
 	epochs    EpochKeeper
 	authority string
 
-	schema               collections.Schema
-	params               collections.Item[types.Params]
-	totals               collections.Item[types.Totals]
-	policies             collections.Map[uint64, types.ReporterPolicy]
-	currentPolicyVersion collections.Item[uint64]
-	sendUsage            collections.Item[types.EpochUsage]
-	refundUsage          collections.Item[types.EpochUsage]
-	transfers            collections.Map[types.ID, types.RecordData]
-	settlements          collections.Map[types.SettlementID, types.SettlementData]
-	usage                collections.Map[sdk.AccAddress, types.AccountUsage]
-	history              collections.KeySet[types.ID]
-	disputes             collections.KeySet[types.ID]
-	refunds              collections.KeySet[collections.Triple[uint64, int64, types.ID]]
-	sequence             collections.Sequence
+	schema         collections.Schema
+	params         collections.Item[types.Params]
+	totals         collections.Item[types.Totals]
+	policies       collections.Map[uint64, types.ReporterPolicy]
+	policySequence collections.Sequence
+	sendUsage      collections.Item[types.EpochUsage]
+	refundUsage    collections.Item[types.EpochUsage]
+	transfers      collections.Map[types.ID, types.RecordData]
+	settlements    collections.Map[types.SettlementID, types.SettlementData]
+	usage          collections.Map[sdk.AccAddress, types.AccountUsage]
+	history        collections.KeySet[types.ID]
+	disputes       collections.KeySet[types.ID]
+	refunds        collections.KeySet[collections.Triple[uint64, int64, types.ID]]
+	sequence       collections.Sequence
 }
 
 func NewKeeper(
@@ -100,24 +102,24 @@ func NewKeeper(
 	})
 
 	k := &keeper{
-		skey:                 key,
-		accounts:             accounts,
-		bank:                 bank,
-		epochs:               epochs,
-		authority:            authority,
-		params:               collections.NewItem(sb, ParamsKey, "params", codec.CollValue[types.Params](cdc)),
-		totals:               collections.NewItem(sb, TotalsKey, "totals", codec.CollValue[types.Totals](cdc)),
-		policies:             collections.NewMap(sb, PoliciesKey, "policies", collections.Uint64Key, codec.CollValue[types.ReporterPolicy](cdc)),
-		currentPolicyVersion: collections.NewItem(sb, CurrentPolicyKey, "current_policy_version", collections.Uint64Value),
-		sendUsage:            collections.NewItem(sb, SendUsageKey, "send_usage", codec.CollValue[types.EpochUsage](cdc)),
-		refundUsage:          collections.NewItem(sb, RefundUsageKey, "refund_usage", codec.CollValue[types.EpochUsage](cdc)),
-		transfers:            collections.NewMap(sb, TransfersKey, "transfers", RecordIDKey, codec.CollValue[types.RecordData](cdc)),
-		settlements:          collections.NewMap(sb, SettlementsKey, "settlements", SettlementIDKey, codec.CollValue[types.SettlementData](cdc)),
-		usage:                collections.NewMap(sb, AccountsKey, "accounts", sdk.AccAddressKey, codec.CollValue[types.AccountUsage](cdc)),
-		history:              collections.NewKeySet(sb, HistoryKey, "history", chronoIDKey),
-		disputes:             collections.NewKeySet(sb, DisputesKey, "disputes", chronoIDKey),
-		refunds:              collections.NewKeySet(sb, RefundQueueKey, "refund_queue", collections.TripleKeyCodec(collections.Uint64Key, collections.Int64Key, RecordIDKey)),
-		sequence:             collections.NewSequence(tsb, SequenceKey, "sequence"),
+		skey:           key,
+		accounts:       accounts,
+		bank:           bank,
+		epochs:         epochs,
+		authority:      authority,
+		params:         collections.NewItem(sb, ParamsKey, "params", codec.CollValue[types.Params](cdc)),
+		totals:         collections.NewItem(sb, TotalsKey, "totals", codec.CollValue[types.Totals](cdc)),
+		policies:       collections.NewMap(sb, PoliciesKey, "policies", collections.Uint64Key, codec.CollValue[types.ReporterPolicy](cdc)),
+		policySequence: collections.NewSequence(sb, PolicySequenceKey, "policy_sequence"),
+		sendUsage:      collections.NewItem(sb, SendUsageKey, "send_usage", codec.CollValue[types.EpochUsage](cdc)),
+		refundUsage:    collections.NewItem(sb, RefundUsageKey, "refund_usage", codec.CollValue[types.EpochUsage](cdc)),
+		transfers:      collections.NewMap(sb, TransfersKey, "transfers", RecordIDKey, codec.CollValue[types.RecordData](cdc)),
+		settlements:    collections.NewMap(sb, SettlementsKey, "settlements", SettlementIDKey, codec.CollValue[types.SettlementData](cdc)),
+		usage:          collections.NewMap(sb, AccountsKey, "accounts", sdk.AccAddressKey, codec.CollValue[types.AccountUsage](cdc)),
+		history:        collections.NewKeySet(sb, HistoryKey, "history", chronoIDKey),
+		disputes:       collections.NewKeySet(sb, DisputesKey, "disputes", chronoIDKey),
+		refunds:        collections.NewKeySet(sb, RefundQueueKey, "refund_queue", collections.TripleKeyCodec(collections.Uint64Key, collections.Int64Key, RecordIDKey)),
+		sequence:       collections.NewSequence(tsb, SequenceKey, "sequence"),
 	}
 
 	var err error
@@ -213,7 +215,7 @@ func (k *keeper) GetTransfer(ctx context.Context, id types.ID) (types.TransferSt
 }
 
 func (k *keeper) GetCurrentPolicy(ctx context.Context) (types.ReporterPolicy, error) {
-	version, err := k.currentPolicyVersion.Get(ctx)
+	version, err := k.policySequence.Peek(ctx)
 	if err != nil {
 		return types.ReporterPolicy{}, err
 	}
@@ -226,6 +228,8 @@ func (k *keeper) GetCurrentPolicy(ctx context.Context) (types.ReporterPolicy, er
 	if version != policy.Version {
 		return types.ReporterPolicy{}, types.ErrInternal.Wrap("policy key mismatch")
 	}
+
+	slices.Sort(policy.Members)
 
 	return policy, nil
 }
@@ -273,10 +277,6 @@ func (k *keeper) allPolicies(ctx context.Context) ([]types.ReporterPolicy, error
 	})
 
 	return result, err
-}
-
-func (k *keeper) BeginBlocker(ctx context.Context) error {
-	return k.sequence.Set(ctx, 0)
 }
 
 func (k *keeper) nextID(ctx sdk.Context, owner sdk.AccAddress) (types.ID, error) {

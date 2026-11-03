@@ -8,7 +8,6 @@ import (
 
 	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/stretchr/testify/require"
 
 	types "pkg.akt.dev/go/node/sink/v1"
@@ -57,17 +56,22 @@ func settlementIn(status types.Status) func(types.ReporterPolicy) types.GenesisR
 
 // historyGenesis retains policies identical 32-member versions and minted
 // terminal transfers behind one transfer in first's state.
-func historyGenesis(policies int, first func(types.ReporterPolicy) types.GenesisRecord, amount int64, minted int) *types.GenesisState {
+func historyGenesis(policies uint64, first func(types.ReporterPolicy) types.GenesisRecord, amount int64, minted int) *types.GenesisState {
 	g := types.DefaultGenesis()
 	g.Params.Reporters = historyMembers()
 	g.Params.MaxEpochRefund = testCoin(2_000_000_000_000)
 	g.Policies = nil
-	for v := 1; v <= policies; v++ {
-		g.Policies = append(g.Policies, g.Params.Policy(uint64(v)))
+
+	for v := uint64(1); v <= policies; v++ {
+		g.Policies = append(g.Policies, types.ReporterPolicy{
+			Version:   v,
+			Members:   g.Params.Reporters,
+			Threshold: g.Params.ReportersThreshold,
+		})
 	}
 
 	current := g.Policies[len(g.Policies)-1]
-	g.CurrentPolicyVersion = current.Version
+	g.PolicySequence = current.Version
 	owner := testOwner(6).String()
 	total := types.ZeroAmount()
 	add := func(sequence uint64, amount int64, record types.GenesisRecord) {
@@ -190,10 +194,7 @@ func TestRefundCapReductionChecksOnlyUnpaidTransfers(t *testing.T) {
 				p := g.Params
 				p.MaxAmountPerTransfer = testCoin(999_999_999_999)
 				p.MaxEpochRefund = testCoin(999_999_999_999)
-				err := k.UpdateParams(ctx, &types.MsgUpdateParams{
-					Authority: authtypes.NewModuleAddress("gov").String(),
-					Params:    p,
-				})
+				err := k.SetParams(ctx, p)
 				if tc.rejected {
 					require.ErrorContains(t, err, "refund cap below unpaid transfer amount")
 					return
@@ -213,10 +214,9 @@ func TestRefundCapReductionGasIgnoresTerminalHistory(t *testing.T) {
 		p := g.Params
 		p.MaxEpochRefund = testCoin(1_000_000_000_000)
 		ctx = ctx.WithGasMeter(storetypes.NewInfiniteGasMeter())
-		require.NoError(t, k.UpdateParams(ctx, &types.MsgUpdateParams{
-			Authority: authtypes.NewModuleAddress("gov").String(),
-			Params:    p,
-		}))
+
+		err := k.SetParams(ctx, p)
+		require.NoError(t, err)
 
 		return ctx.GasMeter().GasConsumed()
 	}

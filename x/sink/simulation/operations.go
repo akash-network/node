@@ -73,7 +73,17 @@ func SimulateMsgSink(txConfig client.TxConfig, ak keeper.AccountKeeper, bk keepe
 			return noOp(msg, "query state"), nil, err
 		}
 
-		if !state.Params.Enabled || state.Policy.Threshold == 0 || state.Epoch == 0 {
+		params, err := k.GetParams(ctx)
+		if err != nil {
+			return noOp(msg, "query params"), nil, err
+		}
+
+		policy, err := k.GetCurrentPolicy(ctx)
+		if err != nil {
+			return noOp(msg, "get current policy"), nil, err
+		}
+
+		if !params.Enabled || policy.Threshold.Equal(sdkmath.LegacyZeroDec()) || state.Epoch == 0 {
 			return noOp(msg, "deposits disabled or quota epoch not started"), nil, nil
 		}
 
@@ -85,13 +95,13 @@ func SimulateMsgSink(txConfig client.TxConfig, ak keeper.AccountKeeper, bk keepe
 				return noOp(msg, "query account usage"), nil, err
 			}
 
-			maximum := sdkmath.MinInt(balance, state.Params.MaxAmountPerTransfer.Amount)
-			maximum = sdkmath.MinInt(maximum, state.Params.MaxTransferAmountPerEpoch.Amount.Sub(state.SendUsage.Amount.Amount))
-			if state.Params.MaxEpochAmountPerAccount.IsPositive() {
-				maximum = sdkmath.MinInt(maximum, state.Params.MaxEpochAmountPerAccount.Amount.Sub(usage.Usage.EpochSent.Amount))
+			maximum := sdkmath.MinInt(balance, params.MaxAmountPerTransfer.Amount)
+			maximum = sdkmath.MinInt(maximum, params.MaxTransferAmountPerEpoch.Amount.Sub(state.SendUsage.Amount.Amount))
+			if params.MaxEpochAmountPerAccount.IsPositive() {
+				maximum = sdkmath.MinInt(maximum, params.MaxEpochAmountPerAccount.Amount.Sub(usage.Usage.EpochSent.Amount))
 			}
 
-			minimum := state.Params.MinAmountPerTransfer.Amount
+			minimum := params.MinAmountPerTransfer.Amount
 			if maximum.LT(minimum) {
 				continue
 			}
@@ -187,7 +197,12 @@ func SimulateMsgFinalizeRefund(txConfig client.TxConfig, ak keeper.AccountKeeper
 			return noOp(msg, "query refund state"), nil, err
 		}
 
-		if !state.Params.RefundsEnabled || state.RefundHead == nil || state.Epoch == 0 {
+		params, err := k.GetParams(ctx)
+		if err != nil {
+			return noOp(msg, "query params"), nil, err
+		}
+
+		if !params.RefundsEnabled || state.RefundHead == nil || state.Epoch == 0 {
 			return noOp(msg, "refunds disabled or no refund candidate"), nil, nil
 		}
 
@@ -200,7 +215,7 @@ func SimulateMsgFinalizeRefund(txConfig client.TxConfig, ak keeper.AccountKeeper
 			return noOp(msg, "refund challenge has not elapsed"), nil, nil
 		}
 
-		if state.RefundUsage.Amount.Add(transfer.Data.Amount).IsGT(state.Params.MaxEpochRefund) {
+		if state.RefundUsage.Amount.Add(transfer.Data.Amount).IsGT(params.MaxEpochRefund) {
 			return noOp(msg, "refund quota exhausted"), nil, nil
 		}
 

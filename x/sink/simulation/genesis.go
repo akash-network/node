@@ -18,6 +18,7 @@ func RandomizedGenState(simState *module.SimulationState) {
 		params.Enabled = true
 		params.RefundsEnabled = true
 		params.ReportersThreshold = sdkmath.LegacyMustNewDecFromStr("0.75")
+
 		for _, index := range simState.Rand.Perm(len(simState.Accounts))[:min(3, len(simState.Accounts))] {
 			params.Reporters = append(params.Reporters, simState.Accounts[index].Address.String())
 		}
@@ -30,7 +31,14 @@ func RandomizedGenState(simState *module.SimulationState) {
 	params.MaxEpochAmountPerAccount = sdk.NewInt64Coin(sdkutil.DenomUakt, maximum*4)
 	params.MaxTransferAmountPerEpoch = sdk.NewInt64Coin(sdkutil.DenomUakt, maximum*20)
 	params.MaxEpochRefund = sdk.NewInt64Coin(sdkutil.DenomUakt, maximum*4)
-	genesis.Policies = []types.ReporterPolicy{params.Policy(genesis.CurrentPolicyVersion)}
+
+	genesis.Policies = []types.ReporterPolicy{
+		{
+			Version:   genesis.PolicySequence,
+			Members:   params.Reporters,
+			Threshold: params.ReportersThreshold,
+		},
+	}
 
 	simState.GenState[types.ModuleName] = simState.Cdc.MustMarshalJSON(genesis)
 }

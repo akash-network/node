@@ -72,7 +72,7 @@ func (k *keeper) InitGenesis(ctx sdk.Context, g *types.GenesisState) error {
 		}
 	}
 
-	if err = k.currentPolicyVersion.Set(cache, g.CurrentPolicyVersion); err != nil {
+	if err = k.policySequence.Set(cache, g.PolicySequence); err != nil {
 		return err
 	}
 
@@ -128,7 +128,7 @@ func (k *keeper) InitGenesis(ctx sdk.Context, g *types.GenesisState) error {
 }
 
 func (k *keeper) ExportGenesis(ctx sdk.Context) (*types.GenesisState, error) {
-	g := &types.GenesisState{SchemaVersion: types.SchemaVersion}
+	g := &types.GenesisState{}
 	var err error
 	g.Params, err = k.params.Get(ctx)
 	if err != nil {
@@ -145,7 +145,7 @@ func (k *keeper) ExportGenesis(ctx sdk.Context) (*types.GenesisState, error) {
 		return nil, err
 	}
 
-	g.CurrentPolicyVersion, err = k.currentPolicyVersion.Get(ctx)
+	g.PolicySequence, err = k.policySequence.Peek(ctx)
 	if err != nil {
 		return nil, err
 	}

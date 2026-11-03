@@ -181,7 +181,7 @@ func populatedGenesis() *types.GenesisState {
 	p1.Members = []string{testOwner(1).String(), testOwner(2).String(), testOwner(3).String(), testOwner(4).String()}
 	p2 := g.Params.Policy(2)
 	g.Policies = []types.ReporterPolicy{p1, p2}
-	g.CurrentPolicyVersion = 2
+	g.PolicySequence = 2
 	deadline := int64(86400 * 18)
 	observe := func(outcome types.Outcome) types.Observation {
 		e := testEvidence()

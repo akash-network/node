@@ -89,12 +89,9 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 			return nil, err
 		}
 
-		sinkParams, err := up.Keepers.Akash.Sink.GetParams(cache)
+		err = up.Keepers.Akash.Sink.SetParams(cache, sinktypes.DefaultParams())
 		if err != nil {
 			return nil, err
-		}
-		if sinkParams.Enabled {
-			return nil, fmt.Errorf("sink must remain disabled after installation")
 		}
 
 		write()
