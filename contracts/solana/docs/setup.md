@@ -1,22 +1,29 @@
 # Setup and operations
 
-This workspace is `contracts/solana` in the [Akash node repository](https://github.com/akash-network/node). Check out [chain-sdk](https://github.com/akash-network/chain-sdk) next to the node checkout, on the branch or tag that matches node's sink API.
+This page prepares a development workspace and test networks. Production
+operators should start with [production deployment](production-deployment.md)
+and [service installation](deploy-services.md).
+
+This workspace is `contracts/solana` in the [Akash node repository](https://github.com/akash-network/node).
+Akash uses its existing root Makefile, direnv environment and `go.mod` pins.
+Solana programs use Anchor and Cargo. The verifier is a pinned commit of
+[akash-network/ibc-contracts](https://github.com/akash-network/ibc-contracts/tree/0da3165d8428a1b7792cc17551ecd1d3985761e6).
 
 ## Toolchain
 
 The stack builds on macOS Apple Silicon and Ubuntu 26.04 x86_64. Windows needs WSL2. The Linux host uses the official Anchor release described below. Allow several GB for caches and ledgers.
 
-| Tool                     | Version                                                 |
-| ------------------------ | ------------------------------------------------------- |
-| Node.js                  | 24.x; `.nvmrc` pins 24.14.1                             |
-| Go                       | 1.26.2                                                  |
-| Rust through rustup      | 1.89.0, pinned in `rust-toolchain.toml`                 |
-| Solana / Agave CLI       | 2.3.13, including `solana-test-validator`               |
-| Anchor CLI               | 0.32.1                                                  |
-| Native tools             | Git, Python 3, C compiler, make, curl, tar, patch, lsof |
-| Optional generation tool | protoc, only when regenerating bindings                 |
+| Tool                     | Version                                                      |
+| ------------------------ | ------------------------------------------------------------ |
+| Node.js                  | 24.x; `.nvmrc` pins 24.14.1                                  |
+| Go                       | 1.26.2                                                       |
+| Rust through rustup      | 1.89.0, pinned in `rust-toolchain.toml`                      |
+| Solana / Agave CLI       | 2.3.13, including `solana-test-validator`                    |
+| Anchor CLI               | 0.32.1                                                       |
+| Native tools             | Git, Python 3.11+, C compiler, direnv, make, curl, tar, lsof |
+| Optional generation tool | protoc, only when regenerating bindings                      |
 
-On macOS, install Xcode tools with `xcode-select --install`. Homebrew can provide `python`, `cmake`, `pkg-config`, and `protobuf`. On Ubuntu, install `build-essential pkg-config libssl-dev libudev-dev libclang-dev clang cmake python3 curl git patch lsof protobuf-compiler`.
+On macOS, install Xcode tools with `xcode-select --install`. Homebrew can provide `python`, `cmake`, `pkg-config`, and `protobuf`. On Ubuntu, install `build-essential pkg-config libssl-dev libudev-dev libclang-dev clang cmake python3 curl git direnv lsof protobuf-compiler`.
 
 Install [Node 24](https://nodejs.org/en/download) and [Go 1.26.2](https://go.dev/dl/). With nvm installed, run `nvm install && nvm use` inside `contracts/solana/`. With another recent Go version installed, `export GOTOOLCHAIN=go1.26.2` selects and downloads the required Go toolchain.
 
@@ -40,48 +47,91 @@ macOS setup and avoids that compiler flag mismatch.
 
 ## Build and run
 
-From `contracts/solana/`:
+Initialize node's normal [direnv environment](../../../.envrc) first:
+
+```bash
+# From the node repository root.
+direnv allow
+make bins
+```
+
+Supply the reviewed TypeScript SDK archive described in
+[SDK integration](sdk-integration.md), then from `contracts/solana/`:
 
 ```bash
 npm run doctor
 npm run setup
+```
+
+`setup` runs `npm ci`, `make bins`, the pinned IBC builds, the AKT Anchor build,
+the header encoder build and TypeScript checking. It does not rewrite SDK
+packages, Go dependency files or build tags. The normal binary is `$AKASH`
+(default `node/.cache/bin/akash`). `test:sink` honors the same Go workspace
+selection as ordinary Go commands and never discovers a cached modfile.
+
+### Local SDK development
+
+Only if you are changing node and the Go SDK together, use Go's existing
+workspace support. From the node root, create or update the ignored `go.work`:
+
+```bash
+# Use `go work use` alone if go.work already exists.
+go work init .
+go work use ../chain-sdk/go ../chain-sdk/go/cli
+export GOWORK="$PWD/go.work"
+make bins
+```
+
+Use the actual SDK checkout paths. Keep that workspace local; production builds
+and release qualification use `GOWORK=off make bins` and the committed SDK pins.
+A missing or incompatible published pin is a release blocker, not a reason to
+substitute another module tree during release builds.
+
+### Accelerated testnet
+
+The local genesis asks for a 20-second challenge. Select `sinkdev` explicitly
+using the existing Makefile's build-tag argument and give the output a distinct
+path. From the node root, after `npm run setup`:
+
+```bash
+mkdir -p .cache/solana/bin
+make bins AKASH="$PWD/.cache/solana/bin/akash-sinkdev" \
+  BUILD_TAGS='osusergo netgo ledger muslc gcc sinkdev'
+export AKASH="$PWD/.cache/solana/bin/akash-sinkdev"
+cd contracts/solana
 export AKT_LOCAL_RUN=dev
 npm run testnet:up
 npm run testnet:demo
 npm run testnet:verify
 ```
 
-`doctor` checks versions and the node and chain-sdk checkouts. `setup` builds `chain-sdk/ts`, packs it with `npm pack` into `../../.cache/solana/chain-sdk.tgz`, runs `npm ci`, and builds `.cache/solana/bin/akash` in the node repository against `chain-sdk/go` and `chain-sdk/go/cli`. It then downloads and patches the pinned verifier, builds the programs and encoder, and checks TypeScript. The local npm archive is ignored and verified against `package-lock.json`; no registry publication is needed. Go SDK substitution lives in the ignored `node/.cache/solana/node.mod`; committed dependency files stay unchanged. `node/.cache/solana/node-sdk.json` records the SDK path used.
+Restore `AKASH` and `AKT_LOCAL_RUN` in a new shell before resuming this testnet.
+Production and mainnet-fork qualification use the ordinary build without
+`sinkdev`. An accelerated test run does not qualify that build.
 
 ### Generated files
 
-Everything the build and local networks generate goes to the node repository's
-ignored `.cache/`, never into `contracts/solana`, except `node_modules`, which
-npm always installs next to `package.json`:
+| Path                              | Contents                                                         |
+| --------------------------------- | ---------------------------------------------------------------- |
+| `.cache/bin/akash`                | Normal Akash Makefile output                                     |
+| `.cache/solana/bin/akash-sinkdev` | Explicit accelerated-testnet build                               |
+| `.cache/solana/chain-sdk.tgz`     | Reviewed TypeScript package, locked by npm integrity             |
+| `.cache/solana/deps/`             | Pinned IBC checkout, its Anchor output and Metaplex test program |
+| `.cache/solana/target/`           | AKT Cargo/Anchor output and header encoder                       |
+| `.cache/solana/run/`              | Local networks and tests, including private development keys     |
 
-| Path                          | Contents                                                                 |
-| ----------------------------- | ------------------------------------------------------------------------ |
-| `.cache/solana/bin/akash`     | Node binary from `scripts/build-node.sh`, with its `solana.mod` modfile  |
-| `.cache/solana/chain-sdk.tgz` | Packed chain-sdk TypeScript package                                      |
-| `.cache/solana/deps/`         | Pinned light client sources and Metaplex program, downloaded and patched |
-| `.cache/solana/target/`       | Cargo and Anchor output: programs, IDL, TypeScript types, header encoder |
-| `.cache/solana/run/`          | Local networks and test runs, including their development keys and logs  |
+Cargo also uses its normal user-level registry/git/toolchain caches; npm installs
+`node_modules` beside `package.json`. The fixed release container uses its own
+build and toolchain directories. These are separate from project scratch.
 
-`rm -rf .cache/solana contracts/solana/node_modules` from the node repository
-resets everything. Run directories hold private development keys; share
-individual result files, not the directory.
+If setup finds the old patched IBC archive, move that exact directory aside under
+`.cache/solana` before retrying. The fetcher preserves existing sources and rejects
+a different revision or dirty checkout. Do not remove ledgers or keys as a build
+repair.
 
-No direnv setup or separate wasm library download is needed for this local build. The Go wasmvm dependency includes native dynamic libraries. Advanced node build commands can still use direnv.
-
-Custom paths are supported:
-
-```bash
-export NODE_SINK_DIR=/absolute/path/to/node
-export CHAIN_SDK_DIR=/absolute/path/to/chain-sdk
-npm run setup
-```
-
-Keep `NODE_SINK_DIR` set for runtime commands with a custom path. By default node is this repository and chain-sdk is `../chain-sdk` next to it. Do not use an SDK checkout containing unrelated changes.
+`NODE_SINK_DIR=/absolute/path/to/node` selects another node source for fixture
+tests. Load that checkout's normal build environment and set `AKASH` to its
+Makefile output for runtime commands.
 
 The demo deposits 10 AKT and confirms its mint, then deposits 3 AKT to an invalid recipient and waits for a void/refund. A fresh successful run leaves 1,000,010 AKT on Solana and the same amount escrowed on Akash. Later runs add transfers. Health checks read finalized state and reconcile supply, escrow and independently indexed burns.
 
@@ -109,7 +159,7 @@ npm run testnet:verify
 
 `testnet:scenarios` changes validator availability, pauses minting and exercises governance. Run it after the demo settles. `bench:headers`, `test:receipts`, `test:recovery`, `test:misbehaviour` and `test:expiry` each use an isolated validator on port 19999; run them separately. See [the test guide](reproduce.md) for all suites, their expected results and evidence paths.
 
-Rebuild native changes with `bash scripts/build-node.sh`, Solana changes with `npm run build`. A retained ledger contains its previously loaded programs. Stop it and choose a new paired run name to test rebuilt code, or explicitly upgrade the local programs. Never reset a checkpoint to hide a failure. The client expires after 24 hours without sufficient updates; preserve the old evidence and choose a new run name for a new experiment.
+Rebuild native changes with `make bins` from the node root, Solana changes with `npm run build`. A retained ledger contains its previously loaded programs. Stop it and choose a new paired run name to test rebuilt code, or explicitly upgrade the local programs. Never reset a checkpoint to hide a failure. The client expires after 24 hours without sufficient updates; preserve the old evidence and choose a new run name for a new experiment.
 
 ### Optional old-node upgrade rehearsal
 
@@ -117,7 +167,7 @@ The ordinary demo does not need the old binary. For upgrade tests:
 
 ```bash
 git -C ../.. worktree add --detach .cache/solana/upgrade-base 5193e54672e49ef328f67758ef5c91e24990c09a
-bash scripts/build-node.sh ../../.cache/solana/upgrade-base
+(cd ../../.cache/solana/upgrade-base && direnv allow && direnv exec . make bins)
 npm run test:upgrade
 ```
 

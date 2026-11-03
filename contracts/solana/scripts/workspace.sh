@@ -3,11 +3,10 @@
 solana_repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 # This directory is contracts/solana inside the node repository.
 NODE_SINK_DIR=${NODE_SINK_DIR:-$(cd "$solana_repo/../.." && pwd)}
-CHAIN_SDK_DIR=${CHAIN_SDK_DIR:-$(cd "$NODE_SINK_DIR/.." && pwd)/chain-sdk}
 SOLANA_CACHE=$solana_repo/../../.cache/solana
 mkdir -p "$SOLANA_CACHE"
 SOLANA_CACHE=$(cd "$SOLANA_CACHE" && pwd)
 SOLANA_DEPS=$SOLANA_CACHE/deps
 SOLANA_RUN=$SOLANA_CACHE/run
 CARGO_TARGET_DIR=$SOLANA_CACHE/target
-export NODE_SINK_DIR CHAIN_SDK_DIR SOLANA_CACHE SOLANA_DEPS SOLANA_RUN CARGO_TARGET_DIR
+export NODE_SINK_DIR SOLANA_CACHE SOLANA_DEPS SOLANA_RUN CARGO_TARGET_DIR

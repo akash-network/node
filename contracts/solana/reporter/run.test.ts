@@ -1,19 +1,25 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, rm, stat, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import test from "node:test";
 import { promisify } from "node:util";
+import { temporaryDirectory } from "../local/test-workspace";
 import { toBech32 } from "@cosmjs/encoding";
 import { web3 } from "@coral-xyz/anchor";
 import example from "./config.example.json";
+import idl from "../../../.cache/solana/target/idl/akt_solana.json";
 import { parseConfig } from "./config";
 
 // Port 9 keeps a CLI test from reaching any node, including a tunnel on 8899.
 function offline() {
   return {
     ...example,
+    programId: idl.address,
+    mint: web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("mint")],
+      new web3.PublicKey(idl.address),
+    )[0].toBase58(),
     akashRpc: "http://127.0.0.1:9",
     solanaRpc: "http://127.0.0.1:9",
     reporter: toBech32("akash", new Uint8Array(20).fill(7)),
@@ -39,6 +45,11 @@ async function cli(config: string, flags: string[]) {
 test("config accepts an optional bounded maxSlotLead", () => {
   const base = {
     ...example,
+    programId: idl.address,
+    mint: web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("mint")],
+      new web3.PublicKey(idl.address),
+    )[0].toBase58(),
     reporter: toBech32("akash", new Uint8Array(20).fill(7)),
     solanaGenesisHash: web3.Keypair.generate().publicKey.toBase58(),
   };
@@ -54,6 +65,11 @@ test("config accepts an optional bounded maxSlotLead", () => {
 test("config rejects unknown fields, including the removed maxTransfers", () => {
   const base = {
     ...example,
+    programId: idl.address,
+    mint: web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("mint")],
+      new web3.PublicKey(idl.address),
+    )[0].toBase58(),
     reporter: toBech32("akash", new Uint8Array(20).fill(7)),
     solanaGenesisHash: web3.Keypair.generate().publicKey.toBase58(),
   };
@@ -69,6 +85,11 @@ test("config rejects unknown fields, including the removed maxTransfers", () => 
 test("config pins a light client only when one is set", () => {
   const base = {
     ...example,
+    programId: idl.address,
+    mint: web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("mint")],
+      new web3.PublicKey(idl.address),
+    )[0].toBase58(),
     reporter: toBech32("akash", new Uint8Array(20).fill(7)),
     solanaGenesisHash: web3.Keypair.generate().publicKey.toBase58(),
   };
@@ -86,7 +107,7 @@ test("config pins a light client only when one is set", () => {
 });
 
 test("CLI refuses implicit signing and never echoes malformed private key contents", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "akt-reporter-test-"));
+  const directory = await temporaryDirectory("akt-reporter-test-");
   try {
     const config = join(directory, "config.json");
     const key = join(directory, "reporter.key");
@@ -138,7 +159,7 @@ test("CLI refuses implicit signing and never echoes malformed private key conten
 });
 
 test("CLI runs an external signer only for broadcast and never beside a key file", async (t) => {
-  const directory = await mkdtemp(join(tmpdir(), "akt-reporter-test-"));
+  const directory = await temporaryDirectory("akt-reporter-test-");
   t.after(() => rm(directory, { recursive: true, force: true }));
   const config = join(directory, "config.json");
   const marker = join(directory, "ran");

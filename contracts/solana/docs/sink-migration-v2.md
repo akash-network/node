@@ -67,4 +67,4 @@ Unknown or pruned heights and malformed pages remain failures. A failed history 
 
 Run `npm run typecheck`, `npm run test:services` and `npm run test:portal-contract` after installing the paired SDK and IDL. Service tests drive the actual relayer tick and signed transaction journal with controlled RPC boundaries. They are not validator membership evidence.
 
-Run `npm test` for the program's isolated validator tests and `npm run test:sink` for a chain-produced proof after the node fixture gate passes. `AKT_NODE_MODFILE` selects an integration modfile. Preserve their fresh test directories. Live headers, full refund recovery, cross-host services and populated mainnet-fork recovery remain separate gates.
+Run `npm test` for the program's isolated validator tests and `npm run test:sink` for a chain-produced proof after the node fixture gate passes. Go tests use the committed pins by default; local SDK development must explicitly select the existing `go.work` mechanism. Preserve their fresh test directories. Live headers, full refund recovery, cross-host services and populated mainnet-fork recovery remain separate gates.

@@ -2,10 +2,10 @@ import { testId, testSnapshot } from "../tests/sink-fixtures";
 import { sinkIdParts } from "../shared/id";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import test from "node:test";
+import { temporaryDirectory } from "../local/test-workspace";
 import { secp256k1 } from "@noble/curves/secp256k1";
 import {
   makeAuthInfoBytes,
@@ -78,7 +78,7 @@ function verifies(tx: TxRaw) {
 }
 
 test("external signer receives the sign doc and returns a verified signature", async (t) => {
-  const directory = await mkdtemp(join(tmpdir(), "akt-signer-test-"));
+  const directory = await temporaryDirectory("akt-signer-test-");
   t.after(() => rm(directory, { recursive: true, force: true }));
   process.env.FAKE_SIGNER_LOG = join(directory, "requests.jsonl");
   t.after(() => delete process.env.FAKE_SIGNER_LOG);

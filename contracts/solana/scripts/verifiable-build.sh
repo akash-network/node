@@ -5,7 +5,7 @@
 # out. The image stays local; never push it.
 #
 # Usage: bash scripts/verifiable-build.sh [--rev <commit>] [output-dir]
-# Writes the three .so files, SHA256SUMS and build-info.txt to output-dir
+# Writes the three programs, IDLs, TS interfaces, SHA256SUMS and build-info.txt
 # (default .cache/solana/verifiable-build/<commit> in the node repository).
 set -euo pipefail
 source "$(dirname "$0")/workspace.sh"
@@ -25,12 +25,13 @@ fi
 mkdir -p "$out"
 out=$(cd "$out" && pwd)
 
-stage=$(mktemp -d "${TMPDIR:-/tmp}/akt-verifiable.XXXXXX")
+stage=$(mktemp -d "$SOLANA_CACHE/verifiable.XXXXXX")
 trap 'rm -rf "$stage"' EXIT
 # Only committed files reach the build, never the working tree.
 git archive --format=tar -o "$stage/source.tar" "$commit" \
-  Anchor.toml Cargo.toml Cargo.lock rust-toolchain.toml programs idls patches \
-  scripts/apply-light-client-patches.sh tools/verifiable-build
+  Anchor.toml Cargo.toml Cargo.lock rust-toolchain.toml programs idls \
+  scripts/fetch-light-client.py scripts/workspace.sh scripts/setup-light-client.sh \
+  scripts/build-programs.sh tools/header-encoder/Cargo.toml tools/verifiable-build
 mkdir "$stage/context"
 tar -xf "$stage/source.tar" -C "$stage/context" --strip-components=2 tools/verifiable-build
 

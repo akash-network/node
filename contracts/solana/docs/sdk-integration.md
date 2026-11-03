@@ -8,12 +8,22 @@ Canonical queries are `Transfer`, `Transfers`, `Disputes`, `Account` and `State`
 
 `MsgSinkResponse.id` contains the composite identity. Transaction-hash receipts bind the successful sole MsgSink, response ID, sender, block height, recipient and amount to the immutable record. ID receipts and owner history use canonical state queries and require no transaction index.
 
-## Refresh the local package
+## Supply the locked package
 
-Wait for the SDK worker to finish before building its checkout. `npm run setup` builds and packs that SDK into the node repository's `.cache/solana/chain-sdk.tgz`. To use an already built SDK:
+The current SDK version is consumed as a reviewed `.tgz` input. `npm ci`
+verifies its integrity against `package-lock.json`; `npm run setup` never builds
+or replaces it implicitly. Production packaging must receive that same archive.
+A published version can replace this input once the matching SDK is released;
+release/package publication is a separate task.
+
+To update the dependency deliberately during SDK development, build the selected
+SDK checkout first, then pack it and review the resulting lockfile change:
 
 ```bash
 source scripts/workspace.sh
+CHAIN_SDK_DIR=/absolute/path/to/reviewed/chain-sdk
+npm ci --prefix "$CHAIN_SDK_DIR/ts"
+npm run build --prefix "$CHAIN_SDK_DIR/ts"
 sdk_package=$(cd "$CHAIN_SDK_DIR/ts" && npm pack --silent --pack-destination "$SOLANA_CACHE")
 cp "$SOLANA_CACHE/$sdk_package" "$SOLANA_CACHE/chain-sdk.tgz"
 npm install --force ../../.cache/solana/chain-sdk.tgz

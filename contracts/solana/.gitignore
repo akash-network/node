@@ -17,3 +17,6 @@ test-ledger
 __pycache__/
 *.pyc
 *.tgz
+
+# Ceremony records are retained outside source control.
+/launch/

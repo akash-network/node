@@ -12,6 +12,7 @@ import type { AktSolana } from "../../../.cache/solana/target/types/akt_solana";
 import type { Ics07Tendermint } from "../../../.cache/solana/deps/ibc-contracts/ibc-solana/target/types/ics07_tendermint";
 import type { AccessManager } from "../../../.cache/solana/deps/ibc-contracts/ibc-solana/target/types/access_manager";
 import { readTokenMetadata } from "../shared/token-metadata";
+import { MAINNET_GENESIS } from "../shared/networks";
 import * as ix from "./admin-instructions";
 import { LE64, PROGRAM_ID, ROOT, SOLANA_RPC, json, pda } from "./common";
 
@@ -1127,7 +1128,7 @@ async function main() {
     values.genesis,
     "connected Solana cluster has a different genesis hash",
   );
-  const mainnet = genesis === ix.MAINNET_GENESIS;
+  const mainnet = genesis === MAINNET_GENESIS;
   const readOnlyCommand = ["show", "relayers", "events"].includes(command);
   const emit = values.emit !== undefined;
   let signer: web3.Keypair | undefined;

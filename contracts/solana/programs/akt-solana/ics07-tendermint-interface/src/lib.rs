@@ -1,8 +1,8 @@
 //! Anchor bindings for the pinned ICS07 Tendermint light client.
 //!
 //! `declare_program!` reads `idls/ics07_tendermint.json` at the repository
-//! root, the interface `npm run setup:light-client` checks against the patched
-//! upstream build. AKT uses the `ClientState` and `ConsensusStateStore`
+//! root, the interface `npm run setup:light-client` checks against the pinned
+//! IBC build. AKT uses the `ClientState` and `ConsensusStateStore`
 //! account types and authenticates their owner against its pinned program.
 //!
 //! The bindings live in their own crate because `declare_program!` also emits

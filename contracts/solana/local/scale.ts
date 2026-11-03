@@ -33,12 +33,6 @@ import { assertClientActive } from "./client-status";
 import { pruneExpiredConsensusStates } from "./consensus-prune";
 import { transferKey } from "../shared/sink";
 
-const PATCHES = [
-  "patches/ics07-signature-batches.patch",
-  "patches/ics07-monotonic-latest-height.patch",
-  "patches/ics07-consensus-pruning.patch",
-  "patches/ics07-open-relaying.patch",
-];
 type Packet = ReturnType<typeof decodePacket>;
 
 // The prune run's checkpoint expires 180 s after initialization; each later
@@ -930,20 +924,9 @@ async function main() {
       accountLimit: 64,
       computeLimit: 1_400_000,
       clientProgram: CLIENT_ID.toBase58(),
-      upstreamCommit: "dc78ade828b766b218fb6bcb5417fdaf8e553021",
-      patchSha256: createHash("sha256")
-        .update(await readFile(join(REPO, PATCHES[0])))
-        .digest("hex"),
-      patches: Object.fromEntries(
-        await Promise.all(
-          PATCHES.map(async (path) => [
-            path,
-            createHash("sha256")
-              .update(await readFile(join(REPO, path)))
-              .digest("hex"),
-          ]),
-        ),
-      ),
+      upstreamCommit: (
+        await readFile(join(DEPS, "ibc-contracts/.git/HEAD"), "utf8")
+      ).trim(),
       programSha256: {
         client: createHash("sha256")
           .update(await readFile(join(artifacts, "ics07_tendermint.so")))

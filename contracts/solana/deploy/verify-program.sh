@@ -6,6 +6,7 @@
 # Usage: verify-program.sh --url RPC PROGRAM_ID BINARY [EXPECTED_AUTHORITY]
 # Prints: PROGRAM_ID SHA256 AUTHORITY
 set -euo pipefail
+source "$(dirname "$0")/../scripts/workspace.sh"
 
 if [[ "${1:-}" != --url ]] || (($# < 4 || $# > 5)); then
   echo 'usage: verify-program.sh --url RPC PROGRAM_ID BINARY [EXPECTED_AUTHORITY]' >&2
@@ -25,9 +26,9 @@ sha256() {
 # Hosts without a default CLI signer pass any keypair for these read-only calls.
 signer=()
 [[ -z "${SOLANA_KEYPAIR:-}" ]] || signer=(--keypair "$SOLANA_KEYPAIR")
-work=$(mktemp -d "${TMPDIR:-/tmp}/akt-verify-program.XXXXXX")
+work=$(mktemp -d "$SOLANA_CACHE/verify-program.XXXXXX")
 trap 'rm -rf "$work"' EXIT
-solana program dump "${signer[@]}" --url "$url" "$id" "$work/program.so" > /dev/null
+solana program dump "${signer[@]}" --url "$url" --commitment finalized "$id" "$work/program.so" > /dev/null
 size=$(wc -c < "$binary" | tr -d ' ')
 dumped=$(wc -c < "$work/program.so" | tr -d ' ')
 if ((dumped < size)); then
@@ -45,7 +46,7 @@ if [[ "$padding" != 0 ]]; then
   echo "$id has $padding non-zero bytes after the build" >&2
   exit 1
 fi
-authority=$(solana program show "${signer[@]}" --url "$url" "$id" --output json |
+authority=$(solana program show "${signer[@]}" --url "$url" --commitment finalized "$id" --output json |
   python3 -I -c 'import json, sys; print(json.load(sys.stdin).get("authority") or "none")')
 if [[ -n "$expected_authority" && "$authority" != "$expected_authority" ]]; then
   echo "$id upgrade authority is $authority, not $expected_authority" >&2

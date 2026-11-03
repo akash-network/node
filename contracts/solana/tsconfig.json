@@ -16,6 +16,7 @@
     "../../.cache/solana/target/types/**/*.ts",
     "reporter/**/*.ts",
     "local/**/*.ts",
-    "shared/**/*.ts"
+    "shared/**/*.ts",
+    "deploy/**/*.ts"
   ]
 }

@@ -9,12 +9,15 @@ npm run doctor
 npm run setup
 ```
 
-Setup builds the native node against the chain-sdk checkout, applies the pinned verifier patch, checks its generated IDLs, builds the AKT program and header encoder, and typechecks. It generates no public-chain transactions. No original wallet, deployment key or ledger is needed. See [README.md](../README.md) for the checkouts.
+Setup invokes node's normal `make bins`, fetches the merged IBC source at the
+Cargo pin, checks generated IDLs, builds AKT and the header encoder, and
+checks TypeScript. Prepare the normal node environment and reviewed SDK archive
+as described in [setup](setup.md) first. It sends no public-chain transactions.
 
-The `chain-sdk` branch owns the sink schemas, generated Go and TypeScript clients,
-and shared CLI. Node's ignored `.cache/solana/node-sdk.json` records the actual SDK
-path. Setup builds the local SDK package before installing this repo. See
-[SDK integration](sdk-integration.md) for generation and dependency updates.
+`chain-sdk` owns schemas, generated Go and TypeScript clients, and the shared
+CLI. Go uses the committed module pins unless an explicit development workspace
+is selected. npm verifies the supplied SDK archive against the lockfile. See
+[SDK integration](sdk-integration.md) for deliberate dependency updates.
 
 ## 2. Component and proof checks
 
@@ -25,28 +28,30 @@ npm run typecheck
 npm run format:check
 npm run test:unit
 npm run test:reporter
+npm run test:deployment
+npm run test:build
 npm run test:durable
 npm test
 npm run test:sink
 ```
 
-| Check           | What a passing run establishes                                                                                                   | Evidence                                                                                                       |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `test:unit`     | Rust expiry, frozen-client and cap boundaries.                                                                                   | Console test results.                                                                                          |
-| `test:reporter` | Evidence validation, signer boundaries, quorum/veto decisions and own-vote reuse.                                                | Console test results.                                                                                          |
-| `test:durable`  | The OS payer lock excludes another writer and releases after process death.                                                      | Console test results.                                                                                          |
-| `npm test`      | One-time genesis, mint authority, proof rejection, recipient checks, replay, caps, buffers and expiry.                           | Console results; `../../.cache/solana/run/contract-test.*/validator.log`.                                      |
-| `test:sink`     | A signed native deposit produces a real multistore proof; Solana verifies it and returns three signed reports accepted by Akash. | Console results; node `.cache/sink-proof.json` and `.cache/sink-reporter.json`; a new contract-test directory. |
+| Check           | What a passing run establishes                                                                                                   | Evidence                                                                                          |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `test:unit`     | Rust expiry, frozen-client and cap boundaries.                                                                                   | Console test results.                                                                             |
+| `test:reporter` | Evidence validation, signer boundaries, quorum/veto decisions and own-vote reuse.                                                | Console test results.                                                                             |
+| `test:durable`  | The OS payer lock excludes another writer and releases after process death.                                                      | Console test results.                                                                             |
+| `npm test`      | One-time genesis, mint authority, proof rejection, recipient checks, replay, caps, buffers and expiry.                           | Console results; `../../.cache/solana/run/contract-test.*/validator.log`.                         |
+| `test:sink`     | A signed native deposit produces a real multistore proof; Solana verifies it and returns three signed reports accepted by Akash. | Console results; `.cache/solana/run/sink-proof-v2.*/` fixtures and a new contract-test directory. |
 
 `test:sink` also runs the contract suite, so it intentionally overlaps `npm test`. These proof suites start from explicitly trusted test roots. The live network below separately verifies Akash consensus signatures.
 
-Run native deposit, settlement and genesis tests against the same SDK used by setup:
+Run native deposit, settlement and genesis tests against the committed SDK pins (or your explicitly selected development workspace):
 
 ```bash
 (
   . scripts/workspace.sh
   cd "$NODE_SINK_DIR"
-  GOWORK=off go test -mod=readonly -modfile=.cache/solana/node.mod \
+  go test -mod=readonly \
     ./x/sink/... ./app ./app/types ./cmd/akash/cmd -count=1
 )
 ```
@@ -157,17 +162,19 @@ cargo test --locked --manifest-path ../../.cache/solana/deps/ibc-contracts/Cargo
   -p tendermint-light-client-solana --lib
 ```
 
-`npm run setup:light-client` reapplies or verifies the tracked patch and compares both generated IDLs. If it reports modified sources, preserve them and inspect the difference; do not overwrite local work. SBF stack-size diagnostics remain an audit item even when exercised paths pass.
+`npm run setup:light-client` verifies the pinned IBC checkout and compares both generated IDLs. If it reports modified sources, preserve them and inspect the difference; do not overwrite local work. SBF stack-size diagnostics remain an audit item even when exercised paths pass.
 
 ## 5. Existing-chain upgrade
 
-Build the pre-sink revision once, using the same SDK and native build helper:
+Build the pre-sink revision once, using that revision's own dependencies and Makefile:
 
 ```bash
 (
   . scripts/workspace.sh
   git -C "$NODE_SINK_DIR" worktree add --detach .cache/solana/upgrade-base 5193e54672e49ef328f67758ef5c91e24990c09a
-  bash scripts/build-node.sh "$NODE_SINK_DIR/.cache/solana/upgrade-base"
+  cd "$NODE_SINK_DIR/.cache/solana/upgrade-base"
+  direnv allow
+  GOWORK=off direnv exec . make bins
 )
 npm run test:upgrade
 ```

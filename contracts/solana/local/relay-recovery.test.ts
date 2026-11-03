@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { readFile, readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import test, { type TestContext } from "node:test";
+import { temporaryDirectory } from "./test-workspace";
 import {
   AnchorProvider,
   BorshInstructionCoder,
@@ -328,7 +328,7 @@ async function fixture(
   status = Status.STATUS_VOIDED,
   large = false,
 ) {
-  const stateDir = await mkdtemp(join(tmpdir(), "relay-recovery-"));
+  const stateDir = await temporaryDirectory("relay-recovery-");
   t.after(() => rm(stateDir, { recursive: true, force: true }));
   const connection = new PayingSolana(),
     wallet = new AnchorProvider(

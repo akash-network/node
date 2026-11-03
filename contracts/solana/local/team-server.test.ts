@@ -1,17 +1,18 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { temporaryDirectory } from "./test-workspace";
 
 test(
   "maintained testnet server serves configured portal and fails unavailable state without diagnostics",
   { timeout: 20000 },
   async (t) => {
-    const dist = await mkdtemp(join(tmpdir(), "sink-v2-portal-"));
+    const dist = await temporaryDirectory("sink-v2-portal-");
+    t.after(() => rm(dist, { recursive: true, force: true }));
     await writeFile(
       join(dist, "index.html"),
       "<!doctype html><title>separately built portal</title>",

@@ -69,11 +69,11 @@ and the portal on one machine, and keep no keys on the portal host.
 | Go                          | 1.26.2 (node `go.mod`)                                                                   | build host only                                                    |
 | Program hashes              | Record the ELF, IDL and generated TypeScript hashes from one build                       | `npm run build:verifiable` output and the deployment manifest      |
 
-Build once in CI and ship artifacts; do not build on production hosts. A
-`contracts/solana` build needs `npm ci`, `npm run build` (program IDL),
-`npm run setup:light-client` (patched verifier IDL) and
-`npm run build:header-encoder` (Rust helper the relayer calls). Ship the
-resulting workspace (or a container image of it) with the commit hash.
+Build on a clean Linux builder and install immutable service artifacts using
+[service deployment](deploy-services.md). That process includes the locked
+runtime dependencies, matching program IDL/types, SDK archive and native header
+encoder, plus production configuration checks and systemd units. Keep operator
+config, keys and relayer state outside the release directory.
 
 ## Hosts
 
@@ -287,22 +287,8 @@ disk halted the test network for 29 hours and expired its light client.
 - Who holds the guardians and multisig seats (decisions L1, L2, L3).
 - Production upgrade name and height (decision A1).
 
-## Maintained testnet receipt adapter
+## Testnet tooling
 
-Run `npm run portal:testnet` with `AKT_TEAM_TESTNET=1`, `AKT_TEAM_HOST`, `AKT_TEAM_ORIGIN` and `AKT_PORTAL_DIST` set explicitly. `AKT_PORTAL_DIST` names a separately built portal dist directory. The server binds loopback port 18080. Configure your existing authenticated proxy separately. This adapter does not claim production ownership or provide production deployment automation.
-
-When the proxy publishes Solana on a different port, set `AKT_TEAM_SOLANA_RPC_PORT` to that public RPC port. Status responses advertise it and the next port for WebSocket; local service connections still use `AKT_SOLANA_RPC_PORT`. For the hosted testnet, public 18999/19000 forward to loopback 18799/18800. Keep those forwarding and firewall rules in place.
-
-The API is version 2. Configuration reports the transfer minimum and maximum, account epoch cap, and aggregate epoch cap in uakt. The minimum is positive while deposits are enabled. Zero disables the account cap. Both sending caps may be below the transfer maximum. Limits use Akash's configured native quota period. Owner history returns the newest 100 records, newest first, at one committed height, with a required `truncated` flag. Older records remain accessible by ID. Discovered rows have `txHash: null` and a required composite ID. Their `createdAt` is null only when the creation height is below the node's earliest retained block; other block or status failures return 503. ID receipts need no transaction index. Transaction receipts retain byte/hash/message/response/record binding. Missing and pruned state fail instead of becoming an empty history.
-
-`local/team-contracts.ts` mirrors the portal's public contract. Holds and the five financial statuses remain separate. On-chain status 3 maps to HTTP `void_requested`; Solana `voided` remains a confirmed outcome. Origin allowlists, bounded proxy requests and responses, network genesis pins and concise errors remain enforced. The adapter logs error classes without secret-bearing messages, stacks or request bodies.
-
-Run `SINK_PORTAL_DIR=/path/to/sink-portal npm run test:portal-contract` when
-integrating either repository. The check compares the service copy with the
-portal's authoritative `contracts.ts` and fails on any difference.
-
-Origin checks do not authenticate native clients. Keep the loopback listener
-behind an authenticated proxy or a tailnet with explicit access-control rules.
-Requests without an Origin header rely on that access boundary.
-
-The adapter binds loopback at `AKT_TEAM_PORT` (default 18080). API and proxy responses are bounded to 2 MiB. The history page limit is independent of native sending amount limits.
+The faucet and receipt adapter are documented with the
+[testnet workflow](testnetify.md#maintained-testnet-receipt-adapter). Production
+portal/API hosting is a separate release prerequisite.

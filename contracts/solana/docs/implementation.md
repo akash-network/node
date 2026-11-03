@@ -46,7 +46,7 @@ There is no refund instruction on Solana. Reporters must observe the permanent o
 | Node                        | 24.14.1                   |
 | Go, for IAVL proof fixtures | 1.23+; tested with 1.26.2 |
 
-The Solana versions match the upstream light-client repository at commit `dc78ade828b766b218fb6bcb5417fdaf8e553021`. Rust and Anchor versions are pinned in this workspace. Keep both `Cargo.lock` and `package-lock.json` in version control.
+The Solana versions match the upstream light-client repository at commit `0da3165d8428a1b7792cc17551ecd1d3985761e6`. Rust and Anchor versions are pinned in this workspace. Keep both `Cargo.lock` and `package-lock.json` in version control.
 
 The Rust lockfile uses upstream-compatible transitive versions. Solana's on-chain compiler is bundled separately from host Rust; regenerating the lockfile from scratch can select dependencies that its compiler cannot build.
 
@@ -146,15 +146,15 @@ Use `npm ci` to restore JavaScript dependencies from the lockfile.
 ## Remaining launch work
 
 - Production metadata publication, wallet display checks, canonical address publication and launch tooling. The admin-controlled Metaplex instruction and local tooling are implemented; [metadata requirements](token-metadata.md) are a mainnet launch gate.
-- Review and audit the [verifier patches](verifier-patches.md), mint program ([audit package](audit.md)), native sink and reporter path. Resolve reachable upstream stack-size diagnostics and test real 100-validator transitions and sustained throughput.
+- Review and audit the [IBC verifier](verifier.md), mint program ([audit package](audit.md)), native sink and reporter path. Resolve reachable upstream stack-size diagnostics and test real 100-validator transitions and sustained throughput.
 - Operate independent reporter nodes with protected signers, durable queues, alert delivery and indexed settlement monitoring. Retain complete burn history.
 - Choose the production upgrade version, OCL source and preexisting-balance policy. The local-only handler and genuine binary-swap upgrade rehearsal now pass; they do not authorize a mainnet upgrade.
 - Define checkpoint and re-pin ceremonies, and rehearse production policy under multisig/time locks. Expiry stops minting and header updates until the upgrade authority re-pins a reviewed new client.
 
 There is no mock proof verifier or trusted-relayer mint bypass. Upstream source reference:
 
-- Repository: <https://github.com/cosmos/ibc-contracts>
-- Commit: `dc78ade828b766b218fb6bcb5417fdaf8e553021`
+- Repository: <https://github.com/akash-network/ibc-contracts>
+- Commit: `0da3165d8428a1b7792cc17551ecd1d3985761e6`
 - Programs: `ibc-solana/programs/ics07-tendermint` and `ibc-solana/programs/access-manager`
 
 The standalone test suites initialize explicitly trusted checkpoints. The persistent local stack goes further: after its initial trusted checkpoint, it verifies real signed headers through upstream ICS07 before relaying state proofs. This works without ICS26 or the upstream proof API. A reviewed production checkpoint, real full-set transitions and production operations remain.

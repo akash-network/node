@@ -12,6 +12,7 @@ import {
   readTokenMetadata,
 } from "../shared/token-metadata";
 import { object, pda, programData, PROGRAM_ID, provider } from "./common";
+import { MAINNET_GENESIS } from "../shared/networks";
 
 function httpsUrl(value: string) {
   const url = new URL(value);
@@ -45,7 +46,7 @@ async function main() {
   assert.equal(genesis, values.genesis, "wrong Solana ledger");
   assert.notEqual(
     genesis,
-    "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+    MAINNET_GENESIS,
     "use a reviewed multisig transaction for mainnet",
   );
   const metaplex = await wallet.connection.getAccountInfo(

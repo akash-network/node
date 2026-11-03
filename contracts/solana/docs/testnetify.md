@@ -93,3 +93,23 @@ The [100-validator benchmark](header-scaling.md) now passes equal and weighted c
 All live validators and reporters run on one machine. Production key custody, independent nodes, full-size validator changes, approved upgrade policy, metadata, multisig/time locks and audits remain. The monitor scans complete chronological history without a record-count limit. Missing or pruned history still fails closed. Scan time and memory grow with history.
 
 The Sink service uses the canonical schema 4 and native protobuf proofs. Follow [launch and recovery](sink-migration-v2.md) before running these commands against a new namespace. Existing numeric-ID deployments remain separate.
+
+## Maintained testnet receipt adapter
+
+Run `npm run portal:testnet` with `AKT_TEAM_TESTNET=1`, `AKT_TEAM_HOST`, `AKT_TEAM_ORIGIN` and `AKT_PORTAL_DIST` set explicitly. `AKT_PORTAL_DIST` names a separately built portal dist directory. The server binds loopback port 18080. Configure your existing authenticated proxy separately. This adapter does not claim production ownership or provide production deployment automation.
+
+When the proxy publishes Solana on a different port, set `AKT_TEAM_SOLANA_RPC_PORT` to that public RPC port. Status responses advertise it and the next port for WebSocket; local service connections still use `AKT_SOLANA_RPC_PORT`. For the hosted testnet, public 18999/19000 forward to loopback 18799/18800. Keep those forwarding and firewall rules in place.
+
+The API is version 2. Configuration reports the transfer minimum and maximum, account epoch cap, and aggregate epoch cap in uakt. The minimum is positive while deposits are enabled. Zero disables the account cap. Both sending caps may be below the transfer maximum. Limits use Akash's configured native quota period. Owner history returns the newest 100 records, newest first, at one committed height, with a required `truncated` flag. Older records remain accessible by ID. Discovered rows have `txHash: null` and a required composite ID. Their `createdAt` is null only when the creation height is below the node's earliest retained block; other block or status failures return 503. ID receipts need no transaction index. Transaction receipts retain byte/hash/message/response/record binding. Missing and pruned state fail instead of becoming an empty history.
+
+`local/team-contracts.ts` mirrors the portal's public contract. Holds and the five financial statuses remain separate. On-chain status 3 maps to HTTP `void_requested`; Solana `voided` remains a confirmed outcome. Origin allowlists, bounded proxy requests and responses, network genesis pins and concise errors remain enforced. The adapter logs error classes without secret-bearing messages, stacks or request bodies.
+
+Run `SINK_PORTAL_DIR=/path/to/sink-portal npm run test:portal-contract` when
+integrating either repository. The check compares the service copy with the
+portal's authoritative `contracts.ts` and fails on any difference.
+
+Origin checks do not authenticate native clients. Keep the loopback listener
+behind an authenticated proxy or a tailnet with explicit access-control rules.
+Requests without an Origin header rely on that access boundary.
+
+The adapter binds loopback at `AKT_TEAM_PORT` (default 18080). API and proxy responses are bounded to 2 MiB. The history page limit is independent of native sending amount limits.
