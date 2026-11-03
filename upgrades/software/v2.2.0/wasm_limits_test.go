@@ -38,8 +38,9 @@ func TestPythVaaContractPassesCanonicalWasmLimits(t *testing.T) {
 	require.NoError(t, storePythVaa(t, akash.DefaultWasmLimits().ToVM()))
 }
 
-// Documents the original failure: upstream libwasmvm defaults allow only 100 locals.
-func TestPythVaaContractFailsUpstreamWasmLimits(t *testing.T) {
-	err := storePythVaa(t, wasmvmtypes.WasmLimits{})
-	require.ErrorContains(t, err, "more than 100 locals: 137")
+func TestPythVaaContractRespectsWasmLimits(t *testing.T) {
+	limits := akash.DefaultWasmLimits()
+	limits.MaxFunctionLocals = 1
+	err := storePythVaa(t, limits.ToVM())
+	require.ErrorContains(t, err, "more than 1 locals")
 }

@@ -48,6 +48,7 @@ import (
 	dtypes "pkg.akt.dev/go/node/deployment/v1"
 	mtypes "pkg.akt.dev/go/node/market/v1"
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
+	sinktypes "pkg.akt.dev/go/node/sink/v1"
 	"pkg.akt.dev/go/sdkutil"
 
 	akash "pkg.akt.dev/node/v2/app"
@@ -183,7 +184,7 @@ func TestAppImportExport(t *testing.T) {
 	require.Equal(t, akash.AppName, appB.Name())
 
 	ctxA := appA.NewContextLegacy(true, cmtproto.Header{Height: appA.LastBlockHeight()})
-	ctxB := appB.NewContextLegacy(true, cmtproto.Header{Height: appA.LastBlockHeight()})
+	ctxB := appB.NewContextLegacy(true, cmtproto.Header{Height: appA.LastBlockHeight(), Time: appA.GetContextForCheckTx(nil).BlockTime()})
 
 	initReq := &abci.RequestInitChain{
 		AppStateBytes: exported.AppState,
@@ -349,6 +350,12 @@ func TestAppImportExport(t *testing.T) {
 			[][]byte{},
 		},
 		{
+			sinktypes.StoreKey,
+			appA,
+			appB,
+			[][]byte{},
+		},
+		{
 			wasmtypes.StoreKey,
 			appA,
 			appB,
@@ -444,6 +451,7 @@ func TestAppSimulationAfterImport(t *testing.T) {
 	_, err = newApp.InitChain(&abci.RequestInitChain{
 		AppStateBytes: exported.AppState,
 		ChainId:       AppChainID,
+		Time:          app.GetContextForCheckTx(nil).BlockTime(),
 	})
 	require.NoError(t, err)
 

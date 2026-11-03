@@ -19,25 +19,24 @@ type Distribution interface {
 	DeleteDelegatorWithdrawAddr(ctx context.Context, delAddr, withdrawAddr sdk.AccAddress) error
 }
 
-type sweepContextKey struct{}
-type sweepAuthorization struct {
-	recipient sdk.AccAddress
-	amount    sdk.Coins
-}
-
 // PrepareInstall readies the deterministic sink address for an upgrade that
 // adds this module, before migrations run sink InitGenesis. Anyone can send
 // coins to the address or create an account there before the upgrade height,
 // so neither may fail the upgrade. A non-module account becomes the sink
 // module account with the same account number. Its whole balance then moves
-// to the community pool, keeping pending + minted + voided equal to the sink
-// balance. Withdraw addresses set to the sink address, which only
+// to the community pool. Withdraw addresses set to the sink address, which only
 // becomes a blocked address with this module, are cleared so rewards go to
 // the delegators themselves. It returns the moved coins.
 func (k Keeper) PrepareInstall(ctx sdk.Context, pool Distribution) (sdk.Coins, error) {
-	if k.initialized(ctx) {
+	initialized, err := k.initialized(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if initialized {
 		return nil, fmt.Errorf("sink already initialized")
 	}
+
 	addr := Address()
 	cache, write := ctx.CacheContext()
 	switch acc := k.accounts.GetAccount(cache, addr).(type) {
@@ -53,14 +52,17 @@ func (k Keeper) PrepareInstall(ctx sdk.Context, pool Distribution) (sdk.Coins, e
 		base := authtypes.NewBaseAccount(addr, nil, acc.GetAccountNumber(), acc.GetSequence())
 		k.accounts.SetAccount(cache, authtypes.NewModuleAccount(base, types.ModuleName))
 	}
+
 	balance := k.bank.GetAllBalances(cache, addr)
 	if !balance.IsZero() {
 		sweep := cache.WithValue(sweepContextKey{}, sweepAuthorization{
-			recipient: authtypes.NewModuleAddress(distrtypes.ModuleName), amount: balance,
+			recipient: authtypes.NewModuleAddress(distrtypes.ModuleName),
+			amount:    balance,
 		})
 		if err := pool.FundCommunityPool(sweep, balance, addr); err != nil {
 			return nil, err
 		}
+
 		if !k.bank.GetAllBalances(cache, addr).IsZero() {
 			return nil, fmt.Errorf("sink address balance was not cleared")
 		}
@@ -75,6 +77,7 @@ func (k Keeper) PrepareInstall(ctx sdk.Context, pool Distribution) (sdk.Coins, e
 			return nil, err
 		}
 	}
+
 	// A payment to a blocked address fails, which would break reward
 	// withdrawals, undelegations and zero-height export. Collect first, then
 	// delete, rather than deleting while iterating.
@@ -83,8 +86,10 @@ func (k Keeper) PrepareInstall(ctx sdk.Context, pool Distribution) (sdk.Coins, e
 		if withdraw.Equals(addr) {
 			delegators = append(delegators, del)
 		}
+
 		return false
 	})
+
 	for _, del := range delegators {
 		if err := pool.DeleteDelegatorWithdrawAddr(cache, del, addr); err != nil {
 			return nil, err
@@ -99,6 +104,8 @@ func (k Keeper) PrepareInstall(ctx sdk.Context, pool Distribution) (sdk.Coins, e
 			return nil, err
 		}
 	}
+
 	write()
+
 	return balance, nil
 }

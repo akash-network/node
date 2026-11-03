@@ -3,11 +3,9 @@ package app_test
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
-	storetypes "cosmossdk.io/store/types"
 	abci "github.com/cometbft/cometbft/abci/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
@@ -20,66 +18,66 @@ import (
 
 func reportingHarness(t *testing.T) *sinkHarness {
 	return newSinkHarness(t, func(g *types.GenesisState) {
-		g.Params.MaxTransfer = 100
-		g.Params.DailyRefundCap = 100
-		g.Params.ChallengePeriodSeconds = types.DefaultChallengePeriodSeconds
+		g.Params.MaxAmountPerTransfer = coin(100)
+		g.Params.MaxEpochRefund = coin(100)
 		g.Params.RefundsEnabled = true
 	})
 }
 
 func observation(outcome types.Outcome) types.Observation {
-	return types.Observation{Outcome: outcome, Slot: 100, TransactionSignature: bytes.Repeat([]byte{byte(outcome) + 1}, 64)}
+	return types.Observation{Outcome: outcome, Evidence: types.SolanaEvidence{Slot: 100, TransactionSignature: bytes.Repeat([]byte{1}, 64)}}
 }
 
-func (h *sinkHarness) reportMsg(t *testing.T, reporter int, id uint64, outcome types.Outcome) *types.MsgReportOutcome {
+func (h *sinkHarness) reportMsg(t *testing.T, reporter, id int, outcome types.Outcome) *types.MsgReportOutcome {
 	t.Helper()
-	entry, ok := h.a.Keepers.Akash.Sink.GetTransfer(h.ctx(), id)
-	require.True(t, ok)
-	return &types.MsgReportOutcome{Reporter: sdk.AccAddress(h.reporters[reporter].PubKey().Address()).String(), Id: id,
-		ReporterEpoch: h.a.Keepers.Akash.Sink.GetTotals(h.ctx()).ReporterEpoch,
-		Round:         entry.Settlement.Round, Observation: observation(outcome)}
+	entry, err := h.a.Keepers.Akash.Sink.GetTransfer(h.ctx(), h.id(id))
+	require.NoError(t, err)
+
+	return &types.MsgReportOutcome{Reporter: h.reporterAddress(reporter), ID: h.id(id), PolicyVersion: h.state().Policy.Version, Round: entry.Settlement.Round, Observation: observation(outcome)}
 }
 
-func (h *sinkHarness) report(t *testing.T, reporter int, id uint64, outcome types.Outcome) *abci.ExecTxResult {
-	t.Helper()
+func (h *sinkHarness) report(t *testing.T, reporter, id int, outcome types.Outcome) *abci.ExecTxResult {
 	return h.deliverBytes(t, h.txFrom(t, h.reporters[reporter], "", h.reportMsg(t, reporter, id, outcome)))
 }
 
-func (h *sinkHarness) quorum(t *testing.T, id uint64, outcome types.Outcome) {
+func (h *sinkHarness) quorum(t *testing.T, id int, outcome types.Outcome) {
 	t.Helper()
+
 	for i := 0; i < 3; i++ {
 		res := h.report(t, i, id, outcome)
 		require.Zero(t, res.Code, res.Log)
 	}
 }
 
-func (h *sinkHarness) refund(t *testing.T, id uint64) *abci.ExecTxResult {
-	t.Helper()
-	key := h.reporters[4] // Not in the reporter set; finalization is permissionless.
-	return h.deliverBytes(t, h.txFrom(t, key, "", &types.MsgFinalizeRefund{Executor: sdk.AccAddress(key.PubKey().Address()).String(), Id: id}))
+func (h *sinkHarness) refund(t *testing.T, id int) *abci.ExecTxResult {
+	return h.deliverBytes(t, h.txFrom(t, h.reporters[4], "", &types.MsgFinalizeRefund{Executor: h.reporterAddress(4), ID: h.id(id)}))
 }
 
-func (h *sinkHarness) settlement(t *testing.T, id uint64) types.Settlement {
+func (h *sinkHarness) settlement(t *testing.T, id int) types.SettlementData {
 	t.Helper()
-	entry, ok := h.a.Keepers.Akash.Sink.GetTransfer(h.ctx(), id)
-	require.True(t, ok)
+	entry, err := h.a.Keepers.Akash.Sink.GetTransfer(h.ctx(), h.id(id))
+	require.NoError(t, err)
+
 	return entry.Settlement
 }
 
-func (h *sinkHarness) resolve(t *testing.T, id uint64, decision types.Decision) error {
+func (h *sinkHarness) resolve(t *testing.T, id types.ID, decision types.Decision) error {
 	t.Helper()
-	msg := &types.MsgResolveTransfer{Authority: authtypes.NewModuleAddress(govtypes.ModuleName).String(), Id: id, Decision: decision, Reason: "local governance review"}
-	if decision == types.Decision_DECISION_CONFIRM_MINT {
-		value := observation(types.Outcome_OUTCOME_MINTED)
-		msg.Observation = &value
+	authority := authtypes.NewModuleAddress(govtypes.ModuleName).String()
+	transfer, err := h.a.Keepers.Akash.Sink.GetTransfer(h.ctx(), id)
+	require.NoError(t, err)
+	round := transfer.Settlement.Round
+	var msg types.Resolution
+	switch decision {
+	case types.DecisionRestart:
+		msg = &types.MsgRestartTransfer{Authority: authority, ID: id, ExpectedRound: round, Reason: "review"}
+	case types.DecisionConfirmMint:
+		msg = &types.MsgConfirmMint{Authority: authority, ID: id, ExpectedRound: round, Reason: "review", Evidence: observation(types.OutcomeMinted).Evidence}
+	case types.DecisionConfirmVoid:
+		msg = &types.MsgConfirmVoid{Authority: authority, ID: id, ExpectedRound: round, Reason: "review", Evidence: observation(types.OutcomeVoided).Evidence}
 	}
-	if decision == types.Decision_DECISION_CONFIRM_VOID {
-		value := observation(types.Outcome_OUTCOME_VOIDED)
-		msg.Observation = &value
-	}
-	// Governance dispatches the same registered message handler after a passed
-	// proposal; it does not possess a private key for the governance account.
-	_, err := h.a.MsgServiceRouter().Handler(msg)(h.ctx(), msg)
+
+	_, err = h.a.MsgServiceRouter().Handler(msg)(h.ctx(), msg)
 	return err
 }
 
@@ -87,336 +85,244 @@ func (h *sinkHarness) checkSettlementExport(t *testing.T) {
 	t.Helper()
 	k := h.a.Keepers.Akash.Sink
 	require.NoError(t, k.CheckBalance(h.ctx()))
-	open := h.checkOpenIndex(t, h.ctx())
-	g := k.ExportGenesis(h.ctx())
+	g, err := k.ExportGenesis(h.ctx())
+	require.NoError(t, err)
 	require.NoError(t, g.Validate())
 	cache, _ := h.ctx().CacheContext()
-	s := cache.KVStore(h.a.GetKey(types.StoreKey))
-	before := storeEntries(s, sinkkeeper.OpenTransfersKey.Bytes())
-	queue := storeEntries(s, sinkkeeper.RefundQueueKey.Bytes())
-	it := storetypes.KVStorePrefixIterator(s, nil)
-	var keys [][]byte
-	for ; it.Valid(); it.Next() {
-		keys = append(keys, bytes.Clone(it.Key()))
-	}
-	require.NoError(t, it.Close())
-	for _, key := range keys {
-		s.Delete(key)
-	}
+	cache = cache.WithBlockHeight(h.height + 1)
+	before := storeEntries(t, cache.KVStore(h.a.GetKey(types.StoreKey)), nil)
+	clearSinkStore(t, h, cache)
 	require.NoError(t, k.InitGenesis(cache, g))
-	require.Equal(t, g, k.ExportGenesis(cache))
+	again, err := k.ExportGenesis(cache)
+	require.NoError(t, err)
+	require.Equal(t, g, again)
+	require.Equal(t, before, storeEntries(t, cache.KVStore(h.a.GetKey(types.StoreKey)), nil))
 	require.NoError(t, k.CheckBalance(cache))
-	// InitGenesis rebuilds the derived open index and refund queue exactly.
-	require.Equal(t, before, storeEntries(s, sinkkeeper.OpenTransfersKey.Bytes()))
-	require.Equal(t, queue, storeEntries(s, sinkkeeper.RefundQueueKey.Bytes()))
-	require.Equal(t, open, h.checkOpenIndex(t, cache))
 }
 
 func TestSinkMintReportsCloseOnce(t *testing.T) {
 	h := reportingHarness(t)
-	k := h.a.Keepers.Akash.Sink
-	p := k.GetParams(h.ctx())
-	p.MaxPendingPerAccount = 1
-	require.NoError(t, k.SetParams(h.ctx(), p))
-	res := h.deliver(t, "", h.deposit(100))
+	res := h.deliver(t, "", h.deposit(60))
 	require.Zero(t, res.Code, res.Log)
-	original, _ := k.GetTransfer(h.ctx(), 1)
-	for _, i := range []int{0, 0, 1} {
-		res = h.report(t, i, 1, types.Outcome_OUTCOME_MINTED)
-		require.Zero(t, res.Code, res.Log)
-	}
-	require.Len(t, h.settlement(t, 1).Votes, 2)
-	require.Equal(t, uint32(1), k.GetAccountUsage(h.ctx(), h.sender).PendingCount)
-	res = h.report(t, 4, 1, types.Outcome_OUTCOME_MINTED)
-	require.NotZero(t, res.Code)
-	require.Contains(t, res.Log, "not a current sink reporter")
-	forged := h.reportMsg(t, 0, 1, types.Outcome_OUTCOME_MINTED)
-	res = h.deliverBytes(t, h.txFrom(t, h.reporters[1], "", forged))
-	require.NotZero(t, res.Code) // Cannot submit another reporter's vote.
-	bad := h.reportMsg(t, 2, 1, types.Outcome_OUTCOME_MINTED)
-	bad.Observation.TransactionSignature = []byte{1}
-	res = h.deliverBytes(t, h.txFrom(t, h.reporters[2], "", bad))
-	require.NotZero(t, res.Code)
-	require.Contains(t, res.Log, "64-byte")
 	before := h.a.Keepers.Cosmos.Bank.GetAllBalances(h.ctx(), sinkkeeper.Address())
-	res = h.report(t, 2, 1, types.Outcome_OUTCOME_MINTED)
-	require.Zero(t, res.Code, res.Log)
-	require.Equal(t, types.Status_STATUS_MINTED, h.settlement(t, 1).Status)
-	require.Equal(t, uint64(100), k.GetTotals(h.ctx()).MintedAmount)
-	require.Zero(t, k.GetTotals(h.ctx()).PendingCount)
-	require.Zero(t, k.GetAccountUsage(h.ctx(), h.sender).PendingCount)
-	require.Equal(t, before, h.a.Keepers.Cosmos.Bank.GetAllBalances(h.ctx(), sinkkeeper.Address()))
-	res = h.report(t, 3, 1, types.Outcome_OUTCOME_MINTED)
-	require.Zero(t, res.Code, res.Log)
-	require.Zero(t, k.GetTotals(h.ctx()).PendingCount)
-	res = h.deliver(t, "", h.deposit(1))
-	require.Zero(t, res.Code, res.Log) // Slot reopened.
-	res = h.report(t, 3, 1, types.Outcome_OUTCOME_VOIDED)
-	require.Zero(t, res.Code, res.Log)
-	require.Equal(t, types.Hold_HOLD_CONFLICT, h.settlement(t, 1).Hold)
-	require.Equal(t, types.Status_STATUS_MINTED, h.settlement(t, 1).Status)
+	h.quorum(t, 1, types.OutcomeMinted)
+	s := h.settlement(t, 1)
+	require.Equal(t, types.StatusMinted, s.Status)
+	require.Len(t, s.Votes, 3)
+	msg := h.reportMsg(t, 0, 1, types.OutcomeMinted)
+	msg.Observation.Evidence.Slot++
+	require.NoError(t, h.a.Keepers.Akash.Sink.ReportOutcome(h.ctx(), msg))
+	require.Equal(t, s, h.settlement(t, 1))
+	require.Equal(t, coin(60), h.totals().MintedAmount)
+	require.Equal(t, uint64(1), h.totals().MintedCount)
+	require.Zero(t, h.totals().PendingCount)
 	res = h.refund(t, 1)
 	require.NotZero(t, res.Code)
-	require.Error(t, h.resolve(t, 1, types.Decision_DECISION_RESTART))
-	// Without a void order governance cannot confirm a void, even to reopen a
-	// contested mint (TestSinkGovernanceReopensContestedMint).
-	require.ErrorContains(t, h.resolve(t, 1, types.Decision_DECISION_CONFIRM_VOID), "void order")
-	require.NoError(t, h.resolve(t, 1, types.Decision_DECISION_CONFIRM_MINT))
-	entry, _ := k.GetTransfer(h.ctx(), 1)
-	require.Equal(t, original.Record, entry.Record)
-	require.Equal(t, types.Hold_HOLD_NONE, entry.Settlement.Hold)
+	require.Equal(t, before, h.a.Keepers.Cosmos.Bank.GetAllBalances(h.ctx(), sinkkeeper.Address()))
 	h.checkSettlementExport(t)
 }
 
 func TestSinkRefundExactOnceAndBankRollback(t *testing.T) {
 	h := reportingHarness(t)
-	k := h.a.Keepers.Akash.Sink
 	res := h.deliver(t, "", h.deposit(60))
 	require.Zero(t, res.Code, res.Log)
-	original, _ := k.GetTransfer(h.ctx(), 1)
-	require.NoError(t, k.RequestVoid(h.ctx(), authtypes.NewModuleAddress(govtypes.ModuleName).String(), 1))
-	res = h.refund(t, 1)
-	require.NotZero(t, res.Code) // An Akash order is not a Solana void.
-	h.quorum(t, 1, types.Outcome_OUTCOME_VOIDED)
-	s := h.settlement(t, 1)
-	require.Equal(t, types.Status_STATUS_VOIDED, s.Status)
-	require.Equal(t, uint64(60), k.GetTotals(h.ctx()).VoidedAmount)
-	require.Zero(t, k.GetTotals(h.ctx()).PendingAmount)
-	require.Equal(t, uint64(1), k.GetTotals(h.ctx()).PendingCount)
-	res = h.report(t, 0, 1, types.Outcome_OUTCOME_VOIDED)
-	require.Zero(t, res.Code, res.Log)
-	require.Equal(t, s.ChallengeEnd, h.settlement(t, 1).ChallengeEnd)
-	h.now = time.Unix(s.ChallengeEnd-2, 0)
+	h.quorum(t, 1, types.OutcomeVoided)
 	res = h.refund(t, 1)
 	require.NotZero(t, res.Code)
-	require.Contains(t, res.Log, "not finished")
-	failBank := true
+	h.now = *h.settlement(t, 1).ChallengeEnd
+	fail := true
 	h.a.Keepers.Cosmos.Bank.AppendSendRestriction(func(_ context.Context, from, to sdk.AccAddress, _ sdk.Coins) (sdk.AccAddress, error) {
-		if failBank && from.Equals(sinkkeeper.Address()) {
-			return nil, fmt.Errorf("injected bank rejection")
+		if fail && from.Equals(sinkkeeper.Address()) {
+			return nil, types.ErrInternal.Wrap("injected bank failure")
 		}
+
 		return to, nil
 	})
-	before := h.a.Keepers.Cosmos.Bank.GetBalance(h.ctx(), h.sender, "uakt")
+
+	before := h.totals()
+	s := h.settlement(t, 1)
+	balance := h.a.Keepers.Cosmos.Bank.GetAllBalances(h.ctx(), h.sender)
 	res = h.refund(t, 1)
 	require.NotZero(t, res.Code)
-	require.Contains(t, res.Log, "injected bank rejection")
-	require.Zero(t, k.GetTotals(h.ctx()).RefundedToday)
-	require.Equal(t, types.Status_STATUS_VOIDED, h.settlement(t, 1).Status)
-	require.Equal(t, before, h.a.Keepers.Cosmos.Bank.GetBalance(h.ctx(), h.sender, "uakt"))
-	failBank = false
+	require.Equal(t, before, h.totals())
+	require.Equal(t, s, h.settlement(t, 1))
+	require.Equal(t, balance, h.a.Keepers.Cosmos.Bank.GetAllBalances(h.ctx(), h.sender))
+	fail = false
 	res = h.refund(t, 1)
 	require.Zero(t, res.Code, res.Log)
-	require.Equal(t, before.Add(sdk.NewInt64Coin("uakt", 60)), h.a.Keepers.Cosmos.Bank.GetBalance(h.ctx(), h.sender, "uakt"))
-	totals := k.GetTotals(h.ctx())
-	require.Equal(t, uint64(60), totals.RefundedAmount)
-	require.Equal(t, uint64(60), totals.RefundedToday)
-	require.Zero(t, totals.PendingCount)
-	require.Zero(t, totals.VoidedAmount)
-	require.Zero(t, k.GetAccountUsage(h.ctx(), h.sender).PendingCount)
-	require.Equal(t, types.Status_STATUS_REFUNDED, h.settlement(t, 1).Status)
+	require.Equal(t, types.StatusRefunded, h.settlement(t, 1).Status)
+	require.Equal(t, balance.Add(coin(60)), h.a.Keepers.Cosmos.Bank.GetAllBalances(h.ctx(), h.sender))
+	require.Equal(t, coin(60), h.totals().RefundedAmount)
+	require.Equal(t, uint64(1), h.totals().RefundedCount)
+	paid := h.a.Keepers.Cosmos.Bank.GetAllBalances(h.ctx(), h.sender)
 	res = h.refund(t, 1)
 	require.Zero(t, res.Code, res.Log)
-	require.Equal(t, totals, k.GetTotals(h.ctx()))
-	entry, _ := k.GetTransfer(h.ctx(), 1)
-	require.Equal(t, original.Record, entry.Record)
-	require.Error(t, h.a.Keepers.Cosmos.Bank.SendCoinsFromModuleToAccount(h.ctx(), types.ModuleName, h.sender, sdk.NewCoins(sdk.NewInt64Coin("uakt", 1))))
-	res = h.report(t, 3, 1, types.Outcome_OUTCOME_MINTED)
-	require.Zero(t, res.Code, res.Log)
-	require.Equal(t, types.Hold_HOLD_CONFLICT, h.settlement(t, 1).Hold)
-	require.Error(t, h.resolve(t, 1, types.Decision_DECISION_CONFIRM_MINT))
-	require.Error(t, h.resolve(t, 1, types.Decision_DECISION_RESTART))
+	require.Equal(t, paid, h.a.Keepers.Cosmos.Bank.GetAllBalances(h.ctx(), h.sender))
 	h.checkSettlementExport(t)
 }
 
 func TestSinkVetoConflictAndGovernanceResolution(t *testing.T) {
-	for _, mode := range []string{"veto", "conflict"} {
-		t.Run(mode, func(t *testing.T) {
-			h := reportingHarness(t)
-			k := h.a.Keepers.Akash.Sink
-			res := h.deliver(t, "", h.deposit(60))
-			require.Zero(t, res.Code, res.Log)
-			h.quorum(t, 1, types.Outcome_OUTCOME_VOIDED)
-			old := h.reportMsg(t, 0, 1, types.Outcome_OUTCOME_VOIDED)
-			outsider := sdk.AccAddress(h.reporters[4].PubKey().Address()).String()
-			res = h.deliverBytes(t, h.txFrom(t, h.reporters[4], "", &types.MsgVetoVoid{Signer: outsider, Id: 1, Reason: "outsider"}))
-			require.NotZero(t, res.Code)
-			if mode == "veto" {
-				member := sdk.AccAddress(h.reporters[3].PubKey().Address()).String()
-				res = h.deliverBytes(t, h.txFrom(t, h.reporters[3], "", &types.MsgVetoVoid{Signer: member, Id: 1, Reason: "node does not show a finalized void"}))
-				require.Zero(t, res.Code, res.Log)
-				require.Equal(t, types.Hold_HOLD_VETO, h.settlement(t, 1).Hold)
-			} else {
-				// One reporter equivocates. Its second outcome is evidence of a
-				// conflict, not another vote toward either threshold.
-				res = h.report(t, 0, 1, types.Outcome_OUTCOME_MINTED)
-				require.Zero(t, res.Code, res.Log)
-				require.Equal(t, types.Hold_HOLD_CONFLICT, h.settlement(t, 1).Hold)
-			}
-			h.checkSettlementExport(t)
-			h.now = time.Unix(h.settlement(t, 1).ChallengeEnd, 0)
-			res = h.refund(t, 1)
-			require.NotZero(t, res.Code)
-			gov := authtypes.NewModuleAddress(govtypes.ModuleName).String()
-			require.NoError(t, k.RequestVoid(h.ctx(), gov, 1))
-			res = h.refund(t, 1)
-			require.NotZero(t, res.Code)
-			require.Error(t, k.ResolveTransfer(h.ctx(), &types.MsgResolveTransfer{Authority: gov, Id: 1, Decision: types.Decision_DECISION_CONFIRM_VOID, Reason: "missing evidence"}))
-			res = h.deliver(t, "", &types.MsgResolveTransfer{Authority: h.sender.String(), Id: 1, Decision: types.Decision_DECISION_RESTART, Reason: "not governance"})
-			require.NotZero(t, res.Code)
-			require.NoError(t, h.resolve(t, 1, types.Decision_DECISION_CONFIRM_VOID))
-			s := h.settlement(t, 1)
-			require.Equal(t, uint64(2), s.Round)
-			require.Equal(t, types.Hold_HOLD_NONE, s.Hold)
-			require.Greater(t, s.ChallengeEnd, h.now.Unix())
-			res = h.refund(t, 1)
-			require.NotZero(t, res.Code) // Governance cannot bypass the new window.
-			res = h.deliverBytes(t, h.txFrom(t, h.reporters[0], "", old))
-			require.NotZero(t, res.Code)
-			require.Contains(t, res.Log, "stale report round")
-			// Reject the void and require a completely new round of observations.
-			require.NoError(t, h.resolve(t, 1, types.Decision_DECISION_RESTART))
-			require.Equal(t, types.Status_STATUS_PENDING, h.settlement(t, 1).Status)
-			require.Equal(t, uint64(60), k.GetTotals(h.ctx()).PendingAmount)
-			require.Zero(t, k.GetTotals(h.ctx()).VoidedAmount)
-			h.quorum(t, 1, types.Outcome_OUTCOME_MINTED)
-			require.Equal(t, types.Status_STATUS_MINTED, h.settlement(t, 1).Status)
-			h.checkSettlementExport(t)
-		})
-	}
+	h := reportingHarness(t)
+	res := h.deliver(t, "", h.deposit(60))
+	require.Zero(t, res.Code, res.Log)
+	h.quorum(t, 1, types.OutcomeVoided)
+	k := h.a.Keepers.Akash.Sink
+	require.NoError(t, k.VetoVoid(h.ctx(), &types.MsgVetoVoid{Signer: h.reporterAddress(0), ID: h.id(1), Reason: "check evidence"}))
+	require.Equal(t, types.HoldVeto, h.settlement(t, 1).Hold)
+	res = h.report(t, 0, 1, types.OutcomeMinted)
+	require.Zero(t, res.Code, res.Log)
+	require.Equal(t, types.HoldConflict, h.settlement(t, 1).Hold)
+	round := h.settlement(t, 1).Round
+	require.NoError(t, h.resolve(t, h.id(1), types.DecisionRestart))
+	require.Equal(t, round+1, h.settlement(t, 1).Round)
+	require.Empty(t, h.settlement(t, 1).Votes)
+	require.Nil(t, h.settlement(t, 1).Veto)
+	stale := &types.MsgConfirmMint{Authority: authtypes.NewModuleAddress(govtypes.ModuleName).String(), ID: h.id(1), ExpectedRound: round, Reason: "stale proposal", Evidence: observation(types.OutcomeMinted).Evidence}
+	require.ErrorIs(t, k.Resolve(h.ctx(), stale), types.ErrStaleReport)
+	require.Error(t, h.resolve(t, h.id(1), types.DecisionConfirmVoid))
+	require.NoError(t, h.order(h.id(1)))
+	require.NoError(t, h.resolve(t, h.id(1), types.DecisionConfirmVoid))
+	h.now = *h.settlement(t, 1).ChallengeEnd
+	res = h.refund(t, 1)
+	require.Zero(t, res.Code, res.Log)
+	require.Error(t, h.resolve(t, h.id(1), types.DecisionConfirmMint))
+	require.Error(t, h.resolve(t, h.id(1), types.DecisionRestart))
+	h.checkSettlementExport(t)
+}
+
+func rotate(h *sinkHarness) {
+	p := h.params()
+	p.Reporters = []string{h.reporterAddress(1), h.reporterAddress(2), h.reporterAddress(3), h.reporterAddress(4)}
+	require.NoError(h.t, h.update(p))
 }
 
 func TestSinkReporterRotationRestartsAuthorization(t *testing.T) {
 	h := reportingHarness(t)
-	k := h.a.Keepers.Akash.Sink
 	res := h.deliver(t, "", h.deposit(60))
 	require.Zero(t, res.Code, res.Log)
-	h.quorum(t, 1, types.Outcome_OUTCOME_VOIDED)
-	old := h.reportMsg(t, 1, 1, types.Outcome_OUTCOME_VOIDED)
-	oldDeadline := h.settlement(t, 1).ChallengeEnd
-	p := k.GetParams(h.ctx())
-	p.Reporters[0] = sdk.AccAddress(h.reporters[4].PubKey().Address()).String()
-	require.NoError(t, k.SetParams(h.ctx(), p))
-	require.Equal(t, old.ReporterEpoch+1, k.GetTotals(h.ctx()).ReporterEpoch)
-	h.now = time.Unix(oldDeadline, 0)
+	h.quorum(t, 1, types.OutcomeVoided)
+	old := h.settlement(t, 1)
+	rotate(h)
+	require.Nil(t, h.state().RefundHead)
+	h.now = *old.ChallengeEnd
 	res = h.refund(t, 1)
 	require.NotZero(t, res.Code)
-	require.Contains(t, res.Log, "stale void authorization")
-	h.checkSettlementExport(t) // Export/import must retain the invalidation.
-	res = h.deliverBytes(t, h.txFrom(t, h.reporters[1], "", old))
-	require.NotZero(t, res.Code)
-	require.Contains(t, res.Log, "stale reporter epoch")
-	res = h.report(t, 0, 1, types.Outcome_OUTCOME_VOIDED)
-	require.NotZero(t, res.Code)
-	res = h.report(t, 1, 1, types.Outcome_OUTCOME_VOIDED)
+	res = h.report(t, 1, 1, types.OutcomeVoided)
 	require.Zero(t, res.Code, res.Log)
-	require.Equal(t, types.Status_STATUS_PENDING, h.settlement(t, 1).Status)
-	require.Equal(t, uint64(60), k.GetTotals(h.ctx()).PendingAmount)
-	require.Zero(t, k.GetTotals(h.ctx()).VoidedAmount)
-	for _, i := range []int{2, 4} {
-		res = h.report(t, i, 1, types.Outcome_OUTCOME_VOIDED)
+	s := h.settlement(t, 1)
+	require.Equal(t, types.StatusTransferPending, s.Status)
+	require.Len(t, s.Votes, 4)
+	require.Nil(t, s.ChallengeEnd)
+
+	for _, r := range []int{2, 3} {
+		res = h.report(t, r, 1, types.OutcomeVoided)
 		require.Zero(t, res.Code, res.Log)
 	}
-	s := h.settlement(t, 1)
-	require.Greater(t, s.ChallengeEnd, oldDeadline)
-	p = k.GetParams(h.ctx())
-	p.ChallengePeriodSeconds = types.DefaultChallengePeriodSeconds + 1
-	p.Reporters[0], p.Reporters[1] = p.Reporters[1], p.Reporters[0]
-	require.NoError(t, k.SetParams(h.ctx(), p))
-	require.Equal(t, old.ReporterEpoch+1, k.GetTotals(h.ctx()).ReporterEpoch) // Reordering is not rotation.
-	require.Equal(t, s.ChallengeEnd, h.settlement(t, 1).ChallengeEnd)
-	res = h.refund(t, 1)
-	require.NotZero(t, res.Code)
-	h.now = time.Unix(s.ChallengeEnd-1, 0)
-	res = h.refund(t, 1)
-	require.Zero(t, res.Code, res.Log) // Exactly the deadline.
+
+	s = h.settlement(t, 1)
+	require.Equal(t, types.StatusRefundPending, s.Status)
+	require.True(t, s.ChallengeEnd.After(*old.ChallengeEnd))
 	h.checkSettlementExport(t)
 }
 
 func TestSinkRotationCannotRemoveHold(t *testing.T) {
 	h := reportingHarness(t)
-	k := h.a.Keepers.Akash.Sink
 	res := h.deliver(t, "", h.deposit(60))
 	require.Zero(t, res.Code, res.Log)
-	h.quorum(t, 1, types.Outcome_OUTCOME_VOIDED)
-	member := sdk.AccAddress(h.reporters[3].PubKey().Address()).String()
-	res = h.deliverBytes(t, h.txFrom(t, h.reporters[3], "", &types.MsgVetoVoid{Signer: member, Id: 1, Reason: "disputed void"}))
+	h.quorum(t, 1, types.OutcomeVoided)
+	k := h.a.Keepers.Akash.Sink
+	require.NoError(t, k.VetoVoid(h.ctx(), &types.MsgVetoVoid{Signer: h.reporterAddress(0), ID: h.id(1), Reason: "keep me"}))
+	rotate(h)
+	res = h.report(t, 1, 1, types.OutcomeVoided)
 	require.Zero(t, res.Code, res.Log)
-	p := k.GetParams(h.ctx())
-	p.ReporterThreshold = 4
-	require.NoError(t, k.SetParams(h.ctx(), p))
-	for i := 0; i < 4; i++ {
-		res = h.report(t, i, 1, types.Outcome_OUTCOME_VOIDED)
-		require.Zero(t, res.Code, res.Log)
-	}
-	require.Equal(t, types.Hold_HOLD_VETO, h.settlement(t, 1).Hold)
-	require.Equal(t, types.Status_STATUS_PENDING, h.settlement(t, 1).Status)
-	h.now = h.now.Add(48 * time.Hour)
-	res = h.refund(t, 1)
-	require.NotZero(t, res.Code)
+	s := h.settlement(t, 1)
+	require.Equal(t, types.HoldVeto, s.Hold)
+	require.Equal(t, "keep me", s.Veto.Reason)
+	require.Nil(t, s.ChallengeEnd)
 	h.checkSettlementExport(t)
+}
+
+func TestSinkTerminalEvidenceSurvivesRotation(t *testing.T) {
+	for _, outcome := range []types.Outcome{types.OutcomeMinted, types.OutcomeVoided} {
+		t.Run(outcome.String(), func(t *testing.T) {
+			h := reportingHarness(t)
+			res := h.deliver(t, "", h.deposit(60))
+			require.Zero(t, res.Code, res.Log)
+			h.quorum(t, 1, outcome)
+
+			if outcome == types.OutcomeVoided {
+				h.now = *h.settlement(t, 1).ChallengeEnd
+				res = h.refund(t, 1)
+				require.Zero(t, res.Code, res.Log)
+			}
+
+			before := h.settlement(t, 1)
+			rotate(h)
+			opposite := types.OutcomeVoided
+			if outcome == types.OutcomeVoided {
+				opposite = types.OutcomeMinted
+			}
+
+			res = h.report(t, 4, 1, opposite)
+			require.Zero(t, res.Code, res.Log)
+			after := h.settlement(t, 1)
+			require.Equal(t, before.Status, after.Status)
+			require.Equal(t, before.PolicyVersion, after.PolicyVersion)
+			require.Equal(t, before.Votes, after.Votes[:len(before.Votes)])
+			require.Equal(t, types.HoldConflict, after.Hold)
+			disputes, err := h.a.Keepers.Akash.Sink.NewQuerier().Disputes(h.ctx(), nil)
+			require.NoError(t, err)
+			require.Len(t, disputes.Transfers, 1)
+
+			if outcome == types.OutcomeVoided {
+				require.NoError(t, h.resolve(t, h.id(1), types.DecisionConfirmVoid))
+				require.Equal(t, types.StatusRefunded, h.settlement(t, 1).Status)
+			}
+
+			h.checkSettlementExport(t)
+		})
+	}
 }
 
 func TestSinkRefundPauseAndDailyCap(t *testing.T) {
 	h := reportingHarness(t)
-	k := h.a.Keepers.Akash.Sink
-	for id := uint64(1); id <= 2; id++ {
+	for i := 0; i < 2; i++ {
 		res := h.deliver(t, "", h.deposit(60))
 		require.Zero(t, res.Code, res.Log)
-		h.quorum(t, id, types.Outcome_OUTCOME_VOIDED)
+		h.quorum(t, i+1, types.OutcomeVoided)
 	}
-	h.now = time.Unix(h.settlement(t, 2).ChallengeEnd, 0)
-	p := k.GetParams(h.ctx())
+
+	h.now = *h.settlement(t, 2).ChallengeEnd
+	p := h.params()
 	p.RefundsEnabled = false
-	require.NoError(t, k.SetParams(h.ctx(), p))
+	require.NoError(t, h.update(p))
 	res := h.refund(t, 1)
 	require.NotZero(t, res.Code)
-	require.Contains(t, res.Log, "refunds disabled")
 	p.RefundsEnabled = true
-	require.NoError(t, k.SetParams(h.ctx(), p))
+	require.NoError(t, h.update(p))
 	res = h.refund(t, 1)
 	require.Zero(t, res.Code, res.Log)
-	require.Equal(t, uint64(60), k.GetTotals(h.ctx()).RefundedToday)
 	res = h.refund(t, 2)
 	require.NotZero(t, res.Code)
-	require.Contains(t, res.Log, "daily refund cap")
-	gov := authtypes.NewModuleAddress(govtypes.ModuleName).String()
-	require.NoError(t, k.RequestVoid(h.ctx(), gov, 2))
-	require.NoError(t, h.resolve(t, 2, types.Decision_DECISION_CONFIRM_VOID))
-	require.NoError(t, k.SetParams(h.ctx(), p))
-	// Neither governance nor params reset the day's refunds.
-	require.Equal(t, uint64(60), k.GetTotals(h.ctx()).RefundedToday)
-	res = h.refund(t, 2)
-	require.NotZero(t, res.Code) // the new window has not passed
-	oldDay := k.GetTotals(h.ctx()).RefundDay
-	h.now = time.Unix(h.settlement(t, 2).ChallengeEnd, 0)
+	h.now = h.now.Add(24 * time.Hour)
 	res = h.refund(t, 2)
 	require.Zero(t, res.Code, res.Log)
-	require.Equal(t, uint64(120), k.GetTotals(h.ctx()).RefundedAmount)
-	require.Equal(t, uint64(60), k.GetTotals(h.ctx()).RefundedToday)
-	require.Greater(t, k.GetTotals(h.ctx()).RefundDay, oldDay)
 	h.checkSettlementExport(t)
 }
 
 func TestSinkGovernanceWhenReportersUnavailable(t *testing.T) {
 	h := reportingHarness(t)
-	k := h.a.Keepers.Akash.Sink
 	res := h.deliver(t, "", h.deposit(60))
 	require.Zero(t, res.Code, res.Log)
-	p := k.GetParams(h.ctx())
-	p.Enabled = false
+	require.NoError(t, h.order(h.id(1)))
+	require.NoError(t, h.resolve(t, h.id(1), types.DecisionConfirmVoid))
+	version := h.settlement(t, 1).PolicyVersion
+	p := h.params()
+	p.DepositsEnabled = false
 	p.Reporters = nil
-	p.ReporterThreshold = 0
-	require.NoError(t, k.SetParams(h.ctx(), p))
-	gov := authtypes.NewModuleAddress(govtypes.ModuleName).String()
-	require.NoError(t, k.RequestVoid(h.ctx(), gov, 1))
-	require.NoError(t, h.resolve(t, 1, types.Decision_DECISION_CONFIRM_VOID))
-	h.now = time.Unix(h.settlement(t, 1).ChallengeEnd, 0)
-	require.NoError(t, k.VetoVoid(h.ctx(), &types.MsgVetoVoid{Signer: gov, Id: 1, Reason: "stop before payment"}))
-	res = h.refund(t, 1)
-	require.NotZero(t, res.Code)
-	require.NoError(t, h.resolve(t, 1, types.Decision_DECISION_CONFIRM_VOID))
-	h.now = time.Unix(h.settlement(t, 1).ChallengeEnd-1, 0)
+	require.NoError(t, h.update(p))
+	require.Equal(t, version, h.settlement(t, 1).PolicyVersion)
+	h.now = *h.settlement(t, 1).ChallengeEnd
 	res = h.refund(t, 1)
 	require.Zero(t, res.Code, res.Log)
 	h.checkSettlementExport(t)

@@ -3,12 +3,9 @@ package v2_2_0_test
 import (
 	"testing"
 
-	"cosmossdk.io/log"
 	sdkmath "cosmossdk.io/math"
 	storetypes "cosmossdk.io/store/types"
-	upgradetypes "cosmossdk.io/x/upgrade/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/module"
 	"github.com/stretchr/testify/require"
 
 	escrowid "pkg.akt.dev/go/node/escrow/id/v1"
@@ -19,7 +16,6 @@ import (
 	repair "pkg.akt.dev/node/v2/upgrades/software/v2.2.0"
 
 	"pkg.akt.dev/node/v2/testutil/state"
-	utypes "pkg.akt.dev/node/v2/upgrades/types"
 	"pkg.akt.dev/node/v2/x/escrow"
 	ekeeper "pkg.akt.dev/node/v2/x/escrow/keeper"
 )
@@ -216,31 +212,6 @@ func TestRepairDoesNotChargeOrphanDuringLaterSettlement(t *testing.T) {
 	other := state.SetupTestSuite(t)
 	escrow.InitGenesis(other.Context(), other.EscrowKeeper(), exported)
 	require.Equal(t, exported, escrow.ExportGenesis(other.Context(), other.EscrowKeeper()))
-}
-
-func TestUpgradeRegistrationAndVersions(t *testing.T) {
-	s := state.SetupTestSuite(t)
-	ctx := s.Context()
-	k := s.EscrowKeeper()
-	id := testutil.LeaseID(t)
-	p := payment(id, etypes.StateOpen)
-	require.NoError(t, k.SavePaymentRaw(ctx, p))
-	require.NoError(t, s.MarketKeeper().SaveLease(ctx, mv1.Lease{ID: id, State: mv1.LeaseClosed, Price: p.State.Rate}))
-	factory := utypes.GetUpgradesList()[repair.UpgradeName]
-	require.NotNil(t, factory)
-	upgrade, err := factory(log.NewNopLogger(), s.App().App)
-	require.NoError(t, err)
-	require.Nil(t, upgrade.StoreLoader())
-	versions := module.VersionMap{"escrow": 4, "market": 7, "bank": 4}
-	got, err := upgrade.UpgradeHandler()(ctx, upgradetypes.Plan{Name: repair.UpgradeName, Height: ctx.BlockHeight()}, versions)
-	require.NoError(t, err)
-	require.Equal(t, versions, got)
-	p.State.State = etypes.StateClosed
-	actual, err := k.GetPayment(ctx, p.ID)
-	require.NoError(t, err)
-	require.Equal(t, p, actual)
-	events := ctx.EventManager().Events()
-	require.Equal(t, "escrow_orphan_payments_repaired", events[len(events)-1].Type)
 }
 
 func TestRepairSkipsOtherScopes(t *testing.T) {

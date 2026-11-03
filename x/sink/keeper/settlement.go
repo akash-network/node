@@ -1,123 +1,71 @@
 package keeper
 
 import (
-	"fmt"
 	"math"
 	"slices"
+	"time"
 
-	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	gogotypes "github.com/cosmos/gogoproto/types"
 
 	types "pkg.akt.dev/go/node/sink/v1"
 )
 
-type refundContextKey struct{}
-type refundAuthorization struct {
-	recipient sdk.AccAddress
-	amount    uint64
-}
-
-func amountCoins(amount uint64) sdk.Coins {
-	return sdk.NewCoins(sdk.NewCoin(types.Denom, sdkmath.NewIntFromUint64(amount)))
-}
-
-// settlement loads a transfer and its settlement. Unlike GetTransfer it skips
-// the void-order lookup, which settlement code reads only where it needs it.
-func (k Keeper) settlement(ctx sdk.Context, id uint64) (types.Transfer, types.Settlement, error) {
-	record, ok := get(ctx, k.transfers, id, nil)
-	if !ok {
-		return types.Transfer{}, types.Settlement{}, sdkerrors.ErrNotFound.Wrap("sink transfer")
+func challengeDeadline(ctx sdk.Context, p types.Params) (*time.Time, error) {
+	deadline := ctx.BlockTime().Add(p.ReporterChallengePeriod).UTC()
+	if !deadline.After(ctx.BlockTime()) {
+		return nil, types.ErrInvalidClock.Wrap("invalid challenge deadline")
 	}
-	s, _ := get(ctx, k.settlements, id, types.Settlement{Round: 1})
-	t, err := types.DecodeTransfer(record)
-	return t, s, err
-}
 
-func reporterPolicy(p types.Params, epoch uint64) types.ReporterPolicy {
-	return types.ReporterPolicy{Epoch: epoch, Members: slices.Clone(p.Reporters), Threshold: p.ReporterThreshold}
-}
-
-func challengeDeadline(ctx sdk.Context, p types.Params) (int64, error) {
-	now := ctx.BlockTime().Unix()
-	if now <= 0 || p.ChallengePeriodSeconds > uint64(math.MaxInt64-now) { //nolint:gosec // now > 0
-		return 0, fmt.Errorf("invalid challenge deadline")
+	if _, err := gogotypes.TimestampProto(deadline); err != nil {
+		return nil, err
 	}
-	return now + int64(p.ChallengePeriodSeconds), nil //nolint:gosec // bounded by the check above
+
+	return &deadline, nil
 }
 
-func bucket(t *types.Totals, s types.Status) *uint64 {
-	switch s {
-	case types.Status_STATUS_PENDING:
-		return &t.PendingAmount
-	case types.Status_STATUS_MINTED:
-		return &t.MintedAmount
-	case types.Status_STATUS_VOIDED:
-		return &t.VoidedAmount
-	case types.Status_STATUS_REFUNDED:
-		return &t.RefundedAmount
+// RequestVoid commits a governance order for proof on Solana. It does not
+// establish that Solana executed the void and cannot release any escrow.
+func (k Keeper) RequestVoid(ctx sdk.Context, msg *types.MsgRequestVoid) error {
+	if msg == nil {
+		return sdkerrors.ErrInvalidRequest.Wrap("nil request")
 	}
-	return nil
-}
 
-// transition moves one amount between accounting buckets in totals, which the
-// caller stores. Terminal outcomes cannot be reopened here, and only their
-// first transition frees a pending slot.
-func (k Keeper) transition(ctx sdk.Context, totals *types.Totals, t types.Transfer, s *types.Settlement, next types.Status) error {
-	if s.Status == next {
+	if err := msg.ValidateBasic(); err != nil {
+		return err
+	}
+
+	cache, write := ctx.CacheContext()
+
+	if msg.Authority != k.authority {
+		return sdkerrors.ErrUnauthorized.Wrap("sink authority must be governance")
+	}
+
+	t, err := k.GetTransfer(cache, msg.ID)
+	if err != nil {
+		return err
+	}
+
+	if t.VoidOrdered {
 		return nil
 	}
-	if s.Terminal() || (next == types.Status_STATUS_REFUNDED && s.Status != types.Status_STATUS_VOIDED) {
-		return fmt.Errorf("cannot change terminal sink outcome")
-	}
-	from, to := bucket(totals, s.Status), bucket(totals, next)
-	if from == nil || to == nil || *from < t.Amount || *to > math.MaxUint64-t.Amount {
-		return fmt.Errorf("invalid sink settlement accounting")
-	}
-	*from -= t.Amount
-	*to += t.Amount
-	if next == types.Status_STATUS_MINTED || next == types.Status_STATUS_REFUNDED {
-		u := k.GetAccountUsage(ctx, t.Sender[:])
-		if u.PendingCount == 0 || totals.PendingCount == 0 {
-			return fmt.Errorf("invalid sink pending count")
-		}
-		u.PendingCount--
-		totals.PendingCount--
-		if err := k.usage.Set(ctx, t.Sender[:], u); err != nil {
-			return err
-		}
-		if err := k.open.Remove(ctx, t.ID); err != nil {
-			return err
-		}
-	}
-	s.Status = next
-	if next != types.Status_STATUS_VOIDED {
-		s.ChallengeEnd = 0
-	}
-	return nil
-}
 
-// reopenMinted moves a Minted transfer under a conflict hold back to Voided.
-// A false mint quorum that votes before Solana resolves closes the transfer
-// at once; this is governance's way back. The pending slot and open-index
-// entry that the mint released come back.
-func (k Keeper) reopenMinted(ctx sdk.Context, totals *types.Totals, t types.Transfer, s *types.Settlement) error {
-	u := k.GetAccountUsage(ctx, t.Sender[:])
-	if totals.MintedAmount < t.Amount || totals.VoidedAmount > math.MaxUint64-t.Amount ||
-		totals.PendingCount == math.MaxUint64 || u.PendingCount == math.MaxUint32 {
-		return fmt.Errorf("invalid sink settlement accounting")
+	s := t.Settlement
+	if s.Status == types.StatusRefunded || s.Status == types.StatusMinted && s.Hold != types.HoldConflict {
+		return types.ErrTransferClosed
 	}
-	totals.MintedAmount -= t.Amount
-	totals.VoidedAmount += t.Amount
-	totals.PendingCount++
-	u.PendingCount++
-	if err := k.usage.Set(ctx, t.Sender[:], u); err != nil {
+
+	if err = k.voids.Set(cache, msg.ID, types.VoidOrder{}); err != nil {
 		return err
 	}
-	if err := k.open.Set(ctx, t.ID); err != nil {
+
+	if err = cache.EventManager().EmitTypedEvent(&types.EventVoidOrdered{ID: msg.ID}); err != nil {
 		return err
 	}
-	s.Status = types.Status_STATUS_VOIDED
+
+	write()
+
 	return nil
 }
 
@@ -125,117 +73,117 @@ func (k Keeper) ReportOutcome(ctx sdk.Context, msg *types.MsgReportOutcome) erro
 	if msg == nil {
 		return sdkerrors.ErrInvalidRequest.Wrap("nil report")
 	}
-	if err := msg.Observation.Validate(); err != nil {
+
+	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
-	p := k.GetParams(ctx)
-	if !slices.Contains(p.Reporters, msg.Reporter) {
-		return sdkerrors.ErrUnauthorized.Wrap("not a current sink reporter")
-	}
+
 	cache, write := ctx.CacheContext()
-	totals := k.GetTotals(cache)
-	loaded := totals
-	epoch := totals.ReporterEpoch
-	if msg.ReporterEpoch != epoch {
-		return fmt.Errorf("stale reporter epoch")
-	}
-	t, s, err := k.settlement(cache, msg.Id)
+	policy, err := k.currentPolicy(cache)
 	if err != nil {
 		return err
 	}
-	before := s
-	if msg.Round != s.Round {
-		return fmt.Errorf("stale report round")
-	}
-	if s.Policy.Epoch != epoch {
-		// Old quorums never carry across rotation. Holds require governance even
-		// after rotation, but an unfinished authorization returns to pending.
-		if !s.Terminal() {
-			if err := k.transition(cache, &totals, t, &s, types.Status_STATUS_PENDING); err != nil {
-				return err
-			}
-			s.GovernanceObservation = nil
-		}
-		s.Policy = reporterPolicy(p, epoch)
-		s.Votes = nil
-	}
-	for _, vote := range s.Votes {
-		if vote.Reporter == msg.Reporter && vote.Observation.Outcome == msg.Observation.Outcome {
-			return nil
-		}
-	}
-	s.Votes = append(s.Votes, types.Vote{Reporter: msg.Reporter, Observation: msg.Observation})
-	minted, voided := s.Tallies()
-	if (minted > 0 && voided > 0) || (s.Status == types.Status_STATUS_MINTED && voided > 0) ||
-		((s.Status == types.Status_STATUS_VOIDED || s.Status == types.Status_STATUS_REFUNDED) && minted > 0) {
-		s.Hold = types.Hold_HOLD_CONFLICT
 
-		err = cache.EventManager().EmitTypedEvent(
-			&types.EventReportConflict{
-				ID:       t.ID,
-				Reporter: msg.Reporter,
-			},
-		)
-		if err != nil {
-			return err
-		}
+	if !slices.Contains(policy.Members, msg.Reporter) {
+		return types.ErrNotReporter
 	}
-	if s.Hold == types.Hold_HOLD_NONE && s.Status == types.Status_STATUS_PENDING {
-		if minted >= p.ReporterThreshold {
-			if err := k.transition(cache, &totals, t, &s, types.Status_STATUS_MINTED); err != nil {
-				return err
-			}
 
-			err = cache.EventManager().EmitTypedEvent(
-				&types.EventMintConfirmed{
-					ID: t.ID,
-				},
-			)
-			if err != nil {
-				return err
-			}
-		} else if voided >= p.ReporterThreshold {
-			deadline, err := challengeDeadline(cache, p)
-			if err != nil {
-				return err
-			}
-			if err := k.transition(cache, &totals, t, &s, types.Status_STATUS_VOIDED); err != nil {
-				return err
-			}
-			s.ChallengeEnd = deadline
+	if msg.PolicyVersion != policy.Version {
+		return types.ErrStaleReport
+	}
 
-			err = cache.EventManager().EmitTypedEvent(
-				&types.EventVoidConfirmed{
-					ID:           t.ID,
-					ChallengeEnd: deadline,
-				},
-			)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	if totals != loaded {
-		if err := k.setTotals(cache, totals); err != nil {
-			return err
-		}
-	}
-	if err := k.putSettlement(cache, t.ID, before, s); err != nil {
+	t, err := k.GetTransfer(cache, msg.ID)
+	if err != nil {
 		return err
 	}
 
-	err = cache.EventManager().EmitTypedEvent(
-		&types.EventOutcomeReported{
-			ID:       t.ID,
+	before := t.Settlement
+	s := before
+	if msg.Round != s.Round {
+		return types.ErrStaleReport
+	}
+
+	refreshed := false
+	if s.PolicyVersion != policy.Version && (s.Status == types.StatusTransferPending || s.Status == types.StatusRefundPending && s.GovernanceEvidence == nil) {
+		refreshed = true
+		s.Status = types.StatusTransferPending
+		s.PolicyVersion = policy.Version
+		s.ChallengeEnd = nil
+	}
+
+	duplicate := false
+	for _, v := range s.Votes {
+		if v.Reporter == msg.Reporter && v.Observation.Outcome == msg.Observation.Outcome && v.PolicyVersion == msg.PolicyVersion {
+			duplicate = true
+			break
+		}
+	}
+
+	if duplicate && !refreshed {
+		return nil
+	}
+
+	conflict := s.Status == types.StatusMinted && msg.Observation.Outcome == types.OutcomeVoided || (s.Status == types.StatusRefundPending || s.Status == types.StatusRefunded) && msg.Observation.Outcome == types.OutcomeMinted
+	for _, v := range s.Votes {
+		if v.Observation.Outcome != msg.Observation.Outcome {
+			conflict = true
+		}
+	}
+
+	if !duplicate {
+		s.Votes = append(s.Votes, types.Vote{Reporter: msg.Reporter, Observation: msg.Observation, PolicyVersion: msg.PolicyVersion})
+	}
+
+	if conflict && s.Hold != types.HoldConflict {
+		s.Hold = types.HoldConflict
+
+		if err = cache.EventManager().EmitTypedEvent(&types.EventReportConflict{ID: msg.ID, Reporter: msg.Reporter}); err != nil {
+			return err
+		}
+	}
+
+	if s.Hold == types.HoldNone && s.Status == types.StatusTransferPending {
+		minted, voided := s.Tallies()
+		if policy.Threshold > 0 && minted >= policy.Threshold {
+			s.Status = types.StatusMinted
+
+			if err = cache.EventManager().EmitTypedEvent(&types.EventMintConfirmed{ID: msg.ID}); err != nil {
+				return err
+			}
+		} else if policy.Threshold > 0 && voided >= policy.Threshold {
+			p, err := k.params.Get(cache)
+			if err != nil {
+				return err
+			}
+
+			s.Status = types.StatusRefundPending
+			s.ChallengeEnd, err = challengeDeadline(cache, p)
+			if err != nil {
+				return err
+			}
+
+			if err = cache.EventManager().EmitTypedEvent(&types.EventVoidConfirmed{ID: msg.ID, ChallengeEnd: *s.ChallengeEnd}); err != nil {
+				return err
+			}
+		}
+	}
+
+	if err = k.put(cache, msg.ID, t.Data.Amount, &before, s); err != nil {
+		return err
+	}
+
+	if !duplicate {
+		if err = cache.EventManager().EmitTypedEvent(&types.EventOutcomeReported{
+			ID:       msg.ID,
 			Reporter: msg.Reporter,
 			Outcome:  msg.Observation.Outcome,
-		},
-	)
-	if err != nil {
-		return err
+		}); err != nil {
+			return err
+		}
 	}
 
 	write()
+
 	return nil
 }
 
@@ -243,242 +191,300 @@ func (k Keeper) VetoVoid(ctx sdk.Context, msg *types.MsgVetoVoid) error {
 	if msg == nil {
 		return sdkerrors.ErrInvalidRequest.Wrap("nil veto")
 	}
-	if err := types.ValidateReason(msg.Reason); err != nil {
-		return err
-	}
-	gov := msg.Signer == k.authority
-	if !gov && !slices.Contains(k.GetParams(ctx).Reporters, msg.Signer) {
-		return sdkerrors.ErrUnauthorized.Wrap("veto requires reporter or governance")
-	}
-	t, s, err := k.settlement(ctx, msg.Id)
-	if err != nil {
-		return err
-	}
-	before := s
-	if s.Status != types.Status_STATUS_VOIDED {
-		return fmt.Errorf("no pending void to veto")
-	}
-	if !gov && ctx.BlockTime().Unix() >= s.ChallengeEnd {
-		return fmt.Errorf("void challenge window ended")
-	}
-	if s.Hold != types.Hold_HOLD_CONFLICT {
-		s.Hold = types.Hold_HOLD_VETO
-	}
-	s.VetoBy, s.VetoReason = msg.Signer, msg.Reason
-	if err := k.putSettlement(ctx, t.ID, before, s); err != nil {
+
+	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
 
-	err = ctx.EventManager().EmitTypedEvent(
-		&types.EventVoidVetoed{
-			ID:     t.ID,
-			Signer: msg.Signer,
-			Reason: msg.Reason,
-		},
-	)
+	cache, write := ctx.CacheContext()
+	policy, err := k.currentPolicy(cache)
 	if err != nil {
 		return err
 	}
+
+	gov := msg.Signer == k.authority
+	if !gov && !slices.Contains(policy.Members, msg.Signer) {
+		return types.ErrNotReporter
+	}
+
+	t, err := k.GetTransfer(cache, msg.ID)
+	if err != nil {
+		return err
+	}
+
+	before := t.Settlement
+	s := before
+	if s.Status != types.StatusRefundPending {
+		return types.ErrNoPendingVoid
+	}
+
+	if s.ChallengeEnd == nil {
+		return types.ErrInvalidSettlement
+	}
+
+	if !gov && !cache.BlockTime().Before(*s.ChallengeEnd) {
+		return types.ErrChallengeWindowEnded
+	}
+
+	if s.Hold != types.HoldConflict {
+		s.Hold = types.HoldVeto
+	}
+
+	s.Veto = &types.Veto{Signer: msg.Signer, Reason: msg.Reason}
+	if err = k.put(cache, msg.ID, t.Data.Amount, &before, s); err != nil {
+		return err
+	}
+
+	if err = cache.EventManager().EmitTypedEvent(&types.EventVoidVetoed{ID: msg.ID, Signer: msg.Signer, Reason: msg.Reason}); err != nil {
+		return err
+	}
+
+	write()
 
 	return nil
 }
 
-func (k Keeper) ResolveTransfer(ctx sdk.Context, msg *types.MsgResolveTransfer) error {
-	if msg == nil || msg.Authority != k.authority {
-		return sdkerrors.ErrUnauthorized.Wrap("sink authority must be governance")
+func (k Keeper) Resolve(ctx sdk.Context, msg types.Resolution) error {
+	var authority, reason string
+	var id types.ID
+	var round uint64
+	var decision types.Decision
+	var evidence *types.SolanaEvidence
+	switch m := msg.(type) {
+	case *types.MsgRestartTransfer:
+		if m == nil {
+			return sdkerrors.ErrInvalidRequest.Wrap("nil restart")
+		}
+
+		authority, reason, id, round, decision = m.Authority, m.Reason, m.ID, m.ExpectedRound, types.DecisionRestart
+	case *types.MsgConfirmMint:
+		if m == nil {
+			return sdkerrors.ErrInvalidRequest.Wrap("nil confirmation")
+		}
+
+		authority, reason, id, round, decision = m.Authority, m.Reason, m.ID, m.ExpectedRound, types.DecisionConfirmMint
+		evidence = &m.Evidence
+	case *types.MsgConfirmVoid:
+		if m == nil {
+			return sdkerrors.ErrInvalidRequest.Wrap("nil confirmation")
+		}
+
+		authority, reason, id, round, decision = m.Authority, m.Reason, m.ID, m.ExpectedRound, types.DecisionConfirmVoid
+		evidence = &m.Evidence
+	default:
+		return types.ErrInvalidResolution
 	}
-	if err := types.ValidateReason(msg.Reason); err != nil {
+
+	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
-	var target types.Status
-	switch msg.Decision {
-	case types.Decision_DECISION_RESTART:
-		if msg.Observation != nil {
-			return fmt.Errorf("restart must not authorize an observation")
-		}
-		target = types.Status_STATUS_PENDING
-	case types.Decision_DECISION_CONFIRM_MINT, types.Decision_DECISION_CONFIRM_VOID:
-		if msg.Observation == nil {
-			return fmt.Errorf("governance confirmation requires Solana evidence")
-		}
-		if err := msg.Observation.Validate(); err != nil {
-			return err
-		}
-		if (msg.Decision == types.Decision_DECISION_CONFIRM_MINT) != (msg.Observation.Outcome == types.Outcome_OUTCOME_MINTED) {
-			return fmt.Errorf("decision does not match observation")
-		}
-		target = types.Status_STATUS_VOIDED
-		if msg.Decision == types.Decision_DECISION_CONFIRM_MINT {
-			target = types.Status_STATUS_MINTED
-		}
-	default:
-		return fmt.Errorf("invalid governance resolution")
-	}
+
 	cache, write := ctx.CacheContext()
-	t, s, err := k.settlement(cache, msg.Id)
+
+	if authority != k.authority {
+		return sdkerrors.ErrUnauthorized.Wrap("sink authority must be governance")
+	}
+
+	t, err := k.GetTransfer(cache, id)
 	if err != nil {
 		return err
 	}
-	before := s
-	p := k.GetParams(cache)
-	totals := k.GetTotals(cache)
-	loaded := totals
-	reopen := false
-	if s.Terminal() {
-		if s.Status == types.Status_STATUS_REFUNDED && target == types.Status_STATUS_VOIDED {
-			target = types.Status_STATUS_REFUNDED
-		}
-		// Only a Minted transfer that an honest reporter contested can return.
-		reopen = s.Status == types.Status_STATUS_MINTED && s.Hold == types.Hold_HOLD_CONFLICT && target == types.Status_STATUS_VOIDED
-		if target != s.Status && !reopen {
-			return fmt.Errorf("cannot change terminal sink outcome")
-		}
+
+	before := t.Settlement
+	s := before
+	if s.Round != round {
+		return types.ErrStaleReport.Wrap("expected_round differs from settlement")
 	}
-	// Akash can check only the observation's format. A void order lets anyone
-	// seal the record on Solana with void_transfer during the challenge window,
-	// so a governance-confirmed void cannot also be minted. Put MsgRequestVoid
-	// in the same proposal.
-	if target == types.Status_STATUS_VOIDED && !has(cache, k.voids, msg.Id) {
-		return fmt.Errorf("confirming a void requires a void order; include MsgRequestVoid in the proposal")
-	}
+
 	if s.Round == math.MaxUint64 {
-		return fmt.Errorf("report round exhausted")
+		return types.ErrOverflow.Wrap("settlement round")
 	}
-	if reopen {
-		// The refund queue pays only its head, so it must fit a day's cap.
-		if t.Amount > p.DailyRefundCap {
-			return fmt.Errorf("transfer amount %d exceeds the daily refund cap; raise the cap first", t.Amount)
-		}
-		if err := k.reopenMinted(cache, &totals, t, &s); err != nil {
-			return err
-		}
-	}
-	if err := k.transition(cache, &totals, t, &s, target); err != nil {
+
+	p, err := k.params.Get(cache)
+	if err != nil {
 		return err
 	}
+
+	switch decision {
+	case types.DecisionRestart:
+		if s.Terminal() {
+			return types.ErrTransferClosed
+		}
+
+		s.Status = types.StatusTransferPending
+	case types.DecisionConfirmMint:
+		if s.Status == types.StatusRefunded {
+			return types.ErrTransferClosed
+		}
+
+		s.Status = types.StatusMinted
+	case types.DecisionConfirmVoid:
+		if s.Status != types.StatusRefunded {
+			if s.Status == types.StatusMinted && s.Hold != types.HoldConflict {
+				return types.ErrTransferClosed
+			}
+
+			if !t.VoidOrdered {
+				return types.ErrInvalidResolution.Wrap("confirming an unpaid void requires a void order")
+			}
+
+			if t.Data.Amount.IsGT(p.MaxEpochRefund) {
+				return types.ErrRefundCapReached
+			}
+
+			s.Status = types.StatusRefundPending
+		}
+	}
+
+	policy, err := k.currentPolicy(cache)
+	if err != nil {
+		return err
+	}
+
 	s.Round++
-	s.Policy = reporterPolicy(p, totals.ReporterEpoch)
+	s.PolicyVersion = policy.Version
 	s.Votes = nil
-	s.Hold, s.VetoBy, s.VetoReason = types.Hold_HOLD_NONE, "", ""
-	s.GovernanceObservation = msg.Observation
-	if target == types.Status_STATUS_VOIDED {
+	s.Hold = types.HoldNone
+	s.Veto = nil
+	s.ChallengeEnd = nil
+	s.GovernanceEvidence = evidence
+	if s.Status == types.StatusRefundPending {
 		s.ChallengeEnd, err = challengeDeadline(cache, p)
 		if err != nil {
 			return err
 		}
 	}
-	if totals != loaded {
-		if err := k.setTotals(cache, totals); err != nil {
-			return err
-		}
-	}
-	if err := k.putSettlement(cache, t.ID, before, s); err != nil {
+
+	if err = k.put(cache, id, t.Data.Amount, &before, s); err != nil {
 		return err
 	}
 
-	err = cache.EventManager().EmitTypedEvent(
-		&types.EventTransferResolved{
-			ID:       t.ID,
-			Decision: msg.Decision,
-			Reason:   msg.Reason,
-		},
-	)
-	if err != nil {
+	if err = cache.EventManager().EmitTypedEvent(&types.EventTransferResolved{ID: id, Decision: decision, Reason: reason}); err != nil {
 		return err
 	}
 
 	write()
+
 	return nil
 }
 
-// FinalizeRefund is the only operation that can authorize an outgoing bank
-// send. It pays exactly one original sender and never releases minted escrow.
-func (k Keeper) FinalizeRefund(ctx sdk.Context, id uint64) error {
-	cache, write := ctx.CacheContext()
-	t, s, err := k.settlement(cache, id)
-	if err != nil {
-		return err
+// FinalizeRefund pays exactly one original sender and never releases minted
+// escrow.
+func (k Keeper) FinalizeRefund(ctx sdk.Context, msg *types.MsgFinalizeRefund) error {
+	if msg == nil {
+		return sdkerrors.ErrInvalidRequest.Wrap("nil refund")
 	}
-	if s.Status == types.Status_STATUS_REFUNDED {
-		return nil
-	}
-	before := s
-	p := k.GetParams(cache)
-	totals := k.GetTotals(cache)
-	if !p.RefundsEnabled {
-		return fmt.Errorf("sink refunds disabled")
-	}
-	if s.Status != types.Status_STATUS_VOIDED || !s.HasVoidAuthorization() || s.Hold != types.Hold_HOLD_NONE {
-		return fmt.Errorf("refund requires an unchallenged confirmed void")
-	}
-	if s.Policy.Epoch != totals.ReporterEpoch {
-		return fmt.Errorf("stale void authorization after reporter rotation")
-	}
-	now := cache.BlockTime().Unix()
-	if s.ChallengeEnd <= 0 || now < s.ChallengeEnd {
-		return fmt.Errorf("void challenge window not finished")
-	}
-	// Oldest first: a refund waits only for refunds that matured before it.
-	head, ok, err := k.refundQueueHead(cache)
-	if err != nil {
-		return err
-	}
-	if !ok {
-		return fmt.Errorf("sink refund queue is missing transfer %d", id)
-	}
-	if head != id {
-		return fmt.Errorf("sink refund %d must wait for older refund %d", id, head)
-	}
-	day := uint64(now / 86400) //nolint:gosec // now >= ChallengeEnd > 0
-	if day < totals.RefundDay {
-		return fmt.Errorf("sink clock moved backwards")
-	}
-	if day != totals.RefundDay {
-		totals.RefundDay, totals.RefundedToday = day, 0
-	}
-	if totals.RefundedToday > p.DailyRefundCap || t.Amount > p.DailyRefundCap-totals.RefundedToday {
-		return fmt.Errorf("sink daily refund cap")
-	}
-	if err := k.CheckBalance(cache); err != nil {
-		return err
-	}
-	// Record the refund before paying it.
-	totals.RefundedToday += t.Amount
-	if err := k.transition(cache, &totals, t, &s, types.Status_STATUS_REFUNDED); err != nil {
-		return err
-	}
-	if err := k.setTotals(cache, totals); err != nil {
-		return err
-	}
-	if err := k.putSettlement(cache, t.ID, before, s); err != nil {
-		return err
-	}
-	recipient := sdk.AccAddress(t.Sender[:])
-	balance := k.bank.GetAllBalances(cache, recipient)
-	send := cache.WithValue(refundContextKey{}, refundAuthorization{recipient: recipient, amount: t.Amount})
-	if err := k.bank.SendCoinsFromModuleToAccount(send, types.ModuleName, recipient, amountCoins(t.Amount)); err != nil {
-		return err
-	}
-	// A send restriction added after the sink's could redirect the payment;
-	// the sink side would look the same either way.
-	if !k.bank.GetAllBalances(cache, recipient).Equal(balance.Add(amountCoins(t.Amount)...)) {
-		return fmt.Errorf("sink refund did not reach the original sender")
-	}
-	if err := k.CheckBalance(cache); err != nil {
+
+	if err := msg.ValidateBasic(); err != nil {
 		return err
 	}
 
-	err = cache.EventManager().EmitTypedEvent(
-		&types.EventTransferRefunded{
-			ID:     t.ID,
-			Sender: recipient.String(),
-			Amount: sdk.NewCoin(types.Denom, sdkmath.NewIntFromUint64(t.Amount)),
-		},
-	)
+	cache, write := ctx.CacheContext()
+	t, err := k.GetTransfer(cache, msg.ID)
 	if err != nil {
+		return err
+	}
+
+	before := t.Settlement
+	s := before
+	if s.Status == types.StatusRefunded {
+		return nil
+	}
+
+	p, err := k.params.Get(cache)
+	if err != nil {
+		return err
+	}
+
+	if !p.RefundsEnabled {
+		return types.ErrRefundsDisabled
+	}
+
+	policy, err := k.currentPolicy(cache)
+	if err != nil {
+		return err
+	}
+
+	if !s.Payable(policy, policy.Version) {
+		return types.ErrInvalidSettlement.Wrap("refund needs current authorization without a hold")
+	}
+
+	if s.ChallengeEnd == nil || cache.BlockTime().Before(*s.ChallengeEnd) {
+		return types.ErrChallengeWindowNotElapsed
+	}
+
+	head, ok, err := k.refundHead(cache, policy.Version)
+	if err != nil {
+		return err
+	}
+
+	if !ok || head != msg.ID {
+		return types.ErrRefundOutOfOrder
+	}
+
+	epoch, err := types.EpochOf(cache.BlockTime())
+	if err != nil {
+		return err
+	}
+
+	usage, err := k.refundUsage.Get(cache)
+	if err != nil {
+		return err
+	}
+
+	usage, err = usage.At(epoch)
+	if err != nil {
+		return err
+	}
+
+	usage.Amount, err = types.AddAmount(usage.Amount, t.Data.Amount)
+	if err != nil {
+		return err
+	}
+
+	if usage.Amount.IsGT(p.MaxEpochRefund) {
+		return types.ErrRefundCapReached
+	}
+
+	if err = k.CheckBalance(cache); err != nil {
+		return err
+	}
+
+	if err = k.refundUsage.Set(cache, usage); err != nil {
+		return err
+	}
+
+	s.Status = types.StatusRefunded
+	s.ChallengeEnd = nil
+	if err = k.put(cache, msg.ID, t.Data.Amount, &before, s); err != nil {
+		return err
+	}
+
+	owner, err := sdk.AccAddressFromBech32(msg.ID.Owner)
+	if err != nil {
+		return err
+	}
+
+	balance := k.bank.GetAllBalances(cache, owner)
+	coins := sdk.NewCoins(t.Data.Amount)
+	send := cache.WithValue(refundContextKey{}, refundAuthorization{recipient: owner, amount: coins})
+	if err = k.bank.SendCoinsFromModuleToAccount(send, types.ModuleName, owner, coins); err != nil {
+		return err
+	}
+
+	if !k.bank.GetAllBalances(cache, owner).Equal(balance.Add(coins...)) {
+		return types.ErrBalanceMismatch.Wrap("refund did not reach original sender")
+	}
+
+	if err = k.CheckBalance(cache); err != nil {
+		return err
+	}
+
+	if err = cache.EventManager().EmitTypedEvent(&types.EventTransferRefunded{ID: msg.ID, Sender: msg.ID.Owner, Amount: t.Data.Amount}); err != nil {
 		return err
 	}
 
 	write()
+
 	return nil
 }

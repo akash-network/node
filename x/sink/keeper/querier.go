@@ -1,0 +1,263 @@
+package keeper
+
+import (
+	"bytes"
+	"context"
+
+	collcodec "cosmossdk.io/collections/codec"
+	"cosmossdk.io/store/prefix"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
+	types "pkg.akt.dev/go/node/sink/v1"
+)
+
+type Querier struct {
+	k Keeper
+}
+
+var _ types.QueryServer = Querier{}
+
+func (q Querier) Transfer(ctx context.Context, req *types.QueryTransferRequest) (*types.QueryTransferResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "missing request")
+	}
+
+	if err := req.ValidateBasic(); err != nil {
+		return nil, err
+	}
+
+	t, err := q.k.GetTransfer(ctx, req.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.QueryTransferResponse{Transfer: t}, nil
+}
+
+func (q Querier) Account(ctx context.Context, req *types.QueryAccountRequest) (*types.QueryAccountResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "missing request")
+	}
+
+	if err := req.ValidateBasic(); err != nil {
+		return nil, err
+	}
+
+	owner, err := sdk.AccAddressFromBech32(req.Owner)
+	if err != nil {
+		return nil, err
+	}
+
+	epoch, err := types.EpochOf(sdk.UnwrapSDKContext(ctx).BlockTime())
+	if err != nil {
+		return nil, err
+	}
+
+	u, err := q.k.GetAccountUsage(ctx, owner)
+	if err != nil {
+		return nil, err
+	}
+
+	u, err = u.At(epoch)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.QueryAccountResponse{Usage: u, Epoch: epoch}, nil
+}
+
+func (q Querier) State(ctx context.Context, _ *types.QueryStateRequest) (*types.QueryStateResponse, error) {
+	result := &types.QueryStateResponse{}
+	var err error
+	result.Params, err = q.k.params.Get(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	result.Totals, err = q.k.totals.Get(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	result.Policy, err = q.k.currentPolicy(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	result.Epoch, err = types.EpochOf(sdk.UnwrapSDKContext(ctx).BlockTime())
+	if err != nil {
+		return nil, err
+	}
+
+	send, err := q.k.sendUsage.Get(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	refund, err := q.k.refundUsage.Get(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	result.SendUsage, err = send.At(result.Epoch)
+	if err != nil {
+		return nil, err
+	}
+
+	result.RefundUsage, err = refund.At(result.Epoch)
+	if err != nil {
+		return nil, err
+	}
+
+	head, ok, err := q.k.refundHead(ctx, result.Policy.Version)
+	if err != nil {
+		return nil, err
+	}
+
+	if ok {
+		result.RefundHead = &head
+	}
+
+	return result, nil
+}
+
+func (q Querier) Transfers(ctx context.Context, req *types.QueryTransfersRequest) (*types.QueryTransfersResponse, error) {
+	if req == nil {
+		req = &types.QueryTransfersRequest{}
+	}
+
+	if err := req.ValidateBasic(); err != nil {
+		return nil, err
+	}
+
+	var owner sdk.AccAddress
+	var err error
+	if req.Owner != "" {
+		owner, err = sdk.AccAddressFromBech32(req.Owner)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	domain := HistoryKey.Bytes()
+	var filter []byte
+	decode := exactID(chronoIDKey)
+	if owner != nil || req.Status != types.StatusInvalid {
+		domain = TransfersKey.Bytes()
+		decode = exactID(types.IDKey)
+		if req.Status != types.StatusInvalid {
+			domain = StatusKey.Bytes()
+			prefix, err := statusByte(req.Status)
+			if err != nil {
+				return nil, err
+			}
+
+			filter = []byte{prefix}
+			decode = func(key []byte) (types.ID, error) {
+				n, sid, err := SettlementIDKey.Decode(key)
+				if err == nil && (n != len(key) || sid.Status != req.Status) {
+					err = status.Error(codes.InvalidArgument, "cursor outside status filter")
+				}
+
+				return transferID(sid), err
+			}
+		}
+
+		if owner != nil {
+			filter = append(filter, types.AccountLength)
+			filter = append(filter, owner...)
+		}
+	}
+
+	transfers, page, err := q.page(ctx, domain, filter, req.Pagination, decode)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.QueryTransfersResponse{Transfers: transfers, Pagination: page}, nil
+}
+
+func (q Querier) Disputes(ctx context.Context, req *types.QueryDisputesRequest) (*types.QueryDisputesResponse, error) {
+	if req == nil {
+		req = &types.QueryDisputesRequest{}
+	}
+
+	if err := req.ValidateBasic(); err != nil {
+		return nil, err
+	}
+
+	transfers, page, err := q.page(ctx, DisputesKey.Bytes(), nil, req.Pagination, exactID(chronoIDKey))
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.QueryDisputesResponse{Transfers: transfers, Pagination: page}, nil
+}
+
+func (q Querier) page(ctx context.Context, domain, filter []byte, request *sdkquery.PageRequest, decode func([]byte) (types.ID, error)) ([]types.TransferState, *sdkquery.PageResponse, error) {
+	page := sdkquery.PageRequest{Limit: types.DefaultPageLimit}
+	if request != nil {
+		page = *request
+	}
+
+	if page.Limit == 0 {
+		page.Limit = types.DefaultPageLimit
+	}
+
+	if len(page.Key) > 0 {
+		if _, err := decode(page.Key); err != nil {
+			return nil, nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+
+		if !bytes.HasPrefix(page.Key, filter) {
+			return nil, nil, status.Error(codes.InvalidArgument, "cursor outside owner or status filter")
+		}
+
+		page.Key = page.Key[len(filter):]
+	}
+
+	store := prefix.NewStore(sdk.UnwrapSDKContext(ctx).KVStore(q.k.skey), append(bytes.Clone(domain), filter...))
+	if len(page.Key) > 0 && !store.Has(page.Key) {
+		return nil, nil, status.Error(codes.InvalidArgument, "cursor is absent from the selected index")
+	}
+
+	transfers := make([]types.TransferState, 0)
+	result, err := sdkquery.Paginate(store, &page, func(key, value []byte) error {
+		id, err := decode(append(bytes.Clone(filter), key...))
+		if err != nil {
+			return err
+		}
+
+		t, err := q.k.GetTransfer(ctx, id)
+		if err != nil {
+			return err
+		}
+
+		transfers = append(transfers, t)
+
+		return nil
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if len(result.NextKey) > 0 {
+		result.NextKey = append(bytes.Clone(filter), result.NextKey...)
+	}
+
+	return transfers, result, nil
+}
+
+func exactID(codec collcodec.KeyCodec[types.ID]) func([]byte) (types.ID, error) {
+	return func(key []byte) (types.ID, error) {
+		n, id, err := codec.Decode(key)
+		if err == nil && n != len(key) {
+			err = status.Error(codes.InvalidArgument, "trailing cursor bytes")
+		}
+
+		return id, err
+	}
+}

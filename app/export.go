@@ -3,6 +3,7 @@ package app
 import (
 	"encoding/json"
 	"math/rand"
+	"time"
 
 	errorsmod "cosmossdk.io/errors"
 	storetypes "cosmossdk.io/store/types"
@@ -333,6 +334,7 @@ func Setup(opts ...SetupAppOption) *AkashApp {
 		// Initialize the chain
 		_, err = app.InitChain(
 			&abci.RequestInitChain{
+				Time:          time.Unix(0, 0),
 				Validators:    []abci.ValidatorUpdate{},
 				AppStateBytes: stateBytes,
 				ChainId:       cfg.chainID,

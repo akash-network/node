@@ -292,7 +292,7 @@ func (app *App) InitNormalKeepers(
 		app.Log,
 	)
 
-	app.Keepers.Akash.Sink = sinkkeeper.NewKeeper(cdc, app.keys[sinktypes.StoreKey],
+	app.Keepers.Akash.Sink = sinkkeeper.NewKeeper(cdc, app.keys[sinktypes.StoreKey], app.tkeys[sinktypes.TStoreKey],
 		app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String())
 	app.Keepers.Cosmos.Bank.AppendSendRestriction(app.Keepers.Akash.Sink.SendRestriction)
@@ -649,6 +649,7 @@ func kvStoreKeys() []string {
 func transientStoreKeys() []string {
 	return []string{
 		paramstypes.TStoreKey,
+		sinktypes.TStoreKey,
 		bmetypes.TStoreKey,
 		otypes.TStoreKey,
 	}

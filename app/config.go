@@ -114,9 +114,7 @@ type wasmLimitField struct {
 	ptr *uint32
 }
 
-// DefaultWasmLimits returns the chain-canonical limits. Values equal cosmwasm-vm 3.0.10
-// defaults, except MaxFunctionLocals which is raised from 100 to 140 so that the pyth_vaa
-// contract (137 locals after wasm-opt) stored by the v2.2.0 upgrade passes validation.
+// DefaultWasmLimits returns the consensus limits for validating uploaded contracts.
 func DefaultWasmLimits() WasmLimits {
 	return WasmLimits{
 		InitialMemoryLimitPages: 512,
