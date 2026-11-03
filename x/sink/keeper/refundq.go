@@ -10,23 +10,60 @@ import (
 	types "pkg.akt.dev/go/node/sink/v1"
 )
 
-func refundKey(s types.SettlementData, id types.ID) (collections.Triple[uint64, string, types.ID], bool) {
-	scope, ok := s.RefundScope()
-	if !ok || s.ChallengeEnd == nil {
-		return collections.Triple[uint64, string, types.ID]{}, false
+func refundKey(t types.TransferState) (collections.Triple[uint64, int64, types.ID], bool) {
+	scope, ok := t.Settlement.RefundScope(t.Status)
+	if !ok || t.Settlement.ChallengeEnd <= 0 {
+		return collections.Triple[uint64, int64, types.ID]{}, false
 	}
 
-	return collections.Join3(scope, string(sdk.FormatTimeBytes(*s.ChallengeEnd)), id), true
+	return collections.Join3(scope, t.Settlement.ChallengeEnd, t.ID), true
 }
 
-func (k Keeper) put(ctx sdk.Context, id types.ID, amount sdk.Coin, before *types.SettlementData, after types.SettlementData) error {
-	policies, err := k.referencedPolicies(ctx, after)
+func (k *keeper) validateSettlement(ctx context.Context, t types.TransferState) error {
+	policies, err := k.referencedPolicies(ctx, t.Settlement)
 	if err != nil {
 		return err
 	}
 
-	if err = after.Validate(policies); err != nil {
+	if err = t.Settlement.Validate(t.ID, t.Status, policies); err != nil {
 		return err
+	}
+
+	s := t.Settlement
+	if s.VetoBy != "" && s.VetoPolicyVersion == types.GovernanceRefundScope && s.VetoBy != k.authority {
+		return types.ErrInvalidSettlement.Wrap("governance veto signer differs from authority")
+	}
+
+	return nil
+}
+
+func (k *keeper) put(ctx sdk.Context, before *types.TransferState, after types.TransferState) error {
+	if err := k.validateSettlement(ctx, after); err != nil {
+		return err
+	}
+
+	if before != nil {
+		if before.ID != after.ID || before.Data.Dest != after.Data.Dest || !before.Data.Amount.Equal(after.Data.Amount) {
+			return types.ErrInternal.Wrap("immutable transfer changed")
+		}
+
+		if receipt := before.Settlement.VoidAuthorization; receipt != nil {
+			next := after.Settlement.VoidAuthorization
+			if next == nil || *receipt != *next {
+				return types.ErrInvalidSettlement.Wrap("permanent void authorization changed")
+			}
+		}
+	} else {
+		for status := types.StatusTransferPending; status <= types.StatusRefunded; status++ {
+			exists, err := k.settlements.Has(ctx, types.NewSettlementID(status, after.ID))
+			if err != nil {
+				return err
+			}
+
+			if exists {
+				return types.ErrInternal.Wrap("canonical settlement already exists")
+			}
+		}
 	}
 
 	if before == nil || before.Status != after.Status {
@@ -40,20 +77,16 @@ func (k Keeper) put(ctx sdk.Context, id types.ID, amount sdk.Coin, before *types
 		}
 
 		if before != nil {
-			if err = totals.Sub(before.Status, amount); err != nil {
+			if err = totals.Sub(before.Status, after.Data.Amount); err != nil {
 				return types.ErrInternal.Wrap("invalid settlement accounting")
 			}
 
-			if err = k.byStatus.Remove(ctx, settlementID(before.Status, id)); err != nil {
+			if err = k.settlements.Remove(ctx, types.NewSettlementID(before.Status, after.ID)); err != nil {
 				return err
 			}
 		}
 
-		if err = totals.Add(after.Status, amount); err != nil {
-			return err
-		}
-
-		if err = k.byStatus.Set(ctx, settlementID(after.Status, id)); err != nil {
+		if err = totals.Add(after.Status, after.Data.Amount); err != nil {
 			return err
 		}
 
@@ -61,24 +94,52 @@ func (k Keeper) put(ctx sdk.Context, id types.ID, amount sdk.Coin, before *types
 			return err
 		}
 
-		if err = ctx.EventManager().EmitTypedEvent(&types.EventTotalsUpdated{Totals: totals}); err != nil {
+		epoch, err := k.quotaEpoch(ctx)
+		if err != nil {
+			return err
+		}
+
+		usage, err := k.refundUsage.Get(ctx)
+		if err != nil {
+			return err
+		}
+
+		usage, err = usage.At(epoch)
+		if err != nil {
+			return err
+		}
+
+		if err = ctx.EventManager().EmitTypedEvent(&types.EventTotalsUpdated{
+			PendingAmount:       totals.PendingAmount,
+			PendingCount:        totals.PendingCount,
+			MintedAmount:        totals.MintedAmount,
+			MintedCount:         totals.MintedCount,
+			VoidedAmount:        totals.VoidedAmount,
+			VoidedCount:         totals.VoidedCount,
+			RefundPendingAmount: totals.RefundPendingAmount,
+			RefundPendingCount:  totals.RefundPendingCount,
+			RefundedAmount:      totals.RefundedAmount,
+			RefundedCount:       totals.RefundedCount,
+			RefundedInEpoch:     usage.Amount,
+		}); err != nil {
 			return err
 		}
 	}
 
 	if before == nil {
-		if err = k.history.Set(ctx, id); err != nil {
+		if err := k.history.Set(ctx, after.ID); err != nil {
 			return err
 		}
 	}
 
-	oldDispute := before != nil && before.Hold != types.HoldNone
-	newDispute := after.Hold != types.HoldNone
+	oldDispute := before != nil && before.Settlement.Hold != types.HoldNone
+	newDispute := after.Settlement.Hold != types.HoldNone
 	if oldDispute != newDispute {
+		var err error
 		if newDispute {
-			err = k.disputes.Set(ctx, id)
+			err = k.disputes.Set(ctx, after.ID)
 		} else {
-			err = k.disputes.Remove(ctx, id)
+			err = k.disputes.Remove(ctx, after.ID)
 		}
 
 		if err != nil {
@@ -86,33 +147,33 @@ func (k Keeper) put(ctx sdk.Context, id types.ID, amount sdk.Coin, before *types
 		}
 	}
 
-	oldKey, oldQueued := collections.Triple[uint64, string, types.ID]{}, false
+	oldKey, oldQueued := collections.Triple[uint64, int64, types.ID]{}, false
 	if before != nil {
-		oldKey, oldQueued = refundKey(*before, id)
+		oldKey, oldQueued = refundKey(*before)
 	}
 
-	newKey, newQueued := refundKey(after, id)
+	newKey, newQueued := refundKey(after)
 	same := oldQueued && newQueued && oldKey.K1() == newKey.K1() && oldKey.K2() == newKey.K2()
 	if oldQueued && !same {
-		if err = k.refunds.Remove(ctx, oldKey); err != nil {
+		if err := k.refunds.Remove(ctx, oldKey); err != nil {
 			return err
 		}
 	}
 
 	if newQueued && !same {
-		if err = k.refunds.Set(ctx, newKey); err != nil {
+		if err := k.refunds.Set(ctx, newKey); err != nil {
 			return err
 		}
 	}
 
-	return k.settlements.Set(ctx, id, after)
+	return k.settlements.Set(ctx, types.NewSettlementID(after.Status, after.ID), after.Settlement)
 }
 
-func (k Keeper) refundHead(ctx context.Context, current uint64) (types.ID, bool, error) {
-	var best collections.Triple[uint64, string, types.ID]
+func (k *keeper) refundHead(ctx context.Context, current uint64) (types.ID, bool, error) {
+	var best collections.Triple[uint64, int64, types.ID]
 	found := false
 	for _, scope := range []uint64{types.GovernanceRefundScope, current} {
-		it, err := k.refunds.Iterate(ctx, collections.NewPrefixedTripleRange[uint64, string, types.ID](scope))
+		it, err := k.refunds.Iterate(ctx, collections.NewPrefixedTripleRange[uint64, int64, types.ID](scope))
 		if err != nil {
 			return types.ID{}, false, err
 		}
@@ -138,8 +199,7 @@ func (k Keeper) refundHead(ctx context.Context, current uint64) (types.ID, bool,
 			}
 
 			if earlier {
-				best = key
-				found = true
+				best, found = key, true
 			}
 		}
 

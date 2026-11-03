@@ -1,204 +1,75 @@
-# x/sink
+# Sink
 
-`x/sink` locks AKT on Akash for minting on Solana. A deposit escrows `uakt` in
-the sink module account and writes an immutable transfer record. A Solana
-program verifies that record with an IAVL proof of this store and mints the
-same amount. Reporters attest the Solana outcome back to Akash. A voided
-transfer can be refunded to its original sender after a challenge window.
+Sink escrows native AKT for minting on Solana. A deposit creates an immutable proof record and an explicit settlement. Mint confirmation keeps the backing in escrow. A refund pays the original Akash owner after authorization, a challenge interval, and queue and amount checks.
 
-The protobuf API, Go types, validation and CLI live in chain-sdk under
-`proto/node/akash/sink/v1`, `go/node/sink/v1` and `go/cli/sink_{tx,query}.go`.
-This module holds the keeper, message and query servers, the bank send
-restriction and the ante decorator.
+## Authority and bank accounting
 
-Deposits and refunds are disabled by default and the reporter set is empty.
-Governance enables them after reporters are configured. There is no launch
-reserve: Solana supply starts at zero, and every SPL AKT is minted from a
-proven transfer.
+`handler.NewServer` unwraps a message, calls the keeper command once, and returns its response. Each command calls SDK `ValidateBasic` before state checks and owns one cache. Its bank changes, records, counters, indexes, allocation, and events commit together.
 
-## State
+The ante decorator records the exact sole top-level `MsgSink` request. `Deposit` matches the sender, destination type, destination, denomination, and amount against that private marker. It also requires an ordinary account with a public key. Nested authz and contract calls receive no matching request marker.
 
-Store key `sink`. State is kept in `collections` with two-byte prefixes, as in
-x/bme. Integer keys are fixed-width big-endian, so iteration follows numeric
-order.
+Sink remains in the bank's `BlockedAddrs`. Public bank send and multisend handlers reject that recipient, including bank messages dispatched through authz or contracts. Wasm attached-fund transfers also check blocked recipients. Sink registers no additional bank send restriction. Its deposit, refund, and pre-installation sweep use the bank's privileged module helpers after their own validation. Calling those helpers directly is trusted module code, not a public transaction route.
 
-| Prefix      | Key                                    | Value                                            |
-| ----------- | -------------------------------------- | ------------------------------------------------ |
-| `0x01 0x00` | none                                   | `Params`                                         |
-| `0x01 0x01` | none                                   | `Totals`                                         |
-| `0x02 0x00` | transfer ID, 8-byte BE                 | 77-byte transfer record, never rewritten         |
-| `0x02 0x01` | transfer ID, 8-byte BE                 | 9-byte governance void order                     |
-| `0x03 0x00` | transfer ID, 8-byte BE                 | `Settlement`                                     |
-| `0x03 0x01` | transfer ID, 8-byte BE                 | empty; index of transfers not minted or refunded |
-| `0x03 0x02` | challenge end, then ID, 8-byte BE each | empty; refund queue                              |
-| `0x04 0x00` | 20-byte sender address                 | `AccountUsage`                                   |
+After a bank deposit, the keeper verifies exact escrow backing. After a refund, it verifies both escrow backing and the original owner's balance increase. A bank error or redirected deposit or refund cannot leave successful Sink state. Installation retains its cached sweep, empty-balance check, and cleanup of withdrawal addresses that pointed at Sink before it became blocked.
 
-IDs start at 1 and are never reused. Solana proves the transfer and void keys,
-so their prefixes and encoding are fixed and published in the SDK as
-`TransferKey` and `VoidKey`. For ID 1 the transfer key is
-`02 00 00 00 00 00 00 00 00 01`.
+Totals contain one amount and count for each financial status:
 
-The transfer record is what the Solana verifier checks, so its layout is fixed:
+- `TRANSFER_PENDING` has no mint or refund authorization.
+- `MINTED` retains the backing in escrow.
+- `VOIDED` retains a governance order awaiting Solana confirmation.
+- `REFUND_PENDING` has authorization and a challenge deadline, but has not paid.
+- `REFUNDED` records a paid refund and sits outside escrow.
 
-| Offset | Bytes | Value                               |
-| ------ | ----- | ----------------------------------- |
-| 0      | 1     | Version `1`                         |
-| 1      | 8     | Transfer ID, little endian          |
-| 9      | 20    | Akash sender address                |
-| 29     | 32    | Solana recipient public key         |
-| 61     | 8     | Amount in uakt, little endian       |
-| 69     | 8     | Creation block height, little endian |
+Holds do not change these populations. The module's complete bank balance must equal pending, minted, voided, and refund-pending amounts in `uakt`, with no other denominations. A new governance void order moves a pending attempt to `VOIDED`; it never authorizes payment. Totals contain only five Coin/uint64 count pairs. The flat totals event additionally includes normalized refund consumption for the current native epoch.
 
-A void order is version `1` followed by the ID as a little-endian uint64.
-Writing one never changes the transfer record or releases funds.
+## Reports and governance
 
-Proofs use the standard ABCI query `/store/sink/key` with the transfer key.
-The merkle path is `["sink", TransferKey(id)]`, or `["sink", VoidKey(id)]` for a
-void order.
+Reporter policies are immutable history. A separate current-policy item selects the active version; reads load only referenced policies. The quorum is the ceiling of `reporters_threshold * member_count`, computed with exact decimals. A membership or effective-threshold change increments the version. Reordering members or changing the ratio without changing the effective threshold does not.
 
-The open index is derived. A deposit adds an entry; the first mint
-confirmation or refund removes it. The refund queue holds voided transfers
-without a hold. Both are rebuilt by InitGenesis from settlements and omitted by
-ExportGenesis. InitGenesis also rejects refund or account-usage days later than
-the genesis time.
+Reports require current membership, current policy version, and exact settlement round. Votes retain their own policy version. An active attempt accepts one vote per reporter for its first outcome. At quorum the certificate freezes. At most one opposite witness is retained; conflict freezes further reports. Same-outcome reports cannot grow a completed certificate. Evidence validation checks signature and slot format; it does not establish Solana truth or finality.
 
-## Accounting
+A current report refreshes an unheld unpaid reporter attempt after rotation: replace the embedded policy, clear stale attempt votes and the deadline, and return to transfer-pending or voided according to its permanent order. Old-policy reports fail before clearing. Held, minted, refunded, and governance-authorized refund-pending settlements retain their authorization and evidence. New-policy reports can add an opposite witness without erasing the retained certificate.
 
-The sink module account balance always equals
-`pending_amount + minted_amount + voided_amount` in `uakt`.
-`refunded_amount` is cumulative and excluded. Deposits and refunds check this
-after each bank transfer, and InitGenesis checks it on import. A fresh install
-holds nothing.
+`RequestVoid` requires a matching `expected_round` for a new order. An authenticated retry preserves the original receipt without changing the round. The receipt stores request height and round and survives every subsequent transition. `RestartTransfer`, `ConfirmMint`, and `ConfirmVoid` require `expected_round`, then advance the round. Restart applies only before payment or mint confirmation. Confirm-mint never reverses a paid refund. Confirm-void requires an immutable void order for unpaid transfers or conflict-held minted transfers. Those transfers must fit the refund cap. Confirm-void on an already-refunded transfer resolves the dispute without another payment or a new order. Confirmations replace votes and holds with governance evidence.
 
-`Totals` field 2 and `GenesisState` field 3 held the removed launch reserve.
-They stay reserved.
+A reporter can veto a refund before its deadline. Governance can veto before payment. Conflict takes precedence over veto. Changing policy preserves the veto signer, reason, and its membership version. A zero veto version means governance; import and writes authenticate the configured authority.
 
-## Messages
+## Limits and refund order
 
-| Message              | Signer                     | Effect                                                           |
-| -------------------- | -------------------------- | ---------------------------------------------------------------- |
-| `MsgSink`            | depositor                  | Escrow `amount` for Solana destination `dest`, return the ID     |
-| `MsgUpdateParams`    | governance                 | Replace all parameters                                           |
-| `MsgRequestVoid`     | governance                 | Write a void order for an unsettled transfer, or a held mint     |
-| `MsgReportOutcome`   | current reporter           | Vote that a transfer was minted or voided on Solana              |
-| `MsgVetoVoid`        | current reporter or gov    | Hold a void before its refund is paid                            |
-| `MsgResolveTransfer` | governance                 | Restart a held transfer, or confirm a mint or a void             |
-| `MsgFinalizeRefund`  | anyone                     | Pay an eligible refund to the original sender                    |
-| `MsgGuardianPause`   | `params.pause_guardian`    | Turn deposits, refunds or both off                               |
+Send and refund usage read `CurrentEpoch` from the existing `x/epochs` record named `day`. Sink owns no timer or epoch hooks. The schedule's duration and start belong to epochs genesis and can differ from a UTC day. After counting starts, the native timer advances only strictly after the current endpoint, once per block. Downtime can therefore produce successive allowance resets across recovery blocks; unused allowances do not accumulate.
 
-`MsgSink` must be the only message in its transaction, signed by an ordinary
-account. `dest_type` must be `1` (Solana). `dest` must be the canonical base58
-encoding of 32 nonzero bytes: a canonical ed25519 point that is not of small
-order, unless it is in `params.vault_allowlist`. Akash does not check the Solana account itself; the
-Solana program does that when it mints. `MsgSink.ValidateBasic` runs the
-stateless checks before fees are charged. The keeper enforces
-`min_transfer <= amount <= max_transfer`, the per-account daily count, pending
-count and daily amount limits, and checked uint64 arithmetic. A nonzero
-`min_transfer` is required while deposits are enabled.
+Deposits charge lifetime account usage, account epoch usage, and global send epoch usage. Refunds never restore sending capacity. Queries project stale usage to the native number at the queried height without writes; export preserves raw stamps. Missing or malformed native state fails. Valid unstarted schedules expose epoch zero, while deposits and refund payments reject it. Future stamps and positive epoch-zero consumption fail. Epochs initializes before Sink and already runs first in BeginBlock. Sink still resets its independent per-block sequence in BeginBlock.
 
-`MsgSinkResponse.id` is the decimal record ID. It is available from the
-included transaction's message responses, not from the initial broadcast reply.
-An `akash.sink.v1.EventTransferCreated` event carries the same ID with the
-sender, amount, recipient and height. Every sink event is a typed event defined
-in chain-sdk `proto/node/akash/sink/v1/events.proto`.
+The challenge Duration remains independent. Its integer Unix-second deadline is the checked ceiling of block time plus Duration, including fractional carry. Authorization receives the full interval even just before a quota boundary, and existing deadlines survive parameter changes. Immediate Solana mints and their separate amount caps remain unchanged.
 
-Reports carry the reporter epoch, the transfer round and an observation: the
-outcome, a finalized Solana slot and the 64-byte transaction signature. They
-are attestations, not proofs. A mint quorum closes the transfer. A void quorum
-starts the challenge window, after which anyone can finalize the refund,
-subject to `refunds_enabled` and `daily_refund_cap`. Refunds are paid oldest
-first: only the head of the refund queue (earliest challenge end, then lowest
-ID) can be paid, so a small refund cannot use up a day's cap ahead of an older,
-larger one. A head from an earlier reporter epoch blocks the queue until a
-current reporter reports on it. Conflicting votes or a veto hold the transfer
-until governance resolves it.
+The account epoch cap may be zero to disable that limit; account usage is still tracked. The other caps and the minimum are positive `uakt` Coins. Only individual transfer amounts must fit `uint64`. There are no account count quotas. Changing a cap preserves consumption, including when an account cap is re-enabled. Lowering the refund cap scans unpaid transfers and rejects a cap that strands one. Existing challenge deadlines remain unchanged when the challenge parameter changes.
 
-Governance confirms a void only with a void order, so a proposal pairs
-`MsgRequestVoid` with `MsgResolveTransfer`. Refunded transfers are terminal. A
-Minted transfer is terminal unless it carries a conflict hold: governance can
-then confirm a void, which moves it back to voided with a new challenge window
-and restores its pending slot. This recovers a refund after a false mint quorum
-voted before Solana resolved the transfer. The amount must fit the daily refund
-cap.
+Refund queue keys contain authorization scope, challenge deadline, and ID. Scope zero is governance; a nonzero scope is a reporter policy version. Payment selects the oldest entry across governance and the current policy. Old reporter scopes cannot block current refunds. Queue membership alone does not imply maturity, remaining epoch capacity, or enabled refunds.
 
-`akash query sink open-transfers --held-only` reads every page and lists the
-held transfers, for a proposal that removes a reporter and restarts them.
+The destination vault allowlist exempts configured Solana recipients from the curve check. It does not bypass amount, authorization, or accounting rules.
 
-`MsgGuardianPause` can only clear `enabled` and `refunds_enabled`. Only
-`MsgUpdateParams` can set them again or change the guardian. An empty
-`pause_guardian` means there is none.
+## Identity, storage, and queries
 
-## Bank restrictions
+A transfer ID is `owner/height/sequence`, with a canonical nonzero 20-byte owner and positive height and sequence. A transient allocator issues 1 first and increments globally within each block. `BeginBlocker` resets it to zero. Failed deposits roll back allocation. Simulation uses the proposed next block height because committed state has already cleared its transient allocator; BaseApp discards the simulated writes.
 
-The sink address is a blocked bank address, like other module accounts.
-A send restriction rejects every transfer into or out of it except:
+The SDK owns native codec fixtures. Transfer keys are `02 00 || 14 || owner20 || BE64(height) || BE64(sequence)` (39 bytes); values are native protobuf `RecordData`, including the recipient and SDK Coin. Canonical settlement keys are `03 01 || status || 14 || owner20 || BE64(height) || BE64(sequence)` (40 bytes); values are native protobuf `SettlementData`. Status exists only in the settlement key. Its permanent tag-9 void authorization is the sealing receipt. Both maps use `codec.CollValue`. Proof nonces are the full SHA-256 of the proven key; paths are `[sink, key]`. There is no separate void map or status index.
 
-- the exact deposit authorized inside the `MsgSink` handler,
-- the exact refund authorized by `FinalizeRefund`,
-- the sweep of a preexisting balance by `PrepareInstall` before the store is
-  initialized.
+`Transfer` probes all five canonical status keys and requires exactly one settlement. Missing, duplicate, or malformed canonical state fails. `Transfers` ranges the canonical status buckets; owner-only pages merge five ordered iterators by height and sequence. Without filters it orders by height, sequence, then owner. `Disputes` includes held terminal transfers. `Account` and `State` expose normalized epoch usage; State also returns the eligible refund queue head.
 
-The ante decorator records the shape of the transaction so the handler can
-reject a `MsgSink` that is nested in authz, contracts or a multi-message
-transaction.
+Pagination uses native `PageRequest` and `PageResponse`, with default limit 100 and maximum 500. Offsets, count-total requests, and limits above 500 are rejected. Cursors are the selected index's complete key without its collection prefix. Malformed cursors and keys outside the selected owner, status, or index are rejected.
 
-## Queries
+Clients must use the same `x-cosmos-block-height` on every page of a snapshot. A pruned height fails through BaseApp; the keeper does not fall back to current state. Durable discovery retains the last processed chronological identity even when `next_key` is empty. On reconnect, seek that identity at the new height, skip the already-processed record, and continue. A new owner cannot sort behind an old chronological identity. Filtered listings do not serve as global discovery cursors.
 
-| Query           | REST                                                 |
-| --------------- | ---------------------------------------------------- |
-| `Sink`          | `/akash/sink/v1/records/{id}`                        |
-| `State`         | `/akash/sink/v1/state`                               |
-| `Transfer`      | `/akash/sink/v1/transfers/{id}`                      |
-| `Account`       | `/akash/sink/v1/accounts/{sender}`                   |
-| `OpenTransfers` | `/akash/sink/v1/open_transfers?start_after=&limit=`  |
+## Recovery and compatibility
 
-`Sink` takes the canonical decimal ID and returns a public status with the full
-transfer state. Malformed IDs return `InvalidArgument`; unknown IDs return
-`NotFound`. `transfer_pending` means unsettled, `completed` means the mint was
-confirmed, and `void` means a confirmed void whether or not the refund has been
-paid; `transfer.settlement` has the details. `validation_pending` and
-`validated` are reserved.
+Consensus version remains 2. Genesis `schema_version` is 4. `GenesisRecord` contains ID, immutable data, complete settlement and its separate status; account usage appears once per owner. `current_policy_version` is explicit. Imports require current and all referenced policies, with uniqueness and consistency but no contiguity requirement. Schema 3 and older shapes fail; there is no in-place conversion or silent evidence truncation. The v2.2.0 upgrade installs Sink only when the input module version map does not contain Sink. It preserves its shared cache around installation, module migration, escrow repair, real Wasm migration, and final checks.
 
-`OpenTransfers` returns transfers that are neither minted nor refunded with IDs
-above `start_after`, in ascending order. A limit of 0 means 100; larger limits
-are capped at 500. Pass `next_start_after` to continue; 0 means no more.
+The upgrade moves any preexisting balance at the deterministic Sink address to the community pool. Its governance proposal must disclose that disposition. Installation preserves the existing account number and clears withdrawal addresses pointing to Sink so rewards return to their delegators.
 
-## Parameters
+Genesis runs after auth and bank. Import validates the complete snapshot, requires an empty Sink store, writes canonical state in one cache, rebuilds indexes through the settlement writer, recomputes totals, and checks exact bank restoration. Import does not sweep, mint, refund, rotate policy, or normalize epochs. Policies, votes, governance evidence, vetoes, void orders, paid states, and empty account usage entries survive export and import.
 
-| Parameter                      | Default         | Notes                                               |
-| ------------------------------ | --------------- | --------------------------------------------------- |
-| `enabled`                      | false           | Requires a reporter set and `min_transfer`          |
-| `max_transfer`                 | 1,000,000 AKT   | At most `solana_daily_mint_cap`                     |
-| `solana_daily_mint_cap`        | 10,000,000 AKT  | Must match the Solana program's daily cap           |
-| `max_daily_per_account`        | 20              | Deposits per account per UTC day                    |
-| `max_pending_per_account`      | 3               | Unsettled transfers per account                     |
-| `vault_allowlist`              | empty           | Up to 16 recipients exempt from the curve check     |
-| `reporters`                    | empty           | Up to 32 accounts                                   |
-| `reporter_threshold`           | 0               | More than two thirds of `reporters`                 |
-| `challenge_period_seconds`     | 259,200         | At least 72 hours; 1 s in builds with tag `sinkdev` |
-| `daily_refund_cap`             | 1,000,000 AKT   | At least `max_transfer`; lowered, at least the largest open transfer |
-| `refunds_enabled`              | false           |                                                     |
-| `min_transfer`                 | 0               | Required while `enabled`; 0 only with deposits off   |
-| `max_daily_amount_per_account` | 0               | 0 means no cap; otherwise at least `min_transfer`   |
-| `pause_guardian`               | empty           | 20- or 32-byte account                              |
+Every imported transfer and void-request height must precede `max(1, InitChain height)`. Duplicate block-height/sequence pairs are rejected across owners as well. Operators must retain an initial height above the exported chain height. `akash export` keeps the original `genesis_time`. Operators must also set it at or after the export's last block time, and preserve the native epoch record; import rejects usage beyond its current number. A database restart resumes after the committed height with a fresh transient sequence. Prior Sink schemas require a fresh deployment domain; their keys and history are not rewritten in place.
 
-Defaults are placeholders for development, not launch values. Changing the
-reporter set or threshold increments `totals.reporter_epoch`, which invalidates
-unfinished void authorizations from earlier epochs.
+Defaults are development policy. Deposits and refunds are disabled. Reporter membership is empty, the ratio is 0.75, and the challenge is 72 hours. Release and sinkdev challenge floors remain in SDK validation. Solana's independent mint amount caps do not couple submission timing to Akash send epochs.
 
-## Installation
-
-An upgrade that adds this module must:
-
-1. add the `sink` store,
-2. call `PrepareInstall` before migrations, which turns any account already at
-   the sink address into the module account (keeping its account number),
-   moves its whole balance to the community pool and deletes distribution
-   withdraw addresses set to the sink address,
-3. run migrations, which call InitGenesis with the default state,
-4. check that the sink balance matches its totals, which are all zero.
-
-The provisional handler does not read the plan info. It carries only the
-standard cosmovisor `binaries` and `configs`.
-
-Deposits stay disabled until governance enables them.
+Recovery must preserve the native `day` schedule and current number before Sink initialization. A new installation accepts empty zero-stamped usage at an existing nonzero epoch. Populated import preserves raw current and stale consumption and requires the first executable height to exceed every stored transfer height. Restart preserves both modules. Sink does not tick the native timer during import, export, or queries.

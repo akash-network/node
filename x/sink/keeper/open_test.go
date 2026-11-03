@@ -14,7 +14,7 @@ func TestTransfersIndexedPagination(t *testing.T) {
 	g := types.DefaultGenesis()
 	for i := 1; i <= 620; i++ {
 		owner := testOwner(byte(i%2 + 1)).String()
-		g.Transfers = append(g.Transfers, types.TransferState{ID: types.ID{Owner: owner, Height: int64(i), Sequence: 1}, Data: types.RecordData{Dest: types.SolanaAddress{1}.String(), Amount: testCoin(1)}, Settlement: types.SettlementData{Status: types.StatusTransferPending, PolicyVersion: 1, Round: 1}})
+		g.Records = append(g.Records, types.GenesisRecord{Status: types.StatusTransferPending, ID: types.ID{Owner: owner, Height: int64(i), Sequence: 1}, Data: types.RecordData{Dest: types.SolanaAddress{1}.String(), Amount: testCoin(1)}, Settlement: types.SettlementData{Policy: g.Policies[0], Round: 1}})
 	}
 
 	g.Totals.PendingAmount = testCoin(620)

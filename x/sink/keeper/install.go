@@ -27,7 +27,7 @@ type Distribution interface {
 // to the community pool. Withdraw addresses set to the sink address, which only
 // becomes a blocked address with this module, are cleared so rewards go to
 // the delegators themselves. It returns the moved coins.
-func (k Keeper) PrepareInstall(ctx sdk.Context, pool Distribution) (sdk.Coins, error) {
+func (k *keeper) PrepareInstall(ctx sdk.Context, pool Distribution) (sdk.Coins, error) {
 	initialized, err := k.initialized(ctx)
 	if err != nil {
 		return nil, err
@@ -55,11 +55,7 @@ func (k Keeper) PrepareInstall(ctx sdk.Context, pool Distribution) (sdk.Coins, e
 
 	balance := k.bank.GetAllBalances(cache, addr)
 	if !balance.IsZero() {
-		sweep := cache.WithValue(sweepContextKey{}, sweepAuthorization{
-			recipient: authtypes.NewModuleAddress(distrtypes.ModuleName),
-			amount:    balance,
-		})
-		if err := pool.FundCommunityPool(sweep, balance, addr); err != nil {
+		if err := pool.FundCommunityPool(cache, balance, addr); err != nil {
 			return nil, err
 		}
 
@@ -95,14 +91,7 @@ func (k Keeper) PrepareInstall(ctx sdk.Context, pool Distribution) (sdk.Coins, e
 			return nil, err
 		}
 
-		err := cache.EventManager().EmitTypedEvent(
-			&types.EventWithdrawAddressReset{
-				Delegator: del.String(),
-			},
-		)
-		if err != nil {
-			return nil, err
-		}
+		cache.EventManager().EmitEvent(sdk.NewEvent("sink_withdraw_address_reset", sdk.NewAttribute("delegator", del.String())))
 	}
 
 	write()

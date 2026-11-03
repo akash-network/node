@@ -12,22 +12,35 @@ import (
 	types "pkg.akt.dev/go/node/sink/v1"
 )
 
-func challengeDeadline(ctx sdk.Context, p types.Params) (*time.Time, error) {
-	deadline := ctx.BlockTime().Add(p.ReporterChallengePeriod).UTC()
-	if !deadline.After(ctx.BlockTime()) {
-		return nil, types.ErrInvalidClock.Wrap("invalid challenge deadline")
+func challengeDeadline(ctx sdk.Context, p types.Params) (int64, error) {
+	now := ctx.BlockTime()
+	duration := p.ReporterChallengePeriod
+	if duration <= 0 || now.Unix() < 0 {
+		return 0, types.ErrInvalidClock.Wrap("invalid challenge clock")
 	}
 
-	if _, err := gogotypes.TimestampProto(deadline); err != nil {
-		return nil, err
+	seconds := int64(duration / time.Second)
+	nanos := int64(now.Nanosecond()) + int64(duration%time.Second)
+	seconds += (nanos + int64(time.Second) - 1) / int64(time.Second)
+	if now.Unix() > math.MaxInt64-seconds {
+		return 0, types.ErrInvalidClock.Wrap("challenge deadline overflow")
 	}
 
-	return &deadline, nil
+	deadline := now.Unix() + seconds
+	if deadline <= 0 {
+		return 0, types.ErrInvalidClock.Wrap("invalid challenge deadline")
+	}
+
+	if _, err := gogotypes.TimestampProto(time.Unix(deadline, 0)); err != nil {
+		return 0, types.ErrInvalidClock.Wrap(err.Error())
+	}
+
+	return deadline, nil
 }
 
-// RequestVoid commits a governance order for proof on Solana. It does not
-// establish that Solana executed the void and cannot release any escrow.
-func (k Keeper) RequestVoid(ctx sdk.Context, msg *types.MsgRequestVoid) error {
+// RequestVoid commits a permanent governance order for proof on Solana.
+// The order cannot release escrow without a separate final void authorization.
+func (k *keeper) RequestVoid(ctx sdk.Context, msg *types.MsgRequestVoid) error {
 	if msg == nil {
 		return sdkerrors.ErrInvalidRequest.Wrap("nil request")
 	}
@@ -36,27 +49,43 @@ func (k Keeper) RequestVoid(ctx sdk.Context, msg *types.MsgRequestVoid) error {
 		return err
 	}
 
-	cache, write := ctx.CacheContext()
-
 	if msg.Authority != k.authority {
 		return sdkerrors.ErrUnauthorized.Wrap("sink authority must be governance")
 	}
 
+	cache, write := ctx.CacheContext()
 	t, err := k.GetTransfer(cache, msg.ID)
 	if err != nil {
 		return err
 	}
 
-	if t.VoidOrdered {
+	if t.Settlement.VoidAuthorization != nil {
 		return nil
 	}
 
-	s := t.Settlement
-	if s.Status == types.StatusRefunded || s.Status == types.StatusMinted && s.Hold != types.HoldConflict {
+	if msg.ExpectedRound != t.Settlement.Round {
+		return types.ErrStaleReport.Wrap("expected_round differs from settlement")
+	}
+
+	if t.Status == types.StatusRefunded || t.Status == types.StatusMinted && t.Settlement.Hold != types.HoldConflict {
 		return types.ErrTransferClosed
 	}
 
-	if err = k.voids.Set(cache, msg.ID, types.VoidOrder{}); err != nil {
+	if cache.BlockHeight() < t.ID.Height {
+		return types.ErrInvalidClock.Wrap("void request precedes deposit")
+	}
+
+	before := t
+	t.Settlement.VoidAuthorization = &types.VoidAuthorization{
+		RequestedHeight: cache.BlockHeight(),
+		RequestedRound:  t.Settlement.Round,
+	}
+
+	if t.Status == types.StatusTransferPending {
+		t.Status = types.StatusVoided
+	}
+
+	if err = k.put(cache, &before, t); err != nil {
 		return err
 	}
 
@@ -69,7 +98,7 @@ func (k Keeper) RequestVoid(ctx sdk.Context, msg *types.MsgRequestVoid) error {
 	return nil
 }
 
-func (k Keeper) ReportOutcome(ctx sdk.Context, msg *types.MsgReportOutcome) error {
+func (k *keeper) ReportOutcome(ctx sdk.Context, msg *types.MsgReportOutcome) error {
 	if msg == nil {
 		return sdkerrors.ErrInvalidRequest.Wrap("nil report")
 	}
@@ -97,89 +126,98 @@ func (k Keeper) ReportOutcome(ctx sdk.Context, msg *types.MsgReportOutcome) erro
 		return err
 	}
 
-	before := t.Settlement
-	s := before
+	before := t
+	s := &t.Settlement
 	if msg.Round != s.Round {
 		return types.ErrStaleReport
 	}
 
-	refreshed := false
-	if s.PolicyVersion != policy.Version && (s.Status == types.StatusTransferPending || s.Status == types.StatusRefundPending && s.GovernanceEvidence == nil) {
-		refreshed = true
-		s.Status = types.StatusTransferPending
-		s.PolicyVersion = policy.Version
-		s.ChallengeEnd = nil
-	}
-
-	duplicate := false
-	for _, v := range s.Votes {
-		if v.Reporter == msg.Reporter && v.Observation.Outcome == msg.Observation.Outcome && v.PolicyVersion == msg.PolicyVersion {
-			duplicate = true
-			break
-		}
-	}
-
-	if duplicate && !refreshed {
+	if s.Hold == types.HoldConflict {
 		return nil
 	}
 
-	conflict := s.Status == types.StatusMinted && msg.Observation.Outcome == types.OutcomeVoided || (s.Status == types.StatusRefundPending || s.Status == types.StatusRefunded) && msg.Observation.Outcome == types.OutcomeMinted
-	for _, v := range s.Votes {
-		if v.Observation.Outcome != msg.Observation.Outcome {
-			conflict = true
+	if s.Policy.Version != policy.Version && s.Hold == types.HoldNone && !t.Status.Terminal() && s.GovernanceObservation == nil {
+		s.Policy, s.Votes, s.ChallengeEnd = policy, nil, 0
+		t.Status = types.StatusTransferPending
+		if s.VoidAuthorization != nil {
+			t.Status = types.StatusVoided
 		}
 	}
 
-	if !duplicate {
-		s.Votes = append(s.Votes, types.Vote{Reporter: msg.Reporter, Observation: msg.Observation, PolicyVersion: msg.PolicyVersion})
+	primary := types.OutcomeUnspecified
+	if s.GovernanceObservation != nil {
+		primary = s.GovernanceObservation.Outcome
+	} else if len(s.Votes) > 0 {
+		primary = s.Votes[0].Observation.Outcome
 	}
 
-	if conflict && s.Hold != types.HoldConflict {
+	conflict := primary != types.OutcomeUnspecified && primary != msg.Observation.Outcome
+	if !conflict {
+		if t.Status.Terminal() || t.Status == types.StatusRefundPending || s.Hold != types.HoldNone {
+			return nil
+		}
+
+		for _, vote := range s.Votes {
+			if vote.Reporter == msg.Reporter {
+				return nil
+			}
+		}
+	}
+
+	s.Votes = append(slices.Clone(s.Votes), types.Vote{
+		Reporter:      msg.Reporter,
+		Observation:   msg.Observation,
+		PolicyVersion: msg.PolicyVersion,
+	})
+
+	if conflict {
 		s.Hold = types.HoldConflict
 
-		if err = cache.EventManager().EmitTypedEvent(&types.EventReportConflict{ID: msg.ID, Reporter: msg.Reporter}); err != nil {
+		if err = cache.EventManager().EmitTypedEvent(&types.EventReportConflict{
+			ID:       msg.ID,
+			Reporter: msg.Reporter,
+		}); err != nil {
 			return err
 		}
-	}
-
-	if s.Hold == types.HoldNone && s.Status == types.StatusTransferPending {
+	} else {
 		minted, voided := s.Tallies()
-		if policy.Threshold > 0 && minted >= policy.Threshold {
-			s.Status = types.StatusMinted
+		if policy.Threshold > 0 && minted == policy.Threshold {
+			t.Status = types.StatusMinted
 
 			if err = cache.EventManager().EmitTypedEvent(&types.EventMintConfirmed{ID: msg.ID}); err != nil {
 				return err
 			}
-		} else if policy.Threshold > 0 && voided >= policy.Threshold {
+		} else if policy.Threshold > 0 && voided == policy.Threshold {
 			p, err := k.params.Get(cache)
 			if err != nil {
 				return err
 			}
 
-			s.Status = types.StatusRefundPending
+			t.Status = types.StatusRefundPending
 			s.ChallengeEnd, err = challengeDeadline(cache, p)
 			if err != nil {
 				return err
 			}
 
-			if err = cache.EventManager().EmitTypedEvent(&types.EventVoidConfirmed{ID: msg.ID, ChallengeEnd: *s.ChallengeEnd}); err != nil {
+			if err = cache.EventManager().EmitTypedEvent(&types.EventVoidConfirmed{
+				ID:           msg.ID,
+				ChallengeEnd: time.Unix(s.ChallengeEnd, 0).UTC(),
+			}); err != nil {
 				return err
 			}
 		}
 	}
 
-	if err = k.put(cache, msg.ID, t.Data.Amount, &before, s); err != nil {
+	if err = k.put(cache, &before, t); err != nil {
 		return err
 	}
 
-	if !duplicate {
-		if err = cache.EventManager().EmitTypedEvent(&types.EventOutcomeReported{
-			ID:       msg.ID,
-			Reporter: msg.Reporter,
-			Outcome:  msg.Observation.Outcome,
-		}); err != nil {
-			return err
-		}
+	if err = cache.EventManager().EmitTypedEvent(&types.EventOutcomeReported{
+		ID:       msg.ID,
+		Reporter: msg.Reporter,
+		Outcome:  msg.Observation.Outcome,
+	}); err != nil {
+		return err
 	}
 
 	write()
@@ -187,7 +225,7 @@ func (k Keeper) ReportOutcome(ctx sdk.Context, msg *types.MsgReportOutcome) erro
 	return nil
 }
 
-func (k Keeper) VetoVoid(ctx sdk.Context, msg *types.MsgVetoVoid) error {
+func (k *keeper) VetoVoid(ctx sdk.Context, msg *types.MsgVetoVoid) error {
 	if msg == nil {
 		return sdkerrors.ErrInvalidRequest.Wrap("nil veto")
 	}
@@ -212,17 +250,18 @@ func (k Keeper) VetoVoid(ctx sdk.Context, msg *types.MsgVetoVoid) error {
 		return err
 	}
 
-	before := t.Settlement
-	s := before
-	if s.Status != types.StatusRefundPending {
+	before := t
+	s := &t.Settlement
+
+	if t.Status != types.StatusRefundPending {
 		return types.ErrNoPendingVoid
 	}
 
-	if s.ChallengeEnd == nil {
+	if s.ChallengeEnd == 0 {
 		return types.ErrInvalidSettlement
 	}
 
-	if !gov && !cache.BlockTime().Before(*s.ChallengeEnd) {
+	if !gov && cache.BlockTime().Unix() >= s.ChallengeEnd {
 		return types.ErrChallengeWindowEnded
 	}
 
@@ -230,12 +269,21 @@ func (k Keeper) VetoVoid(ctx sdk.Context, msg *types.MsgVetoVoid) error {
 		s.Hold = types.HoldVeto
 	}
 
-	s.Veto = &types.Veto{Signer: msg.Signer, Reason: msg.Reason}
-	if err = k.put(cache, msg.ID, t.Data.Amount, &before, s); err != nil {
+	s.VetoBy, s.VetoReason = msg.Signer, msg.Reason
+	s.VetoPolicyVersion = policy.Version
+	if gov {
+		s.VetoPolicyVersion = types.GovernanceRefundScope
+	}
+
+	if err = k.put(cache, &before, t); err != nil {
 		return err
 	}
 
-	if err = cache.EventManager().EmitTypedEvent(&types.EventVoidVetoed{ID: msg.ID, Signer: msg.Signer, Reason: msg.Reason}); err != nil {
+	if err = cache.EventManager().EmitTypedEvent(&types.EventVoidVetoed{
+		ID:     msg.ID,
+		Signer: msg.Signer,
+		Reason: msg.Reason,
+	}); err != nil {
 		return err
 	}
 
@@ -244,7 +292,7 @@ func (k Keeper) VetoVoid(ctx sdk.Context, msg *types.MsgVetoVoid) error {
 	return nil
 }
 
-func (k Keeper) Resolve(ctx sdk.Context, msg types.Resolution) error {
+func (k *keeper) Resolve(ctx sdk.Context, msg types.Resolution) error {
 	var authority, reason string
 	var id types.ID
 	var round uint64
@@ -290,8 +338,8 @@ func (k Keeper) Resolve(ctx sdk.Context, msg types.Resolution) error {
 		return err
 	}
 
-	before := t.Settlement
-	s := before
+	before := t
+	s := &t.Settlement
 	if s.Round != round {
 		return types.ErrStaleReport.Wrap("expected_round differs from settlement")
 	}
@@ -307,24 +355,27 @@ func (k Keeper) Resolve(ctx sdk.Context, msg types.Resolution) error {
 
 	switch decision {
 	case types.DecisionRestart:
-		if s.Terminal() {
+		if t.Status.Terminal() {
 			return types.ErrTransferClosed
 		}
 
-		s.Status = types.StatusTransferPending
+		t.Status = types.StatusTransferPending
+		if s.VoidAuthorization != nil {
+			t.Status = types.StatusVoided
+		}
 	case types.DecisionConfirmMint:
-		if s.Status == types.StatusRefunded {
+		if t.Status == types.StatusRefunded {
 			return types.ErrTransferClosed
 		}
 
-		s.Status = types.StatusMinted
+		t.Status = types.StatusMinted
 	case types.DecisionConfirmVoid:
-		if s.Status != types.StatusRefunded {
-			if s.Status == types.StatusMinted && s.Hold != types.HoldConflict {
+		if t.Status != types.StatusRefunded {
+			if t.Status == types.StatusMinted && s.Hold != types.HoldConflict {
 				return types.ErrTransferClosed
 			}
 
-			if !t.VoidOrdered {
+			if s.VoidAuthorization == nil {
 				return types.ErrInvalidResolution.Wrap("confirming an unpaid void requires a void order")
 			}
 
@@ -332,7 +383,7 @@ func (k Keeper) Resolve(ctx sdk.Context, msg types.Resolution) error {
 				return types.ErrRefundCapReached
 			}
 
-			s.Status = types.StatusRefundPending
+			t.Status = types.StatusRefundPending
 		}
 	}
 
@@ -342,24 +393,41 @@ func (k Keeper) Resolve(ctx sdk.Context, msg types.Resolution) error {
 	}
 
 	s.Round++
-	s.PolicyVersion = policy.Version
+	s.Policy = policy
 	s.Votes = nil
 	s.Hold = types.HoldNone
-	s.Veto = nil
-	s.ChallengeEnd = nil
-	s.GovernanceEvidence = evidence
-	if s.Status == types.StatusRefundPending {
+	s.VetoBy, s.VetoReason, s.VetoPolicyVersion = "", "", 0
+	s.ChallengeEnd = 0
+	s.GovernanceObservation = nil
+	if evidence != nil {
+		outcome := types.OutcomeMinted
+		if decision == types.DecisionConfirmVoid {
+			outcome = types.OutcomeVoided
+		}
+
+		s.GovernanceObservation = &types.Observation{
+			Outcome:              outcome,
+			Slot:                 evidence.Slot,
+			TransactionSignature: evidence.TransactionSignature,
+		}
+	}
+
+	if t.Status == types.StatusRefundPending {
 		s.ChallengeEnd, err = challengeDeadline(cache, p)
 		if err != nil {
 			return err
 		}
 	}
 
-	if err = k.put(cache, id, t.Data.Amount, &before, s); err != nil {
+	if err = k.put(cache, &before, t); err != nil {
 		return err
 	}
 
-	if err = cache.EventManager().EmitTypedEvent(&types.EventTransferResolved{ID: id, Decision: decision, Reason: reason}); err != nil {
+	if err = cache.EventManager().EmitTypedEvent(&types.EventTransferResolved{
+		ID:       id,
+		Decision: decision,
+		Reason:   reason,
+	}); err != nil {
 		return err
 	}
 
@@ -370,7 +438,7 @@ func (k Keeper) Resolve(ctx sdk.Context, msg types.Resolution) error {
 
 // FinalizeRefund pays exactly one original sender and never releases minted
 // escrow.
-func (k Keeper) FinalizeRefund(ctx sdk.Context, msg *types.MsgFinalizeRefund) error {
+func (k *keeper) FinalizeRefund(ctx sdk.Context, msg *types.MsgFinalizeRefund) error {
 	if msg == nil {
 		return sdkerrors.ErrInvalidRequest.Wrap("nil refund")
 	}
@@ -385,9 +453,10 @@ func (k Keeper) FinalizeRefund(ctx sdk.Context, msg *types.MsgFinalizeRefund) er
 		return err
 	}
 
-	before := t.Settlement
-	s := before
-	if s.Status == types.StatusRefunded {
+	before := t
+	s := &t.Settlement
+
+	if t.Status == types.StatusRefunded {
 		return nil
 	}
 
@@ -405,11 +474,20 @@ func (k Keeper) FinalizeRefund(ctx sdk.Context, msg *types.MsgFinalizeRefund) er
 		return err
 	}
 
-	if !s.Payable(policy, policy.Version) {
+	if !s.Payable(t.Status, policy.Version) {
+		if t.Status == types.StatusRefundPending && s.HasVoidAuthorization() {
+			switch s.Hold {
+			case types.HoldVeto, types.HoldConflict:
+				return types.ErrSettlementHeld
+			case types.HoldNone:
+				return types.ErrStaleReport
+			}
+		}
+
 		return types.ErrInvalidSettlement.Wrap("refund needs current authorization without a hold")
 	}
 
-	if s.ChallengeEnd == nil || cache.BlockTime().Before(*s.ChallengeEnd) {
+	if s.ChallengeEnd == 0 || cache.BlockTime().Unix() < s.ChallengeEnd {
 		return types.ErrChallengeWindowNotElapsed
 	}
 
@@ -422,9 +500,13 @@ func (k Keeper) FinalizeRefund(ctx sdk.Context, msg *types.MsgFinalizeRefund) er
 		return types.ErrRefundOutOfOrder
 	}
 
-	epoch, err := types.EpochOf(cache.BlockTime())
+	epoch, err := k.quotaEpoch(cache)
 	if err != nil {
 		return err
+	}
+
+	if epoch == 0 {
+		return types.ErrInvalidClock.Wrap("quota epoch has not started")
 	}
 
 	usage, err := k.refundUsage.Get(cache)
@@ -454,9 +536,10 @@ func (k Keeper) FinalizeRefund(ctx sdk.Context, msg *types.MsgFinalizeRefund) er
 		return err
 	}
 
-	s.Status = types.StatusRefunded
-	s.ChallengeEnd = nil
-	if err = k.put(cache, msg.ID, t.Data.Amount, &before, s); err != nil {
+	t.Status = types.StatusRefunded
+	s.ChallengeEnd = 0
+
+	if err = k.put(cache, &before, t); err != nil {
 		return err
 	}
 
@@ -467,8 +550,7 @@ func (k Keeper) FinalizeRefund(ctx sdk.Context, msg *types.MsgFinalizeRefund) er
 
 	balance := k.bank.GetAllBalances(cache, owner)
 	coins := sdk.NewCoins(t.Data.Amount)
-	send := cache.WithValue(refundContextKey{}, refundAuthorization{recipient: owner, amount: coins})
-	if err = k.bank.SendCoinsFromModuleToAccount(send, types.ModuleName, owner, coins); err != nil {
+	if err = k.bank.SendCoinsFromModuleToAccount(cache, types.ModuleName, owner, coins); err != nil {
 		return err
 	}
 
@@ -480,7 +562,11 @@ func (k Keeper) FinalizeRefund(ctx sdk.Context, msg *types.MsgFinalizeRefund) er
 		return err
 	}
 
-	if err = cache.EventManager().EmitTypedEvent(&types.EventTransferRefunded{ID: msg.ID, Sender: msg.ID.Owner, Amount: t.Data.Amount}); err != nil {
+	if err = cache.EventManager().EmitTypedEvent(&types.EventTransferRefunded{
+		ID:     msg.ID,
+		Sender: msg.ID.Owner,
+		Amount: t.Data.Amount,
+	}); err != nil {
 		return err
 	}
 

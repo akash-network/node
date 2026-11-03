@@ -22,9 +22,9 @@ func historyMembers() []string {
 	return members
 }
 
-func settlementIn(status types.Status) func(types.ReporterPolicy) types.SettlementData {
-	return func(p types.ReporterPolicy) types.SettlementData {
-		s := types.SettlementData{Status: status, Round: 1, PolicyVersion: p.Version}
+func settlementIn(status types.Status) func(types.ReporterPolicy) types.GenesisRecord {
+	return func(p types.ReporterPolicy) types.GenesisRecord {
+		s := types.SettlementData{Round: 1, Policy: p}
 		switch status {
 		case types.StatusMinted:
 			s.Votes = quorum(p, types.OutcomeMinted)
@@ -34,16 +34,20 @@ func settlementIn(status types.Status) func(types.ReporterPolicy) types.Settleme
 
 		if status == types.StatusRefundPending {
 			deadline := time.Unix(86400*21, 0).UTC()
-			s.ChallengeEnd = &deadline
+			s.ChallengeEnd = deadline.Unix()
 		}
 
-		return s
+		if status == types.StatusVoided {
+			s.VoidAuthorization = &types.VoidAuthorization{RequestedHeight: 7, RequestedRound: 1}
+		}
+
+		return types.GenesisRecord{Status: status, Settlement: s}
 	}
 }
 
 // historyGenesis retains policies identical 32-member versions and minted
 // terminal transfers behind one transfer in first's state.
-func historyGenesis(policies int, first func(types.ReporterPolicy) types.SettlementData, amount int64, minted int) *types.GenesisState {
+func historyGenesis(policies int, first func(types.ReporterPolicy) types.GenesisRecord, amount int64, minted int) *types.GenesisState {
 	g := types.DefaultGenesis()
 	g.Params.Reporters = historyMembers()
 	g.Params.MaxEpochRefund = testCoin(2_000_000_000_000)
@@ -53,16 +57,18 @@ func historyGenesis(policies int, first func(types.ReporterPolicy) types.Settlem
 	}
 
 	current := g.Policies[len(g.Policies)-1]
+	g.CurrentPolicyVersion = current.Version
 	owner := testOwner(6).String()
 	total := types.ZeroAmount()
-	add := func(sequence uint64, amount int64, s types.SettlementData) {
-		g.Transfers = append(g.Transfers, types.TransferState{
+	add := func(sequence uint64, amount int64, record types.GenesisRecord) {
+		g.Records = append(g.Records, types.GenesisRecord{
 			ID:         types.ID{Owner: owner, Height: 7, Sequence: sequence},
 			Data:       types.RecordData{Dest: types.SolanaAddress{1}.String(), Amount: testCoin(amount)},
-			Settlement: s,
+			Settlement: record.Settlement,
+			Status:     record.Status,
 		})
 
-		if err := g.Totals.Add(s.Status, testCoin(amount)); err != nil {
+		if err := g.Totals.Add(record.Status, testCoin(amount)); err != nil {
 			panic(err)
 		}
 
@@ -84,16 +90,16 @@ func TestSettlementWritesRejectMissingPolicies(t *testing.T) {
 	k, ctx, bank := testStore(t)
 	g := historyGenesis(1, settlementIn(types.StatusTransferPending), 10, 0)
 	importTestGenesis(t, k, ctx, bank, g)
-	transfer, err := k.GetTransfer(ctx, g.Transfers[0].ID)
+	transfer, err := k.GetTransfer(ctx, g.Records[0].ID)
 	require.NoError(t, err)
-	missing := transfer.Settlement
-	missing.PolicyVersion = 2
-	err = k.put(ctx, transfer.ID, transfer.Data.Amount, &transfer.Settlement, missing)
+	missing := transfer
+	missing.Settlement.Policy.Version = 2
+	err = k.put(ctx, &transfer, missing)
 	require.ErrorIs(t, err, types.ErrInvalidSettlement)
 	require.ErrorContains(t, err, "missing policy version 2")
-	outsider := transfer.Settlement
-	outsider.Votes = []types.Vote{{Reporter: g.Policies[0].Members[0], PolicyVersion: 2, Observation: types.Observation{Outcome: types.OutcomeMinted, Evidence: testEvidence()}}}
-	err = k.put(ctx, transfer.ID, transfer.Data.Amount, &transfer.Settlement, outsider)
+	outsider := transfer
+	outsider.Settlement.Votes = []types.Vote{{Reporter: g.Policies[0].Members[0], PolicyVersion: 2, Observation: types.Observation{Outcome: types.OutcomeMinted, Slot: testEvidence().Slot, TransactionSignature: testEvidence().TransactionSignature}}}
+	err = k.put(ctx, &transfer, outsider)
 	require.ErrorIs(t, err, types.ErrInvalidSettlement)
 	require.ErrorContains(t, err, "missing policy version 2")
 	unchanged, err := k.GetTransfer(ctx, transfer.ID)
@@ -110,16 +116,18 @@ func TestSettlementWriteGasIgnoresRetainedPolicies(t *testing.T) {
 		ctx = ctx.WithGasMeter(storetypes.NewInfiniteGasMeter())
 		require.NoError(t, k.ReportOutcome(ctx, &types.MsgReportOutcome{
 			Reporter:      current.Members[0],
-			ID:            g.Transfers[0].ID,
+			ID:            g.Records[0].ID,
 			PolicyVersion: current.Version,
 			Round:         1,
-			Observation:   types.Observation{Outcome: types.OutcomeMinted, Evidence: testEvidence()},
+			Observation:   types.Observation{Outcome: types.OutcomeMinted, Slot: testEvidence().Slot, TransactionSignature: testEvidence().TransactionSignature},
 		}))
 
 		return ctx.GasMeter().GasConsumed()
 	}
 
-	require.Equal(t, report(1), report(50), "a report must not pay for unreferenced policy versions")
+	one, fifty := report(1), report(50)
+	t.Logf("report gas with 1 and 50 retained policies: %d / %d", one, fifty)
+	require.Equal(t, one, fifty, "a report must not pay for unreferenced policy versions")
 }
 
 func TestRefundCapReductionChecksOnlyUnpaidTransfers(t *testing.T) {
@@ -128,6 +136,7 @@ func TestRefundCapReductionChecksOnlyUnpaidTransfers(t *testing.T) {
 		rejected bool
 	}{
 		{types.StatusTransferPending, true},
+		{types.StatusVoided, true},
 		{types.StatusRefundPending, true},
 		{types.StatusMinted, false},
 		{types.StatusRefunded, false},
@@ -163,5 +172,7 @@ func TestRefundCapReductionGasIgnoresTerminalHistory(t *testing.T) {
 		return ctx.GasMeter().GasConsumed()
 	}
 
-	require.Equal(t, lower(0), lower(2000), "lowering the refund cap must not scan terminal transfers")
+	empty, populated := lower(0), lower(2000)
+	t.Logf("refund cap reduction gas with 0 and 2000 terminal records: %d / %d", empty, populated)
+	require.Equal(t, empty, populated, "lowering the refund cap must not scan terminal transfers")
 }

@@ -22,7 +22,7 @@ func TestAllocatorAtomicDepositAndReset(t *testing.T) {
 	k, ctx, bank := testStore(t)
 	g := types.DefaultGenesis()
 	g.Params.MinAmountPerTransfer = testCoin(1)
-	g.Params.DepositsEnabled = true
+	g.Params.Enabled = true
 	for n := byte(1); n <= 4; n++ {
 		g.Params.Reporters = append(g.Params.Reporters, testOwner(n).String())
 	}
@@ -92,7 +92,7 @@ func TestSenderAndPolicyEligibility(t *testing.T) {
 	k, ctx, bank := testStore(t)
 	g := types.DefaultGenesis()
 	g.Params.MinAmountPerTransfer = testCoin(1)
-	g.Params.DepositsEnabled = true
+	g.Params.Enabled = true
 	for n := byte(1); n <= 4; n++ {
 		g.Params.Reporters = append(g.Params.Reporters, testOwner(n).String())
 	}

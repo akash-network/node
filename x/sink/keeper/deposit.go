@@ -1,7 +1,6 @@
 package keeper
 
 import (
-	"context"
 	"math"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -10,18 +9,7 @@ import (
 	types "pkg.akt.dev/go/node/sink/v1"
 )
 
-type sweepContextKey struct{}
-
-type sweepAuthorization struct {
-	recipient sdk.AccAddress
-	amount    sdk.Coins
-}
-
 type sinkRequestContextKey struct{}
-
-type depositContextKey struct{}
-
-type refundContextKey struct{}
 
 type sinkRequest struct {
 	sender   string
@@ -31,55 +19,9 @@ type sinkRequest struct {
 	amount   string
 }
 
-type depositAuthorization struct {
-	sender sdk.AccAddress
-	amount sdk.Coins
-}
-
-type refundAuthorization struct {
-	recipient sdk.AccAddress
-	amount    sdk.Coins
-}
-
-// SendRestriction guards every bank path into and out of escrow. It never
-// creates records; the MsgSink handler owns the complete atomic deposit.
-func (k Keeper) SendRestriction(goCtx context.Context, from, to sdk.AccAddress, coins sdk.Coins) (sdk.AccAddress, error) {
-	if from.Equals(sinkAddress) {
-		ctx := sdk.UnwrapSDKContext(goCtx)
-		if refund, ok := ctx.Value(refundContextKey{}).(refundAuthorization); ok && to.Equals(refund.recipient) && coins.Equal(refund.amount) {
-			return to, nil
-		}
-
-		if sweep, ok := ctx.Value(sweepContextKey{}).(sweepAuthorization); ok && to.Equals(sweep.recipient) && coins.Equal(sweep.amount) {
-			initialized, err := k.initialized(ctx)
-			if err != nil {
-				return nil, err
-			}
-
-			if !initialized {
-				return to, nil
-			}
-		}
-
-		return nil, sdkerrors.ErrUnauthorized.Wrap("sink escrow cannot be sent")
-	}
-
-	if !to.Equals(sinkAddress) {
-		return to, nil
-	}
-
-	ctx := sdk.UnwrapSDKContext(goCtx)
-	d, ok := ctx.Value(depositContextKey{}).(depositAuthorization)
-	if !ok || !from.Equals(d.sender) || !coins.Equal(d.amount) {
-		return nil, sdkerrors.ErrUnauthorized.Wrap("sink deposits require MsgSink")
-	}
-
-	return to, nil
-}
-
 // Deposit validates and escrows one deposit, writes its immutable proof record
 // and returns that record's ID.
-func (k Keeper) Deposit(ctx sdk.Context, msg *types.MsgSink) (types.ID, error) {
+func (k *keeper) Deposit(ctx sdk.Context, msg *types.MsgSink) (types.ID, error) {
 	if msg == nil {
 		return types.ID{}, sdkerrors.ErrInvalidRequest.Wrap("nil request")
 	}
@@ -120,7 +62,7 @@ func (k Keeper) Deposit(ctx sdk.Context, msg *types.MsgSink) (types.ID, error) {
 		return types.ID{}, err
 	}
 
-	if !p.DepositsEnabled {
+	if !p.Enabled {
 		return types.ID{}, types.ErrDepositsDisabled
 	}
 
@@ -155,9 +97,13 @@ func (k Keeper) Deposit(ctx sdk.Context, msg *types.MsgSink) (types.ID, error) {
 		return types.ID{}, types.ErrAboveMaxTransfer
 	}
 
-	epoch, err := types.EpochOf(cache.BlockTime())
+	epoch, err := k.quotaEpoch(cache)
 	if err != nil {
 		return types.ID{}, err
+	}
+
+	if epoch == 0 {
+		return types.ID{}, types.ErrInvalidClock.Wrap("quota epoch has not started")
 	}
 
 	u, err := k.GetAccountUsage(cache, sender)
@@ -185,7 +131,7 @@ func (k Keeper) Deposit(ctx sdk.Context, msg *types.MsgSink) (types.ID, error) {
 		return types.ID{}, err
 	}
 
-	if nextAccount.IsGT(p.MaxEpochAmountPerAccount) {
+	if p.MaxEpochAmountPerAccount.IsPositive() && nextAccount.IsGT(p.MaxEpochAmountPerAccount) {
 		return types.ID{}, types.ErrAccountDailyAmountExceeded
 	}
 
@@ -217,12 +163,14 @@ func (k Keeper) Deposit(ctx sdk.Context, msg *types.MsgSink) (types.ID, error) {
 	}
 
 	coins := sdk.NewCoins(msg.Amount)
-	sendCtx := cache.WithValue(depositContextKey{}, depositAuthorization{sender: sender, amount: coins})
-	if err = k.bank.SendCoinsFromAccountToModule(sendCtx, sender, types.ModuleName, coins); err != nil {
+	if err = k.bank.SendCoinsFromAccountToModule(cache, sender, types.ModuleName, coins); err != nil {
 		return types.ID{}, err
 	}
 
-	if err = k.transfers.Set(cache, id, types.RecordData{Dest: msg.Dest, Amount: msg.Amount}); err != nil {
+	if err = k.transfers.Set(cache, id, types.RecordData{
+		Dest:   msg.Dest,
+		Amount: msg.Amount,
+	}); err != nil {
 		return types.ID{}, err
 	}
 
@@ -242,10 +190,17 @@ func (k Keeper) Deposit(ctx sdk.Context, msg *types.MsgSink) (types.ID, error) {
 		return types.ID{}, err
 	}
 
-	if err = k.put(cache, id, msg.Amount, nil, types.SettlementData{
-		Status:        types.StatusTransferPending,
-		Round:         1,
-		PolicyVersion: policy.Version,
+	if err = k.put(cache, nil, types.TransferState{
+		ID: id,
+		Data: types.RecordData{
+			Dest:   msg.Dest,
+			Amount: msg.Amount,
+		},
+		Status: types.StatusTransferPending,
+		Settlement: types.SettlementData{
+			Round:  1,
+			Policy: policy,
+		},
 	}); err != nil {
 		return types.ID{}, err
 	}

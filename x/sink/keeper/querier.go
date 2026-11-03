@@ -3,6 +3,9 @@ package keeper
 import (
 	"bytes"
 	"context"
+	"errors"
+
+	storetypes "cosmossdk.io/store/types"
 
 	collcodec "cosmossdk.io/collections/codec"
 	"cosmossdk.io/store/prefix"
@@ -15,7 +18,7 @@ import (
 )
 
 type Querier struct {
-	k Keeper
+	k *keeper
 }
 
 var _ types.QueryServer = Querier{}
@@ -51,7 +54,7 @@ func (q Querier) Account(ctx context.Context, req *types.QueryAccountRequest) (*
 		return nil, err
 	}
 
-	epoch, err := types.EpochOf(sdk.UnwrapSDKContext(ctx).BlockTime())
+	epoch, err := q.k.quotaEpoch(sdk.UnwrapSDKContext(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +69,10 @@ func (q Querier) Account(ctx context.Context, req *types.QueryAccountRequest) (*
 		return nil, err
 	}
 
-	return &types.QueryAccountResponse{Usage: u, Epoch: epoch}, nil
+	return &types.QueryAccountResponse{
+		Usage: u,
+		Epoch: epoch,
+	}, nil
 }
 
 func (q Querier) State(ctx context.Context, _ *types.QueryStateRequest) (*types.QueryStateResponse, error) {
@@ -87,7 +93,7 @@ func (q Querier) State(ctx context.Context, _ *types.QueryStateRequest) (*types.
 		return nil, err
 	}
 
-	result.Epoch, err = types.EpochOf(sdk.UnwrapSDKContext(ctx).BlockTime())
+	result.Epoch, err = q.k.quotaEpoch(sdk.UnwrapSDKContext(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -142,28 +148,23 @@ func (q Querier) Transfers(ctx context.Context, req *types.QueryTransfersRequest
 		}
 	}
 
+	if owner != nil && req.Status == types.StatusInvalid {
+		return q.ownerTransfers(ctx, req, owner)
+	}
+
 	domain := HistoryKey.Bytes()
 	var filter []byte
 	decode := exactID(chronoIDKey)
-	if owner != nil || req.Status != types.StatusInvalid {
-		domain = TransfersKey.Bytes()
-		decode = exactID(types.IDKey)
-		if req.Status != types.StatusInvalid {
-			domain = StatusKey.Bytes()
-			prefix, err := statusByte(req.Status)
-			if err != nil {
-				return nil, err
+	if req.Status != types.StatusInvalid {
+		domain = SettlementsKey.Bytes()
+		filter = []byte{byte(req.Status)} //nolint:gosec // ValidateBasic admits only statuses 1 through 5 here.
+		decode = func(key []byte) (types.ID, error) {
+			n, sid, err := types.SettlementIDKey.Decode(key)
+			if err == nil && (n != len(key) || sid.Status != req.Status) {
+				err = status.Error(codes.InvalidArgument, "cursor outside status filter")
 			}
 
-			filter = []byte{prefix}
-			decode = func(key []byte) (types.ID, error) {
-				n, sid, err := SettlementIDKey.Decode(key)
-				if err == nil && (n != len(key) || sid.Status != req.Status) {
-					err = status.Error(codes.InvalidArgument, "cursor outside status filter")
-				}
-
-				return transferID(sid), err
-			}
+			return sid.ID(), err
 		}
 
 		if owner != nil {
@@ -177,7 +178,10 @@ func (q Querier) Transfers(ctx context.Context, req *types.QueryTransfersRequest
 		return nil, err
 	}
 
-	return &types.QueryTransfersResponse{Transfers: transfers, Pagination: page}, nil
+	return &types.QueryTransfersResponse{
+		Transfers:  transfers,
+		Pagination: page,
+	}, nil
 }
 
 func (q Querier) Disputes(ctx context.Context, req *types.QueryDisputesRequest) (*types.QueryDisputesResponse, error) {
@@ -194,7 +198,10 @@ func (q Querier) Disputes(ctx context.Context, req *types.QueryDisputesRequest) 
 		return nil, err
 	}
 
-	return &types.QueryDisputesResponse{Transfers: transfers, Pagination: page}, nil
+	return &types.QueryDisputesResponse{
+		Transfers:  transfers,
+		Pagination: page,
+	}, nil
 }
 
 func (q Querier) page(ctx context.Context, domain, filter []byte, request *sdkquery.PageRequest, decode func([]byte) (types.ID, error)) ([]types.TransferState, *sdkquery.PageResponse, error) {
@@ -259,5 +266,113 @@ func exactID(codec collcodec.KeyCodec[types.ID]) func([]byte) (types.ID, error) 
 		}
 
 		return id, err
+	}
+}
+
+func (q Querier) ownerTransfers(ctx context.Context, req *types.QueryTransfersRequest, owner sdk.AccAddress) (response *types.QueryTransfersResponse, err error) {
+	page := sdkquery.PageRequest{Limit: types.DefaultPageLimit}
+	if req.Pagination != nil {
+		page = *req.Pagination
+	}
+
+	if page.Limit == 0 {
+		page.Limit = types.DefaultPageLimit
+	}
+
+	ownerPrefix := append([]byte{types.AccountLength}, owner...)
+	var cursor []byte
+	if len(page.Key) > 0 {
+		id, decodeErr := exactID(types.IDKey)(page.Key)
+		if decodeErr != nil || id.Owner != req.Owner {
+			return nil, status.Error(codes.InvalidArgument, "cursor outside owner filter or malformed")
+		}
+
+		if _, lookupErr := q.k.GetTransfer(ctx, id); lookupErr != nil {
+			if errors.Is(lookupErr, types.ErrTransferNotFound) {
+				return nil, status.Error(codes.InvalidArgument, "cursor is absent from owner settlements")
+			}
+
+			return nil, lookupErr
+		}
+
+		cursor = page.Key[len(ownerPrefix):]
+	}
+
+	iterators := make([]storetypes.Iterator, 0, 5)
+	defer func() {
+		for _, it := range iterators {
+			err = errors.Join(err, it.Close())
+		}
+	}()
+
+	for financial := types.StatusTransferPending; financial <= types.StatusRefunded; financial++ {
+		domain := append(bytes.Clone(SettlementsKey.Bytes()), byte(financial))
+		domain = append(domain, ownerPrefix...)
+		store := prefix.NewStore(sdk.UnwrapSDKContext(ctx).KVStore(q.k.skey), domain)
+		var it storetypes.Iterator
+		if page.Reverse {
+			var end []byte
+			if len(cursor) > 0 {
+				end = append(bytes.Clone(cursor), 0)
+			}
+
+			it = store.ReverseIterator(nil, end)
+		} else {
+			it = store.Iterator(cursor, nil)
+		}
+
+		iterators = append(iterators, it)
+	}
+
+	response = &types.QueryTransfersResponse{
+		Transfers:  make([]types.TransferState, 0),
+		Pagination: &sdkquery.PageResponse{},
+	}
+
+	for {
+		selected := -1
+		for i, it := range iterators {
+			if !it.Valid() {
+				continue
+			}
+
+			if selected == -1 {
+				selected = i
+				continue
+			}
+
+			comparison := bytes.Compare(it.Key(), iterators[selected].Key())
+			if comparison == 0 {
+				return nil, types.ErrInternal.Wrap("multiple canonical owner settlements")
+			}
+
+			if !page.Reverse && comparison < 0 || page.Reverse && comparison > 0 {
+				selected = i
+			}
+		}
+
+		if selected == -1 {
+			return response, nil
+		}
+
+		it := iterators[selected]
+		key := append(bytes.Clone(ownerPrefix), it.Key()...)
+		id, decodeErr := exactID(types.IDKey)(key)
+		if decodeErr != nil {
+			return nil, decodeErr
+		}
+
+		if uint64(len(response.Transfers)) == page.Limit {
+			response.Pagination.NextKey = key
+			return response, nil
+		}
+
+		transfer, lookupErr := q.k.GetTransfer(ctx, id)
+		if lookupErr != nil {
+			return nil, lookupErr
+		}
+
+		response.Transfers = append(response.Transfers, transfer)
+		it.Next()
 	}
 }

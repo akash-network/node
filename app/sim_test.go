@@ -46,6 +46,7 @@ import (
 	atypes "pkg.akt.dev/go/node/audit/v1"
 	ctypes "pkg.akt.dev/go/node/cert/v1"
 	dtypes "pkg.akt.dev/go/node/deployment/v1"
+	epochstypes "pkg.akt.dev/go/node/epochs/v1beta1"
 	mtypes "pkg.akt.dev/go/node/market/v1"
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
 	sinktypes "pkg.akt.dev/go/node/sink/v1"
@@ -94,7 +95,22 @@ func simulateFromSeedFunc(t *testing.T, newApp *akash.AkashApp, config sdksim.Co
 		t,
 		os.Stdout,
 		newApp.BaseApp,
-		simtestutil.AppStateFn(newApp.AppCodec(), newApp.SimulationManager(), akash.NewDefaultGenesisState(newApp.AppCodec())),
+		simtestutil.AppStateFnWithExtendedCb(newApp.AppCodec(), newApp.SimulationManager(), akash.NewDefaultGenesisState(newApp.AppCodec()), func(state map[string]json.RawMessage) {
+			if config.GenesisFile != "" {
+				return
+			}
+
+			var epochs epochstypes.GenesisState
+			newApp.AppCodec().MustUnmarshalJSON(state[epochstypes.ModuleName], &epochs)
+			for _, epoch := range epochs.Epochs {
+				if epoch.ID == "day" {
+					return
+				}
+			}
+
+			epochs.Epochs = append(epochs.Epochs, epochstypes.NewGenesisEpochInfo("day", 10*time.Minute))
+			state[epochstypes.ModuleName] = newApp.AppCodec().MustMarshalJSON(&epochs)
+		}),
 		sdksim.RandomAccounts, // Replace it with own random account function if using keys other than secp256k1
 		simtestutil.BuildSimulationOperations(newApp, newApp.AppCodec(), config, newApp.TxConfig()),
 		newApp.ModuleAccountAddrs(),

@@ -17,14 +17,26 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
+	"github.com/cosmos/cosmos-sdk/runtime"
 	"github.com/cosmos/cosmos-sdk/testutil"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/stretchr/testify/require"
 
+	epochstypes "pkg.akt.dev/go/node/epochs/v1beta1"
 	types "pkg.akt.dev/go/node/sink/v1"
 	"pkg.akt.dev/go/sdkutil"
+	epochskeeper "pkg.akt.dev/node/v2/x/epochs/keeper"
 )
+
+type testEpochs struct {
+	info epochstypes.EpochInfo
+	err  error
+}
+
+func (e testEpochs) GetEpoch(_ sdk.Context, _ string) (epochstypes.EpochInfo, error) {
+	return e.info, e.err
+}
 
 type genesisAccounts map[string]sdk.AccountI
 
@@ -41,10 +53,9 @@ func (a genesisAccounts) GetModuleAccount(_ context.Context, name string) sdk.Mo
 }
 
 type testBank struct {
-	key         *storetypes.KVStoreKey
-	redirect    sdk.AccAddress
-	fail        bool
-	restriction func(context.Context, sdk.AccAddress, sdk.AccAddress, sdk.Coins) (sdk.AccAddress, error)
+	key      *storetypes.KVStoreKey
+	redirect sdk.AccAddress
+	fail     bool
 }
 
 func (b *testBank) set(ctx context.Context, addr sdk.AccAddress, coins sdk.Coins) {
@@ -71,14 +82,6 @@ func (b *testBank) GetAllBalances(ctx context.Context, addr sdk.AccAddress) sdk.
 }
 
 func (b *testBank) send(ctx context.Context, from, to sdk.AccAddress, coins sdk.Coins) error {
-	if b.restriction != nil {
-		var err error
-		to, err = b.restriction(ctx, from, to, coins)
-		if err != nil {
-			return err
-		}
-	}
-
 	if b.redirect != nil {
 		to = b.redirect
 	}
@@ -118,12 +121,13 @@ func testEvidence() types.SolanaEvidence {
 	return types.SolanaEvidence{Slot: 10, TransactionSignature: bytes.Repeat([]byte{1}, 64)}
 }
 
-func testStore(t *testing.T) (Keeper, sdk.Context, *testBank) {
+func testStore(t *testing.T) (*keeper, sdk.Context, *testBank) {
 	t.Helper()
 	key := storetypes.NewKVStoreKey(types.StoreKey)
 	bankKey := storetypes.NewKVStoreKey("bank")
+	epochKey := storetypes.NewKVStoreKey(epochstypes.StoreKey)
 	tkey := storetypes.NewTransientStoreKey(types.TStoreKey)
-	ctx := testutil.DefaultContextWithKeys(map[string]*storetypes.KVStoreKey{types.StoreKey: key, "bank": bankKey}, map[string]*storetypes.TransientStoreKey{types.TStoreKey: tkey}, nil).WithBlockHeight(100).WithBlockTime(time.Unix(86400*20, 0).UTC())
+	ctx := testutil.DefaultContextWithKeys(map[string]*storetypes.KVStoreKey{types.StoreKey: key, "bank": bankKey, epochstypes.StoreKey: epochKey}, map[string]*storetypes.TransientStoreKey{types.TStoreKey: tkey}, nil).WithBlockHeight(100).WithBlockTime(time.Unix(86400*20, 0).UTC())
 	accounts := genesisAccounts{}
 	for n := byte(1); n <= 8; n++ {
 		a := authtypes.NewBaseAccountWithAddress(testOwner(n))
@@ -132,15 +136,18 @@ func testStore(t *testing.T) (Keeper, sdk.Context, *testBank) {
 	}
 
 	bank := &testBank{key: bankKey}
-	k := NewKeeper(codec.NewProtoCodec(codectypes.NewInterfaceRegistry()), key, tkey, accounts, bank, authtypes.NewModuleAddress("gov").String())
-	bank.restriction = k.SendRestriction
+	cdc := codec.NewProtoCodec(codectypes.NewInterfaceRegistry())
+	epochs := epochskeeper.NewKeeper(runtime.NewKVStoreService(epochKey), cdc)
+	epochs.SetHooks(epochstypes.NewMultiEpochHooks())
+	require.NoError(t, epochs.AddEpoch(ctx, epochstypes.EpochInfo{ID: "day", StartTime: ctx.BlockTime().Add(-19 * 10 * time.Minute), Duration: 10 * time.Minute, CurrentEpoch: 20, CurrentEpochStartTime: ctx.BlockTime(), CurrentEpochStartHeight: 100, EpochCountingStarted: true}))
+	k := NewKeeper(cdc, key, tkey, accounts, bank, epochs, authtypes.NewModuleAddress("gov").String()).(*keeper)
 	return k, ctx, bank
 }
 
 func quorum(p types.ReporterPolicy, outcome types.Outcome) []types.Vote {
 	votes := make([]types.Vote, 0, p.Threshold)
 	for _, r := range p.Members[:p.Threshold] {
-		votes = append(votes, types.Vote{Reporter: r, PolicyVersion: p.Version, Observation: types.Observation{Outcome: outcome, Evidence: testEvidence()}})
+		votes = append(votes, types.Vote{Reporter: r, PolicyVersion: p.Version, Observation: types.Observation{Outcome: outcome, Slot: testEvidence().Slot, TransactionSignature: testEvidence().TransactionSignature}})
 	}
 
 	return votes
@@ -153,40 +160,43 @@ func populatedGenesis() *types.GenesisState {
 	p1.Members = []string{testOwner(1).String(), testOwner(2).String(), testOwner(3).String(), testOwner(4).String()}
 	p2 := g.Params.Policy(2)
 	g.Policies = []types.ReporterPolicy{p1, p2}
-	deadline := time.Unix(86400*18, 123).UTC()
-	states := []types.SettlementData{
-		{Status: types.StatusTransferPending, Round: 1, PolicyVersion: 2},
-		{Status: types.StatusTransferPending, Round: 1, PolicyVersion: 1, Hold: types.HoldConflict, Votes: []types.Vote{{Reporter: p1.Members[0], PolicyVersion: 1, Observation: types.Observation{Outcome: types.OutcomeMinted, Evidence: testEvidence()}}, {Reporter: p2.Members[0], PolicyVersion: 2, Observation: types.Observation{Outcome: types.OutcomeVoided, Evidence: testEvidence()}}}},
-		{Status: types.StatusTransferPending, Round: 1, PolicyVersion: 2, Hold: types.HoldVeto, Veto: &types.Veto{Signer: p1.Members[0], Reason: "retained after refresh"}},
-		{Status: types.StatusMinted, Round: 1, PolicyVersion: 1, Votes: quorum(p1, types.OutcomeMinted)},
-		{Status: types.StatusMinted, Round: 1, PolicyVersion: 1, Hold: types.HoldConflict, Votes: append(quorum(p1, types.OutcomeMinted), types.Vote{Reporter: p2.Members[0], PolicyVersion: 2, Observation: types.Observation{Outcome: types.OutcomeVoided, Evidence: testEvidence()}})},
-		{Status: types.StatusRefundPending, Round: 1, PolicyVersion: 1, ChallengeEnd: &deadline, Votes: quorum(p1, types.OutcomeVoided)},
-		{Status: types.StatusRefundPending, Round: 1, PolicyVersion: 2, ChallengeEnd: &deadline, Votes: quorum(p2, types.OutcomeVoided)},
-		{
-			Status:        types.StatusRefundPending,
-			Round:         2,
-			PolicyVersion: 1,
-			ChallengeEnd:  &deadline,
-			GovernanceEvidence: func() *types.SolanaEvidence {
-				e := testEvidence()
-				return &e
-			}(),
-		},
-		{Status: types.StatusRefundPending, Round: 1, PolicyVersion: 2, ChallengeEnd: &deadline, Votes: quorum(p2, types.OutcomeVoided), Hold: types.HoldVeto, Veto: &types.Veto{Signer: p2.Members[0], Reason: "review"}},
-		{Status: types.StatusRefundPending, Round: 1, PolicyVersion: 2, ChallengeEnd: &deadline, Votes: quorum(p2, types.OutcomeVoided), Hold: types.HoldConflict},
-		{Status: types.StatusRefunded, Round: 1, PolicyVersion: 1, Votes: quorum(p1, types.OutcomeVoided)},
-		{Status: types.StatusRefunded, Round: 1, PolicyVersion: 1, Votes: append(quorum(p1, types.OutcomeVoided), types.Vote{Reporter: p2.Members[0], PolicyVersion: 2, Observation: types.Observation{Outcome: types.OutcomeMinted, Evidence: testEvidence()}}), Hold: types.HoldConflict},
+	g.CurrentPolicyVersion = 2
+	deadline := int64(86400 * 18)
+	observe := func(outcome types.Outcome) types.Observation {
+		e := testEvidence()
+		return types.Observation{Outcome: outcome, Slot: e.Slot, TransactionSignature: e.TransactionSignature}
+	}
+
+	opposite := func(p types.ReporterPolicy, outcome types.Outcome) types.Vote {
+		return types.Vote{Reporter: p.Members[0], PolicyVersion: p.Version, Observation: observe(outcome)}
+	}
+
+	governance := observe(types.OutcomeVoided)
+	records := []types.GenesisRecord{
+		{Status: types.StatusTransferPending, Settlement: types.SettlementData{Round: 1, Policy: p2}},
+		{Status: types.StatusTransferPending, Settlement: types.SettlementData{Round: 1, Policy: p1, Hold: types.HoldConflict, Votes: []types.Vote{opposite(p1, types.OutcomeMinted), opposite(p2, types.OutcomeVoided)}}},
+		{Status: types.StatusVoided, Settlement: types.SettlementData{Round: 1, Policy: p1, Hold: types.HoldConflict, Votes: []types.Vote{opposite(p1, types.OutcomeMinted), opposite(p2, types.OutcomeVoided)}, VoidAuthorization: &types.VoidAuthorization{RequestedHeight: 7, RequestedRound: 1}}},
+		{Status: types.StatusMinted, Settlement: types.SettlementData{Round: 1, Policy: p1, Votes: quorum(p1, types.OutcomeMinted)}},
+		{Status: types.StatusMinted, Settlement: types.SettlementData{Round: 1, Policy: p1, Votes: append(quorum(p1, types.OutcomeMinted), opposite(p2, types.OutcomeVoided)), Hold: types.HoldConflict}},
+		{Status: types.StatusRefundPending, Settlement: types.SettlementData{Round: 1, Policy: p1, ChallengeEnd: deadline, Votes: quorum(p1, types.OutcomeVoided)}},
+		{Status: types.StatusRefundPending, Settlement: types.SettlementData{Round: 1, Policy: p2, ChallengeEnd: deadline, Votes: quorum(p2, types.OutcomeVoided)}},
+		{Status: types.StatusRefundPending, Settlement: types.SettlementData{Round: 2, Policy: p1, ChallengeEnd: deadline, GovernanceObservation: &governance, VoidAuthorization: &types.VoidAuthorization{RequestedHeight: 7, RequestedRound: 1}}},
+		{Status: types.StatusRefundPending, Settlement: types.SettlementData{Round: 1, Policy: p2, ChallengeEnd: deadline, Votes: quorum(p2, types.OutcomeVoided), Hold: types.HoldVeto, VetoBy: p1.Members[0], VetoReason: "retained after rotation", VetoPolicyVersion: 1}},
+		{Status: types.StatusRefundPending, Settlement: types.SettlementData{Round: 1, Policy: p2, ChallengeEnd: deadline, Votes: append(quorum(p2, types.OutcomeVoided), opposite(p2, types.OutcomeMinted)), Hold: types.HoldConflict}},
+		{Status: types.StatusRefunded, Settlement: types.SettlementData{Round: 1, Policy: p1, Votes: quorum(p1, types.OutcomeVoided)}},
+		{Status: types.StatusRefunded, Settlement: types.SettlementData{Round: 1, Policy: p1, Votes: append(quorum(p1, types.OutcomeVoided), opposite(p2, types.OutcomeMinted)), Hold: types.HoldConflict}},
 	}
 
 	sums := map[string]int64{}
-	for i, s := range states {
-		id := types.ID{Owner: testOwner(byte(i%2 + 6)).String(), Height: 7, Sequence: uint64(i + 1)}
-		g.Transfers = append(g.Transfers, types.TransferState{ID: id, Data: types.RecordData{Dest: types.SolanaAddress{1}.String(), Amount: testCoin(10)}, Settlement: s, VoidOrdered: s.GovernanceEvidence != nil})
-		if err := g.Totals.Add(s.Status, testCoin(10)); err != nil {
+	for i, record := range records {
+		record.ID = types.ID{Owner: testOwner(byte(i%2 + 6)).String(), Height: 7, Sequence: uint64(i + 1)}
+		record.Data = types.RecordData{Dest: types.SolanaAddress{1}.String(), Amount: testCoin(10)}
+		g.Records = append(g.Records, record)
+		if err := g.Totals.Add(record.Status, record.Data.Amount); err != nil {
 			panic(err)
 		}
 
-		sums[id.Owner] += 10
+		sums[record.ID.Owner] += 10
 	}
 
 	for n := byte(6); n <= 7; n++ {
@@ -203,22 +213,58 @@ func populatedGenesis() *types.GenesisState {
 func importTestGenesis(t *testing.T, k Keeper, ctx sdk.Context, bank *testBank, g *types.GenesisState) {
 	t.Helper()
 	require.NoError(t, g.Validate())
-	bank.set(ctx, Address(), sdk.NewCoins(g.Totals.PendingAmount.Add(g.Totals.MintedAmount).Add(g.Totals.RefundPendingAmount)))
+	bank.set(ctx, Address(), sdk.NewCoins(g.Totals.PendingAmount.Add(g.Totals.MintedAmount).Add(g.Totals.VoidedAmount).Add(g.Totals.RefundPendingAmount)))
 	require.NoError(t, k.InitGenesis(ctx, g))
+}
+
+func nativeQuotaGenesis() *types.GenesisState {
+	g := populatedGenesis()
+	g.Params.Enabled = true
+	g.Params.RefundsEnabled = true
+	g.Params.MinAmountPerTransfer = testCoin(1)
+	g.Params.MaxAmountPerTransfer = testCoin(10)
+	g.Params.MaxEpochAmountPerAccount = testCoin(60)
+	g.Params.MaxTransferAmountPerEpoch = testCoin(60)
+	g.Params.MaxEpochRefund = testCoin(20)
+	g.Accounts[0].Usage.LastEpoch = 57
+	g.Accounts[1].Usage.LastEpoch = 56
+	g.Accounts[2].Usage.LastEpoch = 55
+	g.SendUsage = types.EpochUsage{Epoch: 57, Amount: testCoin(60)}
+	g.RefundUsage = types.EpochUsage{Epoch: 57, Amount: testCoin(20)}
+	return g
 }
 
 func TestGenesisPopulatedRecovery(t *testing.T) {
 	k, ctx, bank := testStore(t)
-	g := populatedGenesis()
+	g := nativeQuotaGenesis()
+	epochs := k.epochs.(epochskeeper.Keeper)
+	native, err := epochs.GetEpoch(ctx, "day")
+	require.NoError(t, err)
+	native.CurrentEpoch = 57
+	require.NoError(t, epochs.RemoveEpoch(ctx, "day"))
+	require.NoError(t, epochs.AddEpoch(ctx, native))
 	importTestGenesis(t, k, ctx, bank, g)
 	exported, err := k.ExportGenesis(ctx)
 	require.NoError(t, err)
-	require.Len(t, exported.Transfers, 12)
+	require.Len(t, exported.Records, 12)
 	require.Len(t, exported.Accounts, 3)
 	require.Equal(t, g.SendUsage, exported.SendUsage)
 	require.Equal(t, g.RefundUsage, exported.RefundUsage)
 	k2, ctx2, bank2 := testStore(t)
+	epochs2 := k2.epochs.(epochskeeper.Keeper)
+	require.NoError(t, epochs2.RemoveEpoch(ctx2, "day"))
+	require.NoError(t, epochs2.AddEpoch(ctx2, native))
 	importTestGenesis(t, k2, ctx2, bank2, exported)
+	native2, err := epochs2.GetEpoch(ctx2, "day")
+	require.NoError(t, err)
+	require.Equal(t, native, native2)
+
+	for _, transfer := range exported.Records {
+		key, err := types.TransferKey(transfer.ID)
+		require.NoError(t, err)
+		require.Equal(t, ctx.KVStore(k.skey).Get(key), ctx2.KVStore(k2.skey).Get(key))
+	}
+
 	again, err := k2.ExportGenesis(ctx2)
 	require.NoError(t, err)
 	require.Equal(t, exported, again)
@@ -226,10 +272,18 @@ func TestGenesisPopulatedRecovery(t *testing.T) {
 	q := k2.NewQuerier()
 	state, err := q.State(ctx2, &types.QueryStateRequest{})
 	require.NoError(t, err)
-	require.True(t, state.SendUsage.Amount.IsZero())
-	require.True(t, state.RefundUsage.Amount.IsZero())
+	require.Equal(t, uint64(57), state.Epoch)
+	require.Equal(t, g.SendUsage, state.SendUsage)
+	require.Equal(t, g.RefundUsage, state.RefundUsage)
+	stale, err := q.Account(ctx2, &types.QueryAccountRequest{Owner: testOwner(7).String()})
+	require.NoError(t, err)
+	require.True(t, stale.Usage.EpochSent.IsZero())
+	raw, err := k2.GetAccountUsage(ctx2, testOwner(7))
+	require.NoError(t, err)
+	require.Equal(t, int64(56), raw.LastEpoch)
+	require.Equal(t, testCoin(60), raw.EpochSent)
 	require.NotNil(t, state.RefundHead)
-	require.Equal(t, g.Transfers[6].ID, *state.RefundHead)
+	require.Equal(t, g.Records[6].ID, *state.RefundHead)
 	disputes, err := q.Disputes(ctx2, nil)
 	require.NoError(t, err)
 	require.Len(t, disputes.Transfers, 6)
@@ -249,14 +303,14 @@ func TestGenesisRejectsLostIdentityOrBacking(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			k, ctx, bank := testStore(t)
 			g := populatedGenesis()
-			balance := sdk.NewCoins(g.Totals.PendingAmount.Add(g.Totals.MintedAmount).Add(g.Totals.RefundPendingAmount))
+			balance := sdk.NewCoins(g.Totals.PendingAmount.Add(g.Totals.MintedAmount).Add(g.Totals.VoidedAmount).Add(g.Totals.RefundPendingAmount))
 			switch name {
 			case "reused height":
 				ctx = ctx.WithBlockHeight(7)
 			case "zero import height":
 				ctx = ctx.WithBlockHeight(0)
 			case "duplicate cross-owner position":
-				g.Transfers[1].ID.Sequence = g.Transfers[0].ID.Sequence
+				g.Records[1].ID.Sequence = g.Records[0].ID.Sequence
 			case "future send":
 				g.SendUsage.Epoch = 21
 			case "future refund":
@@ -268,9 +322,9 @@ func TestGenesisRejectsLostIdentityOrBacking(t *testing.T) {
 			case "extra denom":
 				balance = balance.Add(sdk.NewInt64Coin("other", 1))
 			case "legacy store":
-				ctx.KVStore(k.skey).Set([]byte{1, 0}, []byte{1})
+				ctx.KVStore(k.skey).Set([]byte{0x11, 0}, []byte{1})
 			case "missing settlement":
-				g.Transfers[0].Settlement = types.SettlementData{}
+				g.Records[0].Settlement = types.SettlementData{}
 			case "wrong totals":
 				g.Totals.PendingCount++
 			case "missing account":
@@ -295,7 +349,7 @@ func TestGenesisZeroHeightEmptyAndCorruption(t *testing.T) {
 	_, err := k.ExportGenesis(ctx)
 	require.NoError(t, err)
 	id := types.ID{Owner: testOwner(1).String(), Height: 1, Sequence: 1}
-	require.NoError(t, k.settlements.Set(ctx, id, types.SettlementData{}))
+	require.NoError(t, k.settlements.Set(ctx, types.NewSettlementID(types.StatusTransferPending, id), types.SettlementData{}))
 	_, err = k.ExportGenesis(ctx)
 	require.ErrorContains(t, err, "orphaned")
 }
@@ -304,6 +358,7 @@ func TestGenesisCommittedDatabaseRestart(t *testing.T) {
 	template, _, _ := testStore(t)
 	key := storetypes.NewKVStoreKey(types.StoreKey)
 	bankKey := storetypes.NewKVStoreKey("bank")
+	epochKey := storetypes.NewKVStoreKey(epochstypes.StoreKey)
 	tkey := storetypes.NewTransientStoreKey(types.TStoreKey)
 	db := dbm.NewMemDB()
 	t.Cleanup(func() { require.NoError(t, db.Close()) })
@@ -311,6 +366,7 @@ func TestGenesisCommittedDatabaseRestart(t *testing.T) {
 		ms := store.NewCommitMultiStore(db, log.NewNopLogger(), metrics.NewNoOpMetrics())
 		ms.MountStoreWithDB(key, storetypes.StoreTypeIAVL, nil)
 		ms.MountStoreWithDB(bankKey, storetypes.StoreTypeIAVL, nil)
+		ms.MountStoreWithDB(epochKey, storetypes.StoreTypeIAVL, nil)
 		ms.MountStoreWithDB(tkey, storetypes.StoreTypeTransient, db)
 		require.NoError(t, ms.LoadLatestVersion())
 
@@ -323,8 +379,11 @@ func TestGenesisCommittedDatabaseRestart(t *testing.T) {
 	ctx := sdk.NewContext(first, header, false, log.NewNopLogger())
 	bank := &testBank{key: bankKey}
 	cdc := codec.NewProtoCodec(codectypes.NewInterfaceRegistry())
-	k := NewKeeper(cdc, key, tkey, template.accounts, bank, template.authority)
-	importTestGenesis(t, k, ctx, bank, populatedGenesis())
+	epochs := epochskeeper.NewKeeper(runtime.NewKVStoreService(epochKey), cdc)
+	native := epochstypes.EpochInfo{ID: "day", Duration: 10 * time.Minute, StartTime: header.Time.Add(-56 * 10 * time.Minute), CurrentEpochStartTime: header.Time, CurrentEpochStartHeight: 100, CurrentEpoch: 57, EpochCountingStarted: true}
+	require.NoError(t, epochs.AddEpoch(ctx, native))
+	k := NewKeeper(cdc, key, tkey, template.accounts, bank, epochs, template.authority).(*keeper)
+	importTestGenesis(t, k, ctx, bank, nativeQuotaGenesis())
 	before, err := k.ExportGenesis(ctx)
 	require.NoError(t, err)
 	_, err = k.nextID(ctx, testOwner(6))
@@ -334,7 +393,12 @@ func TestGenesisCommittedDatabaseRestart(t *testing.T) {
 	require.Equal(t, int64(100), second.LastCommitID().Version)
 	header.Height = 101
 	restarted := sdk.NewContext(second, header, false, log.NewNopLogger())
-	restored := NewKeeper(cdc, key, tkey, template.accounts, bank, template.authority)
+	restoredEpochs := epochskeeper.NewKeeper(runtime.NewKVStoreService(epochKey), cdc)
+	restoredEpochs.SetHooks(epochstypes.NewMultiEpochHooks())
+	restored := NewKeeper(cdc, key, tkey, template.accounts, bank, restoredEpochs, template.authority).(*keeper)
+	gotEpoch, err := restoredEpochs.GetEpoch(restarted, "day")
+	require.NoError(t, err)
+	require.Equal(t, native, gotEpoch)
 	after, err := restored.ExportGenesis(restarted)
 	require.NoError(t, err)
 	require.Equal(t, before, after)
@@ -343,30 +407,45 @@ func TestGenesisCommittedDatabaseRestart(t *testing.T) {
 	require.Equal(t, uint64(1), id.Sequence)
 	require.Equal(t, int64(101), id.Height)
 	require.NoError(t, restored.CheckBalance(restarted))
+	state, err := restored.NewQuerier().State(restarted, nil)
+	require.NoError(t, err)
+	require.Equal(t, uint64(57), state.Epoch)
+	require.Equal(t, before.SendUsage, state.SendUsage)
+	require.Equal(t, before.RefundUsage, state.RefundUsage)
+	err = restored.FinalizeRefund(restarted, &types.MsgFinalizeRefund{Executor: testOwner(6).String(), ID: nativeQuotaGenesis().Records[6].ID})
+	require.ErrorIs(t, err, types.ErrRefundCapReached)
+	restarted = restarted.WithBlockTime(native.CurrentEpochStartTime.Add(native.Duration + time.Nanosecond))
+	require.NoError(t, restoredEpochs.BeginBlocker(restarted))
+	state, err = restored.NewQuerier().State(restarted, nil)
+	require.NoError(t, err)
+	require.Equal(t, uint64(58), state.Epoch)
+	require.True(t, state.SendUsage.Amount.IsZero())
+	require.True(t, state.RefundUsage.Amount.IsZero())
+	require.NoError(t, restored.FinalizeRefund(restarted, &types.MsgFinalizeRefund{Executor: testOwner(6).String(), ID: *state.RefundHead}))
 }
 
 func TestGenesisExportRejectsCanonicalCorruption(t *testing.T) {
-	for _, kind := range []string{"missing settlement", "bad record", "bad order", "bad totals", "orphan order"} {
+	for _, kind := range []string{"missing settlement", "bad record", "bad settlement", "bad totals", "orphan settlement"} {
 		t.Run(kind, func(t *testing.T) {
 			k, ctx, bank := testStore(t)
 			g := populatedGenesis()
 			importTestGenesis(t, k, ctx, bank, g)
-			id := g.Transfers[0].ID
+			id := g.Records[0].ID
 			switch kind {
 			case "missing settlement":
-				require.NoError(t, k.settlements.Remove(ctx, id))
+				require.NoError(t, k.settlements.Remove(ctx, types.NewSettlementID(types.StatusTransferPending, id)))
 			case "bad record":
 				key, err := types.TransferKey(id)
 				require.NoError(t, err)
 				ctx.KVStore(k.skey).Set(key, []byte{1})
-			case "bad order":
-				key, err := types.VoidOrderKey(id)
+			case "bad settlement":
+				key, err := types.SettlementKey(types.NewSettlementID(types.StatusTransferPending, id))
 				require.NoError(t, err)
 				ctx.KVStore(k.skey).Set(key, []byte{1})
 			case "bad totals":
 				ctx.KVStore(k.skey).Set(TotalsKey.Bytes(), []byte{})
-			case "orphan order":
-				require.NoError(t, k.voids.Set(ctx, types.ID{Owner: testOwner(8).String(), Height: 2, Sequence: 1}, types.VoidOrder{}))
+			case "orphan settlement":
+				require.NoError(t, k.settlements.Set(ctx, types.NewSettlementID(types.StatusTransferPending, types.ID{Owner: testOwner(8).String(), Height: 2, Sequence: 1}), types.SettlementData{}))
 
 			}
 

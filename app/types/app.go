@@ -292,10 +292,14 @@ func (app *App) InitNormalKeepers(
 		app.Log,
 	)
 
+	app.Keepers.Akash.Epochs = epochskeeper.NewKeeper(
+		runtime.NewKVStoreService(app.keys[epochstypes.StoreKey]),
+		cdc,
+	)
+
 	app.Keepers.Akash.Sink = sinkkeeper.NewKeeper(cdc, app.keys[sinktypes.StoreKey], app.tkeys[sinktypes.TStoreKey],
-		app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank,
+		app.Keepers.Cosmos.Acct, app.Keepers.Cosmos.Bank, app.Keepers.Akash.Epochs,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String())
-	app.Keepers.Cosmos.Bank.AppendSendRestriction(app.Keepers.Akash.Sink.SendRestriction)
 
 	app.Keepers.Cosmos.Crisis = crisiskeeper.NewKeeper( //nolint: staticcheck
 		cdc, runtime.NewKVStoreService(app.keys[crisistypes.StoreKey]),
@@ -486,11 +490,6 @@ func (app *App) InitNormalKeepers(
 	app.Keepers.Akash.Cert = ckeeper.NewKeeper(
 		cdc,
 		app.keys[ctypes.StoreKey],
-	)
-
-	app.Keepers.Akash.Epochs = epochskeeper.NewKeeper(
-		runtime.NewKVStoreService(app.keys[epochstypes.StoreKey]),
-		cdc,
 	)
 
 	app.Keepers.Akash.Wasm = wkeeper.NewKeeper(

@@ -27,10 +27,10 @@ func TestSinkOpenTransfersFollowSettlement(t *testing.T) {
 		res, err := q.Transfers(h.ctx(), &types.QueryTransfersRequest{Owner: h.sender.String(), Status: status})
 		require.NoError(t, err)
 		require.Len(t, res.Transfers, 1)
-		require.Equal(t, status, res.Transfers[0].Settlement.Status)
+		require.Equal(t, status, res.Transfers[0].Status)
 	}
 
-	h.now = *h.settlement(t, 2).ChallengeEnd
+	h.now = time.Unix(h.transfer(t, 2).Settlement.ChallengeEnd, 0).UTC()
 	res := h.refund(t, 2)
 	require.Zero(t, res.Code, res.Log)
 	paid, err := q.Transfers(h.ctx(), &types.QueryTransfersRequest{Status: types.StatusRefunded})

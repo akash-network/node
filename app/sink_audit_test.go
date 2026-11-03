@@ -52,7 +52,8 @@ func TestSinkRefundsPayOldestFirst(t *testing.T) {
 		h.quorum(t, len(h.ids), types.OutcomeVoided)
 	}
 
-	h.now = *h.settlement(t, 2).ChallengeEnd
+	h.now = time.Unix(h.transfer(t, 2).Settlement.ChallengeEnd, 0).UTC()
+	h.catchUpQuotaEpoch(t)
 	res := h.refund(t, 2)
 	require.NotZero(t, res.Code)
 	require.Equal(t, h.id(1), *h.state().RefundHead)
@@ -82,7 +83,7 @@ func TestSinkRefundQueueFollowsSettlement(t *testing.T) {
 	require.NoError(t, h.order(h.id(1)))
 	require.NoError(t, h.resolve(t, h.id(1), types.DecisionConfirmVoid))
 	require.Equal(t, h.id(1), *h.state().RefundHead)
-	h.now = *h.settlement(t, 1).ChallengeEnd
+	h.now = time.Unix(h.transfer(t, 1).Settlement.ChallengeEnd, 0).UTC()
 	res := h.refund(t, 1)
 	require.Zero(t, res.Code, res.Log)
 	require.Nil(t, h.state().RefundHead)
@@ -110,7 +111,7 @@ func TestSinkGovernanceReopensContestedMint(t *testing.T) {
 	require.True(t, h.totals().MintedAmount.IsZero())
 	require.Zero(t, h.totals().MintedCount)
 	require.Equal(t, coin(100), h.totals().RefundPendingAmount)
-	h.now = *h.settlement(t, 1).ChallengeEnd
+	h.now = time.Unix(h.transfer(t, 1).Settlement.ChallengeEnd, 0).UTC()
 	res = h.refund(t, 1)
 	require.Zero(t, res.Code, res.Log)
 	h.checkSettlementExport(t)
@@ -128,11 +129,11 @@ func TestSinkParameterFloors(t *testing.T) {
 	p.ReporterChallengePeriod = time.Duration(types.MinChallengePeriodSeconds)*time.Second - time.Nanosecond
 	require.Error(t, h.update(p))
 	h.quorum(t, 1, types.OutcomeVoided)
-	deadline := h.settlement(t, 1).ChallengeEnd
+	deadline := h.transfer(t, 1).Settlement.ChallengeEnd
 	p = h.params()
 	p.ReporterChallengePeriod += time.Hour
 	require.NoError(t, h.update(p))
-	require.Equal(t, deadline, h.settlement(t, 1).ChallengeEnd)
+	require.Equal(t, deadline, h.transfer(t, 1).Settlement.ChallengeEnd)
 }
 
 func TestSinkRefundMustReachSender(t *testing.T) {
@@ -140,7 +141,7 @@ func TestSinkRefundMustReachSender(t *testing.T) {
 	res := h.deliver(t, "", h.deposit(60))
 	require.Zero(t, res.Code, res.Log)
 	h.quorum(t, 1, types.OutcomeVoided)
-	h.now = *h.settlement(t, 1).ChallengeEnd
+	h.now = time.Unix(h.transfer(t, 1).Settlement.ChallengeEnd, 0).UTC()
 	h.a.Keepers.Cosmos.Bank.AppendSendRestriction(func(_ context.Context, from, to sdk.AccAddress, _ sdk.Coins) (sdk.AccAddress, error) {
 		if from.Equals(sinkkeeper.Address()) {
 			return h.bystander, nil
@@ -149,16 +150,12 @@ func TestSinkRefundMustReachSender(t *testing.T) {
 		return to, nil
 	})
 
-	before := h.totals()
-	sender := h.a.Keepers.Cosmos.Bank.GetAllBalances(h.ctx(), h.sender)
-	other := h.a.Keepers.Cosmos.Bank.GetAllBalances(h.ctx(), h.bystander)
+	before := captureSinkBankState(t, h, h.ctx())
 	ctx := h.ctx().WithBlockTime(h.now)
 	events := ctx.EventManager().Events()
 	err := h.a.Keepers.Akash.Sink.FinalizeRefund(ctx, &types.MsgFinalizeRefund{Executor: h.sender.String(), ID: h.id(1)})
 	require.ErrorContains(t, err, "original sender")
-	require.Equal(t, before, h.totals())
-	require.Equal(t, sender, h.a.Keepers.Cosmos.Bank.GetAllBalances(h.ctx(), h.sender))
-	require.Equal(t, other, h.a.Keepers.Cosmos.Bank.GetAllBalances(h.ctx(), h.bystander))
+	require.Equal(t, before, captureSinkBankState(t, h, h.ctx()))
 	require.Equal(t, events, ctx.EventManager().Events())
 	h.checkSettlementExport(t)
 }
@@ -187,7 +184,7 @@ func TestSinkUpgradeClearsSinkWithdrawAddresses(t *testing.T) {
 	withdraw, err := d.GetDelegatorWithdrawAddr(ctx, h.sender)
 	require.NoError(t, err)
 	require.Equal(t, h.sender, withdraw)
-	require.Contains(t, sinkEvents(t, ctx.EventManager().ABCIEvents()), proto.Message(&types.EventWithdrawAddressReset{Delegator: h.sender.String()}))
+	require.Contains(t, ctx.EventManager().Events(), sdk.NewEvent("sink_withdraw_address_reset", sdk.NewAttribute("delegator", h.sender.String())))
 	require.Equal(t, types.DefaultParams(), sinkParams(t, h.a.Keepers.Akash.Sink, ctx))
 	require.Equal(t, authtypes.NewModuleAddress(types.ModuleName), sinkkeeper.Address())
 }

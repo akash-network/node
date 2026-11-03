@@ -94,7 +94,7 @@ func (up *upgrade) UpgradeHandler() upgradetypes.UpgradeHandler {
 		if err != nil {
 			return nil, err
 		}
-		if sinkParams.DepositsEnabled {
+		if sinkParams.Enabled {
 			return nil, fmt.Errorf("sink must remain disabled after installation")
 		}
 

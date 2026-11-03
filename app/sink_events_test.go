@@ -3,6 +3,7 @@ package app_test
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	abci "github.com/cometbft/cometbft/abci/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -44,7 +45,7 @@ func TestSinkVoidAndRefundEvents(t *testing.T) {
 	res := h.deliver(t, "", h.deposit(60))
 	require.Zero(t, res.Code, res.Log)
 	events := sinkEvents(t, res.Events)
-	require.Contains(t, events, proto.Message(&types.EventTotalsUpdated{Totals: h.totals()}))
+	require.Contains(t, events, proto.Message(totalsEvent(h.totals(), h.state().RefundUsage.Amount)))
 	require.NoError(t, h.order(h.id(1)))
 	h.quorum(t, 1, types.OutcomeVoided)
 	ctx := h.ctx().WithEventManager(sdk.NewEventManager())
@@ -53,10 +54,10 @@ func TestSinkVoidAndRefundEvents(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []proto.Message{&types.EventVoidVetoed{ID: h.id(1), Signer: h.reporterAddress(0), Reason: "review"}}, sinkEvents(t, result.Events))
 	require.NoError(t, h.resolve(t, h.id(1), types.DecisionConfirmVoid))
-	h.now = *h.settlement(t, 1).ChallengeEnd
+	h.now = time.Unix(h.transfer(t, 1).Settlement.ChallengeEnd, 0).UTC()
 	res = h.refund(t, 1)
 	require.Zero(t, res.Code, res.Log)
-	require.Equal(t, []proto.Message{&types.EventTotalsUpdated{Totals: h.totals()}, &types.EventTransferRefunded{ID: h.id(1), Sender: h.sender.String(), Amount: coin(60)}}, sinkEvents(t, res.Events))
+	require.Equal(t, []proto.Message{totalsEvent(h.totals(), h.state().RefundUsage.Amount), &types.EventTransferRefunded{ID: h.id(1), Sender: h.sender.String(), Amount: coin(60)}}, sinkEvents(t, res.Events))
 	require.NoError(t, k.CheckBalance(h.ctx()))
 }
 
@@ -74,4 +75,8 @@ func TestSinkMintAndConflictEvents(t *testing.T) {
 	res = h.report(t, 0, 1, types.OutcomeVoided)
 	require.Zero(t, res.Code, res.Log)
 	require.Equal(t, []proto.Message{&types.EventReportConflict{ID: h.id(1), Reporter: h.reporterAddress(0)}, &types.EventOutcomeReported{ID: h.id(1), Reporter: h.reporterAddress(0), Outcome: types.OutcomeVoided}}, sinkEvents(t, res.Events))
+}
+
+func totalsEvent(t types.Totals, refunded sdk.Coin) *types.EventTotalsUpdated {
+	return &types.EventTotalsUpdated{PendingAmount: t.PendingAmount, PendingCount: t.PendingCount, MintedAmount: t.MintedAmount, MintedCount: t.MintedCount, VoidedAmount: t.VoidedAmount, VoidedCount: t.VoidedCount, RefundPendingAmount: t.RefundPendingAmount, RefundPendingCount: t.RefundPendingCount, RefundedAmount: t.RefundedAmount, RefundedCount: t.RefundedCount, RefundedInEpoch: refunded}
 }

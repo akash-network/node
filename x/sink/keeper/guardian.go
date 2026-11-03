@@ -8,11 +8,11 @@ import (
 )
 
 // GuardianPause lets params.pause_guardian turn off deposits, refunds or both.
-// It can only clear params.deposits_enabled and params.refunds_enabled; enabling
+// It can only clear params.enabled and params.refunds_enabled; enabling
 // either again, or changing the guardian, takes governance. Params are stored
 // without revalidation. Clearing these switches only relaxes the rules, and a
 // pause must not fail because a stored value predates a newer rule.
-func (k Keeper) GuardianPause(ctx sdk.Context, msg *types.MsgGuardianPause) error {
+func (k *keeper) GuardianPause(ctx sdk.Context, msg *types.MsgGuardianPause) error {
 	if msg == nil {
 		return sdkerrors.ErrInvalidRequest.Wrap("nil request")
 	}
@@ -32,7 +32,7 @@ func (k Keeper) GuardianPause(ctx sdk.Context, msg *types.MsgGuardianPause) erro
 	}
 
 	if msg.Deposits {
-		p.DepositsEnabled = false
+		p.Enabled = false
 	}
 
 	if msg.Refunds {
@@ -47,7 +47,7 @@ func (k Keeper) GuardianPause(ctx sdk.Context, msg *types.MsgGuardianPause) erro
 		Guardian:       msg.Guardian,
 		Deposits:       msg.Deposits,
 		Refunds:        msg.Refunds,
-		Enabled:        p.DepositsEnabled,
+		Enabled:        p.Enabled,
 		RefundsEnabled: p.RefundsEnabled,
 	}); err != nil {
 		return err

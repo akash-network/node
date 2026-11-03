@@ -8,12 +8,12 @@ import (
 	types "pkg.akt.dev/go/node/sink/v1"
 )
 
-func (k Keeper) InitGenesis(ctx sdk.Context, g *types.GenesisState) error {
+func (k *keeper) InitGenesis(ctx sdk.Context, g *types.GenesisState) error {
 	if g == nil {
 		return types.ErrInvalidGenesis.Wrap("nil genesis")
 	}
 
-	if err := g.Validate(); err != nil {
+	if err := k.validateGenesis(ctx, g); err != nil {
 		return err
 	}
 
@@ -28,23 +28,16 @@ func (k Keeper) InitGenesis(ctx sdk.Context, g *types.GenesisState) error {
 		return types.ErrInvalidGenesis.Wrap("sink store is not empty")
 	}
 
-	epoch, err := types.EpochOf(ctx.BlockTime())
-	if err != nil {
-		return err
-	}
-
-	if g.SendUsage.Epoch > epoch || g.RefundUsage.Epoch > epoch {
-		return types.ErrInvalidGenesis.Wrap("future epoch usage")
-	}
-
 	firstHeight := max(int64(1), ctx.BlockHeight())
-	for _, t := range g.Transfers {
-		if t.ID.Height >= firstHeight {
+	for _, t := range g.Records {
+		if t.ID.Height >= firstHeight || t.Settlement.VoidAuthorization != nil && t.Settlement.VoidAuthorization.RequestedHeight >= firstHeight {
 			return types.ErrInvalidGenesis.Wrap("transfer height must precede first executable height")
 		}
 	}
 
 	cache, write := ctx.CacheContext()
+	var err error
+
 	if account := k.accounts.GetAccount(cache, Address()); account != nil {
 		module, ok := account.(sdk.ModuleAccountI)
 		if !ok || module.GetName() != types.ModuleName {
@@ -79,6 +72,10 @@ func (k Keeper) InitGenesis(ctx sdk.Context, g *types.GenesisState) error {
 		}
 	}
 
+	if err = k.currentPolicyVersion.Set(cache, g.CurrentPolicyVersion); err != nil {
+		return err
+	}
+
 	if err = k.sendUsage.Set(cache, g.SendUsage); err != nil {
 		return err
 	}
@@ -87,18 +84,12 @@ func (k Keeper) InitGenesis(ctx sdk.Context, g *types.GenesisState) error {
 		return err
 	}
 
-	for _, t := range g.Transfers {
+	for _, t := range g.Records {
 		if err = k.transfers.Set(cache, t.ID, t.Data); err != nil {
 			return err
 		}
 
-		if t.VoidOrdered {
-			if err = k.voids.Set(cache, t.ID, types.VoidOrder{}); err != nil {
-				return err
-			}
-		}
-
-		if err = k.put(cache, t.ID, t.Data.Amount, nil, t.Settlement); err != nil {
+		if err = k.put(cache, nil, types.TransferState(t)); err != nil {
 			return err
 		}
 	}
@@ -136,7 +127,7 @@ func (k Keeper) InitGenesis(ctx sdk.Context, g *types.GenesisState) error {
 	return nil
 }
 
-func (k Keeper) ExportGenesis(ctx sdk.Context) (*types.GenesisState, error) {
+func (k *keeper) ExportGenesis(ctx sdk.Context) (*types.GenesisState, error) {
 	g := &types.GenesisState{SchemaVersion: types.SchemaVersion}
 	var err error
 	g.Params, err = k.params.Get(ctx)
@@ -150,6 +141,11 @@ func (k Keeper) ExportGenesis(ctx sdk.Context) (*types.GenesisState, error) {
 	}
 
 	g.Policies, err = k.allPolicies(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	g.CurrentPolicyVersion, err = k.currentPolicyVersion.Get(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +166,7 @@ func (k Keeper) ExportGenesis(ctx sdk.Context) (*types.GenesisState, error) {
 			return true, err
 		}
 
-		g.Transfers = append(g.Transfers, t)
+		g.Records = append(g.Records, types.GenesisRecord(t))
 
 		return false, nil
 	})
@@ -179,22 +175,19 @@ func (k Keeper) ExportGenesis(ctx sdk.Context) (*types.GenesisState, error) {
 	}
 
 	err = k.usage.Walk(ctx, nil, func(owner sdk.AccAddress, u types.AccountUsage) (bool, error) {
-		g.Accounts = append(g.Accounts, types.GenesisAccount{Owner: owner.String(), Usage: u})
+		g.Accounts = append(g.Accounts, types.GenesisAccount{
+			Owner: owner.String(),
+			Usage: u,
+		})
+
 		return false, nil
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	err = k.settlements.Walk(ctx, nil, func(id types.ID, _ types.SettlementData) (bool, error) {
-		return k.requireRecord(ctx, id)
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	err = k.voids.Walk(ctx, nil, func(id types.ID, _ types.VoidOrder) (bool, error) {
-		return k.requireRecord(ctx, id)
+	err = k.settlements.Walk(ctx, nil, func(id types.SettlementID, _ types.SettlementData) (bool, error) {
+		return k.requireRecord(ctx, id.ID())
 	})
 	if err != nil {
 		return nil, err
@@ -211,7 +204,7 @@ func (k Keeper) ExportGenesis(ctx sdk.Context) (*types.GenesisState, error) {
 		return nil, err
 	}
 
-	if err = g.Validate(); err != nil {
+	if err = k.validateGenesis(ctx, g); err != nil {
 		return nil, err
 	}
 
@@ -222,7 +215,7 @@ func (k Keeper) ExportGenesis(ctx sdk.Context) (*types.GenesisState, error) {
 	return g, nil
 }
 
-func (k Keeper) requireRecord(ctx context.Context, id types.ID) (bool, error) {
+func (k *keeper) requireRecord(ctx context.Context, id types.ID) (bool, error) {
 	exists, err := k.transfers.Has(ctx, id)
 	if err != nil {
 		return true, err
@@ -233,4 +226,28 @@ func (k Keeper) requireRecord(ctx context.Context, id types.ID) (bool, error) {
 	}
 
 	return false, nil
+}
+
+func (k *keeper) validateGenesis(ctx sdk.Context, g *types.GenesisState) error {
+	if err := g.Validate(); err != nil {
+		return err
+	}
+
+	for _, record := range g.Records {
+		s := record.Settlement
+		if s.VetoBy != "" && s.VetoPolicyVersion == types.GovernanceRefundScope && s.VetoBy != k.authority {
+			return types.ErrInvalidGenesis.Wrap("governance veto signer differs from authority")
+		}
+	}
+
+	epoch, err := k.quotaEpoch(ctx)
+	if err != nil {
+		return err
+	}
+
+	if g.SendUsage.Epoch > epoch || g.RefundUsage.Epoch > epoch {
+		return types.ErrInvalidGenesis.Wrap("future epoch usage")
+	}
+
+	return nil
 }

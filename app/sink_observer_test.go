@@ -50,15 +50,15 @@ func TestSinkAcceptsSolanaObserverReports(t *testing.T) {
 		msg, ok := tx.GetMsgs()[0].(*types.MsgReportOutcome)
 		require.True(t, ok)
 		require.Equal(t, types.OutcomeMinted, msg.Observation.Outcome)
-		require.Equal(t, fixture.Slot, msg.Observation.Evidence.Slot)
-		require.Equal(t, fixture.Signature, msg.Observation.Evidence.TransactionSignature)
+		require.Equal(t, fixture.Slot, msg.Observation.Slot)
+		require.Equal(t, fixture.Signature, msg.Observation.TransactionSignature)
 		res = h.deliverBytes(t, bz)
 		require.Zero(t, res.Code, res.Log)
 	}
 
 	entry, err := k.GetTransfer(h.ctx(), h.id(1))
 	require.NoError(t, err)
-	require.Equal(t, types.StatusMinted, entry.Settlement.Status)
+	require.Equal(t, types.StatusMinted, entry.Status)
 	require.Len(t, entry.Settlement.Votes, 3)
 	require.Equal(t, coin(123456789), h.totals().MintedAmount)
 	require.Zero(t, h.totals().PendingCount)
