@@ -1,54 +1,104 @@
 # AKT on Solana
 
-This workspace contains the Solana programs and operator services for Akash
-Sink, a one-way transfer of AKT from Akash to Solana. The AKT mint starts with
-zero supply. Each mint requires an authenticated proof of an Akash deposit;
-reporters observe finalized Solana outcomes and settle them on Akash.
+Build and deploy the AKT program, the IBC light client, and its access manager.
+Run commands from `contracts/solana` unless stated otherwise.
 
-The Akash implementation is [`x/sink`](../../x/sink/README.md). Schema, generated
-clients and CLI ownership are described in [SDK integration](docs/sdk-integration.md).
-The transfer portal is maintained in its own repository.
+## Contents
 
-## Production deployment
+- [Build](#build)
+- [Deploy](#deploy)
+- [Start a Solana testnet](#start-a-solana-testnet)
 
-Start with the [production runbook](docs/production-deployment.md). It links the
-program ceremony, service installation, activation checks and incident response.
-Production uses `akashnet-2` and Solana mainnet-beta, fresh program IDs, a reviewed
-release manifest, and separate ceremony, multisig, relayer and reporter keys.
+## Build
 
-| Task                                        | Entry point                                                      |
-| ------------------------------------------- | ---------------------------------------------------------------- |
-| Build committed program artifacts           | `npm run build:verifiable -- --rev COMMIT OUTPUT`                |
-| Check a reviewed release offline            | `npm run deploy:programs -- check --manifest FILE`               |
-| Check the cluster and existing programs     | `npm run deploy:programs -- preflight --manifest FILE --url RPC` |
-| Deploy and verify program bytes             | [Program deployment](docs/deploy-program.md)                     |
-| Build and install relayers/reporters        | [Service deployment](docs/deploy-services.md)                    |
-| Emit reviewed multisig instructions         | `npm run admin -- COMMAND ...`                                   |
-| Test deployment guards without transactions | `npm run test:deployment`                                        |
+Install Node 24, Go 1.26.2, Rust 1.89.0, Solana CLI 2.3.13, and Anchor 0.32.1.
+[Tool installation](docs/setup.md#toolchain) lists the required native packages.
 
-The manifest template intentionally contains invalid placeholders. Fill it from
-independently reviewed build output and ceremony public keys. Neither a passing
-preflight nor a successful upload establishes launch readiness: initialize the
-programs, transfer authorities, configure the checkpoint and policy, validate the
-services, and complete the activation gates. No mainnet deployment is claimed.
+Place the reviewed chain-sdk package at `../../.cache/solana/chain-sdk.tgz`.
+Use the version and archive described in [SDK integration](docs/sdk-integration.md).
 
-## Development and testnets
+```bash
+npm ci
+npm run setup:light-client
+npm run build
+```
 
-Follow [development setup](docs/setup.md) to build with the existing Akash
-Makefile, install the locked SDK package, and build the pinned IBC programs.
-Accelerated refund tests require an explicitly selected `sinkdev` binary.
-The ordinary build retains the production challenge-period floor.
+The build writes:
 
-`testnet:up` creates development keys and starts both test chains and services.
-`testnet:down` preserves keys and ledgers for restart. See
-[local stack](docs/local-stack.md), [four-validator testnet](docs/testnetify.md),
-and [test suites](docs/reproduce.md).
+- AKT: `../../.cache/solana/target/deploy/akt_solana.so`
+- IBC verifier: `../../.cache/solana/deps/ibc-contracts/ibc-solana/target/deploy/ics07_tendermint.so`
+- Access manager: `../../.cache/solana/deps/ibc-contracts/ibc-solana/target/deploy/access_manager.so`
 
-## Reference
+IDLs and TypeScript types are generated beside each program's `deploy` directory.
+The IBC build uses the merged repository at the committed Cargo pin.
 
-- [Protocol and proofs](docs/bridge-protocol.md), [mint implementation](docs/implementation.md),
-  [settlement rules](docs/sink-reporting.md), [canonical launch/recovery](docs/sink-migration-v2.md).
-- [Relayer operations](docs/operators.md), [reporters and key custody](docs/reporter.md),
-  [infrastructure](docs/hosting.md), [token metadata](docs/token-metadata.md).
-- [Audit scope](docs/audit.md), [IBC verifier](docs/verifier.md),
-  [header scaling](docs/header-scaling.md), [signature batches](docs/signature-batches.md).
+Check the build:
+
+```bash
+npm run test:unit
+npm run typecheck
+npm run test:services
+```
+
+## Deploy
+
+For a new production deployment, set the production program IDs and commit the
+changes using [the launch instructions](docs/deploy-program.md#2-launch-commit).
+The current account layout requires fresh Solana state and an unused native
+Sink module.
+
+Build the committed release with Docker:
+
+```bash
+source scripts/workspace.sh
+export RELEASE_DIR="$SOLANA_CACHE/releases/$(git rev-parse HEAD)"
+npm run build:verifiable -- --rev "$(git rev-parse HEAD)" "$RELEASE_DIR/build"
+cp deploy/manifest.example.json "$RELEASE_DIR/manifest.json"
+```
+
+Fill in the manifest with the reviewed program IDs, authorities, commit, and
+build hashes. Set `buildDirectory` to `build`. Set `RPC` to the target cluster.
+
+```bash
+export RPC=https://your-solana-rpc.example
+npm run deploy:programs -- check --manifest "$RELEASE_DIR/manifest.json"
+npm run deploy:programs -- preflight --manifest "$RELEASE_DIR/manifest.json" --url "$RPC"
+```
+
+Deploy the three programs with the Solana CLI, then initialize them, transfer
+the upgrade authorities, and configure the bridge. Follow
+[the deployment guide](docs/deploy-program.md) in order, keeping the same
+`RELEASE_DIR`. It includes the commands and checks for each transaction.
+
+After the ceremony, verify the deployed bytes and authorities:
+
+```bash
+npm run deploy:programs -- verify --manifest "$RELEASE_DIR/manifest.json" --url "$RPC" --authority multisig
+```
+
+[Service installation](docs/deploy-services.md) covers starting the relayer and
+reporters against the deployed programs.
+
+## Start a Solana testnet
+
+Start a local Solana validator:
+
+```bash
+npm run setup:metadata
+npm run localnet
+```
+
+The RPC is `http://127.0.0.1:17899`. The validator stays in the foreground;
+Ctrl-C stops it and preserves its ledger. Restart with the same command.
+
+This starts Solana with Metaplex loaded. Deploy AKT, the IBC verifier, and the
+access manager before using the bridge. To exercise the contracts with all
+programs loaded automatically, run this in another terminal:
+
+```bash
+npm test
+```
+
+The tests use a separate validator on port 19899 and stop it when they finish.
+To run transfers with an Akash chain, relayer, and reporters, follow
+[the local bridge instructions](docs/local-stack.md#start-and-exercise-it).

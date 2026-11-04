@@ -37,7 +37,9 @@ export VAULT='REPLACE_WITH_MULTISIG_VAULT'
 export MULTISIG_PROGRAM='REPLACE_WITH_MULTISIG_PROGRAM'       # check it against the deployed multisig
 export CEREMONY=/secure/akash-launch/ceremony.json
 export PROGRAM_KEYS=/secure/akash-launch/program-keys
-export MANIFEST="$PWD/launch/manifest.json"
+export RELEASE_DIR="${RELEASE_DIR:-$(cd ../.. && pwd)/.cache/solana/launch}"
+export MANIFEST="$RELEASE_DIR/manifest.json"
+mkdir -p "$RELEASE_DIR"
 admin() { node --import tsx local/bridge-admin.ts "$@" --genesis "$GENESIS" --url "$RPC"; }
 ```
 
@@ -105,9 +107,11 @@ names are not release inputs.
 
 ## 3. Reproducible build and hashes
 
+Commit the reviewed launch changes before running this build.
+
 ```bash
-npm run build:verifiable -- --rev <launch commit> launch/build
-cat launch/build/SHA256SUMS launch/build/build-info.txt
+npm run build:verifiable -- --rev "$(git rev-parse HEAD)" "$RELEASE_DIR/build"
+cat "$RELEASE_DIR/build/SHA256SUMS" "$RELEASE_DIR/build/build-info.txt"
 ```
 
 At least two people build on different machines and compare `SHA256SUMS`.
@@ -116,7 +120,7 @@ interfaces. Publish the launch commit, `SHA256SUMS` and `build-info.txt` before
 deploying. Every later check compares against these reviewed artifacts.
 
 Copy [`deploy/manifest.example.json`](../deploy/manifest.example.json) to
-`launch/manifest.json`. Set the source commit, all three program IDs, ceremony
+`$MANIFEST`. Set the source commit, all three program IDs, ceremony
 public key and multisig vault. `buildDirectory` resolves relative to the
 manifest. Set `checksumsSha256` to the SHA-256 of `SHA256SUMS` and
 `buildInfoSha256` to the SHA-256 of `build-info.txt`, after the independent
@@ -146,7 +150,7 @@ Deploy the exact artifacts with the real program keypairs on a local validator,
 through every step below:
 
 ```bash
-AKT_REHEARSAL_PROGRAMS=launch/build AKT_REHEARSAL_KEYPAIRS="$PROGRAM_KEYS" \
+AKT_REHEARSAL_PROGRAMS="$RELEASE_DIR/build" AKT_REHEARSAL_KEYPAIRS="$PROGRAM_KEYS" \
   bash deploy/rehearse-launch.sh
 ```
 
@@ -167,10 +171,10 @@ PROGRAM=access_manager
 solana-keygen pubkey "$CEREMONY"
 solana-keygen pubkey "$PROGRAM_KEYS/$PROGRAM-keypair.json"
 solana --config /dev/null --url "$RPC" --keypair "$CEREMONY" \
-  --commitment finalized program deploy "launch/build/$PROGRAM.so" \
+  --commitment finalized program deploy "$RELEASE_DIR/build/$PROGRAM.so" \
   --program-id "$PROGRAM_KEYS/$PROGRAM-keypair.json" \
   --upgrade-authority "$CEREMONY" \
-  --max-len "$((2 * $(wc -c < "launch/build/$PROGRAM.so")))" \
+  --max-len "$((2 * $(wc -c < "$RELEASE_DIR/build/$PROGRAM.so")))" \
   --with-compute-unit-price 0
 ```
 
@@ -248,9 +252,9 @@ keypairs. From here on, every change below is a multisig transaction.
 Each step emits a file, reviewers check it, and the multisig executes it:
 
 ```bash
-mkdir -p launch/tx
-admin <command> [options] --emit launch/tx/NN-name.json --authority "$VAULT"
-admin decode launch/tx/NN-name.json      # every reviewer, independently
+mkdir -p "$RELEASE_DIR/tx"
+admin <command> [options] --emit "$RELEASE_DIR/tx/NN-name.json" --authority "$VAULT"
+admin decode "$RELEASE_DIR/tx/NN-name.json"      # every reviewer, independently
 ```
 
 `--emit` signs and sends nothing. It reads chain state first and refuses
@@ -289,13 +293,13 @@ first.
 
 ```bash
 admin set-token-metadata --akt-program "$AKT_ID" --uri <versioned HTTPS URL> \
-  --emit launch/tx/07a-metadata.json --authority "$VAULT"
+  --emit "$RELEASE_DIR/tx/07a-metadata.json" --authority "$VAULT"
 admin set-guardian --akt-program "$AKT_ID" --guardian <on-call key> \
-  --emit launch/tx/07b-guardian.json --authority "$VAULT"
+  --emit "$RELEASE_DIR/tx/07b-guardian.json" --authority "$VAULT"
 ```
 
 Both can go in one vault transaction:
-`admin bundle --emit launch/tx/07-bundle.json launch/tx/07a-metadata.json launch/tx/07b-guardian.json`.
+`admin bundle --emit "$RELEASE_DIR/tx/07-bundle.json" "$RELEASE_DIR/tx/07a-metadata.json" "$RELEASE_DIR/tx/07b-guardian.json"`.
 Verify with `admin show --akt-program "$AKT_ID"`: `metadata.uri` and `guardian`.
 
 ## 8. Checkpoint and bridge
@@ -305,7 +309,7 @@ checkpoint holder fetches it from at least three independent nodes:
 
 ```bash
 admin checkpoint --height <H> --akash-rpc <node 1> --akash-rpc <node 2> \
-  --akash-rpc <node 3> --out launch/checkpoint-<name>.json
+  --akash-rpc <node 3> --out "$RELEASE_DIR/checkpoint-<name>.json"
 ```
 
 It reads each node's `/commit`, requires a canonical commit, and fails unless
@@ -316,7 +320,7 @@ block hash. Compare the holders' files without their `sources`:
 python3 -c 'import json, sys
 for f in sys.argv[1:]:
     c = json.load(open(f)); c.pop("sources", None); print(json.dumps(c, sort_keys=True))' \
-  launch/checkpoint-*.json | uniq -c       # one line, counted once per holder
+  "$RELEASE_DIR"/checkpoint-*.json | uniq -c       # one line, counted once per holder
 ```
 
 `configure_bridge` names the light client's consensus state at its latest
@@ -326,14 +330,14 @@ bridge in one vault transaction, from the agreed checkpoint:
 
 ```bash
 admin init-client --program "$ICS07_ID" --access-manager "$AM_ID" \
-  --checkpoint launch/checkpoint.json --trusting-period 1209600 \
+  --checkpoint "$RELEASE_DIR/checkpoint.json" --trusting-period 1209600 \
   --unbonding-period 1814400 --max-clock-drift <measured> \
-  --emit launch/tx/08a-client.json --authority "$VAULT"
+  --emit "$RELEASE_DIR/tx/08a-client.json" --authority "$VAULT"
 admin configure-bridge --akt-program "$AKT_ID" --program "$ICS07_ID" \
   --chain-id akashnet-2 --per-transfer-max 1000000000000 --daily-mint-cap 10000000000000 \
-  --checkpoint launch/checkpoint.json \
-  --emit launch/tx/08b-bridge.json --authority "$VAULT"
-admin bundle --emit launch/tx/08-bridge.json launch/tx/08a-client.json launch/tx/08b-bridge.json
+  --checkpoint "$RELEASE_DIR/checkpoint.json" \
+  --emit "$RELEASE_DIR/tx/08b-bridge.json" --authority "$VAULT"
+admin bundle --emit "$RELEASE_DIR/tx/08-bridge.json" "$RELEASE_DIR/tx/08a-client.json" "$RELEASE_DIR/tx/08b-bridge.json"
 ```
 
 The example policy is expressed in base units, not an approved launch limit: 1,000,000 AKT per
@@ -359,7 +363,7 @@ admin relayers --akt-program "$AKT_ID"
 
 ```bash
 admin set-bridge-enabled --akt-program "$AKT_ID" --enabled true \
-  --emit launch/tx/09-enable.json --authority "$VAULT"
+  --emit "$RELEASE_DIR/tx/09-enable.json" --authority "$VAULT"
 ```
 
 Nothing mints until Akash accepts deposits. Continue with
@@ -393,13 +397,13 @@ to the vault and emit the loader's upgrade. `upgrade-program` checks the buffer
 authority and its contents' SHA-256:
 
 ```bash
-solana program write-buffer launch/build/akt_solana.so --keypair <payer> --url "$RPC"
+solana program write-buffer "$RELEASE_DIR/build/akt_solana.so" --keypair <payer> --url "$RPC"
 solana program set-buffer-authority <BUFFER> --new-buffer-authority "$VAULT" \
   --keypair <payer> --url "$RPC"
 admin upgrade-program --program "$AKT_ID" --buffer <BUFFER> --spill "$VAULT" \
-  --expect-sha256 <published hash> --emit launch/tx/upgrade.json --authority "$VAULT"
+  --expect-sha256 <published hash> --emit "$RELEASE_DIR/tx/upgrade.json" --authority "$VAULT"
 # after execution
-bash deploy/verify-program.sh --url "$RPC" "$AKT_ID" launch/build/akt_solana.so "$VAULT"
+bash deploy/verify-program.sh --url "$RPC" "$AKT_ID" "$RELEASE_DIR/build/akt_solana.so" "$VAULT"
 ```
 
 A larger build needs `solana program extend` first.
