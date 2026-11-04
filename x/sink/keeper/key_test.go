@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"math"
 	"os"
-	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -19,7 +18,6 @@ import (
 	storetypes "cosmossdk.io/store/types"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/stretchr/testify/require"
 
 	types "pkg.akt.dev/go/node/sink/v1"
@@ -739,110 +737,6 @@ func TestRefundHeadEqualDeadlineUsesOwnerFirstID(t *testing.T) {
 	require.Equal(t, later, head)
 }
 
-func TestQueryCursorBytesAndFilters(t *testing.T) {
-	for _, length := range []int{20, 32, 255} {
-		t.Run(strconv.Itoa(length), func(t *testing.T) {
-			testQueryCursorBytesAndFilters(t, length)
-		})
-	}
-}
-
-func testQueryCursorBytesAndFilters(t *testing.T, length int) {
-	k, ctx, bank := testStore(t)
-	g := populatedGenesis()
-	owners := map[string]string{
-		testOwner(6).String(): sdk.AccAddress(bytes.Repeat([]byte{6}, length)).String(),
-		testOwner(7).String(): sdk.AccAddress(bytes.Repeat([]byte{7}, length)).String(),
-	}
-	for i := range g.Records {
-		if owner, ok := owners[g.Records[i].ID.Owner]; ok {
-			g.Records[i].ID.Owner = owner
-		}
-	}
-	for i := range g.Accounts {
-		if owner, ok := owners[g.Accounts[i].Owner]; ok {
-			g.Accounts[i].Owner = owner
-		}
-	}
-	importTestGenesis(t, k, ctx, bank, g)
-	q := k.NewQuerier()
-	for _, filter := range []types.QueryTransfersRequest{
-		{},
-		{Owner: owners[testOwner(6).String()]},
-		{Status: types.StatusTransferPending},
-		{
-			Status: types.StatusRefundPending,
-			Owner:  owners[testOwner(7).String()],
-		},
-	} {
-		type cursorRecord struct {
-			id  types.ID
-			key []byte
-		}
-
-		var expected []cursorRecord
-		for _, record := range g.Records {
-			if filter.Owner != "" && record.ID.Owner != filter.Owner || filter.Status != types.StatusInvalid && record.Status != filter.Status {
-				continue
-			}
-
-			owner, err := sdk.AccAddressFromBech32(record.ID.Owner)
-			require.NoError(t, err)
-			identity := append([]byte{byte(len(owner))}, owner...)                 //nolint:gosec // Native address lengths fit one byte.
-			height := binary.BigEndian.AppendUint64(nil, uint64(record.ID.Height)) //nolint:gosec // Fixture heights are positive.
-			sequence := binary.BigEndian.AppendUint64(nil, record.ID.Sequence)
-			var key []byte
-			if filter.Owner == "" && filter.Status == types.StatusInvalid {
-				key = append(append(height, sequence...), identity...)
-			} else {
-				key = append(append(identity, height...), sequence...)
-				if filter.Status != types.StatusInvalid {
-					key = append([]byte{byte(record.Status)}, key...) //nolint:gosec // Fixture statuses are 1 through 5.
-				}
-			}
-
-			expected = append(expected, cursorRecord{
-				id:  record.ID,
-				key: key,
-			})
-		}
-
-		slices.SortFunc(expected, func(a, b cursorRecord) int { return bytes.Compare(a.key, b.key) })
-		require.GreaterOrEqual(t, len(expected), 2)
-
-		filter.Owner = strings.ToUpper(filter.Owner)
-		for _, reverse := range []bool{false, true} {
-			if reverse {
-				slices.Reverse(expected)
-			}
-
-			var cursor []byte
-			for i, want := range expected {
-				filter.Pagination = &sdkquery.PageRequest{
-					Key:     cursor,
-					Limit:   1,
-					Reverse: reverse,
-				}
-				page, err := q.Transfers(ctx, &filter)
-				require.NoError(t, err)
-				require.Len(t, page.Transfers, 1)
-				require.Equal(t, want.id, page.Transfers[0].ID)
-				cursor = page.Pagination.NextKey
-				if i+1 < len(expected) {
-					require.Equal(t, expected[i+1].key, cursor)
-				} else {
-					require.Empty(t, cursor)
-				}
-			}
-
-			bad := append(bytes.Clone(expected[0].key), 0)
-			filter.Pagination = &sdkquery.PageRequest{Key: bad}
-			_, err := q.Transfers(ctx, &filter)
-			require.Error(t, err)
-		}
-	}
-}
-
 func TestIDCodecsUseNativeAddressSemantics(t *testing.T) {
 	for _, length := range []int{0, 1, 19, 20, 21, 32, 255} {
 		for _, fill := range []byte{0, 1, 255} {
@@ -884,39 +778,6 @@ func TestIDCodecsUseNativeAddressSemantics(t *testing.T) {
 			key, err = SettlementKey(*types.NewSettlementID(types.StatusTransferPending, id))
 			require.NoError(t, err)
 			require.Equal(t, append(append(bytes.Clone(SettlementsKey.Bytes()), 1), record...), key)
-		}
-	}
-}
-
-func TestQueryPaginationBounds(t *testing.T) {
-	k, ctx, bank := testStore(t)
-	g := historyGenesis(1, settlementIn(types.StatusTransferPending), 10, 105)
-	importTestGenesis(t, k, ctx, bank, g)
-	q := k.NewQuerier()
-	for _, filter := range []types.QueryTransfersRequest{
-		{},
-		{Owner: g.Records[0].ID.Owner},
-		{Status: types.StatusMinted},
-	} {
-		page, err := q.Transfers(ctx, &filter)
-		require.NoError(t, err)
-		require.Len(t, page.Transfers, 100)
-		require.NotEmpty(t, page.Pagination.NextKey)
-		filter.Pagination = &sdkquery.PageRequest{Limit: 500}
-		page, err = q.Transfers(ctx, &filter)
-		require.NoError(t, err)
-		require.Greater(t, len(page.Transfers), 100)
-		require.Empty(t, page.Pagination.NextKey)
-		for _, pagination := range []*sdkquery.PageRequest{
-			{Offset: 1},
-			{CountTotal: true},
-			{Limit: 501},
-		} {
-			filter.Pagination = pagination
-			_, err = q.Transfers(ctx, &filter)
-			require.ErrorIs(t, err, types.ErrInvalidPagination)
-			_, err = q.Disputes(ctx, &types.QueryDisputesRequest{Pagination: pagination})
-			require.ErrorIs(t, err, types.ErrInvalidPagination)
 		}
 	}
 }

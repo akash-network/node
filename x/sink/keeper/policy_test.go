@@ -242,3 +242,73 @@ func TestPolicyBootstrapAndOverflow(t *testing.T) {
 	require.NoError(t, err)
 	require.False(t, p.ReportersThreshold.Equal(stored.ReportersThreshold))
 }
+
+func TestSetParamsRejectsInvalidReporterSet(t *testing.T) {
+	members := func(n int) []string {
+		out := make([]string, 0, n)
+		for i := 1; i <= n; i++ {
+			out = append(out, testOwner(byte(i)).String())
+		}
+
+		return out
+	}
+
+	for _, tc := range []struct {
+		name      string
+		reporters []string
+		threshold string
+	}{
+		{name: "three at default ratio", reporters: members(3), threshold: "0.66"},
+		{name: "six at default ratio", reporters: members(6), threshold: "0.66"},
+		{name: "nine at default ratio", reporters: members(9), threshold: "0.66"},
+		{name: "exactly two thirds", reporters: members(3), threshold: "0.666666666666666666"},
+		{name: "zero ratio", reporters: members(4), threshold: "0"},
+		{name: "duplicate member", reporters: append(members(3), members(1)...), threshold: "0.75"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			k, ctx, bank := testStore(t)
+			g := populatedGenesis()
+			importTestGenesis(t, k, ctx, bank, g)
+			before, err := k.ExportGenesis(ctx)
+			require.NoError(t, err)
+
+			p := g.Params
+			p.Reporters = tc.reporters
+			p.ReportersThreshold = sdkmath.LegacyMustNewDecFromStr(tc.threshold)
+			require.ErrorIs(t, k.SetParams(ctx, p), types.ErrInvalidReporters)
+
+			// Nothing was stored, so policy history stays valid and exportable.
+			after, err := k.ExportGenesis(ctx)
+			require.NoError(t, err)
+			require.Equal(t, before, after)
+		})
+	}
+
+	for _, tc := range []struct {
+		name      string
+		reporters []string
+		threshold string
+	}{
+		{name: "just above two thirds", reporters: members(3), threshold: "0.666666666666666667"},
+		{name: "seven at default ratio", reporters: members(7), threshold: "0.66"},
+		{name: "empty set", reporters: nil, threshold: "0.66"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			k, ctx, bank := testStore(t)
+			g := populatedGenesis()
+			importTestGenesis(t, k, ctx, bank, g)
+
+			p := g.Params
+			p.Reporters = tc.reporters
+			p.ReportersThreshold = sdkmath.LegacyMustNewDecFromStr(tc.threshold)
+			require.NoError(t, k.SetParams(ctx, p))
+
+			current, err := k.GetCurrentPolicy(ctx)
+			require.NoError(t, err)
+			require.Equal(t, uint64(3), current.Version)
+			require.ElementsMatch(t, tc.reporters, current.Members)
+			_, err = k.ExportGenesis(ctx)
+			require.NoError(t, err)
+		})
+	}
+}

@@ -25,3 +25,28 @@ func TestRefundQueueRetainsPolicyAndGovernanceScopes(t *testing.T) {
 		collections.Join3(types.GovernanceRefundScope, genesis.Records[7].Settlement.ChallengeEnd, genesis.Records[7].ID),
 	}, keys)
 }
+
+func TestSettlementWriteAuthenticatesGovernanceVeto(t *testing.T) {
+	k, ctx, bank := testStore(t)
+	g := populatedGenesis()
+	importTestGenesis(t, k, ctx, bank, g)
+
+	// Records[8] holds a reporter-scope veto; rescoping it to governance
+	// requires the configured authority as its signer.
+	before, err := k.GetTransfer(ctx, g.Records[8].ID)
+	require.NoError(t, err)
+	require.Equal(t, types.HoldVeto, before.Settlement.Hold)
+
+	after := before
+	after.Settlement.VetoPolicyVersion = types.GovernanceRefundScope
+	after.Settlement.VetoBy = testOwner(1).String()
+	err = k.put(ctx, &before, after)
+	require.ErrorIs(t, err, types.ErrInvalidSettlement)
+	require.ErrorContains(t, err, "governance veto signer differs from authority")
+
+	after.Settlement.VetoBy = k.authority
+	require.NoError(t, k.put(ctx, &before, after))
+	stored, err := k.GetTransfer(ctx, g.Records[8].ID)
+	require.NoError(t, err)
+	require.Equal(t, k.authority, stored.Settlement.VetoBy)
+}

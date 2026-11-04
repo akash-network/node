@@ -17,9 +17,9 @@ func (k *keeper) BeginBlocker(ctx context.Context) error {
 
 	sctx := sdk.UnwrapSDKContext(ctx)
 
-	// reset the ledger sequence on each new block
-	// sequence must start from 1 for ledger record id range to work correctly
-	err := k.sequence.Set(ctx, 1)
+	// The allocator stores the last issued sequence and nextID issues the
+	// stored value plus one, so a reset to zero makes each block start at 1.
+	err := k.sequence.Set(ctx, 0)
 	if err != nil {
 		sctx.Logger().Error("failed to reset ledger sequence", "err", err)
 	}

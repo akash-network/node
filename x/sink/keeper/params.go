@@ -14,6 +14,17 @@ import (
 )
 
 func (k *keeper) SetParams(ctx sdk.Context, p types.Params) error {
+	if err := p.ValidateBasic(); err != nil {
+		return err
+	}
+
+	// Params.ValidateBasic does not apply the quorum rule. Settlement writes and
+	// export revalidate every stored policy, and policy history is immutable, so
+	// a set that fails the rule must never be stored.
+	if err := types.ValidateReporters(p.Reporters, p.ReportersThreshold); err != nil {
+		return err
+	}
+
 	cache, write := ctx.CacheContext()
 
 	old, err := k.params.Get(cache)
@@ -79,9 +90,7 @@ func (k *keeper) SetParams(ctx sdk.Context, p types.Params) error {
 		}
 	}
 
-	currentMembers := slices.Clone(currPolicy.Members)
-	slices.Sort(currentMembers)
-	if version == 0 || !slices.Equal(currentMembers, newMembers) || !p.ReportersThreshold.Equal(currPolicy.Threshold) {
+	if version == 0 || !policyMatches(currPolicy, p) {
 		if version == math.MaxUint64 {
 			return types.ErrOverflow.Wrap("policy version")
 		}
@@ -108,4 +117,19 @@ func (k *keeper) SetParams(ctx sdk.Context, p types.Params) error {
 	write()
 
 	return nil
+}
+
+// policyMatches reports whether policy is the reporter policy that params
+// describe: the same members in any order and an equal threshold ratio.
+func policyMatches(policy types.ReporterPolicy, p types.Params) bool {
+	if policy.Threshold.IsNil() || p.ReportersThreshold.IsNil() || !p.ReportersThreshold.Equal(policy.Threshold) {
+		return false
+	}
+
+	current := slices.Clone(policy.Members)
+	next := slices.Clone(p.Reporters)
+	slices.Sort(current)
+	slices.Sort(next)
+
+	return slices.Equal(current, next)
 }

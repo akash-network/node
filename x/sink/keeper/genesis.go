@@ -8,7 +8,13 @@ import (
 	types "pkg.akt.dev/go/node/sink/v1"
 )
 
-func (k *keeper) InitGenesis(ctx sdk.Context, g *types.GenesisState) error {
+// ValidateGenesis checks genesis state without store access. Beyond the SDK
+// shape checks it requires the reporter policy that params describe: without
+// a policy sequence the reporter set is empty, otherwise the policy at the
+// sequence exists and matches params. SetParams and every reporter command
+// load that policy, so a genesis without it could only be repaired by a chain
+// upgrade.
+func ValidateGenesis(g *types.GenesisState) error {
 	if g == nil {
 		return types.ErrInvalidGenesis.Wrap("nil genesis")
 	}
@@ -17,30 +23,113 @@ func (k *keeper) InitGenesis(ctx sdk.Context, g *types.GenesisState) error {
 		return err
 	}
 
-	if err := k.policySequence.Set(ctx, g.PolicySequence); err != nil {
+	if g.PolicySequence == 0 {
+		if len(g.Params.Reporters) > 0 {
+			return types.ErrInvalidGenesis.Wrap("reporters require a current reporter policy")
+		}
+
+		return nil
+	}
+
+	for _, policy := range g.Policies {
+		if policy.Version != g.PolicySequence {
+			continue
+		}
+
+		if !policyMatches(policy, g.Params) {
+			return types.ErrInvalidGenesis.Wrap("current reporter policy differs from params")
+		}
+
+		return nil
+	}
+
+	return types.ErrInvalidGenesis.Wrap("missing current reporter policy")
+}
+
+// validateGenesis adds the snapshot checks that need keeper state. Import and
+// export apply the same snapshot rules; import also requires an empty store,
+// transfer and void-request heights below the first executable height, a
+// usable account at the sink address and exact bank backing.
+func (k *keeper) validateGenesis(ctx sdk.Context, g *types.GenesisState) error {
+	if err := ValidateGenesis(g); err != nil {
+		return err
+	}
+
+	for _, record := range g.Records {
+		if !k.governanceVetoAuthorized(record.Settlement) {
+			return types.ErrInvalidGenesis.Wrap("governance veto signer differs from authority")
+		}
+	}
+
+	epoch, err := k.quotaEpoch(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Account stamps are bounded by the send stamp in GenesisState.Validate.
+	// A future stamp fails every deposit, refund and status change until the
+	// native epoch catches up, and no message can reset it.
+	if g.SendUsage.Epoch > epoch || g.RefundUsage.Epoch > epoch {
+		return types.ErrInvalidGenesis.Wrap("future epoch usage")
+	}
+
+	return nil
+}
+
+// InitGenesis imports a validated snapshot into an empty store. Totals are
+// recomputed and compared by GenesisState.Validate, so records are written
+// without replaying settlement accounting. All writes share one cache, so a
+// rejected import leaves no state behind.
+func (k *keeper) InitGenesis(ctx sdk.Context, g *types.GenesisState) error {
+	if err := k.validateGenesis(ctx, g); err != nil {
+		return err
+	}
+
+	if err := k.requireEmptyStore(ctx); err != nil {
+		return err
+	}
+
+	// The allocator restarts every block, so a record at or above the first
+	// executable height could share its height and sequence with a new
+	// deposit, and export rejects duplicate positions.
+	first := max(int64(1), ctx.BlockHeight())
+	for _, t := range g.Records {
+		void := t.Settlement.VoidAuthorization
+		if t.ID.Height >= first || void != nil && void.RequestedHeight >= first {
+			return types.ErrInvalidGenesis.Wrap("transfer height must precede first executable height")
+		}
+	}
+
+	cache, write := ctx.CacheContext()
+
+	if err := k.installModuleAccount(cache); err != nil {
+		return err
+	}
+
+	if err := k.policySequence.Set(cache, g.PolicySequence); err != nil {
 		return err
 	}
 
 	for _, p := range g.Policies {
-		if err := k.policies.Set(ctx, p.Version, p); err != nil {
+		if err := k.policies.Set(cache, p.Version, p); err != nil {
 			return err
 		}
 	}
 
-	if err := k.sendUsage.Set(ctx, g.SendUsage); err != nil {
+	if err := k.sendUsage.Set(cache, g.SendUsage); err != nil {
 		return err
 	}
 
-	if err := k.refundUsage.Set(ctx, g.RefundUsage); err != nil {
+	if err := k.refundUsage.Set(cache, g.RefundUsage); err != nil {
 		return err
 	}
 
 	for _, t := range g.Records {
-		if err := k.transfers.Set(ctx, t.ID, t.Data); err != nil {
+		if err := k.transfers.Set(cache, t.ID, t.Data); err != nil {
 			return err
 		}
 
-		if err := k.setSettlement(ctx, nil, types.TransferState(t)); err != nil {
+		if err := k.setSettlement(cache, nil, types.TransferState(t)); err != nil {
 			return err
 		}
 	}
@@ -51,21 +140,55 @@ func (k *keeper) InitGenesis(ctx sdk.Context, g *types.GenesisState) error {
 			return err
 		}
 
-		if err = k.usage.Set(ctx, owner, a.Usage); err != nil {
+		if err = k.usage.Set(cache, owner, a.Usage); err != nil {
 			return err
 		}
 	}
 
-	if err := k.totals.Set(ctx, g.Totals); err != nil {
+	if err := k.totals.Set(cache, g.Totals); err != nil {
 		return err
 	}
 
-	if err := k.params.Set(ctx, g.Params); err != nil {
+	if err := k.params.Set(cache, g.Params); err != nil {
 		return err
 	}
 
-	if err := k.CheckBalance(ctx); err != nil {
+	if err := k.CheckBalance(cache); err != nil {
 		return err
+	}
+
+	write()
+
+	return nil
+}
+
+func (k *keeper) requireEmptyStore(ctx sdk.Context) error {
+	it := ctx.KVStore(k.skey).Iterator(nil, nil)
+	nonempty := it.Valid()
+	if err := it.Close(); err != nil {
+		return err
+	}
+
+	if nonempty {
+		return types.ErrInvalidGenesis.Wrap("sink store is not empty")
+	}
+
+	return nil
+}
+
+// installModuleAccount creates the sink module account, or keeps the one auth
+// genesis restored or PrepareInstall adopted. Any other account at the address
+// would make the first deposit panic in the bank keeper.
+func (k *keeper) installModuleAccount(ctx sdk.Context) error {
+	if acc := k.accounts.GetAccount(ctx, Address()); acc != nil {
+		module, ok := acc.(sdk.ModuleAccountI)
+		if !ok || module.GetName() != types.ModuleName {
+			return types.ErrInvalidGenesis.Wrap("sink address must be its module account")
+		}
+	}
+
+	if k.accounts.GetModuleAccount(ctx, types.ModuleName) == nil {
+		return types.ErrInternal.Wrap("sink module account is not registered")
 	}
 
 	return nil
@@ -148,7 +271,7 @@ func (k *keeper) ExportGenesis(ctx sdk.Context) (*types.GenesisState, error) {
 		return nil, err
 	}
 
-	if err = g.Validate(); err != nil {
+	if err = k.validateGenesis(ctx, g); err != nil {
 		return nil, err
 	}
 

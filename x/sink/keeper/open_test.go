@@ -12,6 +12,14 @@ import (
 func TestTransfersIndexedPagination(t *testing.T) {
 	k, ctx, bank := testStore(t)
 	g := types.DefaultGenesis()
+	g.Params.Reporters = []string{testOwner(3).String(), testOwner(4).String(), testOwner(5).String(), testOwner(8).String()}
+	policy := types.ReporterPolicy{
+		Version:   1,
+		Members:   g.Params.Reporters,
+		Threshold: g.Params.ReportersThreshold,
+	}
+	g.Policies = []types.ReporterPolicy{policy}
+	g.PolicySequence = policy.Version
 	for i := 1; i <= 620; i++ {
 		owner := testOwner(byte(i%2 + 1)).String()
 		g.Records = append(g.Records, types.GenesisRecord{
@@ -26,7 +34,7 @@ func TestTransfersIndexedPagination(t *testing.T) {
 				Amount: testCoin(1),
 			},
 			Settlement: types.SettlementData{
-				Policy: g.Policies[0],
+				Policy: policy,
 				Round:  1,
 			},
 		})
@@ -105,19 +113,38 @@ func TestTransfersIndexedPagination(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, int64(620), reverse.Transfers[0].ID.Height)
 
-	for _, req := range []*sdkquery.PageRequest{{Key: []byte{1}}, {Limit: 501}, {Offset: 1}, {CountTotal: true}} {
+	// A malformed cursor and an offset without a status filter are rejected.
+	for _, req := range []*sdkquery.PageRequest{{Key: []byte{1}}, {Offset: 1}} {
 		_, err = q.Transfers(ctx, &types.QueryTransfersRequest{Pagination: req})
 		require.Error(t, err)
 	}
 
+	// There is no maximum limit.
+	large, err := q.Transfers(ctx, &types.QueryTransfersRequest{Pagination: &sdkquery.PageRequest{Limit: 501}})
+	require.NoError(t, err)
+	require.Len(t, large.Transfers, 501)
+	require.NotEmpty(t, large.Pagination.NextKey)
+
+	// count_total is ignored; Total counts the returned page.
+	counted, err := q.Transfers(ctx, &types.QueryTransfersRequest{Pagination: &sdkquery.PageRequest{CountTotal: true}})
+	require.NoError(t, err)
+	require.Len(t, counted.Transfers, 100)
+	require.Equal(t, uint64(100), counted.Pagination.Total)
+
+	// On resume the cursor, not the request filter, selects the owner.
 	ownerPage, err := q.Transfers(ctx, &types.QueryTransfersRequest{
 		Owner:      testOwner(1).String(),
 		Pagination: &sdkquery.PageRequest{Limit: 1},
 	})
 	require.NoError(t, err)
-	_, err = q.Transfers(ctx, &types.QueryTransfersRequest{
-		Owner:      testOwner(2).String(),
-		Pagination: &sdkquery.PageRequest{Key: ownerPage.Pagination.NextKey},
+	resumed, err := q.Transfers(ctx, &types.QueryTransfersRequest{
+		Owner: testOwner(2).String(),
+		Pagination: &sdkquery.PageRequest{
+			Key:   ownerPage.Pagination.NextKey,
+			Limit: 1,
+		},
 	})
-	require.Error(t, err)
+	require.NoError(t, err)
+	require.Len(t, resumed.Transfers, 1)
+	require.Equal(t, testOwner(1).String(), resumed.Transfers[0].ID.Owner)
 }

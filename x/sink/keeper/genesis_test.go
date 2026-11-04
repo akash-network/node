@@ -5,10 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"testing"
 	"time"
 
 	"cosmossdk.io/log"
+	sdkmath "cosmossdk.io/math"
 	"cosmossdk.io/store"
 	"cosmossdk.io/store/metrics"
 	storetypes "cosmossdk.io/store/types"
@@ -49,8 +51,23 @@ func (a genesisAccounts) SetAccount(_ context.Context, acc sdk.AccountI) {
 	a[acc.GetAddress().String()] = acc
 }
 
+// GetModuleAccount mirrors the auth keeper: it returns the stored module
+// account, creates and stores a missing one, and panics on another account kind.
 func (a genesisAccounts) GetModuleAccount(_ context.Context, name string) sdk.ModuleAccountI {
-	return authtypes.NewEmptyModuleAccount(name)
+	addr := authtypes.NewModuleAddress(name).String()
+	if acc, exists := a[addr]; exists {
+		module, ok := acc.(sdk.ModuleAccountI)
+		if !ok {
+			panic(fmt.Sprintf("account is not a module account: %s", addr))
+		}
+
+		return module
+	}
+
+	module := authtypes.NewEmptyModuleAccount(name)
+	a[addr] = module
+
+	return module
 }
 
 type testBank struct {
@@ -481,11 +498,13 @@ func TestGenesisPopulatedRecovery(t *testing.T) {
 }
 
 func TestGenesisRejectsLostIdentityOrBacking(t *testing.T) {
-	for _, name := range []string{"reused height", "zero import height", "duplicate cross-owner position", "future send", "future refund", "future account", "missing backing", "extra denom", "legacy store", "missing settlement", "wrong totals", "missing account"} {
+	for _, name := range []string{"reused height", "zero import height", "duplicate cross-owner position", "future send", "future send stamp", "future refund", "future account", "missing backing", "extra denom", "legacy store", "missing settlement", "wrong totals", "missing account", "foreign account", "foreign module account"} {
 		t.Run(name, func(t *testing.T) {
 			k, ctx, bank := testStore(t)
 			g := populatedGenesis()
 			balance := sdk.NewCoins(g.Totals.PendingAmount.Add(g.Totals.MintedAmount).Add(g.Totals.VoidedAmount).Add(g.Totals.RefundPendingAmount))
+			// want pins the rejection reason where another check could also fail.
+			var want string
 			switch name {
 			case "reused height":
 				ctx = ctx.WithBlockHeight(7)
@@ -495,6 +514,11 @@ func TestGenesisRejectsLostIdentityOrBacking(t *testing.T) {
 				g.Records[1].ID.Sequence = g.Records[0].ID.Sequence
 			case "future send":
 				g.SendUsage.Epoch = 21
+			case "future send stamp":
+				// Zero consumption keeps the SDK's usage sums consistent, so only
+				// the stamp itself is ahead of the native epoch.
+				g.SendUsage = types.EpochUsage{Epoch: 21, Amount: types.ZeroAmount()}
+				want = "future epoch usage"
 			case "future refund":
 				g.RefundUsage.Epoch = 21
 			case "future account":
@@ -511,11 +535,23 @@ func TestGenesisRejectsLostIdentityOrBacking(t *testing.T) {
 				g.Totals.PendingCount++
 			case "missing account":
 				g.Accounts = g.Accounts[1:]
+			case "foreign account":
+				k.accounts.SetAccount(ctx, authtypes.NewBaseAccountWithAddress(Address()))
+				want = "sink address must be its module account"
+			case "foreign module account":
+				k.accounts.SetAccount(ctx, authtypes.NewModuleAccount(authtypes.NewBaseAccountWithAddress(Address()), "other"))
+				want = "sink address must be its module account"
 			}
 
 			bank.set(ctx, Address(), balance)
 			beforeEvents := ctx.EventManager().Events()
-			require.Error(t, k.InitGenesis(ctx, g))
+			err := k.InitGenesis(ctx, g)
+			require.Error(t, err)
+			if want != "" {
+				require.ErrorIs(t, err, types.ErrInvalidGenesis)
+				require.ErrorContains(t, err, want)
+			}
+
 			require.Equal(t, balance, bank.GetAllBalances(ctx, Address()))
 			require.Equal(t, beforeEvents, ctx.EventManager().Events())
 			initialized, err := k.initialized(ctx)
@@ -523,6 +559,103 @@ func TestGenesisRejectsLostIdentityOrBacking(t *testing.T) {
 			require.False(t, initialized)
 		})
 	}
+}
+
+func TestGenesisVoidRequestMustPrecedeFirstHeight(t *testing.T) {
+	// Only the void request reaches the first executable height (100 in
+	// testStore); the transfer itself is older.
+	for _, tc := range []struct {
+		requested int64
+		accepted  bool
+	}{
+		{requested: 99, accepted: true},
+		{requested: 100, accepted: false},
+	} {
+		t.Run(fmt.Sprintf("requested at %d", tc.requested), func(t *testing.T) {
+			k, ctx, bank := testStore(t)
+			g := populatedGenesis()
+			record := &g.Records[2]
+			require.NotNil(t, record.Settlement.VoidAuthorization)
+			require.Less(t, record.ID.Height, ctx.BlockHeight())
+			record.Settlement.VoidAuthorization.RequestedHeight = tc.requested
+			require.NoError(t, ValidateGenesis(g))
+
+			if tc.accepted {
+				importTestGenesis(t, k, ctx, bank, g)
+				return
+			}
+
+			escrow, err := g.Totals.EscrowAmount()
+			require.NoError(t, err)
+			bank.set(ctx, Address(), sdk.NewCoins(escrow))
+			err = k.InitGenesis(ctx, g)
+			require.ErrorIs(t, err, types.ErrInvalidGenesis)
+			require.ErrorContains(t, err, "transfer height must precede first executable height")
+			initialized, err := k.initialized(ctx)
+			require.NoError(t, err)
+			require.False(t, initialized)
+		})
+	}
+}
+
+func TestGenesisInstallsModuleAccount(t *testing.T) {
+	k, ctx, bank := testStore(t)
+	require.Nil(t, k.accounts.GetAccount(ctx, Address()))
+	importTestGenesis(t, k, ctx, bank, types.DefaultGenesis())
+	created, ok := k.accounts.GetAccount(ctx, Address()).(sdk.ModuleAccountI)
+	require.True(t, ok, "InitGenesis creates the sink module account")
+	require.Equal(t, types.ModuleName, created.GetName())
+
+	// An account restored by auth genesis, or adopted by PrepareInstall, is kept.
+	k, ctx, bank = testStore(t)
+	base := authtypes.NewBaseAccountWithAddress(Address())
+	require.NoError(t, base.SetAccountNumber(42))
+	k.accounts.SetAccount(ctx, authtypes.NewModuleAccount(base, types.ModuleName))
+	importTestGenesis(t, k, ctx, bank, types.DefaultGenesis())
+	require.Equal(t, uint64(42), k.accounts.GetAccount(ctx, Address()).GetAccountNumber())
+}
+
+func TestGenesisRequiresCurrentReporterPolicy(t *testing.T) {
+	for name, change := range map[string]func(*types.GenesisState){
+		"missing current policy": func(g *types.GenesisState) { g.PolicySequence = 3 },
+		"members differ from params": func(g *types.GenesisState) {
+			g.Params.Reporters = []string{testOwner(2).String(), testOwner(3).String(), testOwner(4).String(), testOwner(6).String()}
+		},
+		"threshold differs from params": func(g *types.GenesisState) {
+			g.Params.ReportersThreshold = sdkmath.LegacyMustNewDecFromStr("0.75")
+		},
+		"reporters without a policy": func(g *types.GenesisState) {
+			*g = *types.DefaultGenesis()
+			g.Params.Reporters = []string{testOwner(1).String()}
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			k, ctx, bank := testStore(t)
+			g := populatedGenesis()
+			change(g)
+			require.NoError(t, g.Validate(), "the SDK accepts the shape")
+			require.ErrorIs(t, ValidateGenesis(g), types.ErrInvalidGenesis)
+
+			escrow, err := g.Totals.EscrowAmount()
+			require.NoError(t, err)
+			bank.set(ctx, Address(), sdk.NewCoins(escrow))
+			require.ErrorIs(t, k.InitGenesis(ctx, g), types.ErrInvalidGenesis)
+			initialized, err := k.initialized(ctx)
+			require.NoError(t, err)
+			require.False(t, initialized)
+		})
+	}
+
+	t.Run("reordered members", func(t *testing.T) {
+		k, ctx, bank := testStore(t)
+		g := populatedGenesis()
+		g.Params.Reporters = slices.Clone(g.Params.Reporters)
+		slices.Reverse(g.Params.Reporters)
+		require.NoError(t, ValidateGenesis(g))
+		importTestGenesis(t, k, ctx, bank, g)
+		_, err := k.ExportGenesis(ctx)
+		require.NoError(t, err)
+	})
 }
 
 func TestGenesisZeroHeightEmptyAndCorruption(t *testing.T) {

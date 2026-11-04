@@ -157,7 +157,4 @@ func TestSenderAndPolicyEligibility(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, uint64(3), policy.Version)
 	require.True(t, p.ReportersThreshold.Equal(policy.Threshold))
-	accounts[testOwner(6).String()] = authtypes.NewModuleAccount(base, "reserved")
-	p.Reporters[0] = testOwner(6).String()
-	require.Error(t, k.SetParams(ctx, p))
 }

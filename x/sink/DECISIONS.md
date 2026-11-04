@@ -6,7 +6,7 @@ Typed `RecordData`, `SettlementData`, and `VoidOrder` maps are authoritative. Th
 
 The single `put` writer maintains settlement, financial totals, status membership, dispute membership, and refund membership. It changes a queue key only when membership or deadline/scope changes. Deposit separately creates the immutable record and charges send usage. Refund separately charges refund usage and pays the original owner. The public command's cache includes all of these changes.
 
-Genesis uses the same writer to rebuild derived indexes and recompute totals. Export rejects orphaned canonical state and invalid aggregate accounting. Auth and bank restore accounts and balances first. Recovery never manufactures bank funds or performs lifecycle transitions.
+Genesis rebuilds derived indexes with the settlement writer's index step and does not replay accounting; `GenesisState.Validate` recomputes totals and import rejects a mismatch. Export rejects orphaned canonical state and invalid aggregate accounting. Auth and bank restore accounts and balances first. Recovery never manufactures bank funds or performs lifecycle transitions.
 
 The allocator is transient because committed height supplies restart identity. Import requires a strictly later initial height and rejects duplicate positions across owners. Persistent allocation fields would duplicate the chain's committed position and could disagree with it.
 
@@ -14,7 +14,9 @@ The allocator is transient because committed height supplies restart identity. I
 
 Amount and count describe the same status population, including held transfers. Minted and paid refunded transfers can still be disputed. Keeping disputes separate makes a false terminal report visible without pretending that a payment was reversed.
 
-Each vote names its immutable reporter policy. Terminal and governance authorization keep their original evidence when reporters rotate. Unfinished quorum authorization refreshes lazily on the next report. Policy updates therefore write one policy record instead of scanning all settlements. A settlement write loads only the versions its authorization and votes name, so its cost does not grow with retained history. Genesis import and export still validate the complete contiguous history. Scoped queues prevent stale quorum entries from blocking current payments.
+Each vote names its immutable reporter policy. Terminal and governance authorization keep their original evidence when reporters rotate. Unfinished quorum authorization refreshes lazily on the next report. Policy updates therefore write one policy record instead of scanning all settlements. A settlement write loads only the versions its authorization and votes name, so its cost does not grow with retained history. Genesis import and export still validate every retained policy and require the current one. Scoped queues prevent stale quorum entries from blocking current payments.
+
+SDK `Params.ValidateBasic` and `GenesisState.Validate` check shape only: they accept a reporter set whose quorum is not above two thirds and a genesis without the current policy. The keeper enforces both. `SetParams` validates the set before storing a policy, because policy history is immutable and every settlement write and export revalidates it. Genesis validation requires the policy at `policy_sequence` to exist and match params, because `SetParams` and every reporter command load it. A governance proposal with an invalid set therefore passes submission and fails on execution without changing state.
 
 A governance confirmation names one outcome through its message type. The evidence contains only a slot and signature. `expected_round` prevents a passed proposal from applying to a different settlement revision. A refund of a genuinely invalid Solana recipient may have no governance order, so resolving a paid refund does not require one.
 
@@ -28,4 +30,4 @@ The existing bank `BlockedAddrs` protects public transfers to Sink. Bank message
 
 Owner-first IDs make owner and status/owner queries bounded. An independent chronological index serves global discovery so a newly active owner cannot appear behind an old cursor. Native pagination uses the historical SDK context selected by BaseApp. Clients pin a height during a page walk and retain the last chronological identity between walks.
 
-Genesis schema marker 3 distinguishes native epoch counters from the earlier fixed-day counters. The module has no in-place migration from an existing Sink installation. Existing testnets, programs, mints, and their histories require fresh paired state rather than reinterpretation.
+Genesis carries no schema marker. Import rejects usage stamps ahead of the native epoch but cannot otherwise tell earlier fixed-day counters from native epoch numbers, so snapshots from fixed-day builds must not be imported. The module has no in-place migration from an existing Sink installation. Existing testnets, programs, mints, and their histories require fresh paired state rather than reinterpretation.

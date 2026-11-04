@@ -332,7 +332,12 @@ func TestOwnerPaginationMergesAllFiveCanonicalBuckets(t *testing.T) {
 				got = append(got, record.ID)
 			}
 
-			cursor = page.Pagination.NextKey
+			if page.Pagination != nil {
+				cursor = page.Pagination.NextKey
+			} else {
+				cursor = nil
+			}
+
 			if len(cursor) == 0 {
 				break
 			}

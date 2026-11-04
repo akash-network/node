@@ -33,12 +33,19 @@ func (k *keeper) validateSettlement(ctx context.Context, t types.TransferState) 
 		return err
 	}
 
-	s := t.Settlement
-	if s.VetoBy != "" && s.VetoPolicyVersion == types.GovernanceRefundScope && s.VetoBy != k.authority {
+	if !k.governanceVetoAuthorized(t.Settlement) {
 		return types.ErrInvalidSettlement.Wrap("governance veto signer differs from authority")
 	}
 
 	return nil
+}
+
+// governanceVetoAuthorized reports whether a governance-scope veto was signed
+// by the configured authority. SettlementData.Validate checks reporter-scope
+// vetoes against their policy but cannot know the authority. Settlement writes
+// and genesis import and export all apply this one rule.
+func (k *keeper) governanceVetoAuthorized(s types.SettlementData) bool {
+	return s.VetoBy == "" || s.VetoPolicyVersion != types.GovernanceRefundScope || s.VetoBy == k.authority
 }
 
 func (k *keeper) put(ctx sdk.Context, before *types.TransferState, after types.TransferState) error {

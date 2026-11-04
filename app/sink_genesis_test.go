@@ -9,6 +9,7 @@ import (
 	"time"
 
 	abci "github.com/cometbft/cometbft/abci/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	commitment "github.com/cosmos/ibc-go/v10/modules/core/23-commitment/types"
 	"github.com/stretchr/testify/require"
 
@@ -17,6 +18,24 @@ import (
 	"pkg.akt.dev/node/v2/app"
 	sinkkeeper "pkg.akt.dev/node/v2/x/sink/keeper"
 )
+
+func TestSinkRejectedGenesisLeavesNoModuleAccount(t *testing.T) {
+	h, ctx := preSinkLedger(t)
+	ak := h.a.Keepers.Cosmos.Acct
+	require.Nil(t, ak.GetAccount(ctx, sinkkeeper.Address()))
+
+	// Coins the empty genesis does not account for fail the final balance
+	// check, after InitGenesis has created the module account in its cache.
+	seedPreUpgradeBalances(t, h, ctx, h.sender, sinkkeeper.Address(), sdk.NewCoins(coin(5)))
+	before := sinkUpgradeStores(t, h, ctx)
+	events := ctx.EventManager().Events()
+
+	err := h.a.Keepers.Akash.Sink.InitGenesis(ctx, types.DefaultGenesis())
+	require.ErrorIs(t, err, types.ErrBalanceMismatch)
+	require.Nil(t, ak.GetAccount(ctx, sinkkeeper.Address()))
+	require.Equal(t, before, sinkUpgradeStores(t, h, ctx), "no store writes, including auth's account number")
+	require.Equal(t, events, ctx.EventManager().Events())
+}
 
 func TestSinkFullAppGenesisBankRestoration(t *testing.T) {
 	h := reportingHarness(t)

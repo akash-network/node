@@ -57,7 +57,7 @@ func (AppModuleBasic) ValidateGenesis(cdc codec.JSONCodec, _ client.TxEncodingCo
 		return err
 	}
 
-	return g.Validate()
+	return keeper.ValidateGenesis(&g)
 }
 
 type AppModule struct {
