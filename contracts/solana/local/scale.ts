@@ -35,9 +35,8 @@ import { transferKey } from "../shared/sink";
 
 type Packet = ReturnType<typeof decodePacket>;
 
-// The prune run's checkpoint expires 180 s after initialization; each later
-// state expires 300 s after its header time.
-const PRUNE_TRUSTING_SECONDS = 300;
+// Leave time for finalized header uploads before checking expiry on chain.
+const PRUNE_TRUSTING_SECONDS = 600;
 const PRUNE_CHECKPOINT_AGE_SECONDS = 120;
 
 async function chainNanos(wallet: AnchorProvider) {
@@ -715,6 +714,7 @@ async function testLatestHeight(
 }
 
 async function fixture({
+  wallet,
   target,
   trusted,
   signers,
@@ -722,6 +722,7 @@ async function fixture({
   validators = 100,
   rootTag = "local scale fixture",
 }: {
+  wallet: AnchorProvider;
   target: number;
   trusted: number;
   signers: number;
@@ -740,7 +741,10 @@ async function fixture({
   const signed = object(input.signed_header),
     header = object(signed.header);
   header.height = String(target);
-  header.time = new Date(Date.now() - 2000).toISOString();
+  // A slow local validator can lag wall time beyond the client's clock drift.
+  header.time = new Date(
+    Number((await chainNanos(wallet)) / 1_000_000n) - 2000,
+  ).toISOString();
   header.app_hash = createHash("sha256")
     .update(`${rootTag} ${target}`)
     .digest("hex")
@@ -962,6 +966,7 @@ async function main() {
       })
       .rpc();
     const initial = await fixture({
+      wallet,
       target: 3,
       trusted: 1,
       signers: small ? 3 : wide ? wideQuorum : 67,
@@ -996,10 +1001,9 @@ async function main() {
           ...initial.packet.consensus,
           timestamp: new BN(
             (
-              BigInt(
-                Date.now() -
-                  (mode === "prune" ? PRUNE_CHECKPOINT_AGE_SECONDS : 60) * 1000,
-              ) * 1_000_000n
+              (await chainNanos(wallet)) -
+              BigInt(mode === "prune" ? PRUNE_CHECKPOINT_AGE_SECONDS : 60) *
+                1_000_000_000n
             ).toString(),
           ),
         },
@@ -1044,6 +1048,7 @@ async function main() {
         await client.account.clientState.fetch(clientState)
       ).latestHeight.revisionHeight.toNumber();
       const { value, packet } = await fixture({
+        wallet,
         target,
         trusted,
         signers,
@@ -1112,6 +1117,7 @@ async function main() {
       );
     if (mode === "misbehaviour") {
       const other = await fixture({
+        wallet,
         target: 3,
         trusted: 1,
         signers: 3,
@@ -1133,6 +1139,7 @@ async function main() {
           async (target, trusted) =>
             (
               await fixture({
+                wallet,
                 target,
                 trusted,
                 signers: 3,
@@ -1157,6 +1164,7 @@ async function main() {
           async (target, trusted) =>
             (
               await fixture({
+                wallet,
                 target,
                 trusted,
                 signers: 3,
@@ -1180,6 +1188,7 @@ async function main() {
           async (target, trusted) =>
             (
               await fixture({
+                wallet,
                 target,
                 trusted,
                 signers: 3,
@@ -1191,6 +1200,7 @@ async function main() {
       );
     if (mode === "open") {
       const conflicting = await fixture({
+        wallet,
         target: 3,
         trusted: 1,
         signers: 3,
@@ -1211,6 +1221,7 @@ async function main() {
           async (target, trusted) =>
             (
               await fixture({
+                wallet,
                 target,
                 trusted,
                 signers: 3,
@@ -1236,6 +1247,7 @@ async function main() {
             ),
           (
             await fixture({
+              wallet,
               target: 3,
               trusted: 1,
               signers: 100,

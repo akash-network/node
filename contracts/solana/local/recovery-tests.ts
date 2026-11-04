@@ -198,7 +198,8 @@ export async function testRecovery(
   console.log(
     "Interrupted uploads and rejected-job cleanup passed; waiting for actual lookup cooldown.",
   );
-  const deadline = Date.now() + 300000;
+  // Lookup cooldown takes 512 slots; a local validator can run below mainnet speed.
+  const deadline = Date.now() + 20 * 60_000;
   for (;;) {
     await reclaimLookups(wallet, journalDirectory);
     await reclaimLookups(other, join(root, "other-operator"));

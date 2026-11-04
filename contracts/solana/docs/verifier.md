@@ -110,7 +110,7 @@ enforces every rule, so a stale selection costs at most one failed transaction
 fee per call. The scan reads every consensus state; an indexed production
 relayer should track the heights it created instead.
 
-`npx tsx local/scale.ts prune` uses a 300-second trusting period with four
+`npx tsx local/scale.ts prune` uses a 600-second trusting period with four
 validators. It checks that pruning:
 
 - rejects a non-latest state that has not expired;
