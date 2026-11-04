@@ -5,6 +5,54 @@ canonical mint or opening pools. It gives wallets the token's name, symbol and
 logo. It does not create a new mint, authorize issuance or grant a verification
 badge.
 
+## Contents
+
+- [Mainnet values](#mainnet-values)
+- [Contract and authority](#contract-and-authority)
+- [Local setup](#local-setup)
+- [Mainnet launch gate](#mainnet-launch-gate)
+
+## Mainnet values
+
+The mainnet metadata content and hosting URLs are not finalized. The current
+contract defines these values:
+
+| Field            | Current value                                       |
+| ---------------- | --------------------------------------------------- |
+| Name             | `Akash Network`                                     |
+| Symbol           | `AKT`                                               |
+| Decimals         | `6`, set on the mint                                |
+| Token program    | Standard SPL Token, with Metaplex fungible metadata |
+| Royalties        | `0`                                                 |
+| Metadata updates | Mutable, through the AKT program upgrade authority  |
+
+Name and symbol are constants in
+[`constants.rs`](../programs/akt-solana/src/constants.rs). The deployment command
+accepts only the URI; changing the name or symbol requires a code change.
+Initializing the mint does not set metadata. The separate
+[`set-token-metadata` deployment step](deploy-program.md#metadata-and-pause-guardian)
+creates it.
+
+Before mainnet, approve the description, exact logo file, official website URL,
+and permanent public HTTPS locations for the JSON and image. The following is
+a draft, not a published asset. Replace both placeholders and approve the text:
+
+```json
+{
+  "name": "Akash Network",
+  "symbol": "AKT",
+  "description": "AKT, the native token of Akash Network, on Solana.",
+  "image": "https://REPLACE_WITH_METADATA_HOST/token/akt-v1.png",
+  "external_url": "https://REPLACE_WITH_OFFICIAL_WEBSITE"
+}
+```
+
+Publish the approved JSON at a versioned URL such as
+`https://REPLACE_WITH_METADATA_HOST/token/akt-v1.json`. Record the final URLs
+and file hashes with the release. The existing `/token/akt.json` route in
+`local/team.ts` says "AKT on the private Akash testnet. No monetary value."
+Do not use that JSON for mainnet.
+
 ## Contract and authority
 
 `set_token_metadata(uri)` creates or updates the canonical Metaplex metadata

@@ -288,6 +288,13 @@ step.
 
 ### Metadata and pause guardian
 
+The current contract uses **Akash Network**, **AKT**, and **6 decimals**, with
+standard SPL Token and Metaplex fungible metadata. The mainnet JSON URL, logo,
+description, and website URL are not finalized. Review the
+[mainnet values and draft JSON](token-metadata.md#mainnet-values), publish the
+approved assets, and use the final JSON URL below. Initializing the mint does
+not create metadata. Do not use the private-testnet portal's metadata JSON.
+
 Complete the [metadata launch gate](token-metadata.md#mainnet-launch-gate)
 first.
 
