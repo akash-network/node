@@ -10,8 +10,8 @@ Run commands from `contracts/solana` unless stated otherwise.
 - [Start a Solana testnet](#start-a-solana-testnet)
 - [Code walkthrough](docs/implementation.md)
 - [Program deployment guide](docs/deploy-program.md)
-- [Local CLI E2E after an Akash upgrade](../../_docs/sink-local-e2e.md)
-- [Akash and Solana operator deployment](../../_docs/sink-deployment.md)
+- [Local E2E with the CLI](../../_docs/sink-local-e2e.md)
+- [Deploy Akash and Solana](../../_docs/sink-deployment.md)
 
 ## Build
 
