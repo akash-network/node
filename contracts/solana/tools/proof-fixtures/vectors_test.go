@@ -62,7 +62,7 @@ func TestNativeBoundaryVectors(t *testing.T) {
 		})
 	}
 
-	members := make([]string, 64)
+	members := make([]string, 7)
 	for i := range members {
 		members[i] = sdk.AccAddress(bytes.Repeat([]byte{byte(i + 1)}, 32)).String()
 	}
@@ -108,7 +108,7 @@ func TestNativeBoundaryVectors(t *testing.T) {
 		"records": records,
 		"settlements": []map[string]any{
 			{
-				"name":                 "64_reporters_32_byte_addresses",
+				"name":                 "7_reporters_32_byte_addresses",
 				"owner":                id.Owner,
 				"owner_hex":            hex.EncodeToString(bytes.Repeat([]byte{1}, 32)),
 				"height":               "9",

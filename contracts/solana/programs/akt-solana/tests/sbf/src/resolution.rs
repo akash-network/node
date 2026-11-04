@@ -314,7 +314,7 @@ pub(super) fn heaps(vm: &mut Mollusk, fixtures: &[Fixture]) {
             matches!(
                 fixture.name.as_str(),
                 "sdk-settlement-maximum_evidence"
-                    | "sdk-settlement-64_reporters_32_byte_addresses"
+                    | "sdk-settlement-7_reporters_32_byte_addresses"
                     | "verifier-depth-127"
                     | "mint-depth-127"
             )

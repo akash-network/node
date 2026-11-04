@@ -56,7 +56,7 @@ pub enum AktError {
     CpiNotAllowed,
     #[msg("Only compute budget instructions may precede mint or void")]
     PrecedingInstruction,
-    #[msg("Record needs nonzero owner, sequence and amount, and 0 < height <= MaxInt64 with height < proof height")]
+    #[msg("Record needs a 1-to-255-byte owner, positive sequence and amount, and 0 < height <= MaxInt64 with height < proof height")]
     InvalidRecord,
     #[msg("Solana clock is negative or earlier than the recorded mint day")]
     InvalidClock,

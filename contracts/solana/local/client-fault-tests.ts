@@ -26,7 +26,7 @@ export async function testExpiry(
         beforeUpload: () => assertClientActive(wallet, client, "akash-scale-1"),
         record: async () => {},
       }),
-    /light client expired/,
+    /light client is expired/,
   );
   assert.equal(
     await wallet.connection.getBalance(wallet.publicKey),
