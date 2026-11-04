@@ -22,7 +22,9 @@ require (
 	github.com/cosmos/cosmos-db v1.1.3
 	github.com/cosmos/cosmos-sdk v0.53.6
 	github.com/cosmos/gogoproto v1.7.2
+	github.com/cosmos/iavl v1.2.6
 	github.com/cosmos/ibc-go/v10 v10.7.0
+	github.com/cosmos/ics23/go v0.11.0
 	github.com/cosmos/rosetta v0.50.12
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/go-github/v62 v62.0.0
@@ -49,8 +51,8 @@ require (
 	google.golang.org/grpc v1.84.0
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.2
-	pkg.akt.dev/go v0.5.0-rc1.0.20261103203633-3b977f0785ee
-	pkg.akt.dev/go/cli v0.3.0-rc1.0.20261103203633-3b977f0785ee
+	pkg.akt.dev/go v0.5.0-rc1.0.20261104035819-ea3d90b37574
+	pkg.akt.dev/go/cli v0.3.0-rc1.0.20261104035819-ea3d90b37574
 	pkg.akt.dev/go/sdl v0.2.2
 )
 
@@ -141,8 +143,6 @@ require (
 	github.com/cosmos/cosmos-proto v1.0.0-beta.5 // indirect
 	github.com/cosmos/go-bip39 v1.0.0 // indirect
 	github.com/cosmos/gogogateway v1.2.0 // indirect
-	github.com/cosmos/iavl v1.2.6 // indirect
-	github.com/cosmos/ics23/go v0.11.0 // indirect
 	github.com/cosmos/ledger-cosmos-go v1.0.0 // indirect
 	github.com/cosmos/rosetta-sdk-go v0.10.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.6 // indirect
