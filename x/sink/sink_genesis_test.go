@@ -1,4 +1,4 @@
-package app_test
+package sink_test
 
 import (
 	"bytes"
@@ -38,7 +38,7 @@ func TestSinkRejectedGenesisLeavesNoModuleAccount(t *testing.T) {
 }
 
 func TestSinkFullAppGenesisBankRestoration(t *testing.T) {
-	h := reportingHarness(t)
+	h := setupReportingTestSuite(t)
 	native := h.quotaEpoch(t)
 	native.Duration = 4 * h.params().ReporterChallengePeriod
 	native.StartTime = h.now.Add(-56 * native.Duration)
@@ -106,7 +106,7 @@ func TestSinkFullAppGenesisBankRestoration(t *testing.T) {
 	exported, err := h.a.ExportAppStateAndValidators(false, nil, nil)
 	require.NoError(t, err)
 	require.Greater(t, exported.Height, h.height)
-	root := filepath.Join("..", ".cache", "sink-review-corrections", "app-homes")
+	root := filepath.Join("..", "..", ".cache", "sink-review-corrections", "app-homes")
 	require.NoError(t, os.MkdirAll(root, 0o700))
 	home, err := os.MkdirTemp(root, "sink-genesis-")
 	require.NoError(t, err)

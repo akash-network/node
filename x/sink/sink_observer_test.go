@@ -1,4 +1,4 @@
-package app_test
+package sink_test
 
 import (
 	"encoding/base64"
@@ -35,7 +35,7 @@ func TestSinkAcceptsSolanaObserverReports(t *testing.T) {
 	require.Len(t, fixture.Transactions, 3)
 	require.Positive(t, fixture.Slot)
 	require.Len(t, fixture.Signature, 64)
-	h := newSinkHarness(t, nil)
+	h := setupTestSuite(t, nil)
 	res := h.deliver(t, "", h.deposit(123456789))
 	require.Zero(t, res.Code, res.Log)
 	k := h.a.Keepers.Akash.Sink

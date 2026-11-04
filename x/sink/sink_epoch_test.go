@@ -1,4 +1,4 @@
-package app_test
+package sink_test
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 	types "pkg.akt.dev/go/node/sink/v1"
 )
 
-func (h *sinkHarness) quotaEpoch(t *testing.T) epochstypes.EpochInfo {
+func (h *testSuite) quotaEpoch(t *testing.T) epochstypes.EpochInfo {
 	t.Helper()
 	epoch, err := h.a.Keepers.Akash.Epochs.GetEpoch(h.ctx(), "day")
 	require.NoError(t, err)
@@ -20,13 +20,13 @@ func (h *sinkHarness) quotaEpoch(t *testing.T) epochstypes.EpochInfo {
 	return epoch
 }
 
-func (h *sinkHarness) setQuotaEpoch(t *testing.T, epoch epochstypes.EpochInfo) {
+func (h *testSuite) setQuotaEpoch(t *testing.T, epoch epochstypes.EpochInfo) {
 	t.Helper()
 	require.NoError(t, h.a.Keepers.Akash.Epochs.RemoveEpoch(h.ctx(), "day"))
 	require.NoError(t, h.a.Keepers.Akash.Epochs.AddEpoch(h.ctx(), epoch))
 }
 
-func (h *sinkHarness) catchUpQuotaEpoch(t *testing.T) {
+func (h *testSuite) catchUpQuotaEpoch(t *testing.T) {
 	t.Helper()
 
 	for range 1000 {
@@ -44,10 +44,10 @@ func (h *sinkHarness) catchUpQuotaEpoch(t *testing.T) {
 func TestSinkNativeEpochBoundaries(t *testing.T) {
 	for _, timestamp := range []string{"2026-11-02T10:03:17Z", "2026-11-02T23:57:17Z"} {
 		t.Run(timestamp, func(t *testing.T) {
-			h := newSinkHarness(t, func(g *types.GenesisState) {
-				g.Params.MaxAmountPerTransfer = coin(10)
-				g.Params.MaxEpochAmountPerAccount = coin(10)
-				g.Params.MaxTransferAmountPerEpoch = coin(10)
+			h := setupTestSuite(t, func(p *types.Params) {
+				p.MaxAmountPerTransfer = coin(10)
+				p.MaxEpochAmountPerAccount = coin(10)
+				p.MaxTransferAmountPerEpoch = coin(10)
 			})
 
 			start, err := time.Parse(time.RFC3339, timestamp)
@@ -136,10 +136,10 @@ func TestSinkNativeEpochBoundaries(t *testing.T) {
 }
 
 func TestSinkNativeEpochDowntime(t *testing.T) {
-	h := newSinkHarness(t, func(g *types.GenesisState) {
-		g.Params.MaxAmountPerTransfer = coin(10)
-		g.Params.MaxEpochAmountPerAccount = coin(10)
-		g.Params.MaxTransferAmountPerEpoch = coin(10)
+	h := setupTestSuite(t, func(p *types.Params) {
+		p.MaxAmountPerTransfer = coin(10)
+		p.MaxEpochAmountPerAccount = coin(10)
+		p.MaxTransferAmountPerEpoch = coin(10)
 	})
 
 	start := time.Date(2026, 11, 2, 10, 3, 17, 0, time.UTC)
@@ -174,7 +174,7 @@ func TestSinkNativeEpochDowntime(t *testing.T) {
 }
 
 func TestSinkChallengeIntervalCrossesNativeEpoch(t *testing.T) {
-	h := reportingHarness(t)
+	h := setupReportingTestSuite(t)
 	start := h.now
 	epoch := epochstypes.NewGenesisEpochInfo("day", 10*time.Minute)
 	epoch.StartTime = start

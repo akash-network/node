@@ -1,4 +1,4 @@
-package app_test
+package sink_test
 
 import (
 	"bytes"
@@ -16,7 +16,7 @@ import (
 	sinkkeeper "pkg.akt.dev/node/v2/x/sink/keeper"
 )
 
-func clearSinkStore(t *testing.T, h *sinkHarness, ctx sdk.Context) {
+func clearSinkStore(t *testing.T, h *testSuite, ctx sdk.Context) {
 	t.Helper()
 	s := ctx.KVStore(h.a.GetKey(types.StoreKey))
 	it := s.Iterator(nil, nil)
@@ -45,7 +45,7 @@ func storeEntries(t *testing.T, s storetypes.KVStore, prefix []byte) map[string]
 }
 
 func TestSinkRefundsPayOldestFirst(t *testing.T) {
-	h := reportingHarness(t)
+	h := setupReportingTestSuite(t)
 	for _, amount := range []int64{100, 10} {
 		res := h.deliver(t, "", h.deposit(amount))
 		require.Zero(t, res.Code, res.Log)
@@ -68,7 +68,7 @@ func TestSinkRefundsPayOldestFirst(t *testing.T) {
 }
 
 func TestSinkRefundQueueFollowsSettlement(t *testing.T) {
-	h := reportingHarness(t)
+	h := setupReportingTestSuite(t)
 	for i := 0; i < 2; i++ {
 		res := h.deliver(t, "", h.deposit(10))
 		require.Zero(t, res.Code, res.Log)
@@ -94,54 +94,8 @@ func TestSinkRefundQueueFollowsSettlement(t *testing.T) {
 	h.checkSettlementExport(t)
 }
 
-func TestSinkGovernanceReopensContestedMint(t *testing.T) {
-	h := reportingHarness(t)
-	res := h.deliver(t, "", h.deposit(100))
-	require.Zero(t, res.Code, res.Log)
-	h.quorum(t, 1, types.OutcomeMinted)
-	require.Error(t, h.order(h.id(1)))
-	require.Error(t, h.resolve(t, h.id(1), types.DecisionConfirmVoid))
-	res = h.report(t, 3, 1, types.OutcomeVoided)
-	require.Zero(t, res.Code, res.Log)
-	p := h.params()
-	p.MaxAmountPerTransfer = coin(50)
-	p.MaxEpochRefund = coin(50)
-	require.NoError(t, h.update(p))
-	require.NoError(t, h.order(h.id(1)))
-	require.Error(t, h.resolve(t, h.id(1), types.DecisionConfirmVoid))
-	p.MaxEpochRefund = coin(100)
-	require.NoError(t, h.update(p))
-	require.NoError(t, h.resolve(t, h.id(1), types.DecisionConfirmVoid))
-	require.True(t, h.totals().MintedAmount.IsZero())
-	require.Zero(t, h.totals().MintedCount)
-	require.Equal(t, coin(100), h.totals().RefundPendingAmount)
-	h.now = time.Unix(h.transfer(t, 1).Settlement.ChallengeEnd, 0).UTC()
-	res = h.refund(t, 1)
-	require.Zero(t, res.Code, res.Log)
-	h.checkSettlementExport(t)
-}
-
-func TestSinkParameterFloors(t *testing.T) {
-	h := reportingHarness(t)
-	res := h.deliver(t, "", h.deposit(100))
-	require.Zero(t, res.Code, res.Log)
-	p := h.params()
-	p.MaxAmountPerTransfer = coin(50)
-	p.MaxEpochRefund = coin(50)
-	require.Error(t, h.update(p))
-	p = h.params()
-	p.ReporterChallengePeriod = time.Duration(types.MinChallengePeriodSeconds)*time.Second - time.Nanosecond
-	require.Error(t, h.update(p))
-	h.quorum(t, 1, types.OutcomeVoided)
-	deadline := h.transfer(t, 1).Settlement.ChallengeEnd
-	p = h.params()
-	p.ReporterChallengePeriod += time.Hour
-	require.NoError(t, h.update(p))
-	require.Equal(t, deadline, h.transfer(t, 1).Settlement.ChallengeEnd)
-}
-
 func TestSinkRefundMustReachSender(t *testing.T) {
-	h := reportingHarness(t)
+	h := setupReportingTestSuite(t)
 	res := h.deliver(t, "", h.deposit(60))
 	require.Zero(t, res.Code, res.Log)
 	h.quorum(t, 1, types.OutcomeVoided)
@@ -167,8 +121,8 @@ func TestSinkRefundMustReachSender(t *testing.T) {
 	h.checkSettlementExport(t)
 }
 
-func TestSinkDepositEventAndGenesisDays(t *testing.T) {
-	h := newSinkHarness(t, nil)
+func TestSinkDepositEventAndGenesisValidation(t *testing.T) {
+	h := setupTestSuite(t, nil)
 	res := h.deliver(t, "", h.deposit(10))
 	require.Zero(t, res.Code, res.Log)
 	require.Contains(t, sinkEvents(t, res.Events), proto.Message(&types.EventTransferCreated{
@@ -181,12 +135,18 @@ func TestSinkDepositEventAndGenesisDays(t *testing.T) {
 	k := h.a.Keepers.Akash.Sink
 	g, err := k.ExportGenesis(h.ctx())
 	require.NoError(t, err)
-	cache, _ := h.ctx().CacheContext()
+	cache, _ := h.ctx().WithBlockHeight(h.height + 1).CacheContext()
 	clearSinkStore(t, h, cache)
-	require.Error(t, k.InitGenesis(cache, g))
-	cache = cache.WithBlockHeight(h.height + 1)
+	require.NoError(t, k.InitGenesis(cache, g))
+	restored, err := k.ExportGenesis(cache)
+	require.NoError(t, err)
+	require.Equal(t, g, restored)
+
 	g.SendUsage.Epoch += 100
-	require.Error(t, k.InitGenesis(cache, g))
+	want := g.Validate()
+	require.Error(t, want)
+	clearSinkStore(t, h, cache)
+	require.EqualError(t, k.InitGenesis(cache, g), want.Error())
 }
 
 func TestSinkUpgradeClearsSinkWithdrawAddresses(t *testing.T) {

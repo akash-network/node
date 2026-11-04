@@ -20,43 +20,57 @@ func TestQuotaEpochFailureIsAtomic(t *testing.T) {
 	for name, epoch := range map[string]testEpochs{
 		"missing":      {err: collections.ErrNotFound},
 		"read failure": {err: readFailure},
-		"unstarted": {info: epochstypes.EpochInfo{
-			ID:       "day",
-			Duration: time.Minute,
-		}},
-		"wrong identifier": {info: epochstypes.EpochInfo{
-			ID:                   "hour",
-			Duration:             time.Minute,
-			CurrentEpoch:         20,
-			EpochCountingStarted: true,
-		}},
-		"zero duration": {info: epochstypes.EpochInfo{
-			ID:                   "day",
-			CurrentEpoch:         20,
-			EpochCountingStarted: true,
-		}},
-		"negative duration": {info: epochstypes.EpochInfo{
-			ID:                   "day",
-			Duration:             -time.Minute,
-			CurrentEpoch:         20,
-			EpochCountingStarted: true,
-		}},
-		"negative number": {info: epochstypes.EpochInfo{
-			ID:                   "day",
-			Duration:             time.Minute,
-			CurrentEpoch:         -1,
-			EpochCountingStarted: true,
-		}},
-		"started zero": {info: epochstypes.EpochInfo{
-			ID:                   "day",
-			Duration:             time.Minute,
-			EpochCountingStarted: true,
-		}},
-		"unstarted nonzero": {info: epochstypes.EpochInfo{
-			ID:           "day",
-			Duration:     time.Minute,
-			CurrentEpoch: 20,
-		}},
+		"unstarted": {
+			info: epochstypes.EpochInfo{
+				ID:       "day",
+				Duration: time.Minute,
+			},
+		},
+		"wrong identifier": {
+			info: epochstypes.EpochInfo{
+				ID:                   "hour",
+				Duration:             time.Minute,
+				CurrentEpoch:         20,
+				EpochCountingStarted: true,
+			},
+		},
+		"zero duration": {
+			info: epochstypes.EpochInfo{
+				ID:                   "day",
+				CurrentEpoch:         20,
+				EpochCountingStarted: true,
+			},
+		},
+		"negative duration": {
+			info: epochstypes.EpochInfo{
+				ID:                   "day",
+				Duration:             -time.Minute,
+				CurrentEpoch:         20,
+				EpochCountingStarted: true,
+			},
+		},
+		"negative number": {
+			info: epochstypes.EpochInfo{
+				ID:                   "day",
+				Duration:             time.Minute,
+				CurrentEpoch:         -1,
+				EpochCountingStarted: true,
+			},
+		},
+		"started zero": {
+			info: epochstypes.EpochInfo{
+				ID:                   "day",
+				Duration:             time.Minute,
+				EpochCountingStarted: true,
+			},
+		},
+		"unstarted nonzero": {
+			info: epochstypes.EpochInfo{
+				ID:           "day",
+				Duration:     time.Minute,
+				CurrentEpoch: 20,
+			},
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			k, ctx, bank := testStore(t)
@@ -132,13 +146,15 @@ func TestQuotaEpochEmptyInstallation(t *testing.T) {
 		query  uint64
 	}{{0, 0}, {57, 57}} {
 		k, ctx, bank := testStore(t)
-		k.epochs = testEpochs{info: epochstypes.EpochInfo{
-			ID:                   "day",
-			Duration:             10 * time.Minute,
-			StartTime:            ctx.BlockTime().Add(time.Hour),
-			CurrentEpoch:         epoch.native,
-			EpochCountingStarted: epoch.native > 0,
-		}}
+		k.epochs = testEpochs{
+			info: epochstypes.EpochInfo{
+				ID:                   "day",
+				Duration:             10 * time.Minute,
+				StartTime:            ctx.BlockTime().Add(time.Hour),
+				CurrentEpoch:         epoch.native,
+				EpochCountingStarted: epoch.native > 0,
+			},
+		}
 		g := types.DefaultGenesis()
 		importTestGenesis(t, k, ctx, bank, g)
 		state, err := k.NewQuerier().State(ctx, nil)
@@ -153,18 +169,32 @@ func TestQuotaEpochEmptyInstallation(t *testing.T) {
 		require.Equal(t, epoch.query, account.Epoch)
 		exported, err := k.ExportGenesis(ctx.WithBlockTime(time.Time{}))
 		require.NoError(t, err)
-		require.Equal(t, g, exported)
+		want, err := g.Marshal()
+		require.NoError(t, err)
+		got, err := exported.Marshal()
+		require.NoError(t, err)
+		require.Equal(t, want, got)
 	}
 }
 
-func TestQuotaEpochRejectsFixedDayGenesis(t *testing.T) {
+func requireGenesisEqual(t *testing.T, expected, actual *types.GenesisState) {
+	t.Helper()
+	require.ElementsMatch(t, expected.Records, actual.Records)
+	want, got := *expected, *actual
+	want.Records, got.Records = nil, nil
+	require.Equal(t, want, got)
+}
+
+func TestGenesisPreservesEpochCounters(t *testing.T) {
 	k, ctx, bank := testStore(t)
-	k.epochs = testEpochs{info: epochstypes.EpochInfo{
-		ID:                   "day",
-		Duration:             10 * time.Minute,
-		CurrentEpoch:         50000,
-		EpochCountingStarted: true,
-	}}
+	k.epochs = testEpochs{
+		info: epochstypes.EpochInfo{
+			ID:                   "day",
+			Duration:             10 * time.Minute,
+			CurrentEpoch:         50000,
+			EpochCountingStarted: true,
+		},
+	}
 	g := populatedGenesis()
 
 	g.SendUsage.Epoch = 20759
@@ -173,9 +203,11 @@ func TestQuotaEpochRejectsFixedDayGenesis(t *testing.T) {
 		g.Accounts[i].Usage.LastEpoch = 20759
 	}
 
-	bank.set(ctx, Address(), sdk.NewCoins(g.Totals.PendingAmount.Add(g.Totals.MintedAmount).Add(g.Totals.RefundPendingAmount)))
-	require.ErrorContains(t, k.InitGenesis(ctx, g), "schema_version must be 4")
-	normalized, err := g.SendUsage.At(50000)
+	importTestGenesis(t, k, ctx, bank, g)
+	exported, err := k.ExportGenesis(ctx)
 	require.NoError(t, err)
-	require.True(t, normalized.Amount.IsZero(), "numeric comparison alone would erase fixed-day consumption")
+	requireGenesisEqual(t, g, exported)
+	epoch, err := k.quotaEpoch(ctx)
+	require.NoError(t, err)
+	require.Equal(t, uint64(50000), epoch)
 }

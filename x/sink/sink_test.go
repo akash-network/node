@@ -1,4 +1,4 @@
-package app_test
+package sink_test
 
 import (
 	"bytes"
@@ -18,7 +18,6 @@ import (
 	abci "github.com/cometbft/cometbft/abci/types"
 	cmted25519 "github.com/cometbft/cometbft/crypto/ed25519"
 	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
-	"github.com/cosmos/cosmos-sdk/codec"
 	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -40,11 +39,13 @@ import (
 	"pkg.akt.dev/go/sdkutil"
 
 	"pkg.akt.dev/node/v2/app"
+	"pkg.akt.dev/node/v2/testutil/state"
 	sinkhandler "pkg.akt.dev/node/v2/x/sink/handler"
 	sinkkeeper "pkg.akt.dev/node/v2/x/sink/keeper"
 )
 
-type sinkHarness struct {
+type testSuite struct {
+	*state.TestSuite
 	t         *testing.T
 	ids       []sinktypes.ID
 	a         *app.AkashApp
@@ -59,18 +60,21 @@ type sinkHarness struct {
 	signBytes []byte
 }
 
-func newSinkHarness(t *testing.T, change func(*sinktypes.GenesisState)) *sinkHarness {
+func setupTestSuite(t *testing.T, change func(*sinktypes.Params)) *testSuite {
 	t.Helper()
-	root := filepath.Join("..", ".cache", "sink-review-corrections", "app-homes")
-	require.NoError(t, os.MkdirAll(root, 0o700))
-	home, err := os.MkdirTemp(root, "sink-")
+	root, err := filepath.Abs(filepath.Join("..", "..", ".cache", "sink-test-homes"))
 	require.NoError(t, err)
-	t.Cleanup(func() { require.NoError(t, os.RemoveAll(home)) })
+	require.NoError(t, os.MkdirAll(root, 0o700))
+	t.Setenv("TMPDIR", root)
+	ssuite := state.SetupTestSuite(t)
+	t.Cleanup(func() { require.NoError(t, ssuite.App().Close()) })
 
-	h := &sinkHarness{
-		t:   t,
-		key: secp256k1.GenPrivKeyFromSecret([]byte("local sink sender")),
-		now: time.Unix(1_750_000_000, 0).UTC(),
+	h := &testSuite{
+		TestSuite: ssuite,
+		a:         ssuite.App(),
+		t:         t,
+		key:       secp256k1.GenPrivKeyFromSecret([]byte("local sink sender")),
+		now:       time.Unix(1_750_000_000, 0).UTC(),
 	}
 
 	h.sender = sdk.AccAddress(h.key.PubKey().Address())
@@ -80,92 +84,77 @@ func newSinkHarness(t *testing.T, change func(*sinktypes.GenesisState)) *sinkHar
 	}
 
 	copy(h.recipient[:], ed25519.NewKeyFromSeed(bytes.Repeat([]byte{7}, 32)).Public().(ed25519.PublicKey))
-	h.a = app.Setup(app.WithHome(home), app.WithGenesis(func(cdc codec.Codec) app.GenesisState {
-		state := app.GenesisStateWithValSet(cdc)
-		epochs := epochstypes.DefaultGenesis()
-		for i := range epochs.Epochs {
-			epochs.Epochs[i].StartTime = h.now
-		}
-
-		state[epochstypes.ModuleName] = cdc.MustMarshalJSON(epochs)
-
-		// Isolate bridge supply accounting from ordinary per-block inflation.
-		mint := minttypes.DefaultGenesisState()
-		mint.Minter.Inflation = sdkmath.LegacyZeroDec()
-		mint.Minter.AnnualProvisions = sdkmath.LegacyZeroDec()
-		mint.Params.InflationMin = sdkmath.LegacyZeroDec()
-		mint.Params.InflationMax = sdkmath.LegacyZeroDec()
-		mint.Params.InflationRateChange = sdkmath.LegacyZeroDec()
-		state[minttypes.ModuleName] = cdc.MustMarshalJSON(mint)
-		var auth authtypes.GenesisState
-		cdc.MustUnmarshalJSON(state[authtypes.ModuleName], &auth)
-		accounts, err := authtypes.UnpackAccounts(auth.Accounts)
-		require.NoError(t, err)
-		accounts = append(accounts, authtypes.NewBaseAccountWithAddress(h.sender), authtypes.NewBaseAccountWithAddress(h.bystander))
-		for _, key := range h.reporters {
-			accounts = append(accounts, authtypes.NewBaseAccountWithAddress(sdk.AccAddress(key.PubKey().Address())))
-		}
-
-		state[authtypes.ModuleName] = cdc.MustMarshalJSON(authtypes.NewGenesisState(auth.Params, accounts))
-		var bank banktypes.GenesisState
-		cdc.MustUnmarshalJSON(state[banktypes.ModuleName], &bank)
-
-		for _, b := range []banktypes.Balance{
-			{
-				Address: h.sender.String(),
-				Coins:   sdk.NewCoins(sdk.NewInt64Coin(sdkutil.DenomUakt, 2_000_000_000), sdk.NewInt64Coin("other", 100)),
-			},
-			{
-				Address: h.bystander.String(),
-				Coins:   sdk.NewCoins(sdk.NewInt64Coin(sdkutil.DenomUakt, 1_000_000_000)),
-			},
-		} {
-			bank.Balances = append(bank.Balances, b)
-			bank.Supply = bank.Supply.Add(b.Coins...)
-		}
-
-		for _, key := range h.reporters {
-			coins := sdk.NewCoins(sdk.NewInt64Coin(sdkutil.DenomUakt, 1_000_000))
-			bank.Balances = append(bank.Balances, banktypes.Balance{
-				Address: sdk.AccAddress(key.PubKey().Address()).String(),
-				Coins:   coins,
-			})
-
-			bank.Supply = bank.Supply.Add(coins...)
-		}
-
-		state[banktypes.ModuleName] = cdc.MustMarshalJSON(&bank)
-		g := sinktypes.DefaultGenesis()
-		g.Params.Enabled = true
-		g.Params.MinAmountPerTransfer = coin(1)
-		for _, key := range h.reporters[:4] {
-			g.Params.Reporters = append(g.Params.Reporters, sdk.AccAddress(key.PubKey().Address()).String())
-		}
-
-		g.Params.ReportersThreshold = sdkmath.LegacyMustNewDecFromStr("0.75")
-		if change != nil {
-			change(g)
-		}
-
-		g.PolicySequence = 1
-		g.Policies = []sinktypes.ReporterPolicy{
-			{
-				Version:   g.PolicySequence,
-				Members:   g.Params.Reporters,
-				Threshold: g.Params.ReportersThreshold,
-			},
-		}
-		state[sinktypes.ModuleName] = cdc.MustMarshalJSON(g)
-
-		return state
+	ctx := h.ctx()
+	epochs := h.a.Keepers.Akash.Epochs
+	var epochNames []string
+	require.NoError(t, epochs.IterateEpochs(ctx, func(name string, _ epochstypes.EpochInfo) (bool, error) {
+		epochNames = append(epochNames, name)
+		return false, nil
 	}))
+	for _, name := range epochNames {
+		epoch, err := epochs.GetEpoch(ctx, name)
+		require.NoError(t, err)
+		epoch.StartTime = h.now
+		require.NoError(t, epochs.RemoveEpoch(ctx, name))
+		require.NoError(t, epochs.AddEpoch(ctx, epoch))
+	}
 
-	t.Cleanup(func() { require.NoError(t, h.a.Close()) })
+	// Isolate bridge supply accounting from ordinary per-block inflation.
+	mint := h.a.Keepers.Cosmos.Mint
+	minter, err := mint.Minter.Get(ctx)
+	require.NoError(t, err)
+	minter.Inflation = sdkmath.LegacyZeroDec()
+	minter.AnnualProvisions = sdkmath.LegacyZeroDec()
+	require.NoError(t, mint.Minter.Set(ctx, minter))
+	mintParams, err := mint.Params.Get(ctx)
+	require.NoError(t, err)
+	mintParams.InflationMin = sdkmath.LegacyZeroDec()
+	mintParams.InflationMax = sdkmath.LegacyZeroDec()
+	mintParams.InflationRateChange = sdkmath.LegacyZeroDec()
+	require.NoError(t, mint.Params.Set(ctx, mintParams))
+
+	balances := make([]banktypes.Balance, 0, 2+len(h.reporters))
+	balances = append(balances,
+		banktypes.Balance{
+			Address: h.sender.String(),
+			Coins:   sdk.NewCoins(coin(2_000_000_000), sdk.NewInt64Coin("other", 100)),
+		},
+		banktypes.Balance{
+			Address: h.bystander.String(),
+			Coins:   sdk.NewCoins(coin(1_000_000_000)),
+		},
+	)
+
+	for _, key := range h.reporters {
+		balances = append(balances, banktypes.Balance{
+			Address: sdk.AccAddress(key.PubKey().Address()).String(),
+			Coins:   sdk.NewCoins(coin(1_000_000)),
+		})
+	}
+	for _, balance := range balances {
+		address := sdk.MustAccAddressFromBech32(balance.Address)
+		account := h.a.Keepers.Cosmos.Acct.NewAccountWithAddress(ctx, address)
+		h.a.Keepers.Cosmos.Acct.SetAccount(ctx, account)
+		require.NoError(t, h.a.Keepers.Cosmos.Bank.MintCoins(ctx, minttypes.ModuleName, balance.Coins))
+		require.NoError(t, h.a.Keepers.Cosmos.Bank.SendCoinsFromModuleToAccount(ctx, minttypes.ModuleName, address, balance.Coins))
+	}
+
+	params := h.params()
+	params.Enabled = true
+	params.MinAmountPerTransfer = coin(1)
+	for _, key := range h.reporters[:4] {
+		params.Reporters = append(params.Reporters, sdk.AccAddress(key.PubKey().Address()).String())
+	}
+	params.ReportersThreshold = sdkmath.LegacyMustNewDecFromStr("0.75")
+	if change != nil {
+		change(&params)
+	}
+	require.NoError(t, h.update(params))
 
 	return h
 }
 
-func (h *sinkHarness) ctx() sdk.Context {
+func (h *testSuite) ctx() sdk.Context {
 	if h.height == 0 {
 		return h.a.NewContext(false)
 	}
@@ -176,7 +165,7 @@ func (h *sinkHarness) ctx() sdk.Context {
 	})
 }
 
-func (h *sinkHarness) deposit(amount int64) *sinktypes.MsgSink {
+func (h *testSuite) deposit(amount int64) *sinktypes.MsgSink {
 	return &sinktypes.MsgSink{
 		DestType: sinktypes.DestTypeSolana,
 		Dest:     base58.Encode(h.recipient[:]),
@@ -185,15 +174,15 @@ func (h *sinkHarness) deposit(amount int64) *sinktypes.MsgSink {
 	}
 }
 
-func (h *sinkHarness) tx(t *testing.T, memo string, msgs ...sdk.Msg) []byte {
+func (h *testSuite) tx(t *testing.T, memo string, msgs ...sdk.Msg) []byte {
 	return h.txFrom(t, h.key, memo, msgs...)
 }
 
-func (h *sinkHarness) txFrom(t *testing.T, key *secp256k1.PrivKey, memo string, msgs ...sdk.Msg) []byte {
+func (h *testSuite) txFrom(t *testing.T, key *secp256k1.PrivKey, memo string, msgs ...sdk.Msg) []byte {
 	return h.txFromMode(t, key, signing.SignMode_SIGN_MODE_DIRECT, memo, msgs...)
 }
 
-func (h *sinkHarness) txFromMode(t *testing.T, key *secp256k1.PrivKey, mode signing.SignMode, memo string, msgs ...sdk.Msg) []byte {
+func (h *testSuite) txFromMode(t *testing.T, key *secp256k1.PrivKey, mode signing.SignMode, memo string, msgs ...sdk.Msg) []byte {
 	t.Helper()
 	sender := sdk.AccAddress(key.PubKey().Address())
 	cfg := h.a.TxConfig()
@@ -230,7 +219,7 @@ func (h *sinkHarness) txFromMode(t *testing.T, key *secp256k1.PrivKey, mode sign
 	return bz
 }
 
-func (h *sinkHarness) commitBlock(t *testing.T, at time.Time, txs ...[]byte) []*abci.ExecTxResult {
+func (h *testSuite) commitBlock(t *testing.T, at time.Time, txs ...[]byte) []*abci.ExecTxResult {
 	t.Helper()
 	h.height++
 	h.now = at
@@ -251,12 +240,12 @@ func (h *sinkHarness) commitBlock(t *testing.T, at time.Time, txs ...[]byte) []*
 	return res.TxResults
 }
 
-func (h *sinkHarness) deliverBytes(t *testing.T, bz []byte) *abci.ExecTxResult {
+func (h *testSuite) deliverBytes(t *testing.T, bz []byte) *abci.ExecTxResult {
 	t.Helper()
 	return h.commitBlock(t, h.now.Add(time.Second), bz)[0]
 }
 
-func (h *sinkHarness) deliver(t *testing.T, memo string, msgs ...sdk.Msg) *abci.ExecTxResult {
+func (h *testSuite) deliver(t *testing.T, memo string, msgs ...sdk.Msg) *abci.ExecTxResult {
 	t.Helper()
 	return h.deliverBytes(t, h.tx(t, memo, msgs...))
 }
@@ -281,41 +270,41 @@ func sinkTotals(t *testing.T, k sinkkeeper.Keeper, ctx sdk.Context) sinktypes.To
 	return v
 }
 
-func (h *sinkHarness) params() sinktypes.Params {
+func (h *testSuite) params() sinktypes.Params {
 	return sinkParams(h.t, h.a.Keepers.Akash.Sink, h.ctx())
 }
 
-func (h *sinkHarness) totals() sinktypes.Totals {
+func (h *testSuite) totals() sinktypes.Totals {
 	return sinkTotals(h.t, h.a.Keepers.Akash.Sink, h.ctx())
 }
 
-func (h *sinkHarness) state() *sinktypes.QueryStateResponse {
+func (h *testSuite) state() *sinktypes.QueryStateResponse {
 	v, err := h.a.Keepers.Akash.Sink.NewQuerier().State(h.ctx(), nil)
 	require.NoError(h.t, err)
 
 	return v
 }
 
-func (h *sinkHarness) policy() *sinktypes.QueryReportersResponse {
+func (h *testSuite) policy() *sinktypes.QueryReportersResponse {
 	v, err := h.a.Keepers.Akash.Sink.NewQuerier().Reporters(h.ctx(), nil)
 	require.NoError(h.t, err)
 
 	return v
 }
 
-func (h *sinkHarness) usage(owner sdk.AccAddress) sinktypes.AccountUsage {
+func (h *testSuite) usage(owner sdk.AccAddress) sinktypes.AccountUsage {
 	u, err := h.a.Keepers.Akash.Sink.GetAccountUsage(h.ctx(), owner)
 	require.NoError(h.t, err)
 
 	return u
 }
 
-func (h *sinkHarness) id(n int) sinktypes.ID {
+func (h *testSuite) id(n int) sinktypes.ID {
 	require.LessOrEqual(h.t, n, len(h.ids))
 	return h.ids[n-1]
 }
 
-func (h *sinkHarness) capture(t *testing.T, res *abci.ExecTxResult) {
+func (h *testSuite) capture(t *testing.T, res *abci.ExecTxResult) {
 	if res.Code != 0 {
 		return
 	}
@@ -332,7 +321,7 @@ func (h *sinkHarness) capture(t *testing.T, res *abci.ExecTxResult) {
 	}
 }
 
-func (h *sinkHarness) update(p sinktypes.Params) error {
+func (h *testSuite) update(p sinktypes.Params) error {
 	_, err := sinkhandler.NewServer(h.a.Keepers.Akash.Sink).UpdateParams(h.ctx(), &sinktypes.MsgUpdateParams{
 		Authority: authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 		Params:    p,
@@ -340,7 +329,7 @@ func (h *sinkHarness) update(p sinktypes.Params) error {
 	return err
 }
 
-func (h *sinkHarness) order(id sinktypes.ID) error {
+func (h *testSuite) order(id sinktypes.ID) error {
 	entry, err := h.a.Keepers.Akash.Sink.GetTransfer(h.ctx(), id)
 	if err != nil {
 		return err
@@ -355,7 +344,7 @@ func (h *sinkHarness) order(id sinktypes.ID) error {
 }
 
 func TestSinkSignedDepositAndProof(t *testing.T) {
-	h := newSinkHarness(t, nil)
+	h := setupTestSuite(t, nil)
 	k := h.a.Keepers.Akash.Sink
 	totalSupply := h.a.Keepers.Cosmos.Bank.GetSupply(h.ctx(), sdkutil.DenomUakt)
 
@@ -473,7 +462,7 @@ func TestSinkSignedDepositAndProof(t *testing.T) {
 }
 
 func TestSinkCannotBeWithdrawAddress(t *testing.T) {
-	h := newSinkHarness(t, nil)
+	h := setupTestSuite(t, nil)
 	require.True(t, h.a.Keepers.Cosmos.Bank.BlockedAddr(sinkkeeper.Address()))
 	valAddr := sdk.ValAddress(h.sender)
 	pk, err := cryptocodec.FromCmtPubKeyInterface(cmted25519.GenPrivKeyFromSecret([]byte("sink withdraw validator")).PubKey())
@@ -508,7 +497,7 @@ func TestSinkCannotBeWithdrawAddress(t *testing.T) {
 }
 
 func TestSinkRejectedTransactionsAreAtomic(t *testing.T) {
-	h := newSinkHarness(t, nil)
+	h := setupTestSuite(t, nil)
 	k := h.a.Keepers.Akash.Sink
 	h.commitBlock(t, h.now)
 
@@ -537,9 +526,9 @@ func TestSinkRejectedTransactionsAreAtomic(t *testing.T) {
 }
 
 func TestSinkLimitsAndGovernanceVoid(t *testing.T) {
-	h := newSinkHarness(t, func(g *sinktypes.GenesisState) {
-		g.Params.MaxAmountPerTransfer = coin(10)
-		g.Params.MaxEpochAmountPerAccount = coin(10)
+	h := setupTestSuite(t, func(p *sinktypes.Params) {
+		p.MaxAmountPerTransfer = coin(10)
+		p.MaxEpochAmountPerAccount = coin(10)
 	})
 
 	res := h.deliver(t, "", h.deposit(10))
@@ -576,9 +565,9 @@ func TestSinkLimitsAndGovernanceVoid(t *testing.T) {
 }
 
 func TestSinkEnableRequiresReporters(t *testing.T) {
-	h := newSinkHarness(t, func(g *sinktypes.GenesisState) {
-		g.Params.Enabled = false
-		g.Params.Reporters = nil
+	h := setupTestSuite(t, func(p *sinktypes.Params) {
+		p.Enabled = false
+		p.Reporters = nil
 	})
 
 	k := h.a.Keepers.Akash.Sink
@@ -604,7 +593,7 @@ func TestSinkEnableRequiresReporters(t *testing.T) {
 }
 
 func TestSinkMinimumTransfer(t *testing.T) {
-	h := newSinkHarness(t, func(g *sinktypes.GenesisState) { g.Params.MinAmountPerTransfer = coin(100) })
+	h := setupTestSuite(t, func(p *sinktypes.Params) { p.MinAmountPerTransfer = coin(100) })
 	before := h.a.Keepers.Cosmos.Bank.GetAllBalances(h.ctx(), h.sender)
 	res := h.deliver(t, "", h.deposit(99))
 	require.NotZero(t, res.Code)
@@ -623,7 +612,7 @@ func TestSinkMinimumTransfer(t *testing.T) {
 }
 
 func TestSinkSameBlockAllocationAndFailedDeposit(t *testing.T) {
-	h := newSinkHarness(t, nil)
+	h := setupTestSuite(t, nil)
 	transactions := make([][]byte, 0, 3)
 	transactions = append(transactions, h.tx(t, "", h.deposit(3_000_000_000)))
 	for _, key := range h.reporters[3:5] {
@@ -661,7 +650,7 @@ func TestSinkSameBlockAllocationAndFailedDeposit(t *testing.T) {
 }
 
 func TestSinkIDNeverWraps(t *testing.T) {
-	h := newSinkHarness(t, nil)
+	h := setupTestSuite(t, nil)
 	res := h.deliver(t, "", h.deposit(1))
 	require.Zero(t, res.Code, res.Log)
 	ctx := h.ctx().WithBlockHeight(h.height + 1)

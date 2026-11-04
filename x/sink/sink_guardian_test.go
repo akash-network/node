@@ -1,4 +1,4 @@
-package app_test
+package sink_test
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 )
 
 func TestSinkGuardianPause(t *testing.T) {
-	h := reportingHarness(t)
+	h := setupReportingTestSuite(t)
 	guardian := h.reporterAddress(4)
 	pause := func(deposits, refunds bool) {
 		res := h.deliverBytes(t, h.txFromMode(t, h.reporters[4], signing.SignMode_SIGN_MODE_LEGACY_AMINO_JSON, "", &types.MsgGuardianPause{

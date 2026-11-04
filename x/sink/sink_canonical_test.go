@@ -1,4 +1,4 @@
-package app_test
+package sink_test
 
 import (
 	"bytes"
@@ -21,7 +21,7 @@ import (
 )
 
 func TestSinkCanonicalSettlementMembershipProofs(t *testing.T) {
-	h := reportingHarness(t)
+	h := setupReportingTestSuite(t)
 	result := h.deliver(t, "", h.deposit(10))
 	require.Zero(t, result.Code, result.Log)
 	h.commitBlock(t, h.now.Add(time.Second))
@@ -110,7 +110,7 @@ func TestSinkCanonicalSettlementMembershipProofs(t *testing.T) {
 func TestSinkRequestVoidRoundIsBoundBySignature(t *testing.T) {
 	for _, mode := range []signing.SignMode{signing.SignMode_SIGN_MODE_DIRECT, signing.SignMode_SIGN_MODE_LEGACY_AMINO_JSON} {
 		t.Run(mode.String(), func(t *testing.T) {
-			h := reportingHarness(t)
+			h := setupReportingTestSuite(t)
 			result := h.deliver(t, "", h.deposit(10))
 			require.Zero(t, result.Code, result.Log)
 			msg := &types.MsgRequestVoid{

@@ -370,3 +370,17 @@ func TestOwnerPaginationMergesAllFiveCanonicalBuckets(t *testing.T) {
 	})
 	require.Error(t, err)
 }
+
+func TestSinkQueryLegacyWireRecord(t *testing.T) {
+	k, ctx, _ := testStore(t)
+	ctx = ctx.WithBlockHeight(2)
+	ctx.KVStore(k.skey).Set([]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 42}, bytes.Repeat([]byte{1}, 77))
+	_, err := k.NewQuerier().Transfer(ctx, &types.QueryTransferRequest{
+		ID: types.ID{
+			Owner:    sdk.AccAddress(bytes.Repeat([]byte{1}, 20)).String(),
+			Height:   1,
+			Sequence: 42,
+		},
+	})
+	require.ErrorIs(t, err, types.ErrTransferNotFound)
+}

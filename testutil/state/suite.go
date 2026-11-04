@@ -340,6 +340,10 @@ func (ts *TestSuite) BmeKeeper() bmekeeper.Keeper {
 	return ts.keepers.BME
 }
 
+func (ts *TestSuite) SinkKeeper() skeeper.Keeper {
+	return ts.keepers.Sink
+}
+
 // MockBMEForDeposit mocks bank operations for depositing funds into escrow.
 // Deposits go directly to the escrow module account via SendCoinsFromAccountToModule.
 func (ts *TestSuite) MockBMEForDeposit(from sdk.AccAddress, depositCoin sdk.Coin) {

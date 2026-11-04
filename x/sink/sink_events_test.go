@@ -1,4 +1,4 @@
-package app_test
+package sink_test
 
 import (
 	"reflect"
@@ -36,12 +36,12 @@ func sinkEvents(t *testing.T, events []abci.Event) []proto.Message {
 }
 
 // reporterAddress is the account of reporter i.
-func (h *sinkHarness) reporterAddress(i int) string {
+func (h *testSuite) reporterAddress(i int) string {
 	return sdk.AccAddress(h.reporters[i].PubKey().Address()).String()
 }
 
 func TestSinkVoidAndRefundEvents(t *testing.T) {
-	h := reportingHarness(t)
+	h := setupReportingTestSuite(t)
 	res := h.deliver(t, "", h.deposit(60))
 	require.Zero(t, res.Code, res.Log)
 	events := sinkEvents(t, res.Events)
@@ -56,25 +56,30 @@ func TestSinkVoidAndRefundEvents(t *testing.T) {
 		Reason: "review",
 	})
 	require.NoError(t, err)
-	require.Equal(t, []proto.Message{&types.EventVoidVetoed{
-		ID:     h.id(1),
-		Signer: h.reporterAddress(0),
-		Reason: "review",
-	}}, sinkEvents(t, result.Events))
+	require.Equal(t, []proto.Message{
+		&types.EventVoidVetoed{
+			ID:     h.id(1),
+			Signer: h.reporterAddress(0),
+			Reason: "review",
+		},
+	}, sinkEvents(t, result.Events))
 	require.NoError(t, h.resolve(t, h.id(1), types.DecisionConfirmVoid))
 	h.now = time.Unix(h.transfer(t, 1).Settlement.ChallengeEnd, 0).UTC()
 	res = h.refund(t, 1)
 	require.Zero(t, res.Code, res.Log)
-	require.Equal(t, []proto.Message{totalsEvent(h.totals(), h.state().RefundUsage.Amount), &types.EventTransferRefunded{
-		ID:     h.id(1),
-		Sender: h.sender.String(),
-		Amount: coin(60),
-	}}, sinkEvents(t, res.Events))
+	require.Equal(t, []proto.Message{
+		totalsEvent(h.totals(), h.state().RefundUsage.Amount),
+		&types.EventTransferRefunded{
+			ID:     h.id(1),
+			Sender: h.sender.String(),
+			Amount: coin(60),
+		},
+	}, sinkEvents(t, res.Events))
 	require.NoError(t, k.CheckBalance(h.ctx()))
 }
 
 func TestSinkMintAndConflictEvents(t *testing.T) {
-	h := reportingHarness(t)
+	h := setupReportingTestSuite(t)
 	res := h.deliver(t, "", h.deposit(60))
 	require.Zero(t, res.Code, res.Log)
 
@@ -86,14 +91,17 @@ func TestSinkMintAndConflictEvents(t *testing.T) {
 	require.Contains(t, sinkEvents(t, res.Events), proto.Message(&types.EventMintConfirmed{ID: h.id(1)}))
 	res = h.report(t, 0, 1, types.OutcomeVoided)
 	require.Zero(t, res.Code, res.Log)
-	require.Equal(t, []proto.Message{&types.EventReportConflict{
-		ID:       h.id(1),
-		Reporter: h.reporterAddress(0),
-	}, &types.EventOutcomeReported{
-		ID:       h.id(1),
-		Reporter: h.reporterAddress(0),
-		Outcome:  types.OutcomeVoided,
-	}}, sinkEvents(t, res.Events))
+	require.Equal(t, []proto.Message{
+		&types.EventReportConflict{
+			ID:       h.id(1),
+			Reporter: h.reporterAddress(0),
+		},
+		&types.EventOutcomeReported{
+			ID:       h.id(1),
+			Reporter: h.reporterAddress(0),
+			Outcome:  types.OutcomeVoided,
+		},
+	}, sinkEvents(t, res.Events))
 }
 
 func totalsEvent(t types.Totals, refunded sdk.Coin) *types.EventTotalsUpdated {

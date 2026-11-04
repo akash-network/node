@@ -1,4 +1,4 @@
-package app_test
+package sink_test
 
 import (
 	"fmt"
@@ -21,7 +21,7 @@ type sinkBankSnapshot struct {
 	supply   sdk.Coin
 }
 
-func captureSinkBankState(t *testing.T, h *sinkHarness, ctx sdk.Context, addresses ...sdk.AccAddress) sinkBankSnapshot {
+func captureSinkBankState(t *testing.T, h *testSuite, ctx sdk.Context, addresses ...sdk.AccAddress) sinkBankSnapshot {
 	t.Helper()
 	bank := h.a.Keepers.Cosmos.Bank
 	balances := make(map[string]sdk.Coins)
@@ -40,10 +40,12 @@ func sinkBankMessages(from, to, other sdk.AccAddress) map[string]sdk.Msg {
 	return map[string]sdk.Msg{
 		"send": banktypes.NewMsgSend(from, to, sdk.NewCoins(coin(10))),
 		"multisend": &banktypes.MsgMultiSend{
-			Inputs: []banktypes.Input{{
-				Address: from.String(),
-				Coins:   sdk.NewCoins(coin(10)),
-			}},
+			Inputs: []banktypes.Input{
+				{
+					Address: from.String(),
+					Coins:   sdk.NewCoins(coin(10)),
+				},
+			},
 			Outputs: []banktypes.Output{
 				{
 					Address: other.String(),
@@ -62,7 +64,7 @@ func TestSinkPublicBankTransfersBlocked(t *testing.T) {
 	for _, enabled := range []bool{true, false} {
 		for _, name := range []string{"send", "multisend"} {
 			t.Run(fmt.Sprintf("%s/enabled=%t", name, enabled), func(t *testing.T) {
-				h := newSinkHarness(t, nil)
+				h := setupTestSuite(t, nil)
 				res := h.deliver(t, "", h.deposit(10))
 				require.Zero(t, res.Code, res.Log)
 				p := h.params()
@@ -92,7 +94,7 @@ func TestSinkAuthzBankTransfersBlocked(t *testing.T) {
 	for _, granted := range []bool{false, true} {
 		for _, name := range []string{"send", "multisend"} {
 			t.Run(fmt.Sprintf("%s/granted=%t", name, granted), func(t *testing.T) {
-				h := newSinkHarness(t, nil)
+				h := setupTestSuite(t, nil)
 				res := h.deliver(t, "", h.deposit(10))
 				require.Zero(t, res.Code, res.Log)
 				key := h.key
@@ -146,7 +148,7 @@ func TestSinkAuthzBankTransfersBlocked(t *testing.T) {
 func TestSinkAuthzNestedDepositRejected(t *testing.T) {
 	for _, granted := range []bool{false, true} {
 		t.Run(fmt.Sprintf("granted=%t", granted), func(t *testing.T) {
-			h := newSinkHarness(t, nil)
+			h := setupTestSuite(t, nil)
 			res := h.deliver(t, "", h.deposit(10))
 			require.Zero(t, res.Code, res.Log)
 			key := h.key

@@ -1,4 +1,4 @@
-package app_test
+package sink_test
 
 import (
 	"bytes"
@@ -40,15 +40,17 @@ import (
 	sinksims "pkg.akt.dev/node/v2/x/sink/simulation"
 )
 
+const simulationChainID = "akash-sim"
+
 func newSinkSimulationApp(t *testing.T) *app.AkashApp {
 	t.Helper()
-	root := filepath.Join("..", ".cache", "sink-review-corrections", "simulation")
+	root := filepath.Join("..", "..", ".cache", "sink-review-corrections", "simulation")
 	require.NoError(t, os.MkdirAll(root, 0o700))
 	home, err := os.MkdirTemp(root, "app-")
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, os.RemoveAll(home)) })
 
-	a := app.Setup(app.WithHome(home), app.WithCheckTx(true), app.WithChainID(AppChainID))
+	a := app.Setup(app.WithHome(home), app.WithCheckTx(true), app.WithChainID(simulationChainID))
 	t.Cleanup(func() { require.NoError(t, a.Close()) })
 
 	return a
@@ -231,7 +233,7 @@ func TestSinkSimulationLifecycle(t *testing.T) {
 				require.NoError(t, err)
 				now := time.Unix(1_750_000_000, 0).UTC()
 				_, err = a.InitChain(&abci.RequestInitChain{
-					ChainId:       AppChainID,
+					ChainId:       simulationChainID,
 					Time:          now,
 					AppStateBytes: stateBytes,
 				})
@@ -253,7 +255,7 @@ func TestSinkSimulationLifecycle(t *testing.T) {
 					require.NoError(t, err)
 					ctx := a.GetContextForFinalizeBlock(nil)
 					for range 12 {
-						_, future, err := choices[r.Intn(len(choices))](r, a.BaseApp, ctx, accounts, AppChainID)
+						_, future, err := choices[r.Intn(len(choices))](r, a.BaseApp, ctx, accounts, simulationChainID)
 						require.NoError(t, err)
 						require.Empty(t, future)
 					}
@@ -266,7 +268,12 @@ func TestSinkSimulationLifecycle(t *testing.T) {
 
 				t.Logf("seed=%d run=%d operations=%v noops=%v", seed, run, counts, noops)
 
-				for _, msg := range []sdk.Msg{&types.MsgSink{}, &types.MsgReportOutcome{}, &types.MsgRequestVoid{}, &types.MsgFinalizeRefund{}} {
+				for _, msg := range []sdk.Msg{
+					&types.MsgSink{},
+					&types.MsgReportOutcome{},
+					&types.MsgRequestVoid{},
+					&types.MsgFinalizeRefund{},
+				} {
 					require.Positive(t, counts[sdk.MsgTypeURL(msg)], "operation never executed: %T", msg)
 				}
 
@@ -350,7 +357,7 @@ func assertSinkSimulationImport(t *testing.T, a *app.AkashApp, ctx sdk.Context, 
 	require.NoError(t, err)
 	restored := newSinkSimulationApp(t)
 	_, err = restored.InitChain(&abci.RequestInitChain{
-		ChainId:       AppChainID,
+		ChainId:       simulationChainID,
 		Time:          ctx.BlockTime(),
 		InitialHeight: exported.Height,
 		AppStateBytes: exported.AppState,
@@ -379,7 +386,7 @@ func TestSinkSimulationQuotaAndAnte(t *testing.T) {
 	require.NoError(t, err)
 	now := time.Unix(1_750_000_000, 0).UTC()
 	_, err = a.InitChain(&abci.RequestInitChain{
-		ChainId:       AppChainID,
+		ChainId:       simulationChainID,
 		Time:          now,
 		AppStateBytes: bz,
 	})
@@ -392,7 +399,7 @@ func TestSinkSimulationQuotaAndAnte(t *testing.T) {
 	ctx := a.GetContextForFinalizeBlock(nil)
 	operations := sinkSimulationOperations(t, a)
 	deposit := operations[0].Op()
-	operation, _, err := deposit(r, a.BaseApp, ctx, accounts, AppChainID)
+	operation, _, err := deposit(r, a.BaseApp, ctx, accounts, simulationChainID)
 	require.NoError(t, err)
 	require.True(t, operation.OK, operation.Comment)
 	var msg types.MsgSink
@@ -405,7 +412,7 @@ func TestSinkSimulationQuotaAndAnte(t *testing.T) {
 	account, found := simtypes.FindAccount(accounts, owner)
 	require.True(t, found)
 	acc := a.Keepers.Cosmos.Acct.GetAccount(ctx, owner)
-	tx, err := simtestutil.GenSignedMockTx(r, a.TxConfig(), []sdk.Msg{&msg, &msg}, nil, simtestutil.DefaultGenTxGas, AppChainID, []uint64{acc.GetAccountNumber()}, []uint64{acc.GetSequence()}, account.PrivKey)
+	tx, err := simtestutil.GenSignedMockTx(r, a.TxConfig(), []sdk.Msg{&msg, &msg}, nil, simtestutil.DefaultGenTxGas, simulationChainID, []uint64{acc.GetAccountNumber()}, []uint64{acc.GetSequence()}, account.PrivKey)
 	require.NoError(t, err)
 	_, _, err = a.SimDeliver(a.TxConfig().TxEncoder(), tx)
 	require.ErrorIs(t, err, sdkerrors.ErrInvalidRequest)
@@ -416,7 +423,7 @@ func TestSinkSimulationQuotaAndAnte(t *testing.T) {
 
 	completed := 1
 	for ; completed < 300; completed++ {
-		operation, _, err = deposit(r, a.BaseApp, ctx, accounts, AppChainID)
+		operation, _, err = deposit(r, a.BaseApp, ctx, accounts, simulationChainID)
 		require.NoError(t, err)
 
 		if !operation.OK {
@@ -440,7 +447,7 @@ func TestSinkSimulationQuotaAndAnte(t *testing.T) {
 
 	msg.Amount = params.MaxAmountPerTransfer
 	acc = a.Keepers.Cosmos.Acct.GetAccount(ctx, owner)
-	tx, err = simtestutil.GenSignedMockTx(r, a.TxConfig(), []sdk.Msg{&msg}, nil, simtestutil.DefaultGenTxGas, AppChainID, []uint64{acc.GetAccountNumber()}, []uint64{acc.GetSequence()}, account.PrivKey)
+	tx, err = simtestutil.GenSignedMockTx(r, a.TxConfig(), []sdk.Msg{&msg}, nil, simtestutil.DefaultGenTxGas, simulationChainID, []uint64{acc.GetAccountNumber()}, []uint64{acc.GetSequence()}, account.PrivKey)
 	require.NoError(t, err)
 	_, _, err = a.SimDeliver(a.TxConfig().TxEncoder(), tx)
 	require.Error(t, err)
@@ -466,7 +473,7 @@ func TestSinkSimulationQuotaAndAnte(t *testing.T) {
 	require.Equal(t, quota.Epoch+1, rolled.Epoch)
 	require.True(t, rolled.SendUsage.Amount.IsZero())
 	require.Equal(t, quota.Totals, rolled.Totals)
-	operation, _, err = deposit(r, a.BaseApp, ctx, accounts, AppChainID)
+	operation, _, err = deposit(r, a.BaseApp, ctx, accounts, simulationChainID)
 	require.NoError(t, err)
 	require.True(t, operation.OK, operation.Comment)
 	after, err = a.Keepers.Akash.Sink.ExportGenesis(ctx)
@@ -525,7 +532,7 @@ func TestSinkSimulationFromSeed(t *testing.T) {
 				InitialBlockHeight: 1,
 				NumBlocks:          8,
 				BlockSize:          20,
-				ChainID:            AppChainID,
+				ChainID:            simulationChainID,
 				Commit:             true,
 				Lean:               true,
 			}

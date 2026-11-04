@@ -1,4 +1,4 @@
-package app_test
+package sink_test
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 )
 
 func TestSinkOpenTransfersFollowSettlement(t *testing.T) {
-	h := reportingHarness(t)
+	h := setupReportingTestSuite(t)
 	for i := 0; i < 3; i++ {
 		res := h.deliver(t, "", h.deposit(10))
 		require.Zero(t, res.Code, res.Log)
@@ -43,7 +43,7 @@ func TestSinkOpenTransfersFollowSettlement(t *testing.T) {
 }
 
 func TestSinkHistoricalPagesAndChronologicalDiscovery(t *testing.T) {
-	h := newSinkHarness(t, nil)
+	h := setupTestSuite(t, nil)
 	for i := 0; i < 3; i++ {
 		res := h.deliver(t, "", h.deposit(10))
 		require.Zero(t, res.Code, res.Log)
@@ -67,21 +67,27 @@ func TestSinkHistoricalPagesAndChronologicalDiscovery(t *testing.T) {
 		return &out
 	}
 
-	page := query(&types.QueryTransfersRequest{Pagination: &sdkquery.PageRequest{Limit: 2}}, height)
+	page := query(&types.QueryTransfersRequest{
+		Pagination: &sdkquery.PageRequest{Limit: 2},
+	}, height)
 	require.Len(t, page.Transfers, 2)
 	require.NotEmpty(t, page.Pagination.NextKey)
 	res := h.depositFrom(t, h.reporters[4], 10)
 	require.Zero(t, res.Code, res.Log)
-	next := query(&types.QueryTransfersRequest{Pagination: &sdkquery.PageRequest{
-		Key:   page.Pagination.NextKey,
-		Limit: 2,
-	}}, height)
+	next := query(&types.QueryTransfersRequest{
+		Pagination: &sdkquery.PageRequest{
+			Key:   page.Pagination.NextKey,
+			Limit: 2,
+		},
+	}, height)
 	require.Len(t, next.Transfers, 1)
 	require.Empty(t, next.Pagination.NextKey)
-	current := query(&types.QueryTransfersRequest{Pagination: &sdkquery.PageRequest{
-		Key:   page.Pagination.NextKey,
-		Limit: 2,
-	}}, h.height)
+	current := query(&types.QueryTransfersRequest{
+		Pagination: &sdkquery.PageRequest{
+			Key:   page.Pagination.NextKey,
+			Limit: 2,
+		},
+	}, h.height)
 	require.Len(t, current.Transfers, 2)
 	require.Equal(t, h.id(4), current.Transfers[1].ID)
 	latest := query(&types.QueryTransfersRequest{}, h.height)
@@ -98,7 +104,7 @@ func TestSinkHistoricalPagesAndChronologicalDiscovery(t *testing.T) {
 }
 
 func TestSinkPrunedSnapshotFails(t *testing.T) {
-	h := newSinkHarness(t, nil)
+	h := setupTestSuite(t, nil)
 	h.a.CommitMultiStore().SetPruning(pruningtypes.NewPruningOptions(pruningtypes.PruningEverything))
 	h.a.CommitMultiStore().SetIAVLSyncPruning(true)
 
@@ -107,7 +113,9 @@ func TestSinkPrunedSnapshotFails(t *testing.T) {
 		require.Zero(t, res.Code, res.Log)
 	}
 
-	data, err := (&types.QueryTransfersRequest{Pagination: &sdkquery.PageRequest{Limit: 1}}).Marshal()
+	data, err := (&types.QueryTransfersRequest{
+		Pagination: &sdkquery.PageRequest{Limit: 1},
+	}).Marshal()
 	require.NoError(t, err)
 	require.Eventually(t, func() bool {
 		response, err := h.a.Query(context.Background(), &abci.RequestQuery{

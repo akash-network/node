@@ -1,4 +1,4 @@
-package app_test
+package sink_test
 
 import (
 	"testing"
@@ -13,7 +13,7 @@ import (
 	types "pkg.akt.dev/go/node/sink/v1"
 )
 
-func (h *sinkHarness) depositFrom(t *testing.T, key *secp256k1.PrivKey, amount int64) *abci.ExecTxResult {
+func (h *testSuite) depositFrom(t *testing.T, key *secp256k1.PrivKey, amount int64) *abci.ExecTxResult {
 	return h.deliverBytes(t, h.txFrom(t, key, "", &types.MsgSink{
 		DestType: types.DestTypeSolana,
 		Dest:     base58.Encode(h.recipient[:]),
@@ -23,10 +23,10 @@ func (h *sinkHarness) depositFrom(t *testing.T, key *secp256k1.PrivKey, amount i
 }
 
 func TestSinkUnlimitedAccountRetainsUsage(t *testing.T) {
-	h := newSinkHarness(t, func(g *types.GenesisState) {
-		g.Params.MaxAmountPerTransfer = coin(10)
-		g.Params.MaxEpochAmountPerAccount = coin(0)
-		g.Params.MaxTransferAmountPerEpoch = coin(25)
+	h := setupTestSuite(t, func(p *types.Params) {
+		p.MaxAmountPerTransfer = coin(10)
+		p.MaxEpochAmountPerAccount = coin(0)
+		p.MaxTransferAmountPerEpoch = coin(25)
 	})
 
 	for range 2 {
@@ -53,11 +53,11 @@ func TestSinkUnlimitedAccountRetainsUsage(t *testing.T) {
 }
 
 func TestSinkEpochAmountPerAccount(t *testing.T) {
-	h := newSinkHarness(t, func(g *types.GenesisState) {
-		g.Params.MinAmountPerTransfer = coin(10)
-		g.Params.MaxAmountPerTransfer = coin(100)
-		g.Params.MaxEpochAmountPerAccount = coin(100)
-		g.Params.MaxTransferAmountPerEpoch = coin(200)
+	h := setupTestSuite(t, func(p *types.Params) {
+		p.MinAmountPerTransfer = coin(10)
+		p.MaxAmountPerTransfer = coin(100)
+		p.MaxEpochAmountPerAccount = coin(100)
+		p.MaxTransferAmountPerEpoch = coin(200)
 	})
 
 	res := h.deliver(t, "", h.deposit(60))

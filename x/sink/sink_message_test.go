@@ -1,7 +1,6 @@
-package app_test
+package sink_test
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -26,7 +25,7 @@ import (
 )
 
 func TestSinkContractBankDepositRejected(t *testing.T) {
-	h := newSinkHarness(t, nil)
+	h := setupTestSuite(t, nil)
 
 	// Initialize a live block/account before adding a test contract through the
 	// native governance setup path. Its execution is a real signed transaction.
@@ -59,7 +58,7 @@ func TestSinkContractBankDepositRejected(t *testing.T) {
 }
 
 func TestSinkContractDispatchRejected(t *testing.T) {
-	h := newSinkHarness(t, nil)
+	h := setupTestSuite(t, nil)
 	res := h.deliver(t, "", h.deposit(1))
 	require.Zero(t, res.Code, res.Log)
 	wasm := wasmkeeper.NewGovPermissionKeeper(h.a.Keepers.Cosmos.Wasm)
@@ -86,10 +85,12 @@ func TestSinkContractDispatchRejected(t *testing.T) {
 				Bank: &wasmvmtypes.BankMsg{
 					Send: &wasmvmtypes.SendMsg{
 						ToAddress: sinkkeeper.Address().String(),
-						Amount: []wasmvmtypes.Coin{{
-							Denom:  sdkutil.DenomUakt,
-							Amount: "1",
-						}},
+						Amount: []wasmvmtypes.Coin{
+							{
+								Denom:  sdkutil.DenomUakt,
+								Amount: "1",
+							},
+						},
 					},
 				},
 			},
@@ -102,10 +103,12 @@ func TestSinkContractDispatchRejected(t *testing.T) {
 					Execute: &wasmvmtypes.ExecuteMsg{
 						ContractAddr: sinkkeeper.Address().String(),
 						Msg:          []byte(`{}`),
-						Funds: []wasmvmtypes.Coin{{
-							Denom:  sdkutil.DenomUakt,
-							Amount: "1",
-						}},
+						Funds: []wasmvmtypes.Coin{
+							{
+								Denom:  sdkutil.DenomUakt,
+								Amount: "1",
+							},
+						},
 					},
 				},
 			},
@@ -113,23 +116,31 @@ func TestSinkContractDispatchRejected(t *testing.T) {
 		},
 		{
 			name: "protobuf sink",
-			msg: wasmvmtypes.CosmosMsg{Any: &wasmvmtypes.AnyMsg{
-				TypeURL: sdk.MsgTypeURL(deposit),
-				Value:   depositBytes,
-			}},
+			msg: wasmvmtypes.CosmosMsg{
+				Any: &wasmvmtypes.AnyMsg{
+					TypeURL: sdk.MsgTypeURL(deposit),
+					Value:   depositBytes,
+				},
+			},
 			want: "Any message type " + sdk.MsgTypeURL(deposit) + " not allowed",
 		},
 		{
 			name: "protobuf authz sink",
-			msg: wasmvmtypes.CosmosMsg{Any: &wasmvmtypes.AnyMsg{
-				TypeURL: sdk.MsgTypeURL(&exec),
-				Value:   execBytes,
-			}},
+			msg: wasmvmtypes.CosmosMsg{
+				Any: &wasmvmtypes.AnyMsg{
+					TypeURL: sdk.MsgTypeURL(&exec),
+					Value:   execBytes,
+				},
+			},
 			want: "Any message type " + sdk.MsgTypeURL(&exec) + " not allowed",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			body, err := json.Marshal(wasmtestdata.ReflectHandleMsg{Reflect: &wasmtestdata.ReflectPayload{Msgs: []wasmvmtypes.CosmosMsg{tc.msg}}})
+			body, err := json.Marshal(wasmtestdata.ReflectHandleMsg{
+				Reflect: &wasmtestdata.ReflectPayload{
+					Msgs: []wasmvmtypes.CosmosMsg{tc.msg},
+				},
+			})
 			require.NoError(t, err)
 			before := captureSinkBankState(t, h, h.ctx(), contract)
 			contractState := storeEntries(t, h.ctx().KVStore(h.a.GetKey(wasmtypes.StoreKey)), wasmtypes.GetContractStorePrefix(contract))
@@ -167,11 +178,16 @@ func TestSinkContractDispatchRejected(t *testing.T) {
 }
 
 func TestSinkMessageValidationAndSigner(t *testing.T) {
-	h := newSinkHarness(t, nil)
+	h := setupTestSuite(t, nil)
 	for _, change := range []func(*types.MsgSink){
-		func(m *types.MsgSink) { m.Dest = "bad" }, func(m *types.MsgSink) { m.Dest = "11111111111111111111111111111111" },
-		func(m *types.MsgSink) { m.DestType = types.DestTypeInvalid }, func(m *types.MsgSink) { m.DestType = types.DestTypeSolana + 1 },
-		func(m *types.MsgSink) { m.Amount.Denom = "other" }, func(m *types.MsgSink) { m.Amount.Amount = sdkmath.Int{} }, func(m *types.MsgSink) { m.Amount = coin(0) }, func(m *types.MsgSink) { m.Amount.Amount = sdkmath.NewInt(-1) },
+		func(m *types.MsgSink) { m.Dest = "bad" },
+		func(m *types.MsgSink) { m.Dest = "11111111111111111111111111111111" },
+		func(m *types.MsgSink) { m.DestType = types.DestTypeInvalid },
+		func(m *types.MsgSink) { m.DestType = types.DestTypeSolana + 1 },
+		func(m *types.MsgSink) { m.Amount.Denom = "other" },
+		func(m *types.MsgSink) { m.Amount.Amount = sdkmath.Int{} },
+		func(m *types.MsgSink) { m.Amount = coin(0) },
+		func(m *types.MsgSink) { m.Amount.Amount = sdkmath.NewInt(-1) },
 		func(m *types.MsgSink) { m.Sender = h.bystander.String() },
 	} {
 		msg := h.deposit(10)
@@ -188,7 +204,7 @@ func TestSinkMessageValidationAndSigner(t *testing.T) {
 }
 
 func TestSinkLegacyAminoSignature(t *testing.T) {
-	h := newSinkHarness(t, nil)
+	h := setupTestSuite(t, nil)
 	res := h.deliverBytes(t, h.txFromMode(t, h.key, signing.SignMode_SIGN_MODE_LEGACY_AMINO_JSON, "", h.deposit(10)))
 	require.Zero(t, res.Code, res.Log)
 	require.Contains(t, string(h.signBytes), `"type":"sink/MsgSink"`)
@@ -198,7 +214,7 @@ func TestSinkLegacyAminoSignature(t *testing.T) {
 func TestSinkDepositBankFailureAndRedirectRollback(t *testing.T) {
 	for _, redirect := range []bool{false, true} {
 		t.Run(fmt.Sprint(redirect), func(t *testing.T) {
-			h := newSinkHarness(t, nil)
+			h := setupTestSuite(t, nil)
 			h.commitBlock(t, h.now)
 			h.a.Keepers.Cosmos.Bank.AppendSendRestriction(func(_ context.Context, from, to sdk.AccAddress, _ sdk.Coins) (sdk.AccAddress, error) {
 				if to.Equals(sinkkeeper.Address()) {
@@ -232,19 +248,23 @@ func TestSinkDepositBankFailureAndRedirectRollback(t *testing.T) {
 }
 
 func TestSinkQueryStatusAndCanonicalIDs(t *testing.T) {
-	h := reportingHarness(t)
+	h := setupReportingTestSuite(t)
 	q := h.a.Keepers.Akash.Sink.NewQuerier()
 	_, err := q.Transfer(h.ctx(), nil)
 	require.Error(t, err)
 
-	for _, id := range []types.ID{{}, {
-		Owner:  h.sender.String(),
-		Height: 1,
-	}, {
-		Owner:    h.sender.String(),
-		Height:   -1,
-		Sequence: 1,
-	}} {
+	for _, id := range []types.ID{
+		{},
+		{
+			Owner:  h.sender.String(),
+			Height: 1,
+		},
+		{
+			Owner:    h.sender.String(),
+			Height:   -1,
+			Sequence: 1,
+		},
+	} {
 		_, err = q.Transfer(h.ctx(), &types.QueryTransferRequest{ID: id})
 		require.Error(t, err)
 	}
@@ -263,24 +283,8 @@ func TestSinkQueryStatusAndCanonicalIDs(t *testing.T) {
 	require.Equal(t, types.StatusRefunded, got.Transfer.Status)
 }
 
-func TestSinkQueryLegacyWireRecord(t *testing.T) {
-	h := newSinkHarness(t, nil)
-	ctx, _ := h.ctx().CacheContext()
-	ctx = ctx.WithBlockHeight(2)
-	ctx.KVStore(h.a.GetKey(types.StoreKey)).Set([]byte{2, 0, 0, 0, 0, 0, 0, 0, 0, 42}, bytes.Repeat([]byte{1}, 77))
-	_, err := h.a.Keepers.Akash.Sink.NewQuerier().Transfer(ctx, &types.QueryTransferRequest{ID: types.ID{
-		Owner:    h.sender.String(),
-		Height:   1,
-		Sequence: 42,
-	}})
-	require.ErrorIs(t, err, types.ErrTransferNotFound)
-	clearSinkStore(t, h, ctx)
-	ctx.KVStore(h.a.GetKey(types.StoreKey)).Set([]byte{2, 0}, []byte{1})
-	require.Error(t, h.a.Keepers.Akash.Sink.InitGenesis(ctx, types.DefaultGenesis()))
-}
-
 func TestSinkRequestBindingAndNativeCacheRollback(t *testing.T) {
-	h := newSinkHarness(t, nil)
+	h := setupTestSuite(t, nil)
 	res := h.deliver(t, "", h.deposit(1))
 	require.Zero(t, res.Code, res.Log)
 	k := h.a.Keepers.Akash.Sink

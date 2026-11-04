@@ -1,4 +1,4 @@
-package app_test
+package sink_test
 
 import (
 	"bytes"
@@ -42,12 +42,12 @@ const sinkUpgradeContract = "akash1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfn
 
 // preSinkLedger emulates the ledger just before the sink upgrade: no sink store
 // contents and no account at the sink address.
-func preSinkLedger(t *testing.T) (*sinkHarness, sdk.Context) {
+func preSinkLedger(t *testing.T) (*testSuite, sdk.Context) {
 	t.Helper()
-	h := newSinkHarness(t, func(g *sinktypes.GenesisState) {
-		g.Params.Enabled = false
-		g.Params.Reporters = nil
-		g.Params.ReportersThreshold = sdkmath.LegacyMustNewDecFromStr("0.75")
+	h := setupTestSuite(t, func(p *sinktypes.Params) {
+		p.Enabled = false
+		p.Reporters = nil
+		p.ReportersThreshold = sdkmath.LegacyMustNewDecFromStr("0.75")
 	})
 
 	ctx, _ := h.ctx().CacheContext()
@@ -66,14 +66,17 @@ func preSinkLedger(t *testing.T) (*sinkHarness, sdk.Context) {
 	}
 
 	ak := h.a.Keepers.Cosmos.Acct
-	ak.RemoveAccount(ctx, ak.GetAccount(ctx, sinkkeeper.Address()))
+	if account := ak.GetAccount(ctx, sinkkeeper.Address()); account != nil {
+		ak.RemoveAccount(ctx, account)
+	}
+	require.Nil(t, ak.GetAccount(ctx, sinkkeeper.Address()))
 	require.True(t, h.a.Keepers.Cosmos.Bank.GetAllBalances(ctx, sinkkeeper.Address()).IsZero())
 	installPreUpgradeContract(t, h, ctx)
 	ctx = ctx.WithEventManager(sdk.NewEventManager())
 	return h, ctx
 }
 
-func installPreUpgradeContract(t *testing.T, h *sinkHarness, ctx sdk.Context) {
+func installPreUpgradeContract(t *testing.T, h *testSuite, ctx sdk.Context) {
 	t.Helper()
 	wasm := h.a.Keepers.Cosmos.Wasm
 	codeID, _, err := wasmkeeper.NewGovPermissionKeeper(wasm).Create(ctx, h.sender, wasmtestdata.HackatomContractWasm(), &wasmtypes.AllowNobody)
@@ -82,33 +85,39 @@ func installPreUpgradeContract(t *testing.T, h *sinkHarness, ctx sdk.Context) {
 	created := &wasmtypes.AbsoluteTxPosition{BlockHeight: 1}
 	_, err = wasmkeeper.InitGenesis(ctx, wasm, wasmtypes.GenesisState{
 		Params: wasm.GetParams(ctx),
-		Contracts: []wasmtypes.Contract{{
-			ContractAddress: sinkUpgradeContract,
-			ContractInfo: wasmtypes.ContractInfo{
-				CodeID:  codeID,
-				Creator: h.sender.String(),
-				Admin:   wasm.GetAuthority(),
-				Label:   "pre-upgrade Pyth state",
-				Created: created,
+		Contracts: []wasmtypes.Contract{
+			{
+				ContractAddress: sinkUpgradeContract,
+				ContractInfo: wasmtypes.ContractInfo{
+					CodeID:  codeID,
+					Creator: h.sender.String(),
+					Admin:   wasm.GetAuthority(),
+					Label:   "pre-upgrade Pyth state",
+					Created: created,
+				},
+				ContractState: []wasmtypes.Model{
+					{
+						Key:   []byte("config"),
+						Value: config,
+					},
+				},
+				ContractCodeHistory: []wasmtypes.ContractCodeHistoryEntry{
+					{
+						Operation: wasmtypes.ContractCodeHistoryOperationTypeInit,
+						CodeID:    codeID,
+						Updated:   created,
+						Msg:       []byte("{}"),
+					},
+				},
 			},
-			ContractState: []wasmtypes.Model{{
-				Key:   []byte("config"),
-				Value: config,
-			}},
-			ContractCodeHistory: []wasmtypes.ContractCodeHistoryEntry{{
-				Operation: wasmtypes.ContractCodeHistoryOperationTypeInit,
-				CodeID:    codeID,
-				Updated:   created,
-				Msg:       []byte("{}"),
-			}},
-		}},
+		},
 	})
 	require.NoError(t, err)
 	account := h.a.Keepers.Cosmos.Acct.NewAccountWithAddress(ctx, sdk.MustAccAddressFromBech32(sinkUpgradeContract))
 	h.a.Keepers.Cosmos.Acct.SetAccount(ctx, account)
 }
 
-func seedPreUpgradeBalances(t *testing.T, h *sinkHarness, ctx sdk.Context, from, to sdk.AccAddress, coins sdk.Coins) {
+func seedPreUpgradeBalances(t *testing.T, h *testSuite, ctx sdk.Context, from, to sdk.AccAddress, coins sdk.Coins) {
 	t.Helper()
 	bank, ok := h.a.Keepers.Cosmos.Bank.(bankkeeper.BaseKeeper)
 	require.True(t, ok)
@@ -122,7 +131,7 @@ func seedPreUpgradeBalances(t *testing.T, h *sinkHarness, ctx sdk.Context, from,
 	}
 }
 
-func runSinkUpgradeWithInfo(t *testing.T, h *sinkHarness, ctx sdk.Context, info string) error {
+func runSinkUpgradeWithInfo(t *testing.T, h *testSuite, ctx sdk.Context, info string) error {
 	t.Helper()
 	ctor := utypes.GetUpgradesList()[sinkupgrade.UpgradeName]
 	require.NotNil(t, ctor)
@@ -166,12 +175,12 @@ func cosmovisorInfo(t *testing.T) string {
 	return string(bz)
 }
 
-func runSinkUpgrade(t *testing.T, h *sinkHarness, ctx sdk.Context) error {
+func runSinkUpgrade(t *testing.T, h *testSuite, ctx sdk.Context) error {
 	t.Helper()
 	return runSinkUpgradeWithInfo(t, h, ctx, cosmovisorInfo(t))
 }
 
-func communityPool(t *testing.T, h *sinkHarness, ctx sdk.Context) sdk.DecCoins {
+func communityPool(t *testing.T, h *testSuite, ctx sdk.Context) sdk.DecCoins {
 	t.Helper()
 	pool, err := h.a.Keepers.Cosmos.Distr.FeePool.Get(ctx)
 	require.NoError(t, err)
@@ -179,7 +188,7 @@ func communityPool(t *testing.T, h *sinkHarness, ctx sdk.Context) sdk.DecCoins {
 	return pool.CommunityPool
 }
 
-func requireInstalled(t *testing.T, h *sinkHarness, ctx sdk.Context, accountNumber uint64) {
+func requireInstalled(t *testing.T, h *testSuite, ctx sdk.Context, accountNumber uint64) {
 	t.Helper()
 	k := h.a.Keepers.Akash.Sink
 	acc := h.a.Keepers.Cosmos.Acct.GetAccount(ctx, sinkkeeper.Address())
@@ -259,10 +268,12 @@ func TestSinkUpgradeSweepsDustAndKeepsAccountNumber(t *testing.T) {
 	require.Equal(t, poolBefore.Add(sdk.NewDecCoinsFromCoins(dust...)...), communityPool(t, h, ctx))
 	require.Equal(t, supply, h.a.Keepers.Cosmos.Bank.GetSupply(ctx, sdkutil.DenomUakt))
 	require.Equal(t, otherSupply, h.a.Keepers.Cosmos.Bank.GetSupply(ctx, "other"))
-	require.Equal(t, []proto.Message{&sinktypes.EventPreexistingBalanceMoved{
-		Amount:    dust,
-		Recipient: authtypes.NewModuleAddress(distrtypes.ModuleName).String(),
-	}}, sinkEvents(t, ctx.EventManager().ABCIEvents()))
+	require.Equal(t, []proto.Message{
+		&sinktypes.EventPreexistingBalanceMoved{
+			Amount:    dust,
+			Recipient: authtypes.NewModuleAddress(distrtypes.ModuleName).String(),
+		},
+	}, sinkEvents(t, ctx.EventManager().ABCIEvents()))
 }
 
 func TestSinkUpgradeConvertsEmptyBaseAccount(t *testing.T) {
@@ -297,7 +308,8 @@ func TestSinkUpgradeCleanAddressAndRestrictions(t *testing.T) {
 	h, ctx := preSinkLedger(t)
 	poolBefore := communityPool(t, h, ctx)
 	require.NoError(t, runSinkUpgrade(t, h, ctx))
-	acc := h.a.Keepers.Cosmos.Acct.GetAccount(ctx, sinkkeeper.Address())
+	require.NotNil(t, h.a.Keepers.Cosmos.Acct.GetAccount(ctx, sinkkeeper.Address()))
+	acc := h.a.Keepers.Cosmos.Acct.GetModuleAccount(ctx, sinktypes.ModuleName)
 	require.NotNil(t, acc)
 	requireInstalled(t, h, ctx, acc.GetAccountNumber())
 	require.Equal(t, poolBefore, communityPool(t, h, ctx))
@@ -342,7 +354,8 @@ func TestSinkUpgradePlanInfo(t *testing.T) {
 			h, ctx := preSinkLedger(t)
 			before := h.a.Keepers.Cosmos.Bank.GetAllBalances(ctx, h.bystander)
 			require.NoError(t, runSinkUpgradeWithInfo(t, h, ctx, info))
-			acc := h.a.Keepers.Cosmos.Acct.GetAccount(ctx, sinkkeeper.Address())
+			require.NotNil(t, h.a.Keepers.Cosmos.Acct.GetAccount(ctx, sinkkeeper.Address()))
+			acc := h.a.Keepers.Cosmos.Acct.GetModuleAccount(ctx, sinktypes.ModuleName)
 			require.NotNil(t, acc)
 			requireInstalled(t, h, ctx, acc.GetAccountNumber())
 			require.Equal(t, before, h.a.Keepers.Cosmos.Bank.GetAllBalances(ctx, h.bystander))
@@ -389,13 +402,13 @@ func TestSinkUpgradePreservesNativeEpoch(t *testing.T) {
 		k := h.a.Keepers.Akash.Sink
 		exported, err := k.ExportGenesis(ctx)
 		require.NoError(t, err)
-		require.Equal(t, sinktypes.DefaultGenesis(), exported)
+		require.Equal(t, sinkUpgradeGenesis(), exported)
 		q := k.NewQuerier()
 
 		state, err := q.State(ctx, nil)
 		require.NoError(t, err)
 
-		pResp, err := q.Params(ctx, nil)
+		pResp, err := q.Params(ctx, &sinktypes.QueryParamsRequest{})
 		require.NoError(t, err)
 
 		require.EqualValues(t, native.CurrentEpoch, state.Epoch)
@@ -426,30 +439,44 @@ func TestSinkUpgradeRejectsUnusableNativeEpoch(t *testing.T) {
 				require.NoError(t, epochs.AddEpoch(ctx, native))
 			}
 
-			before := sinkUpgradeStores(t, h, ctx)
-			events := ctx.EventManager().Events()
-			var failure any
-			func() {
-				defer func() { failure = recover() }()
-				_ = runSinkUpgrade(t, h, ctx)
-			}()
-
-			err, ok := failure.(error)
-			require.True(t, ok, "expected genesis dependency failure, got %v", failure)
-
+			before, err := epochs.ExportGenesis(ctx)
+			require.NoError(t, err)
+			stores := sinkUpgradeStores(t, h, ctx)
+			ctx.EventManager().EmitEvent(sdk.NewEvent("before_upgrade"))
+			events := append(sdk.Events(nil), ctx.EventManager().Events()...)
+			want := sinktypes.ErrInvalidClock.Wrap("invalid quota epoch")
 			if name == "missing" {
-				require.ErrorIs(t, err, collections.ErrNotFound)
-			} else {
-				require.ErrorIs(t, err, sinktypes.ErrInvalidClock)
+				_, want = epochs.GetEpoch(ctx, "day")
+				require.Error(t, want)
 			}
 
-			require.Equal(t, before, sinkUpgradeStores(t, h, ctx))
+			require.PanicsWithError(t, want.Error(), func() {
+				_ = runSinkUpgrade(t, h, ctx)
+			})
+			after, err := epochs.ExportGenesis(ctx)
+			require.NoError(t, err)
+			require.Equal(t, before, after)
+			require.Equal(t, stores, sinkUpgradeStores(t, h, ctx))
 			require.Equal(t, events, ctx.EventManager().Events())
+
 		})
 	}
 }
 
-func sinkUpgradeOrphanPayment(t *testing.T, h *sinkHarness, ctx sdk.Context) escrowtypes.Payment {
+func sinkUpgradeGenesis() *sinktypes.GenesisState {
+	g := sinktypes.DefaultGenesis()
+	g.PolicySequence = 1
+	g.Policies = []sinktypes.ReporterPolicy{
+		{
+			Version:   1,
+			Threshold: g.Params.ReportersThreshold,
+		},
+	}
+
+	return g
+}
+
+func sinkUpgradeOrphanPayment(t *testing.T, h *testSuite, ctx sdk.Context) escrowtypes.Payment {
 	t.Helper()
 	id := markettypes.LeaseID{
 		Owner:    h.sender.String(),
@@ -493,10 +520,10 @@ func TestUpgradeRegistrationAndVersions(t *testing.T) {
 	require.Equal(t, payment, got)
 	require.False(t, ctx.KVStore(h.a.Keepers.Akash.Escrow.StoreKey()).Has(escrowkeeper.BuildPaymentsKey(escrowtypes.StateOpen, &payment.ID)))
 	require.Contains(t, ctx.EventManager().Events(), sdk.NewEvent("escrow_orphan_payments_repaired",
-		sdk.NewAttribute("closed_payments", "1"), sdk.NewAttribute("missing_leases", "0")))
+		sdk.NewAttribute("closed_payments", "1")))
 }
 
-func sinkUpgradeStores(t *testing.T, h *sinkHarness, ctx sdk.Context) map[string]map[string]string {
+func sinkUpgradeStores(t *testing.T, h *testSuite, ctx sdk.Context) map[string]map[string]string {
 	t.Helper()
 	stores := make(map[string]map[string]string)
 	for name, key := range h.a.GetKVStoreKey() {
@@ -556,6 +583,7 @@ func TestSinkUpgradeWasmFailureRollsBack(t *testing.T) {
 			require.NoError(t, runSinkUpgrade(t, h, ctx))
 			acc := ak.GetAccount(ctx, sinkkeeper.Address())
 			if account == "absent" {
+				require.NotNil(t, acc)
 				accountNumber = acc.GetAccountNumber()
 			} else {
 				require.Equal(t, uint64(9), acc.GetSequence())

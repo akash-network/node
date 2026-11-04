@@ -1,4 +1,4 @@
-package app_test
+package sink_test
 
 import (
 	"testing"
@@ -19,11 +19,11 @@ func TestSinkIndependentSendingCaps(t *testing.T) {
 		"aggregate with unlimited account": {0, 5, sinktypes.ErrSendCapReached.ABCICode()},
 	} {
 		t.Run(name, func(t *testing.T) {
-			h := newSinkHarness(t, func(g *sinktypes.GenesisState) {
-				g.Params.MaxAmountPerTransfer = coin(10)
-				g.Params.MaxEpochAmountPerAccount = coin(tc.account)
-				g.Params.MaxTransferAmountPerEpoch = coin(tc.total)
-				g.Params.ReportersThreshold = sdkmath.LegacyMustNewDecFromStr("0.6")
+			h := setupTestSuite(t, func(p *sinktypes.Params) {
+				p.MaxAmountPerTransfer = coin(10)
+				p.MaxEpochAmountPerAccount = coin(tc.account)
+				p.MaxTransferAmountPerEpoch = coin(tc.total)
+				p.ReportersThreshold = sdkmath.LegacyMustNewDecFromStr("0.6")
 			})
 			before := h.totals()
 			res := h.deliver(t, "", h.deposit(6))

@@ -22,8 +22,8 @@ func TestWithdrawLeaseState(t *testing.T) {
 		{mv1.LeaseActive, true},
 		{mv1.LeaseReclaiming, true},
 		{mv1.LeaseClosed, false},
-		{mv1.LeaseInsufficientFunds, false},
-		{mv1.LeaseStateInvalid, false},
+		{mv1.LeaseInsufficientFunds, true},
+		{mv1.LeaseStateInvalid, true},
 	} {
 		t.Run(tc.state.String(), func(t *testing.T) {
 			suite := setupTestSuite(t)
@@ -36,8 +36,7 @@ func TestWithdrawLeaseState(t *testing.T) {
 			lease.State = tc.state
 			require.NoError(t, suite.MarketKeeper().SaveLease(ctx, lease))
 
-			// Leave the payment open to verify that the market guard prevents
-			// settlement even when historical escrow and lease states disagree.
+			// The market guard blocks closed leases; escrow handles the remaining states.
 			pid := lid.ToEscrowPaymentID()
 			beforePayment, err := suite.EscrowKeeper().GetPayment(ctx, pid)
 			require.NoError(t, err)

@@ -30,11 +30,11 @@ fi
 
 (
   cd "$node_repo"
-  go test "${go_args[@]}" ./app -run '^TestSinkSignedDepositAndProof$' -count=1 -v
+  go test "${go_args[@]}" ./x/sink -run '^TestSinkSignedDepositAndProof$' -count=1 -v
 )
 
 npm test
 (
   cd "$node_repo"
-  go test "${go_args[@]}" ./app -run '^TestSinkAcceptsSolanaObserverReports$' -count=1 -v
+  go test "${go_args[@]}" ./x/sink -run '^TestSinkAcceptsSolanaObserverReports$' -count=1 -v
 )
