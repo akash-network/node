@@ -116,7 +116,7 @@ Canonical implementation checks include native proof vectors, program unit tests
 
 ## Limitations and operational risks
 
-- The 16,384-byte upload limit is not a bound on native settlement size. Native reporter sets are uncapped; larger policies or evidence may exceed it and prevent a governance void from reaching Solana. This remains an audit and launch decision, not a restored node/SDK reporter cap.
+- The planned deployment uses up to seven reporters. The existing 16,384-byte proof buffer bounds complete uploads; reporter-policy changes require checking the resulting proof size.
 - This layout uses a Borsh byte vector for the owner and hashed owner PDA seeds. It requires an unused Sink launch and fresh Solana namespace. It is not an in-place upgrade or a replay-safe replacement for an already operating bridge.
 
 - Governance evidence and reporter quorum are Akash trust decisions. Solana cannot prove that Akash has not refunded a transfer. Honest refund processing needs a real finalized Solana void first. A false governance confirmation can violate that assumption.

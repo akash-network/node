@@ -8,6 +8,8 @@ Run commands from `contracts/solana` unless stated otherwise.
 - [Build](#build)
 - [Deploy](#deploy)
 - [Start a Solana testnet](#start-a-solana-testnet)
+- [Code walkthrough](docs/implementation.md)
+- [Program deployment guide](docs/deploy-program.md)
 
 ## Build
 

@@ -86,9 +86,8 @@ evidence for the final release:
 - An unused native Sink module for the initial launch. This address layout changes
   every status PDA and must not replace a live bridge over already resolved
   deposits. Existing records require a separately reviewed migration.
-- A decision on settlement proof capacity: the 16,384-byte upload limit is not
-  guaranteed for uncapped native reporter sets. Exercise the complete proof for
-  the chosen policy and include larger evidence in the audit.
+- Successful mint and governance-void proofs for the planned seven-reporter
+  policy, using the existing verifier and 16,384-byte proof buffer.
 - Fresh production program IDs, proven control of the multisig vault, reviewed
   time lock and members, and successful finalized authority handover for all
   three programs. No hot service key holds upgrade authority.

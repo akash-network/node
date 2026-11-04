@@ -47,7 +47,7 @@ Solana keeps its independent per-transfer and daily mint caps. Mints submit imme
 
 ## Buffer funding and recovery
 
-The Solana upload limit is 16,384 bytes. Native reporter policy has no corresponding count limit, so this is not a proven bound on every valid native settlement. Audit and launch must address that mismatch; increasing the reporter set can create an unrelayable governance void. Test the complete proof for the proposed policy and retain the larger-policy case in the audit scope.
+The planned deployment uses up to seven reporters. Proofs use the existing 16,384-byte buffer and full native settlement verification. Check the complete proof size when changing the reporter policy.
 
 For a proof that fits, the account needs an 80-byte header plus its declared proof length. Creation allocates at most 10,240 bytes. `growProofBuffer()` funds and allocates the rest, at most one growth with the current capacity. Uploads append at most 500 bytes per transaction. Resolution requests a 256 KiB heap and the existing compute limit.
 
