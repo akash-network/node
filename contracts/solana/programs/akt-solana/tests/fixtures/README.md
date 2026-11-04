@@ -25,7 +25,7 @@ same fixture bytes. `tests/program-vectors.test.ts` checks the generated Anchor
 instruction encoding and the current status/event layout.
 
 `native_boundary_vectors.json` adds owners of 1, 20, 32 and 255 bytes and a
-13,413-byte settlement with 64 reporters whose addresses are 32 bytes. The
+1,500-byte settlement with seven reporters whose addresses are 32 bytes. The
 Solana-owned generator imports the unchanged production node key codecs and
 SDK validation/serialization. From node root, regenerate and verify with:
 

@@ -10,7 +10,7 @@ Canonical queries are `Transfer`, `Transfers`, `Disputes`, `Account`, `State`, `
 
 ## Supply the locked package
 
-The paired inputs are node `290ba7ba9520332f32087924df17c912fcb8a49e` and chain-sdk `3b977f0785eef4a5cfdd06747a8084f2cd5161ba`. The SDK package is `1.0.0-alpha.46`, built from that exact committed source with its own `npm run build` pipeline and consumed as a reviewed `.tgz` input. Version alone does not identify this prerelease build. `npm ci`
+The paired inputs are node `b5c4affa65afb2645755645199492978ff6f4ce4` and chain-sdk `3b977f0785eef4a5cfdd06747a8084f2cd5161ba`. The SDK package is `1.0.0-alpha.46`, built from that exact committed source with its own `npm run build` pipeline and consumed as a reviewed `.tgz` input. Version alone does not identify this prerelease build. `npm ci`
 verifies its integrity against `package-lock.json`; `npm run setup` never builds
 or replaces it implicitly. Production packaging must receive that same archive.
 A published version can replace this input once the matching SDK is released;
@@ -31,6 +31,6 @@ npm run typecheck
 npm run test:services
 ```
 
-The explicit package argument refreshes npm's same-version archive integrity in the lockfile. Install the same archive into the portal and compare installed package bytes in both consumers. Preserve version strings and unrelated lockfile fields. Service and program tests consume the native fixtures under `programs/akt-solana/tests/fixtures`. The node generator owns the original record/settlement vectors; the Solana-owned boundary generator calls the unchanged node codecs and SDK encoders for wider addresses and a larger reporter set. Native `RecordData` and `SettlementData` values use generated encoders.
+The explicit package argument refreshes npm's same-version archive integrity in the lockfile. Install the same archive into the portal and compare installed package bytes in both consumers. Preserve version strings and unrelated lockfile fields. Service and program tests consume the native fixtures under `programs/akt-solana/tests/fixtures`. The node generator owns the original record/settlement vectors; the Solana-owned boundary generator calls the unchanged node codecs and SDK encoders for wider addresses and the planned seven-reporter policy. Native `RecordData` and `SettlementData` values use generated encoders.
 
 Run the real-chain fixture with `npm run test:sink` after node integration is available. See [canonical launch and recovery](sink-migration-v2.md) for separate deployment namespaces, durable state and validation gates. Historical evidence does not validate this schema.

@@ -174,7 +174,7 @@ environment, select the reviewed `UPGRADE_FROM`, `UPGRADE_TO`, snapshot and
 `network-upgrade` CI job runs this harness too. It manages the old/new binaries,
 Cosmovisor and validator processes.
 
-The native [`app/sink_upgrade_test.go`](../../../app/sink_upgrade_test.go) covers
+The native [`x/sink/sink_upgrade_test.go`](../../../x/sink/sink_upgrade_test.go) covers
 Sink installation and state invariants against the registered handler. A
 populated-state upgrade and restart rehearsal remains required for release;
 component tests alone do not establish it. Solana does not need a second Go
