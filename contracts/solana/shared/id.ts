@@ -5,15 +5,22 @@ import type { Sink_ID } from "@akashnetwork/chain-sdk/private-types/akash.v1";
 
 export const MAX_UINT64 = (1n << 64n) - 1n;
 export const MAX_INT64 = (1n << 63n) - 1n;
+export const MAX_OWNER_BYTES = 255;
+export const OWNER_BECH32_LIMIT =
+  5 + 1 + Math.ceil((MAX_OWNER_BYTES * 8) / 5) + 6;
 export type SinkId = string & { readonly __brand: "SinkId" };
 
 export function ownerBytes(owner: string): Uint8Array {
-  const { prefix, data } = fromBech32(owner, 90);
+  const { prefix, data } = fromBech32(owner, OWNER_BECH32_LIMIT);
   assert.ok(
-    prefix === "akash" && data.length === 20 && data.some((byte) => byte !== 0),
-    "owner must be a nonzero Akash account of 20 bytes",
+    prefix === "akash" && data.length > 0 && data.length <= MAX_OWNER_BYTES,
+    "owner must be an Akash account of 1 to 255 bytes",
   );
-  assert.equal(toBech32(prefix, data), owner, "noncanonical owner");
+  assert.equal(
+    toBech32(prefix, data, OWNER_BECH32_LIMIT),
+    owner,
+    "noncanonical owner",
+  );
   return data;
 }
 const component = z
@@ -67,25 +74,15 @@ export function compareIds(a: SinkId, b: SinkId): number {
       ? x.sequence < y.sequence
         ? -1
         : 1
-      : Buffer.compare(ownerBytes(x.owner), ownerBytes(y.owner));
+      : ownerBytes(x.owner).length - ownerBytes(y.owner).length ||
+        Buffer.compare(ownerBytes(x.owner), ownerBytes(y.owner));
 }
 export function idSuffix(id: SinkId): Buffer {
   const value = sinkIdParts(id),
-    bytes = Buffer.alloc(37);
-  bytes[0] = 20;
-  bytes.set(ownerBytes(value.owner), 1);
-  bytes.writeBigUInt64BE(value.height, 21);
-  bytes.writeBigUInt64BE(value.sequence, 29);
-  return bytes;
-}
-// Native chronological index key. PageRequest.key is inclusive, so resumption
-// uses the last existing key and drops that one row, even after an empty next_key.
-export function chronologicalKey(id: SinkId): Uint8Array {
-  const value = sinkIdParts(id),
-    key = Buffer.alloc(37);
-  key.writeBigUInt64BE(value.height, 0);
-  key.writeBigUInt64BE(value.sequence, 8);
-  key[16] = 20;
-  key.set(ownerBytes(value.owner), 17);
-  return key;
+    owner = ownerBytes(value.owner),
+    height = Buffer.alloc(8),
+    sequence = Buffer.alloc(8);
+  height.writeBigUInt64BE(value.height);
+  sequence.writeBigUInt64BE(value.sequence);
+  return Buffer.concat([Buffer.from([owner.length]), owner, height, sequence]);
 }

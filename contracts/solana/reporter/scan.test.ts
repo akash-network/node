@@ -15,35 +15,58 @@ import {
   discoverTransfers,
   openTransfers,
 } from "../local/open-transfers";
-import { chronologicalKey, parseSinkId, type SinkId } from "../shared/id";
+import { parseSinkId, type SinkId } from "../shared/id";
 import { testId, testSnapshot, testTransfer } from "../tests/sink-fixtures";
-test("chronological discovery retains EOF cursor and finds later earlier-sorting owners", async () => {
+test("chronological discovery reuses the server's last-page cursor and finds later earlier-sorting owners", async () => {
   const first = testTransfer(1n, 10n),
+    second = testTransfer(2n, 10n),
+    third = testTransfer(3n, 10n),
     later = testTransfer(
       1n,
       11n,
       toBech32("akash", new Uint8Array(20).fill(1)),
-    );
-  let rows = [first];
+    ),
+    token = new Uint8Array([255, 3, 19]);
+  let tail = [third];
   const akash = {
     async transfers(height: number, options: { key?: Uint8Array } = {}) {
       assert.equal(height, 20);
-      if (options.key)
-        assert.deepEqual(options.key, chronologicalKey(testId(1n, 10n)));
-      return { transfers: rows, nextKey: new Uint8Array() };
+      if (!options.key?.length)
+        return { transfers: [first, second], nextKey: token };
+      assert.deepEqual(options.key, token);
+      return { transfers: tail, nextKey: new Uint8Array() };
     },
   };
   const start = await discoverTransfers(akash, 20);
-  assert.equal(start.cursor, parseSinkId(first.id));
-  assert.equal(start.hasMore, false);
+  assert.deepEqual(start.cursor, {
+    kind: "next",
+    key: token,
+    lastId: parseSinkId(second.id),
+  });
+  assert.equal(start.hasMore, true);
+  const end = await discoverTransfers(akash, 20, start.cursor);
+  assert.deepEqual(end.cursor, {
+    kind: "tail",
+    key: token,
+    lastId: parseSinkId(third.id),
+  });
+  assert.equal(end.hasMore, false);
   assert.equal(
-    (await discoverTransfers(akash, 20, start.cursor)).entries.length,
+    (await discoverTransfers(akash, 20, end.cursor)).entries.length,
     0,
   );
-  rows = [first, later];
-  const next = await discoverTransfers(akash, 20, start.cursor);
-  assert.equal(next.entries.length, 1);
-  assert.equal(next.cursor, parseSinkId(later.id));
+  tail = [third, later];
+  const next = await discoverTransfers(akash, 20, end.cursor);
+  assert.deepEqual(
+    next.entries.map((entry) => entry.id),
+    [parseSinkId(later.id)],
+  );
+  assert.equal(next.cursor?.lastId, parseSinkId(later.id));
+  tail = [later];
+  await assert.rejects(
+    () => discoverTransfers(akash, 20, end.cursor),
+    /checkpoint disappeared/,
+  );
 });
 test("native pages preserve fixed height, reject duplicates, stalled cursors and pruned state", async () => {
   const a = testTransfer(1),
@@ -57,6 +80,22 @@ test("native pages preserve fixed height, reject duplicates, stalled cursors and
   });
   assert.equal(result.length, 2);
   assert.deepEqual(keys, [new Uint8Array(), new Uint8Array([2])]);
+  const tokens = [new Uint8Array([255]), new Uint8Array([1]), new Uint8Array()];
+  let calls = 0;
+  const unordered = await collectPages(async () => ({
+    transfers: [testTransfer(++calls)],
+    nextKey: tokens[calls - 1],
+  }));
+  assert.equal(unordered.length, 3, "opaque cursor bytes need not increase");
+  calls = 0;
+  await assert.rejects(
+    () =>
+      collectPages(async () => ({
+        transfers: [testTransfer(++calls)],
+        nextKey: tokens[(calls - 1) % 2],
+      })),
+    /cursor did not advance/,
+  );
   await assert.rejects(
     () =>
       collectPages(async () => ({
@@ -277,7 +316,7 @@ test("every open transfer past the old bounds is reviewed, disputes and refunds 
     );
   assert.deepEqual(f.output.at(-1), {
     scanned: 10_001,
-    audited: 11,
+    audited: 10,
     index: "canonical",
     failures: 0,
     lightClientProgram: web3.PublicKey.default.toBase58(),
@@ -328,23 +367,20 @@ test("an audit query failure still reviews open transfers and retries its window
     if (options.status !== undefined) return listed(height, options);
     auditKeys.push(options.key);
     if (auditFails) throw new Error("history page unavailable");
-    const key = options.key,
-      start = key
-        ? history.findIndex((row) =>
-            chronologicalKey(parseSinkId(row.id)).every(
-              (byte, i) => byte === key[i],
-            ),
-          )
-        : 0;
+    const start = options.key ? 2 : 0;
+    if (options.key) assert.deepEqual(options.key, new Uint8Array([255, 7]));
+    assert.equal(options.limit, 2);
     return {
       transfers: history.slice(start, start + 2),
       nextKey:
-        start + 2 < history.length ? new Uint8Array([1]) : new Uint8Array(),
+        start + 2 < history.length
+          ? new Uint8Array([255, 7])
+          : new Uint8Array(),
     };
   };
   const scanner = new Scanner(f.akash, f.observer, {
     reporter: "reporter",
-    auditPerScan: 1,
+    auditPerScan: 2,
     output: (value) => f.output.push(value),
     signal: new AbortController().signal,
   });
@@ -366,8 +402,8 @@ test("an audit query failure still reviews open transfers and retries its window
   f.reads.length = 0;
   assert.equal(await scanner.scan(), 0);
   assert.deepEqual(auditKeys.slice(1), [
-    chronologicalKey(testId(2)),
-    chronologicalKey(testId(2)),
+    new Uint8Array([255, 7]),
+    new Uint8Array([255, 7]),
   ]);
   assert.deepEqual(f.reads, [testId(2), testId(), testId(3)]);
 });

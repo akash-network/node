@@ -1,27 +1,27 @@
 # Launch and recover canonical Sink services
 
-Use a fresh chain, program, mint and service-state directory for schema 4. Keep existing keys, ledgers and receipt history intact. The node upgrade installs Sink when the source chain has no Sink module version. Existing Sink genesis must already satisfy schema 4.
+This account layout is for a new launch with an unused Sink module and fresh Solana program, mint and service state. It changes instruction, account and event encoding and every permanent status PDA, including 20-byte owners. Do not upgrade an existing program in place or point a fresh program at previously resolved native deposits: the old outcome accounts would no longer prevent replay. Existing test deployments remain on their original binaries and namespaces. Preserve their keys, ledgers and receipt history.
 
 ## Prepare the namespace
 
 1. Build the SDK and install the same local archive into the bridge and portal. Preserve package versions and unrelated lock entries. Compare installed package bytes with the archive before testing.
 2. Build the program and generated IDL with `npm run build`. Configure observers, relayers and the portal with the program, its canonical mint, the Akash chain ID and both genesis identities.
 3. Choose a fresh run name with `AKT_LOCAL_RUN`. The defaults remain `live-stack-v2` and `testnetify-stack-v2` under the node repository's `.cache/solana/run`. These directory names do not identify the protobuf schema.
-4. Export complete Sink genesis with `schema_version: 4`. Retain `records`, `accounts`, `policies`, `current_policy_version`, send usage and refund usage, together with the complete native `x/epochs` state. Each record contains its ID, immutable data, settlement and financial status. Preserve permanent void authorizations and every referenced vote or veto policy.
+4. Export complete Sink genesis using the paired node version. Retain `records`, `accounts`, `policies`, `policy_sequence`, send usage and refund usage, together with the complete native `x/epochs` state. Each record contains its ID, immutable data, settlement and financial status. Preserve permanent void authorizations and every referenced vote or veto policy.
 5. Set `initial_height` above the exported height and `genesis_time` at or after that height's committed block time. Keep the raw export and prepare a separate import file. The importer rebuilds derived indexes and rejects inconsistent escrow, totals, identities or policy references. Do not relabel an earlier schema or truncate its evidence.
-6. Inspect the canonical `State` query before enabling deposits. Verify reporter membership, threshold, Coin caps, native epoch, escrow backing and the Solana client's trust state.
+6. Read `State`, `Params` and `Reporters` (version 0) at the same committed height before enabling deposits. Verify reporter membership, decimal threshold, Coin caps, native epoch, escrow backing and the Solana client's trust state.
 
 ## Identity and proofs
 
-A transfer ID is `owner/height/sequence`. The owner is a canonical nonzero 20-byte Akash account. Height is a positive int64. Sequence is a positive uint64 allocated within a block, beginning at one. TypeScript uses bigint and JSON uses decimal strings.
+A transfer ID is `owner/height/sequence`. The owner is a canonical Akash account of 1–255 bytes, matching the native SDK. Height is a positive int64. Sequence is a positive uint64 allocated within a block, beginning at one. TypeScript uses bigint and JSON uses decimal strings.
 
-The mint key is `0200 || 14 || owner20 || BE64(height) || BE64(sequence)`, 39 bytes. Its value is the SDK's native protobuf `RecordData`, containing a canonical base58 recipient and a positive uint64 `uakt` Coin amount.
+The mint key is `0200 || U8(owner_length) || owner || BE64(height) || BE64(sequence)`, `19 + owner_length` bytes. Its value is the SDK's native protobuf `RecordData`, containing a canonical base58 recipient and a positive uint64 `uakt` Coin amount.
 
-The settlement key is `0301 || status || 14 || owner20 || BE64(height) || BE64(sequence)`, 40 bytes. Its value is native protobuf `SettlementData`. Status belongs to the key and to the public `TransferState.status` field. The settlement embeds its reporter policy and permanently retains `void_authorization.requested_height` and `requested_round` after governance orders a void.
+The settlement key is `0301 || status || U8(owner_length) || owner || BE64(height) || BE64(sequence)`, `20 + owner_length` bytes. Its value is native protobuf `SettlementData`. Status belongs to the key and to the public `TransferState.status` field. The settlement embeds its reporter policy and permanently retains `void_authorization.requested_height` and `requested_round` after governance orders a void.
 
 A governance void proves the complete settlement value. The relayer binds the returned key, value and IAVL existence proof to one queried snapshot. It rejects a wrong height, round, authorization, key, value or store. The program authenticates both ICS23 membership levels under `["sink", key]`. A value hash in a local job never replaces the value sent for membership verification.
 
-The permanent outcome PDA uses `transfer`, owner20, LE64 height and LE64 sequence. Proof buffers use `proof`, submitter32 and all 32 bytes of SHA-256 of the exact key. Each settlement status has a different buffer nonce. Header H proves state at H-1. The proof must follow the deposit height and cover the authorization's request height.
+The permanent outcome PDA uses `transfer`, SHA-256 of the raw owner bytes, LE64 height and LE64 sequence. Hashing keeps the owner seed within Solana’s 32-byte limit. The Anchor IDL cannot represent a hash-derived seed; clients supply the PDA using `statusAddress`. Proof buffers use `proof`, submitter32 and all 32 bytes of SHA-256 of the exact key. Each settlement status has a different buffer nonce. Header H proves state at H-1. The proof must follow the deposit height and cover the authorization's request height.
 
 ## Financial states and authorization
 
@@ -47,7 +47,9 @@ Solana keeps its independent per-transfer and daily mint caps. Mints submit imme
 
 ## Buffer funding and recovery
 
-A proof is at most 16,384 bytes. The account needs an 80-byte header plus its declared proof length. Creation allocates at most 10,240 bytes. `growProofBuffer()` funds and allocates the rest, at most one growth with the current capacity. Uploads append at most 500 bytes per transaction. Resolution requests a 256 KiB heap and the existing compute limit.
+The Solana upload limit is 16,384 bytes. Native reporter policy has no corresponding count limit, so this is not a proven bound on every valid native settlement. Audit and launch must address that mismatch; increasing the reporter set can create an unrelayable governance void. Test the complete proof for the proposed policy and retain the larger-policy case in the audit scope.
+
+For a proof that fits, the account needs an 80-byte header plus its declared proof length. Creation allocates at most 10,240 bytes. `growProofBuffer()` funds and allocates the rest, at most one growth with the current capacity. Uploads append at most 500 bytes per transaction. Resolution requests a 256 KiB heap and the existing compute limit.
 
 The payer needs temporary liquidity for the buffer as well as permanent spend. Query the cluster's rent exemption for `80 + proofLength` before funding. `proof-buffer-ready` records the actual allocation and refundable lamports. `relay-payment` records transaction fees, payer balance changes and buffer funding or reclamation. The ledger retains cumulative `bufferFundedLamports` and `bufferReclaimedLamports` separately from `spentLamports`.
 
@@ -59,7 +61,7 @@ The relayer reads the actual allocation and uploaded prefix after restart. It gr
 
 ## Discovery and receipt history
 
-Each pass reads every dispute, then refund-pending, void-requested and transfer-pending records at one pinned height. There is no backlog count limit. Durable unfinished jobs also return to the queue after restart. Global discovery retains its chronological checkpoint at EOF and drops the inclusive duplicate when resuming.
+Each pass reads every dispute, then refund-pending, void-requested and transfer-pending records at one pinned height. There is no backlog count limit. Durable unfinished jobs also return to the queue after restart. `Transfers` pagination keys are opaque server-issued tokens; clients neither construct them from IDs nor compare their bytes for ordering. Discovery saves the token that starts its last page and the last processed ID. At EOF it replays that page, skips already-seen IDs, and discovers later deposits. The `relay-discovery-v3` file records this checkpoint. Older v2 discovery files are preserved and cause a one-time rescan; spending ledgers and unfinished proof jobs are retained.
 
 Unknown or pruned heights and malformed pages remain failures. A failed history or audit query retains its checkpoint while open transfers continue. A failed open-transfer scan stops the pass. The receipt API preserves the newest 100 owner records, its `truncated` flag and null creation dates only for genuinely pruned block history.
 

@@ -7,15 +7,10 @@ import {
 } from "@akashnetwork/chain-sdk/private-types/akash.v1";
 import assert from "node:assert/strict";
 import test from "node:test";
+import boundaries from "../programs/akt-solana/tests/fixtures/native_boundary_vectors.json";
 import vectors from "../programs/akt-solana/tests/fixtures/proof_vectors.json";
 import settlements from "../programs/akt-solana/tests/fixtures/settlement_vectors.json";
-import {
-  chronologicalKey,
-  MAX_INT64,
-  MAX_UINT64,
-  parseSinkId,
-  sinkIdParts,
-} from "./id";
+import { MAX_INT64, MAX_UINT64, parseSinkId, sinkIdParts } from "./id";
 import {
   authorizedSettlement,
   decodeRecordData,
@@ -28,7 +23,7 @@ import {
   transferKey,
 } from "./proof";
 
-for (const vector of vectors)
+for (const vector of [...vectors, ...boundaries.records])
   test(`SDK native RecordData vector ${vector.name}`, () => {
     const id = parseSinkId({
       owner: vector.owner,
@@ -56,7 +51,7 @@ for (const vector of vectors)
     const expected = web3.PublicKey.findProgramAddressSync(
       [
         Buffer.from("transfer"),
-        Buffer.from(vector.owner_hex, "hex"),
+        proofNonce(Buffer.from(vector.owner_hex, "hex")),
         Buffer.from(vector.height_le_hex, "hex"),
         Buffer.from(vector.sequence_le_hex, "hex"),
       ],
@@ -65,7 +60,7 @@ for (const vector of vectors)
     assert.ok(statusAddress(program, id).equals(expected));
   });
 
-for (const vector of settlements)
+for (const vector of [...settlements, ...boundaries.settlements])
   test(`SDK native SettlementData vector ${vector.name}`, () => {
     const id = parseSinkId({
       owner: vector.owner,
@@ -167,7 +162,6 @@ test("native record validation rejects legacy, ambiguous and noncanonical values
     { owner: vector.owner, height: 1, sequence: 1n },
   ])
     assert.throws(() => parseSinkId(value));
-  assert.equal(chronologicalKey(parseSinkId(vector.id_text)).length, 37);
   const good = encodeRecord({
     dest: vector.recipient,
     amount: { denom: "uakt", amount: vector.amount },

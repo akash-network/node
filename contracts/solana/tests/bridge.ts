@@ -170,7 +170,7 @@ export async function runBridgeTests(t: TestContext) {
             policy: {
               version: 1n,
               members: [sinkIdParts(testId(id)).owner],
-              threshold: 1,
+              threshold: "1",
             },
             voidAuthorization: { requestedHeight: 41n, requestedRound: 1n },
           }),
@@ -494,7 +494,7 @@ export async function runBridgeTests(t: TestContext) {
       status: web3.PublicKey.findProgramAddressSync(
         [
           Buffer.from("transfer"),
-          Buffer.from(value.id.owner),
+          proofNonce(value.id.owner),
           le64(value.id.height),
           le64(value.id.sequence),
         ],
@@ -929,7 +929,7 @@ export async function runBridgeTests(t: TestContext) {
       for (const id of [
         anchorId(testId(99, 41n)),
         anchorId(testId(1, 40n)),
-        { ...record(1).id, owner: Array<number>(20).fill(9) },
+        { ...record(1).id, owner: Buffer.alloc(20, 9) },
       ]) {
         const changed = { ...record(1), id };
         const key = Buffer.concat([
@@ -989,7 +989,7 @@ export async function runBridgeTests(t: TestContext) {
         { ...record(1), amount: new BN(0) },
         {
           ...record(1),
-          id: { ...record(1).id, owner: Array<number>(20).fill(0) },
+          id: { ...record(1).id, owner: Buffer.alloc(0) },
         },
         { ...record(1), id: { ...record(1).id, height: new BN(0) } },
         { ...record(1), id: { ...record(1).id, height: HEIGHT } },

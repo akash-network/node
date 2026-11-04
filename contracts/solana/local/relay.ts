@@ -8,6 +8,7 @@ import {
   TOKEN_PROGRAM_ID,
   getAssociatedTokenAddressSync,
 } from "@solana/spl-token";
+import { z } from "zod";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import {
@@ -74,7 +75,11 @@ import {
   type RelayerAccess,
 } from "./light-client";
 import { reclaimLookups } from "./lookup-cleanup";
-import { discoverTransfers, openTransfers } from "./open-transfers";
+import {
+  discoverTransfers,
+  openTransfers,
+  type DiscoveryCursor,
+} from "./open-transfers";
 import {
   loadPayer,
   localRelayConfig,
@@ -1220,21 +1225,34 @@ export async function relayContext(options?: {
   }
   const discoveryPath = join(
     settings.stateDir,
-    `relay-discovery-v2-${genesis}-${programId}.json`,
+    `relay-discovery-v3-${genesis}-${programId}.json`,
   );
   async function unresolved(state: Awaited<ReturnType<typeof akash.state>>) {
     const saved = await optionalJson(discoveryPath);
-    let cursor: SinkId | undefined;
+    let cursor: DiscoveryCursor | undefined;
     if (saved !== undefined) {
       const value = object(saved);
       assert.ok(
-        value.version === 2 &&
+        value.version === 3 &&
           value.chainId === chainId &&
           value.genesis === genesis &&
           value.programId === programId.toBase58(),
-        "unsupported discovery state; preserve it and use a fresh v2 domain",
+        "unsupported discovery state; preserve it and use a fresh discovery file",
       );
-      cursor = value.cursor === null ? undefined : parseSinkId(value.cursor);
+      const checkpoint = z
+        .object({
+          key: z.string().base64(),
+          lastId: z.string().transform(parseSinkId),
+        })
+        .strict()
+        .nullable()
+        .parse(value.cursor);
+      if (checkpoint)
+        cursor = {
+          kind: "tail",
+          key: Buffer.from(checkpoint.key, "base64"),
+          lastId: checkpoint.lastId,
+        };
     }
     const entries = new Map(
       (await openTransfers(akash, state.height)).map((entry) => [
@@ -1264,10 +1282,15 @@ export async function relayContext(options?: {
     const pending = await withoutStatus([...entries.keys()]);
     if (discovered)
       await atomicJson(discoveryPath, {
-        version: 2,
+        version: 3,
         chainId,
         ...identity,
-        cursor: cursor ?? null,
+        cursor: cursor
+          ? {
+              key: Buffer.from(cursor.key).toString("base64"),
+              lastId: cursor.lastId,
+            }
+          : null,
       });
     return { pending, known: entries };
   }

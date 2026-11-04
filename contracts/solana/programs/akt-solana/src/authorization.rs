@@ -1,14 +1,9 @@
-use crate::errors::AktError;
+use crate::{constants::MAX_PROOF_BYTES, errors::AktError};
 use anchor_lang::prelude::*;
 
-// Schema 4 admits 32 certificate votes and one opposing witness, with 20-byte
-// Akash signers.
-const MAX_SETTLEMENT_BYTES: usize = 6_503;
-const MAX_POLICY_BYTES: usize = 1_485;
-const MAX_VOTE_BYTES: usize = 138;
+// Policy and vote sizes come from the proven native state. Bound parser work by
+// the proof upload limit instead of imposing a separate reporter-count limit.
 const MAX_OBSERVATION_BYTES: usize = 79;
-const MAX_VOTES: usize = 33;
-const MAX_SIGNER_BYTES: usize = 44;
 const MAX_VETO_REASON_BYTES: usize = 256;
 const MAX_AUTHORIZATION_BYTES: usize = 21;
 
@@ -79,13 +74,12 @@ pub(crate) fn void_authorization(
     proof_height: u64,
 ) -> Result<VoidAuthorization> {
     require!(
-        value.len() <= MAX_SETTLEMENT_BYTES,
+        value.len() <= MAX_PROOF_BYTES,
         AktError::InvalidVoidAuthorization
     );
     let mut fields = Fields(value);
     let mut previous = 0;
     let mut round = 0;
-    let mut votes = 0;
     let mut authorization = None;
     while !fields.0.is_empty() {
         let tag = fields.varint()?;
@@ -107,14 +101,8 @@ pub(crate) fn void_authorization(
             3 | 4 | 6 | 7 | 8 | 9 => {
                 require!(tag & 7 == 2, AktError::InvalidVoidAuthorization);
                 let maximum = match field {
-                    3 => MAX_POLICY_BYTES,
-                    4 => {
-                        votes += 1;
-                        require!(votes <= MAX_VOTES, AktError::InvalidVoidAuthorization);
-                        MAX_VOTE_BYTES
-                    }
+                    3 | 4 | 7 => MAX_PROOF_BYTES,
                     6 => MAX_OBSERVATION_BYTES,
-                    7 => MAX_SIGNER_BYTES,
                     8 => MAX_VETO_REASON_BYTES,
                     _ => MAX_AUTHORIZATION_BYTES,
                 };

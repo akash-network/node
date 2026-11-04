@@ -222,7 +222,7 @@ function voided(raw: TransferState, observations: Observation[]): Snapshot {
         policy: {
           version: 1n,
           members: ["reporter", "b", "c", "d"],
-          threshold: 3,
+          threshold: "0.75",
         },
         votes: observations.map((observation, i) => ({
           reporter: snapshot.policy.members[i + 1],
@@ -902,7 +902,7 @@ test("observer binds every composite component and proof height in finalized acc
   for (const component of ["owner", "height", "sequence", "proof"] as const)
     await t.test(component, async (t) => {
       const f = await fixture(t);
-      if (component === "owner") f.status.id.owner = Array<number>(20).fill(9);
+      if (component === "owner") f.status.id.owner = Buffer.alloc(20, 9);
       if (component === "height")
         f.status.id.height = f.status.id.height.addn(1);
       if (component === "sequence")
@@ -929,7 +929,7 @@ test("resolution events must match identity, proof height, transaction slot and 
     await t.test(field, async (t) => {
       const f = await fixture(t);
       const changed = { ...f.status, id: { ...f.status.id } };
-      if (field === "owner") changed.id.owner = Array<number>(20).fill(9);
+      if (field === "owner") changed.id.owner = Buffer.alloc(20, 9);
       if (field === "height") changed.id.height = changed.id.height.addn(1);
       if (field === "sequence")
         changed.id.sequence = changed.id.sequence.addn(1);

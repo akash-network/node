@@ -122,11 +122,16 @@ impl Case {
     fn new(fixture: &Fixture) -> Self {
         let program = akt_solana::ID;
         let key = bytes(&fixture.key);
-        let start = key.len() - 36;
+        let prefix_len = if fixture.amount.is_some() { 2 } else { 3 };
+        let mut fields = &key[prefix_len..];
+        let owner_len = usize::from(fields[0]);
+        fields = &fields[1..];
+        let (owner, rest) = fields.split_at(owner_len);
+        let (height, sequence) = rest.split_at(8);
         let id = TransferId {
-            owner: key[start..start + 20].try_into().unwrap(),
-            height: u64::from_be_bytes(key[start + 20..start + 28].try_into().unwrap()),
-            sequence: u64::from_be_bytes(key[start + 28..].try_into().unwrap()),
+            owner: owner.to_vec(),
+            height: u64::from_be_bytes(height.try_into().unwrap()),
+            sequence: u64::from_be_bytes(sequence.try_into().unwrap()),
         };
         let payer = Pubkey::new_from_array([19; 32]);
         let (config, bump) = Pubkey::find_program_address(&[CONFIG_SEED], &program);
@@ -140,7 +145,7 @@ impl Case {
         let status = Pubkey::find_program_address(
             &[
                 TRANSFER_SEED,
-                &id.owner,
+                &akt_solana::wire::owner_seed(&id.owner),
                 &id.height.to_le_bytes(),
                 &id.sequence.to_le_bytes(),
             ],
@@ -290,7 +295,7 @@ impl Case {
                 }
                 .to_account_metas(None),
                 data: akt_solana::instruction::MintTransfer {
-                    id,
+                    id: id.clone(),
                     recipient_key: recipient,
                     amount,
                     proof_height: HEIGHT,
@@ -313,7 +318,7 @@ impl Case {
                 }
                 .to_account_metas(None),
                 data: akt_solana::instruction::VoidTransfer {
-                    id,
+                    id: id.clone(),
                     settlement_status: key[2],
                     proof_height: HEIGHT,
                 }
@@ -671,10 +676,20 @@ fn main() {
     );
     token::add_program(&mut vm);
     associated_token::add_program(&mut vm);
-    let records: Vec<serde_json::Value> =
+    let mut records: Vec<serde_json::Value> =
         serde_json::from_str(include_str!("../../fixtures/proof_vectors.json")).unwrap();
-    let settlements: Vec<serde_json::Value> =
+    let mut settlements: Vec<serde_json::Value> =
         serde_json::from_str(include_str!("../../fixtures/settlement_vectors.json")).unwrap();
+    let boundaries: serde_json::Value =
+        serde_json::from_str(include_str!("../../fixtures/native_boundary_vectors.json")).unwrap();
+    records.extend(boundaries["records"].as_array().unwrap().iter().cloned());
+    settlements.extend(
+        boundaries["settlements"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .cloned(),
+    );
     let mint_template = fixtures
         .iter()
         .find(|fixture| fixture.name == "mint-1")

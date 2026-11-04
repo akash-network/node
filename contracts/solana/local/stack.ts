@@ -234,14 +234,13 @@ export async function init() {
     max_transfer_amount_per_epoch: { denom: "uakt", amount: "10000000000000" },
     max_epoch_refund: { denom: "uakt", amount: "1000000000000" },
   };
-  assert.equal(sink.schema_version, 4, "local stack requires schema 4 genesis");
   assert.ok(
     Array.isArray(sink.records) && sink.records.length === 0,
     "refusing populated genesis reconfiguration",
   );
-  sink.current_policy_version = "1";
+  sink.policy_sequence = "1";
   sink.policies = [
-    { version: "1", members: object(sink.params).reporters, threshold: 3 },
+    { version: "1", members: object(sink.params).reporters, threshold: "0.75" },
   ];
   app.sink = sink;
   const mint = object(app.mint);

@@ -11,6 +11,9 @@ import {
   QueryTransfersRequest,
   QueryTransfersResponse,
   QueryStateResponse,
+  Sink_QueryParamsResponse as QueryParamsResponse,
+  QueryReportersRequest,
+  QueryReportersResponse,
   QueryTransferRequest,
   QueryTransferResponse,
 } from "@akashnetwork/chain-sdk/private-types/akash.v1";
@@ -65,6 +68,7 @@ test("queries sink state and transfer at one committed height; rejects stale/wro
     ).toString("base64"),
   };
   let queryHeight = "42";
+  let mismatchedPath = "";
   let transferFailure: { code: number; codespace: string } | undefined;
   const key = Buffer.alloc(33, 2);
   const baseAccount = (pubKey?: Uint8Array) => ({
@@ -170,7 +174,21 @@ test("queries sink state and transfer at one committed height; rejects stale/wro
         }
         if (params.path === "/akash.sink.v1.Query/State")
           value = QueryStateResponse.encode(state).finish();
-        else if (params.path === "/cosmos.auth.v1beta1.Query/Account")
+        else if (params.path === "/akash.sink.v1.Query/Params")
+          value = QueryParamsResponse.encode({
+            params: snapshotState.params,
+          }).finish();
+        else if (params.path === "/akash.sink.v1.Query/Reporters") {
+          assert.equal(
+            QueryReportersRequest.decode(
+              Buffer.from(params.data.replace(/^0x/, ""), "hex"),
+            ).version,
+            0n,
+          );
+          value = QueryReportersResponse.encode({
+            reporters: [snapshotState.policy],
+          }).finish();
+        } else if (params.path === "/cosmos.auth.v1beta1.Query/Account")
           value = QueryAccountResponse.encode({ account }).finish();
         else {
           assert.equal(params.path, "/akash.sink.v1.Query/Transfer");
@@ -198,7 +216,7 @@ test("queries sink state and transfer at one committed height; rejects stale/wro
         result = {
           response: {
             code: 0,
-            height: queryHeight,
+            height: params.path === mismatchedPath ? "41" : queryHeight,
             value: Buffer.from(value).toString("base64"),
           },
         };
@@ -231,6 +249,8 @@ test("queries sink state and transfer at one committed height; rejects stale/wro
   assert.deepEqual(snapshot.transfer, record);
   assert.deepEqual(requests, [
     "/akash.sink.v1.Query/State",
+    "/akash.sink.v1.Query/Params",
+    "/akash.sink.v1.Query/Reporters",
     "/akash.sink.v1.Query/Transfer",
   ]);
   const page = await client.transfers(42, {
@@ -284,6 +304,11 @@ test("queries sink state and transfer at one committed height; rejects stale/wro
   state.refundUsage.amount = { denom: "uakt", amount: "1" };
   await assert.rejects(() => client.state(), /usage before quota epoch starts/);
   state.refundUsage.amount.amount = "0";
+  for (const path of ["State", "Params", "Reporters"]) {
+    mismatchedPath = `/akash.sink.v1.Query/${path}`;
+    await assert.rejects(() => client.state(), /height mismatch/);
+  }
+  mismatchedPath = "";
   queryHeight = "41";
   await assert.rejects(() => client.state(), /height mismatch/);
   status.node_info.network = "other-chain";

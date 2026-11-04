@@ -12,7 +12,11 @@ import {
   decodeRecord,
   type SolanaObserver,
 } from "./solana";
-import { openTransfers, discoverTransfers } from "../local/open-transfers";
+import {
+  openTransfers,
+  discoverTransfers,
+  type DiscoveryCursor,
+} from "../local/open-transfers";
 import type { SinkId } from "../shared/id";
 export type ScanAkash = Pick<
   AkashClient,
@@ -35,7 +39,7 @@ const PENDING = [
   Status.STATUS_REFUND_PENDING,
 ];
 export class Scanner {
-  private auditCursor?: SinkId;
+  private auditCursor?: DiscoveryCursor;
   constructor(
     private readonly akash: ScanAkash,
     private readonly observer: ScanObserver,
@@ -110,7 +114,7 @@ export class Scanner {
           this.akash,
           state.height,
           this.auditCursor,
-          Math.min(500, this.options.auditPerScan + 1),
+          Math.min(500, this.options.auditPerScan),
         );
         this.auditCursor = audit.hasMore ? audit.cursor : undefined;
         audited = audit.entries.length;

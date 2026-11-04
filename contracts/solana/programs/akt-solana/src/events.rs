@@ -73,7 +73,7 @@ pub struct LightClientRepinned {
     pub chain_id: String,
 }
 
-/// A record reached its terminal status, stored at `["transfer", owner, LE64(height), LE64(sequence)]`.
+/// A record reached its terminal status at `["transfer", SHA256(owner), LE64(height), LE64(sequence)]`.
 #[event]
 pub struct TransferResolved {
     pub id: TransferId,

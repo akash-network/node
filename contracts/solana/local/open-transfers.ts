@@ -4,19 +4,18 @@ import {
   type TransferState,
 } from "@akashnetwork/chain-sdk/private-types/akash.v1";
 import type { AkashClient } from "../reporter/akash";
-import {
-  parseSinkId,
-  type SinkId,
-  chronologicalKey,
-  compareIds,
-} from "../shared/id";
+import { parseSinkId, type SinkId, compareIds } from "../shared/id";
 export type TransferEntry = { id: SinkId; transfer: TransferState };
 export type Page = { transfers: TransferState[]; nextKey: Uint8Array };
+export type DiscoveryCursor =
+  | { kind: "next"; key: Uint8Array; lastId: SinkId }
+  | { kind: "tail"; key: Uint8Array; lastId: SinkId };
 export async function collectPages(
   read: (key: Uint8Array) => Promise<Page>,
 ): Promise<TransferEntry[]> {
   const result: TransferEntry[] = [],
-    seen = new Set<string>();
+    seen = new Set<string>(),
+    cursors = new Set<string>([""]);
   let key: Uint8Array = new Uint8Array();
   for (;;) {
     const page = await read(key);
@@ -27,10 +26,12 @@ export async function collectPages(
       result.push({ id, transfer });
     }
     if (page.nextKey.length === 0) return result;
+    const next = Buffer.from(page.nextKey).toString("base64");
     assert.ok(
-      page.transfers.length > 0 && Buffer.compare(key, page.nextKey) < 0,
+      page.transfers.length > 0 && !cursors.has(next),
       "pagination cursor did not advance",
     );
+    cursors.add(next);
     key = page.nextKey;
   }
 }
@@ -60,32 +61,55 @@ export async function openTransfers(
 export async function discoverTransfers(
   akash: Pick<AkashClient, "transfers">,
   height: number,
-  after?: SinkId,
+  after?: DiscoveryCursor,
   limit = 500,
 ) {
   const page = await akash.transfers(height, {
-    key: after ? chronologicalKey(after) : undefined,
+    key: after?.key,
     limit,
   });
-  let cursor = after;
+  assert.ok(
+    after?.kind !== "next" || page.transfers.length > 0,
+    "chronological checkpoint disappeared",
+  );
+  let lastId = after?.lastId;
+  let previous: SinkId | undefined;
+  let checkpointFound = after?.kind !== "tail";
   const entries: TransferEntry[] = [];
-  for (const [index, transfer] of page.transfers.entries()) {
+  for (const transfer of page.transfers) {
     const id = parseSinkId(transfer.id);
-    if (after && index === 0) {
-      assert.equal(id, after, "chronological checkpoint missing from query");
+    assert.ok(
+      !previous || compareIds(id, previous) > 0,
+      "history is not chronological",
+    );
+    previous = id;
+    if (after?.kind === "tail" && compareIds(id, after.lastId) <= 0) {
+      if (id === after.lastId) checkpointFound = true;
       continue;
     }
+    assert.ok(checkpointFound, "chronological checkpoint disappeared");
     assert.ok(
-      !cursor || compareIds(id, cursor) > 0,
+      !lastId || compareIds(id, lastId) > 0,
       "history is not chronological",
     );
     entries.push({ id, transfer });
-    cursor = id;
+    lastId = id;
   }
-  if (after)
+  assert.ok(checkpointFound, "chronological checkpoint disappeared");
+  const hasMore = page.nextKey.length > 0;
+  let cursor: DiscoveryCursor | undefined;
+  if (hasMore) {
     assert.ok(
-      page.transfers.length > 0,
-      "chronological checkpoint disappeared",
+      lastId &&
+        page.transfers.length > 0 &&
+        !Buffer.from(page.nextKey).equals(after?.key ?? new Uint8Array()),
+      "pagination cursor did not advance",
     );
-  return { entries, cursor, hasMore: page.nextKey.length > 0 };
+    cursor = { kind: "next", key: page.nextKey, lastId };
+  } else if (lastId) {
+    // Replay only the last page on the next poll. The server owns its cursor;
+    // the last ID distinguishes already-discovered rows from later deposits.
+    cursor = { kind: "tail", key: after?.key ?? new Uint8Array(), lastId };
+  }
+  return { entries, cursor, hasMore };
 }

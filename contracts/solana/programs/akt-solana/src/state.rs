@@ -158,7 +158,7 @@ impl ProofBuffer {
     }
 }
 
-/// Terminal outcome of one x/sink record at `["transfer", owner, LE64(height), LE64(sequence)]`.
+/// Terminal outcome at `["transfer", SHA256(owner), LE64(height), LE64(sequence)]`.
 /// `mint_transfer` and `void_transfer` both create it with `init`, and nothing
 /// closes it, so each record ID resolves exactly once.
 #[account]
@@ -203,7 +203,7 @@ mod tests {
     #[test]
     fn proof_buffer_binds_the_full_nonce_to_the_operation() {
         let id = TransferId {
-            owner: [1; 20],
+            owner: vec![1; 20],
             height: 42,
             sequence: 7,
         };
@@ -237,7 +237,7 @@ mod tests {
     #[test]
     fn status_and_event_retain_identity_and_resolution_evidence() {
         let id = TransferId {
-            owner: [2; 20],
+            owner: vec![2; 20],
             height: i64::MAX as u64,
             sequence: u64::MAX,
         };
@@ -254,7 +254,7 @@ mod tests {
             },
         ] {
             let status = TransferStatus {
-                id,
+                id: id.clone(),
                 proof_height: id.height + 1,
                 resolved_at_slot: 99,
                 outcome: outcome.clone(),
@@ -273,7 +273,7 @@ mod tests {
             );
 
             let event = TransferResolved {
-                id,
+                id: id.clone(),
                 proof_height: status.proof_height,
                 resolved_at_slot: status.resolved_at_slot,
                 outcome: outcome.clone(),
@@ -360,11 +360,11 @@ mod tests {
     }
 
     #[test]
-    fn account_sizes_match_the_v2_layout() {
+    fn account_sizes_match_the_native_address_layout() {
         assert_eq!(8 + LaunchConfig::INIT_SPACE, 84);
         assert_eq!(8 + BridgeConfig::INIT_SPACE, 656);
         assert_eq!(8 + PauseGuardian::INIT_SPACE, 42);
         assert_eq!(8 + ProofBuffer::INIT_SPACE, 16464);
-        assert_eq!(8 + TransferStatus::INIT_SPACE, 101);
+        assert_eq!(8 + TransferStatus::INIT_SPACE, 340);
     }
 }

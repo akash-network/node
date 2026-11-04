@@ -29,7 +29,7 @@ validator.
 - `commit` and `validators` at the client's latest height plus one and at the
   newest block.
 - Not catching up, with its latest block younger than `maxAgeSeconds`.
-- x/sink schema 4 and its canonical queries are required. See [canonical Sink](sink-migration-v2.md).
+- The matching x/sink interface and its canonical queries are required. See [canonical Sink](sink-migration-v2.md).
 
 **Solana RPC.** HTTP JSON-RPC only; the relayer polls and opens no WebSocket. It
 uses `getAccountInfo`, `getMultipleAccounts`, `getProgramAccounts` on the ICS07

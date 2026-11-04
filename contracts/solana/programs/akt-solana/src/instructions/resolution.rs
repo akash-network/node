@@ -61,7 +61,7 @@ pub(crate) fn resolve(
 ) -> Result<()> {
     let resolved_at_slot = Clock::get()?.slot;
     status.set_inner(TransferStatus {
-        id,
+        id: id.clone(),
         proof_height,
         resolved_at_slot,
         outcome: outcome.clone(),

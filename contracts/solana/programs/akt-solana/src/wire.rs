@@ -7,12 +7,12 @@ use solana_sha256_hasher::hash;
 pub const SINK_STORE: &[u8] = b"sink";
 pub const TRANSFER_KEY_PREFIX: &[u8] = &[0x02, 0x00];
 pub const SETTLEMENT_KEY_PREFIX: &[u8] = &[0x03, 0x01];
-pub const TRANSFER_KEY_SIZE: usize = 39;
-pub const SETTLEMENT_KEY_SIZE: usize = 40;
+pub const MAX_OWNER_BYTES: usize = 255;
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug, PartialEq, Eq, InitSpace)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug, PartialEq, Eq, InitSpace)]
 pub struct TransferId {
-    pub owner: [u8; 20],
+    #[max_len(MAX_OWNER_BYTES)]
+    pub owner: Vec<u8>,
     pub height: u64,
     pub sequence: u64,
 }
@@ -20,7 +20,8 @@ pub struct TransferId {
 impl TransferId {
     pub fn validate(&self) -> Result<()> {
         require!(
-            self.owner != [0; 20]
+            !self.owner.is_empty()
+                && self.owner.len() <= MAX_OWNER_BYTES
                 && self.height > 0
                 && self.height <= i64::MAX as u64
                 && self.sequence > 0,
@@ -38,14 +39,19 @@ impl TransferId {
 
     fn key(&self, prefix: &[u8]) -> Result<Vec<u8>> {
         self.validate()?;
-        let mut key = Vec::with_capacity(prefix.len() + 37);
+        let mut key = Vec::with_capacity(prefix.len() + 1 + self.owner.len() + 8 + 8);
         key.extend_from_slice(prefix);
-        key.push(20);
+        key.push(self.owner.len() as u8);
         key.extend_from_slice(&self.owner);
         key.extend_from_slice(&self.height.to_be_bytes());
         key.extend_from_slice(&self.sequence.to_be_bytes());
         Ok(key)
     }
+}
+
+// Native accounts may exceed Solana's 32-byte seed limit.
+pub fn owner_seed(owner: &[u8]) -> [u8; 32] {
+    hash(owner).to_bytes()
 }
 
 pub fn transfer_key(id: &TransferId) -> Result<Vec<u8>> {
@@ -83,7 +89,7 @@ mod tests {
 
     fn id() -> TransferId {
         TransferId {
-            owner: std::array::from_fn(|i| 0xa0 + i as u8),
+            owner: (0..20).map(|i| 0xa0 + i).collect(),
             height: 0x0102_0304_0506_0708,
             sequence: 0x1112_1314_1516_1718,
         }
@@ -121,12 +127,12 @@ mod tests {
             0x06, 0x07, 0x08, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
         ];
         assert_eq!(transfer_key(&id()).unwrap(), key);
-        assert_eq!(key.len(), TRANSFER_KEY_SIZE);
+        assert_eq!(key.len(), 39);
         let mut nonces = std::collections::BTreeSet::from([proof_nonce(&key)]);
         for status in 1..=5 {
             let expected = [&[3, 1, status][..], &key[2..]].concat();
             assert_eq!(settlement_key(&id(), status).unwrap(), expected);
-            assert_eq!(expected.len(), SETTLEMENT_KEY_SIZE);
+            assert_eq!(expected.len(), 40);
             assert!(nonces.insert(proof_nonce(&expected)));
         }
         for status in [0, 6, 255] {
@@ -134,7 +140,7 @@ mod tests {
         }
         for other in [
             TransferId {
-                owner: [1; 20],
+                owner: vec![1; 20],
                 ..id()
             },
             TransferId {
@@ -166,7 +172,7 @@ mod tests {
         let max = TransferId {
             height: i64::MAX as u64,
             sequence: u64::MAX,
-            ..valid
+            ..valid.clone()
         };
         assert!(max.validate_proof_height(i64::MAX as u64 + 1).is_ok());
         assert_eq!(
@@ -175,21 +181,24 @@ mod tests {
         );
         for invalid in [
             TransferId {
-                owner: [0; 20],
-                ..valid
+                owner: vec![],
+                ..valid.clone()
             },
-            TransferId { height: 0, ..valid },
+            TransferId {
+                height: 0,
+                ..valid.clone()
+            },
             TransferId {
                 height: i64::MAX as u64 + 1,
-                ..valid
+                ..valid.clone()
             },
             TransferId {
                 height: u64::MAX,
-                ..valid
+                ..valid.clone()
             },
             TransferId {
                 sequence: 0,
-                ..valid
+                ..valid.clone()
             },
         ] {
             assert_eq!(
@@ -202,19 +211,43 @@ mod tests {
     }
 
     #[test]
+    fn native_owner_lengths_use_distinct_bounded_pda_seeds() {
+        let mut seeds = std::collections::BTreeSet::new();
+        for length in [1, 20, 32, MAX_OWNER_BYTES] {
+            let id = TransferId {
+                owner: vec![0; length],
+                ..id()
+            };
+            id.validate().unwrap();
+            let key = transfer_key(&id).unwrap();
+            assert_eq!(key[TRANSFER_KEY_PREFIX.len()] as usize, length);
+            assert_eq!(key.len(), TRANSFER_KEY_PREFIX.len() + 1 + length + 8 + 8);
+            assert!(seeds.insert(owner_seed(&id.owner)));
+        }
+        for length in [0, MAX_OWNER_BYTES + 1] {
+            assert!(TransferId {
+                owner: vec![1; length],
+                ..id()
+            }
+            .validate()
+            .is_err());
+        }
+    }
+
+    #[test]
     fn instruction_arguments_have_no_record_version() {
         let id = id();
         let recipient = Pubkey::new_unique();
         let amount = u64::MAX;
         let proof_height = id.height + 1;
         let mint = crate::instruction::MintTransfer {
-            id,
+            id: id.clone(),
             recipient_key: recipient,
             amount,
             proof_height,
         }
         .data();
-        assert_eq!(mint.len(), 92);
+        assert_eq!(mint.len(), 96);
         assert_eq!(
             &mint[8..],
             [
@@ -226,12 +259,12 @@ mod tests {
             .concat()
         );
         let void = crate::instruction::VoidTransfer {
-            id,
+            id: id.clone(),
             settlement_status: 5,
             proof_height,
         }
         .data();
-        assert_eq!(void.len(), 53);
+        assert_eq!(void.len(), 57);
         assert_eq!(
             &void[8..],
             [

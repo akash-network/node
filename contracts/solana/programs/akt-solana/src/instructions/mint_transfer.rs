@@ -7,7 +7,7 @@ use crate::{
     errors::AktError,
     light_client::{self, MembershipAccounts, ProvenValue},
     state::{BridgeConfig, LaunchConfig, ProofBuffer, TransferOutcome, TransferStatus, VoidReason},
-    wire::{record_value, transfer_key, TransferId},
+    wire::{owner_seed, record_value, transfer_key, TransferId},
 };
 use anchor_lang::{prelude::*, solana_program::program_pack::Pack, system_program};
 use anchor_spl::{
@@ -40,7 +40,7 @@ pub struct MintTransfer<'info> {
     pub proof_buffer: Box<Account<'info, ProofBuffer>>,
     /// Terminal status. `init` fails if the record already has one.
     #[account(init, payer = payer, space = 8 + TransferStatus::INIT_SPACE,
-        seeds = [TRANSFER_SEED, id.owner.as_ref(), &id.height.to_le_bytes(), &id.sequence.to_le_bytes()], bump)]
+        seeds = [TRANSFER_SEED, &owner_seed(&id.owner), &id.height.to_le_bytes(), &id.sequence.to_le_bytes()], bump)]
     pub status: Account<'info, TransferStatus>,
     /// CHECK: Must be `bridge.light_client_program` and executable.
     #[account(address = bridge.light_client_program, executable)]

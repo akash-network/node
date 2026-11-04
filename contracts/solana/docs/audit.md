@@ -1,6 +1,6 @@
 # AKT Solana audit reference
 
-This reference describes the native protobuf proof contract used with Sink schema 4. The earlier `audit-v1` artifact hashes and validator results do not certify this program. A deployment needs a matching node, SDK archive, program, IDL, services and portal, with their commits and artifact hashes recorded together.
+This reference describes the native protobuf proof contract used with the paired node and chain-sdk revisions. The earlier `audit-v1` artifact hashes and validator results do not certify this program. A deployment needs a matching node, SDK archive, program, IDL, services and portal, with their commits and artifact hashes recorded together.
 
 [Bridge protocol](bridge-protocol.md) specifies the keys and proven values. [Launch and recovery](sink-migration-v2.md) specifies the service journals, budgets and recovery rules. [Production deployment](production-deployment.md) covers authorities and operational acceptance.
 
@@ -46,11 +46,11 @@ Paths beginning with `src/` are relative to `programs/akt-solana`.
 
 ## Proofs and identity
 
-A transfer ID contains a nonzero 20-byte owner, positive int64 height and positive uint64 per-block sequence. The permanent status PDA uses `transfer`, owner20, LE64 height and LE64 sequence. Mint and void initialize that same account, and no instruction closes it. Re-pinning does not create a new outcome namespace.
+A transfer ID contains a 1–255-byte native owner, positive int64 height and positive uint64 per-block sequence. The permanent status PDA uses `transfer`, SHA-256(owner), LE64 height and LE64 sequence. Mint and void initialize that same account, and no instruction closes it. Re-pinning does not create a new outcome namespace.
 
-The mint key is `0200 || 14 || owner20 || BE64(height) || BE64(sequence)`. The program constructs the expected native protobuf `RecordData` from the recipient and amount. Its Coin denomination is `uakt`; the positive amount fits uint64. There is no custom 41-byte record or record-version argument.
+The mint key is `0200 || U8(owner_length) || owner || BE64(height) || BE64(sequence)`. The program constructs the expected native protobuf `RecordData` from the recipient and amount. Its Coin denomination is `uakt`; the positive amount fits uint64. There is no custom 41-byte record or record-version argument.
 
-The governance key is `0301 || status || 14 || owner20 || BE64(height) || BE64(sequence)`. A void proves the entire native protobuf `SettlementData` value, including its permanent `void_authorization`. Status is in the key. The program rejects ambiguous or malformed authorization fields and enforces `deposit_height <= requested_height < proof_height` and `0 < requested_round <= settlement_round`.
+The governance key is `0301 || status || U8(owner_length) || owner || BE64(height) || BE64(sequence)`. A void proves the entire native protobuf `SettlementData` value, including its permanent `void_authorization`. Status is in the key. The program rejects ambiguous or malformed authorization fields and enforces `deposit_height <= requested_height < proof_height` and `0 < requested_round <= settlement_round`.
 
 Both paths authenticate the store path `["sink", key]` against the root in the pinned consensus account. Header H proves state at H-1, so the proof height must be strictly greater than the deposit height. The program checks the pinned executable program, account ownership, PDA addresses, discriminators, chain ID, frozen state, latest height, trusting period and clock drift before membership verification.
 
@@ -112,9 +112,12 @@ npm run build:verifiable
 
 `npm test` starts an isolated validator. `npm run test:sink` uses a real Akash proof. The verifiable build archives a commit and excludes uncommitted changes. Its recorded program hash, IDL, dependency lockfiles and toolchain must match the deployed artifact. A host unit test, a synthetic proof, a validator run and a populated fork exercise establish different facts and must be recorded separately.
 
-Canonical implementation checks include native proof vectors, program unit tests and SBF execution of the built ELF. The measured synthetic 127-step mint used 530,878 compute units. That case is not a universal compute bound or a live-chain result. Fresh validator, signed-header, cross-host, wallet and populated fork acceptance remains required for deployment evidence.
+Canonical implementation checks include native proof vectors, program unit tests and SBF execution of the built ELF. Earlier compute measurements predate this address layout and do not certify its resource use. Fresh validator, signed-header, cross-host, wallet and populated fork acceptance remains required for deployment evidence.
 
 ## Limitations and operational risks
+
+- The 16,384-byte upload limit is not a bound on native settlement size. Native reporter sets are uncapped; larger policies or evidence may exceed it and prevent a governance void from reaching Solana. This remains an audit and launch decision, not a restored node/SDK reporter cap.
+- This layout uses a Borsh byte vector for the owner and hashed owner PDA seeds. It requires an unused Sink launch and fresh Solana namespace. It is not an in-place upgrade or a replay-safe replacement for an already operating bridge.
 
 - Governance evidence and reporter quorum are Akash trust decisions. Solana cannot prove that Akash has not refunded a transfer. Honest refund processing needs a real finalized Solana void first. A false governance confirmation can violate that assumption.
 - Solana mint-cap days reset at UTC midnight. Two adjacent windows can permit twice the daily cap within a rolling 24-hour interval. This clock does not define Akash's configurable quota epochs or its challenge Duration.
@@ -124,4 +127,4 @@ Canonical implementation checks include native proof vectors, program unit tests
 - A System-owned on-curve address proves format, not that anyone controls its private key. The guardian address is also not a proof of key possession.
 - Token-2022 accounts are not supported. Metadata and admin authority remain separate from holder balances.
 - Old verified heights can authenticate records while their consensus accounts remain available and the client is active. Pruned heights fail; services must obtain a fresh proof without discarding unresolved signed transaction intents.
-- The SBF dependency build emits stack diagnostics in transitive curve code. The canonical program's inspected ELF excludes the reported functions. Live client updates, misbehaviour handling and all deployed dependency artifacts still need their own runtime verification.
+- The SBF dependency build emits stack diagnostics in transitive curve code. The locally built AKT ELF excludes the reported functions, verified against its unstripped symbol table. The upstream ICS07 build also emits a misbehaviour decoding stack diagnostic; its stripped binaries do not establish whether that function is reachable. Live client updates, misbehaviour handling and all final deployed dependency artifacts still need their own runtime verification.

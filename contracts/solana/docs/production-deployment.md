@@ -2,7 +2,7 @@
 
 This is the launch and operating runbook for Akash Sink on `akashnet-2` and
 Solana mainnet-beta. It is a deployment process, not a record of a mainnet launch.
-Use reviewed schema-4 node, SDK, Solana and service artifacts together. Read
+Use reviewed node, SDK, Solana and service artifacts together. Read
 [canonical launch and recovery](sink-migration-v2.md) before preparing a new
 program/mint namespace; never reuse one against a reset or forked Akash chain.
 
@@ -83,6 +83,12 @@ evidence for the final release:
   with that exact pair.
 - External review of the AKT program, pinned IBC verifier, x/sink and services;
   independent program builds with matching hashes and IDLs.
+- An unused native Sink module for the initial launch. This address layout changes
+  every status PDA and must not replace a live bridge over already resolved
+  deposits. Existing records require a separately reviewed migration.
+- A decision on settlement proof capacity: the 16,384-byte upload limit is not
+  guaranteed for uncapped native reporter sets. Exercise the complete proof for
+  the chosen policy and include larger evidence in the audit.
 - Fresh production program IDs, proven control of the multisig vault, reviewed
   time lock and members, and successful finalized authority handover for all
   three programs. No hot service key holds upgrade authority.
@@ -103,7 +109,7 @@ evidence for the final release:
 
 The manifest checks artifact identity and cluster identity, not these operational
 or protocol gates. Rehearsal evidence must name the source and artifact hashes
-it covers. Earlier scalar-ID testnet results do not accept schema 4.
+it covers. Earlier scalar-ID testnet results do not accept the current native interface.
 
 Remaining protocol considerations belong in the launch review: reporter slot
 plausibility is measured at observation time; permissionless proof submission

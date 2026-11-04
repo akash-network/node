@@ -41,12 +41,17 @@ export function challengeSeconds(settlement: SettlementData): bigint {
   return settlement.challengeEnd;
 }
 
-export function reporterThreshold(ratio: string, count: number): number {
+function reporterRatio(ratio: string): bigint {
   assert.match(ratio, /^(0|1)(\.[0-9]{1,18})?$/, "invalid reporter ratio");
   const [whole, fraction = ""] = ratio.split(".");
-  const scale = 10n ** BigInt(fraction.length),
-    value = BigInt(whole) * scale + BigInt(fraction || "0");
-  assert.ok(value <= scale, "reporter ratio must be at most one");
+  const value = BigInt(whole) * 10n ** 18n + BigInt(fraction.padEnd(18, "0"));
+  assert.ok(value <= 10n ** 18n, "reporter ratio must be at most one");
+  return value;
+}
+
+export function reporterThreshold(ratio: string, count: number): number {
+  const scale = 10n ** 18n,
+    value = reporterRatio(ratio);
   const members = BigInt(count);
   const threshold = (value * members + scale - 1n) / scale;
   assert.ok(
@@ -131,9 +136,10 @@ export function planOutcome(
     policy.members.includes(reporter),
     "account is not a current sink reporter",
   );
+  reporterThreshold(policy.threshold, policy.members.length);
   assert.equal(
-    policy.threshold,
-    reporterThreshold(params.reportersThreshold, policy.members.length),
+    reporterRatio(policy.threshold),
+    reporterRatio(params.reportersThreshold),
     "current policy threshold mismatch",
   );
   const record = decodeRecord(transfer);

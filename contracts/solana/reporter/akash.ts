@@ -23,6 +23,9 @@ import {
   Sink_Status as Status,
   Hold,
   QueryStateResponse,
+  Sink_QueryParamsResponse as QueryParamsResponse,
+  QueryReportersRequest,
+  QueryReportersResponse,
   QueryTransferRequest,
   QueryTransferResponse,
 } from "@akashnetwork/chain-sdk/private-types/akash.v1";
@@ -89,17 +92,34 @@ export class AkashClient {
       committedAge >= -10 && committedAge <= this.maxAgeSeconds,
       "stale Akash committed state",
     );
-    const reply = await this.query.queryAbci(
-      "/akash.sink.v1.Query/State",
-      new Uint8Array(),
-      height,
-    );
-    assert.equal(reply.height, height, "Akash query height mismatch");
-    const state = QueryStateResponse.decode(reply.value);
+    const replies = await Promise.all([
+      this.query.queryAbci(
+        "/akash.sink.v1.Query/State",
+        new Uint8Array(),
+        height,
+      ),
+      this.query.queryAbci(
+        "/akash.sink.v1.Query/Params",
+        new Uint8Array(),
+        height,
+      ),
+      this.query.queryAbci(
+        "/akash.sink.v1.Query/Reporters",
+        QueryReportersRequest.encode({ version: 0n }).finish(),
+        height,
+      ),
+    ]);
+    for (const reply of replies)
+      assert.equal(reply.height, height, "Akash query height mismatch");
+    const state = QueryStateResponse.decode(replies[0].value);
+    const { params } = QueryParamsResponse.decode(replies[1].value);
+    const { reporters } = QueryReportersResponse.decode(replies[2].value);
+    assert.equal(reporters.length, 1, "missing current reporter policy");
+    const policy = reporters[0];
     assert.ok(
-      state.params &&
+      params &&
         state.totals &&
-        state.policy &&
+        policy.version > 0n &&
         state.sendUsage &&
         state.refundUsage,
       "missing sink state",
@@ -115,8 +135,8 @@ export class AkashClient {
     }
     return {
       ...state,
-      params: state.params,
-      policy: state.policy,
+      params,
+      policy,
       sendUsage: state.sendUsage,
       refundUsage: state.refundUsage,
       totals: state.totals,

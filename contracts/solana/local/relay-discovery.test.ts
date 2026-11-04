@@ -13,7 +13,7 @@ import {
   TransferState,
 } from "@akashnetwork/chain-sdk/private-types/akash.v1";
 import { AnchorProvider, Wallet, web3 } from "@coral-xyz/anchor";
-import { chronologicalKey, parseSinkId } from "../shared/id";
+import { parseSinkId } from "../shared/id";
 import { testTransfer } from "../tests/sink-fixtures";
 import { relayContext } from "./relay";
 import {
@@ -64,10 +64,11 @@ test("a discovery failure still relays open transfers and retries history from t
   const open = testTransfer(1n, 50n),
     older = minted(1n, 10n),
     newer = minted(1n, 60n);
-  const [openId, olderId, newerId] = [open, older, newer].map((transfer) =>
+  const [openId, newerId] = [open, newer].map((transfer) =>
     parseSinkId(transfer.id),
   );
   let historyFails = true;
+  const historyCursor = new Uint8Array([255, 3, 19]);
   const requested: (Uint8Array | undefined)[] = [];
   const page = (transfers: TransferState[], nextKey = new Uint8Array()) => ({
     transfers,
@@ -93,19 +94,10 @@ test("a discovery failure still relays open transfers and retries history from t
     if (options.status !== undefined) return page([]);
     const key = options.key;
     requested.push(key);
-    if (historyFails) {
-      if (key) throw new Error("history height pruned");
-      return page([older], new Uint8Array([1]));
-    }
-    const rows = [older, newer];
-    const from = key
-      ? rows.findIndex(
-          (row) =>
-            Buffer.compare(chronologicalKey(parseSinkId(row.id)), key) === 0,
-        )
-      : 0;
-    assert.ok(from >= 0, "cursor is absent from the history index");
-    return page(rows.slice(from));
+    if (!key?.length) return page([older], historyCursor);
+    assert.deepEqual(Array.from(key), Array.from(historyCursor));
+    if (historyFails) throw new Error("history height pruned");
+    return page([newer]);
   };
   const logs: string[] = [],
     alerts: string[] = [];
@@ -123,7 +115,7 @@ test("a discovery failure still relays open transfers and retries history from t
     "the failed history page is alerted",
   );
   assert.ok(waitingFor(openId), "the open transfer is still planned");
-  assert.deepEqual(requested, [undefined, chronologicalKey(olderId)]);
+  assert.deepEqual(requested, [undefined, historyCursor]);
 
   historyFails = false;
   alerts.length = 0;
@@ -131,15 +123,15 @@ test("a discovery failure still relays open transfers and retries history from t
   assert.deepEqual(events(alerts, "relay-discovery-failed"), []);
   assert.deepEqual(
     requested.slice(2),
-    [undefined],
+    [undefined, historyCursor],
     "history restarts from the saved checkpoint, not the failed page",
   );
   assert.ok(waitingFor(newerId), "the discovered transfer is planned");
 
   await context.tick();
   assert.deepEqual(
-    requested.slice(3),
-    [chronologicalKey(newerId)],
+    requested.slice(4).map((key) => Array.from(key ?? [])),
+    [Array.from(historyCursor)],
     "a complete discovery saves its checkpoint",
   );
 });

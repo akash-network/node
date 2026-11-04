@@ -206,7 +206,7 @@ class PayingSolana extends FakeSolana {
         assert.ok(existence);
         const id = object(args.id);
         assert.ok(
-          Array.isArray(id.owner) &&
+          Buffer.isBuffer(id.owner) &&
             id.height instanceof BN &&
             id.sequence instanceof BN,
         );
@@ -349,7 +349,7 @@ async function fixture(
     status,
     settlement: {
       round: 1n,
-      policy: { version: 1n, members: ["reporter"], threshold: 1 },
+      policy: { version: 1n, members: ["reporter"], threshold: "1" },
       voidAuthorization: { requestedHeight: 60n, requestedRound: 1n },
     },
   });
@@ -525,7 +525,7 @@ test("a status and round change retires the exact old buffer and resumes the per
     settlement: {
       ...f.transfer.settlement,
       round: 3n,
-      policy: { version: 2n, members: ["new"], threshold: 1 },
+      policy: { version: 2n, members: ["new"], threshold: "1" },
     },
   });
   await f.restart();

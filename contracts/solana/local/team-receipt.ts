@@ -291,10 +291,7 @@ export function depositFromTransaction(tx: comet38.TxResponse) {
     );
     assert.match(amount, /^[1-9][0-9]{0,19}$/);
     assert.ok(BigInt(amount) <= 0xffffffffffffffffn);
-    const sender = fromBech32(from, 90);
-    assert.equal(sender.prefix, "akash");
-    assert.equal(sender.data.length, 20);
-    assert.equal(toBech32("akash", sender.data), from);
+    ownerBytes(from);
     const recipient = new web3.PublicKey(destination);
     assert.equal(recipient.toBase58(), destination);
     assert.ok(!recipient.equals(web3.PublicKey.default));
@@ -505,10 +502,7 @@ export function walletHistoryAddress(params: URLSearchParams) {
     assert.equal(entries.length, 1);
     const [key, address] = entries[0];
     assert.equal(key, "sender");
-    const decoded = fromBech32(address, 90);
-    assert.equal(decoded.prefix, "akash");
-    assert.equal(decoded.data.length, 20);
-    assert.equal(toBech32("akash", decoded.data), address);
+    ownerBytes(address);
     return address;
   } catch {
     throw new ApiFailure(400, "A canonical Akash sender address is required");

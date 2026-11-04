@@ -234,6 +234,20 @@ test("decimal quorum is exact and financial terminal state does not conceal hold
   assert.throws(() => reporterThreshold("1.01", 0));
   for (const ratio of ["0.5", "1.01", "NaN"])
     assert.throws(() => reporterThreshold(ratio, 4));
+  const snapshot = testSnapshot();
+  snapshot.policy.threshold = "0.750000000000000000";
+  assert.equal(
+    planOutcome("reporter", snapshot, resolved()).messages.length,
+    1,
+  );
+  snapshot.params.reportersThreshold = "0.74";
+  assert.throws(
+    () => planOutcome("reporter", snapshot, resolved()),
+    /threshold mismatch/,
+  );
+  snapshot.policy.threshold = "0.5";
+  snapshot.params.reportersThreshold = "0.5";
+  assert.throws(() => planOutcome("reporter", snapshot, resolved()), /quorum/);
   const transfer = TransferState.fromPartial({
     status: Status.STATUS_MINTED,
     settlement: { policy: { version: 1n } },

@@ -111,7 +111,7 @@ export function parseProofJob(
   );
   assert.ok(
     Buffer.from(transferKey(id)).equals(key) ||
-      (key.length === 40 && Buffer.from(settlementKey(id, key[2])).equals(key)),
+      (key.length > 2 && Buffer.from(settlementKey(id, key[2])).equals(key)),
     "proof job key mismatch",
   );
   const decoded = MerkleProof.decode(proof);

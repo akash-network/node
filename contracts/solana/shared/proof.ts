@@ -14,6 +14,7 @@ import {
   idSuffix,
   MAX_UINT64,
   MAX_INT64,
+  OWNER_BECH32_LIMIT,
   ownerBytes,
   parseSinkId,
   sinkIdParts,
@@ -45,7 +46,7 @@ export function proofNonce(key: Uint8Array): Buffer {
 export function anchorId(id: SinkId) {
   const value = sinkIdParts(id);
   return {
-    owner: Array.from(ownerBytes(value.owner)),
+    owner: Buffer.from(ownerBytes(value.owner)),
     height: new BN(value.height.toString()),
     sequence: new BN(value.sequence.toString()),
   };
@@ -55,7 +56,7 @@ export function statusAddress(program: web3.PublicKey, id: SinkId) {
   return web3.PublicKey.findProgramAddressSync(
     [
       Buffer.from("transfer"),
-      Buffer.from(value.owner),
+      proofNonce(value.owner),
       value.height.toArrayLike(Buffer, "le", 8),
       value.sequence.toArrayLike(Buffer, "le", 8),
     ],
@@ -174,15 +175,24 @@ export function matchesAnchorId(
 export function idFromTransferKey(key: Uint8Array): SinkId {
   const bytes = Buffer.from(key);
   assert.ok(
-    bytes.length === 39 &&
-      bytes.subarray(0, 2).equals(TRANSFER_KEY_PREFIX) &&
-      bytes[2] === 20,
+    bytes.subarray(0, TRANSFER_KEY_PREFIX.length).equals(TRANSFER_KEY_PREFIX),
     "invalid transfer key",
   );
+  let offset = TRANSFER_KEY_PREFIX.length;
+  const length = bytes[offset++];
+  assert.ok(
+    length > 0 && bytes.length === offset + length + 8 + 8,
+    "invalid transfer key length",
+  );
+  const owner = bytes.subarray(offset, offset + length);
+  offset += length;
+  const height = bytes.readBigUInt64BE(offset);
+  offset += 8;
+  const sequence = bytes.readBigUInt64BE(offset);
   return parseSinkId({
-    owner: toBech32("akash", bytes.subarray(3, 23)),
-    height: bytes.readBigUInt64BE(23),
-    sequence: bytes.readBigUInt64BE(31),
+    owner: toBech32("akash", owner, OWNER_BECH32_LIMIT),
+    height,
+    sequence,
   });
 }
 

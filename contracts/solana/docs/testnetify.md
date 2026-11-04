@@ -67,7 +67,7 @@ The native tool currently logs a repeated database-close error after its complet
 | Governance void        | A real proposal receives validator votes, writes a void order, and its proof permanently voids a 5 AKT deposit on Solana. Reporters refund it after the challenge, including while minting is paused. |
 | Health and restart     | Four nodes agree on a committed block, all services run, all reporters agree with terminal outcomes and propose no duplicate actions, and supply equals accounted escrow.                             |
 
-Fresh schema-4 genesis has zero Sink escrow and zero Solana supply. Run this rehearsal with the matching SDK, node and program. Earlier scalar-ID results do not validate the new schema.
+Fresh genesis has zero Sink escrow and zero Solana supply. Run this rehearsal with the matching SDK, node and program. Earlier scalar-ID results do not validate the current interface.
 
 `testnet:verify` is read-only apart from writing its local result file. It checks actual RPC state, balances and reporter decisions. Run it after all deposits settle; it includes independently indexed finalized SPL burns in the escrow/supply check.
 
@@ -92,7 +92,7 @@ The [100-validator benchmark](header-scaling.md) now passes equal and weighted c
 
 All live validators and reporters run on one machine. Production key custody, independent nodes, full-size validator changes, approved upgrade policy, metadata, multisig/time locks and audits remain. The monitor scans complete chronological history without a record-count limit. Missing or pruned history still fails closed. Scan time and memory grow with history.
 
-The Sink service uses the canonical schema 4 and native protobuf proofs. Follow [launch and recovery](sink-migration-v2.md) before running these commands against a new namespace. Existing numeric-ID deployments remain separate.
+The Sink service uses the current native Sink interface and native protobuf proofs. Follow [launch and recovery](sink-migration-v2.md) before running these commands against a new namespace. Existing numeric-ID deployments remain separate.
 
 ## Maintained testnet receipt adapter
 

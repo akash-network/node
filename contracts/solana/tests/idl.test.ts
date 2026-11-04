@@ -33,7 +33,7 @@ const slot = field("resolved_at_slot", "u64");
 const outcome = field("outcome", defined("TransferOutcome"));
 const nonce = field("nonce", { array: ["u8", 32] });
 const compositeId = struct("TransferId", [
-  field("owner", { array: ["u8", 20] }),
+  field("owner", "bytes"),
   field("height", "u64"),
   field("sequence", "u64"),
 ]);
@@ -90,18 +90,10 @@ function migratedInstruction(
     ...instruction,
     args,
     accounts: instruction.accounts.map((account) => {
-      if (resolution && account.name === "status") {
-        return {
-          ...account,
-          pda: {
-            seeds: [
-              seed("transfer"),
-              arg("id.owner"),
-              arg("id.height"),
-              arg("id.sequence"),
-            ],
-          },
-        };
+      if (resolution && account.name === "status" && "pda" in account) {
+        // Anchor cannot encode hash-derived seeds; callers supply the PDA.
+        const { pda: _pda, ...status } = account;
+        return status;
       }
       if ((resolution || writeBuffer) && account.name === "proof_buffer") {
         return {

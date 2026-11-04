@@ -215,7 +215,7 @@ test("the broadcaster sends nothing unless the external signature verifies", asy
   t.mock.method(akash, "state", async () => ({
     params: Params.fromPartial({ reporters: [address] }),
     totals: Totals.fromPartial({}),
-    policy: { ...testSnapshot().policy, members: [address], threshold: 1 },
+    policy: { ...testSnapshot().policy, members: [address], threshold: "1" },
     sendUsage: testSnapshot().refundUsage,
     refundUsage: testSnapshot().refundUsage,
     height: 10,

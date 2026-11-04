@@ -313,7 +313,10 @@ pub(super) fn heaps(vm: &mut Mollusk, fixtures: &[Fixture]) {
         for fixture in fixtures.iter().filter(|fixture| {
             matches!(
                 fixture.name.as_str(),
-                "sdk-settlement-maximum_evidence" | "verifier-depth-127" | "mint-depth-127"
+                "sdk-settlement-maximum_evidence"
+                    | "sdk-settlement-64_reporters_32_byte_addresses"
+                    | "verifier-depth-127"
+                    | "mint-depth-127"
             )
         }) {
             let case = Case::new(fixture);

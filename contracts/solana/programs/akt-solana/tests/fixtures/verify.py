@@ -2,6 +2,7 @@ import base64
 import hashlib
 import json
 from pathlib import Path
+from decimal import Decimal
 
 DIRECTORY = Path(__file__).resolve().parent
 ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
@@ -41,7 +42,7 @@ def string(field, value):
 def policy(value):
     return (scalar(1, value["version"])
             + b"".join(string(2, member) for member in value["members"])
-            + scalar(3, value["threshold"]))
+            + string(3, str(int(Decimal(value["threshold"]) * 10**18))))
 
 
 def observation(value):
@@ -71,11 +72,13 @@ def settlement(value):
 
 
 def identity(value):
-    return (bytes([20]) + bytes.fromhex(value["owner_hex"])
+    return (bytes([len(bytes.fromhex(value["owner_hex"]))]) + bytes.fromhex(value["owner_hex"])
             + int(value["height"]).to_bytes(8, "big") + int(value["sequence"]).to_bytes(8, "big"))
 
 
-for fixture in json.loads((DIRECTORY / "proof_vectors.json").read_text()):
+boundaries = json.loads((DIRECTORY / "native_boundary_vectors.json").read_text())
+
+for fixture in json.loads((DIRECTORY / "proof_vectors.json").read_text()) + boundaries["records"]:
     recipient = base58(bytes.fromhex(fixture["recipient_hex"]))
     assert recipient == fixture["recipient"]
     amount = str(int(fixture["amount"]))
@@ -87,7 +90,7 @@ for fixture in json.loads((DIRECTORY / "proof_vectors.json").read_text()):
     assert hashlib.sha256(key).hexdigest() == fixture["mint_proof_nonce_hex"]
     print(f"native_record name={fixture['name']} bytes={len(value)} key_nonce=matched independent_base58=true")
 
-for fixture in json.loads((DIRECTORY / "settlement_vectors.json").read_text()):
+for fixture in json.loads((DIRECTORY / "settlement_vectors.json").read_text()) + boundaries["settlements"]:
     key = bytes([3, 1, fixture["status"]]) + identity(fixture)
     value = settlement(fixture["settlement"])
     assert key.hex() == fixture["settlement_key_hex"]

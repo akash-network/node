@@ -35,7 +35,7 @@ export function testTransfer(
       policy: {
         version: 1n,
         members: ["reporter", "b", "c", "d"],
-        threshold: 3,
+        threshold: "0.75",
       },
     },
   });
@@ -52,7 +52,7 @@ export function testSnapshot(): Snapshot {
     policy: ReporterPolicy.fromPartial({
       version: 1n,
       members: ["reporter", "b", "c", "d"],
-      threshold: 3,
+      threshold: "0.75",
     }),
     refundUsage: EpochUsage.fromPartial({
       epoch: 57n,

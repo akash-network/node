@@ -1663,6 +1663,7 @@ dependencies = [
 [[package]]
 name = "ibc-eureka-constrained-types"
 version = "0.1.0"
+source = "git+https://github.com/akash-network/ibc-contracts?rev=0da3165d8428a1b7792cc17551ecd1d3985761e6#0da3165d8428a1b7792cc17551ecd1d3985761e6"
 dependencies = [
  "borsh 0.10.4",
 ]
@@ -3537,10 +3538,12 @@ dependencies = [
 [[package]]
 name = "solana-ibc-constants"
 version = "0.1.0"
+source = "git+https://github.com/akash-network/ibc-contracts?rev=0da3165d8428a1b7792cc17551ecd1d3985761e6#0da3165d8428a1b7792cc17551ecd1d3985761e6"
 
 [[package]]
 name = "solana-ibc-gmp-types"
 version = "0.1.0"
+source = "git+https://github.com/akash-network/ibc-contracts?rev=0da3165d8428a1b7792cc17551ecd1d3985761e6#0da3165d8428a1b7792cc17551ecd1d3985761e6"
 dependencies = [
  "anchor-lang",
  "borsh 0.10.4",
@@ -3551,6 +3554,7 @@ dependencies = [
 [[package]]
 name = "solana-ibc-macros"
 version = "0.1.0"
+source = "git+https://github.com/akash-network/ibc-contracts?rev=0da3165d8428a1b7792cc17551ecd1d3985761e6#0da3165d8428a1b7792cc17551ecd1d3985761e6"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3561,6 +3565,7 @@ dependencies = [
 [[package]]
 name = "solana-ibc-proto"
 version = "0.1.0"
+source = "git+https://github.com/akash-network/ibc-contracts?rev=0da3165d8428a1b7792cc17551ecd1d3985761e6#0da3165d8428a1b7792cc17551ecd1d3985761e6"
 dependencies = [
  "anchor-lang",
  "ibc-eureka-constrained-types",
@@ -3573,6 +3578,7 @@ dependencies = [
 [[package]]
 name = "solana-ibc-types"
 version = "0.1.0"
+source = "git+https://github.com/akash-network/ibc-contracts?rev=0da3165d8428a1b7792cc17551ecd1d3985761e6#0da3165d8428a1b7792cc17551ecd1d3985761e6"
 dependencies = [
  "anchor-lang",
  "borsh 0.10.4",
@@ -5004,6 +5010,7 @@ dependencies = [
 [[package]]
 name = "tendermint-light-client-membership"
 version = "0.1.0"
+source = "git+https://github.com/akash-network/ibc-contracts?rev=0da3165d8428a1b7792cc17551ecd1d3985761e6#0da3165d8428a1b7792cc17551ecd1d3985761e6"
 dependencies = [
  "ibc-core-commitment-types",
  "ibc-core-host-types",
@@ -5014,6 +5021,7 @@ dependencies = [
 [[package]]
 name = "tendermint-light-client-solana"
 version = "0.1.0"
+source = "git+https://github.com/akash-network/ibc-contracts?rev=0da3165d8428a1b7792cc17551ecd1d3985761e6#0da3165d8428a1b7792cc17551ecd1d3985761e6"
 dependencies = [
  "brine-ed25519",
  "ibc-core-commitment-types",

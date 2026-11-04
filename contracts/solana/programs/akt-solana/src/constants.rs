@@ -16,7 +16,7 @@ pub const MINT_AUTHORITY_SEED: &[u8] = b"mint_authority";
 pub const BRIDGE_SEED: &[u8] = b"bridge";
 /// `PauseGuardian`, created by the first `set_pause_guardian`.
 pub const GUARDIAN_SEED: &[u8] = b"guardian";
-/// `TransferStatus`, followed by owner20, LE64(height), and LE64(sequence).
+/// `TransferStatus`, followed by SHA256(owner), LE64(height), and LE64(sequence).
 pub const TRANSFER_SEED: &[u8] = b"transfer";
 /// `ProofBuffer`, followed by the submitter's key and SHA-256(proven key).
 pub const PROOF_SEED: &[u8] = b"proof";

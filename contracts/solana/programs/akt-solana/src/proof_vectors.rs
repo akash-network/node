@@ -1,6 +1,15 @@
-use crate::wire::{proof_nonce, record_value, settlement_key, transfer_key, TransferId};
+use crate::wire::{
+    owner_seed, proof_nonce, record_value, settlement_key, transfer_key, TransferId,
+};
 use anchor_lang::prelude::*;
 use std::collections::BTreeMap;
+
+fn boundaries() -> serde_json::Value {
+    serde_json::from_str(include_str!(
+        "../tests/fixtures/native_boundary_vectors.json"
+    ))
+    .unwrap()
+}
 
 fn hex(value: &str) -> Vec<u8> {
     assert_eq!(value.len() % 2, 0);
@@ -12,12 +21,16 @@ fn hex(value: &str) -> Vec<u8> {
 
 #[test]
 fn sdk_vectors_match_rust_keys_values_nonces_and_seed_bytes() {
-    let vectors: Vec<BTreeMap<String, String>> =
+    let mut vectors: Vec<BTreeMap<String, String>> =
         serde_json::from_str(include_str!("../tests/fixtures/proof_vectors.json")).unwrap();
     assert_eq!(vectors.len(), 5);
+    let records: Vec<BTreeMap<String, String>> =
+        serde_json::from_value(boundaries()["records"].clone()).unwrap();
+    vectors.extend(records);
+    assert_eq!(vectors.len(), 9);
     for vector in vectors {
         let id = TransferId {
-            owner: hex(&vector["owner_hex"]).try_into().unwrap(),
+            owner: hex(&vector["owner_hex"]),
             height: vector["height"].parse().unwrap(),
             sequence: vector["sequence"].parse().unwrap(),
         };
@@ -46,7 +59,7 @@ fn sdk_vectors_match_rust_keys_values_nonces_and_seed_bytes() {
         let status = Pubkey::find_program_address(
             &[
                 crate::TRANSFER_SEED,
-                &id.owner,
+                &owner_seed(&id.owner),
                 &id.height.to_le_bytes(),
                 &id.sequence.to_le_bytes(),
             ],
@@ -55,22 +68,22 @@ fn sdk_vectors_match_rust_keys_values_nonces_and_seed_bytes() {
         .0;
         for other in [
             TransferId {
-                owner: [0x55; 20],
-                ..id
+                owner: vec![0x55; 20],
+                ..id.clone()
             },
             TransferId {
                 height: id.height - 1,
-                ..id
+                ..id.clone()
             },
             TransferId {
                 sequence: id.sequence - 1,
-                ..id
+                ..id.clone()
             },
         ] {
             let other_status = Pubkey::find_program_address(
                 &[
                     crate::TRANSFER_SEED,
-                    &other.owner,
+                    &owner_seed(&other.owner),
                     &other.height.to_le_bytes(),
                     &other.sequence.to_le_bytes(),
                 ],
@@ -84,13 +97,21 @@ fn sdk_vectors_match_rust_keys_values_nonces_and_seed_bytes() {
 
 #[test]
 fn sdk_settlements_bind_every_status_and_preserve_the_authorization() {
-    let vectors: Vec<serde_json::Value> =
+    let mut vectors: Vec<serde_json::Value> =
         serde_json::from_str(include_str!("../tests/fixtures/settlement_vectors.json")).unwrap();
     assert_eq!(vectors.len(), 6);
+    vectors.extend(
+        boundaries()["settlements"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .cloned(),
+    );
+    assert_eq!(vectors.len(), 7);
     for vector in vectors {
         let text = |field| vector[field].as_str().unwrap();
         let id = TransferId {
-            owner: hex(text("owner_hex")).try_into().unwrap(),
+            owner: hex(text("owner_hex")),
             height: text("height").parse().unwrap(),
             sequence: text("sequence").parse().unwrap(),
         };
@@ -124,7 +145,7 @@ fn sdk_settlements_bind_every_status_and_preserve_the_authorization() {
             );
         }
         if text("name") == "maximum_evidence" {
-            assert_eq!(value.len(), 6500);
+            assert_eq!(value.len(), 6519);
         }
     }
 }

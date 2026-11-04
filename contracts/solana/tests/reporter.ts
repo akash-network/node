@@ -7,10 +7,9 @@ import { DirectSecp256k1Wallet } from "@cosmjs/proto-signing";
 import { SigningStargateClient } from "@cosmjs/stargate";
 import { TxRaw } from "cosmjs-types/cosmos/tx/v1beta1/tx";
 import { reporterRegistry } from "../reporter/akash";
-import { planOutcome } from "../reporter/policy";
 import {
   Outcome,
-  QueryStateResponse,
+  MsgReportOutcome,
   QueryTransferResponse,
 } from "@akashnetwork/chain-sdk/private-types/akash.v1";
 import { SolanaObserver, decodeRecord } from "../reporter/solana";
@@ -23,26 +22,18 @@ export async function testReporterReturn(
   assert.ok(
     typeof fixture === "object" &&
       fixture !== null &&
-      "state_response" in fixture &&
-      typeof fixture.state_response === "string" &&
       "transfer_response" in fixture &&
       typeof fixture.transfer_response === "string" &&
       "reporters" in fixture &&
       Array.isArray(fixture.reporters),
   );
-  const state = QueryStateResponse.decode(
-    Buffer.from(fixture.state_response, "hex"),
-  );
   const transfer = QueryTransferResponse.decode(
     Buffer.from(fixture.transfer_response, "hex"),
   ).transfer;
-  assert.ok(
-    state.params &&
-      state.totals &&
-      state.policy &&
-      state.refundUsage &&
-      transfer,
-  );
+  assert.ok(transfer?.settlement?.policy && transfer.id);
+  const settlement = transfer.settlement;
+  const policy = settlement.policy;
+  assert.ok(policy && policy.version > 0n);
   const programId = new web3.PublicKey(
     "FfFAPUKqjf68ggj1HvpyzMHFDRnT2cFAdZYYQb7mK9i5",
   );
@@ -104,27 +95,23 @@ export async function testReporterReturn(
       "akash",
     );
     assert.equal((await wallet.getAccounts())[0]?.address, signer.address);
-    const plan = planOutcome(
-      signer.address,
-      {
-        params: state.params,
-        totals: state.totals,
-        policy: state.policy,
-        refundUsage: state.refundUsage,
-        epoch: state.epoch,
-        transfer,
-        time: 1_750_000_002n,
-      },
-      observed,
-    );
-    assert.equal(plan.messages.length, 1);
-    assert.equal(plan.messages[0].typeUrl, "/akash.sink.v1.MsgReportOutcome");
+    assert.ok(policy.members.includes(signer.address));
+    const message = {
+      typeUrl: "/akash.sink.v1.MsgReportOutcome",
+      value: MsgReportOutcome.fromPartial({
+        reporter: signer.address,
+        id: transfer.id,
+        policyVersion: policy.version,
+        round: settlement.round,
+        observation: observed.observation,
+      }),
+    };
     const client = await SigningStargateClient.offline(wallet, {
       registry: reporterRegistry(),
     });
     const tx = await client.sign(
       signer.address,
-      plan.messages,
+      [message],
       { amount: [{ denom: "uakt", amount: "10" }], gas: "500000" },
       "local finalized observation",
       {

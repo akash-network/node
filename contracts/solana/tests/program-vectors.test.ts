@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import test from "node:test";
 import { BN, BorshCoder, web3 } from "@coral-xyz/anchor";
 import generatedIdl from "../../../.cache/solana/target/idl/akt_solana.json";
+import boundaries from "../programs/akt-solana/tests/fixtures/native_boundary_vectors.json";
 import vectors from "../programs/akt-solana/tests/fixtures/proof_vectors.json";
 import { assertCanonicalIdl } from "./idl.test";
 
@@ -16,10 +17,10 @@ const observable = (value: unknown): unknown =>
   JSON.parse(JSON.stringify(value));
 const sha256 = (key: Buffer) => createHash("sha256").update(key).digest();
 
-for (const vector of vectors) {
+for (const vector of [...vectors, ...boundaries.records]) {
   test(`program Borsh encoding matches SDK vector ${vector.name}`, async () => {
     const id = {
-      owner: [...hex(vector.owner_hex)],
+      owner: hex(vector.owner_hex),
       height: new BN(vector.height),
       sequence: new BN(vector.sequence),
     };
@@ -43,7 +44,10 @@ for (const vector of vectors) {
       decimal,
     ]);
     assert.deepEqual(nativeRecord, hex(vector.record_value_hex));
+    const ownerLength = Buffer.alloc(4);
+    ownerLength.writeUInt32LE(id.owner.length);
     const idBytes = Buffer.concat([
+      ownerLength,
       hex(vector.owner_hex),
       heightLE,
       sequenceLE,
@@ -51,7 +55,7 @@ for (const vector of vectors) {
     assert.deepEqual(coder.types.encode("TransferId", id), idBytes);
 
     const transferKey = Buffer.concat([
-      Buffer.from([0x02, 0, 20]),
+      Buffer.from([0x02, 0, id.owner.length]),
       hex(vector.owner_hex),
       id.height.toArrayLike(Buffer, "be", 8),
       id.sequence.toArrayLike(Buffer, "be", 8),
@@ -73,7 +77,7 @@ for (const vector of vectors) {
       amount: record.amount,
       proof_height: proofHeight,
     });
-    assert.equal(mint.length, 92);
+    assert.equal(mint.length, 76 + id.owner.length);
     assert.deepEqual(
       mint.subarray(8),
       Buffer.concat([
@@ -88,7 +92,7 @@ for (const vector of vectors) {
       settlement_status: 3,
       proof_height: proofHeight,
     });
-    assert.equal(voidInstruction.length, 53);
+    assert.equal(voidInstruction.length, 37 + id.owner.length);
     assert.deepEqual(
       voidInstruction.subarray(8),
       Buffer.concat([
@@ -119,7 +123,7 @@ for (const vector of vectors) {
         outcome,
       };
       const status = await coder.accounts.encode("TransferStatus", evidence);
-      assert.ok(status.length <= 101);
+      assert.ok(status.length <= 85 + id.owner.length);
       assert.deepEqual(
         observable(coder.accounts.decode("TransferStatus", status)),
         observable(evidence),
@@ -139,11 +143,21 @@ for (const vector of vectors) {
     }
 
     const status = web3.PublicKey.findProgramAddressSync(
-      [Buffer.from("transfer"), hex(vector.owner_hex), heightLE, sequenceLE],
+      [
+        Buffer.from("transfer"),
+        sha256(hex(vector.owner_hex)),
+        heightLE,
+        sequenceLE,
+      ],
       program,
     )[0];
     const otherStatus = web3.PublicKey.findProgramAddressSync(
-      [Buffer.from("transfer"), Buffer.alloc(20, 0x55), heightLE, sequenceLE],
+      [
+        Buffer.from("transfer"),
+        sha256(Buffer.alloc(20, 0x55)),
+        heightLE,
+        sequenceLE,
+      ],
       program,
     )[0];
     assert.ok(!status.equals(otherStatus));

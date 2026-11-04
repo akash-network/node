@@ -1,5 +1,5 @@
 import { web3 } from "@coral-xyz/anchor";
-import { fromBech32, toBech32 } from "@cosmjs/encoding";
+import { ownerBytes } from "../shared/id";
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { readFile, rename } from "node:fs/promises";
@@ -107,10 +107,7 @@ async function fund(input: unknown) {
   assert.ok(typeof request.address === "string", "address required");
   const { chain, address } = request;
   if (chain === "akash") {
-    const decoded = fromBech32(address, 90);
-    assert.equal(decoded.prefix, "akash");
-    assert.equal(decoded.data.length, 20);
-    assert.equal(toBech32(decoded.prefix, decoded.data), address);
+    ownerBytes(address);
     const init = object(await json(join(ROOT, "initialized.json")));
     assert.notEqual(
       address,

@@ -59,7 +59,7 @@ and the portal on one machine, and keep no keys on the portal host.
 
 | Item                        | Version                                                                                  | Source                                                             |
 | --------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| Akash node with x/sink      | Reviewed schema 4 source and matching SDK dependency                                     | Build the reviewed node checkout and retain its source fingerprint |
+| Akash node with x/sink      | Reviewed native Sink source and matching SDK dependency                                  | Build the reviewed node checkout and retain its source fingerprint |
 | Akash chain SDK             | Same local archive in the bridge and portal; retain its package version and archive hash | [SDK integration](sdk-integration.md)                              |
 | Agave (Solana)              | Pin the runtime and build tools in the reviewed deployment manifest                      | Retain the exact binary and its hash                               |
 | Relayer, reporter and tools | Reviewed `contracts/solana` source paired with that SDK and program IDL                  | Build with the checked-in package lock                             |

@@ -110,4 +110,4 @@ The single-validator profile also exposes Akash REST on `127.0.0.1:1318`
 endpoints follow the selected profile, so parallel local stacks cannot route
 wallet requests to the other Akash chain.
 
-The Sink service uses the canonical schema 4 and native protobuf proofs. Follow [launch and recovery](sink-migration-v2.md) before running these commands against a new namespace. Existing numeric-ID deployments remain separate.
+The Sink service uses the current native Sink interface and native protobuf proofs. Follow [launch and recovery](sink-migration-v2.md) before running these commands against a new namespace. Existing numeric-ID deployments remain separate.
