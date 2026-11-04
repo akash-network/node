@@ -3,6 +3,7 @@ package keeper
 import (
 	"math"
 	"slices"
+	"strings"
 	"testing"
 
 	sdkmath "cosmossdk.io/math"
@@ -264,6 +265,9 @@ func TestSetParamsRejectsInvalidReporterSet(t *testing.T) {
 		{name: "exactly two thirds", reporters: members(3), threshold: "0.666666666666666666"},
 		{name: "zero ratio", reporters: members(4), threshold: "0"},
 		{name: "duplicate member", reporters: append(members(3), members(1)...), threshold: "0.75"},
+		// Bech32 also decodes the upper-case spelling. Four strings at 0.66
+		// need three votes, which two accounts would cast.
+		{name: "second spelling of a member", reporters: append(members(3), strings.ToUpper(members(1)[0])), threshold: "0.66"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			k, ctx, bank := testStore(t)
@@ -292,6 +296,7 @@ func TestSetParamsRejectsInvalidReporterSet(t *testing.T) {
 		{name: "just above two thirds", reporters: members(3), threshold: "0.666666666666666667"},
 		{name: "seven at default ratio", reporters: members(7), threshold: "0.66"},
 		{name: "empty set", reporters: nil, threshold: "0.66"},
+		{name: "upper-case member", reporters: append([]string{strings.ToUpper(members(1)[0])}, members(4)[1:]...), threshold: "0.75"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			k, ctx, bank := testStore(t)

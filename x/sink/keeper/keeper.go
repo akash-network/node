@@ -60,6 +60,7 @@ type Keeper interface {
 	PrepareInstall(sdk.Context, Distribution) (sdk.Coins, error)
 	InitGenesis(sdk.Context, *types.GenesisState) error
 	ExportGenesis(sdk.Context) (*types.GenesisState, error)
+	ValidateExportHeight(sdk.Context, int64) error
 }
 
 type keeper struct {

@@ -2,7 +2,9 @@ package app
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/rand"
+	"slices"
 	"time"
 
 	errorsmod "cosmossdk.io/errors"
@@ -11,6 +13,7 @@ import (
 	slashingtypes "github.com/cosmos/cosmos-sdk/x/slashing/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/spf13/viper"
+	sinktypes "pkg.akt.dev/go/node/sink/v1"
 	"pkg.akt.dev/go/sdkutil"
 
 	abci "github.com/cometbft/cometbft/abci/types"
@@ -42,6 +45,20 @@ func (app *AkashApp) ExportAppStateAndValidators(
 
 	if forZeroHeight {
 		height = 0
+
+		// Sink transfer IDs keep their deposit height, and a chain started from
+		// a zero-height genesis imports only transfers below height 1.
+		if len(modulesToExport) == 0 || slices.Contains(modulesToExport, sinktypes.ModuleName) {
+			err := app.Keepers.Akash.Sink.ValidateExportHeight(ctx, height)
+			if errorsmod.IsOf(err, sinktypes.ErrInvalidGenesis) {
+				return servertypes.ExportedApp{}, fmt.Errorf("zero-height export cannot carry sink transfers; export without --for-zero-height to keep block heights: %w", err)
+			}
+
+			if err != nil {
+				return servertypes.ExportedApp{}, err
+			}
+		}
+
 		app.prepForZeroHeightGenesis(ctx, jailAllowedAddrs)
 	}
 

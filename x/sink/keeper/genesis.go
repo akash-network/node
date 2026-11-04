@@ -89,14 +89,9 @@ func (k *keeper) InitGenesis(ctx sdk.Context, g *types.GenesisState) error {
 		return err
 	}
 
-	// The allocator restarts every block, so a record at or above the first
-	// executable height could share its height and sequence with a new
-	// deposit, and export rejects duplicate positions.
-	first := max(int64(1), ctx.BlockHeight())
 	for _, t := range g.Records {
-		void := t.Settlement.VoidAuthorization
-		if t.ID.Height >= first || void != nil && void.RequestedHeight >= first {
-			return types.ErrInvalidGenesis.Wrap("transfer height must precede first executable height")
+		if err := requirePriorHeight(t.ID, t.Settlement, ctx.BlockHeight()); err != nil {
+			return err
 		}
 	}
 
@@ -280,6 +275,40 @@ func (k *keeper) ExportGenesis(ctx sdk.Context) (*types.GenesisState, error) {
 	}
 
 	return g, nil
+}
+
+// ValidateExportHeight applies InitGenesis's height rule to the stored
+// transfers: a snapshot for a chain whose genesis has initialHeight may hold
+// only transfers and void requests from earlier blocks. Transfer IDs keep their
+// deposit height, so a zero-height export of any transfer fails.
+func (k *keeper) ValidateExportHeight(ctx sdk.Context, initialHeight int64) error {
+	return k.transfers.Walk(ctx, nil, func(id types.ID, _ types.RecordData) (bool, error) {
+		t, err := k.GetTransfer(ctx, id)
+		if err != nil {
+			return true, err
+		}
+
+		if err = requirePriorHeight(t.ID, t.Settlement, initialHeight); err != nil {
+			return true, err
+		}
+
+		return false, nil
+	})
+}
+
+// requirePriorHeight rejects a transfer that a chain whose genesis has
+// initialHeight could not import; CometBFT starts heights 0 and 1 at block 1.
+// The allocator restarts every block, so a record at or above the first
+// executable height could share its height and sequence with a new deposit,
+// and export rejects duplicate positions. Void requests must be older too.
+func requirePriorHeight(id types.ID, s types.SettlementData, initialHeight int64) error {
+	first := max(int64(1), initialHeight)
+	void := s.VoidAuthorization
+	if id.Height >= first || void != nil && void.RequestedHeight >= first {
+		return types.ErrInvalidGenesis.Wrapf("transfer height must precede first executable height %d: %s", first, id.String())
+	}
+
+	return nil
 }
 
 func (k *keeper) requireRecord(ctx context.Context, id types.ID) (bool, error) {

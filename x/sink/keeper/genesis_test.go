@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -561,6 +562,49 @@ func TestGenesisRejectsLostIdentityOrBacking(t *testing.T) {
 	}
 }
 
+// ValidateExportHeight applies InitGenesis's height rule to stored state: a
+// snapshot exported for an initial height imports at that height, and only
+// then.
+func TestValidateExportHeightMatchesImport(t *testing.T) {
+	empty, emptyCtx, emptyBank := testStore(t)
+	importTestGenesis(t, empty, emptyCtx, emptyBank, types.DefaultGenesis())
+	require.NoError(t, empty.ValidateExportHeight(emptyCtx, 0), "without transfers any initial height works")
+
+	k, ctx, bank := testStore(t)
+	g := populatedGenesis()
+	// Transfers are at height 7; one void request is newer.
+	g.Records[2].Settlement.VoidAuthorization.RequestedHeight = 9
+	importTestGenesis(t, k, ctx, bank, g)
+	exported, err := k.ExportGenesis(ctx)
+	require.NoError(t, err)
+	escrow, err := exported.Totals.EscrowAmount()
+	require.NoError(t, err)
+
+	for height := int64(0); height <= 11; height++ {
+		restored, restoredCtx, restoredBank := testStore(t)
+		restoredBank.set(restoredCtx, Address(), sdk.NewCoins(escrow))
+		imported := restored.InitGenesis(restoredCtx.WithBlockHeight(height), exported)
+
+		err := k.ValidateExportHeight(ctx, height)
+		require.Equal(t, imported == nil, err == nil, "initial height %d: import %v, export %v", height, imported, err)
+		require.Equal(t, height >= 10, err == nil, "initial height %d", height)
+		if err != nil {
+			require.ErrorIs(t, err, types.ErrInvalidGenesis)
+		}
+	}
+}
+
+// A store that cannot be read is reported, never taken for an exportable one.
+func TestValidateExportHeightReportsStoreFailures(t *testing.T) {
+	k, ctx, bank := testStore(t)
+	g := populatedGenesis()
+	importTestGenesis(t, k, ctx, bank, g)
+	require.NoError(t, k.ValidateExportHeight(ctx, 100), "every transfer precedes height 100")
+
+	require.NoError(t, k.settlements.Remove(ctx, *types.NewSettlementID(g.Records[0].Status, g.Records[0].ID)))
+	require.ErrorIs(t, k.ValidateExportHeight(ctx, 100), types.ErrInternal)
+}
+
 func TestGenesisVoidRequestMustPrecedeFirstHeight(t *testing.T) {
 	// Only the void request reaches the first executable height (100 in
 	// testStore); the transfer itself is older.
@@ -656,6 +700,32 @@ func TestGenesisRequiresCurrentReporterPolicy(t *testing.T) {
 		_, err := k.ExportGenesis(ctx)
 		require.NoError(t, err)
 	})
+}
+
+// A policy that spells one reporter twice would let that account cast two
+// votes: four strings at 0.66 need three, which two accounts would supply.
+func TestGenesisRejectsReporterAliases(t *testing.T) {
+	k, ctx, _ := testStore(t)
+	g := types.DefaultGenesis()
+	g.Params.Reporters = []string{
+		testOwner(2).String(),
+		strings.ToUpper(testOwner(2).String()),
+		testOwner(3).String(),
+		testOwner(4).String(),
+	}
+	slices.Sort(g.Params.Reporters)
+	g.Policies = []types.ReporterPolicy{{
+		Version:   1,
+		Members:   g.Params.Reporters,
+		Threshold: g.Params.ReportersThreshold,
+	}}
+	g.PolicySequence = 1
+
+	require.ErrorIs(t, ValidateGenesis(g), types.ErrInvalidReporters)
+	require.ErrorIs(t, k.InitGenesis(ctx, g), types.ErrInvalidReporters)
+	initialized, err := k.initialized(ctx)
+	require.NoError(t, err)
+	require.False(t, initialized)
 }
 
 func TestGenesisZeroHeightEmptyAndCorruption(t *testing.T) {

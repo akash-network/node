@@ -9,7 +9,9 @@ import (
 	"time"
 
 	abci "github.com/cometbft/cometbft/abci/types"
+	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	commitment "github.com/cosmos/ibc-go/v10/modules/core/23-commitment/types"
 	"github.com/stretchr/testify/require"
 
@@ -35,6 +37,45 @@ func TestSinkRejectedGenesisLeavesNoModuleAccount(t *testing.T) {
 	require.Nil(t, ak.GetAccount(ctx, sinkkeeper.Address()))
 	require.Equal(t, before, sinkUpgradeStores(t, h, ctx), "no store writes, including auth's account number")
 	require.Equal(t, events, ctx.EventManager().Events())
+}
+
+// Transfer IDs keep the height of their deposit block, and a chain started from
+// a zero-height genesis executes from height 1, where InitGenesis rejects every
+// transfer. Export refuses such a snapshot instead of producing one.
+func TestSinkZeroHeightExportRequiresEmptySink(t *testing.T) {
+	h := setupReportingTestSuite(t)
+	// Export reads committed state.
+	h.commitBlock(t, h.now.Add(time.Second))
+	_, err := h.a.ExportAppStateAndValidators(true, nil, nil)
+	require.NoError(t, err, "a sink without transfers exports at zero height")
+
+	res := h.deliver(t, "", h.deposit(10))
+	require.Zero(t, res.Code, res.Log)
+
+	_, err = h.a.ExportAppStateAndValidators(true, nil, nil)
+	require.ErrorIs(t, err, types.ErrInvalidGenesis)
+	require.ErrorContains(t, err, "--for-zero-height")
+	_, err = h.a.ExportAppStateAndValidators(true, nil, []string{types.ModuleName})
+	require.ErrorIs(t, err, types.ErrInvalidGenesis, "Sink named explicitly")
+
+	// Height-preserving exports, and zero-height exports that leave Sink out,
+	// still work. A zero-height export prepares the check state, so it runs
+	// after the height-preserving one.
+	exported, err := h.a.ExportAppStateAndValidators(false, nil, nil)
+	require.NoError(t, err)
+	require.Equal(t, h.height+1, exported.Height)
+	_, err = h.a.ExportAppStateAndValidators(true, nil, []string{banktypes.ModuleName})
+	require.NoError(t, err)
+
+	// Export reads the check state. Without its settlement the transfer cannot
+	// be read, which is a store failure rather than a zero-height problem.
+	check := h.a.NewContextLegacy(true, cmtproto.Header{Height: h.height})
+	key, err := sinkkeeper.SettlementKey(*types.NewSettlementID(types.StatusTransferPending, h.id(1)))
+	require.NoError(t, err)
+	check.KVStore(h.a.GetKey(types.StoreKey)).Delete(key)
+	_, err = h.a.ExportAppStateAndValidators(true, nil, nil)
+	require.ErrorIs(t, err, types.ErrInternal)
+	require.NotContains(t, err.Error(), "--for-zero-height")
 }
 
 func TestSinkFullAppGenesisBankRestoration(t *testing.T) {

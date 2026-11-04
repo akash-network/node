@@ -200,7 +200,8 @@ func TestAppImportExport(t *testing.T) {
 	require.Equal(t, akash.AppName, appB.Name())
 
 	ctxA := appA.NewContextLegacy(true, cmtproto.Header{Height: appA.LastBlockHeight()})
-	ctxB := appB.NewContextLegacy(true, cmtproto.Header{Height: appA.LastBlockHeight(), Time: appA.GetContextForCheckTx(nil).BlockTime()})
+	// A chain started from this export runs InitChain at its initial height.
+	ctxB := appB.NewContextLegacy(true, cmtproto.Header{Height: exported.Height, Time: appA.GetContextForCheckTx(nil).BlockTime()})
 
 	initReq := &abci.RequestInitChain{
 		AppStateBytes: exported.AppState,
@@ -447,7 +448,9 @@ func TestAppSimulationAfterImport(t *testing.T) {
 
 	fmt.Printf("exporting genesis...\n")
 
-	exported, err := app.ExportAppStateAndValidators(true, []string{}, []string{})
+	// Sink transfer IDs keep their block heights, so a zero-height export
+	// cannot carry them; export and import at the next height instead.
+	exported, err := app.ExportAppStateAndValidators(false, []string{}, []string{})
 	require.NoError(t, err)
 
 	fmt.Printf("importing genesis...\n")
@@ -468,10 +471,16 @@ func TestAppSimulationAfterImport(t *testing.T) {
 		AppStateBytes: exported.AppState,
 		ChainId:       AppChainID,
 		Time:          app.GetContextForCheckTx(nil).BlockTime(),
+		InitialHeight: exported.Height,
 	})
 	require.NoError(t, err)
 
-	_, _, err = simulateFromSeedFunc(t, newApp, config)
+	// SimulateFromSeed runs its own InitChain from a random genesis without an
+	// initial height, which newApp's stores, now starting at exported.Height,
+	// reject. Simulate on a fresh app.
+	appOpts.Set("home", t.TempDir())
+	simApp := akash.NewApp(log.NewNopLogger(), dbm.NewMemDB(), nil, true, sim.FlagPeriodValue, map[int64]bool{}, encodingConfig, appOpts, fauxMerkleModeOpt, baseapp.SetChainID(AppChainID))
+	_, _, err = simulateFromSeedFunc(t, simApp, config)
 	require.NoError(t, err)
 }
 
