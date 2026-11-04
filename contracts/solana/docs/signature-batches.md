@@ -10,7 +10,7 @@ The batch is an Anchor account with version, submitter, 32-byte session, bump an
 
 The shared verifier authenticates owner, discriminator, supported version, exact allocation, PDA, bounded vector length and sorted uniqueness before copying at most 256 hashes across two batches. It binary-searches those hashes before trying legacy receipts or software verification. Invalid recognized batches fail verification. Legacy receipts also gain owner, discriminator and length checks.
 
-Tendermint continues to check validator-set hashes, quorum, trusted-set overlap, times and signed-header binding. Batch membership only proves the exact signature was verified. The existing assembly and membership CPI ABIs remain unchanged. New account and instructions are additive. All source changes are captured in a reproducible patch against the pinned upstream revision.
+Tendermint continues to check validator-set hashes, quorum, trusted-set overlap, times and signed-header binding. Batch membership only proves the exact signature was verified. The existing assembly and membership CPI ABIs remain unchanged. New account and instructions are additive. The source changes are merged in the `akash-network/ibc-contracts` fork, which Cargo pins at `0da3165d`; node carries no patch ([IBC verifier source](verifier.md)).
 
 The relayer stores the exact header and session before uploading. A per-payer OS lock serializes uploads and rent reclamation, and releases after process death. Signed transaction intents are durable before submission. Lookup modifications, assembly outcomes and temporary-account cleanup must finalize. On restart the uploader resolves pending transactions and checks on-chain receipts, target consensus and cleanup state. Matching finalized consensus from a competing operator counts as completion even if the local assembly was rejected. It never makes a new checkpoint to bypass expiry. Lookup-table rent remains a separate liability until closure is permitted.
 
@@ -25,7 +25,8 @@ journals keep their session. A commit with more than 256 present signatures,
 more than 255 chunks or more than 64 assembly accounts is rejected before any
 transaction. The result carries an `unsupportedHeader` error that names the
 limit. The relayer then drops that packet instead of retrying it forever; later
-packets fail the same way until the validator set shrinks or the patch grows.
+packets fail the same way until the validator set shrinks or a verifier change
+raises the limit.
 
 Akash mainnet has 100 active validators. Commits above 128 signatures exhaust
 compute or heap before the batch limit matters: 129/129 runs out of compute and

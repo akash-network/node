@@ -19,9 +19,9 @@ Run the steps in order, from the node root, in one Bash session.
   [Solana setup](../contracts/solana/docs/setup.md), plus the locked
   [SDK archive](../contracts/solana/docs/sdk-integration.md).
 - The Metaplex fixture: run `npm run setup:metadata` from `contracts/solana`.
-- A separately prepared fresh upgrade fixture: private `tests/upgrade/config.json`,
-  matching public `STATE_CONFIG` at an absolute path, and a compatible snapshot.
-  The native runner imports configured keys; it does not generate these inputs.
+- The tracked upgrade fixture. The harness always reads `tests/upgrade/config.json`
+  and, unless `STATE_CONFIG` names another absolute path, `tests/upgrade/testnet.json`.
+  The native runner imports the configured keys; it does not generate them.
 - Free native-test ports: 26656, 26657, 9090, 9091, 9092, 6060 and 1317.
 
 Allow roughly 8 CPUs, 16–32 GiB RAM and 60 GiB disk for builds and small ledgers.
@@ -42,7 +42,7 @@ export SINK_SOLANA_CACHE="$PWD/.cache/solana"
 mkdir -p "$SINK_RUN/node_modules" "$SINK_SOURCE/contracts/solana/node_modules"
 ```
 
-Use fresh local keys and the single-validator `tests/upgrade/test-config.json`.
+Use the tracked test keys and the single-validator `tests/upgrade/test-config.json`.
 Do not copy a deployed validator home or reuse an old numeric-ID Sink ledger.
 Run the [existing upgrade tests](../contracts/solana/docs/reproduce.md#5-existing-chain-upgrade)
 from `tests/upgrade` so the runner finds its configuration:
@@ -50,7 +50,7 @@ from `tests/upgrade` so the runner finds its configuration:
 ```bash
 (cd tests/upgrade && make test AP_RUN_DIR="$SINK_RUN/upgrade" \
   SNAPSHOT_SOURCE=sandbox UPGRADE_TO=v2.2.0 GENESIS_BINARY_VERSION=v2.1.2 \
-  UPGRADE_BINARY_VERSION=local STATE_CONFIG="$STATE_CONFIG")
+  UPGRADE_BINARY_VERSION=local)
 export AKASH_HOME="$SINK_RUN/upgrade/validators/.akash0"
 ```
 

@@ -293,6 +293,8 @@ func TestSetParamsRejectsInvalidReporterSet(t *testing.T) {
 		reporters []string
 		threshold string
 	}{
+		// A reporter key that was never funded has no account yet.
+		{name: "member without an account", reporters: []string{members(3)[0], members(3)[1], testOwner(200).String(), members(4)[3]}, threshold: "0.75"},
 		{name: "just above two thirds", reporters: members(3), threshold: "0.666666666666666667"},
 		{name: "seven at default ratio", reporters: members(7), threshold: "0.66"},
 		{name: "empty set", reporters: nil, threshold: "0.66"},
@@ -315,5 +317,33 @@ func TestSetParamsRejectsInvalidReporterSet(t *testing.T) {
 			_, err = k.ExportGenesis(ctx)
 			require.NoError(t, err)
 		})
+	}
+}
+
+// A module account cannot run a reporter, so listing one would only shrink the
+// set that can reach quorum. The check decodes the address, so the upper-case
+// spelling is rejected as well.
+func TestSetParamsRejectsModuleAccountReporter(t *testing.T) {
+	for _, spelling := range []func(string) string{
+		func(s string) string { return s },
+		strings.ToUpper,
+	} {
+		k, ctx, bank := testStore(t)
+		g := populatedGenesis()
+		importTestGenesis(t, k, ctx, bank, g)
+		module := k.accounts.GetModuleAccount(ctx, "distribution").GetAddress().String()
+		before, err := k.ExportGenesis(ctx)
+		require.NoError(t, err)
+
+		p := g.Params
+		p.Reporters = []string{testOwner(1).String(), testOwner(2).String(), testOwner(3).String(), spelling(module)}
+		p.ReportersThreshold = sdkmath.LegacyMustNewDecFromStr("0.75")
+		err = k.SetParams(ctx, p)
+		require.ErrorIs(t, err, types.ErrInvalidReporters)
+		require.ErrorContains(t, err, "module account")
+
+		after, err := k.ExportGenesis(ctx)
+		require.NoError(t, err)
+		require.Equal(t, before, after)
 	}
 }

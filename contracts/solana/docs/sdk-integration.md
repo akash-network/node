@@ -10,7 +10,7 @@ Canonical queries are `Transfer`, `Transfers`, `Disputes`, `Account`, `State`, `
 
 ## Supply the locked package
 
-The paired inputs are node `b5c4affa65afb2645755645199492978ff6f4ce4` and chain-sdk `3b977f0785eef4a5cfdd06747a8084f2cd5161ba`. The SDK package is `1.0.0-alpha.46`, built from that exact committed source with its own `npm run build` pipeline and consumed as a reviewed `.tgz` input. Version alone does not identify this prerelease build. `npm ci`
+Node's `go.mod` pins `pkg.akt.dev/go` and `pkg.akt.dev/go/cli` to chain-sdk `ea3d90b3757435b4adf1e1620f9a95be7a2b80da`. The services consume the TypeScript package `@akashnetwork/chain-sdk` `1.0.0-alpha.46` from `../../.cache/solana/chain-sdk.tgz`, locked by integrity in `package-lock.json`. That archive was built from chain-sdk `3b977f0785eef4a5cfdd06747a8084f2cd5161ba` with its own `npm run build` pipeline and consumed as a reviewed `.tgz` input; `ea3d90b3` changes only Go reporter validation, not the TypeScript package. Version alone does not identify this prerelease build. `npm ci`
 verifies its integrity against `package-lock.json`; `npm run setup` never builds
 or replaces it implicitly. Production packaging must receive that same archive.
 A published version can replace this input once the matching SDK is released;

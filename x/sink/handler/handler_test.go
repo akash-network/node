@@ -64,7 +64,10 @@ func setupTestSuite(t *testing.T) *testSuite {
 	accounts.On("GetModuleAccount", mock.Anything, types.ModuleName).Return(moduleAccount)
 	for i := 0; i < 5; i++ {
 		reporter := secp256k1.GenPrivKeyFromSecret([]byte(fmt.Sprintf("local reporter %d", i)))
-		suite.reporters = append(suite.reporters, sdk.AccAddress(reporter.PubKey().Address()).String())
+		address := sdk.AccAddress(reporter.PubKey().Address())
+		suite.reporters = append(suite.reporters, address.String())
+		// Reporters are ordinary signing accounts; SetParams rejects module accounts.
+		accounts.On("GetAccount", mock.Anything, address).Return(authtypes.NewBaseAccount(address, reporter.PubKey(), 0, 0))
 	}
 	publicKey := ed25519.NewKeyFromSeed(bytes.Repeat([]byte{7}, ed25519.SeedSize)).Public().(ed25519.PublicKey)
 	suite.dest = base58.Encode(publicKey)

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	sdkmath "cosmossdk.io/math"
@@ -354,6 +355,74 @@ func TestMessageAuthorizationAndDispatch(t *testing.T) {
 				require.ErrorIs(t, err, k.readErr)
 				require.Nil(t, response)
 				require.Empty(t, k.calls)
+			}
+		})
+	}
+}
+
+// Membership compares the address string governance listed. Bech32 decodes
+// both spellings to one account, but only the listed spelling may report or
+// veto; ValidateReporters rejects a policy that lists both.
+func TestReporterMembershipMatchesListedSpelling(t *testing.T) {
+	authority := sdk.AccAddress(bytes.Repeat([]byte{1}, 20)).String()
+	lower := sdk.AccAddress(bytes.Repeat([]byte{2}, 20)).String()
+	upper := strings.ToUpper(lower)
+	id := types.ID{
+		Owner:    sdk.AccAddress(bytes.Repeat([]byte{4}, 20)).String(),
+		Height:   10,
+		Sequence: 1,
+	}
+	ctx := sdk.Context{}.WithContext(context.Background())
+
+	for name, makeMsg := range map[string]func(string) sdk.Msg{
+		"ReportOutcome": func(signer string) sdk.Msg {
+			return &types.MsgReportOutcome{
+				Reporter:      signer,
+				ID:            id,
+				PolicyVersion: 2,
+				Round:         1,
+				Observation: types.Observation{
+					Outcome:              types.OutcomeMinted,
+					Slot:                 10,
+					TransactionSignature: bytes.Repeat([]byte{1}, 64),
+				},
+			}
+		},
+		"VetoVoid": func(signer string) sdk.Msg {
+			return &types.MsgVetoVoid{
+				Signer: signer,
+				ID:     id,
+				Reason: "veto",
+			}
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			for _, tc := range []struct {
+				listed, signer string
+				allowed        bool
+			}{
+				{listed: upper, signer: upper, allowed: true},
+				{listed: upper, signer: lower},
+				{listed: lower, signer: upper},
+			} {
+				k := &commandKeeper{
+					authority: authority,
+					policy: types.ReporterPolicy{
+						Version:   2,
+						Members:   []string{tc.listed},
+						Threshold: sdkmath.LegacyOneDec(),
+					},
+				}
+				msg := makeMsg(tc.signer)
+				require.NoError(t, msg.(sdk.HasValidateBasic).ValidateBasic())
+				_, err := dispatch(NewServer(k), ctx, msg)
+				if tc.allowed {
+					require.NoError(t, err, "listed %s, signed %s", tc.listed, tc.signer)
+					require.Equal(t, []sdk.Msg{msg}, k.calls)
+				} else {
+					require.ErrorIs(t, err, types.ErrNotReporter, "listed %s, signed %s", tc.listed, tc.signer)
+					require.Empty(t, k.calls)
+				}
 			}
 		})
 	}

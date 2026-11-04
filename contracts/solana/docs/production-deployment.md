@@ -11,12 +11,14 @@ program/mint namespace; never reuse one against a reset or forked Akash chain.
 1. Agree the authority holders, checkpoint procedure, network parameters,
    upgrade plan and activation criteria below.
 2. Produce the launch commit, reproducible program artifacts and reviewed
-   manifest. Run offline checks, cluster preflight and the
-   [program deployment ceremony](deploy-program.md).
+   manifest. Run the offline checks.
 3. Build and install the immutable [service release](deploy-services.md).
-   Keep reporters in preview until governance authorizes them.
-4. Complete the Akash upgrade, checkpoint, bridge configuration and activation
-   sequence below. Record signatures and finalized verification after each step.
+   Keep reporters in preview until governance authorizes them
+   ([reporters](#4-reporters)).
+4. Complete the Akash upgrade, then cluster preflight, the
+   [program deployment ceremony](deploy-program.md), checkpoint, bridge
+   configuration and activation sequence below. Record signatures and finalized
+   verification after each step.
 5. Retain the artifacts, manifest, service configuration and acceptance evidence
    for recovery and future upgrades.
 
@@ -98,9 +100,12 @@ evidence for the final release:
   relaying before the trusting period expires. Rehearse expiry/freeze recovery
   through the real multisig and time lock.
 - Independent reporter operators, funded accounts, tested external signers,
-  preview observations and archive retention covering the challenge period.
+  preview runs that confirm configuration and connectivity, and archive
+  retention covering the challenge period.
 - Production monitoring/reconciliation, proven alert delivery, on-call guardian
   access, backups and a service restart/rollback exercise.
+- The automatic Solana guardian pause on any supply mismatch that AEP-95
+  requires, proven end to end. These repositories do not implement it yet.
 - Production portal and public versioned token metadata. `local/team.ts` is a
   testnet adapter with a faucet; it is not the production API.
 - Canary mint, void/refund after the production challenge period, cap boundaries
@@ -152,16 +157,21 @@ those recovery paths.
 | `maxClockDrift`          | 10 s                             | Measure first. Solana's Clock sysvar read about 1 s behind wall time on 2026-10-18 (three samples) |
 | Checkpoint               | Latest local header              | The [checkpoint ceremony](#3-checkpoint-and-bridge-configuration)                                  |
 
-An idle relayer refreshes the client after `AKT_RELAY_REFRESH_FRACTION` of the
-trusting period, one fifth by default. Each update needs more than a third of
+An idle relayer refreshes the client after its configured
+[`refreshFraction`](operators.md#configure) of the trusting period, one fifth by
+default. Each update needs more than a third of
 the trusted validator power to have signed the new header, so lower the
 fraction if the validator set changes quickly.
 
 ### Solana mint policy
 
-- `per_transfer_max` must not exceed `daily_mint_cap`. The launch policy is
-  1,000,000 AKT per transfer and 10,000,000 AKT per UTC day; the tooling and
-  the launch rehearsal use these values.
+- `per_transfer_max` must not exceed `daily_mint_cap`. Caps start low except
+  for the 1,000,000 AKT seed transfer (AEP-95). The seed-window values, 1,000,000
+  AKT per transfer and 10,000,000 AKT per UTC day, admit that transfer and are
+  not the launch caps; `deploy/rehearse-launch.sh`, the local stack bootstrap in
+  `local/relay.ts` and `tests/upgrade/sink/setup.sh` use them. After the seed
+  mints, both chains lower their caps to the launch values, chosen by governance
+  for x/sink and by the multisig for Solana, in the lowering order below.
 - Leave `vaults` empty unless a vault has been reviewed. It must match the x/sink
   `allowed_destination_vaults`.
 
@@ -169,15 +179,15 @@ fraction if the validator set changes quickly.
 
 Amount parameters use `uakt` Coins. Zero disables the account epoch cap. The minimum may be zero while deposits are disabled; the other limits remain positive. Account and aggregate caps may be below the transfer maximum. Choose launch values through governance; local test values are not recommendations.
 
-| Parameter                                                       | Meaning                                                                                                                                     |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `enabled`, `refunds_enabled`                                    | Independent switches; keep deposits off until validation completes                                                                          |
-| `min_amount_per_transfer`, `max_amount_per_transfer`            | Positive transfer bounds; align maximum with Solana's independent per-transfer cap                                                          |
-| `max_epoch_amount_per_account`, `max_transfer_amount_per_epoch` | Account and aggregate sending caps; zero disables only the account cap, and usage remains tracked                                           |
-| `max_epoch_refund`                                              | Independent positive refund cap within the native quota epoch                                                                               |
-| `reporters`, `reporters_threshold`                              | Members and decimal ratio; ceil(ratio × members) must exceed two thirds of the members. State supplies the effective current ReporterPolicy |
-| `reporter_challenge_period`                                     | Protobuf duration with the production build's required minimum                                                                              |
-| `pause_guardian`                                                | Governance-selected account that may only disable switches                                                                                  |
+| Parameter                                                       | Meaning                                                                                                                                                     |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `enabled`, `refunds_enabled`                                    | Independent switches; keep deposits off until validation completes                                                                                          |
+| `min_amount_per_transfer`, `max_amount_per_transfer`            | Positive transfer bounds; align maximum with Solana's independent per-transfer cap                                                                          |
+| `max_epoch_amount_per_account`, `max_transfer_amount_per_epoch` | Account and aggregate sending caps; zero disables only the account cap, and usage remains tracked                                                           |
+| `max_epoch_refund`                                              | Independent positive refund cap within the native quota epoch                                                                                               |
+| `reporters`, `reporters_threshold`                              | Members and decimal ratio; ceil(ratio × members) must exceed two thirds of the members. `Reporters` version 0 supplies the effective current ReporterPolicy |
+| `reporter_challenge_period`                                     | Protobuf duration with the production build's required minimum                                                                                              |
+| `pause_guardian`                                                | Governance-selected account that may only disable switches                                                                                                  |
 
 Policy rotation advances its version. Terminal evidence and governance refund authorization remain historical; unpaid quorum refunds require current-policy authorization. Lowered caps do not reset consumption.
 
@@ -190,7 +200,8 @@ Change caps in this order:
 - **Raising:** Solana first, then Akash.
 - **Lowering:** Akash first. Wait for pending transfers above the new limit to
   settle, then lower Solana. Lowering the Solana per-transfer maximum first
-  stalls those transfers.
+  stalls those transfers. `set-mint-policy` replaces the whole policy, including
+  `vaults`, so pass the treasury vault and any other vault again with `--vault`.
 
 ## Infrastructure
 
@@ -219,11 +230,24 @@ Change caps in this order:
   rehearses the Solana steps locally, with a keypair standing in for the vault.
 - Prepare the [metadata gate](token-metadata.md#mainnet-launch-gate) items.
 
-### 1. Solana deployment
+### 1. Akash upgrade
 
-Minting stays off throughout. [Deploying the programs](deploy-program.md) has
+1. Submit the software-upgrade proposal. Confirm the current governance voting period and upgrade timing. State the
+   preexisting-balance disposition.
+2. The handler adds the store with a zero balance and leaves deposits disabled
+   with no reporters.
+3. Verify the totals, parameters and bank invariant from several nodes.
+
+### 2. Solana deployment
+
+Minting stays off throughout. Deploy after the Akash upgrade; step 1 can be
+prepared earlier, as in the [deployment workflow](#deployment-workflow).
+Coordinate the token launch, from this deployment through the checkpoint and
+`set_bridge_enabled`, with the governance proposal that enables x/sink
+([activation](#5-activation)). [Deploying the programs](deploy-program.md) has
 the commands and the check after each step; `deploy/rehearse-launch.sh` runs
-them on a local validator.
+steps 4 to 9 on a local validator, without the manifest checks
+([dress rehearsal](deploy-program.md#dress-rehearsal)).
 
 1. Generate keypairs for the three programs and make a launch commit that
    changes only their IDs. Publish the verifiable build hashes
@@ -244,14 +268,7 @@ them on a local validator.
 5. Through the multisig, set token metadata and the pause guardian. Every
    multisig step uses unsigned instructions from the admin CLI's `--emit`,
    which each reviewer decodes ([step 7](deploy-program.md#7-multisig-transactions)).
-
-### 2. Akash upgrade
-
-1. Submit the software-upgrade proposal. Confirm the current governance voting period and upgrade timing. State the
-   preexisting-balance disposition.
-2. The handler adds the store with a zero balance and leaves deposits disabled
-   with no reporters.
-3. Verify the totals, parameters and bank invariant from several nodes.
+   Then publish the canonical mint on official Akash channels.
 
 ### 3. Checkpoint and bridge configuration
 
@@ -273,22 +290,31 @@ them on a local validator.
 ### 4. Reporters
 
 1. Reporter operators run against their production nodes in preview mode,
-   without `--broadcast`.
-2. Submit a governance proposal for the reporters, threshold, challenge period,
-   caps, refund cap, vault allowlist and minimum transfer. Leave `enabled`
-   false.
-3. Run with monitoring for several days, until every alert stays clear.
+   without `--broadcast`. Until the proposal in [activation](#5-activation)
+   lists them, each pass stops with `not a current reporter` after reading both
+   chains, so preview confirms only configuration and connectivity.
+2. Run with monitoring for several days, until every alert other than that
+   expected error stays clear.
 
 ### 5. Activation
 
-1. Through the multisig, run `set_bridge_enabled(true)`. Nothing mints until
-   Akash accepts deposits.
-2. Pass a governance proposal setting `enabled` to true with low caps.
-3. Make team canary transfers: a normal transfer, an invalid recipient (void,
+1. Pass one governance proposal that opens transfers. It sets the reporters,
+   threshold ratio, challenge period, vault allowlist, minimum transfer,
+   seed-window caps including the refund cap, and the x/sink `pause_guardian`,
+   and sets `enabled` and `refunds_enabled` to true.
+2. Right after it passes, run `set_bridge_enabled(true)` through the multisig.
+   Approve that transaction before the vote ends so its time lock has expired
+   by then. Until it executes, the relayer logs `relay-wait` (`bridge-paused`)
+   for new deposits and pays nothing.
+3. OCL sends `MsgSink` for 1,000,000 AKT to the treasury vault, and the relayer
+   mints it. Confirm the finalized `Minted` status and the supply before going
+   on.
+4. After the seed mints, lower the caps on both chains to their launch values
+   ([Solana mint policy](#solana-mint-policy)).
+5. Make team canary transfers: a normal transfer, an invalid recipient (void,
    then refund after the challenge period) and one at the per-transfer cap. Check
    supply after each.
-4. Publish the canonical mint on official Akash channels, then raise caps in
-   steps.
+6. Raise caps in steps.
 
 ## Monitoring
 
@@ -319,14 +345,14 @@ events of an executed multisig transaction.
 
 ## Incident runbooks
 
-| Incident                           | First action                                                                                                                                           | Follow-up                                                                                                                                                                                                                |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Suspected bad mint or verifier bug | Solana guardian pauses minting; x/sink guardian pauses deposits                                                                                        | Reconcile supply and prepare a fix upgrade or re-pin                                                                                                                                                                     |
-| Suspicious void quorum             | Any honest reporter vetoes. If evidence cannot be checked, the x/sink guardian pauses refunds                                                          | Governance uses `MsgConfirmMint` or `MsgConfirmVoid` with current `expected_round` and checked evidence                                                                                                                  |
-| Client close to expiry             | Restart the relayer, switch RPC and check the payer balance                                                                                            | Find why updates stopped                                                                                                                                                                                                 |
-| Client expired or frozen           | Mints and voids stop while Akash still accepts deposits, so disable deposits                                                                           | Re-pin a new client after a new checkpoint ceremony ([commands](deploy-program.md#later-changes))                                                                                                                        |
-| Relayer key leaked                 | Multisig revokes its `RELAYER_ROLE` and grants a new key                                                                                               | Loss is limited to the payer balance; it cannot forge headers                                                                                                                                                            |
-| Reporter key leaked                | Governance replaces the reporter. The policy version advances; unpaid quorum refunds need new authorization while governance authorization is retained | Other reporters watch for false votes                                                                                                                                                                                    |
-| One reporter holds many transfers  | The x/sink guardian pauses deposits, so no new transfers are held                                                                                      | One proposal: `MsgUpdateParams` removing the reporter, then `MsgRestartTransfer` with `expected_round` for each reviewed unpaid transfer from `akash query sink disputes`                                                |
-| A mint quorum contradicts Solana   | An honest reporter's voided vote holds the Minted transfer                                                                                             | One proposal: `MsgRequestVoid` and `MsgConfirmVoid` with `expected_round` and finalized evidence. The transfer returns to RefundPending with a new challenge window, then refunds; replace the reporters that voted mint |
-| Multisig member key leaked         | Rotate the member                                                                                                                                      | Review pending multisig transactions                                                                                                                                                                                     |
+| Incident                           | First action                                                                                                                                           | Follow-up                                                                                                                                                                                                                                                                               |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Suspected bad mint or verifier bug | Solana guardian pauses minting; x/sink guardian pauses deposits                                                                                        | Reconcile supply and prepare a fix upgrade or re-pin                                                                                                                                                                                                                                    |
+| Suspicious void quorum             | Any honest reporter vetoes. If evidence cannot be checked, the x/sink guardian pauses refunds                                                          | Governance uses `MsgConfirmMint` or `MsgConfirmVoid` with current `expected_round` and checked evidence                                                                                                                                                                                 |
+| Client close to expiry             | Restart the relayer, switch RPC and check the payer balance                                                                                            | Find why updates stopped                                                                                                                                                                                                                                                                |
+| Client expired or frozen           | Mints and voids stop while Akash still accepts deposits, so disable deposits                                                                           | Re-pin a new client after a new checkpoint ceremony ([commands](deploy-program.md#later-changes))                                                                                                                                                                                       |
+| Relayer key leaked                 | Multisig revokes its `RELAYER_ROLE` and grants a new key                                                                                               | Loss is limited to the payer balance; it cannot forge headers                                                                                                                                                                                                                           |
+| Reporter key leaked                | Governance replaces the reporter. The policy version advances; unpaid quorum refunds need new authorization while governance authorization is retained | Other reporters watch for false votes                                                                                                                                                                                                                                                   |
+| One reporter holds many transfers  | The x/sink guardian pauses deposits, so no new transfers are held                                                                                      | One proposal: `MsgUpdateParams` removing the reporter, then `MsgRestartTransfer` with `expected_round` for each reviewed unpaid transfer from `akash query sink disputes`                                                                                                               |
+| A mint quorum contradicts Solana   | An honest reporter's voided vote holds the Minted transfer                                                                                             | Replace the reporters that voted mint. The transfer stays Minted: AEP-95 treats Minted as final. Do not refund it with `MsgRequestVoid` and `MsgConfirmVoid`; x/sink still accepts that path for a conflict-held Minted transfer, which is a known defect (AEP-95 implementation notes) |
+| Multisig member key leaked         | Rotate the member                                                                                                                                      | Review pending multisig transactions                                                                                                                                                                                                                                                    |

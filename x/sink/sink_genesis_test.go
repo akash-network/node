@@ -3,6 +3,7 @@ package sink_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -64,8 +65,12 @@ func TestSinkZeroHeightExportRequiresEmptySink(t *testing.T) {
 	exported, err := h.a.ExportAppStateAndValidators(false, nil, nil)
 	require.NoError(t, err)
 	require.Equal(t, h.height+1, exported.Height)
-	_, err = h.a.ExportAppStateAndValidators(true, nil, []string{banktypes.ModuleName})
+	bankOnly, err := h.a.ExportAppStateAndValidators(true, nil, []string{banktypes.ModuleName})
 	require.NoError(t, err)
+	var modules map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(bankOnly.AppState, &modules))
+	require.Contains(t, modules, banktypes.ModuleName)
+	require.NotContains(t, modules, types.ModuleName, "a zero-height export that leaves Sink out must not carry its records")
 
 	// Export reads the check state. Without its settlement the transfer cannot
 	// be read, which is a store failure rather than a zero-height problem.

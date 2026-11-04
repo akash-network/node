@@ -6,14 +6,15 @@ by a time-locked multisig. [Production deployment](production-deployment.md)
 decides who holds each power and which values to use; this page says how.
 Nothing here has run on mainnet.
 
-`bash deploy/rehearse-launch.sh` runs every step below on a temporary local
-validator, with a keypair standing in for the multisig vault. It executes each
+`bash deploy/rehearse-launch.sh` runs steps 4 to 9 below, then a guardian
+pause, a re-pin and a program upgrade, on a temporary local validator, with a
+keypair standing in for the multisig vault. It executes each
 multisig step through upstream's test CPI proxy, so instructions arrive by CPI
 as they do from a multisig program, and checks that the access manager refuses
 a CPI caller it does not list. It takes about ten minutes. Run it before the
 ceremony, and again with the launch artifacts
 ([dress rehearsal](#dress-rehearsal)). It does not exercise a real multisig
-program or its time lock.
+program or its time lock, or the manifest checks.
 
 ## Roles
 
@@ -146,13 +147,21 @@ identifier. The distinction is documented by
 
 ### Dress rehearsal
 
-Deploy the exact artifacts with the real program keypairs on a local validator,
-through every step below:
+Deploy the exact artifacts with the real program keypairs on a local validator:
 
 ```bash
 AKT_REHEARSAL_PROGRAMS="$RELEASE_DIR/build" AKT_REHEARSAL_KEYPAIRS="$PROGRAM_KEYS" \
   bash deploy/rehearse-launch.sh
 ```
+
+It checks `SHA256SUMS` and that each keypair matches its declared program ID,
+then runs steps 4 to 9. The manifest pins the mainnet genesis, and `preflight`
+and `verify` require a cluster that reports it; the rehearsal runs no
+`deploy:programs` command. It checks finalized bytes and authorities with
+`deploy/verify-program.sh` instead, and uses a synthetic checkpoint rather than
+`admin checkpoint`. `preflight` and both `verify` phases therefore first run
+against a real cluster on mainnet; `npm run test:deployment` exercises them only
+with fixtures and a mock RPC.
 
 ## 4. Deploy
 
@@ -335,14 +344,26 @@ admin init-client --program "$ICS07_ID" --access-manager "$AM_ID" \
   --emit "$RELEASE_DIR/tx/08a-client.json" --authority "$VAULT"
 admin configure-bridge --akt-program "$AKT_ID" --program "$ICS07_ID" \
   --chain-id akashnet-2 --per-transfer-max 1000000000000 --daily-mint-cap 10000000000000 \
-  --checkpoint "$RELEASE_DIR/checkpoint.json" \
+  --vault "$TREASURY_VAULT" --checkpoint "$RELEASE_DIR/checkpoint.json" \
   --emit "$RELEASE_DIR/tx/08b-bridge.json" --authority "$VAULT"
 admin bundle --emit "$RELEASE_DIR/tx/08-bridge.json" "$RELEASE_DIR/tx/08a-client.json" "$RELEASE_DIR/tx/08b-bridge.json"
 ```
 
-The example policy is expressed in base units, not an approved launch limit: 1,000,000 AKT per
-transfer and 10,000,000 AKT per UTC day. Set the x/sink `max_amount_per_transfer` and
-`max_transfer_amount_per_epoch` to independently chosen sending capacity. Solana keeps its own `daily_mint_cap`; neither amount cap schedules mints.
+`TREASURY_VAULT` is the reviewed treasury vault that receives the seed. The
+Akash proposal that opens transfers lists the same address in
+`allowed_destination_vaults`. Without `--vault` the policy has no vaults, and an
+off-curve treasury vault is voided as an invalid recipient instead of minted.
+
+The example policy, in base units, holds seed-window values: 1,000,000 AKT per
+transfer and 10,000,000 AKT per UTC day admit the seed transfer and are not the
+launch caps. After the seed mints and Akash has lowered its caps, the multisig
+lowers this policy to the launch values with `set-mint-policy`
+([mint policy](production-deployment.md#solana-mint-policy)). It replaces the
+whole policy, including `vaults`, so pass the treasury vault and any other vault
+again with `--vault`. Set the x/sink
+`max_amount_per_transfer` and `max_transfer_amount_per_epoch` to independently
+chosen sending capacity. Solana keeps its own `daily_mint_cap`; neither amount
+cap schedules mints.
 
 `init-client` refuses a checkpoint older than the trusting period and notes
 when the client expires without an update. The trusting period runs from the
@@ -361,12 +382,18 @@ admin relayers --akt-program "$AKT_ID"
 
 ## 9. Activation
 
+Emit, review and approve this transaction before the voting period of the Akash
+proposal that opens transfers ends, so the multisig time lock has expired when
+it passes. Execute it right after confirming that the proposal passed with the
+reviewed parameters:
+
 ```bash
 admin set-bridge-enabled --akt-program "$AKT_ID" --enabled true \
   --emit "$RELEASE_DIR/tx/09-enable.json" --authority "$VAULT"
 ```
 
-Nothing mints until Akash accepts deposits. Continue with
+Until it executes, the relayer logs `relay-wait` (`bridge-paused`) for new
+deposits and pays nothing. Continue with
 [activation](production-deployment.md#5-activation).
 
 ## Later changes

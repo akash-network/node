@@ -131,17 +131,18 @@ public provider. The relayer can use a trusted provider as its second source.
 
 ### Relayer
 
-| Need            | Value                                                                                                   |
-| --------------- | ------------------------------------------------------------------------------------------------------- |
-| Runtime         | Node 24 plus the `contracts/solana` artifact; no validator                                              |
-| Config          | JSON file, see [operators](operators.md#configure) (`relayer/config.example.json`)                      |
-| Inputs          | Its Akash node (proof queries), Solana RPC                                                              |
-| Key             | Solana fee payer keypair file, mode 0600. Hot key holding a few days of spend                           |
-| State directory | Header-upload journals, upload lock, spend ledger. One running relayer per directory                    |
-| Process         | `npm run relayer -- --config /etc/akt-relayer/config.json` under systemd or a container, restart always |
-| Output          | JSON lines on stdout; alerts on stderr                                                                  |
+| Need            | Value                                                                                                                                               |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Runtime         | Node 24 plus the `contracts/solana` artifact; no validator                                                                                          |
+| Config          | JSON file, see [operators](operators.md#configure) (`relayer/config.example.json`)                                                                  |
+| Inputs          | Its Akash node (proof queries), Solana RPC                                                                                                          |
+| Key             | Solana fee payer keypair file, mode 0600. Hot key holding a few days of spend                                                                       |
+| State directory | Header-upload journals, upload lock, spend ledger. One running relayer per directory                                                                |
+| Process         | `akt-relayer.service` runs `deploy/service.sh relayer` and restarts on failure; see [service deployment](deploy-services.md#supervise-and-activate) |
+| Output          | JSON lines on stdout; alerts on stderr                                                                                                              |
 
-Funding: a mint to a new wallet costs about 0.0025 to 0.0035 SOL; header
+Funding: a mint costs about 0.0033 SOL in rent when the recipient's token
+account exists and about 0.0053 SOL when the mint creates it, plus fees; header
 updates about 0.0015 SOL each. Keep a few days of spend plus 0.05 SOL. The
 relayer does not alert on its own balance; monitoring must.
 
@@ -154,15 +155,15 @@ its own payer and state directory for redundancy and bursts.
 Each reporter operator runs one. DevOps runs ours and gives other operators
 this section.
 
-| Need    | Value                                                                                                                                                                 |
-| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Runtime | Node 24 plus the `contracts/solana` artifact                                                                                                                          |
-| Config  | JSON file, see [reporter](reporter.md#run-an-independent-reporter) (`reporter/config.example.json`)                                                                   |
-| Inputs  | Its own Akash node and its own Solana RPC node                                                                                                                        |
-| Key     | Akash account key in a KMS or HSM through the external signer interface ([key custody](reporter.md#key-custody)). A key file is for testing only                      |
-| Funds   | AKT for transaction fees in the reporter account                                                                                                                      |
-| Process | `npm run reporter -- --config PATH --watch --broadcast` with the signer, restart always. Run first without `--broadcast` (preview) until governance adds the reporter |
-| Rule    | One signing process per reporter account                                                                                                                              |
+| Need    | Value                                                                                                                                                                                                                                                              |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Runtime | Node 24 plus the `contracts/solana` artifact                                                                                                                                                                                                                       |
+| Config  | JSON file, see [reporter](reporter.md#run-an-independent-reporter) (`reporter/config.example.json`)                                                                                                                                                                |
+| Inputs  | Its own Akash node and its own Solana RPC node                                                                                                                                                                                                                     |
+| Key     | Akash account key in a KMS or HSM through the external signer interface ([key custody](reporter.md#key-custody)). A key file is for testing only                                                                                                                   |
+| Funds   | AKT for transaction fees in the reporter account                                                                                                                                                                                                                   |
+| Process | `akt-reporter.service` runs `deploy/service.sh reporter-preview`. After governance adds the reporter, a reviewed drop-in switches it to `reporter-broadcast`, which requires `externalSigner`; see [service deployment](deploy-services.md#supervise-and-activate) |
+| Rule    | One signing process per reporter account                                                                                                                                                                                                                           |
 
 ### Monitoring and reconciliation
 
@@ -223,14 +224,14 @@ See the [metadata launch gate](token-metadata.md#mainnet-launch-gate).
 
 ## Keys
 
-| Key                                               | Where it lives                                             | On a server?            |
-| ------------------------------------------------- | ---------------------------------------------------------- | ----------------------- |
-| Program upgrade authorities, access-manager admin | Squads multisig vault (members on hardware wallets)        | No                      |
-| Ceremony key                                      | Offline machine; deleted after launch                      | No                      |
-| Solana pause guardian                             | On-call holder chosen by governance                        | No (on-call device)     |
-| x/sink pause guardian                             | On-call key, multisig or group policy chosen by governance | No                      |
-| Relayer fee payer                                 | Relayer host, mode 0600, small balance                     | Yes                     |
-| Reporter account keys                             | Each operator's KMS or HSM                                 | Through the signer only |
+| Key                                               | Where it lives                                                                                                                         | On a server?            |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| Program upgrade authorities, access-manager admin | Squads multisig vault (members on hardware wallets)                                                                                    | No                      |
+| Ceremony key                                      | Offline machine; deleted after launch                                                                                                  | No                      |
+| Solana pause guardian                             | On-call holder chosen by governance; AEP-95 also requires the monitor to hold it for the automatic pause, which is not implemented yet | No (on-call device)     |
+| x/sink pause guardian                             | On-call key, multisig or group policy chosen by governance                                                                             | No                      |
+| Relayer fee payer                                 | Relayer host, mode 0600, small balance                                                                                                 | Yes                     |
+| Reporter account keys                             | Each operator's KMS or HSM                                                                                                             | Through the signer only |
 
 Guardians can only pause. Practice a pause with them before launch.
 
@@ -265,17 +266,22 @@ disk halted the test network for 29 hours and expired its light client.
 
 1. Before launch: Akash nodes and Solana RPC nodes synced; relayer and reporter
    hosts built; monitoring and paging live; metadata files hosted.
-2. Solana programs, a day or more before the Akash upgrade (multisig; see
-   [deploying the programs](deploy-program.md)): deploy, initialize (the mint
-   starts at supply 0), authorities to the multisig, metadata and guardian.
-3. Akash upgrade height: every Akash node switches to the x/sink binary.
+2. Akash upgrade height: every Akash node switches to the x/sink binary.
    x/sink installs with deposits off.
+3. Solana programs after the upgrade, coordinated with the governance proposal
+   in step 6 (multisig; see [deploying the programs](deploy-program.md)):
+   deploy, initialize (the mint starts at supply 0), authorities to the
+   multisig, metadata and guardian.
 4. Checkpoint ceremony after the upgrade: light client and bridge
    configuration through the multisig. Start the relayer at once; the client's
    trusting period starts at the checkpoint.
-5. Reporters run in preview, then broadcast after governance adds them.
-6. A governance proposal sets reporters, limits and the guardian and turns
-   deposits on; the multisig enables minting.
+5. Reporters run in preview, then broadcast after governance adds them. Until
+   then each pass stops with `not a current reporter`, so preview confirms only
+   configuration and connectivity.
+6. One governance proposal opens transfers: it sets the reporters, threshold
+   ratio, challenge period, vaults, minimum, seed-window caps and x/sink
+   guardian, and turns deposits and refunds on. The multisig enables minting
+   right after it passes.
 7. Portal goes live at activation.
 
 ## Open items

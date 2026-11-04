@@ -113,7 +113,9 @@ journalctl -u akt-relayer -f
 ```
 
 On a reporter host install `akt-reporter.service` instead. It starts in preview
-and neither reads signing keys nor invokes the configured signer. After
+and neither reads signing keys nor invokes the configured signer. Until
+governance lists this reporter, each pass stops with `not a current reporter`,
+so preview confirms only configuration and connectivity. After
 governance adds this reporter and the preview/alert gates pass, install a
 reviewed drop-in:
 

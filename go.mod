@@ -51,8 +51,8 @@ require (
 	google.golang.org/grpc v1.84.0
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.2
-	pkg.akt.dev/go v0.5.0-rc1.0.20261104035819-ea3d90b37574
-	pkg.akt.dev/go/cli v0.3.0-rc1.0.20261104035819-ea3d90b37574
+	pkg.akt.dev/go v0.5.0-rc2
+	pkg.akt.dev/go/cli v0.3.0-rc2
 	pkg.akt.dev/go/sdl v0.2.2
 )
 

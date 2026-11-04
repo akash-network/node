@@ -35,13 +35,13 @@ npm test
 npm run test:sink
 ```
 
-| Check           | What a passing run establishes                                                                                                   | Evidence                                                                                          |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `test:unit`     | Rust expiry, frozen-client and cap boundaries.                                                                                   | Console test results.                                                                             |
-| `test:reporter` | Evidence validation, signer boundaries, quorum/veto decisions and own-vote reuse.                                                | Console test results.                                                                             |
-| `test:durable`  | The OS payer lock excludes another writer and releases after process death.                                                      | Console test results.                                                                             |
-| `npm test`      | One-time genesis, mint authority, proof rejection, recipient checks, replay, caps, buffers and expiry.                           | Console results; `../../.cache/solana/run/contract-test.*/validator.log`.                         |
-| `test:sink`     | A signed native deposit produces a real multistore proof; Solana verifies it and returns three signed reports accepted by Akash. | Console results; `.cache/solana/run/sink-proof-v2.*/` fixtures and a new contract-test directory. |
+| Check           | What a passing run establishes                                                                                                   | Evidence                                                                                                |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `test:unit`     | Rust expiry, frozen-client and cap boundaries.                                                                                   | Console test results.                                                                                   |
+| `test:reporter` | Evidence validation, signer boundaries, quorum/veto decisions and own-vote reuse.                                                | Console test results.                                                                                   |
+| `test:durable`  | The OS payer lock excludes another writer and releases after process death.                                                      | Console test results.                                                                                   |
+| `npm test`      | One-time genesis, mint authority, proof rejection, recipient checks, replay, caps, buffers and expiry.                           | Console results; `../../.cache/solana/run/contract-test.*/validator.log`.                               |
+| `test:sink`     | A signed native deposit produces a real multistore proof; Solana verifies it and returns three signed reports accepted by Akash. | Console results; `../../.cache/solana/run/sink-proof-v2.*/` fixtures and a new contract-test directory. |
 
 `test:sink` also runs the contract suite, so it intentionally overlaps `npm test`. These proof suites start from explicitly trusted test roots. The live network below separately verifies Akash consensus signatures.
 
@@ -111,7 +111,7 @@ import json
 import os
 from pathlib import Path
 
-root = Path('.cache') / ('testnetify-stack-v2-' + os.environ['AKT_LOCAL_RUN'])
+root = Path('../../.cache/solana/run') / ('testnetify-stack-v2-' + os.environ['AKT_LOCAL_RUN'])
 before = json.loads((root / 'health-before-restart.json').read_text())
 after = json.loads((root / 'health-result.json').read_text())
 fields = [

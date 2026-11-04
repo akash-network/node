@@ -10,10 +10,9 @@ Each reporter needs its own Akash node, its own Solana node and its own key. The
 
 **Solana node.** Run a replaying node with `--enable-rpc-transaction-history`, not a public RPC provider. The reporter reads account state at finalized commitment and, for a first observation, the finalized block at the resolution slot. Keep blocks for at least the longest reporter outage you plan to survive plus the Akash challenge period. Once this reporter's own vote is stored on Akash, it reuses that evidence and needs no older blocks for that transfer. The terminal audit reads only account state unless it finds a disagreement, which then needs the resolution block. Increasing retention cannot recover deleted history.
 
-**Configuration.** Copy the example into an ignored directory and fill in your values:
+**Configuration.** Copy the example outside the repository and fill in your values:
 
 ```bash
-mkdir -p .reporter
 mkdir -p ~/.config/akt-reporter
 cp reporter/config.example.json ~/.config/akt-reporter/config.json
 ```
@@ -28,19 +27,25 @@ cp reporter/config.example.json ~/.config/akt-reporter/config.json
 | `reporter`           | Your reporter account                                                                            |
 | `lightClientProgram` | Optional pin. Leave unset to follow the bridge account; see [light client](#light-client)        |
 | `maxAgeSeconds`      | Freshness bound for both nodes, at most 600                                                      |
-| `maxSlotLead`        | Optional; default `(maxAgeSeconds + 60) * 5`. See [checks](#checks-and-decisions)                |
+| `maxSlotLead`        | Optional; default `(maxAgeSeconds + 60) * 5`. See [scanning](#scanning)                          |
 | `auditPerScan`       | Optional; default 100. Transfer IDs the terminal audit rechecks per pass                         |
 | `pollSeconds`        | Delay between passes in watch mode                                                               |
-| `feeAmountUakt`      | Fee per Akash transaction, at most 1 AKT. The example is a test value                            |
+| `feeAmountUakt`      | Fee per Akash transaction, at most 1 AKT. The example pays 0.025 uakt per gas                    |
 | `gasLimit`           | Gas per Akash transaction, at most 20,000,000                                                    |
 | `externalSigner`     | Optional signer command; see [key custody](#key-custody)                                         |
 
-Unknown configuration fields are rejected. Preview one pass without loading a key, then run continuously once the output looks right:
+Unknown configuration fields are rejected. `reporter` must be a lowercase 20-byte `akash` address. The chain compares it with the listed members as exact strings, so governance must list it in that lowercase form; x/sink also rejects a module account as a reporter.
+
+For production installation, supervision and rollback use [service deployment](deploy-services.md). Its packaged `akt-reporter.service` starts in preview, and its broadcast entry point checks the production configuration and requires `externalSigner` in the config file. The generic commands below also support explicitly configured development networks.
+
+Preview one pass without loading a key, then run continuously once the output looks right:
 
 ```bash
 npm run reporter -- --config ~/.config/akt-reporter/config.json
 npm run reporter -- --config ~/.config/akt-reporter/config.json --watch --broadcast --signer-command /usr/local/bin/akt-sign
 ```
+
+Until governance lists `reporter`, every pass stops with `not a current reporter` after reading both chains, so preview confirms only configuration and connectivity.
 
 Output is JSON lines: per-transfer observations, proposed messages, alerts, transaction hashes, errors and one summary per pass. Amounts and slots are decimal strings; signature bytes are base64. A one-shot run exits nonzero if anything failed. Watch mode logs the failure and retries on the next pass. Ctrl-C stops after the current bounded RPC or transaction operation.
 

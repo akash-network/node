@@ -568,7 +568,9 @@ func TestGenesisRejectsLostIdentityOrBacking(t *testing.T) {
 func TestValidateExportHeightMatchesImport(t *testing.T) {
 	empty, emptyCtx, emptyBank := testStore(t)
 	importTestGenesis(t, empty, emptyCtx, emptyBank, types.DefaultGenesis())
-	require.NoError(t, empty.ValidateExportHeight(emptyCtx, 0), "without transfers any initial height works")
+	for _, height := range []int64{0, 1, 1 << 40} {
+		require.NoError(t, empty.ValidateExportHeight(emptyCtx, height), "without transfers, initial height %d works", height)
+	}
 
 	k, ctx, bank := testStore(t)
 	g := populatedGenesis()

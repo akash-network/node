@@ -30,10 +30,13 @@ export DEPLOY_RUN=$(mktemp -d "$PWD/.cache/sink-deploy-XXXXXX")
 Verify committed SDK pins, no local replacements and no `sinkdev` tag. The
 release challenge minimum is 72 hours. Retain the test output, including skips.
 
-Build the [Solana programs](../contracts/solana/docs/setup.md) with the locked
-[SDK archive](../contracts/solana/docs/sdk-integration.md) and pinned IBC source.
-Build the [service archive](../contracts/solana/docs/deploy-services.md).
-Record source commits, program IDs, binary and IDL hashes, and archive hashes.
+Prepare the locked [SDK archive](../contracts/solana/docs/sdk-integration.md).
+Produce the launch commit with its pinned IBC source, the reproducible program
+build and the reviewed manifest with
+[program deployment steps 1 to 3](../contracts/solana/docs/deploy-program.md#1-program-keypairs).
+Then build the [service archive](../contracts/solana/docs/deploy-services.md#build-one-reviewed-release)
+from that manifest. Record source commits, program IDs, binary and IDL hashes,
+and archive hashes.
 
 ## Upgrade Akash
 
@@ -95,10 +98,13 @@ epoch schedule used for quotas.
 
 Follow these guides in order, using the same Akash chain ID and Solana genesis:
 
-1. [Deploy and initialize the programs](../contracts/solana/docs/deploy-program.md).
+1. [Deploy and initialize the programs](../contracts/solana/docs/deploy-program.md#4-deploy).
    Verify all three programs and authorities, then trust a post-upgrade Akash checkpoint.
+   Run its step 9, `set_bridge_enabled`, only after the proposal below passes.
 2. [Install the relayer and reporters](../contracts/solana/docs/deploy-services.md).
    Start the relayer promptly to keep the checkpoint fresh. Run reporters in preview.
+   Until the proposal below lists them, each pass stops with `not a current reporter`,
+   so preview confirms only configuration and connectivity.
 
 Give each production reporter a funded Akash account, external signer and
 independent observation infrastructure. Do not attach a new mint to already
@@ -113,9 +119,10 @@ akash query sink params --node "$RPC" --output json |
   jq .params > "$DEPLOY_RUN/params.json"
 ```
 
-Edit `params.json` with the approved reporters, decimal threshold, limits,
-vaults and guardian. Preserve unrelated fields. Keep both `enabled` and
-`refunds_enabled` false until activation, then generate the unsigned message:
+One proposal opens transfers. Edit `params.json` with the approved reporters,
+decimal threshold, challenge period, vaults, minimum, seed-window limits and
+guardian, and set both `enabled` and `refunds_enabled` to true. Preserve
+unrelated fields, then generate the unsigned message:
 
 ```bash
 akash tx sink update-params "$DEPLOY_RUN/params.json" --generate-only \
@@ -138,8 +145,9 @@ compare with the approved values. For example, seven reporters at `0.67`
 require five votes. Choose the actual policy through governance.
 
 Follow the [activation sequence](../contracts/solana/docs/production-deployment.md#5-activation):
-enable Solana, enable reporter broadcasting after preview checks, then enable
-native Sink through governance with small canary limits.
+right after the proposal passes, the multisig runs `set_bridge_enabled(true)`;
+enable reporter broadcasting after preview checks; after the seed mints, lower
+both chains' caps to their launch values.
 
 ## Verify the deployment
 

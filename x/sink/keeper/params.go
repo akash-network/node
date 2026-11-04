@@ -25,6 +25,20 @@ func (k *keeper) SetParams(ctx sdk.Context, p types.Params) error {
 		return err
 	}
 
+	// A module account cannot run a reporter, so listing one would only shrink
+	// the set that can reach quorum. An address without an account is allowed:
+	// a new reporter key has none until it is funded.
+	for _, member := range p.Reporters {
+		addr, err := sdk.AccAddressFromBech32(member)
+		if err != nil {
+			return err
+		}
+
+		if _, module := k.accounts.GetAccount(ctx, addr).(sdk.ModuleAccountI); module {
+			return types.ErrInvalidReporters.Wrapf("reporter %s is a module account", member)
+		}
+	}
+
 	cache, write := ctx.CacheContext()
 
 	old, err := k.params.Get(cache)

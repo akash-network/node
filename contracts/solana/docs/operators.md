@@ -90,7 +90,7 @@ alerts go to stderr.
 
 ## Light-client discovery
 
-Governance can [re-pin](bridge-protocol.md#re-pinning-the-light-client) the
+Governance can [re-pin](deploy-program.md#later-changes) the
 bridge to another light client at any time, so the relayer never uses fixed
 verifier addresses. Every pass it reads:
 
@@ -127,9 +127,9 @@ update rights, logged as `relayer-access` at startup and on change:
 
 With `none`, the relayer relays only transfers the latest verified height
 already proves, and logs `relay-header-blocked` when an update is needed. It
-does not resume a stored upload. [Relayers](bridge-protocol.md#relayers)
-describes the role and the test network's `grant-relayer` and `open-relaying`
-commands; [IBC verifier](verifier.md) covers the program change.
+does not resume a stored upload. [Later changes](deploy-program.md#later-changes)
+lists the `grant-relayer` and `open-relaying` commands; [IBC verifier](verifier.md)
+covers the program change.
 
 ## Large validator sets
 
@@ -198,7 +198,7 @@ relayers. The reconciler reports unbacked records.
 
 ## Pending transfers
 
-The relayer queries every dispute, then refund-pending, then transfer-pending transfer. It also discovers immutable history in chronological order. Every page uses one committed height. A durable full-ID checkpoint survives empty `next_key` pages and restarts. No numeric fallback exists. An open-set listing error stops the pass. A history discovery failure raises `relay-discovery-failed` and retains the checkpoint; open transfers still run.
+The relayer queries every dispute, then refund-pending, then void-requested (`VOIDED`), then transfer-pending transfer. It also discovers immutable history in chronological order. Every page uses one committed height. A durable full-ID checkpoint survives empty `next_key` pages and restarts. No numeric fallback exists. An open-set listing error stops the pass. A history discovery failure raises `relay-discovery-failed` and retains the checkpoint; open transfers still run.
 
 A terminal conflict is still discoverable. An Akash refund-pending or paid refund without a finalized Solana status produces an alert and no mint. An immutable governance order is a distinct proof action, not a changed deposit value.
 
@@ -226,7 +226,7 @@ Watch the light client's age as well. The relayer stops at expiry with
 
 ## V2 durable recovery
 
-Follow [the complete recovery contract](sink-migration-v2.md#recovery-contract). Start v2 in a fresh namespace. Preserve scalar-ID state files. Budget files bind the new deployment and reject old versions. Signed transaction jobs and charged-signature dedupe survive restart; retries retain their deadline. Never delete a pending job to bypass an ambiguous transaction.
+Follow [buffer funding and recovery](sink-migration-v2.md#buffer-funding-and-recovery). Start v2 in a fresh namespace. Preserve scalar-ID state files. Budget files bind the new deployment and reject old versions. Signed transaction jobs and charged-signature dedupe survive restart; retries retain their deadline. Never delete a pending job to bypass an ambiguous transaction.
 
 An expired blockhash with no signature history cannot establish whether the transaction landed earlier. The relayer retains the exact signed intent and reports `expired transaction history unresolved`. This stops the recovery pass, including proof-buffer cleanup and ledger completion, until the configured Solana RPC supplies the signature outcome and transaction metadata. Restore access to retained or archival history for the same genesis and retry. A permanent transfer-status account establishes the business outcome but supplies neither the transaction fee nor the payer balance change. A budget reset cannot resolve this history gap. Even an expired transaction that never landed stays blocked when the available RPC evidence cannot establish that fact.
 

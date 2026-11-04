@@ -187,7 +187,7 @@ checkpoint akash-rehearsal-2 1000 checkpoint.json
 emit client init-client --program "$client_id" --access-manager "$manager_id" \
   --checkpoint "$run/checkpoint.json" --trusting-period 86400 --unbonding-period 1814400 \
   --max-clock-drift 10
-# Launch policy: 1,000,000 AKT per transfer, 10,000,000 AKT per UTC day.
+# Seed-window policy: 1,000,000 AKT per transfer, 10,000,000 AKT per UTC day.
 emit bridge configure-bridge --program "$client_id" --chain-id akash-rehearsal-2 \
   --per-transfer-max 1000000000000 --daily-mint-cap 10000000000000 --checkpoint "$run/checkpoint.json"
 admin bundle --emit "$run/tx/launch-bridge.json" "$run/tx/client.json" "$run/tx/bridge.json"
@@ -206,7 +206,7 @@ multisig close close-relaying
 multisig revoke revoke-relayer --key "$relayer2"
 
 echo '== 9. Multisig: policy and activation'
-# Rehearses the policy instruction; it restates the launch policy.
+# Rehearses the policy instruction; it restates the seed-window policy.
 multisig policy set-mint-policy --per-transfer-max 1000000000000 --daily-mint-cap 10000000000000
 multisig enable set-bridge-enabled --enabled true
 
