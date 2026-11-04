@@ -16,7 +16,7 @@ use anchor_lang::prelude::*;
 #[derive(Accounts)]
 pub struct UpgradeAuthority<'info> {
     #[account(constraint = program.programdata_address()? == Some(program_data.key()) @ AktError::InvalidProgramData)]
-    pub program: Program<'info, crate::program::AktSolana>,
+    pub program: Program<'info, crate::program::Akt>,
     #[account(constraint = program_data.upgrade_authority_address == Some(authority.key()) @ AktError::InvalidAuthority)]
     pub program_data: Account<'info, ProgramData>,
     #[account(mut)]

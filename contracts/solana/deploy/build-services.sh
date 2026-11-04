@@ -28,8 +28,8 @@ mkdir -p "$stage/root/.cache/solana/target/idl" "$stage/root/.cache/solana/targe
 git -C "$NODE_SINK_DIR" archive "$commit" contracts/solana | tar -x -C "$stage/root"
 build=$(node -e 'const p=require("node:path"); const m=require(process.argv[1]); process.stdout.write(p.resolve(p.dirname(process.argv[1]),m.buildDirectory))' "$manifest")
 cp "$SOLANA_CACHE/chain-sdk.tgz" "$stage/root/.cache/solana/"
-cp "$build/akt_solana.json" "$stage/root/.cache/solana/target/idl/"
-cp "$build/akt_solana.ts" "$stage/root/.cache/solana/target/types/"
+cp "$build/akt.json" "$stage/root/.cache/solana/target/idl/"
+cp "$build/akt.ts" "$stage/root/.cache/solana/target/types/"
 upstream_types=.cache/solana/deps/ibc-contracts/ibc-solana/target/types
 mkdir -p "$stage/root/$upstream_types"
 cp "$build/ics07_tendermint.ts" \

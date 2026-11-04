@@ -13,7 +13,7 @@ The source programs are `ibc-solana/programs/ics07-tendermint` and
 `ibc-solana/programs/access-manager`, both Apache-2.0 licensed.
 
 AKT uses Anchor's `declare_program!` in the separate
-`programs/akt-solana/ics07-tendermint-interface` crate to generate membership
+`programs/akt/ics07-tendermint-interface` crate to generate membership
 CPI and account decoding from the Tendermint IDL. The separate crate keeps
 verifier errors out of AKT's generated IDL. No signature or Merkle verification
 code is copied into AKT.

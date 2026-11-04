@@ -1,12 +1,12 @@
 [package]
-name = "akt-solana"
+name = "akt"
 version = "0.1.0"
 description = "AKT on Solana: zero-supply genesis, then mints only for Akash x/sink records verified by an ICS07 light client"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "akt_solana"
+name = "akt"
 
 [features]
 default = ["custom-heap"]

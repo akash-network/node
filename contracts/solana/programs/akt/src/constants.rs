@@ -36,9 +36,9 @@ pub const AKT_DECIMALS: u8 = 6;
 /// genesis treasury field.
 pub const LAUNCH_CONFIG_VERSION: u8 = 2;
 /// Metaplex display name.
-pub const TOKEN_NAME: &str = "Akash Network";
+pub const TOKEN_NAME: &str = "Akash Network Token";
 /// Metaplex symbol.
-pub const TOKEN_SYMBOL: &str = "AKT";
+pub const TOKEN_SYMBOL: &str = "akt";
 /// Required metadata URI scheme.
 pub const METADATA_URI_SCHEME: &str = "https://";
 /// Longest metadata URI `set_token_metadata` accepts, in bytes.

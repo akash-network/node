@@ -4,8 +4,8 @@ import { Program, web3 } from "@coral-xyz/anchor";
 import { getMint, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { TokenStandard } from "@metaplex-foundation/mpl-token-metadata";
 import { unwrapOption } from "@metaplex-foundation/umi";
-import idl from "../../../.cache/solana/target/idl/akt_solana.json";
-import type { AktSolana } from "../../../.cache/solana/target/types/akt_solana";
+import idl from "../../../.cache/solana/target/idl/akt.json";
+import type { Akt } from "../../../.cache/solana/target/types/akt";
 import {
   METADATA_PROGRAM_ID,
   metadataAddress,
@@ -15,7 +15,7 @@ import { emittedEvent, rejectsWithAnchorCode, testProvider } from "./helpers";
 
 export async function runMetadataTests(t: TestContext) {
   const provider = testProvider();
-  const program = new Program<AktSolana>(idl, provider);
+  const program = new Program<Akt>(idl, provider);
   const derive = (seed: string) =>
     web3.PublicKey.findProgramAddressSync(
       [Buffer.from(seed)],
@@ -130,8 +130,8 @@ export async function runMetadataTests(t: TestContext) {
         "confirmed",
       );
       assert.ok(data);
-      assert.equal(data.name, "Akash Network");
-      assert.equal(data.symbol, "AKT");
+      assert.equal(data.name, "Akash Network Token");
+      assert.equal(data.symbol, "akt");
       assert.equal(data.uri, uri);
       assert.equal(data.updateAuthority, mintAuthority.toBase58());
       assert.equal(data.sellerFeeBasisPoints, 0);

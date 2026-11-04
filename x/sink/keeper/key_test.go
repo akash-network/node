@@ -268,7 +268,7 @@ func TestProofVectors(t *testing.T) {
 		})
 	}
 
-	checkVectors(t, "../../../contracts/solana/programs/akt-solana/tests/fixtures/proof_vectors.json", vectors)
+	checkVectors(t, "../../../contracts/solana/programs/akt/tests/fixtures/proof_vectors.json", vectors)
 }
 
 type settlementVector struct {
@@ -401,7 +401,7 @@ func TestSettlementProofVectors(t *testing.T) {
 		Sequence: math.MaxUint64,
 	}, types.StatusRefundPending, s, map[uint64]types.ReporterPolicy{primary.Version: primary, witness.Version: witness})
 
-	checkVectors(t, "../../../contracts/solana/programs/akt-solana/tests/fixtures/settlement_vectors.json", vectors)
+	checkVectors(t, "../../../contracts/solana/programs/akt/tests/fixtures/settlement_vectors.json", vectors)
 }
 
 func checkVectors(t *testing.T, path string, vectors any) {

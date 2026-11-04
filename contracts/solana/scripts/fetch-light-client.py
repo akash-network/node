@@ -23,7 +23,7 @@ def git(path, *args):
 
 def main():
     repo, revision = dependency(
-        "programs/akt-solana/Cargo.toml", "tendermint-light-client-membership"
+        "programs/akt/Cargo.toml", "tendermint-light-client-membership"
     )
     encoder = dependency("tools/header-encoder/Cargo.toml", "solana-ibc-borsh-header")
     if ((repo, revision) != encoder or len(revision) != 40 or

@@ -1,4 +1,4 @@
-# Pinned toolchain for verifiable SBF builds of akt_solana, ics07_tendermint and
+# Pinned toolchain for verifiable SBF builds of akt, ics07_tendermint and
 # access_manager. Use scripts/verifiable-build.sh; never push this image.
 # Agave publishes x86_64 Linux binaries only, so the image is linux/amd64.
 # rust:1.89.0-slim-trixie: Anchor 0.32.1's release binary needs glibc 2.39.

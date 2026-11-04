@@ -25,8 +25,8 @@ case "${1:-}" in
     export AKT_LOCALNET_RPC_PORT=8899
     export AKT_LOCALNET_LEDGER="$SINK_STATE/ledger"
     exec bash scripts/localnet.sh --limit-ledger-size 1000000 \
-      --upgradeable-program "$(program_id "$cache/target/idl/akt_solana.json")" \
-        "$cache/target/deploy/akt_solana.so" "$payer" \
+      --upgradeable-program "$(program_id "$cache/target/idl/akt.json")" \
+        "$cache/target/deploy/akt.so" "$payer" \
       --upgradeable-program "$(program_id "$PWD/idls/ics07_tendermint.json")" \
         "$cache/deps/ibc-contracts/ibc-solana/target/deploy/ics07_tendermint.so" "$payer" \
       --upgradeable-program "$(program_id "$PWD/idls/access_manager.json")" \
@@ -37,7 +37,7 @@ case "${1:-}" in
     test ! -e "$SINK_STATE/bootstrap-started"
     node -e 'require("node:fs").writeFileSync(process.argv[1], "started\n", {flag:"wx", mode:0o600})' \
       "$SINK_STATE/bootstrap-started"
-    akt=$(program_id "$cache/target/idl/akt_solana.json")
+    akt=$(program_id "$cache/target/idl/akt.json")
     client=$(program_id "$PWD/idls/ics07_tendermint.json")
     manager=$(program_id "$PWD/idls/access_manager.json")
     payer=$(solana-keygen pubkey "$SINK_STATE/payer.json")

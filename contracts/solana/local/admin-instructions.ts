@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { BN, BorshCoder, web3, type Idl } from "@coral-xyz/anchor";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import aktJson from "../../../.cache/solana/target/idl/akt_solana.json";
+import aktJson from "../../../.cache/solana/target/idl/akt.json";
 import clientJson from "../idls/ics07_tendermint.json";
 import accessJson from "../idls/access_manager.json";
 import { programEvents } from "../reporter/solana";
@@ -25,7 +25,7 @@ export const MAX_VAULTS = 16;
 const U64_MAX = (1n << 64n) - 1n;
 
 export const IDLS = {
-  akt_solana: aktJson as unknown as Idl,
+  akt: aktJson as unknown as Idl,
   ics07_tendermint: clientJson as unknown as Idl,
   access_manager: accessJson as unknown as Idl,
 } as const;
@@ -151,7 +151,7 @@ export class IdlProgram {
   }
 }
 
-export const akt = (id?: web3.PublicKey) => new IdlProgram("akt_solana", id);
+export const akt = (id?: web3.PublicKey) => new IdlProgram("akt", id);
 export const lightClient = (id?: web3.PublicKey) =>
   new IdlProgram("ics07_tendermint", id);
 export const accessManager = (id?: web3.PublicKey) =>
@@ -773,7 +773,7 @@ export function programName(
   return found;
 }
 
-export const EMIT_FORMAT = "akt-solana-admin-instructions/v1";
+export const EMIT_FORMAT = "akt-admin-instructions/v1";
 
 export interface EmittedInstruction {
   programId: string;

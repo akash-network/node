@@ -17,10 +17,10 @@ import {
   getAssociatedTokenAddressSync,
   getMint,
 } from "@solana/spl-token";
-import idl from "../../../.cache/solana/target/idl/akt_solana.json";
+import idl from "../../../.cache/solana/target/idl/akt.json";
 import clientIdl from "../idls/ics07_tendermint.json";
 import accessIdl from "../idls/access_manager.json";
-import type { AktSolana } from "../../../.cache/solana/target/types/akt_solana";
+import type { Akt } from "../../../.cache/solana/target/types/akt";
 import type { Ics07Tendermint } from "../../../.cache/solana/deps/ibc-contracts/ibc-solana/target/types/ics07_tendermint";
 import type { AccessManager } from "../../../.cache/solana/deps/ibc-contracts/ibc-solana/target/types/access_manager";
 import { SolanaObserver, decodeRecord } from "../reporter/solana";
@@ -106,7 +106,7 @@ function encodeRecord(record: ReturnType<typeof makeRecord>) {
 
 export async function runBridgeTests(t: TestContext) {
   const provider = testProvider();
-  const program = new Program<AktSolana>(idl, provider);
+  const program = new Program<Akt>(idl, provider);
   const client = new Program<Ics07Tendermint>(clientIdl, provider);
   const access = new Program<AccessManager>(accessIdl, provider);
   const connection = provider.connection;

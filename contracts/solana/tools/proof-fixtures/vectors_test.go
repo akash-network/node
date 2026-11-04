@@ -124,7 +124,7 @@ func TestNativeBoundaryVectors(t *testing.T) {
 	encoded, err := json.MarshalIndent(fixture, "", "  ")
 	require.NoError(t, err)
 	encoded = append(encoded, '\n')
-	const path = "../../programs/akt-solana/tests/fixtures/native_boundary_vectors.json"
+	const path = "../../programs/akt/tests/fixtures/native_boundary_vectors.json"
 	if os.Getenv("UPDATE_PROOF_VECTORS") == "1" {
 		require.NoError(t, os.WriteFile(path, encoded, 0o600))
 	}

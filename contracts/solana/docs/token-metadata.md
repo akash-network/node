@@ -5,11 +5,39 @@ canonical mint or opening pools. It gives wallets the token's name, symbol and
 logo. It does not create a new mint, authorize issuance or grant a verification
 badge.
 
+## Contents
+
+- [Mainnet values](#mainnet-values)
+- [Contract and authority](#contract-and-authority)
+- [Local setup](#local-setup)
+- [Mainnet launch gate](#mainnet-launch-gate)
+
+## Mainnet values
+
+Use [`metadata/akt.json`](../metadata/akt.json) for mainnet:
+
+- Name: **Akash Network Token**
+- Symbol: **akt**
+- Decimals: **6**, set on the mint
+- Description: **AKT, the native token of Akash Network, on Solana.**
+- Website: **https://akash.network/**
+
+The image is the existing Cosmos AKT logo from the
+[Cosmos chain registry](https://github.com/cosmos/chain-registry/blob/f98e34339a1d30b4a2734b78d6dfcbba9cb02f8e/akash/images/akt.png),
+an unchanged 800-by-800 PNG. The JSON pins that GitHub revision. Its SHA-256 is
+`2f88bb209e166c871439b09c991046318d5fe0291a6f4b4711850d1f89725ce1`.
+
+Host this JSON at a permanent public HTTPS URL and pass that URL to
+`set-token-metadata`. The mainnet JSON URL is a deployment input; no metadata
+has been published or set on mainnet by this change. The token uses standard
+SPL Token with Metaplex fungible metadata. Initializing the mint does not create
+metadata.
+
 ## Contract and authority
 
 `set_token_metadata(uri)` creates or updates the canonical Metaplex metadata
-account for the existing AKT mint. It fixes the name to `Akash Network`, symbol
-to `AKT`, and royalties to zero. Metaplex records the token as fungible. The URI
+account for the existing AKT mint. It fixes the name to `Akash Network Token`, symbol
+to `akt`, and royalties to zero. Metaplex records the token as fungible. The URI
 must be HTTPS and fit its 200-byte field.
 
 The current AKT program upgrade authority must sign. The mint-authority PDA
@@ -41,9 +69,9 @@ Retain a copy of the pinned binary for reproducibility, or review and
 repin the replacement. This fixture is for local testing, not a mainnet program
 deployment. Mainnet already has the Metaplex program.
 
-On test networks the portal serves `/token/akt.json` and `/token/akt.png`. JSON
-uses the portal's origin for its absolute image URL. The PNG is a 512-pixel
-render of the Akash logo. Both routes allow cross-origin reads. No IPFS upload,
+On test networks the portal serves `/token/akt.json` with the same name, symbol
+and logo URL. Its description explicitly marks it as a private testnet token,
+and its website link points to the test portal. The JSON allows cross-origin reads. No IPFS upload,
 public bucket, Metaplex registration or wallet-provider submission is needed.
 
 After the updated mint program is deployed and genesis is initialized, use the
@@ -75,8 +103,8 @@ do not expose the testnet to solve a wallet cache or proxy limitation.
 
 ## Mainnet launch gate
 
-- Approve the exact name, symbol, PNG and description with the team. Remove all
-  testnet wording and private addresses from production JSON.
+- Use the approved [mainnet values](#mainnet-values) and JSON. Do not publish
+  the private-testnet portal's JSON as mainnet metadata.
 - Host JSON and the logo at durable, publicly readable HTTPS URLs with correct
   content types and no authentication. We can self-host them. No external
   approval or disclosure of source code or private keys is required. Use a

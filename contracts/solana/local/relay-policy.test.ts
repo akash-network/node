@@ -11,7 +11,7 @@ import {
 } from "@solana/spl-token";
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import idl from "../../../.cache/solana/target/idl/akt_solana.json";
+import idl from "../../../.cache/solana/target/idl/akt.json";
 import clientIdl from "../idls/ics07_tendermint.json";
 import { testId } from "../tests/sink-fixtures";
 import { assemblyExhaustion } from "./header-upload";

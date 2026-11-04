@@ -4,8 +4,8 @@ import { Program, web3 } from "@coral-xyz/anchor";
 import { getMint } from "@solana/spl-token";
 import { TokenStandard } from "@metaplex-foundation/mpl-token-metadata";
 import { unwrapOption } from "@metaplex-foundation/umi";
-import idl from "../../../.cache/solana/target/idl/akt_solana.json";
-import type { AktSolana } from "../../../.cache/solana/target/types/akt_solana";
+import idl from "../../../.cache/solana/target/idl/akt.json";
+import type { Akt } from "../../../.cache/solana/target/types/akt";
 import {
   METADATA_PROGRAM_ID,
   metadataAddress,
@@ -68,8 +68,8 @@ async function main() {
     /^application\/json\b/,
   );
   const json = object(await response.json());
-  assert.equal(json.name, "Akash Network");
-  assert.equal(json.symbol, "AKT");
+  assert.equal(json.name, "Akash Network Token");
+  assert.equal(json.symbol, "akt");
   assert.ok(typeof json.image === "string", "image URL required");
   const image = await fetch(httpsUrl(json.image), {
     signal: AbortSignal.timeout(15_000),
@@ -84,7 +84,7 @@ async function main() {
     "PNG logo required, at most 1 MB",
   );
 
-  const program = new Program<AktSolana>(idl, wallet);
+  const program = new Program<Akt>(idl, wallet);
   const mint = pda("mint");
   const mintAuthority = pda("mint_authority");
   const before = await getMint(wallet.connection, mint, "finalized");
@@ -93,8 +93,8 @@ async function main() {
   if (
     !old ||
     old.uri !== uri ||
-    old.name !== "Akash Network" ||
-    old.symbol !== "AKT"
+    old.name !== "Akash Network Token" ||
+    old.symbol !== "akt"
   ) {
     signature = await program.methods
       .setTokenMetadata(uri)
@@ -116,8 +116,8 @@ async function main() {
   }
   const metadata = await readTokenMetadata(wallet.connection, mint);
   assert.ok(metadata);
-  assert.equal(metadata.name, "Akash Network");
-  assert.equal(metadata.symbol, "AKT");
+  assert.equal(metadata.name, "Akash Network Token");
+  assert.equal(metadata.symbol, "akt");
   assert.equal(metadata.uri, uri);
   assert.equal(metadata.updateAuthority, mintAuthority.toBase58());
   assert.equal(metadata.sellerFeeBasisPoints, 0);

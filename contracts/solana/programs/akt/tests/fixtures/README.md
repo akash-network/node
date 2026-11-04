@@ -18,7 +18,7 @@ base58 text, and maximum identity components. Settlement cases cover all five
 status keys and a validated 6,519-byte retained certificate with an opposing
 witness, veto provenance and permanent governance receipt.
 
-Run `python3 programs/akt-solana/tests/fixtures/verify.py` from `contracts/solana`
+Run `python3 programs/akt/tests/fixtures/verify.py` from `contracts/solana`
 for independent base58, protobuf, key and nonce reconstruction. Rust tests
 reconstruct native records and keys and validate authorization against these
 same fixture bytes. `tests/program-vectors.test.ts` checks the generated Anchor

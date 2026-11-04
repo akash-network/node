@@ -6,8 +6,8 @@ import {
   type Program,
   web3,
 } from "@coral-xyz/anchor";
-import idl from "../../../.cache/solana/target/idl/akt_solana.json";
-import type { AktSolana } from "../../../.cache/solana/target/types/akt_solana";
+import idl from "../../../.cache/solana/target/idl/akt.json";
+import type { Akt } from "../../../.cache/solana/target/types/akt";
 
 const AKT_PROGRAM = new web3.PublicKey(idl.address);
 const AKT_ERROR_CODES = new Map(
@@ -70,7 +70,7 @@ export async function rejectsWithProgramLogs(
 // Returns the data of the single event `name` (camelCase, as Anchor decodes
 // it) that the program emitted in a confirmed transaction.
 export async function emittedEvent(
-  program: Program<AktSolana>,
+  program: Program<Akt>,
   signature: string,
   name: string,
 ) {

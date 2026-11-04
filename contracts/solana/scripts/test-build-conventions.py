@@ -39,7 +39,7 @@ class BuildConventions(unittest.TestCase):
 
     def manifests(self, program, encoder):
         for path, name, revision in (
-            ("programs/akt-solana/Cargo.toml", "tendermint-light-client-membership", program),
+            ("programs/akt/Cargo.toml", "tendermint-light-client-membership", program),
             ("tools/header-encoder/Cargo.toml", "solana-ibc-borsh-header", encoder),
         ):
             manifest = self.source / path

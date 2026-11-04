@@ -12,7 +12,7 @@ import { MAINNET_GENESIS } from "../shared/networks";
 
 const exec = promisify(execFile);
 const repo = resolve(__dirname, "..");
-const names = ["access_manager", "ics07_tendermint", "akt_solana"] as const;
+const names = ["access_manager", "ics07_tendermint", "akt"] as const;
 const hash = (bytes: Buffer | string) =>
   createHash("sha256").update(bytes).digest("hex");
 
@@ -26,7 +26,7 @@ async function fixture(t: TestContext) {
   const programs = {
     access_manager: web3.Keypair.generate().publicKey.toBase58(),
     ics07_tendermint: web3.Keypair.generate().publicKey.toBase58(),
-    akt_solana: web3.Keypair.generate().publicKey.toBase58(),
+    akt: web3.Keypair.generate().publicKey.toBase58(),
   };
   let sums = "";
   for (const name of names) {
@@ -63,15 +63,15 @@ async function fixture(t: TestContext) {
 test("release review binds every binary, IDL, source revision and checksum list", async (t) => {
   const f = await fixture(t);
   await checkRelease(f.file);
-  const binary = join(f.build, "akt_solana.so");
+  const binary = join(f.build, "akt.so");
   const original = await readFile(binary);
   await writeFile(binary, Buffer.concat([original, Buffer.from("changed")]));
   await assert.rejects(checkRelease(f.file), /artifact hash mismatch/);
   await writeFile(binary, original);
-  f.manifest.programs.akt_solana = web3.Keypair.generate().publicKey.toBase58();
+  f.manifest.programs.akt = web3.Keypair.generate().publicKey.toBase58();
   await f.save();
   await assert.rejects(checkRelease(f.file), /IDL program ID mismatch/);
-  f.manifest.programs.akt_solana = f.manifest.programs.access_manager;
+  f.manifest.programs.akt = f.manifest.programs.access_manager;
   await f.save();
   await assert.rejects(checkRelease(f.file), /IDs must be distinct/);
 });
@@ -85,8 +85,7 @@ test("release rejects development IDs, wrong source and unreviewed checksum chan
   await assert.rejects(checkRelease(f.file), /unreviewed build-info/);
   await writeFile(join(f.build, "SHA256SUMS"), "changed\n");
   await assert.rejects(checkRelease(f.file), /unreviewed SHA256SUMS/);
-  f.manifest.programs.akt_solana =
-    "FfFAPUKqjf68ggj1HvpyzMHFDRnT2cFAdZYYQb7mK9i5";
+  f.manifest.programs.akt = "FfFAPUKqjf68ggj1HvpyzMHFDRnT2cFAdZYYQb7mK9i5";
   await f.save();
   await assert.rejects(checkRelease(f.file), /development program IDs/);
 });
@@ -248,7 +247,7 @@ test("preflight checks existing programs and verification rejects wrong authorit
     cwd: repo,
     env: { ...process.env, PATH: f.root },
   });
-  const id = new web3.PublicKey(f.manifest.programs.akt_solana);
+  const id = new web3.PublicKey(f.manifest.programs.akt);
   const dataId = web3.PublicKey.findProgramAddressSync(
     [id.toBuffer()],
     new web3.PublicKey(loader),

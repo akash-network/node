@@ -1,5 +1,5 @@
 {
-  "name": "akt-solana",
+  "name": "akt",
   "version": "0.1.0",
   "private": true,
   "description": "AKT on Solana programs, production operations, and development tooling",
@@ -12,7 +12,7 @@
     "build": "bash scripts/build-programs.sh",
     "setup:light-client": "bash scripts/setup-light-client.sh",
     "build:verifiable": "bash scripts/verifiable-build.sh",
-    "test:unit": "bash -c 'source scripts/workspace.sh && exec \"$@\"' -- cargo test -p akt-solana --lib",
+    "test:unit": "bash -c 'source scripts/workspace.sh && exec \"$@\"' -- cargo test -p akt --lib",
     "test:sink": "bash scripts/test-sink.sh",
     "test": "bash scripts/test-contract.sh",
     "localnet": "bash scripts/localnet.sh",

@@ -2,7 +2,7 @@ use super::*;
 
 fn instruction(accounts: impl ToAccountMetas, data: impl InstructionData) -> Instruction {
     Instruction {
-        program_id: akt_solana::ID,
+        program_id: akt::ID,
         accounts: accounts.to_account_metas(None),
         data: data.data(),
     }
@@ -13,7 +13,7 @@ pub(super) fn exercise(vm: &mut Mollusk) {
     for length in [0, 1, 4096, 10_160, 10_161, 16_384, 16_385] {
         let nonce = [length as u8; 32];
         let buffer =
-            Pubkey::find_program_address(&[PROOF_SEED, payer.as_ref(), &nonce], &akt_solana::ID).0;
+            Pubkey::find_program_address(&[PROOF_SEED, payer.as_ref(), &nonce], &akt::ID).0;
         let accounts = vec![
             (
                 payer,
@@ -26,12 +26,12 @@ pub(super) fn exercise(vm: &mut Mollusk) {
             system(),
         ];
         let create = instruction(
-            akt_solana::accounts::CreateProofBuffer {
+            akt::accounts::CreateProofBuffer {
                 submitter: payer,
                 proof_buffer: buffer,
                 system_program: anchor_lang::system_program::ID,
             },
-            akt_solana::instruction::CreateProofBuffer {
+            akt::instruction::CreateProofBuffer {
                 nonce,
                 expected_len: length,
             },
@@ -56,20 +56,20 @@ pub(super) fn exercise(vm: &mut Mollusk) {
         );
         let mut accounts = result.resulting_accounts;
         let grow = instruction(
-            akt_solana::accounts::GrowProofBuffer {
+            akt::accounts::GrowProofBuffer {
                 submitter: payer,
                 proof_buffer: buffer,
                 system_program: anchor_lang::system_program::ID,
             },
-            akt_solana::instruction::GrowProofBuffer {},
+            akt::instruction::GrowProofBuffer {},
         );
         let append = |offset, chunk| {
             instruction(
-                akt_solana::accounts::WriteProofBuffer {
+                akt::accounts::WriteProofBuffer {
                     submitter: payer,
                     proof_buffer: buffer,
                 },
-                akt_solana::instruction::AppendProof { offset, chunk },
+                akt::instruction::AppendProof { offset, chunk },
             )
         };
         if created < 80 + length as usize {
@@ -143,11 +143,11 @@ pub(super) fn exercise(vm: &mut Mollusk) {
                 _ => unreachable!(),
             }
             let close = instruction(
-                akt_solana::accounts::CloseProofBuffer {
+                akt::accounts::CloseProofBuffer {
                     submitter: payer,
                     proof_buffer: buffer,
                 },
-                akt_solana::instruction::CloseProofBuffer {},
+                akt::instruction::CloseProofBuffer {},
             );
             for mut operation in [grow.clone(), append(0, vec![1]), close] {
                 operation.accounts[0] = bad_grow.accounts[0].clone();
@@ -188,11 +188,11 @@ pub(super) fn exercise(vm: &mut Mollusk) {
         assert!(result.raw_result.is_err());
         assert_eq!(result.resulting_accounts, accounts);
         let close = instruction(
-            akt_solana::accounts::CloseProofBuffer {
+            akt::accounts::CloseProofBuffer {
                 submitter: payer,
                 proof_buffer: buffer,
             },
-            akt_solana::instruction::CloseProofBuffer {},
+            akt::instruction::CloseProofBuffer {},
         );
         let result = vm.process_instruction(&close, &accounts);
         assert!(result.raw_result.is_ok());

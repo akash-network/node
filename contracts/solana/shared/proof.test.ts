@@ -7,9 +7,9 @@ import {
 } from "@akashnetwork/chain-sdk/private-types/akash.v1";
 import assert from "node:assert/strict";
 import test from "node:test";
-import boundaries from "../programs/akt-solana/tests/fixtures/native_boundary_vectors.json";
-import vectors from "../programs/akt-solana/tests/fixtures/proof_vectors.json";
-import settlements from "../programs/akt-solana/tests/fixtures/settlement_vectors.json";
+import boundaries from "../programs/akt/tests/fixtures/native_boundary_vectors.json";
+import vectors from "../programs/akt/tests/fixtures/proof_vectors.json";
+import settlements from "../programs/akt/tests/fixtures/settlement_vectors.json";
 import { MAX_INT64, MAX_UINT64, parseSinkId, sinkIdParts } from "./id";
 import {
   authorizedSettlement,

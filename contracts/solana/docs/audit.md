@@ -8,7 +8,7 @@ This reference describes the native protobuf proof contract used with the paired
 
 The program verifies membership using the pinned `tendermint-light-client-membership` library inside AKT. It reads the authenticated ICS07 client and consensus accounts. It does not call the verifier's membership instruction through CPI. ICS07 still owns header verification, consensus roots, freezing and pruning.
 
-The program's audit scope includes `programs/akt-solana`, its membership dependencies in `Cargo.lock`, the generated ICS07 account types, and the merged IBC source pinned in the Cargo manifests. The upstream client, access manager, Anchor, Solana runtime, SPL Token and Metaplex remain dependencies to review. Akash, reporters and the relayer have separate code and trust boundaries.
+The program's audit scope includes `programs/akt`, its membership dependencies in `Cargo.lock`, the generated ICS07 account types, and the merged IBC source pinned in the Cargo manifests. The upstream client, access manager, Anchor, Solana runtime, SPL Token and Metaplex remain dependencies to review. Akash, reporters and the relayer have separate code and trust boundaries.
 
 | Actor                                        | Authority                                                                                                                             |
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
@@ -23,7 +23,7 @@ Upgrade authorities are trusted for issuance. A malicious AKT upgrade can bypass
 
 ## Source map
 
-Paths beginning with `src/` are relative to `programs/akt-solana`.
+Paths beginning with `src/` are relative to `programs/akt`.
 
 | Source                                                              | Responsibility                                                                                |
 | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |

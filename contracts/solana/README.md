@@ -29,7 +29,7 @@ npm run build
 
 The build writes:
 
-- AKT: `../../.cache/solana/target/deploy/akt_solana.so`
+- AKT: `../../.cache/solana/target/deploy/akt.so`
 - IBC verifier: `../../.cache/solana/deps/ibc-contracts/ibc-solana/target/deploy/ics07_tendermint.so`
 - Access manager: `../../.cache/solana/deps/ibc-contracts/ibc-solana/target/deploy/access_manager.so`
 

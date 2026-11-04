@@ -59,7 +59,7 @@ class ServiceArchiveTests(unittest.TestCase):
         (self.cache / "chain-sdk.tgz").write_text("fixture-sdk")
         build = self.root / "build"
         build.mkdir()
-        for name in ("akt_solana", "ics07_tendermint", "access_manager"):
+        for name in ("akt", "ics07_tendermint", "access_manager"):
             (build / f"{name}.json").write_text("{}\n")
             (build / f"{name}.ts").write_text("// fixture type\n")
             (self.source / f"idls/{name}.json").write_text("{}\n")
@@ -93,8 +93,8 @@ class ServiceArchiveTests(unittest.TestCase):
         with tarfile.open(self.output) as archive:
             files = set(archive.getnames())
         for name in ("bin/akt-header-encoder", ".cache/solana/chain-sdk.tgz",
-                     ".cache/solana/target/idl/akt_solana.json",
-                     ".cache/solana/target/types/akt_solana.ts",
+                     ".cache/solana/target/idl/akt.json",
+                     ".cache/solana/target/types/akt.ts",
                      ".cache/solana/deps/ibc-contracts/ibc-solana/target/types/ics07_tendermint.ts",
                      "contracts/solana/node_modules/fixture", "service-build-info.txt", "launch-manifest.json"):
             self.assertIn("./" + name, files)

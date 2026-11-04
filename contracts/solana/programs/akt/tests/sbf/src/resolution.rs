@@ -243,13 +243,13 @@ pub(super) fn races(vm: &Mollusk, mint_fixture: &Fixture, settlement: &Fixture) 
             assert_eq!(rejected.resulting_accounts, sealed);
         }
         let close = Instruction {
-            program_id: akt_solana::ID,
-            accounts: akt_solana::accounts::CloseProofBuffer {
+            program_id: akt::ID,
+            accounts: akt::accounts::CloseProofBuffer {
                 submitter: winner.payer,
                 proof_buffer: winner.buffer,
             }
             .to_account_metas(None),
-            data: akt_solana::instruction::CloseProofBuffer {}.data(),
+            data: akt::instruction::CloseProofBuffer {}.data(),
         };
         let closed = vm.process_instruction(&close, &sealed);
         assert!(closed.raw_result.is_ok());
@@ -270,7 +270,7 @@ pub(super) fn cpi_rejection(vm: &mut Mollusk, elf: &[u8], mint: &Fixture, settle
     for fixture in [mint, settlement] {
         let mut case = Case::new(fixture);
         let inner = case.instruction.clone();
-        let mut data = akt_solana::wire::proof_nonce(b"global:proxy_cpi")[..8].to_vec();
+        let mut data = akt::wire::proof_nonce(b"global:proxy_cpi")[..8].to_vec();
         data.extend_from_slice(&(inner.data.len() as u32).to_le_bytes());
         data.extend_from_slice(&inner.data);
         data.extend_from_slice(&(inner.accounts.len() as u32).to_le_bytes());
@@ -278,12 +278,12 @@ pub(super) fn cpi_rejection(vm: &mut Mollusk, elf: &[u8], mint: &Fixture, settle
             data.extend_from_slice(&[u8::from(meta.is_signer), u8::from(meta.is_writable)]);
         }
         let mut accounts = vec![
-            solana_instruction::AccountMeta::new_readonly(akt_solana::ID, false),
+            solana_instruction::AccountMeta::new_readonly(akt::ID, false),
             solana_instruction::AccountMeta::new(case.payer, true),
         ];
         accounts.extend(inner.accounts);
         case.accounts.push((
-            akt_solana::ID,
+            akt::ID,
             Account {
                 executable: true,
                 ..account(mollusk_svm::program::loader_keys::LOADER_V3, vec![])

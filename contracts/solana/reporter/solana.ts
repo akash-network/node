@@ -12,15 +12,15 @@ import {
 import { TOKEN_PROGRAM_ID, unpackMint } from "@solana/spl-token";
 import assert from "node:assert/strict";
 import { isDeepStrictEqual } from "node:util";
-import idl from "../../../.cache/solana/target/idl/akt_solana.json";
-import type { AktSolana } from "../../../.cache/solana/target/types/akt_solana";
+import idl from "../../../.cache/solana/target/idl/akt.json";
+import type { Akt } from "../../../.cache/solana/target/types/akt";
 import { matchesAnchorId } from "../shared/proof";
 
 import { decodeRecord, statusAddress } from "../shared/proof";
 export { decodeRecord } from "../shared/proof";
 export type Record = ReturnType<typeof decodeRecord>;
-type TransferStatus = IdlAccounts<AktSolana>["transferStatus"];
-type TransferResolved = IdlEvents<AktSolana>["transferResolved"];
+type TransferStatus = IdlAccounts<Akt>["transferStatus"];
+type TransferResolved = IdlEvents<Akt>["transferResolved"];
 type Executed = Pick<web3.VersionedTransactionResponse, "transaction" | "meta">;
 // slotLimit is the highest slot another node could have finalized while this
 // fresh node's finalized slot is contextSlot. Higher reported slots are false.
@@ -150,7 +150,7 @@ export function safeSlot(slot: bigint): number {
 // The owned RPC node is a trust boundary. Finalized commitment cannot make an
 // untrusted RPC truthful. No public-provider fallback is configured here.
 export class SolanaObserver {
-  private readonly program: Program<AktSolana>;
+  private readonly program: Program<Akt>;
   private readonly slotLead: bigint;
   private followed?: { program: web3.PublicKey; contextSlot: bigint };
   private readonly changes: LightClientChange[] = [];
@@ -167,7 +167,7 @@ export class SolanaObserver {
       idl.address,
       "program differs from built IDL",
     );
-    this.program = new Program<AktSolana>(idl, { connection: rpc });
+    this.program = new Program<Akt>(idl, { connection: rpc });
     assert.ok(config.mint.equals(this.pda("mint")), "noncanonical mint");
   }
 
@@ -229,10 +229,10 @@ export class SolanaObserver {
     }
     assert.ok(launchAccount && bridgeAccount && mintAccount);
     const launch = this.program.coder.accounts.decode<
-      IdlAccounts<AktSolana>["launchConfig"]
+      IdlAccounts<Akt>["launchConfig"]
     >("launchConfig", launchAccount.data);
     const bridge = this.program.coder.accounts.decode<
-      IdlAccounts<AktSolana>["bridgeConfig"]
+      IdlAccounts<Akt>["bridgeConfig"]
     >("bridgeConfig", bridgeAccount.data);
     assert.equal(launch.version, 2, "unsupported launch configuration");
     assert.ok(launch.mint.equals(this.config.mint), "wrong configured mint");

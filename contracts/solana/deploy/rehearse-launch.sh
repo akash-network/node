@@ -23,7 +23,7 @@ port=${AKT_LOCALNET_RPC_PORT:-17899}
 url=http://127.0.0.1:$port
 upstream=$SOLANA_DEPS/ibc-contracts/ibc-solana
 artifacts=$upstream/target/deploy
-names=(akt_solana ics07_tendermint access_manager)
+names=(akt ics07_tendermint access_manager)
 mkdir -p "$SOLANA_RUN"
 run=$(mktemp -d "$SOLANA_RUN/launch-rehearsal.XXXXXX")
 mkdir "$run/keys" "$run/tx" "$run/programs"
@@ -39,7 +39,7 @@ sha256() {
 # The program ID each build declares, from the IDLs it was built with.
 declared() {
   local idl=idls/$1.json
-  [[ $1 == akt_solana ]] && idl=$CARGO_TARGET_DIR/idl/akt_solana.json
+  [[ $1 == akt ]] && idl=$CARGO_TARGET_DIR/idl/akt.json
   python3 -I -c 'import json, sys; print(json.load(open(sys.argv[1]))["address"])' "$idl"
 }
 # Rewrites a build's own program ID (tests/relocate-program.ts).
@@ -79,12 +79,12 @@ if [[ -n "${AKT_REHEARSAL_PROGRAMS:-}" ]]; then
 else
   for name in "${names[@]}"; do
     source=$artifacts/$name.so
-    [[ $name == akt_solana ]] && source=$CARGO_TARGET_DIR/deploy/akt_solana.so
+    [[ $name == akt ]] && source=$CARGO_TARGET_DIR/deploy/akt.so
     test -f "$source" || { echo "Missing $source. Run npm run setup first." >&2; exit 1; }
     relocate "$source" "$(declared "$name")" "$(newkey "$name-keypair")" "$run/programs/$name.so"
   done
 fi
-akt_id=$(solana-keygen pubkey "$run/keys/akt_solana-keypair.json")
+akt_id=$(solana-keygen pubkey "$run/keys/akt-keypair.json")
 client_id=$(solana-keygen pubkey "$run/keys/ics07_tendermint-keypair.json")
 manager_id=$(solana-keygen pubkey "$run/keys/access_manager-keypair.json")
 relocate "$run/programs/ics07_tendermint.so" "$client_id" "$repin_id" "$run/programs/ics07_repin.so"
@@ -227,12 +227,12 @@ admin bundle --emit "$run/tx/repin-bridge.json" "$run/tx/repin-client.json" "$ru
 execute repin-bridge
 
 echo '== Multisig program upgrade from a buffer'
-buffer=$(sol program write-buffer "$run/programs/akt_solana.so" --output json |
+buffer=$(sol program write-buffer "$run/programs/akt.so" --output json |
   python3 -I -c 'import json, sys; print(json.load(sys.stdin)["buffer"])')
 sol program set-buffer-authority "$buffer" --new-buffer-authority "$vault"
 multisig upgrade upgrade-program --program "$akt_id" --buffer "$buffer" --spill "$vault" \
-  --expect-sha256 "$(sha256 "$run/programs/akt_solana.so")"
-verify "$akt_id" "$run/programs/akt_solana.so" "$vault"
+  --expect-sha256 "$(sha256 "$run/programs/akt.so")"
+verify "$akt_id" "$run/programs/akt.so" "$vault"
 
 echo '== Events, read by invocation frame from the CPI executions'
 signature=$(python3 -I -c 'import json, sys; print(json.load(open(sys.argv[1]))["signature"])' "$run/tx/repin-bridge.executed.json")

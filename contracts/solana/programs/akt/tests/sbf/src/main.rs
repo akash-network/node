@@ -1,4 +1,4 @@
-use akt_solana::{
+use akt::{
     constants::*,
     state::{
         BridgeConfig, LaunchConfig, MintPolicy, ProofBuffer, TransferOutcome, TransferStatus,
@@ -120,7 +120,7 @@ struct Case {
 
 impl Case {
     fn new(fixture: &Fixture) -> Self {
-        let program = akt_solana::ID;
+        let program = akt::ID;
         let key = bytes(&fixture.key);
         let prefix_len = if fixture.amount.is_some() { 2 } else { 3 };
         let mut fields = &key[prefix_len..];
@@ -145,7 +145,7 @@ impl Case {
         let status = Pubkey::find_program_address(
             &[
                 TRANSFER_SEED,
-                &akt_solana::wire::owner_seed(&id.owner),
+                &akt::wire::owner_seed(&id.owner),
                 &id.height.to_le_bytes(),
                 &id.sequence.to_le_bytes(),
             ],
@@ -275,7 +275,7 @@ impl Case {
             ]);
             Instruction {
                 program_id: program,
-                accounts: akt_solana::accounts::MintTransfer {
+                accounts: akt::accounts::MintTransfer {
                     payer,
                     config,
                     bridge,
@@ -294,7 +294,7 @@ impl Case {
                     system_program: anchor_lang::system_program::ID,
                 }
                 .to_account_metas(None),
-                data: akt_solana::instruction::MintTransfer {
+                data: akt::instruction::MintTransfer {
                     id: id.clone(),
                     recipient_key: recipient,
                     amount,
@@ -305,7 +305,7 @@ impl Case {
         } else {
             Instruction {
                 program_id: program,
-                accounts: akt_solana::accounts::VoidTransfer {
+                accounts: akt::accounts::VoidTransfer {
                     payer,
                     bridge,
                     proof_buffer: buffer,
@@ -317,7 +317,7 @@ impl Case {
                     system_program: anchor_lang::system_program::ID,
                 }
                 .to_account_metas(None),
-                data: akt_solana::instruction::VoidTransfer {
+                data: akt::instruction::VoidTransfer {
                     id: id.clone(),
                     settlement_status: key[2],
                     proof_height: HEIGHT,
@@ -520,7 +520,7 @@ fn negative_membership(vm: &mut Mollusk, fixture: &Fixture) {
                 set(&mut case.accounts, case.buffer, &buffer);
                 let address = Pubkey::find_program_address(
                     &[PROOF_SEED, case.payer.as_ref(), &buffer.nonce],
-                    &akt_solana::ID,
+                    &akt::ID,
                 )
                 .0;
                 case.replace_key(case.buffer, address);
@@ -602,7 +602,7 @@ fn negative_membership(vm: &mut Mollusk, fixture: &Fixture) {
                 set(&mut case.accounts, case.buffer, &buffer);
                 let next = Pubkey::find_program_address(
                     &[PROOF_SEED, case.payer.as_ref(), &buffer.nonce],
-                    &akt_solana::ID,
+                    &akt::ID,
                 )
                 .0;
                 case.replace_key(case.buffer, next);
@@ -670,7 +670,7 @@ fn main() {
     vm.sysvars.clock.unix_timestamp = 105;
     vm.sysvars.clock.slot = 500;
     vm.add_program_with_elf_and_loader(
-        &akt_solana::ID,
+        &akt::ID,
         &elf,
         &mollusk_svm::program::loader_keys::LOADER_V3,
     );

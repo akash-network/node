@@ -10,6 +10,6 @@
   "programs": {
     "access_manager": "REPLACE_WITH_LAUNCH_ACCESS_MANAGER_ID",
     "ics07_tendermint": "REPLACE_WITH_LAUNCH_ICS07_ID",
-    "akt_solana": "REPLACE_WITH_LAUNCH_AKT_ID"
+    "akt": "REPLACE_WITH_LAUNCH_AKT_ID"
   }
 }

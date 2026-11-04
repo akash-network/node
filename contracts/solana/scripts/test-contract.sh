@@ -26,8 +26,8 @@ bash scripts/setup-metadata.sh
 if [[ ${AKT_TEST_SKIP_BUILD:-0} != 1 ]]; then
   bash scripts/build-programs.sh
 fi
-test -f "$CARGO_TARGET_DIR/deploy/akt_solana.so"
-test -f "$CARGO_TARGET_DIR/idl/akt_solana.json"
+test -f "$CARGO_TARGET_DIR/deploy/akt.so"
+test -f "$CARGO_TARGET_DIR/idl/akt.json"
 
 upstream="$SOLANA_DEPS/ibc-contracts/ibc-solana"
 artifacts="$upstream/target/deploy"
@@ -55,7 +55,7 @@ solana-test-validator --ledger "$run/ledger" --bind-address 127.0.0.1 \
 	--rpc-port "$port" --gossip-port "$((port_base + 1))" --dynamic-port-range "$((port_base + 2))-$((port_base + 50))" --faucet-port "$port_base" --mint "$authority" \
 	--bpf-program metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s "$SOLANA_DEPS/metaplex/mpl_token_metadata.so" \
 	--bpf-program CtQLLKbDMt1XVNXtLKJEt1K8cstbckjqE6zyFqR37KTc "$artifacts/test_cpi_proxy.so" \
-	--upgradeable-program FfFAPUKqjf68ggj1HvpyzMHFDRnT2cFAdZYYQb7mK9i5 "$CARGO_TARGET_DIR/deploy/akt_solana.so" "$authority" \
+	--upgradeable-program FfFAPUKqjf68ggj1HvpyzMHFDRnT2cFAdZYYQb7mK9i5 "$CARGO_TARGET_DIR/deploy/akt.so" "$authority" \
 	--upgradeable-program HqPcGpVHxNNFfVatjhG78dFVMwjyZixoKPdZSt3d3TdD "$artifacts/ics07_tendermint.so" "$authority" \
 	--upgradeable-program 4fMih2CidrXPeRx77kj3QcuBZwREYtxEbXjURUgadoe1 "$artifacts/access_manager.so" "$authority" \
 	--upgradeable-program "$repin_client" "$run/ics07_repin.so" "$authority" \

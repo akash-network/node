@@ -112,7 +112,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "akt-solana"
+name = "akt"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",
@@ -784,7 +784,7 @@ dependencies = [
 name = "canonical-program-sbf"
 version = "0.1.0"
 dependencies = [
- "akt-solana",
+ "akt",
  "anchor-lang",
  "anchor-spl",
  "hex",

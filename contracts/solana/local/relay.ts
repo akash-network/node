@@ -20,8 +20,8 @@ import {
 } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
-import idl from "../../../.cache/solana/target/idl/akt_solana.json";
-import type { AktSolana } from "../../../.cache/solana/target/types/akt_solana";
+import idl from "../../../.cache/solana/target/idl/akt.json";
+import type { Akt } from "../../../.cache/solana/target/types/akt";
 import { AkashClient } from "../reporter/akash";
 import { decodeRecord } from "../reporter/solana";
 import { parseSinkId, type SinkId } from "../shared/id";
@@ -254,7 +254,7 @@ export async function relayContext(options?: {
       settings.solanaGenesisHash,
       "Solana RPC serves another cluster: genesis hash differs from solanaGenesisHash",
     );
-  const program = new Program<AktSolana>(
+  const program = new Program<Akt>(
     { ...idl, address: programId.toBase58() },
     wallet,
   );

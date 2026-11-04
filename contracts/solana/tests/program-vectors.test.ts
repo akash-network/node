@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import test from "node:test";
 import { BN, BorshCoder, web3 } from "@coral-xyz/anchor";
-import generatedIdl from "../../../.cache/solana/target/idl/akt_solana.json";
-import boundaries from "../programs/akt-solana/tests/fixtures/native_boundary_vectors.json";
-import vectors from "../programs/akt-solana/tests/fixtures/proof_vectors.json";
+import generatedIdl from "../../../.cache/solana/target/idl/akt.json";
+import boundaries from "../programs/akt/tests/fixtures/native_boundary_vectors.json";
+import vectors from "../programs/akt/tests/fixtures/proof_vectors.json";
 import { assertCanonicalIdl } from "./idl.test";
 
 const idl: unknown = generatedIdl;

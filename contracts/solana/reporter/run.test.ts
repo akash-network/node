@@ -8,7 +8,7 @@ import { temporaryDirectory } from "../local/test-workspace";
 import { toBech32 } from "@cosmjs/encoding";
 import { web3 } from "@coral-xyz/anchor";
 import example from "./config.example.json";
-import idl from "../../../.cache/solana/target/idl/akt_solana.json";
+import idl from "../../../.cache/solana/target/idl/akt.json";
 import { parseConfig } from "./config";
 
 // Port 9 keeps a CLI test from reaching any node, including a tunnel on 8899.

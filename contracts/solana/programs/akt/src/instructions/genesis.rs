@@ -11,7 +11,7 @@ pub struct Initialize<'info> {
         constraint = program.programdata_address()? == Some(program_data.key())
             @ AktError::InvalidProgramData
     )]
-    pub program: Program<'info, crate::program::AktSolana>,
+    pub program: Program<'info, crate::program::Akt>,
     /// This program's ProgramData. Anchor checks the loader owns it; its
     /// recorded upgrade authority must sign.
     #[account(

@@ -378,7 +378,7 @@ export async function up(signal?: AbortSignal) {
       wallet.publicKey.toBase58(),
       "--upgradeable-program",
       PROGRAM_ID.toBase58(),
-      join(TARGET, "deploy/akt_solana.so"),
+      join(TARGET, "deploy/akt.so"),
       wallet.publicKey.toBase58(),
       "--quiet",
     ],

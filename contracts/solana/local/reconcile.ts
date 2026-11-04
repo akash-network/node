@@ -8,8 +8,8 @@ import {
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
-import idl from "../../../.cache/solana/target/idl/akt_solana.json";
-import type { AktSolana } from "../../../.cache/solana/target/types/akt_solana";
+import idl from "../../../.cache/solana/target/idl/akt.json";
+import type { Akt } from "../../../.cache/solana/target/types/akt";
 import { AkashClient } from "../reporter/akash";
 import { decodeRecord } from "../reporter/solana";
 import { coinAmount, matchesAnchorId, statusAddress } from "../shared/proof";
@@ -188,7 +188,7 @@ export async function reconcile() {
 async function reconcileSnapshot() {
   const { reportLagSeconds } = reconcileSettings(process.env);
   const wallet = await provider();
-  const program = new Program<AktSolana>(idl, wallet);
+  const program = new Program<Akt>(idl, wallet);
   const akash = new AkashClient(AKASH_RPC, CHAIN, 60);
   try {
     const state = await akash.state();

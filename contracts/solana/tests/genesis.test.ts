@@ -19,8 +19,8 @@ import {
   getAssociatedTokenAddressSync,
   getMint,
 } from "@solana/spl-token";
-import idl from "../../../.cache/solana/target/idl/akt_solana.json";
-import type { AktSolana } from "../../../.cache/solana/target/types/akt_solana";
+import idl from "../../../.cache/solana/target/idl/akt.json";
+import type { Akt } from "../../../.cache/solana/target/types/akt";
 
 const UPGRADEABLE_LOADER = new web3.PublicKey(
   "BPFLoaderUpgradeab1e11111111111111111111111",
@@ -28,7 +28,7 @@ const UPGRADEABLE_LOADER = new web3.PublicKey(
 
 test("AKT issuance", { timeout: 600_000 }, async (t) => {
   const provider = testProvider();
-  const program = new Program<AktSolana>(idl, provider);
+  const program = new Program<Akt>(idl, provider);
   const connection = provider.connection;
   const attacker = web3.Keypair.generate();
 

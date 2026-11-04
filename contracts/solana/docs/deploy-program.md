@@ -56,7 +56,7 @@ Generate the three program keypairs on an offline machine:
 ```bash
 umask 077
 mkdir -p "$PROGRAM_KEYS"
-for program in akt_solana ics07_tendermint access_manager; do
+for program in akt ics07_tendermint access_manager; do
   solana-keygen new --no-bip39-passphrase --silent \
     --outfile "$PROGRAM_KEYS/$program-keypair.json" > /dev/null
   echo "$program $(solana-keygen pubkey "$PROGRAM_KEYS/$program-keypair.json")"
@@ -82,12 +82,12 @@ that keypair holds the role ([IBC verifier](verifier.md)).
 Program IDs are compiled in, so the launch build is a commit that changes only
 them. Branch from the audited commit:
 
-1. AKT: set `declare_id!` in `programs/akt-solana/src/lib.rs` to `AKT_ID`.
+1. AKT: set `declare_id!` in `programs/akt/src/lib.rs` to `AKT_ID`.
 2. Verifier and access manager: change their `declare_id!` values in the
    **IBC contracts repository**, update its `Anchor.toml` program mappings,
    build with its pinned Anchor toolchain and review that commit there. Do not
    patch the downloaded cache. Pin both Cargo dependencies in node
-   (`programs/akt-solana/Cargo.toml` and `tools/header-encoder/Cargo.toml`) to
+   (`programs/akt/Cargo.toml` and `tools/header-encoder/Cargo.toml`) to
    that reviewed full commit and regenerate both Cargo lockfiles.
 3. Update this workspace's `Anchor.toml` AKT program mapping to `AKT_ID`.
    Regenerate the two IBC IDLs using the IBC repository's Anchor build and
@@ -172,7 +172,7 @@ are not a launch budget. The deploy command reserves twice each binary's size.
 Review the priority fee explicitly in micro-lamports per compute unit.
 
 Use `solana program deploy` directly. For each name in preflight's `missing`
-list (`access_manager`, `ics07_tendermint`, then `akt_solana`), compare the
+list (`access_manager`, `ics07_tendermint`, then `akt`), compare the
 ceremony and program public keys with the approved manifest, then deploy:
 
 ```bash
@@ -296,6 +296,12 @@ Expect `TokenMetadataSet`, `PauseGuardianSet`, `BridgeConfigured`,
 step.
 
 ### Metadata and pause guardian
+
+Use the approved [`metadata/akt.json`](../metadata/akt.json): name
+**Akash Network Token**, symbol **akt**, and the existing Cosmos AKT logo.
+The mint keeps **6 decimals**. Host the JSON at a permanent public HTTPS URL
+and pass it below. See [mainnet metadata](token-metadata.md#mainnet-values)
+for the description and logo source.
 
 Complete the [metadata launch gate](token-metadata.md#mainnet-launch-gate)
 first.
@@ -424,13 +430,13 @@ to the vault and emit the loader's upgrade. `upgrade-program` checks the buffer
 authority and its contents' SHA-256:
 
 ```bash
-solana program write-buffer "$RELEASE_DIR/build/akt_solana.so" --keypair <payer> --url "$RPC"
+solana program write-buffer "$RELEASE_DIR/build/akt.so" --keypair <payer> --url "$RPC"
 solana program set-buffer-authority <BUFFER> --new-buffer-authority "$VAULT" \
   --keypair <payer> --url "$RPC"
 admin upgrade-program --program "$AKT_ID" --buffer <BUFFER> --spill "$VAULT" \
   --expect-sha256 <published hash> --emit "$RELEASE_DIR/tx/upgrade.json" --authority "$VAULT"
 # after execution
-bash deploy/verify-program.sh --url "$RPC" "$AKT_ID" "$RELEASE_DIR/build/akt_solana.so" "$VAULT"
+bash deploy/verify-program.sh --url "$RPC" "$AKT_ID" "$RELEASE_DIR/build/akt.so" "$VAULT"
 ```
 
 A larger build needs `solana program extend` first.
@@ -452,7 +458,7 @@ A larger build needs `solana program extend` first.
 | Access manager | `grant_role`, `revoke_role` | `grant-relayer`, `revoke-relayer`, `open-relaying`, `close-relaying` | AM admin                       |
 | Loader         | `Upgrade`                   | `upgrade-program`                                                    | Program upgrade authority      |
 
-The instructions are built from the IDLs (`../../.cache/solana/target/idl/akt_solana.json` and
+The instructions are built from the IDLs (`../../.cache/solana/target/idl/akt.json` and
 `idls/`), so a rebuilt program changes them only where its interface
 changes. `local/admin-instructions.test.ts` checks each against Anchor's own
 builder and decodes it back.

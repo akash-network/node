@@ -31,6 +31,6 @@ npm run typecheck
 npm run test:services
 ```
 
-The explicit package argument refreshes npm's same-version archive integrity in the lockfile. Install the same archive into the portal and compare installed package bytes in both consumers. Preserve version strings and unrelated lockfile fields. Service and program tests consume the native fixtures under `programs/akt-solana/tests/fixtures`. The node generator owns the original record/settlement vectors; the Solana-owned boundary generator calls the unchanged node codecs and SDK encoders for wider addresses and the planned seven-reporter policy. Native `RecordData` and `SettlementData` values use generated encoders.
+The explicit package argument refreshes npm's same-version archive integrity in the lockfile. Install the same archive into the portal and compare installed package bytes in both consumers. Preserve version strings and unrelated lockfile fields. Service and program tests consume the native fixtures under `programs/akt/tests/fixtures`. The node generator owns the original record/settlement vectors; the Solana-owned boundary generator calls the unchanged node codecs and SDK encoders for wider addresses and the planned seven-reporter policy. Native `RecordData` and `SettlementData` values use generated encoders.
 
 Run the real-chain fixture with `npm run test:sink` after node integration is available. See [canonical launch and recovery](sink-migration-v2.md) for separate deployment namespaces, durable state and validation gates. Historical evidence does not validate this schema.

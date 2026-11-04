@@ -7,7 +7,7 @@ import { web3 } from "@coral-xyz/anchor";
 import { z } from "zod";
 import { MAINNET_GENESIS } from "../shared/networks";
 
-const names = ["access_manager", "ics07_tendermint", "akt_solana"] as const;
+const names = ["access_manager", "ics07_tendermint", "akt"] as const;
 const developmentIds = new Set([
   "4fMih2CidrXPeRx77kj3QcuBZwREYtxEbXjURUgadoe1",
   "HqPcGpVHxNNFfVatjhG78dFVMwjyZixoKPdZSt3d3TdD",
@@ -32,7 +32,7 @@ const manifestSchema = z.strictObject({
   programs: z.strictObject({
     access_manager: publicKey,
     ics07_tendermint: publicKey,
-    akt_solana: publicKey,
+    akt: publicKey,
   }),
 });
 const digest = (data: Buffer) =>

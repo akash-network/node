@@ -60,7 +60,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "akt-solana"
+name = "akt"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",

@@ -7,7 +7,7 @@ publish = false
 [workspace]
 
 [dependencies]
-akt-solana = { path = "../..", features = ["no-entrypoint"] }
+akt = { path = "../..", features = ["no-entrypoint"] }
 anchor-lang = "=0.32.1"
 anchor-spl = "=0.32.1"
 mollusk-svm = "=0.4.1"

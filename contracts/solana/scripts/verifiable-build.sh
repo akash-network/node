@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds akt_solana, ics07_tendermint and access_manager from a committed
+# Builds akt, ics07_tendermint and access_manager from a committed
 # revision in the pinned linux/amd64 image. Sources are copied to /build in the
 # container, so the hashes do not depend on where this repository is checked
 # out. The image stays local; never push it.
@@ -35,7 +35,7 @@ git archive --format=tar -o "$stage/source.tar" "$commit" \
 mkdir "$stage/context"
 tar -xf "$stage/source.tar" -C "$stage/context" --strip-components=2 tools/verifiable-build
 
-image=akt-solana-verifiable-build:${commit:0:12}
+image=akt-verifiable-build:${commit:0:12}
 docker build --platform linux/amd64 -t "$image" "$stage/context"
 docker run --rm --platform linux/amd64 \
   -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" \

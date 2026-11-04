@@ -4,8 +4,8 @@ import assert from "node:assert/strict";
 import test, { type TestContext } from "node:test";
 import { BN, Program, web3, type IdlAccounts } from "@coral-xyz/anchor";
 import { MintLayout, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import idl from "../../../.cache/solana/target/idl/akt_solana.json";
-import type { AktSolana } from "../../../.cache/solana/target/types/akt_solana";
+import idl from "../../../.cache/solana/target/idl/akt.json";
+import type { Akt } from "../../../.cache/solana/target/types/akt";
 import {
   SolanaObserver,
   SolanaUnavailableError,
@@ -14,7 +14,7 @@ import {
 
 async function fixture(t: TestContext) {
   const rpc = new web3.Connection("http://127.0.0.1:8899");
-  const program = new Program<AktSolana>(idl, { connection: rpc });
+  const program = new Program<Akt>(idl, { connection: rpc });
   const pda = (seed: string) =>
     web3.PublicKey.findProgramAddressSync(
       [Buffer.from(seed)],
@@ -29,7 +29,7 @@ async function fixture(t: TestContext) {
     maxAgeSeconds: 60,
   };
   const record = decodeRecord(testTransfer());
-  const status: IdlAccounts<AktSolana>["transferStatus"] = {
+  const status: IdlAccounts<Akt>["transferStatus"] = {
     id: anchorId(record.id),
     proofHeight: new BN(3),
     resolvedAtSlot: new BN(100),

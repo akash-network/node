@@ -5,10 +5,10 @@ import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { AnchorProvider, Program, web3 } from "@coral-xyz/anchor";
 import { getMint } from "@solana/spl-token";
-import idl from "../../../.cache/solana/target/idl/akt_solana.json";
+import idl from "../../../.cache/solana/target/idl/akt.json";
 import clientIdl from "../idls/ics07_tendermint.json";
 import accessIdl from "../idls/access_manager.json";
-import type { AktSolana } from "../../../.cache/solana/target/types/akt_solana";
+import type { Akt } from "../../../.cache/solana/target/types/akt";
 import type { Ics07Tendermint } from "../../../.cache/solana/deps/ibc-contracts/ibc-solana/target/types/ics07_tendermint";
 import type { AccessManager } from "../../../.cache/solana/deps/ibc-contracts/ibc-solana/target/types/access_manager";
 import { readTokenMetadata } from "../shared/token-metadata";
@@ -294,7 +294,7 @@ interface Context {
   connection: web3.Connection;
   aktId: web3.PublicKey;
   akt: ix.IdlProgram;
-  program: Program<AktSolana>;
+  program: Program<Akt>;
   addresses: ReturnType<typeof ix.aktAddresses>;
 }
 
@@ -1181,7 +1181,7 @@ async function main() {
       [signer],
     );
     const aktId = new web3.PublicKey(
-      file.summary.find((entry) => entry.program === "akt_solana")?.programId ??
+      file.summary.find((entry) => entry.program === "akt")?.programId ??
         values["akt-program"] ??
         PROGRAM_ID,
     );
@@ -1212,10 +1212,7 @@ async function main() {
     connection,
     aktId,
     akt: ix.akt(aktId),
-    program: new Program<AktSolana>(
-      { ...idl, address: aktId.toBase58() },
-      wallet,
-    ),
+    program: new Program<Akt>({ ...idl, address: aktId.toBase58() }, wallet),
     addresses: ix.aktAddresses(aktId),
   };
 
@@ -1269,7 +1266,7 @@ async function main() {
       genesisHash: genesis,
       authority,
       instructions: result.instructions,
-      programs: { akt_solana: aktId, ...result.deployments },
+      programs: { akt: aktId, ...result.deployments },
       checks: result.checks,
       notes: result.notes,
     });

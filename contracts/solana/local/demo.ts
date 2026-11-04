@@ -13,8 +13,8 @@ import {
 } from "@solana/spl-token";
 import assert from "node:assert/strict";
 import { join } from "node:path";
-import idl from "../../../.cache/solana/target/idl/akt_solana.json";
-import type { AktSolana } from "../../../.cache/solana/target/types/akt_solana";
+import idl from "../../../.cache/solana/target/idl/akt.json";
+import type { Akt } from "../../../.cache/solana/target/types/akt";
 import { AkashClient } from "../reporter/akash";
 import { decodeRecord } from "../reporter/solana";
 import { sinkIdParts, type SinkId } from "../shared/id";
@@ -41,7 +41,7 @@ async function main() {
   assert.ok(typeof local.sinkAddress === "string");
   const sink = local.sinkAddress;
   const wallet = await provider();
-  const program = new Program<AktSolana>(idl, wallet);
+  const program = new Program<Akt>(idl, wallet);
   const akash = new AkashClient(AKASH_RPC, CHAIN, 60);
   const sender = await cosmosSigner("sender");
   const mint = pda("mint");

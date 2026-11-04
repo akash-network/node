@@ -9,8 +9,8 @@ import { BN, Program, utils, web3, type IdlAccounts } from "@coral-xyz/anchor";
 import { MintLayout, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import assert from "node:assert/strict";
 import test, { type TestContext } from "node:test";
-import idl from "../../../.cache/solana/target/idl/akt_solana.json";
-import type { AktSolana } from "../../../.cache/solana/target/types/akt_solana";
+import idl from "../../../.cache/solana/target/idl/akt.json";
+import type { Akt } from "../../../.cache/solana/target/types/akt";
 import { anchorId, statusAddress } from "../shared/proof";
 import { testSnapshot, testTransfer } from "../tests/sink-fixtures";
 import { planOutcome, reportedObservations, type Snapshot } from "./policy";
@@ -24,7 +24,7 @@ import {
 async function fixture(t: TestContext) {
   // Every RPC method used is mocked. Port 9 keeps a missed mock off any node.
   const rpc = new web3.Connection("http://127.0.0.1:9");
-  const program = new Program<AktSolana>(idl, { connection: rpc });
+  const program = new Program<Akt>(idl, { connection: rpc });
   const pda = (seed: string, suffix?: Buffer) =>
     web3.PublicKey.findProgramAddressSync(
       suffix ? [Buffer.from(seed), suffix] : [Buffer.from(seed)],
@@ -41,7 +41,7 @@ async function fixture(t: TestContext) {
   const raw = testTransfer();
   const record = decodeRecord(raw);
   const address = statusAddress(program.programId, record.id);
-  const status: IdlAccounts<AktSolana>["transferStatus"] = {
+  const status: IdlAccounts<Akt>["transferStatus"] = {
     id: anchorId(record.id),
     proofHeight: new BN(3),
     resolvedAtSlot: new BN(100),

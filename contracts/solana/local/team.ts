@@ -1,4 +1,5 @@
 import { web3 } from "@coral-xyz/anchor";
+import tokenMetadata from "../metadata/akt.json";
 import { ownerBytes } from "../shared/id";
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
@@ -262,10 +263,8 @@ const server = createServer(async (request, response) => {
       response.setHeader("Access-Control-Allow-Origin", "*");
       response.end(
         JSON.stringify({
-          name: "Akash Network",
-          symbol: "AKT",
+          ...tokenMetadata,
           description: "AKT on the private Akash testnet. No monetary value.",
-          image: new URL("/token/akt.png", configuredOrigin).href,
           external_url: configuredOrigin.origin,
         }),
       );

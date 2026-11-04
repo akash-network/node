@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { AnchorProvider, Program, web3 } from "@coral-xyz/anchor";
-import idl from "../../../.cache/solana/target/idl/akt_solana.json";
+import idl from "../../../.cache/solana/target/idl/akt.json";
 import clientIdl from "../idls/ics07_tendermint.json";
 import accessIdl from "../idls/access_manager.json";
 import type { Ics07Tendermint } from "../../../.cache/solana/deps/ibc-contracts/ibc-solana/target/types/ics07_tendermint";

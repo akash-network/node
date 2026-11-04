@@ -31,7 +31,7 @@ pub use wire::TransferId;
 
 /// Entrypoints in lifecycle order. Handlers live in `instructions`.
 #[program]
-pub mod akt_solana {
+pub mod akt {
     use super::*;
 
     /// Genesis: creates the launch record and the AKT mint. Nothing is

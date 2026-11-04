@@ -4,11 +4,11 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
 import type { Idl } from "@coral-xyz/anchor";
-import idl from "../../../.cache/solana/target/idl/akt_solana.json";
+import idl from "../../../.cache/solana/target/idl/akt.json";
 import deployed from "./fixtures/deployed-interface.json";
 
 const declaredAddress = readFileSync(
-  join(__dirname, "../programs/akt-solana/src/lib.rs"),
+  join(__dirname, "../programs/akt/src/lib.rs"),
   "utf8",
 ).match(/declare_id!\("([1-9A-HJ-NP-Za-km-z]+)"\)/);
 assert.ok(declaredAddress, "program source must declare its address");

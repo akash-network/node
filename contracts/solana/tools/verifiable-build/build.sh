@@ -22,18 +22,18 @@ fi
 cmp idls/ics07_tendermint.json "$upstream/ibc-solana/target/idl/ics07_tendermint.json"
 cmp idls/access_manager.json "$upstream/ibc-solana/target/idl/access_manager.json"
 
-cp "$CARGO_TARGET_DIR/deploy/akt_solana.so" \
+cp "$CARGO_TARGET_DIR/deploy/akt.so" \
   "$upstream/ibc-solana/target/deploy/ics07_tendermint.so" \
   "$upstream/ibc-solana/target/deploy/access_manager.so" "$out/"
-cp "$CARGO_TARGET_DIR/idl/akt_solana.json" \
+cp "$CARGO_TARGET_DIR/idl/akt.json" \
   "$upstream/ibc-solana/target/idl/ics07_tendermint.json" \
   "$upstream/ibc-solana/target/idl/access_manager.json" "$out/"
-cp "$CARGO_TARGET_DIR/types/akt_solana.ts" \
+cp "$CARGO_TARGET_DIR/types/akt.ts" \
   "$upstream/ibc-solana/target/types/ics07_tendermint.ts" \
   "$upstream/ibc-solana/target/types/access_manager.ts" "$out/"
-(cd "$out" && sha256sum akt_solana.so ics07_tendermint.so access_manager.so \
-  akt_solana.json ics07_tendermint.json access_manager.json \
-  akt_solana.ts ics07_tendermint.ts access_manager.ts > SHA256SUMS)
+(cd "$out" && sha256sum akt.so ics07_tendermint.so access_manager.so \
+  akt.json ics07_tendermint.json access_manager.json \
+  akt.ts ics07_tendermint.ts access_manager.ts > SHA256SUMS)
 {
   cat "$out/upstream.txt"
   solana --version

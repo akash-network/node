@@ -10,10 +10,10 @@ import {
   web3,
   type Idl,
 } from "@coral-xyz/anchor";
-import aktIdl from "../../../.cache/solana/target/idl/akt_solana.json";
+import aktIdl from "../../../.cache/solana/target/idl/akt.json";
 import clientIdl from "../idls/ics07_tendermint.json";
 import accessIdl from "../idls/access_manager.json";
-import type { AktSolana } from "../../../.cache/solana/target/types/akt_solana";
+import type { Akt } from "../../../.cache/solana/target/types/akt";
 import type { Ics07Tendermint } from "../../../.cache/solana/deps/ibc-contracts/ibc-solana/target/types/ics07_tendermint";
 import type { AccessManager } from "../../../.cache/solana/deps/ibc-contracts/ibc-solana/target/types/access_manager";
 import {
@@ -65,7 +65,7 @@ const provider = new AnchorProvider(
   {},
 );
 const oracle = {
-  akt: new Program<AktSolana>(aktIdl, provider),
+  akt: new Program<Akt>(aktIdl, provider),
   client: new Program<Ics07Tendermint>(clientIdl, provider),
   access: new Program<AccessManager>(accessIdl, provider),
 };
@@ -217,7 +217,7 @@ test("AKT admin instructions match Anchor's builder and decode back", async () =
         .accountsPartial({ admin })
         .instruction(),
     );
-    assert.deepEqual(decodeInstruction(ix, "akt_solana").args, {
+    assert.deepEqual(decodeInstruction(ix, "akt").args, {
       guardian: guardian?.toBase58() ?? null,
     });
   }
@@ -399,7 +399,7 @@ test("fresh program IDs move every address and fixed account", () => {
   assert.ok(ix.keys[0].pubkey.equals(aktId));
   assert.ok(ix.keys[1].pubkey.equals(programData(aktId)));
   assert.ok(ix.keys[3].pubkey.equals(aktAddresses(aktId).config));
-  const decoded = decodeInstruction(ix, "akt_solana");
+  const decoded = decodeInstruction(ix, "akt");
   assert.equal(decoded.accounts[0].name, "admin.program");
   assert.equal(decoded.accounts[0].pubkey, aktId.toBase58());
   // The default deployment's address is no longer accepted for this program.
@@ -407,7 +407,7 @@ test("fresh program IDs move every address and fixed account", () => {
     () =>
       decodeInstruction(
         new web3.TransactionInstruction({ ...ix, programId: AKT.programId }),
-        "akt_solana",
+        "akt",
       ),
     /admin.program must be/,
   );
@@ -443,14 +443,14 @@ test("fresh program IDs move every address and fixed account", () => {
     authority: vault,
     instructions: [client, role, ix],
     programs: {
-      akt_solana: aktId,
+      akt: aktId,
       ics07_tendermint: clientId,
       access_manager: accessId,
     },
   });
   assert.deepEqual(
     file.summary.map((entry) => entry.program),
-    ["ics07_tendermint", "access_manager", "akt_solana"],
+    ["ics07_tendermint", "access_manager", "akt"],
   );
   // Without the deployment map the file cannot be attributed.
   assert.throws(
@@ -598,7 +598,7 @@ test("emitted files round-trip and reject tampering", () => {
   read.instructions.forEach((ix, index) => same(ix, instructions[index]));
   assert.ok(read.authority.equals(vault));
   const text = renderSummary(file);
-  assert.match(text, /1\. akt_solana\.set_pause_guardian/);
+  assert.match(text, /1\. akt\.set_pause_guardian/);
   assert.match(
     text,
     new RegExp(`admin\\.authority\\s+${vault.toBase58()}  signer writable`),
@@ -631,7 +631,7 @@ test("emitted files round-trip and reject tampering", () => {
 
   assert.throws(
     () => readEmitFile({ ...json, format: "other" }),
-    /not an akt-solana-admin-instructions\/v1 file/,
+    /not an akt-admin-instructions\/v1 file/,
   );
 });
 
@@ -899,14 +899,14 @@ test("checkpoints come from agreeing CometBFT commits", () => {
 
 test("every listed admin instruction exists in the IDLs", () => {
   const expected: [ProgramName, string][] = [
-    ["akt_solana", "initialize"],
-    ["akt_solana", "set_token_metadata"],
-    ["akt_solana", "configure_bridge"],
-    ["akt_solana", "set_bridge_enabled"],
-    ["akt_solana", "set_mint_policy"],
-    ["akt_solana", "set_pause_guardian"],
-    ["akt_solana", "repin_light_client"],
-    ["akt_solana", "guardian_pause"],
+    ["akt", "initialize"],
+    ["akt", "set_token_metadata"],
+    ["akt", "configure_bridge"],
+    ["akt", "set_bridge_enabled"],
+    ["akt", "set_mint_policy"],
+    ["akt", "set_pause_guardian"],
+    ["akt", "repin_light_client"],
+    ["akt", "guardian_pause"],
     ["access_manager", "initialize"],
     ["access_manager", "set_whitelisted_programs"],
     ["access_manager", "grant_role"],
