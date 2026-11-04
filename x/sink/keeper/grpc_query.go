@@ -23,8 +23,8 @@ func (q Querier) Params(ctx context.Context, req *types.QueryParamsRequest) (*ty
 	}
 
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
-	params, err := q.GetParams(sdkCtx)
 
+	params, err := q.GetParams(sdkCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -33,8 +33,12 @@ func (q Querier) Params(ctx context.Context, req *types.QueryParamsRequest) (*ty
 }
 
 func (q Querier) Reporters(ctx context.Context, request *types.QueryReportersRequest) (*types.QueryReportersResponse, error) {
-	//TODO implement me
-	panic("implement me")
+	policy, err := q.GetCurrentPolicy(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.QueryReportersResponse{Reporters: []types.ReporterPolicy{policy}}, nil
 }
 
 func (q Querier) Transfer(ctx context.Context, req *types.QueryTransferRequest) (*types.QueryTransferResponse, error) {

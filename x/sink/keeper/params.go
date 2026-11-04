@@ -16,26 +16,9 @@ import (
 func (k *keeper) SetParams(ctx sdk.Context, p types.Params) error {
 	cache, write := ctx.CacheContext()
 
-	for _, member := range p.Reporters {
-		addr, _ := sdk.AccAddressFromBech32(member)
-
-		if _, module := k.accounts.GetAccount(cache, addr).(sdk.ModuleAccountI); module {
-			return types.ErrInvalidReporters.Wrap("reporters must be ordinary accounts")
-		}
-	}
-
 	old, err := k.params.Get(cache)
-	if err != nil && !errors.Is(err, collections.ErrNotFound) {
+	if err != nil {
 		return err
-	}
-
-	if errors.Is(err, collections.ErrNotFound) {
-		if err = k.params.Set(cache, p); err != nil {
-			return err
-		}
-
-		write()
-		return nil
 	}
 
 	if p.MaxEpochRefund.IsLT(old.MaxEpochRefund) {

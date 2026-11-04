@@ -156,6 +156,7 @@ func newSinkHarness(t *testing.T, change func(*sinktypes.GenesisState)) *sinkHar
 			},
 		}
 		state[sinktypes.ModuleName] = cdc.MustMarshalJSON(g)
+
 		return state
 	}))
 
@@ -288,15 +289,15 @@ func (h *sinkHarness) totals() sinktypes.Totals {
 	return sinkTotals(h.t, h.a.Keepers.Akash.Sink, h.ctx())
 }
 
-func (h *sinkHarness) policy() sinktypes.ReporterPolicy {
-	p, err := h.a.Keepers.Akash.Sink.GetCurrentPolicy(h.ctx())
-	require.NoError(h.t, err)
-
-	return p
-}
-
 func (h *sinkHarness) state() *sinktypes.QueryStateResponse {
 	v, err := h.a.Keepers.Akash.Sink.NewQuerier().State(h.ctx(), nil)
+	require.NoError(h.t, err)
+
+	return v
+}
+
+func (h *sinkHarness) policy() *sinktypes.QueryReportersResponse {
+	v, err := h.a.Keepers.Akash.Sink.NewQuerier().Reporters(h.ctx(), nil)
 	require.NoError(h.t, err)
 
 	return v

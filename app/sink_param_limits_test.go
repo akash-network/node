@@ -29,7 +29,7 @@ func TestSinkIndependentSendingCaps(t *testing.T) {
 			res := h.deliver(t, "", h.deposit(6))
 			require.Equal(t, tc.code, res.Code, res.Log)
 			require.Equal(t, before, h.totals())
-			require.True(t, sdkmath.LegacyMustNewDecFromStr("0.6").Equal(h.policy().Threshold))
+			require.True(t, sdkmath.LegacyMustNewDecFromStr("0.6").Equal(h.policy().Reporters[0].Threshold))
 
 			res = h.deliver(t, "", h.deposit(5))
 			require.Zero(t, res.Code, res.Log)

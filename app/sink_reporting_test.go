@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	types "pkg.akt.dev/go/node/sink/v1"
+
 	sinkkeeper "pkg.akt.dev/node/v2/x/sink/keeper"
 )
 
@@ -40,7 +41,7 @@ func (h *sinkHarness) reportMsg(t *testing.T, reporter, id int, outcome types.Ou
 	return &types.MsgReportOutcome{
 		Reporter:      h.reporterAddress(reporter),
 		ID:            h.id(id),
-		PolicyVersion: h.policy().Version,
+		PolicyVersion: h.policy().Reporters[0].Version,
 		Round:         entry.Settlement.Round,
 		Observation:   observation(outcome),
 	}

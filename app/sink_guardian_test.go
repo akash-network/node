@@ -30,7 +30,8 @@ func TestSinkGuardianPause(t *testing.T) {
 	p := h.params()
 	p.PauseGuardian = guardian
 	require.NoError(t, h.update(p))
-	version := h.policy().Version
+	version := h.policy().Reporters[0].Version
+
 	res = h.deliver(t, "", h.deposit(60))
 	require.Zero(t, res.Code, res.Log)
 	h.quorum(t, 1, types.OutcomeVoided)
@@ -52,7 +53,8 @@ func TestSinkGuardianPause(t *testing.T) {
 	res = h.refund(t, 1)
 	require.NotZero(t, res.Code)
 	pause(true, true)
-	require.Equal(t, version, h.policy().Version)
+
+	require.Equal(t, version, h.policy().Reporters[0].Version)
 	require.NoError(t, h.update(p))
 	res = h.refund(t, 1)
 	require.Zero(t, res.Code, res.Log)

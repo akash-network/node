@@ -17,10 +17,6 @@ func (k *keeper) InitGenesis(ctx sdk.Context, g *types.GenesisState) error {
 		return err
 	}
 
-	if err := k.SetParams(ctx, g.Params); err != nil {
-		return err
-	}
-
 	if err := k.policySequence.Set(ctx, g.PolicySequence); err != nil {
 		return err
 	}
@@ -61,6 +57,10 @@ func (k *keeper) InitGenesis(ctx sdk.Context, g *types.GenesisState) error {
 	}
 
 	if err := k.totals.Set(ctx, g.Totals); err != nil {
+		return err
+	}
+
+	if err := k.params.Set(ctx, g.Params); err != nil {
 		return err
 	}
 
