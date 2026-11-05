@@ -55,8 +55,8 @@ func Setup(t *testing.T) (sdk.Context, epochskeeper.Keeper) {
 	encCfg := moduletestutil.MakeTestEncodingConfig()
 
 	epochsKeeper := epochskeeper.NewKeeper(
-		storeService,
 		encCfg.Codec,
+		storeService,
 	)
 	epochsKeeper.SetHooks(types.NewMultiEpochHooks())
 	ctx = ctx.WithBlockTime(time.Now().UTC()).WithBlockHeight(1).WithChainID("epochs")

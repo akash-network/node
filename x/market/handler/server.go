@@ -194,9 +194,14 @@ func (ms msgServer) CloseBid(goCtx context.Context, msg *mvbeta.MsgCloseBid) (*m
 func (ms msgServer) WithdrawLease(goCtx context.Context, msg *mvbeta.MsgWithdrawLease) (*mvbeta.MsgWithdrawLeaseResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	_, found := ms.keepers.Market.GetLease(ctx, msg.ID)
+	lease, found := ms.keepers.Market.GetLease(ctx, msg.ID)
 	if !found {
 		return nil, mv1.ErrUnknownLease
+	}
+
+	// Reclaiming leases remain payable until they are closed.
+	if lease.State == mv1.LeaseClosed {
+		return nil, mv1.ErrLeaseNotActive
 	}
 
 	if err := ms.keepers.Escrow.PaymentWithdraw(ctx, msg.ID.ToEscrowPaymentID()); err != nil {

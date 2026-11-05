@@ -33,6 +33,7 @@ import (
 	"pkg.akt.dev/node/v2/x/market"
 	"pkg.akt.dev/node/v2/x/oracle"
 	"pkg.akt.dev/node/v2/x/provider"
+	"pkg.akt.dev/node/v2/x/sink"
 	awasm "pkg.akt.dev/node/v2/x/wasm"
 )
 
@@ -48,6 +49,7 @@ func akashModuleBasics() []module.AppModuleBasic {
 		oracle.AppModuleBasic{},
 		awasm.AppModuleBasic{},
 		bme.AppModuleBasic{},
+		sink.AppModuleBasic{},
 	}
 }
 
@@ -62,6 +64,7 @@ func orderInitGenesis(_ []string) []string {
 		authtypes.ModuleName,
 		authz.ModuleName,
 		banktypes.ModuleName,
+		epochs.ModuleName,
 		distrtypes.ModuleName,
 		stakingtypes.ModuleName,
 		slashingtypes.ModuleName,
@@ -83,10 +86,10 @@ func orderInitGenesis(_ []string) []string {
 		provider.ModuleName,
 		market.ModuleName,
 		genutiltypes.ModuleName,
-		epochs.ModuleName,
 		bme.ModuleName,
 		escrow.ModuleName,
 		awasm.ModuleName,
 		wasmtypes.ModuleName,
+		sink.ModuleName,
 	}
 }

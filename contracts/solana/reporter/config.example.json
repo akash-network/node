@@ -1,0 +1,13 @@
+{
+  "akashRpc": "http://127.0.0.1:26657",
+  "akashChainId": "akashnet-2",
+  "solanaRpc": "http://127.0.0.1:8899",
+  "solanaGenesisHash": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
+  "programId": "REPLACE_WITH_DEPLOYED_AKT_PROGRAM_ID",
+  "mint": "REPLACE_WITH_VERIFIED_AKT_MINT",
+  "reporter": "REPLACE_WITH_CONFIGURED_AKASH_REPORTER",
+  "maxAgeSeconds": 60,
+  "pollSeconds": 15,
+  "feeAmountUakt": "12500",
+  "gasLimit": "500000"
+}

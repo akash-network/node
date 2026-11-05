@@ -75,6 +75,20 @@ jobs:
         uses: ./.github/actions/setup-ubuntu
       - run: make lint-shell
 
+  solana-build-conventions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: contracts/solana/.nvmrc
+      - name: Check build entry points and source checkout behavior
+        run: python3 contracts/solana/scripts/test-build-conventions.py
+      - name: Check scratch cleanup
+        run: python3 contracts/solana/scripts/test-temp-paths.py
+      - name: Check service archive layout and cleanup
+        run: python3 contracts/solana/deploy/test-build-services.py
+
   sims:
     runs-on: ubuntu-latest
     steps:

@@ -255,3 +255,49 @@ func (_c *AccountKeeper_GetModuleAddress_Call) RunAndReturn(run func(moduleName 
 	_c.Call.Return(run)
 	return _c
 }
+
+// SetAccount provides a mock function for the type AccountKeeper
+func (_mock *AccountKeeper) SetAccount(context1 context.Context, accountI types.AccountI) {
+	_mock.Called(context1, accountI)
+	return
+}
+
+// AccountKeeper_SetAccount_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetAccount'
+type AccountKeeper_SetAccount_Call struct {
+	*mock.Call
+}
+
+// SetAccount is a helper method to define mock.On call
+//   - context1 context.Context
+//   - accountI types.AccountI
+func (_e *AccountKeeper_Expecter) SetAccount(context1 interface{}, accountI interface{}) *AccountKeeper_SetAccount_Call {
+	return &AccountKeeper_SetAccount_Call{Call: _e.mock.On("SetAccount", context1, accountI)}
+}
+
+func (_c *AccountKeeper_SetAccount_Call) Run(run func(context1 context.Context, accountI types.AccountI)) *AccountKeeper_SetAccount_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 types.AccountI
+		if args[1] != nil {
+			arg1 = args[1].(types.AccountI)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *AccountKeeper_SetAccount_Call) Return() *AccountKeeper_SetAccount_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *AccountKeeper_SetAccount_Call) RunAndReturn(run func(context1 context.Context, accountI types.AccountI)) *AccountKeeper_SetAccount_Call {
+	_c.Run(run)
+	return _c
+}

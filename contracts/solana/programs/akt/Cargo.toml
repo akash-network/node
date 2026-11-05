@@ -1,0 +1,40 @@
+[package]
+name = "akt"
+version = "0.1.0"
+description = "AKT on Solana: zero-supply genesis, then mints only for Akash x/sink records verified by an ICS07 light client"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "akt"
+
+[features]
+default = ["custom-heap"]
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+anchor-debug = []
+custom-heap = []
+custom-panic = []
+
+
+[dependencies]
+anchor-lang = { version = "=0.32.1", features = ["init-if-needed"] }
+anchor-spl = { version = "=0.32.1", features = ["metadata"] }
+solana-curve25519 = "=2.3.5"
+# The syscalls feature provides get_processed_sibling_instruction.
+solana-instruction = { version = "=2.3.0", features = ["syscalls"] }
+solana-sha256-hasher = "=2.2.1"
+solana-allocator = "=0.1.2"
+ibc-core-commitment-types = { version = "=0.57.0", default-features = false }
+ibc-proto = { version = "=0.51.1", default-features = false }
+tendermint-light-client-membership = { git = "https://github.com/akash-network/ibc-contracts", rev = "0da3165d8428a1b7792cc17551ecd1d3985761e6", features = ["solana"] }
+ics07-tendermint-interface = { path = "ics07-tendermint-interface" }
+
+[dev-dependencies]
+serde_json = "=1.0.140"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }

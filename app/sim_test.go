@@ -46,8 +46,10 @@ import (
 	atypes "pkg.akt.dev/go/node/audit/v1"
 	ctypes "pkg.akt.dev/go/node/cert/v1"
 	dtypes "pkg.akt.dev/go/node/deployment/v1"
+	epochstypes "pkg.akt.dev/go/node/epochs/v1beta1"
 	mtypes "pkg.akt.dev/go/node/market/v1"
 	ptypes "pkg.akt.dev/go/node/provider/v1beta4"
+	sinktypes "pkg.akt.dev/go/node/sink/v1"
 	"pkg.akt.dev/go/sdkutil"
 
 	akash "pkg.akt.dev/node/v2/app"
@@ -93,7 +95,22 @@ func simulateFromSeedFunc(t *testing.T, newApp *akash.AkashApp, config sdksim.Co
 		t,
 		os.Stdout,
 		newApp.BaseApp,
-		simtestutil.AppStateFn(newApp.AppCodec(), newApp.SimulationManager(), akash.NewDefaultGenesisState(newApp.AppCodec())),
+		simtestutil.AppStateFnWithExtendedCb(newApp.AppCodec(), newApp.SimulationManager(), akash.NewDefaultGenesisState(newApp.AppCodec()), func(state map[string]json.RawMessage) {
+			if config.GenesisFile != "" {
+				return
+			}
+
+			var epochs epochstypes.GenesisState
+			newApp.AppCodec().MustUnmarshalJSON(state[epochstypes.ModuleName], &epochs)
+			for _, epoch := range epochs.Epochs {
+				if epoch.ID == "day" {
+					return
+				}
+			}
+
+			epochs.Epochs = append(epochs.Epochs, epochstypes.NewGenesisEpochInfo("day", 10*time.Minute))
+			state[epochstypes.ModuleName] = newApp.AppCodec().MustMarshalJSON(&epochs)
+		}),
 		sdksim.RandomAccounts, // Replace it with own random account function if using keys other than secp256k1
 		simtestutil.BuildSimulationOperations(newApp, newApp.AppCodec(), config, newApp.TxConfig()),
 		newApp.ModuleAccountAddrs(),
@@ -183,7 +200,8 @@ func TestAppImportExport(t *testing.T) {
 	require.Equal(t, akash.AppName, appB.Name())
 
 	ctxA := appA.NewContextLegacy(true, cmtproto.Header{Height: appA.LastBlockHeight()})
-	ctxB := appB.NewContextLegacy(true, cmtproto.Header{Height: appA.LastBlockHeight()})
+	// A chain started from this export runs InitChain at its initial height.
+	ctxB := appB.NewContextLegacy(true, cmtproto.Header{Height: exported.Height, Time: appA.GetContextForCheckTx(nil).BlockTime()})
 
 	initReq := &abci.RequestInitChain{
 		AppStateBytes: exported.AppState,
@@ -349,6 +367,12 @@ func TestAppImportExport(t *testing.T) {
 			[][]byte{},
 		},
 		{
+			sinktypes.StoreKey,
+			appA,
+			appB,
+			[][]byte{},
+		},
+		{
 			wasmtypes.StoreKey,
 			appA,
 			appB,
@@ -424,7 +448,9 @@ func TestAppSimulationAfterImport(t *testing.T) {
 
 	fmt.Printf("exporting genesis...\n")
 
-	exported, err := app.ExportAppStateAndValidators(true, []string{}, []string{})
+	// Sink transfer IDs keep their block heights, so a zero-height export
+	// cannot carry them; export and import at the next height instead.
+	exported, err := app.ExportAppStateAndValidators(false, []string{}, []string{})
 	require.NoError(t, err)
 
 	fmt.Printf("importing genesis...\n")
@@ -444,10 +470,17 @@ func TestAppSimulationAfterImport(t *testing.T) {
 	_, err = newApp.InitChain(&abci.RequestInitChain{
 		AppStateBytes: exported.AppState,
 		ChainId:       AppChainID,
+		Time:          app.GetContextForCheckTx(nil).BlockTime(),
+		InitialHeight: exported.Height,
 	})
 	require.NoError(t, err)
 
-	_, _, err = simulateFromSeedFunc(t, newApp, config)
+	// SimulateFromSeed runs its own InitChain from a random genesis without an
+	// initial height, which newApp's stores, now starting at exported.Height,
+	// reject. Simulate on a fresh app.
+	appOpts.Set("home", t.TempDir())
+	simApp := akash.NewApp(log.NewNopLogger(), dbm.NewMemDB(), nil, true, sim.FlagPeriodValue, map[int64]bool{}, encodingConfig, appOpts, fauxMerkleModeOpt, baseapp.SetChainID(AppChainID))
+	_, _, err = simulateFromSeedFunc(t, simApp, config)
 	require.NoError(t, err)
 }
 

@@ -1,0 +1,69 @@
+{
+  "signed_header": {
+    "header": {
+      "version": {
+        "block": "11"
+      },
+      "chain_id": "akash-bridge-testnetify-1",
+      "height": "1664",
+      "time": "2026-10-09T22:19:54.165192Z",
+      "last_block_id": {
+        "hash": "AA3C439FAB77CBA778E6ECC867ABA78252C60EB4DA89C06A3C3C7E2B0013D974",
+        "parts": {
+          "total": 1,
+          "hash": "8DE52EEE04A2D31F3E00077B4B217EE88D349182EE627021FE634E71B016ECCF"
+        }
+      },
+      "last_commit_hash": "E8C3CC5BE7F006EF57151B15299B649E5682ABF4E6B1F11F039A4E2DFBCFB334",
+      "data_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+      "validators_hash": "57C11C317B37135A768FC83D38CA3419B2EBDCA5B31FAD5A9D33505DCDF9EAF2",
+      "next_validators_hash": "57C11C317B37135A768FC83D38CA3419B2EBDCA5B31FAD5A9D33505DCDF9EAF2",
+      "consensus_hash": "048091BC7DDC283F77BFBF91D73C44DA58C3DF8A9CBC867405D8B7F3DAADA22F",
+      "app_hash": "346B70CD7DBB4FDC25383AB6903A719FE78476F85C21052855B4807CE392D5E9",
+      "last_results_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+      "evidence_hash": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855",
+      "proposer_address": "F9C40E472587DB66DD58E48795B7E5BA1FB0EDBF"
+    },
+    "commit": {
+      "height": "1664",
+      "round": 0,
+      "block_id": {
+        "hash": "7B6729BB1792E7A80F74FA02BF348CB6088A3DBF390D0CC9E29DDA43C265F963",
+        "parts": {
+          "total": 1,
+          "hash": "B978A9F9C7EA511289437C55289F9E51DFCEDAA7B5A7D0F8475D734E11CBEBD7"
+        }
+      },
+      "signatures": [
+        {
+          "block_id_flag": 2,
+          "validator_address": "9664BD102FF2B97C18C0EA81BB65C73E9E4B1CE4",
+          "timestamp": "2026-10-09T22:19:55.494844Z",
+          "signature": "G5mA5aO0BgPShrkDdIapMYioqJTWoVcxvPUPpvn9u2Y1xX3wj47pwQkIRO+vJu11mgRg5YgDRPUI/mt2efdeDg=="
+        },
+        {
+          "block_id_flag": 2,
+          "validator_address": "CAD2B7EA194FD83A41501A2D853FD465EED5AA4B",
+          "timestamp": "2026-10-09T22:19:55.490715Z",
+          "signature": "8sf8/fYHg9Tew8dVkidqr/KNcoJVWYY0nAS3JQITKahli3QFtjuCtkvD1wQbvn9JbUGhCOzcnmaWnekYtJx1BQ=="
+        },
+        {
+          "block_id_flag": 2,
+          "validator_address": "D983FED724B5D076626DF926A5FDC7DE15389D76",
+          "timestamp": "2026-10-09T22:19:55.498815Z",
+          "signature": "gDUu4J9kp1IWDwNLnQqIymZoPbDZc6jheDr9I4rnReOokIWvvCgM1Vs5gTguxOgL5jKDQVNY83M3D0dcasJODg=="
+        },
+        {
+          "block_id_flag": 1,
+          "validator_address": "",
+          "timestamp": "0001-01-01T00:00:00Z",
+          "signature": null
+        }
+      ]
+    }
+  },
+  "validators": [],
+  "trusted_validators": [],
+  "trusted_height": 1,
+  "revision": 1
+}

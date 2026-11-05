@@ -1,0 +1,117 @@
+# Compose 2.24.4+. Apply after docker-compose.yaml. See _docs/sink-local-e2e.md.
+---
+x-sink-service: &sink-service
+  image: ${SINK_SERVICES_IMAGE:?Build tests/upgrade/sink/Dockerfile first}
+  platform: linux/amd64
+  init: true
+  user: "${SINK_UID:-0}:${SINK_GID:-0}"
+  working_dir: /workspace/contracts/solana
+  network_mode: service:validator
+  environment:
+    SINK_STATE: /workspace/.cache/sink-compose
+    NPM_CONFIG_CACHE: /workspace/.cache/sink-compose/npm-cache
+    NODE_PATH: /workspace/contracts/solana/node_modules
+  volumes:
+    - ${SINK_SOURCE:?Set the node checkout}/contracts/solana:/workspace/contracts/solana:ro
+    - ${SINK_SOURCE}/tests/upgrade/sink:/workspace/tests/upgrade/sink:ro
+    - ${SINK_SOLANA_CACHE:?Set the matching Linux Solana build cache}:/workspace/.cache/solana:ro
+    - ${SINK_RUN:?Use a unique directory under node .cache}:/workspace/.cache/sink-compose
+    - ${SINK_RUN}/node_modules:/workspace/contracts/solana/node_modules
+  stop_grace_period: 3m
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+x-sink-reporter: &sink-reporter
+  <<: *sink-service
+  restart: unless-stopped
+  depends_on:
+    validator:
+      condition: service_healthy
+    solana:
+      condition: service_healthy
+
+services:
+  validator:
+    image: ${AKASH_NODE_IMAGE:?Set the image matching the upgraded home}
+    container_name: !reset null
+    ports: !override
+      - "127.0.0.1::26657"
+    volumes: !override
+      - ${AKASH_HOME:?Set the stopped upgrade validator home}:/root/.akash
+    command:
+      - akash
+      - start
+      - --home=/root/.akash
+      - --rpc.laddr=tcp://0.0.0.0:26657
+      - --p2p.laddr=tcp://0.0.0.0:26656
+      - --p2p.persistent_peers=
+      - --p2p.seeds=
+      - --p2p.pex=false
+      - --minimum-gas-prices=0.025uakt
+      - --pruning=nothing
+
+  hermes-client:
+    profiles: [hermes]
+    container_name: !reset null
+    env_file: !reset []
+    ports: !reset []
+
+  sink-tools:
+    <<: *sink-service
+    profiles: [tools]
+    entrypoint: [bash, /workspace/tests/upgrade/sink/setup.sh]
+
+  solana:
+    <<: *sink-service
+    command: [bash, /workspace/tests/upgrade/sink/setup.sh, solana]
+    restart: unless-stopped
+    depends_on:
+      validator:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, solana, --url, http://127.0.0.1:8899, cluster-version]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+
+  relayer:
+    <<: *sink-reporter
+    command:
+      [
+        node,
+        --import,
+        tsx,
+        local/relay.ts,
+        --config,
+        /workspace/.cache/sink-compose/relayer.json,
+        --watch,
+      ]
+
+  reporter0:
+    <<: *sink-reporter
+    command: [bash, /workspace/tests/upgrade/sink/setup.sh, reporter, "0"]
+  reporter1:
+    <<: *sink-reporter
+    command: [bash, /workspace/tests/upgrade/sink/setup.sh, reporter, "1"]
+  reporter2:
+    <<: *sink-reporter
+    command: [bash, /workspace/tests/upgrade/sink/setup.sh, reporter, "2"]
+  reporter3:
+    <<: *sink-reporter
+    command: [bash, /workspace/tests/upgrade/sink/setup.sh, reporter, "3"]
+  reporter4:
+    <<: *sink-reporter
+    command: [bash, /workspace/tests/upgrade/sink/setup.sh, reporter, "4"]
+  reporter5:
+    <<: *sink-reporter
+    command: [bash, /workspace/tests/upgrade/sink/setup.sh, reporter, "5"]
+  reporter6:
+    <<: *sink-reporter
+    command: [bash, /workspace/tests/upgrade/sink/setup.sh, reporter, "6"]
+
+networks:
+  akash-local:
+    name: ${COMPOSE_PROJECT_NAME:?Use an isolated project name}-network
