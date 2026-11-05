@@ -64,12 +64,13 @@ builds:
       - "-mod={{ .Env.MOD }}"
       - "-tags={{ .Env.BUILD_TAGS }}"
       - -trimpath
+      - "-buildmode={{ .Env.BUILDMODE }}"
     ldflags:
       - "{{ .Env.BUILD_LDFLAGS }}"
       - -s -w
       - -linkmode=external
       # yamllint disable-line rule:line-length
-      - -extldflags "-static-pie -L./.cache/lib -Wl,-z,muldefs -Wl,-z,noexecstack -lm -lrt -lc"
+      - -extldflags "-L./.cache/lib -Wl,-z,muldefs -Wl,-z,noexecstack -lm -lrt -lc"
   - id: akash-linux-arm64
     binary: akash
     main: ./cmd/akash
@@ -84,12 +85,13 @@ builds:
       - "-mod={{ .Env.MOD }}"
       - "-tags={{ .Env.BUILD_TAGS }}"
       - -trimpath
+      - "-buildmode={{ .Env.BUILDMODE }}"
     ldflags:
       - "{{ .Env.BUILD_LDFLAGS }}"
       - -s -w
       - -linkmode=external
       # yamllint disable-line rule:line-length
-      - -extldflags "-static-pie -L./.cache/lib -Wl,-z,muldefs -Wl,-z,noexecstack -lm -lrt -lc"
+      - -extldflags "-L./.cache/lib -Wl,-z,muldefs -Wl,-z,noexecstack -lm -lrt -lc"
 universal_binaries:
   - id: akash-darwin-universal
     ids:

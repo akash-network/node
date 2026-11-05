@@ -23,7 +23,7 @@ GO_LINKMODE            ?= external
 GOMOD                  ?= readonly
 BUILD_TAGS             ?= osusergo,netgo,hidraw,ledger
 GORELEASER_STRIP_FLAGS ?=
-BUILDMODE               =pie
+BUILDMODE               = exe
 
 ifeq ($(IS_PREREL), false)
 	IS_STABLE                  := true
