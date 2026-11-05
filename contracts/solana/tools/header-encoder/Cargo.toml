@@ -18,7 +18,7 @@ ibc-client-tendermint = "0.57"
 ibc-core-client-types = "0.57"
 tendermint = "0.40"
 tendermint-proto = "0.40"
-solana-ibc-borsh-header = { git = "https://github.com/akash-network/ibc-contracts", rev = "0da3165d8428a1b7792cc17551ecd1d3985761e6", features = ["light-client"] }
+solana-ibc-borsh-header = { git = "https://github.com/akash-network/ibc-contracts", rev = "98a97398cc72e8cc7f4037e85926d0e0555b5af8", features = ["light-client"] }
 
 [dev-dependencies]
 tendermint-light-client-verifier = "0.40"

@@ -30,7 +30,7 @@ solana-sha256-hasher = "=2.2.1"
 solana-allocator = "=0.1.2"
 ibc-core-commitment-types = { version = "=0.57.0", default-features = false }
 ibc-proto = { version = "=0.51.1", default-features = false }
-tendermint-light-client-membership = { git = "https://github.com/akash-network/ibc-contracts", rev = "0da3165d8428a1b7792cc17551ecd1d3985761e6", features = ["solana"] }
+tendermint-light-client-membership = { git = "https://github.com/akash-network/ibc-contracts", rev = "98a97398cc72e8cc7f4037e85926d0e0555b5af8", features = ["solana"] }
 ics07-tendermint-interface = { path = "ics07-tendermint-interface" }
 
 [dev-dependencies]

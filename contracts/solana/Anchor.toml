@@ -8,7 +8,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-akt = "FfFAPUKqjf68ggj1HvpyzMHFDRnT2cFAdZYYQb7mK9i5"
+akt = "2bPeYFEZCCRtyRvywZRqEGugFUG3VgWYBTeroyozB9qa"
 
 [provider]
 cluster = "localnet"
