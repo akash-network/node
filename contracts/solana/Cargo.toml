@@ -1,0 +1,19 @@
+[workspace]
+members = [
+    "programs/*"
+]
+resolver = "2"
+
+[profile.release]
+overflow-checks = true
+lto = "fat"
+codegen-units = 1
+
+[patch.crates-io]
+tendermint = { git = "https://github.com/cometbft/tendermint-rs", rev = "a2aa5bf" }
+tendermint-proto = { git = "https://github.com/cometbft/tendermint-rs", rev = "a2aa5bf" }
+tendermint-light-client-verifier = { git = "https://github.com/cometbft/tendermint-rs", rev = "a2aa5bf" }
+[profile.release.build-override]
+opt-level = 3
+incremental = false
+codegen-units = 1

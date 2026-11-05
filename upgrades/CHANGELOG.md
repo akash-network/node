@@ -40,6 +40,32 @@ Goal of the upgrade here
 Add new upgrades after this line based on the template above
 -----
 
+##### v2.2.0
+
+###### Description
+
+Installs x/sink with composite transfer IDs and recoverable genesis state,
+repairs orphaned escrow payments and migrates the Pyth VAA contract. The handler
+commits these changes together. It rejects a source version map that already
+contains sink; this is not an in-place upgrade of the earlier testnet schema.
+Deposits and refunds stay disabled until governance enables them. Any balance
+already held at the sink module address moves to the community pool.
+
+The SDK Amino JSON handler now resolves nested message descriptors. Ship the
+matching node and SDK in this coordinated upgrade, not a rolling patch.
+Update Amino-signing CLI and SDK clients before signing after the upgrade.
+Pending Amino transactions signed with the old SDK may need to be signed again.
+Direct and direct-aux signing are unchanged.
+
+For wasm messages with an instantiate permission, Amino signers must use the
+updated akash CLI or pkg.akt.dev/go handler. The existing cosmjs Amino converter
+for MsgStoreCode.instantiate_permission remains incompatible. Cosmjs clients
+should use SIGN_MODE_DIRECT for that message.
+
+- Stores
+    - added
+        - `sink`: sink transfer records, settlement state and escrow accounting
+
 ##### v2.1.0
 
 ###### Description

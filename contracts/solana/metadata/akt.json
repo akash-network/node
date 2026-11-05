@@ -1,0 +1,7 @@
+{
+  "name": "Akash Network Token",
+  "symbol": "akt",
+  "description": "AKT, the native token of Akash Network, on Solana.",
+  "image": "https://raw.githubusercontent.com/cosmos/chain-registry/f98e34339a1d30b4a2734b78d6dfcbba9cb02f8e/akash/images/akt.png",
+  "external_url": "https://akash.network/"
+}

@@ -1,0 +1,30 @@
+[Unit]
+Description=Akash Sink reporter (preview until explicitly activated)
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=akt-reporter
+Group=akt-reporter
+WorkingDirectory=/opt/akt-bridge/current/contracts/solana
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+ExecStart=/bin/bash /opt/akt-bridge/current/contracts/solana/deploy/service.sh reporter-preview /etc/akt-reporter/config.json
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=120
+UMask=0077
+StateDirectory=akt-reporter
+StateDirectoryMode=0700
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/akt-reporter
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

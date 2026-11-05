@@ -75,6 +75,8 @@ import (
 	wtypes "pkg.akt.dev/go/node/wasm/v1"
 	"pkg.akt.dev/go/sdkutil"
 
+	sinktypes "pkg.akt.dev/go/node/sink/v1"
+
 	akeeper "pkg.akt.dev/node/v2/x/audit/keeper"
 	bmekeeper "pkg.akt.dev/node/v2/x/bme/keeper"
 	ckeeper "pkg.akt.dev/node/v2/x/cert/keeper"
@@ -85,6 +87,7 @@ import (
 	mkeeper "pkg.akt.dev/node/v2/x/market/keeper"
 	okeeper "pkg.akt.dev/node/v2/x/oracle/keeper"
 	pkeeper "pkg.akt.dev/node/v2/x/provider/keeper"
+	sinkkeeper "pkg.akt.dev/node/v2/x/sink/keeper"
 	awasm "pkg.akt.dev/node/v2/x/wasm"
 	wasmbindings "pkg.akt.dev/node/v2/x/wasm/bindings"
 	wkeeper "pkg.akt.dev/node/v2/x/wasm/keeper"
@@ -127,6 +130,7 @@ type AppKeepers struct {
 		Market     mkeeper.IKeeper
 		Oracle     okeeper.Keeper
 		Provider   pkeeper.IKeeper
+		Sink       sinkkeeper.Keeper
 		Wasm       wkeeper.Keeper
 	}
 
@@ -261,6 +265,7 @@ func (app *App) InitNormalKeepers(
 	maccPerms map[string][]string,
 	wasmDir string,
 	wasmConfig wasmtypes.NodeConfig,
+	wasmVMConfig wasmtypes.VMConfig,
 	wasmOpts []wasmkeeper.Option,
 	blockedAddresses map[string]bool,
 	invCheckPeriod uint,
@@ -288,8 +293,23 @@ func (app *App) InitNormalKeepers(
 		app.Log,
 	)
 
+	app.Keepers.Akash.Epochs = epochskeeper.NewKeeper(
+		cdc,
+		runtime.NewKVStoreService(app.keys[epochstypes.StoreKey]),
+	)
+
+	app.Keepers.Akash.Sink = sinkkeeper.NewKeeper(
+		cdc,
+		app.keys[sinktypes.StoreKey],
+		app.tkeys[sinktypes.TStoreKey],
+		app.Keepers.Cosmos.Acct,
+		app.Keepers.Cosmos.Bank,
+		app.Keepers.Akash.Epochs,
+		authtypes.NewModuleAddress(govtypes.ModuleName).String())
+
 	app.Keepers.Cosmos.Crisis = crisiskeeper.NewKeeper( //nolint: staticcheck
-		cdc, runtime.NewKVStoreService(app.keys[crisistypes.StoreKey]),
+		cdc,
+		runtime.NewKVStoreService(app.keys[crisistypes.StoreKey]),
 		invCheckPeriod,
 		app.Keepers.Cosmos.Bank,
 		authtypes.FeeCollectorName,
@@ -479,11 +499,6 @@ func (app *App) InitNormalKeepers(
 		app.keys[ctypes.StoreKey],
 	)
 
-	app.Keepers.Akash.Epochs = epochskeeper.NewKeeper(
-		runtime.NewKVStoreService(app.keys[epochstypes.StoreKey]),
-		cdc,
-	)
-
 	app.Keepers.Akash.Wasm = wkeeper.NewKeeper(
 		cdc,
 		app.keys[wtypes.StoreKey],
@@ -524,7 +539,7 @@ func (app *App) InitNormalKeepers(
 		bApp.GRPCQueryRouter(),
 		wasmDir,
 		wasmConfig,
-		wasmtypes.VMConfig{},
+		wasmVMConfig,
 		wasmCapabilities,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 		wOpts...,
@@ -631,6 +646,7 @@ func kvStoreKeys() []string {
 		awasm.StoreKey,
 		otypes.StoreKey,
 		bmetypes.StoreKey,
+		sinktypes.StoreKey,
 	}
 
 	return keys
@@ -639,6 +655,7 @@ func kvStoreKeys() []string {
 func transientStoreKeys() []string {
 	return []string{
 		paramstypes.TStoreKey,
+		sinktypes.TStoreKey,
 		bmetypes.TStoreKey,
 		otypes.TStoreKey,
 	}

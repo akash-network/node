@@ -1,0 +1,216 @@
+package sink_test
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+
+	abci "github.com/cometbft/cometbft/abci/types"
+	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	commitment "github.com/cosmos/ibc-go/v10/modules/core/23-commitment/types"
+	"github.com/stretchr/testify/require"
+
+	types "pkg.akt.dev/go/node/sink/v1"
+
+	"pkg.akt.dev/node/v2/app"
+	sinkkeeper "pkg.akt.dev/node/v2/x/sink/keeper"
+)
+
+func TestSinkRejectedGenesisLeavesNoModuleAccount(t *testing.T) {
+	h, ctx := preSinkLedger(t)
+	ak := h.a.Keepers.Cosmos.Acct
+	require.Nil(t, ak.GetAccount(ctx, sinkkeeper.Address()))
+
+	// Coins the empty genesis does not account for fail the final balance
+	// check, after InitGenesis has created the module account in its cache.
+	seedPreUpgradeBalances(t, h, ctx, h.sender, sinkkeeper.Address(), sdk.NewCoins(coin(5)))
+	before := sinkUpgradeStores(t, h, ctx)
+	events := ctx.EventManager().Events()
+
+	err := h.a.Keepers.Akash.Sink.InitGenesis(ctx, types.DefaultGenesis())
+	require.ErrorIs(t, err, types.ErrBalanceMismatch)
+	require.Nil(t, ak.GetAccount(ctx, sinkkeeper.Address()))
+	require.Equal(t, before, sinkUpgradeStores(t, h, ctx), "no store writes, including auth's account number")
+	require.Equal(t, events, ctx.EventManager().Events())
+}
+
+// Transfer IDs keep the height of their deposit block, and a chain started from
+// a zero-height genesis executes from height 1, where InitGenesis rejects every
+// transfer. Export refuses such a snapshot instead of producing one.
+func TestSinkZeroHeightExportRequiresEmptySink(t *testing.T) {
+	h := setupReportingTestSuite(t)
+	// Export reads committed state.
+	h.commitBlock(t, h.now.Add(time.Second))
+	_, err := h.a.ExportAppStateAndValidators(true, nil, nil)
+	require.NoError(t, err, "a sink without transfers exports at zero height")
+
+	res := h.deliver(t, "", h.deposit(10))
+	require.Zero(t, res.Code, res.Log)
+
+	_, err = h.a.ExportAppStateAndValidators(true, nil, nil)
+	require.ErrorIs(t, err, types.ErrInvalidGenesis)
+	require.ErrorContains(t, err, "--for-zero-height")
+	_, err = h.a.ExportAppStateAndValidators(true, nil, []string{types.ModuleName})
+	require.ErrorIs(t, err, types.ErrInvalidGenesis, "Sink named explicitly")
+
+	// Height-preserving exports, and zero-height exports that leave Sink out,
+	// still work. A zero-height export prepares the check state, so it runs
+	// after the height-preserving one.
+	exported, err := h.a.ExportAppStateAndValidators(false, nil, nil)
+	require.NoError(t, err)
+	require.Equal(t, h.height+1, exported.Height)
+	bankOnly, err := h.a.ExportAppStateAndValidators(true, nil, []string{banktypes.ModuleName})
+	require.NoError(t, err)
+	var modules map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(bankOnly.AppState, &modules))
+	require.Contains(t, modules, banktypes.ModuleName)
+	require.NotContains(t, modules, types.ModuleName, "a zero-height export that leaves Sink out must not carry its records")
+
+	// Export reads the check state. Without its settlement the transfer cannot
+	// be read, which is a store failure rather than a zero-height problem.
+	check := h.a.NewContextLegacy(true, cmtproto.Header{Height: h.height})
+	key, err := sinkkeeper.SettlementKey(*types.NewSettlementID(types.StatusTransferPending, h.id(1)))
+	require.NoError(t, err)
+	check.KVStore(h.a.GetKey(types.StoreKey)).Delete(key)
+	_, err = h.a.ExportAppStateAndValidators(true, nil, nil)
+	require.ErrorIs(t, err, types.ErrInternal)
+	require.NotContains(t, err.Error(), "--for-zero-height")
+}
+
+func TestSinkFullAppGenesisBankRestoration(t *testing.T) {
+	h := setupReportingTestSuite(t)
+	native := h.quotaEpoch(t)
+	native.Duration = 4 * h.params().ReporterChallengePeriod
+	native.StartTime = h.now.Add(-56 * native.Duration)
+	native.CurrentEpoch = 57
+	native.CurrentEpochStartTime = h.now
+	native.CurrentEpochStartHeight = 1
+	native.EpochCountingStarted = true
+	h.setQuotaEpoch(t, native)
+
+	for i := 0; i < 3; i++ {
+		res := h.deliver(t, "", h.deposit(10))
+		require.Zero(t, res.Code, res.Log)
+	}
+
+	h.quorum(t, 1, types.OutcomeMinted)
+	h.quorum(t, 2, types.OutcomeVoided)
+	h.now = time.Unix(h.transfer(t, 2).Settlement.ChallengeEnd, 0).UTC()
+	res := h.refund(t, 2)
+	require.Zero(t, res.Code, res.Log)
+	h.quorum(t, 3, types.OutcomeVoided)
+	require.NoError(t, h.a.Keepers.Akash.Sink.VetoVoid(h.ctx(), &types.MsgVetoVoid{
+		Signer: h.reporterAddress(0),
+		ID:     h.id(3),
+		Reason: "recovery hold",
+	}))
+
+	res = h.deliver(t, "", h.deposit(10))
+	require.Zero(t, res.Code, res.Log)
+	res = h.deliver(t, "", h.deposit(10))
+	require.Zero(t, res.Code, res.Log)
+	h.quorum(t, 5, types.OutcomeVoided)
+	h.commitBlock(t, time.Unix(h.transfer(t, 5).Settlement.ChallengeEnd, 0).UTC())
+	p := h.params()
+	p.MaxAmountPerTransfer = coin(10)
+	p.MaxEpochAmountPerAccount = coin(50)
+	p.MaxTransferAmountPerEpoch = coin(50)
+	p.MaxEpochRefund = coin(10)
+	require.NoError(t, h.update(p))
+	h.commitBlock(t, h.now.Add(time.Second))
+	require.Equal(t, uint64(57), h.state().Epoch)
+	res = h.deliver(t, "", h.deposit(1))
+	require.Equal(t, types.ErrAccountDailyAmountExceeded.ABCICode(), res.Code)
+	res = h.refund(t, 5)
+	require.Equal(t, types.ErrRefundCapReached.ABCICode(), res.Code)
+	before, err := h.a.Keepers.Akash.Sink.ExportGenesis(h.ctx())
+	require.NoError(t, err)
+	escrow := h.a.Keepers.Cosmos.Bank.GetAllBalances(h.ctx(), sinkkeeper.Address())
+	epochsBefore, err := h.a.Keepers.Akash.Epochs.ExportGenesis(h.ctx())
+	require.NoError(t, err)
+	stateBefore := h.state()
+	key, err := sinkkeeper.TransferKey(h.id(1))
+	require.NoError(t, err)
+	record := bytes.Clone(h.ctx().KVStore(h.a.GetKey(types.StoreKey)).Get(key))
+	proofReply, err := h.a.Query(context.Background(), &abci.RequestQuery{
+		Path:   "/store/sink/key",
+		Data:   key,
+		Height: h.height,
+		Prove:  true,
+	})
+	require.NoError(t, err)
+	require.Zero(t, proofReply.Code, proofReply.Log)
+	proof, err := commitment.ConvertProofs(proofReply.ProofOps)
+	require.NoError(t, err)
+	require.NoError(t, proof.VerifyMembership(commitment.GetSDKSpecs(), commitment.NewMerkleRoot(h.a.CommitMultiStore().LastCommitID().Hash), commitment.NewMerklePath([]byte("sink"), key), record))
+	exported, err := h.a.ExportAppStateAndValidators(false, nil, nil)
+	require.NoError(t, err)
+	require.Greater(t, exported.Height, h.height)
+	root := filepath.Join("..", "..", ".cache", "sink-review-corrections", "app-homes")
+	require.NoError(t, os.MkdirAll(root, 0o700))
+	home, err := os.MkdirTemp(root, "sink-genesis-")
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, os.RemoveAll(home)) })
+
+	restored := app.Setup(app.WithHome(home), app.WithCheckTx(true))
+	t.Cleanup(func() { require.NoError(t, restored.Close()) })
+	_, err = restored.InitChain(&abci.RequestInitChain{
+		ChainId:       "akash-1",
+		Time:          h.now,
+		InitialHeight: exported.Height,
+		AppStateBytes: exported.AppState,
+	})
+	require.NoError(t, err)
+	ctx := restored.NewContext(false)
+	after, err := restored.Keepers.Akash.Sink.ExportGenesis(ctx)
+	require.NoError(t, err)
+	require.Equal(t, before, after)
+	epochsAfter, err := restored.Keepers.Akash.Epochs.ExportGenesis(ctx)
+	require.NoError(t, err)
+	require.Equal(t, epochsBefore, epochsAfter)
+	stateAfter, err := restored.Keepers.Akash.Sink.NewQuerier().State(ctx, nil)
+	require.NoError(t, err)
+	require.Equal(t, stateBefore, stateAfter)
+	require.Equal(t, record, ctx.KVStore(restored.GetKey(types.StoreKey)).Get(key))
+	require.Equal(t, escrow, restored.Keepers.Cosmos.Bank.GetAllBalances(ctx, sinkkeeper.Address()))
+	clone := *h
+	clone.a = restored
+	clone.height = 0
+	clone.ids = append([]types.ID(nil), h.ids...)
+	bz := clone.tx(t, "", clone.deposit(1))
+	clone.height = exported.Height - 1
+	res = clone.deliverBytes(t, bz)
+	require.Equal(t, types.ErrAccountDailyAmountExceeded.ABCICode(), res.Code)
+	res = clone.refund(t, 5)
+	require.Equal(t, types.ErrRefundCapReached.ABCICode(), res.Code)
+	clone.commitBlock(t, native.CurrentEpochStartTime.Add(native.Duration))
+	require.Equal(t, uint64(57), clone.state().Epoch)
+	clone.commitBlock(t, native.CurrentEpochStartTime.Add(native.Duration+time.Nanosecond))
+	require.Equal(t, uint64(58), clone.state().Epoch)
+	res = clone.deliver(t, "", clone.deposit(10))
+	require.Zero(t, res.Code, res.Log)
+	id := clone.ids[len(clone.ids)-1]
+	require.GreaterOrEqual(t, id.Height, exported.Height)
+	require.Equal(t, uint64(1), id.Sequence)
+	res = clone.refund(t, 5)
+	require.Zero(t, res.Code, res.Log)
+	require.NoError(t, restored.Keepers.Akash.Sink.CheckBalance(clone.ctx()))
+	proofReply, err = restored.Query(context.Background(), &abci.RequestQuery{
+		Path:   "/store/sink/key",
+		Data:   key,
+		Height: clone.height,
+		Prove:  true,
+	})
+	require.NoError(t, err)
+	require.Zero(t, proofReply.Code, proofReply.Log)
+	require.Equal(t, record, proofReply.Value)
+	proof, err = commitment.ConvertProofs(proofReply.ProofOps)
+	require.NoError(t, err)
+	require.NoError(t, proof.VerifyMembership(commitment.GetSDKSpecs(), commitment.NewMerkleRoot(restored.CommitMultiStore().LastCommitID().Hash), commitment.NewMerklePath([]byte("sink"), key), record))
+}

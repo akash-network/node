@@ -1,0 +1,29 @@
+[package]
+name = "canonical-program-sbf"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[dependencies]
+akt = { path = "../..", features = ["no-entrypoint"] }
+anchor-lang = "=0.32.1"
+anchor-spl = "=0.32.1"
+mollusk-svm = "=0.4.1"
+mollusk-svm-programs-token = { version = "=0.4.1", default-features = false, features = ["token", "associated-token"] }
+solana-account = "=2.2.1"
+solana-instruction = "=2.3.0"
+solana-pubkey = "=2.4.0"
+serde = { version = "=1.0.219", features = ["derive"] }
+serde_json = "=1.0.140"
+hex = "=0.4.3"
+ibc-core-commitment-types = { version = "=0.57.0", default-features = false }
+ibc-proto = { version = "=0.51.1", default-features = false }
+ics23 = "=0.12.0"
+ics07-tendermint-interface = { path = "../../ics07-tendermint-interface" }
+
+[patch.crates-io]
+tendermint = { git = "https://github.com/cometbft/tendermint-rs", rev = "a2aa5bf" }
+tendermint-proto = { git = "https://github.com/cometbft/tendermint-rs", rev = "a2aa5bf" }
+tendermint-light-client-verifier = { git = "https://github.com/cometbft/tendermint-rs", rev = "a2aa5bf" }

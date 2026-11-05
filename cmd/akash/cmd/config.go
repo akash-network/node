@@ -3,6 +3,8 @@ package cmd
 import (
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	serverconfig "github.com/cosmos/cosmos-sdk/server/config"
+
+	"pkg.akt.dev/node/v2/app"
 )
 
 type AppConfig struct {
@@ -15,7 +17,7 @@ var AppTemplate = serverconfig.DefaultConfigTemplate + `
 ###############################################################################
 ###                            Wasm Configuration                           ###
 ###############################################################################
-` + wasmtypes.DefaultConfigTemplate()
+` + wasmtypes.DefaultConfigTemplate() + app.WasmLimitsConfigTemplate()
 
 func InitAppConfig() (string, interface{}) {
 	appCfg := AppConfig{

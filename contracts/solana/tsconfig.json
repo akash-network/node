@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "types": ["node"],
+    "lib": ["es2022"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "target": "es2022",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": [
+    "tests/**/*.ts",
+    "../../.cache/solana/target/types/**/*.ts",
+    "reporter/**/*.ts",
+    "local/**/*.ts",
+    "shared/**/*.ts",
+    "deploy/**/*.ts"
+  ]
+}

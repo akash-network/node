@@ -521,7 +521,7 @@ function prepare_state() {
 	rvaldir=$validators_dir/.akash0
 
 	echo "testnetifying state"
-	$AKASH testnetify --home="$rvaldir" --testnet-rootdir="$validators_dir" --testnet-config="${STATE_CONFIG}" --yes
+	AKASH_PRUNING=nothing $AKASH testnetify --home="$rvaldir" --testnet-rootdir="$validators_dir" --testnet-config="${STATE_CONFIG}" --yes
 
 	if [[ $MAX_VALIDATORS -gt 1 ]]; then
 		echo "starting testnet validator"
