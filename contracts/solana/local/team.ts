@@ -264,7 +264,9 @@ const server = createServer(async (request, response) => {
       response.end(
         JSON.stringify({
           ...tokenMetadata,
-          description: "AKT on the private Akash testnet. No monetary value.",
+          description:
+            process.env.AKT_TEAM_TOKEN_DESCRIPTION ??
+            "AKT on the private Akash testnet. No monetary value.",
           external_url: configuredOrigin.origin,
         }),
       );
@@ -277,7 +279,8 @@ const server = createServer(async (request, response) => {
     ) {
       await proxyRequest(request, response, url, {
         akashRpc: AKASH_RPC,
-        akashRest: `http://127.0.0.1:${AKASH_REST_PORT}`,
+        akashRest:
+          process.env.AKT_AKASH_REST ?? `http://127.0.0.1:${AKASH_REST_PORT}`,
         allowedOrigins: proxyOrigins,
       });
       return;
@@ -356,11 +359,12 @@ const server = createServer(async (request, response) => {
 });
 server.requestTimeout = 15_000;
 server.headersTimeout = 10_000;
-server.listen(port, "127.0.0.1", () =>
+const bind = process.env.AKT_TEAM_BIND ?? "127.0.0.1";
+server.listen(port, bind, () =>
   console.log(
     JSON.stringify({
       event: "testnet-receipt-adapter",
-      address: `127.0.0.1:${port}`,
+      address: `${bind}:${port}`,
     }),
   ),
 );

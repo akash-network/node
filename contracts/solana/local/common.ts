@@ -22,7 +22,9 @@ assert.ok(
   run === "" || /^[a-z0-9][a-z0-9-]{0,31}$/.test(run),
   "invalid isolated run name",
 );
-export const ROOT = join(
+// AKT_RUN_DIR / AKT_CHAIN_ID / AKT_AKASH_RPC / AKT_SOLANA_RPC let a hosted
+// portal (sandbox-2) point at existing networks; unset keeps local defaults.
+export const ROOT = process.env.AKT_RUN_DIR ? resolve(process.env.AKT_RUN_DIR) : join(
   RUN,
   (PROFILE === "single" ? "live-stack-v2" : "testnetify-stack-v2") +
     (run ? `-${run}` : ""),
@@ -31,6 +33,7 @@ export const AKASH_HOME = join(ROOT, "akash");
 export const NODE_REPO = resolve(REPO, process.env.NODE_SINK_DIR ?? "../..");
 export const AKASH = process.env.AKASH ?? join(NODE_REPO, ".cache/bin/akash");
 export const CHAIN =
+  process.env.AKT_CHAIN_ID ??
   (PROFILE === "single"
     ? "akash-bridge-v2-local"
     : "akash-bridge-v2-testnetify") +
@@ -58,8 +61,10 @@ for (const [name, port] of Object.entries({
     Number.isInteger(port) && port > 1024 && port < 65535,
     `${name} must be an unprivileged port with room for adjacent services`,
   );
-export const AKASH_RPC = `http://127.0.0.1:${AKASH_RPC_PORT}`;
-export const SOLANA_RPC = `http://127.0.0.1:${SOLANA_RPC_PORT}`;
+export const AKASH_RPC =
+  process.env.AKT_AKASH_RPC ?? `http://127.0.0.1:${AKASH_RPC_PORT}`;
+export const SOLANA_RPC =
+  process.env.AKT_SOLANA_RPC ?? `http://127.0.0.1:${SOLANA_RPC_PORT}`;
 export const CLIENT_ID = new web3.PublicKey(
   "A3ShhF8HrTw4dmrXSFE2FsXkDdpo6j6v39b8ZQy895cQ",
 );
