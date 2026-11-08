@@ -87,9 +87,10 @@ header updates, freezing, pruning, and relayer permissions.
 | [`local/stack.ts`](../local/stack.ts)                                                       | Start development chains and services.                                           |
 | [`local/team.ts`](../local/team.ts)                                                         | Testnet receipt API and faucet. The portal UI is in `akash-network/sink-portal`. |
 
-The production relayer and admin CLI currently live under `local/`.
-[`deploy/service.sh`](../deploy/service.sh) runs production services with explicit
-configuration. The testnet launcher and faucet are separate development tools.
+Released relayer and reporter services live in [sink-operators](https://github.com/akash-network/sink-operators).
+The copies here support contract tests and the local E2E stack. The admin CLI
+remains in `local/bridge-admin.ts` for program ceremonies; the testnet launcher
+and faucet are development tools.
 
 ## Build, deploy, and test
 

@@ -34,9 +34,11 @@ Prepare the locked [SDK archive](../contracts/solana/docs/sdk-integration.md).
 Produce the launch commit with its pinned IBC source, the reproducible program
 build and the reviewed manifest with
 [program deployment steps 1 to 3](../contracts/solana/docs/deploy-program.md#1-program-keypairs).
-Then build the [service archive](../contracts/solana/docs/deploy-services.md#build-one-reviewed-release)
-from that manifest. Record source commits, program IDs, binary and IDL hashes,
-and archive hashes.
+Select a compatible [sink-operators release](https://github.com/akash-network/sink-operators/releases)
+for the relayer and reporters. Record its source commit, archive checksum and
+program/SDK compatibility alongside the native and program artifacts.
+The current v0.1.0 is test-network only; a production launch requires a release
+built for the approved production program IDs.
 
 ## Upgrade Akash
 
@@ -101,13 +103,13 @@ Follow these guides in order, using the same Akash chain ID and Solana genesis:
 1. [Deploy and initialize the programs](../contracts/solana/docs/deploy-program.md#4-deploy).
    Verify all three programs and authorities, then trust a post-upgrade Akash checkpoint.
    Run its step 9, `set_bridge_enabled`, only after the proposal below passes.
-2. [Install the relayer and reporters](../contracts/solana/docs/deploy-services.md).
+2. [Install the relayer and reporters](https://github.com/akash-network/sink-operators/blob/v0.1.0/docs/install.md).
    Start the relayer promptly to keep the checkpoint fresh. Run reporters in preview.
    Until the proposal below lists them, each pass stops with `not a current reporter`,
    so preview confirms only configuration and connectivity.
 
-Give each production reporter a funded Akash account, external signer and
-independent observation infrastructure. Do not attach a new mint to already
+Give each reporter a funded Akash account, owner-only software key and
+independent observation infrastructure. External signers are optional. Do not attach a new mint to already
 resolved native deposits without a reviewed migration.
 
 ## Configure and enable Sink

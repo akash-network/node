@@ -2,7 +2,7 @@
 
 This page prepares a development workspace and test networks. Production
 operators should start with [production deployment](production-deployment.md)
-and [service installation](deploy-services.md).
+and [operator installation](https://github.com/akash-network/sink-operators/blob/v0.1.0/docs/install.md).
 
 This workspace is `contracts/solana` in the [Akash node repository](https://github.com/akash-network/node).
 Akash uses its existing root Makefile, direnv environment and `go.mod` pins.

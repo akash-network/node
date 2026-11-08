@@ -12,7 +12,9 @@ program/mint namespace; never reuse one against a reset or forked Akash chain.
    upgrade plan and activation criteria below.
 2. Produce the launch commit, reproducible program artifacts and reviewed
    manifest. Run the offline checks.
-3. Build and install the immutable [service release](deploy-services.md).
+3. Select and install a compatible [sink-operators release](https://github.com/akash-network/sink-operators/blob/v0.1.0/docs/install.md).
+   v0.1.0 supports test networks only; production needs a release built for
+   the approved program IDs.
    Keep reporters in preview until governance authorizes them
    ([reporters](#4-reporters)).
 4. Complete the Akash upgrade, then cluster preflight, the
@@ -22,7 +24,7 @@ program/mint namespace; never reuse one against a reset or forked Akash chain.
 5. Retain the artifacts, manifest, service configuration and acceptance evidence
    for recovery and future upgrades.
 
-[Hosting](hosting.md) specifies infrastructure and custody boundaries.
+[Operator installation](https://github.com/akash-network/sink-operators/blob/v0.1.0/docs/install.md) specifies service hosts, keys and systemd setup.
 [Development setup](setup.md), [local stack](local-stack.md) and
 [testnet scenarios](testnetify.md) are separate rehearsal workflows. Their
 keys, timing overrides, historical results and amount limits are not production
@@ -42,22 +44,21 @@ operator role without code changes:
   `RELAYER_ROLE` or open relaying: granting the role to the light-client
   program's own ID lets any signer update and submit misbehaviour, while
   pruning stays with members. The relayer runs from a config file
-  with its own nodes and payer ([operators](operators.md)).
+  with its own nodes and payer ([operator guide](https://github.com/akash-network/sink-operators/blob/v0.1.0/docs/operations.md#relayer)).
 - **Reporters.** Governance sets the reporter set and threshold. Each reporter
-  runs from its own config, nodes and key custody, including an external
-  KMS/HSM signer ([reporter](reporter.md)).
+  runs from its own config and nodes, with an owner-only software key or
+  optional external signer ([reporter guide](https://github.com/akash-network/sink-operators/blob/v0.1.0/docs/operations.md#reporter)).
 - **Pauses.** The Solana guardian and the x/sink `pause_guardian` are set by
   their governance authorities and can only turn things off.
 
 ## Build ownership and release inputs
 
-| Artifact                    | Existing build path                               | Release input                                          |
-| --------------------------- | ------------------------------------------------- | ------------------------------------------------------ |
-| Akash node                  | Root `make bins` and existing GoReleaser workflow | Committed Go pins, `GOWORK=off`, no `sinkdev`          |
-| AKT program                 | Anchor and Cargo in this workspace                | Reviewed node commit and Cargo lockfile                |
-| IBC verifier/access manager | Anchor in `akash-network/ibc-contracts`           | Full commit pinned by both Cargo manifests             |
-| Header encoder              | `cargo build --locked --release`                  | Same IBC commit and its own committed lockfile         |
-| Services                    | npm lockfile and service archive builder          | Same node commit, reviewed IDLs and locked SDK archive |
+| Artifact                             | Existing build path                                                                                                     | Release input                                               |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Akash node                           | Root `make bins` and existing GoReleaser workflow                                                                       | Committed Go pins, `GOWORK=off`, no `sinkdev`               |
+| AKT program                          | Anchor and Cargo in this workspace                                                                                      | Reviewed node commit and Cargo lockfile                     |
+| IBC verifier/access manager          | Anchor in `akash-network/ibc-contracts`                                                                                 | Full commit pinned by both Cargo manifests                  |
+| Relayer, reporter and header encoder | [sink-operators release process](https://github.com/akash-network/sink-operators/blob/main/docs/development.md#release) | Compatible program interfaces, SDK pin and archive checksum |
 
 The program build wrapper fixes the toolchain and paths for both Anchor
 workspaces and collects the artifacts. It does not replace Anchor's compiler
@@ -99,7 +100,7 @@ evidence for the final release:
 - Independent checkpoint agreement and client initialization, then continuous
   relaying before the trusting period expires. Rehearse expiry/freeze recovery
   through the real multisig and time lock.
-- Independent reporter operators, funded accounts, tested external signers,
+- Independent reporter operators, funded accounts, tested software keys or external signers,
   preview runs that confirm configuration and connectivity, and archive
   retention covering the challenge period.
 - Production monitoring/reconciliation, proven alert delivery, on-call guardian
@@ -119,7 +120,7 @@ Remaining protocol considerations belong in the launch review: reporter slot
 plausibility is measured at observation time; permissionless proof submission
 must be reconciled against Akash refund/dispute state; large validator sets need
 the supported verifying signature subset. See [audit](audit.md),
-[reporters](reporter.md) and [header scaling](header-scaling.md).
+[reporter operations](https://github.com/akash-network/sink-operators/blob/v0.1.0/docs/operations.md#reporter) and [header scaling](header-scaling.md).
 
 ## Authorities and keys
 
@@ -158,7 +159,7 @@ those recovery paths.
 | Checkpoint               | Latest local header              | The [checkpoint ceremony](#3-checkpoint-and-bridge-configuration)                                  |
 
 An idle relayer refreshes the client after its configured
-[`refreshFraction`](operators.md#configure) of the trusting period, one fifth by
+`refreshFraction` of the trusting period, one fifth by
 default. Each update needs more than a third of
 the trusted validator power to have signed the new header, so lower the
 fraction if the validator set changes quickly.
@@ -288,6 +289,9 @@ steps 4 to 9 on a local validator, without the manifest checks
    through the multisig.
 
 ### 4. Reporters
+
+Use the [operator installation guide](https://github.com/akash-network/sink-operators/blob/v0.1.0/docs/install.md) for keys,
+configuration and systemd activation.
 
 1. Reporter operators run against their production nodes in preview mode,
    without `--broadcast`. Until the proposal in [activation](#5-activation)

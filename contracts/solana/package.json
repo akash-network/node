@@ -57,8 +57,7 @@
     "portal:testnet": "AKT_TEAM_TESTNET=1 tsx local/team.ts",
     "test:portal-contract": "bash scripts/check-portal-contract.sh",
     "deploy:programs": "tsx deploy/programs.ts",
-    "deploy:services": "bash deploy/build-services.sh",
-    "test:deployment": "tsx --test deploy/*.test.ts && python3 deploy/test-build-services.py",
+    "test:deployment": "tsx --test deploy/*.test.ts",
     "admin": "tsx local/bridge-admin.ts",
     "test:build": "python3 scripts/test-build-conventions.py && python3 scripts/test-temp-paths.py"
   },

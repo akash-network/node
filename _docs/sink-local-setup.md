@@ -193,5 +193,5 @@ dc up -d reporter0 reporter1 reporter2 reporter3 reporter4 reporter5 reporter6
 ```
 
 Continue with [the CLI tests](sink-local-e2e.md#test-a-mint) in this shell.
-These reporters share one Solana validator; use the [service guide](../contracts/solana/docs/deploy-services.md)
-for production signers and independent observation infrastructure.
+These reporters share one Solana validator; use the [operator guide](https://github.com/akash-network/sink-operators/blob/v0.1.0/docs/install.md)
+for separate service hosts and independent observation infrastructure.

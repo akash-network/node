@@ -86,8 +86,6 @@ jobs:
         run: python3 contracts/solana/scripts/test-build-conventions.py
       - name: Check scratch cleanup
         run: python3 contracts/solana/scripts/test-temp-paths.py
-      - name: Check service archive layout and cleanup
-        run: python3 contracts/solana/deploy/test-build-services.py
 
   sims:
     runs-on: ubuntu-latest

@@ -12,6 +12,7 @@ Run commands from `contracts/solana` unless stated otherwise.
 - [Program deployment guide](docs/deploy-program.md)
 - [Local E2E with the CLI](../../_docs/sink-local-e2e.md)
 - [Deploy Akash and Solana](../../_docs/sink-deployment.md)
+- [Install relayers and reporters](https://github.com/akash-network/sink-operators/blob/v0.1.0/docs/install.md)
 
 ## Build
 
@@ -80,8 +81,13 @@ After the ceremony, verify the deployed bytes and authorities:
 npm run deploy:programs -- verify --manifest "$RELEASE_DIR/manifest.json" --url "$RPC" --authority multisig
 ```
 
-[Service installation](docs/deploy-services.md) covers starting the relayer and
-reporters against the deployed programs.
+Relayer and reporter releases, software keys, systemd units and deployment
+instructions live in [sink-operators](https://github.com/akash-network/sink-operators).
+Its [v0.1.0 package](https://github.com/akash-network/sink-operators/releases/tag/v0.1.0) supports isolated test networks;
+production deployment needs a release built for the approved program IDs.
+
+The relay, reporter and header-encoder sources retained here support contract
+tests and the local E2E stack. Install operator services from `sink-operators`.
 
 ## Start a Solana testnet
 
