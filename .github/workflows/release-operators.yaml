@@ -94,6 +94,7 @@ jobs:
           echo "$GITHUB_WORKSPACE/.cache/solana/toolchain/bin" >> "$GITHUB_PATH"
       - name: Build and test the selected operator
         run: |
+          source contracts/solana/scripts/workspace.sh
           bash contracts/solana/deploy/build-operator.sh "$OPERATOR_ROLE" "$OPERATOR_VERSION" "$PWD/.cache/operator-package"
           cd contracts/solana
           node deploy/audit-operator.mjs
@@ -113,7 +114,7 @@ jobs:
             cd "$dist"
             sha256sum --check "akt-${OPERATOR_ROLE}_${OPERATOR_VERSION}_checksums.txt"
           )
-          tar -xzf "$dist/akt-${OPERATOR_ROLE}_${OPERATOR_VERSION}_linux_amd64.tar.gz" -C .cache/operator-image/package
+          tar -xzpf "$dist/akt-${OPERATOR_ROLE}_${OPERATOR_VERSION}_linux_amd64.tar.gz" -C .cache/operator-image/package
           bash contracts/solana/deploy/test-operator.sh "$PWD/.cache/operator-image/package" "$OPERATOR_ROLE"
           cp "_run/akt-$OPERATOR_ROLE/docker-compose.yaml" "$dist/akt-$OPERATOR_ROLE-compose.yaml"
           cp .cache/operator-image/package/deploy/.env.example "$dist/akt-$OPERATOR_ROLE.env.example"
