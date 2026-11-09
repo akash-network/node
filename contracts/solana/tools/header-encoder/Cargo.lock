@@ -1078,7 +1078,7 @@ dependencies = [
 [[package]]
 name = "solana-ibc-borsh-header"
 version = "0.1.0"
-source = "git+https://github.com/akash-network/ibc-contracts?rev=0d410db9bbc8d543afe3f0f271258c4b2edbb6e1#0d410db9bbc8d543afe3f0f271258c4b2edbb6e1"
+source = "git+https://github.com/akash-network/ibc-contracts?rev=b3f25b45c785a9cb571cb169e5b612fb6c94e1f8#b3f25b45c785a9cb571cb169e5b612fb6c94e1f8"
 dependencies = [
  "borsh",
  "ibc-client-tendermint",

@@ -88,12 +88,14 @@ them. Branch from the audited commit:
 
 1. AKT: set `declare_id!` in `programs/akt/src/lib.rs` to `AKT_ID`.
 2. Verifier and access manager: change their `declare_id!` values in the
-   **IBC contracts repository**, update its `Anchor.toml` program mappings,
+   **IBC contracts repository**, update its `Anchor.toml` mappings under
+   `[programs.mainnet]`,
    build with its pinned Anchor toolchain and review that commit there. Do not
    patch the downloaded cache. Pin both Cargo dependencies in node
    (`programs/akt/Cargo.toml` and `tools/header-encoder/Cargo.toml`) to
    that reviewed full commit and regenerate both Cargo lockfiles.
-3. Update this workspace's `Anchor.toml` AKT program mapping to `AKT_ID`.
+3. Update this workspace's `Anchor.toml` AKT mapping under `[programs.mainnet]`
+   to `AKT_ID`.
    Regenerate the two IBC IDLs using the IBC repository's Anchor build and
    copy the generated files to `idls/`. Review that only the intended address
    fields changed. Preserve or move aside the previous cached IBC checkout,
@@ -109,6 +111,10 @@ them. Branch from the audited commit:
 The IBC source revision must be available to an independent builder. Record
 both commits in the release evidence. Local source changes and mutable branch
 names are not release inputs.
+
+The build scripts select `--provider.cluster mainnet` for the three launch
+programs. This selects their configuration; compiling does not send a transaction.
+The provider default and test-proxy mapping remain `localnet` for local testing.
 
 ## 3. Reproducible build and hashes
 

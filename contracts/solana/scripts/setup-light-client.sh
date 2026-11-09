@@ -4,8 +4,8 @@ source "$(dirname "$0")/workspace.sh"
 cd "$solana_repo"
 
 case "$*" in
-  '') programs=(ics07_tendermint access_manager) ;;
-  --test-proxy) programs=(test_cpi_proxy) ;;
+  '') programs=(ics07_tendermint access_manager); cluster=mainnet ;;
+  --test-proxy) programs=(test_cpi_proxy); cluster=localnet ;;
   *) echo 'usage: setup-light-client.sh [--test-proxy]' >&2; exit 2 ;;
 esac
 
@@ -19,9 +19,9 @@ upstream=$SOLANA_DEPS/ibc-contracts
   export CARGO_TARGET_DIR RUSTUP_TOOLCHAIN
   mkdir -p target/idl target/types
   for program in "${programs[@]}"; do
-    anchor build --program-name "$program" --no-idl -- -- --locked
+    anchor build --provider.cluster "$cluster" --program-name "$program" --no-idl -- -- --locked
     [[ "$program" == test_cpi_proxy ]] && continue
-    anchor idl build --program-name "$program" \
+    anchor idl build --provider.cluster "$cluster" --program-name "$program" \
       --out "target/idl/$program.json" --out-ts "target/types/$program.ts" -- --locked
   done
 )

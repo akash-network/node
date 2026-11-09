@@ -7,7 +7,7 @@ solana_version = "2.3.13"
 resolution = true
 skip-lint = false
 
-[programs.localnet]
+[programs.mainnet]
 akt = "98inUHb5mMaHWQZ9ut9PGrnmkMpncLZWWAyFwxCWagME"
 
 [provider]
