@@ -1,0 +1,29 @@
+version: 2
+project_name: akt-operators
+dist: ./.cache/goreleaser/operators
+
+builds:
+  - skip: true
+
+archives:
+  - id: operator
+    meta: true
+    formats: [tar.gz]
+    name_template: "akt-{{ .Env.OPERATOR_ROLE }}_{{ .Version }}_linux_amd64"
+    files:
+      - src: .cache/operator-package
+        dst: .
+
+checksum:
+  name_template: "akt-{{ .Env.OPERATOR_ROLE }}_{{ .Version }}_checksums.txt"
+
+# OSS GoReleaser packages the verified inputs; the workflow publishes the
+# namespaced tag. This keeps operator tags out of the node v* release series.
+snapshot:
+  version_template: "{{ .Env.OPERATOR_VERSION }}"
+
+changelog:
+  disable: true
+
+release:
+  disable: true

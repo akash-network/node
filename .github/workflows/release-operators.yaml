@@ -1,0 +1,165 @@
+name: release-operators
+
+on:
+  push:
+    tags:
+      - relayer/v*
+      - reporter/v*
+
+permissions:
+  contents: read
+
+concurrency:
+  group: operator-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: write
+      packages: write
+    env:
+      CARGO_BUILD_JOBS: "4"
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check release identity
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          [[ "$TAG" =~ ^(relayer|reporter)/v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[a-zA-Z0-9.-]+)?$ ]]
+          test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/$TAG^{commit}")"
+          git merge-base --is-ancestor HEAD origin/main
+          if draft=$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null); then
+            test "$draft" = true
+          fi
+          version=${TAG#*/v}
+          prerelease=false
+          [[ "$version" != *-* ]] || prerelease=true
+          {
+            echo "OPERATOR_ROLE=${TAG%%/*}"
+            echo "OPERATOR_VERSION=$version"
+            echo "OPERATOR_TAG=$TAG"
+            echo "PRERELEASE=$prerelease"
+          } >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.22.1
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Read node's SDK version
+        id: sdk
+        run: |
+          version=$(GOWORK=off go list -mod=readonly -m -f '{{.Version}}' pkg.akt.dev/go)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: akash-network/chain-sdk
+          ref: go/${{ steps.sdk.outputs.version }}
+          path: .cache/chain-sdk
+          persist-credentials: false
+      - name: Build the pinned TypeScript SDK
+        working-directory: .cache/chain-sdk/ts
+        run: |
+          umask 022
+          trap 'rm -rf "$GITHUB_WORKSPACE/.cache/chain-sdk"' EXIT
+          npm ci
+          npm run build
+          rm dist/tsconfig.build.tsbuildinfo
+          cache="$GITHUB_WORKSPACE/.cache/solana"
+          mkdir -p "$cache"
+          archive=$(npm pack --ignore-scripts --silent --pack-destination "$cache")
+          mv "$cache/$archive" "$cache/chain-sdk.tgz"
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler libssl-dev pkg-config shellcheck
+          rustup toolchain install 1.89.0 --profile minimal --component rustfmt,clippy
+          bash contracts/solana/scripts/install-anchor.sh
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - name: Build and test the selected operator
+        run: |
+          bash contracts/solana/deploy/build-operator.sh "$OPERATOR_ROLE" "$OPERATOR_VERSION" "$PWD/.cache/operator-package"
+          cd contracts/solana
+          node deploy/audit-operator.mjs
+          cargo test --locked --manifest-path tools/header-encoder/Cargo.toml
+          shellcheck -x -P SCRIPTDIR deploy/{build-operator,node-runtime,operator,prepare-services,test-operator,test-operator-compose}.sh
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: v2.17.1
+          args: release --snapshot --clean --config .goreleaser-operators.yaml
+      - name: Verify the archived package
+        run: |
+          umask 077
+          mkdir -p .cache/operator-image/package
+          dist="$GITHUB_WORKSPACE/.cache/goreleaser/operators"
+          (
+            cd "$dist"
+            sha256sum --check "akt-${OPERATOR_ROLE}_${OPERATOR_VERSION}_checksums.txt"
+          )
+          tar -xzf "$dist/akt-${OPERATOR_ROLE}_${OPERATOR_VERSION}_linux_amd64.tar.gz" -C .cache/operator-image/package
+          bash contracts/solana/deploy/test-operator.sh "$PWD/.cache/operator-image/package" "$OPERATOR_ROLE"
+          cp "_run/akt-$OPERATOR_ROLE/docker-compose.yaml" "$dist/akt-$OPERATOR_ROLE-compose.yaml"
+          cp .cache/operator-image/package/deploy/.env.example "$dist/akt-$OPERATOR_ROLE.env.example"
+          cp .cache/operator-image/package/deploy/config.example.json "$dist/akt-$OPERATOR_ROLE-config.example.json"
+          if [[ "$OPERATOR_ROLE" == reporter ]]; then
+            cp _run/akt-reporter/broadcast.yaml "$dist/akt-reporter-broadcast.yaml"
+          fi
+          cd "$dist"
+          sha256sum ./*.yaml ./*.example ./*config.example.json >> "akt-${OPERATOR_ROLE}_${OPERATOR_VERSION}_checksums.txt"
+          sha256sum --check "akt-${OPERATOR_ROLE}_${OPERATOR_VERSION}_checksums.txt"
+      - uses: docker/setup-buildx-action@v3
+      - name: Build and exercise the actual image
+        run: |
+          docker build --target "$OPERATOR_ROLE" --build-arg ROLE="$OPERATOR_ROLE" -f _build/akt-operator.Dockerfile \
+            --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+            --label "org.opencontainers.image.revision=$(git rev-parse HEAD)" \
+            --label "org.opencontainers.image.version=$OPERATOR_VERSION" \
+            -t "akt-$OPERATOR_ROLE:verify" .cache/operator-image
+          docker run --rm --network none --read-only --tmpfs /tmp:rw,noexec,nosuid,size=64m "akt-$OPERATOR_ROLE:verify" --version
+          docker run --rm --network none --read-only --tmpfs /tmp:rw,noexec,nosuid,size=64m "akt-$OPERATOR_ROLE:verify" --help
+          bash contracts/solana/deploy/test-operator-compose.sh "$OPERATOR_ROLE" "akt-$OPERATOR_ROLE:verify"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: akt-${{ env.OPERATOR_ROLE }}-${{ env.OPERATOR_VERSION }}
+          path: .cache/goreleaser/operators/*
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: akt-${{ env.OPERATOR_ROLE }}-dependency-review
+          path: .cache/solana/operator-npm-audit.json
+      - name: Create a draft operator release
+        run: |
+          if ! gh release view "$OPERATOR_TAG" >/dev/null 2>&1; then
+            gh release create "$OPERATOR_TAG" --verify-tag --draft --latest=false \
+              --title "akt-$OPERATOR_ROLE v$OPERATOR_VERSION" \
+              --notes "Linux amd64 download and Docker image for akt-$OPERATOR_ROLE. Configuration selects the deployment; verify its published addresses before starting. See contracts/solana/docs/operator-releases.md at this tag."
+          fi
+          gh release upload "$OPERATOR_TAG" .cache/goreleaser/operators/*.tar.gz .cache/goreleaser/operators/*checksums.txt \
+            .cache/goreleaser/operators/*.yaml .cache/goreleaser/operators/*.example .cache/goreleaser/operators/*config.example.json --clobber
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish this operator image
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/akt-$OPERATOR_ROLE:$OPERATOR_VERSION"
+          docker tag "akt-$OPERATOR_ROLE:verify" "$image"
+          docker push "$image"
+          docker image inspect "$image" --format '{{index .RepoDigests 0}}' > .cache/goreleaser/operators/image-digest.txt
+          gh release upload "$OPERATOR_TAG" .cache/goreleaser/operators/image-digest.txt --clobber
+          mkdir -p .cache/anonymous-docker
+          docker --config "$PWD/.cache/anonymous-docker" manifest inspect "$image" >/dev/null || {
+            echo 'Set this GHCR package visibility to Public, then rerun. The GitHub release remains a draft.' >&2
+            exit 1
+          }
+      - name: Publish the operator release
+        run: gh release edit "$OPERATOR_TAG" --draft=false --latest=false --prerelease="$PRERELEASE"

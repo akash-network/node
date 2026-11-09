@@ -1,14 +1,12 @@
 import assert from "node:assert/strict";
-import { constants, open, readFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { parseArgs } from "node:util";
 import { setTimeout } from "node:timers/promises";
 import { web3 } from "@coral-xyz/anchor";
-import {
-  DirectSecp256k1Wallet,
-  type OfflineSigner,
-} from "@cosmjs/proto-signing";
+import { type OfflineSigner } from "@cosmjs/proto-signing";
 import Long from "long";
 import { AkashClient } from "./akash";
+import { loadSigner } from "./key";
 import { parseConfig, signerCommand } from "./config";
 import type { Message } from "./policy";
 import { Scanner } from "./scan";
@@ -26,44 +24,9 @@ function output(value: unknown) {
   );
 }
 
-async function loadSigner(path: string, expected: string) {
-  const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
-  try {
-    const stat = await file.stat();
-    assert.ok(
-      stat.isFile() &&
-        (stat.mode & 0o077) === 0 &&
-        stat.uid === process.getuid?.(),
-      "signing key must be an owner-only regular file",
-    );
-    const raw = (await file.readFile("utf8")).trim();
-    assert.ok(
-      /^[0-9a-f]{64}$/.test(raw),
-      "key file must contain a 32-byte lowercase hex secp256k1 key",
-    );
-    const scalar = BigInt(`0x${raw}`);
-    assert.ok(
-      scalar > 0n &&
-        scalar <
-          0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141n,
-      "invalid signing key scalar",
-    );
-    const key = Buffer.from(raw, "hex");
-    const wallet = await DirectSecp256k1Wallet.fromKey(key, "akash");
-    // The wallet retains the key for signing; never write it to output.
-    assert.equal(
-      (await wallet.getAccounts())[0]?.address,
-      expected,
-      "signer does not match reporter",
-    );
-    return wallet;
-  } finally {
-    await file.close();
-  }
-}
-
-async function main() {
+export async function runReporter(args = process.argv.slice(2)) {
   const { values } = parseArgs({
+    args,
     options: {
       config: { type: "string" },
       broadcast: { type: "boolean", default: false },
@@ -76,13 +39,14 @@ async function main() {
     values.config,
     "usage: npm run reporter -- --config PATH [--watch] [--broadcast (--key-file PATH | --signer-command PATH)]",
   );
-  const keyFile = values["key-file"];
+  const commandKey = values["key-file"];
   assert.ok(
-    values.broadcast || (!keyFile && !values["signer-command"]),
+    values.broadcast || (!commandKey && !values["signer-command"]),
     "signing requires --broadcast; preview never loads keys or runs signers",
   );
   const raw: unknown = JSON.parse(await readFile(values.config, "utf8"));
   const config = parseConfig(raw);
+  const keyFile = commandKey ?? config.keyFile;
   // --signer-command replaces the configured command and its arguments.
   const external = values["signer-command"]
     ? {
@@ -167,7 +131,9 @@ async function main() {
   }
 }
 
-void main().catch((error: unknown) => {
-  console.error(error instanceof Error ? error.message : "reporter failed");
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  void runReporter().catch((error: unknown) => {
+    console.error(error instanceof Error ? error.message : "reporter failed");
+    process.exitCode = 1;
+  });
+}

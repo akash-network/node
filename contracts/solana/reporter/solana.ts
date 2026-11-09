@@ -12,6 +12,7 @@ import {
 import { TOKEN_PROGRAM_ID, unpackMint } from "@solana/spl-token";
 import assert from "node:assert/strict";
 import { isDeepStrictEqual } from "node:util";
+import { validateMint } from "./config";
 import idl from "../../../.cache/solana/target/idl/akt.json";
 import type { Akt } from "../../../.cache/solana/target/types/akt";
 import { matchesAnchorId } from "../shared/proof";
@@ -161,14 +162,11 @@ export class SolanaObserver {
     const lead = config.maxSlotLead ?? defaultSlotLead(config.maxAgeSeconds);
     assert.ok(Number.isSafeInteger(lead) && lead > 0, "invalid maxSlotLead");
     this.slotLead = BigInt(lead);
-    // IDL and deployment must be reviewed together. Rebuild for another ID.
-    assert.equal(
-      config.programId.toBase58(),
-      idl.address,
-      "program differs from built IDL",
+    this.program = new Program<Akt>(
+      { ...idl, address: config.programId.toBase58() },
+      { connection: rpc },
     );
-    this.program = new Program<Akt>(idl, { connection: rpc });
-    assert.ok(config.mint.equals(this.pda("mint")), "noncanonical mint");
+    validateMint(config);
   }
 
   private pda(seed: string, suffix?: Buffer) {

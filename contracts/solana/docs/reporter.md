@@ -23,7 +23,7 @@ cp reporter/config.example.json ~/.config/akt-reporter/config.json
 | `akashChainId`       | Akash chain ID; also checked against the bridge account                                          |
 | `solanaRpc`          | Your Solana node                                                                                 |
 | `solanaGenesisHash`  | From your own node: `solana --url <node> genesis-hash`. A validator reset changes it             |
-| `programId`, `mint`  | AKT program and canonical mint PDA. Another program ID requires rebuilding the IDL               |
+| `programId`, `mint`  | Compatible AKT program and its canonical mint PDA. Set both in config; no IDL rebuild is needed  |
 | `reporter`           | Your reporter account                                                                            |
 | `lightClientProgram` | Optional pin. Leave unset to follow the bridge account; see [light client](#light-client)        |
 | `maxAgeSeconds`      | Freshness bound for both nodes, at most 600                                                      |
@@ -36,7 +36,7 @@ cp reporter/config.example.json ~/.config/akt-reporter/config.json
 
 Unknown configuration fields are rejected. `reporter` must be a lowercase 20-byte `akash` address. The chain compares it with the listed members as exact strings, so governance must list it in that lowercase form; x/sink also rejects a module account as a reporter.
 
-For production installation, supervision and rollback use [service deployment](deploy-services.md). Its packaged `akt-reporter.service` starts in preview, and its broadcast entry point checks the production configuration and requires `externalSigner` in the config file. The generic commands below also support explicitly configured development networks.
+For production installation, supervision and rollback use [service deployment](deploy-services.md). The service starts in preview; broadcast requires `keyFile` or `externalSigner`. [Independent downloads and Docker Compose](operator-releases.md) include the runtime. The generic commands below also support explicitly configured development networks.
 
 Preview one pass without loading a key, then run continuously once the output looks right:
 
@@ -55,9 +55,9 @@ The reporter pays each Akash transaction's fee and needs no Solana key. The chai
 
 Broadcast requires exactly one signer. Preview never loads a key or runs a signer.
 
-**Key file** (`--key-file PATH`), for development. The file is owner-only, regular, and contains exactly 64 lowercase hex characters. The derived address must match `reporter`. Never use a validator consensus key or commit the file.
+**Key file** (`keyFile` in the config, or `--key-file PATH` on the source runner). The file is owner-only, regular, and contains exactly 64 lowercase hex characters. The derived address must match `reporter`. Never use a validator consensus key or commit the file.
 
-**External signer**, for operator custody in a KMS, HSM or other service. Configure it in the config file, or pass `--signer-command PATH`, which replaces the configured command and its arguments:
+**External signer**, optionally for operator custody in a KMS, HSM or other service. Configure it in the config file, or pass `--signer-command PATH`, which replaces the configured command and its arguments:
 
 ```json
 "externalSigner": {

@@ -58,7 +58,7 @@ build_tags_cs := $(subst $(WHITESPACE),$(COMMA),$(build_tags))
 ldflags := -X github.com/cosmos/cosmos-sdk/version.Name=akash \
 -X github.com/cosmos/cosmos-sdk/version.AppName=akash \
 -X github.com/cosmos/cosmos-sdk/version.BuildTags="$(build_tags_cs)" \
--X github.com/cosmos/cosmos-sdk/version.Version=$(shell git describe --tags | sed 's/^v//') \
+-X github.com/cosmos/cosmos-sdk/version.Version=$(shell git describe --tags --match 'v[0-9]*' | sed 's/^v//') \
 -X github.com/cosmos/cosmos-sdk/version.Commit=$(GIT_HEAD_COMMIT_LONG) \
 -X github.com/cosmos/cosmos-sdk/types.DBBackend=$(DB_BACKEND)
 

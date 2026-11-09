@@ -1,0 +1,12 @@
+services:
+  reporter:
+    command:
+      [
+        run,
+        --config,
+        /etc/akt/config.json,
+        --network,
+        "${OPERATOR_NETWORK:-mainnet}",
+        --watch,
+        --broadcast,
+      ]

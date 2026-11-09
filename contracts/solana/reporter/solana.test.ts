@@ -21,10 +21,16 @@ import {
   defaultSlotLead,
 } from "./solana";
 
-async function fixture(t: TestContext) {
+async function fixture(
+  t: TestContext,
+  programId = new web3.PublicKey(idl.address),
+) {
   // Every RPC method used is mocked. Port 9 keeps a missed mock off any node.
   const rpc = new web3.Connection("http://127.0.0.1:9");
-  const program = new Program<Akt>(idl, { connection: rpc });
+  const program = new Program<Akt>(
+    { ...idl, address: programId.toBase58() },
+    { connection: rpc },
+  );
   const pda = (seed: string, suffix?: Buffer) =>
     web3.PublicKey.findProgramAddressSync(
       suffix ? [Buffer.from(seed), suffix] : [Buffer.from(seed)],
@@ -233,6 +239,42 @@ function voided(raw: TransferState, observations: Observation[]): Snapshot {
     },
   };
 }
+
+test("observer uses the configured deployment without rebuilding its IDL", async (t) => {
+  const programId = new web3.PublicKey(new Uint8Array(32).fill(42));
+  assert.notEqual(programId.toBase58(), idl.address);
+  const f = await fixture(t, programId);
+  const result = await f.observer.observe(f.record);
+  assert.ok(result.kind === "resolved");
+  assert.equal(result.observation.outcome, Outcome.OUTCOME_MINTED);
+  assert.deepEqual(
+    result.observation.transactionSignature,
+    new Uint8Array(64).fill(7),
+  );
+});
+
+test("configured deployment retains mint and account ownership checks", async (t) => {
+  const programId = new web3.PublicKey(new Uint8Array(32).fill(42));
+  for (const failure of ["mint", "owner"] as const) {
+    await t.test(failure, async (t) => {
+      const f = await fixture(t, programId);
+      if (failure === "mint") {
+        const oldMint = web3.PublicKey.findProgramAddressSync(
+          [Buffer.from("mint")],
+          new web3.PublicKey(idl.address),
+        )[0];
+        assert.throws(
+          () => new SolanaObserver(f.rpc, { ...f.config, mint: oldMint }),
+          /noncanonical mint/,
+        );
+      } else {
+        assert.ok(f.accounts[4]);
+        f.accounts[4].owner = new web3.PublicKey(idl.address);
+        await assert.rejects(() => f.observer.observe(f.record), /owner/);
+      }
+    });
+  }
+});
 
 test("observer chooses the successful resolution over a failed replay", async (t) => {
   const f = await fixture(t);

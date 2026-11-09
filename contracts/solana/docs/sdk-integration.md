@@ -10,22 +10,41 @@ Canonical queries are `Transfer`, `Transfers`, `Disputes`, `Account`, `State`, `
 
 ## Supply the locked package
 
-Node's `go.mod` pins `pkg.akt.dev/go` and `pkg.akt.dev/go/cli` to chain-sdk `ea3d90b3757435b4adf1e1620f9a95be7a2b80da`. The services consume the TypeScript package `@akashnetwork/chain-sdk` `1.0.0-alpha.46` from `../../.cache/solana/chain-sdk.tgz`, locked by integrity in `package-lock.json`. That archive was built from chain-sdk `3b977f0785eef4a5cfdd06747a8084f2cd5161ba` with its own `npm run build` pipeline and consumed as a reviewed `.tgz` input; `ea3d90b3` changes only Go reporter validation, not the TypeScript package. Version alone does not identify this prerelease build. `npm ci`
-verifies its integrity against `package-lock.json`; `npm run setup` never builds
-or replaces it implicitly. Production packaging must receive that same archive.
-A published version can replace this input once the matching SDK is released;
-release/package publication is a separate task.
+Node's `go.mod` selects the SDK release. Build the TypeScript package from that
+release's `go/<version>` tag; do not maintain a separate SDK commit pin. The SDK
+repository contains generated TypeScript source, which its own npm build compiles
+and packages. The services install the result from `.cache/solana/chain-sdk.tgz`;
+`npm ci` verifies it against the committed `package-lock.json`.
 
-To update the dependency deliberately during SDK development, build the selected
-SDK checkout first, then pack it and review the resulting lockfile change:
+Operator release CI does this automatically. To prepare the same input locally,
+run from the node repository root with Node 24.22.1:
 
 ```bash
-source scripts/workspace.sh
-CHAIN_SDK_DIR=/absolute/path/to/reviewed/chain-sdk
-npm ci --prefix "$CHAIN_SDK_DIR/ts"
-npm run build --prefix "$CHAIN_SDK_DIR/ts"
-sdk_package=$(cd "$CHAIN_SDK_DIR/ts" && npm pack --silent --pack-destination "$SOLANA_CACHE")
-cp "$SOLANA_CACHE/$sdk_package" "$SOLANA_CACHE/chain-sdk.tgz"
+(
+  set -euo pipefail
+  umask 022
+  cache="$PWD/.cache/solana"
+  mkdir -p "$cache"
+  sdk_dir=$(mktemp -d "$cache/sdk.XXXXXX")
+  trap 'rm -rf "$sdk_dir"' EXIT
+  version=$(GOWORK=off go list -mod=readonly -m -f '{{.Version}}' pkg.akt.dev/go)
+  git clone --depth 1 --branch "go/$version" https://github.com/akash-network/chain-sdk.git "$sdk_dir"
+  cd "$sdk_dir/ts"
+  npm ci
+  npm run build
+  rm dist/tsconfig.build.tsbuildinfo
+  archive=$(npm pack --ignore-scripts --silent --pack-destination "$cache")
+  mv "$cache/$archive" "$cache/chain-sdk.tgz"
+)
+npm ci --prefix contracts/solana
+```
+
+The package omits TypeScript's machine-specific incremental-build cache. A
+changed SDK pin may require a reviewed npm lockfile update. After building the
+newly pinned release, update the package integrity deliberately:
+
+```bash
+cd contracts/solana
 npm install ../../.cache/solana/chain-sdk.tgz
 npm run typecheck
 npm run test:services
