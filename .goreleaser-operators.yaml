@@ -1,6 +1,6 @@
 version: 2
 project_name: akt-operators
-dist: ../operator-dist
+dist: ./.cache/goreleaser/operators
 
 builds:
   - skip: true
@@ -11,15 +11,8 @@ archives:
     formats: [tar.gz]
     name_template: "akt-{{ .Env.OPERATOR_ROLE }}_{{ .Version }}_linux_amd64"
     files:
-      - bin/**
-      - runtime/**
-      - contracts/**
-      - .cache/**
-      - deploy/**
-      - service-build-info.txt
-      - LICENSE
-      - README.md
-      - operator-configuration.md
+      - src: .cache/operator-package
+        dst: .
 
 checksum:
   name_template: "akt-{{ .Env.OPERATOR_ROLE }}_{{ .Version }}_checksums.txt"
