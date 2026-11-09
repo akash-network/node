@@ -45,6 +45,13 @@ if [[ "$role" == relayer ]]; then
     -e 'require("fs").writeFileSync("/data/checkpoint", "retained")'
   "${compose[@]}" run --rm -T --entrypoint /opt/akt/runtime/bin/node relayer \
     -e 'require("assert").strictEqual(require("fs").readFileSync("/data/checkpoint", "utf8"), "retained")'
+  docker run --rm --platform linux/amd64 --network none --read-only \
+    --tmpfs /tmp:rw,noexec,nosuid,size=64m \
+    --tmpfs /opt/akt/.cache/solana/tests:rw,noexec,nosuid,size=16m \
+    --mount "type=bind,src=$solana_repo/local/durable.test.ts,dst=/opt/akt/contracts/solana/local/durable.test.ts,readonly" \
+    --workdir /opt/akt/contracts/solana \
+    --entrypoint /opt/akt/runtime/bin/node "$image" \
+    --import tsx --test local/durable.test.ts
 else
   "${compose[@]}" -f "$NODE_SINK_DIR/_run/akt-reporter/broadcast.yaml" config --format json > "$fixture/broadcast.json"
   python3 - "$fixture/broadcast.json" <<'PY'

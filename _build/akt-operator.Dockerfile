@@ -1,7 +1,7 @@
 FROM ubuntu:noble AS runtime
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates python3 libstdc++6 \
+    && apt-get install -y --no-install-recommends ca-certificates libstdc++6 \
     && rm -rf /var/lib/apt/lists/*
 
 ARG ROLE
@@ -16,6 +16,11 @@ WORKDIR /data
 CMD ["--help"]
 
 FROM runtime AS relayer
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3-minimal \
+    && rm -rf /var/lib/apt/lists/*
+USER 10001:10001
 ENTRYPOINT ["/opt/akt/bin/akt-relayer"]
 
 FROM runtime AS reporter

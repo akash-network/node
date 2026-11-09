@@ -5,6 +5,10 @@ its own release and Docker image. Neither requires installing the Akash node,
 Node.js, npm or Rust. Configuration selects a compatible bridge deployment;
 changing its addresses does not require rebuilding the service.
 
+The images contain the pinned Node runtime and production dependencies. Only
+the relayer includes the header encoder and minimal Python runtime for its
+process lock. Both run as an unprivileged user.
+
 - [Docker Compose](#docker-compose)
 - [Existing wallets](#existing-wallets)
 - [Download without Docker](#download-without-docker)
@@ -176,6 +180,8 @@ Rollback selects the previous compatible image with the same key and journal
 mounts. Do not run old and new instances with the same signing key.
 
 ## Release a service
+
+Merging the PR does not publish images. Tag and release each operator separately.
 
 The separate `release-operators` workflow packages **one** role. It does not
 invoke node's release workflow, build `akash`, publish a node image or change
