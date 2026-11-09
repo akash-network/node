@@ -39,7 +39,7 @@ export CEREMONY='/secure/path/ceremony.json'
 export PROGRAM_KEYS='/secure/path/program-keys'
 export GENESIS=5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d
 export MULTISIG_PROGRAM=SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf
-export METADATA_URI=https://raw.githubusercontent.com/akash-network/net/a3679c66d2e95912435b9640ad68b610d4d0a46f/solana/mainnet/akt.json
+export METADATA_URI=https://raw.githubusercontent.com/akash-network/net/84b94d96287d3507830a1d9832f55925f24b8dc8/solana/mainnet/akt.json
 
 manifest_value() {
   node -e 'let v=require(process.argv[1]); for(const k of process.argv[2].split(".")) v=v[k]; process.stdout.write(v)' "$MANIFEST" "$1"

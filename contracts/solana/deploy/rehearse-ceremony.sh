@@ -110,7 +110,7 @@ admin init-access-manager --keypair "$run/keys/ceremony.json" --access-manager "
   --admin "$ceremony" --cpi-caller "$squads" --relayer "$client_id" --relayer "$relayer" > "$run/access-manager.json"
 admin initialize --keypair "$run/keys/ceremony.json" > "$run/initialize.json"
 emit_authority=$ceremony
-emit metadata set-token-metadata --uri https://raw.githubusercontent.com/akash-network/net/a3679c66d2e95912435b9640ad68b610d4d0a46f/solana/mainnet/akt.json
+emit metadata set-token-metadata --uri https://raw.githubusercontent.com/akash-network/net/84b94d96287d3507830a1d9832f55925f24b8dc8/solana/mainnet/akt.json
 emit guardian set-guardian --guardian "$vault"
 admin bundle --emit "$run/tx/metadata-guardian.json" "$run/tx/metadata.json" "$run/tx/guardian.json"
 ceremony_execute metadata-guardian
