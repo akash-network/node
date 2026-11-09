@@ -198,3 +198,26 @@ test("CLI runs an external signer only for broadcast and never beside a key file
   );
   await assert.rejects(() => stat(marker), { code: "ENOENT" });
 });
+
+test("configured software key is loaded for broadcast, never preview", async (t) => {
+  const directory = await temporaryDirectory("reporter-configured-key-");
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const config = join(directory, "config.json");
+  const keyFile = join(directory, "missing.key");
+  await writeFile(config, JSON.stringify({ ...offline(), keyFile }));
+  await assert.rejects(() => cli(config, ["--broadcast"]), /ENOENT/);
+  await assert.rejects(
+    () => cli(config, []),
+    (failure: unknown) => {
+      assert.ok(
+        failure instanceof Error &&
+          "stderr" in failure &&
+          typeof failure.stderr === "string",
+      );
+      assert.ok(
+        !failure.stderr.includes("ENOENT") && !failure.stderr.includes(keyFile),
+      );
+      return true;
+    },
+  );
+});

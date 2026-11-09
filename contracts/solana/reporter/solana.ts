@@ -161,13 +161,10 @@ export class SolanaObserver {
     const lead = config.maxSlotLead ?? defaultSlotLead(config.maxAgeSeconds);
     assert.ok(Number.isSafeInteger(lead) && lead > 0, "invalid maxSlotLead");
     this.slotLead = BigInt(lead);
-    // IDL and deployment must be reviewed together. Rebuild for another ID.
-    assert.equal(
-      config.programId.toBase58(),
-      idl.address,
-      "program differs from built IDL",
+    this.program = new Program<Akt>(
+      { ...idl, address: config.programId.toBase58() },
+      { connection: rpc },
     );
-    this.program = new Program<Akt>(idl, { connection: rpc });
     assert.ok(config.mint.equals(this.pda("mint")), "noncanonical mint");
   }
 

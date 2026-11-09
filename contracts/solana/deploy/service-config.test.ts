@@ -29,6 +29,40 @@ const reporter = {
   gasLimit: "500000",
 };
 
+test("explicit testnet mode requires both chains to be non-mainnet", () => {
+  const config = {
+    ...relayer,
+    akashChainId: "akash-bridge-v2-testnetify-1",
+    solanaGenesisHash: web3.Keypair.generate().publicKey.toBase58(),
+    programId: "FfFAPUKqjf68ggj1HvpyzMHFDRnT2cFAdZYYQb7mK9i5",
+  };
+  checkServiceConfig("relayer", config, file, "testnet");
+  assert.throws(
+    () => checkServiceConfig("relayer", config, file),
+    /akashnet-2/,
+  );
+  assert.throws(
+    () =>
+      checkServiceConfig(
+        "relayer",
+        { ...config, akashChainId: "akashnet-2" },
+        file,
+        "testnet",
+      ),
+    /refuses Akash mainnet/,
+  );
+  assert.throws(
+    () =>
+      checkServiceConfig(
+        "relayer",
+        { ...config, solanaGenesisHash: MAINNET_GENESIS },
+        file,
+        "testnet",
+      ),
+    /refuses Solana mainnet/,
+  );
+});
+
 test("production services require explicit network, program and durable paths", () => {
   checkServiceConfig("relayer", relayer, file);
   assert.throws(
@@ -82,11 +116,11 @@ test("production services require explicit network, program and durable paths", 
   );
 });
 
-test("reporter preview needs no signer; production broadcast requires external custody", () => {
+test("reporter preview needs no signer; production broadcast supports file keys or external custody", () => {
   checkServiceConfig("reporter-preview", reporter, file);
   assert.throws(
     () => checkServiceConfig("reporter-broadcast", reporter, file),
-    /externalSigner/,
+    /keyFile or externalSigner/,
   );
   checkServiceConfig(
     "reporter-broadcast",
@@ -95,6 +129,39 @@ test("reporter preview needs no signer; production broadcast requires external c
       externalSigner: { command: "/opt/signer/sign", args: [] },
     },
     file,
+  );
+  checkServiceConfig(
+    "reporter-broadcast",
+    {
+      ...reporter,
+      keyFile: "/etc/akt-reporter/reporter.key",
+    },
+    file,
+  );
+  assert.throws(
+    () =>
+      checkServiceConfig(
+        "reporter-broadcast",
+        {
+          ...reporter,
+          keyFile: "relative.key",
+        },
+        file,
+      ),
+    /absolute/,
+  );
+  assert.throws(
+    () =>
+      checkServiceConfig(
+        "reporter-broadcast",
+        {
+          ...reporter,
+          keyFile: "/etc/akt-reporter/reporter.key",
+          externalSigner: { command: "/opt/signer/sign" },
+        },
+        file,
+      ),
+    /not both/,
   );
   assert.throws(() => checkServiceConfig("reporter", reporter, file));
 });

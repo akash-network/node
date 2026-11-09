@@ -1698,8 +1698,9 @@ export async function configuredRelay(path: string) {
   });
 }
 
-async function main() {
+export async function runRelayer(args = process.argv.slice(2)) {
   const { values } = parseArgs({
+    args,
     options: {
       bootstrap: { type: "boolean" },
       watch: { type: "boolean" },
@@ -1798,7 +1799,7 @@ async function main() {
 }
 // Also imported by the local scenario runner.
 if (require.main === module)
-  void main().catch((error: unknown) => {
+  void runRelayer().catch((error: unknown) => {
     console.error(error);
     process.exitCode = 1;
   });

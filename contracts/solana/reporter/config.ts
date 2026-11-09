@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { isAbsolute } from "node:path";
 import { web3 } from "@coral-xyz/anchor";
 import { fromBech32, toBech32 } from "@cosmjs/encoding";
 import {
@@ -24,6 +25,7 @@ const CONFIG_FIELDS = [
   "feeAmountUakt",
   "gasLimit",
   "externalSigner",
+  "keyFile",
 ];
 
 // The command runs without a shell, so require an absolute path.
@@ -158,7 +160,14 @@ export function parseConfig(value: unknown) {
     genesisHash,
     "invalid genesis hash",
   );
+  const keyFile = "keyFile" in fields ? string("keyFile") : undefined;
+  if (keyFile) assert.ok(isAbsolute(keyFile), "keyFile must be absolute");
+  assert.ok(
+    !keyFile || !("externalSigner" in fields),
+    "configure keyFile or externalSigner, not both",
+  );
   return {
+    keyFile,
     akashRpc: url("akashRpc"),
     solanaRpc: url("solanaRpc"),
     akashChainId: string("akashChainId"),
