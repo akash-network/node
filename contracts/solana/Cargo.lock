@@ -1072,7 +1072,7 @@ dependencies = [
 [[package]]
 name = "ibc-eureka-constrained-types"
 version = "0.1.0"
-source = "git+https://github.com/akash-network/ibc-contracts?rev=0da3165d8428a1b7792cc17551ecd1d3985761e6#0da3165d8428a1b7792cc17551ecd1d3985761e6"
+source = "git+https://github.com/akash-network/ibc-contracts?rev=0d410db9bbc8d543afe3f0f271258c4b2edbb6e1#0d410db9bbc8d543afe3f0f271258c4b2edbb6e1"
 dependencies = [
  "borsh 0.10.4",
 ]
@@ -1154,15 +1154,6 @@ name = "itertools"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
-dependencies = [
- "either",
-]
-
-[[package]]
-name = "itertools"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
 dependencies = [
  "either",
 ]
@@ -1555,7 +1546,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "be769465445e8c1474e9c5dac2018218498557af32d9ed057325ec9a41ae81bf"
 dependencies = [
  "heck 0.5.0",
- "itertools 0.14.0",
+ "itertools",
  "log",
  "multimap",
  "once_cell",
@@ -1573,7 +1564,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a56d757972c98b346a9b766e3f02746cde6dd1cd1d1d563472929fdd74bec4d"
 dependencies = [
  "anyhow",
- "itertools 0.14.0",
+ "itertools",
  "proc-macro2",
  "quote",
  "syn 2.0.117",
@@ -2160,12 +2151,12 @@ dependencies = [
 [[package]]
 name = "solana-ibc-constants"
 version = "0.1.0"
-source = "git+https://github.com/akash-network/ibc-contracts?rev=0da3165d8428a1b7792cc17551ecd1d3985761e6#0da3165d8428a1b7792cc17551ecd1d3985761e6"
+source = "git+https://github.com/akash-network/ibc-contracts?rev=0d410db9bbc8d543afe3f0f271258c4b2edbb6e1#0d410db9bbc8d543afe3f0f271258c4b2edbb6e1"
 
 [[package]]
 name = "solana-ibc-gmp-types"
 version = "0.1.0"
-source = "git+https://github.com/akash-network/ibc-contracts?rev=0da3165d8428a1b7792cc17551ecd1d3985761e6#0da3165d8428a1b7792cc17551ecd1d3985761e6"
+source = "git+https://github.com/akash-network/ibc-contracts?rev=0d410db9bbc8d543afe3f0f271258c4b2edbb6e1#0d410db9bbc8d543afe3f0f271258c4b2edbb6e1"
 dependencies = [
  "anchor-lang",
  "borsh 0.10.4",
@@ -2176,7 +2167,7 @@ dependencies = [
 [[package]]
 name = "solana-ibc-macros"
 version = "0.1.0"
-source = "git+https://github.com/akash-network/ibc-contracts?rev=0da3165d8428a1b7792cc17551ecd1d3985761e6#0da3165d8428a1b7792cc17551ecd1d3985761e6"
+source = "git+https://github.com/akash-network/ibc-contracts?rev=0d410db9bbc8d543afe3f0f271258c4b2edbb6e1#0d410db9bbc8d543afe3f0f271258c4b2edbb6e1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2187,7 +2178,7 @@ dependencies = [
 [[package]]
 name = "solana-ibc-proto"
 version = "0.1.0"
-source = "git+https://github.com/akash-network/ibc-contracts?rev=0da3165d8428a1b7792cc17551ecd1d3985761e6#0da3165d8428a1b7792cc17551ecd1d3985761e6"
+source = "git+https://github.com/akash-network/ibc-contracts?rev=0d410db9bbc8d543afe3f0f271258c4b2edbb6e1#0d410db9bbc8d543afe3f0f271258c4b2edbb6e1"
 dependencies = [
  "anchor-lang",
  "ibc-eureka-constrained-types",
@@ -2200,7 +2191,7 @@ dependencies = [
 [[package]]
 name = "solana-ibc-types"
 version = "0.1.0"
-source = "git+https://github.com/akash-network/ibc-contracts?rev=0da3165d8428a1b7792cc17551ecd1d3985761e6#0da3165d8428a1b7792cc17551ecd1d3985761e6"
+source = "git+https://github.com/akash-network/ibc-contracts?rev=0d410db9bbc8d543afe3f0f271258c4b2edbb6e1#0d410db9bbc8d543afe3f0f271258c4b2edbb6e1"
 dependencies = [
  "anchor-lang",
  "borsh 0.10.4",
@@ -2858,7 +2849,7 @@ dependencies = [
  "bytemuck",
  "bytemuck_derive",
  "curve25519-dalek",
- "itertools 0.12.1",
+ "itertools",
  "js-sys",
  "merlin",
  "num-derive 0.4.2",
@@ -3344,7 +3335,7 @@ dependencies = [
 [[package]]
 name = "tendermint-light-client-membership"
 version = "0.1.0"
-source = "git+https://github.com/akash-network/ibc-contracts?rev=0da3165d8428a1b7792cc17551ecd1d3985761e6#0da3165d8428a1b7792cc17551ecd1d3985761e6"
+source = "git+https://github.com/akash-network/ibc-contracts?rev=0d410db9bbc8d543afe3f0f271258c4b2edbb6e1#0d410db9bbc8d543afe3f0f271258c4b2edbb6e1"
 dependencies = [
  "ibc-core-commitment-types",
  "ibc-core-host-types",
@@ -3355,7 +3346,7 @@ dependencies = [
 [[package]]
 name = "tendermint-light-client-solana"
 version = "0.1.0"
-source = "git+https://github.com/akash-network/ibc-contracts?rev=0da3165d8428a1b7792cc17551ecd1d3985761e6#0da3165d8428a1b7792cc17551ecd1d3985761e6"
+source = "git+https://github.com/akash-network/ibc-contracts?rev=0d410db9bbc8d543afe3f0f271258c4b2edbb6e1#0d410db9bbc8d543afe3f0f271258c4b2edbb6e1"
 dependencies = [
  "brine-ed25519",
  "ibc-core-commitment-types",

@@ -61,13 +61,13 @@ for (const [name, port] of Object.entries({
 export const AKASH_RPC = `http://127.0.0.1:${AKASH_RPC_PORT}`;
 export const SOLANA_RPC = `http://127.0.0.1:${SOLANA_RPC_PORT}`;
 export const CLIENT_ID = new web3.PublicKey(
-  "HqPcGpVHxNNFfVatjhG78dFVMwjyZixoKPdZSt3d3TdD",
+  "2dTK4NwEkv3gyY5dZnG4TuDYFMoNYQYrBqEGwTSmEmKr",
 );
 export const ACCESS_ID = new web3.PublicKey(
-  "4fMih2CidrXPeRx77kj3QcuBZwREYtxEbXjURUgadoe1",
+  "HntLc7xrcRMRk9X38uMytCnweFJhVVCuzqhkVPe1RkCq",
 );
 export const PROGRAM_ID = new web3.PublicKey(
-  "FfFAPUKqjf68ggj1HvpyzMHFDRnT2cFAdZYYQb7mK9i5",
+  "98inUHb5mMaHWQZ9ut9PGrnmkMpncLZWWAyFwxCWagME",
 );
 export const LE64 = (value: bigint) => {
   const bytes = Buffer.alloc(8);
