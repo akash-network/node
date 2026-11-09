@@ -8,6 +8,9 @@ Use the existing keys and program IDs. There is no initial AKT allocation.
 
 Checked on 2026-11-09: the ceremony wallet holds **20.1 SOL**; all three program
 addresses are undeployed; the build and exact-byte local Squads rehearsal passed.
+The [full local verification](mainnet-local-verification.md) also passed open
+header relay, proof-backed minting, replay rejection and pause/resume with no
+time lock.
 Current program deposits total **14.80073748 SOL**. Including the measured state
 allowance gives **14.90032660 SOL** before fees; the preparation target is 16 SOL.
 Recheck balance and rent immediately before deployment.
@@ -16,8 +19,9 @@ Before the first write: independent build/hash comparison and human launch revie
 including the [recorded compiler diagnostics](../deployments/mainnet/README.md#verification).
 Before checkpoint setup: approved trusting period/drift, three independent Akash
 RPCs, an agreed height, and a ready relayer with its public payer address.
-Before handover: confirm Squads control, members, threshold, time lock and access
-to its custom transaction builder. Observed configuration: **2 of 5, 0 seconds**.
+Before handover: confirm Squads control, members, threshold and access to its
+custom transaction builder. Observed threshold: **2 of 5**. The confirmed launch
+time lock is **0 seconds (none)**, matching the current on-chain setting.
 Before activation: the separately managed relayer, reporter and backing checks
 must be ready. Service builds are outside this procedure.
 
@@ -244,7 +248,8 @@ or recipient-vault allowlist is configured.
 **Does:** transfers all three upgrade authorities and sole access-manager admin
 in one five-instruction transaction.
 **Needs:** correct completed setup, a fresh active client, confirmed Squads
-control and the approved threshold/time lock. Do not hand over an unfinished setup.
+control, the approved threshold and the confirmed zero-second time lock. Do not
+hand over an unfinished setup.
 
 ```bash
 admin ceremony-handover --manifest "$MANIFEST" \
@@ -268,7 +273,7 @@ zero and minting stays paused. Retire keys only under the agreed custody plan.
 
 **Does:** enables ordinary portal-backed minting.
 **Needs:** step 6, healthy relayer/reporter, backing checks, available Squads
-members and any configured time lock satisfied.
+members for the required approvals. The confirmed time lock is zero seconds.
 
 ```bash
 admin set-bridge-enabled --enabled true \
@@ -279,8 +284,8 @@ admin decode "$RELEASE_DIR/tx/enable.json"
 These commands do not activate anything. In Squads, create a custom vault
 transaction for account `Hx92ZBfSJ7kLaDpmRYvh5TcnrSLWMnh5eDdpQqC9B3ke`, vault
 index `0`, containing exactly the emitted instructions. Review the program,
-accounts and data, simulate, obtain the required approvals, and execute after
-the time lock. Use the [Squads transaction builder](https://docs.squads.so/main/navigating-your-squad/developers-assets/transaction-builder)
+accounts and data, simulate, obtain the required approvals, and execute. No
+additional time-lock wait is configured for this launch. Use the [Squads transaction builder](https://docs.squads.so/main/navigating-your-squad/developers-assets/transaction-builder)
 and the [repository submission procedure](deploy-program.md#7-multisig-transactions).
 The vault is a PDA; there is no vault keypair to pass to the ceremony CLI.
 

@@ -31,6 +31,7 @@ async function main() {
       url: { type: "string" },
       run: { type: "string" },
       bundle: { type: "string" },
+      "time-lock": { type: "string", default: "0" },
     },
   });
   assert.ok(values.run, "Pass --run with the private rehearsal directory");
@@ -86,6 +87,12 @@ async function main() {
     );
 
   if (command === "create") {
+    const timeLock = z.coerce
+      .number()
+      .int()
+      .min(0)
+      .max(86400)
+      .parse(values["time-lock"]);
     const createKey = web3.Keypair.generate();
     const members = Array.from({ length: 5 }, () => web3.Keypair.generate());
     for (const [index, member] of members.entries())
@@ -114,7 +121,7 @@ async function main() {
             key: member.publicKey,
             permissions: squads.types.Permissions.all(),
           })),
-          timeLock: 5,
+          timeLock,
           createKey: createKey.publicKey,
           rentCollector: payer.publicKey,
         }),
@@ -131,7 +138,7 @@ async function main() {
       multisig: multisigPda.toBase58(),
       vault: vault.toBase58(),
       threshold: 2,
-      timeLock: 5,
+      timeLock,
       signature,
     });
     process.stdout.write(vault.toBase58() + "\n");
@@ -288,6 +295,7 @@ async function main() {
       {
         signature,
         thresholdChecked: true,
+        timeLockSeconds: multisig.timeLock,
         timeLockEarlyRejectionChecked: checkedEarly,
         events: aktProgram
           ? decodeEvents(

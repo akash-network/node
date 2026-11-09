@@ -67,26 +67,42 @@ admin() {
 
 Confirm the vault against the Squads account and vault index, and prove control
 through a Squads transaction before handing anything over. Record its members,
-threshold, and current time lock. Using the vault as pause guardian means a
-pause also needs the Squads approvals and time lock. The Akash `x/sink` guardian
+threshold, and current time lock. This launch uses a confirmed time lock of
+**0 seconds (none)**. Using the vault as pause guardian means a pause still
+needs the Squads approvals, with no additional time-lock wait. The Akash `x/sink` guardian
 is a separate Akash address configured through Akash governance.
 
 The metadata is hosted in `akash-network/net`, with the JSON and image pinned
 to immutable commits. Fetch both raw HTTPS URLs, check their contents, and complete
 the [metadata launch gate](token-metadata.md#mainnet-launch-gate).
 
-Run the local rehearsal with the exact release and program IDs:
+Run the local rehearsal with the exact release and program IDs. It also needs
+the repository's Go test environment and the local test header encoder from
+workspace setup (`npm run build:header-encoder` if absent):
 
 ```bash
 npm run rehearse:ceremony -- "$MANIFEST" "$PROGRAM_KEYS"
 ```
 
-It uses disposable local authority keys, the real Squads v4 program, a 2-of-5
-test multisig, and a synthetic checkpoint. The local validator uses eight ticks
-per slot and waits for finalized blocks before setup. It exercises setup, the atomic
-handover, rejection of the retired signer, Squads activation, and guardian
-pause. It never uses the funded ceremony wallet or writes to mainnet. Evidence
-remains under `.cache/solana/run/`; disposable keys and the ledger are removed.
+It uses disposable local authority keys and the real Squads v4 program with a
+2-of-5 test multisig and zero-second time lock. `AKT_REHEARSAL_TIME_LOCK=5` can
+exercise a nonzero delay separately. The local validator uses eight ticks per
+slot and waits for finalized blocks before setup.
+
+The rehearsal deploys and verifies all three binaries, initializes zero supply,
+sets metadata and guardian, configures the checkpoint and bridge, then hands
+over atomically. It rejects the retired signer and insufficient Squads approvals.
+An unlisted signer relays a signed test header, but cannot prune consensus state.
+Squads activates, pauses, resumes and pauses again. Between those actions, the
+contracts reject a paused mint, reject an altered amount, mint a real Akash app
+deposit proof and reject replay.
+
+The deposit proof comes from a signed `MsgSink` committed by the isolated Akash
+app test. Its root is carried by synthetic local validator signatures, using an
+explicitly trusted local checkpoint; this is not mainnet header authentication.
+It never uses the funded ceremony wallet or writes to mainnet. Evidence remains
+under `.cache/solana/run/`; disposable keys and the ledger are removed. Service
+deployment and the public portal UI are outside this contract rehearsal.
 The separate suite exercises valid header relay, misbehaviour submission, and
 rejection of pruning by an ungranted signer and the marker's own keypair:
 
@@ -260,7 +276,8 @@ admin decode "$RELEASE_DIR/tx/enable.json"
 Create a Squads vault transaction containing exactly the emitted instructions,
 using the [multisig submission procedure](deploy-program.md#7-multisig-transactions).
 Members compare the bytes, accounts, and program IDs, approve it, and execute
-after the configured time lock. Record the signature and verify `admin show`.
+with no additional wait under this launch's zero-second time lock. Record the
+signature and verify `admin show`.
 The first AKT arrives through a normal portal transfer.
 
 For a later pause, emit `admin pause --emit FILE --authority "$VAULT"` and

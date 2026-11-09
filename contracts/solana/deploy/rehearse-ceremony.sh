@@ -38,6 +38,16 @@ newkey() {
 }
 ceremony=$(newkey ceremony)
 relayer=$(newkey relayer)
+newkey outsider >/dev/null
+(
+  cd "$NODE_SINK_DIR"
+  SINK_PROOF_FIXTURE="$run/akash-proof.json" go test -mod=readonly ./x/sink \
+    -run '^TestSinkSignedDepositAndProof$' -count=1 -v > "$run/akash-proof.log" 2>&1
+)
+test -x "$CARGO_TARGET_DIR/debug/akt-header-encoder" || {
+  echo 'Missing local test header encoder; run npm run build:header-encoder.' >&2
+  exit 1
+}
 squads=SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf
 config=$(node --import tsx deploy/rehearse-squads.ts fixture --run "$run")
 solana --config /dev/null --url https://api.mainnet-beta.solana.com \
@@ -60,7 +70,8 @@ done
 [[ $ready == 1 ]] || { echo 'Local validator did not become ready.' >&2; exit 1; }
 genesis=$(solana --config /dev/null --url "$url" genesis-hash)
 [[ $genesis != 5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d ]] || exit 1
-vault=$(node --import tsx deploy/rehearse-squads.ts create --run "$run" --url "$url")
+vault=$(node --import tsx deploy/rehearse-squads.ts create --run "$run" --url "$url" \
+  --time-lock "${AKT_REHEARSAL_TIME_LOCK:-0}")
 node - "$release" "$run/manifest.json" "$ceremony" "$vault" "$build" <<'JS'
 const fs=require('node:fs');
 const [input,output,ceremony,vault,build]=process.argv.slice(2);
@@ -77,6 +88,9 @@ client_id=$(program_id ics07_tendermint)
 manager_id=$(program_id access_manager)
 sol() { solana --config /dev/null --url "$url" --keypair "$run/keys/ceremony.json" --commitment finalized "$@"; }
 admin() { node --import tsx local/bridge-admin.ts "$@" --genesis "$genesis" --url "$url" --akt-program "$akt_id"; }
+transfer_test() {
+  node --import tsx deploy/rehearse-transfer.ts "$1" --run "$run" --url "$url"
+}
 emit() {
   local name=$1
   shift
@@ -115,31 +129,12 @@ emit guardian set-guardian --guardian "$vault"
 admin bundle --emit "$run/tx/metadata-guardian.json" "$run/tx/metadata.json" "$run/tx/guardian.json"
 ceremony_execute metadata-guardian
 
-# As in local/scale.ts, use the validator clock: it can lag wall time under load.
-clock_seconds=$(node - "$url" <<'JS'
-const { Connection, SYSVAR_CLOCK_PUBKEY } = require('@solana/web3.js');
-(async () => {
-  const clock = await new Connection(process.argv[2], 'finalized')
-    .getAccountInfo(SYSVAR_CLOCK_PUBKEY);
-  if (!clock || clock.data.length !== 40) throw new Error('Solana clock unavailable');
-  process.stdout.write(clock.data.readBigInt64LE(32).toString());
-})().catch(error => { console.error(error); process.exitCode = 1; });
-JS
-)
-# Synthetic checkpoint and deliberately small test limits, never launch inputs.
-python3 -I - "$clock_seconds" > "$run/checkpoint.json" <<'PY'
-import datetime,json,secrets,sys
-time=datetime.datetime.fromtimestamp(int(sys.argv[1])-5,datetime.timezone.utc)
-micros=int(time.timestamp())*1_000_000+time.microsecond
-print(json.dumps({"chainId":"akash-rehearsal-2","height":"1000",
- "time":time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),"timestamp":str(micros*1000),
- "root":secrets.token_hex(32),"nextValidatorsHash":secrets.token_hex(32),
- "validatorsHash":secrets.token_hex(32),"blockHash":secrets.token_hex(32)}))
-PY
+# Real app proof, synthetic signed headers, and a local-only trusted checkpoint.
+transfer_test checkpoint
 emit client init-client --program "$client_id" --access-manager "$manager_id" \
   --checkpoint "$run/checkpoint.json" --trusting-period 86400 --unbonding-period 1814400 --max-clock-drift 10
-emit bridge configure-bridge --program "$client_id" --chain-id akash-rehearsal-2 \
-  --per-transfer-max 100000000 --daily-mint-cap 1000000000 --checkpoint "$run/checkpoint.json"
+emit bridge configure-bridge --program "$client_id" --chain-id akash-scale-1 \
+  --per-transfer-max 1000000000000 --daily-mint-cap 10000000000000 --checkpoint "$run/checkpoint.json"
 admin bundle --emit "$run/tx/client-bridge.json" "$run/tx/client.json" "$run/tx/bridge.json"
 ceremony_execute client-bridge
 admin show --access-manager "$manager_id" > "$run/before-handover.json"
@@ -154,12 +149,20 @@ if admin set-guardian --guardian "$ceremony" --keypair "$run/keys/ceremony.json"
 fi
 grep -q 'upgrade authority' "$run/retired-authority.txt"
 
-echo 'Checking actual Squads proposal, two approvals, execution, and guardian pause.'
+echo 'Relaying a signed header and uploading a real Akash app proof as an unlisted signer.'
+transfer_test relay
+echo 'Checking Squads approvals, immediate execution, mint, replay, and guardian pause.'
 emit_authority=$vault
 emit enable set-bridge-enabled --enabled true
 vault_execute enable
 emit pause pause
 vault_execute pause
+transfer_test paused
+emit resume set-bridge-enabled --enabled true
+vault_execute resume
+transfer_test mint
+emit final-pause pause
+vault_execute final-pause
 admin show --access-manager "$manager_id" > "$run/final-state.json"
 python3 -I - "$run" "$ceremony" "$vault" "$client_id" <<'PY'
 import json,sys
@@ -172,13 +175,27 @@ for field in ['mint','chainId','policy','guardian','lightClientProgram','metadat
  assert before[field]==after[field], (field,before[field],after[field])
 assert before['accessManager']['admins']==[ceremony]
 assert after['accessManager']['admins']==[vault]
+for state in [before,after]:
+ assert state['token']['supply']=='0'
+minted=json.loads((root/'mint-result.json').read_text())
+assert final['token']['supply']==minted['amount']=='123456789'
 for state in [before,after,final]:
- assert state['token']['supply']=='0' and state['token']['decimals']==6
+ assert state['token']['decimals']==6
  assert state['token']['mintAuthorityIsPda'] and state['token']['freezeAuthority'] is None
  assert state['relaying']['openRelaying'] and client in state['relaying']['relayers']
- assert state['guardian']==vault and state['policy']['vaults']==[]
+ assert state['guardian']==vault and state['policy']=={'perTransferMax':'1000000000000','dailyMintCap':'10000000000000','vaults':[]}
+ assert state['metadata']['name']=='Akash Network Token' and state['metadata']['symbol']=='akt'
+ assert state['metadata']['uri']=='https://raw.githubusercontent.com/akash-network/net/84b94d96287d3507830a1d9832f55925f24b8dc8/solana/mainnet/akt.json'
+ assert state['metadata']['updateAuthority']==state['token']['mintAuthority']
+ assert state['client']['status']=='active'
+assert final['client']['latestHeight']=='3'
 assert final['bridgeEnabled'] is False
 for state in [after,final]:
  for info in state['upgradeAuthorities'].values(): assert info['upgradeAuthority']==vault
-print('Late-handover rehearsal passed with the Squads vault as pause guardian.')
+for name in ['enable','pause','resume','final-pause']:
+ executed=json.loads((root/'tx'/f'{name}.executed.json').read_text())
+ assert executed['thresholdChecked']
+ assert executed['timeLockSeconds']==json.loads((root/'squads.json').read_text())['timeLock']
+ assert executed['events'], name
+print('Late-handover, open header relay, real app proof mint, replay rejection and Squads pause passed.')
 PY

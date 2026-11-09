@@ -60,16 +60,19 @@ The clean build preserved the committed program declarations, Anchor configs
 and Cargo locks. All six interfaces and both IBC binaries match the previous
 launch build. AKT has a new binary hash, with the same program ID and size.
 
-A fresh local rehearsal passed using these exact three binaries and the real
-Squads v4 program: setup while paused, zero initial supply, explicit open
-relaying, atomic handover, rejection of the retired signer, activation and
-guardian pause. The local Squads used two of five members and a five-second
-time lock; this does not test or change the production vault configuration.
+The [complete local contract rehearsal](../../docs/mainnet-local-verification.md)
+passed using these exact three binaries and the real Squads v4 program with
+2-of-5 approvals and zero-second time lock. It verified setup while paused,
+zero initial supply, explicit open relay by an unlisted signer, atomic handover,
+retired-signer rejection, activation, pause/resume, a real Akash app proof mint,
+altered-amount rejection and replay rejection. The final state was paused.
+An earlier five-second rehearsal also checked rejection before its time lock
+expired. Neither run changes or proves control of the production vault.
 
-The rehearsal fixture now uses the finalized validator clock, following the
-existing local tests. Its first run used host time and was correctly rejected
-by the consensus-timestamp check. The fixture correction changes no production
-checks or compilation inputs; the deployment CLI matches the build source.
+The accepted extended rehearsal uses synthetic local validator signatures and
+an explicitly trusted checkpoint. Its evidence and test-harness corrections are
+recorded in the linked report. Production code and compilation inputs remain
+unchanged; the deployment CLI matches the build source.
 
 Rust unit tests, build/cache checks, deployment-tool tests, typechecking and
 scoped shell/format checks passed. The pinned compiler still emits the same
