@@ -6,7 +6,6 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
-import tarfile
 import tempfile
 import unittest
 
@@ -137,77 +136,6 @@ with open(os.environ["CALL_LOG"], "a") as output:
         self.assertFalse(any("pack" in command or "--prefix" in command or "sinkdev" in command
                              for command in commands))
         self.assertEqual(archive.read_bytes(), b"reviewed SDK package")
-
-    def sdk_fixture(self):
-        fixture = self.root / "sdk-source/ts"
-        fixture.mkdir(parents=True)
-        (fixture / "package.json").write_text('{"name":"sdk-fixture","version":"1.0.0"}\n')
-        (fixture / "package.json").chmod(0o644)
-        download = self.root / "sdk-source.tar.gz"
-        with tarfile.open(download, "w:gz") as archive:
-            archive.add(fixture, arcname="chain-sdk/ts")
-        self.sdk_lock("sha512-DxLINbtwj7/UafS6Hn5bm5oe8Ppi8vmltOXZ66WtqzC9OTBzKMke5ozL2tIbkUQER0bZWOYPbZgGIqdEDcPgrg==")
-        bin_dir = self.root / "bin"
-        bin_dir.mkdir()
-        commands = {
-            "curl": '#!/usr/bin/env bash\nset -eu\ncp "$SDK_FIXTURE" "${!#}"\n',
-            "npm": '''#!/usr/bin/env bash
-set -eu
-test "${SDK_FAIL_BUILD:-0}" = 0
-if [[ "$*" == "run build" ]]; then
-  mkdir -p dist
-  printf 'export const value = 1;\\n' > dist/index.js
-  printf '%s' "$PWD" > dist/tsconfig.build.tsbuildinfo
-elif [[ "$1" == pack ]]; then
-  exec "$REAL_NPM" "$@"
-fi
-''',
-        }
-        for name, content in commands.items():
-            path = bin_dir / name
-            path.write_text(content)
-            path.chmod(0o755)
-        env = {k: v for k, v in os.environ.items() if k != "NODE_SINK_DIR"}
-        env.update(PATH=f"{bin_dir}:{os.environ['PATH']}", SDK_FIXTURE=str(download),
-                   REAL_NPM=shutil.which("npm"))
-        return env
-
-    def sdk_lock(self, integrity):
-        (self.source / "package-lock.json").write_text(json.dumps({
-            "packages": {"node_modules/@akashnetwork/chain-sdk": {"integrity": integrity}},
-        }))
-
-    def prepare_sdk(self, env):
-        return subprocess.run(["bash", str(self.source / "scripts/prepare-sdk.sh")],
-                              env=env, capture_output=True, text=True, timeout=30)
-
-    def test_sdk_preparation_is_reproducible_without_incremental_cache(self):
-        env = self.sdk_fixture()
-        target = self.cache / "chain-sdk.tgz"
-        result = self.prepare_sdk(env)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        first = target.read_bytes()
-        with tarfile.open(target) as archive:
-            self.assertEqual(archive.getnames(), ["package/dist/index.js", "package/package.json"])
-            self.assertEqual(archive.extractfile("package/dist/index.js").read(), b"export const value = 1;\n")
-        result = self.prepare_sdk(env)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(first, target.read_bytes())
-        self.assertEqual(list(self.cache.glob("sdk.*")), [])
-
-    def test_sdk_failure_preserves_existing_input_and_cleans_staging(self):
-        env = self.sdk_fixture()
-        target = self.cache / "chain-sdk.tgz"
-        target.write_bytes(b"previous input")
-        self.sdk_lock("sha512-wrong")
-        for fail_build in ("0", "1"):
-            with self.subTest(fail_build=fail_build):
-                result = self.prepare_sdk({**env, "SDK_FAIL_BUILD": fail_build})
-                self.assertNotEqual(result.returncode, 0)
-                if fail_build == "0":
-                    self.assertIn("differs from package-lock.json", result.stderr)
-                self.assertEqual(target.read_bytes(), b"previous input")
-                self.assertEqual(list(self.cache.glob("sdk.*")), [])
 
 
 if __name__ == "__main__":

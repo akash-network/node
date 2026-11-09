@@ -49,8 +49,32 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24.22.1
-      - name: Prepare the locked SDK input
-        run: bash contracts/solana/scripts/prepare-sdk.sh
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Read node's SDK version
+        id: sdk
+        run: |
+          version=$(GOWORK=off go list -mod=readonly -m -f '{{.Version}}' pkg.akt.dev/go)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: akash-network/chain-sdk
+          ref: go/${{ steps.sdk.outputs.version }}
+          path: .cache/chain-sdk
+          persist-credentials: false
+      - name: Build the pinned TypeScript SDK
+        working-directory: .cache/chain-sdk/ts
+        run: |
+          umask 022
+          trap 'rm -rf "$GITHUB_WORKSPACE/.cache/chain-sdk"' EXIT
+          npm ci
+          npm run build
+          rm dist/tsconfig.build.tsbuildinfo
+          mkdir -p ../../solana
+          archive=$(npm pack --ignore-scripts --silent --pack-destination ../../solana)
+          mv "../../solana/$archive" ../../solana/chain-sdk.tgz
       - name: Install build tools
         run: |
           sudo apt-get update
