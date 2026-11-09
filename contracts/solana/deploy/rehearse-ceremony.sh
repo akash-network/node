@@ -115,10 +115,21 @@ emit guardian set-guardian --guardian "$vault"
 admin bundle --emit "$run/tx/metadata-guardian.json" "$run/tx/metadata.json" "$run/tx/guardian.json"
 ceremony_execute metadata-guardian
 
+# As in local/scale.ts, use the validator clock: it can lag wall time under load.
+clock_seconds=$(node - "$url" <<'JS'
+const { Connection, SYSVAR_CLOCK_PUBKEY } = require('@solana/web3.js');
+(async () => {
+  const clock = await new Connection(process.argv[2], 'finalized')
+    .getAccountInfo(SYSVAR_CLOCK_PUBKEY);
+  if (!clock || clock.data.length !== 40) throw new Error('Solana clock unavailable');
+  process.stdout.write(clock.data.readBigInt64LE(32).toString());
+})().catch(error => { console.error(error); process.exitCode = 1; });
+JS
+)
 # Synthetic checkpoint and deliberately small test limits, never launch inputs.
-python3 -I - > "$run/checkpoint.json" <<'PY'
-import datetime,json,secrets
-time=datetime.datetime.now(datetime.timezone.utc)-datetime.timedelta(seconds=5)
+python3 -I - "$clock_seconds" > "$run/checkpoint.json" <<'PY'
+import datetime,json,secrets,sys
+time=datetime.datetime.fromtimestamp(int(sys.argv[1])-5,datetime.timezone.utc)
 micros=int(time.timestamp())*1_000_000+time.microsecond
 print(json.dumps({"chainId":"akash-rehearsal-2","height":"1000",
  "time":time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),"timestamp":str(micros*1000),

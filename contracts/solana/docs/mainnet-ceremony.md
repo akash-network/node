@@ -12,6 +12,11 @@ the same portal deposit and proof process as every later transfer.
 
 ## 1. Prepare the reviewed release
 
+The prepared launch binaries, manifest, checksums and rebuild instructions are
+in [`deployments/mainnet`](../deployments/mainnet/README.md). Copy that directory
+outside the source tree before recording ceremony transactions, and complete
+the independent build comparison before deployment.
+
 Use the existing launch keypairs. A program ID is the public address of its
 program keypair, compiled into the binary; it is different from the AKT mint
 address. Do not generate replacements after reviewing or building the release.

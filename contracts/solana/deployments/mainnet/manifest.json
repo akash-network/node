@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "sourceCommit": "431953bb96a3cfdd1e1888210cae6dbf7d05a4ad",
+  "buildDirectory": "build",
+  "buildInfoSha256": "9e5b50cc680fcb7a8704112e7967d162b644c603192a5ecc73fa9242cec519e8",
+  "checksumsSha256": "211c9fe2e502b2ec48d55233ef2850c90672844ac66667fce33e863e9a1886d5",
+  "solanaGenesisHash": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
+  "ceremonyAuthority": "Dnkeog7YWG5Gc99E2qKJcMmoTx36zUQP1yTvfzJgv8mV",
+  "upgradeAuthority": "H2sXJRVW3SnTdFGjTXpGSsVKN2HnDaKc6xLRomS36H3U",
+  "programs": {
+    "access_manager": "HntLc7xrcRMRk9X38uMytCnweFJhVVCuzqhkVPe1RkCq",
+    "ics07_tendermint": "2dTK4NwEkv3gyY5dZnG4TuDYFMoNYQYrBqEGwTSmEmKr",
+    "akt": "98inUHb5mMaHWQZ9ut9PGrnmkMpncLZWWAyFwxCWagME"
+  }
+}
