@@ -74,7 +74,8 @@ npm run rehearse:ceremony -- "$MANIFEST" "$PROGRAM_KEYS"
 ```
 
 It uses disposable local authority keys, the real Squads v4 program, a 2-of-5
-test multisig, and a synthetic checkpoint. It exercises setup, the atomic
+test multisig, and a synthetic checkpoint. The local validator uses eight ticks
+per slot and waits for finalized blocks before setup. It exercises setup, the atomic
 handover, rejection of the retired signer, Squads activation, and guardian
 pause. It never uses the funded ceremony wallet or writes to mainnet. Evidence
 remains under `.cache/solana/run/`; disposable keys and the ledger are removed.

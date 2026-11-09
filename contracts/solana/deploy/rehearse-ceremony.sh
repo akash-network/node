@@ -44,14 +44,17 @@ solana --config /dev/null --url https://api.mainnet-beta.solana.com \
   program dump "$squads" "$run/squads.so" >/dev/null
 shasum -a 256 "$run/squads.so" > "$run/squads-binary.sha256"
 bash scripts/setup-metadata.sh
-AKT_LOCALNET_LEDGER="$run/ledger" bash scripts/localnet.sh --mint "$ceremony" --quiet \
+AKT_LOCALNET_LEDGER="$run/ledger" bash scripts/localnet.sh --mint "$ceremony" --quiet --ticks-per-slot 8 \
   --bpf-program "$squads" "$run/squads.so" \
   --account "$config" "$run/squads-config.json" > "$run/validator.log" 2>&1 &
 validator=$!
 ready=0
 for _ in $(seq 1 120); do
   kill -0 "$validator" 2>/dev/null || { echo "Local validator exited; see $run/validator.log" >&2; exit 1; }
-  if solana --config /dev/null --url "$url" cluster-version >/dev/null 2>&1; then ready=1; break; fi
+  # Preloaded ProgramData at slot zero becomes executable in a later bank.
+  # A listening RPC alone does not make it visible to finalized simulation.
+  slot=$(solana --config /dev/null --url "$url" --commitment finalized slot 2>/dev/null || true)
+  if [[ $slot =~ ^[0-9]+$ ]] && ((slot > 0)); then ready=1; break; fi
   sleep 1
 done
 [[ $ready == 1 ]] || { echo 'Local validator did not become ready.' >&2; exit 1; }
