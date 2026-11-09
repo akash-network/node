@@ -192,3 +192,20 @@ config uses its archive/snapshot mode with the validated service version;
 the workflow publishes the exact namespaced tag. No temporary `v*` tag is created.
 The existing node GoReleaser configuration remains unchanged. Native version
 lookups select only `v[0-9]*` tags so operator tags cannot become node versions.
+
+### Dependency review
+
+The operator release disables npm install scripts and rejects packages containing
+the native `bigint-buffer` binding. Zod includes the patched collection validator.
+These inherited advisory dispositions apply only to the packaged operator paths:
+
+| Dependency/advisories                                                                                           | Operator use                                                                                    |
+| --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `bigint-buffer`: GHSA-3gc7-fjrx-p6mg                                                                            | Uses the JavaScript fallback; the vulnerable native binding is not shipped.                     |
+| `toml`: GHSA-82x6-q7mm-w9cf, GHSA-v5mp-jgw5-2x6j, GHSA-4qx8-w7c3-pj3p, GHSA-9j65-hcg3-gc64, GHSA-9qmh-m7c6-f92p | Anchor's TOML workspace loader is not used; services construct programs from bundled JSON IDLs. |
+| `stream-json`: GHSA-528h-pc64-c93x, GHSA-hqr4-qq8f-hg3x, GHSA-mjw6-4jj6-33hc                                    | Uses web3's HTTP Jayson client, not its streaming server, filters or assembler.                 |
+| `uuid`: GHSA-w5hq-g745-h8pq                                                                                     | HTTP request IDs use `v4()`; affected caller-supplied v3/v5/v6 buffers are not used.            |
+
+These dependencies are not claimed to be fixed. The workflow records current
+advisories and fails on an ID absent from this review. Reassess the dispositions
+when dependencies or service call paths change.

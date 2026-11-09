@@ -1,6 +1,6 @@
 version: 2
-project_name: "akt-{{ .Env.OPERATOR_ROLE }}"
-dist: "{{ .Env.OPERATOR_DIST }}"
+project_name: akt-operators
+dist: ../operator-dist
 
 builds:
   - skip: true

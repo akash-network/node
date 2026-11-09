@@ -4,6 +4,9 @@ set -euo pipefail
 source "$(dirname "$0")/../scripts/workspace.sh"
 package=${1:?package directory required} role=${2:?role required}
 [[ "$role" =~ ^(relayer|reporter)$ ]]
+if find "$package/contracts/solana/node_modules/bigint-buffer" -name '*.node' -print -quit | grep -q .; then
+  echo 'Native bigint-buffer binding must not be shipped.' >&2; exit 1
+fi
 fixture=$(mktemp -d "$SOLANA_CACHE/operator-smoke.XXXXXX")
 trap 'rm -rf "$fixture"' EXIT
 command=$package/bin/akt-$role

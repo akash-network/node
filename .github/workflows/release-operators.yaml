@@ -58,7 +58,6 @@ jobs:
           [[ "$SDK_ARCHIVE_URL" == https://* ]]
           tag="$OPERATOR_ROLE/v$OPERATOR_VERSION"
           echo "OPERATOR_TAG=$tag" >> "$GITHUB_ENV"
-          echo "OPERATOR_DIST=$GITHUB_WORKSPACE/.cache/operator-dist" >> "$GITHUB_ENV"
           if [[ "$PUBLISH" == true ]]; then
             test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/$tag^{commit}")"
             if gh release view "$tag" --json isDraft > .release-state.json 2>/dev/null; then
@@ -85,6 +84,7 @@ jobs:
         run: |
           bash contracts/solana/deploy/prepare-services.sh
           cd contracts/solana
+          node deploy/audit-operator.mjs
           cargo test --locked --manifest-path tools/header-encoder/Cargo.toml
           shellcheck -x -P SCRIPTDIR deploy/{build-operator,node-runtime,operator,prepare-services,test-operator,test-operator-compose}.sh
       - name: Build the selected operator
@@ -112,7 +112,10 @@ jobs:
       - uses: docker/setup-buildx-action@v3
       - name: Build and exercise the actual image
         run: |
-          docker build --build-arg ROLE="$OPERATOR_ROLE" -f _build/akt-operator.Dockerfile \
+          docker build --target "$OPERATOR_ROLE" --build-arg ROLE="$OPERATOR_ROLE" -f _build/akt-operator.Dockerfile \
+            --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+            --label "org.opencontainers.image.revision=$(git rev-parse HEAD)" \
+            --label "org.opencontainers.image.version=$OPERATOR_VERSION" \
             -t "akt-$OPERATOR_ROLE:verify" .cache/operator-image
           docker run --rm --network none --read-only "akt-$OPERATOR_ROLE:verify" --version
           docker run --rm --network none --read-only "akt-$OPERATOR_ROLE:verify" --help
@@ -121,6 +124,11 @@ jobs:
         with:
           name: akt-${{ inputs.operator }}-${{ inputs.version }}
           path: .cache/operator-dist/*
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: akt-${{ inputs.operator }}-dependency-review
+          path: .cache/solana/operator-npm-audit.json
       - name: Create a draft operator release
         if: inputs.publish
         run: |
