@@ -133,9 +133,9 @@ before activation; config validation alone does not prove either.
 Route JSON alerts to paging and verify delivery. Inspect light-client age,
 relayer progress and spend, reporter observations, finalized resolution history,
 and reconciliation before accepting the release. See
-[monitoring](production-deployment.md#monitoring). The existing local monitor,
-reconciler and faucet/receipt server remain testnet tools; production monitoring
-and the separate production portal are explicit launch prerequisites.
+[monitoring](production-deployment.md#monitoring). The existing local monitor
+and reconciler remain testnet tools; production monitoring is an explicit
+launch prerequisite.
 
 ## Upgrade, rollback and recovery
 

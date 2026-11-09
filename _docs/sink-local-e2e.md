@@ -1,7 +1,7 @@
 # Test Sink locally with the CLI
 
 Run Akash, Solana, a relayer and seven reporters with Docker Compose. Deposit
-AKT, check the mint, then test a refund. No portal is needed.
+AKT, check the mint, then test a refund.
 
 ## Contents
 

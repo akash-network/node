@@ -35,7 +35,7 @@ operator role without code changes:
 
 - **Light client.** The bridge account pins the light-client deployment.
   `repin_light_client` moves it to any compatible deployment at any time, under
-  the upgrade authority. Relayer, reporters, monitor, portal and
+  the upgrade authority. Relayer, reporters, monitor and
   admin CLI read the pin from the bridge account every pass and alert when it
   changes.
 - **Relayers.** Minting and voiding are permissionless. Header updates need
@@ -106,8 +106,7 @@ evidence for the final release:
   access, backups and a service restart/rollback exercise.
 - The automatic Solana guardian pause on any supply mismatch that AEP-95
   requires, proven end to end. These repositories do not implement it yet.
-- Production portal and public versioned token metadata. `local/team.ts` is a
-  testnet adapter with a faucet; it is not the production API.
+- Public versioned token metadata.
 - Canary mint, void/refund after the production challenge period, cap boundaries
   and supply reconciliation using the exact deployed artifacts.
 
@@ -205,8 +204,7 @@ Change caps in this order:
 
 ## Infrastructure
 
-- Run the relayer, each reporter, monitoring and the portal on separate hosts.
-  Keep no keys on the portal host.
+- Run the relayer, each reporter and monitoring on separate hosts.
 - Each reporter runs its own Akash node and its own Solana RPC node. Finalized
   commitment does not authenticate a dishonest node, so reporters must not share
   one.

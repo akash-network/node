@@ -173,9 +173,8 @@ Also verify:
 - Mint supply and burns reconcile with native backing.
 - Monitoring and signer recovery work using the service runbooks.
 
-If deploying a testnet portal, verify its chain, genesis, program and mint, then
-test with a fresh wallet. The local faucet is testnet-only. Record unfinished
-checks separately, including unpaid refunds and untested full-state imports.
+Record unfinished checks separately, including unpaid refunds and untested
+full-state imports.
 
 ## Stop or recover
 

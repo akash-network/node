@@ -27,7 +27,7 @@ results:
   node binary, and three Solana programs (AKT program, ICS07 light client,
   access manager).
 - **Off-chain parts** (hosted): Akash nodes, Solana RPC nodes, the relayer,
-  reporters, monitoring and reconciliation, the portal, and the token metadata
+  reporters, monitoring and reconciliation, and the token metadata
   files.
 
 Trust model, in one line each:
@@ -42,32 +42,31 @@ Trust model, in one line each:
 
 ## Components
 
-| Component                     | What it runs                           | Count                                       | Who operates                                   | Public?     |
-| ----------------------------- | -------------------------------------- | ------------------------------------------- | ---------------------------------------------- | ----------- |
-| Akash full node               | `akash` with x/sink                    | 1 per relayer, reporter, monitor and portal | Each operator for their own                    | No          |
-| Solana RPC node               | Agave (`agave-validator` in RPC mode)  | 1 per reporter; 2 sources for the relayer   | Each operator for their own                    | No          |
-| Relayer                       | `local/relay.ts --config`              | 1 required, 2 or more recommended           | DevOps (and anyone else)                       | No          |
-| Reporter                      | `reporter/run.ts --watch --broadcast`  | 7 or more                                   | 7 independent operators; DevOps runs only ours | No          |
-| Monitoring and reconciliation | Alert rules plus the supply reconciler | 1                                           | DevOps                                         | No          |
-| Portal                        | Static web app plus a small API        | 1                                           | DevOps                                         | Yes (HTTPS) |
-| Token metadata                | `akt.json` and `akt.png`               | 1                                           | DevOps                                         | Yes (HTTPS) |
+| Component                     | What it runs                           | Count                                     | Who operates                                   | Public?     |
+| ----------------------------- | -------------------------------------- | ----------------------------------------- | ---------------------------------------------- | ----------- |
+| Akash full node               | `akash` with x/sink                    | 1 per relayer, reporter and monitor       | Each operator for their own                    | No          |
+| Solana RPC node               | Agave (`agave-validator` in RPC mode)  | 1 per reporter; 2 sources for the relayer | Each operator for their own                    | No          |
+| Relayer                       | `local/relay.ts --config`              | 1 required, 2 or more recommended         | DevOps (and anyone else)                       | No          |
+| Reporter                      | `reporter/run.ts --watch --broadcast`  | 7 or more                                 | 7 independent operators; DevOps runs only ours | No          |
+| Monitoring and reconciliation | Alert rules plus the supply reconciler | 1                                         | DevOps                                         | No          |
+| Token metadata                | `akt.json` and `akt.png`               | 1                                         | DevOps                                         | Yes (HTTPS) |
 
-Keep each component on its own host or VM. Never run the relayer, a reporter
-and the portal on one machine, and keep no keys on the portal host.
+Keep each component on its own host or VM. Separate relayer and reporter
+operators, credentials and hosts.
 
 ## Versions and artifacts
 
-| Item                        | Version                                                                                  | Source                                                             |
-| --------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| Akash node with x/sink      | Reviewed native Sink source and matching SDK dependency                                  | Build the reviewed node checkout and retain its source fingerprint |
-| Akash chain SDK             | Same local archive in the bridge and portal; retain its package version and archive hash | [SDK integration](sdk-integration.md)                              |
-| Agave (Solana)              | Pin the runtime and build tools in the reviewed deployment manifest                      | Retain the exact binary and its hash                               |
-| Relayer, reporter and tools | Reviewed `contracts/solana` source paired with that SDK and program IDL                  | Build with the checked-in package lock                             |
-| Node.js                     | 24.14.1                                                                                  | nodejs.org                                                         |
-| Rust                        | 1.89.0 (`contracts/solana/rust-toolchain.toml`)                                          | rustup                                                             |
-| Anchor CLI                  | 0.32.1                                                                                   | build host only                                                    |
-| Go                          | 1.26.2 (node `go.mod`)                                                                   | build host only                                                    |
-| Program hashes              | Record the ELF, IDL and generated TypeScript hashes from one build                       | `npm run build:verifiable` output and the deployment manifest      |
+| Item                        | Version                                                                 | Source                                                             |
+| --------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Akash node with x/sink      | Reviewed native Sink source and matching SDK dependency                 | Build the reviewed node checkout and retain its source fingerprint |
+| Akash chain SDK             | Reviewed SDK archive; retain its package version and archive hash       | [SDK integration](sdk-integration.md)                              |
+| Agave (Solana)              | Pin the runtime and build tools in the reviewed deployment manifest     | Retain the exact binary and its hash                               |
+| Relayer, reporter and tools | Reviewed `contracts/solana` source paired with that SDK and program IDL | Build with the checked-in package lock                             |
+| Node.js                     | 24.14.1                                                                 | nodejs.org                                                         |
+| Rust                        | 1.89.0 (`contracts/solana/rust-toolchain.toml`)                         | rustup                                                             |
+| Anchor CLI                  | 0.32.1                                                                  | build host only                                                    |
+| Go                          | 1.26.2 (node `go.mod`)                                                  | build host only                                                    |
+| Program hashes              | Record the ELF, IDL and generated TypeScript hashes from one build      | `npm run build:verifiable` output and the deployment manifest      |
 
 Build on a clean Linux builder and install immutable service artifacts using
 [service deployment](deploy-services.md). That process includes the locked
@@ -79,14 +78,14 @@ config, keys and relayer state outside the release directory.
 
 ### Akash full node
 
-| Need                                        | Value                                                                                                |
-| ------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| Binary                                      | `akash` with x/sink, run under cosmovisor                                                            |
-| Chain                                       | `akashnet-2`                                                                                         |
-| Ports used by our services                  | CometBFT RPC 26657, REST 1317, gRPC 9090                                                             |
-| Pruning, relayer's node                     | Keep at least one light-client trusting period of state (14 days). `pruning = "nothing"` is simplest |
-| Pruning, reporter, monitor and portal nodes | Default pruning is fine; they read the latest height                                                 |
-| Health                                      | Not catching up; latest block younger than 60 s                                                      |
+| Need                                | Value                                                                                                |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Binary                              | `akash` with x/sink, run under cosmovisor                                                            |
+| Chain                               | `akashnet-2`                                                                                         |
+| Ports used by our services          | CometBFT RPC 26657, REST 1317, gRPC 9090                                                             |
+| Pruning, relayer's node             | Keep at least one light-client trusting period of state (14 days). `pruning = "nothing"` is simplest |
+| Pruning, reporter and monitor nodes | Default pruning is fine; they read the latest height                                                 |
+| Health                              | Not catching up; latest block younger than 60 s                                                      |
 
 Upgrade notes (the chain upgrade that installs x/sink):
 
@@ -191,16 +190,6 @@ owns:
 | Disk above 70% on any host                                                                                                                     | Page                                |
 | Clock drift (NTP)                                                                                                                              | Page                                |
 
-### Portal
-
-| Need     | Value                                                                                                                                               |
-| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| What     | Static web app plus an API that reads Akash and Solana and proxies Akash RPC and REST for Keplr                                                     |
-| Inputs   | Its own Akash node (RPC, REST) and a Solana RPC                                                                                                     |
-| Keys     | None. Production has no faucet                                                                                                                      |
-| Exposure | Public HTTPS behind a CDN or load balancer with rate limits. Only the portal is public, never the nodes behind it                                   |
-| Status   | **TBD**: the portal lives in its own repository. The testnet server includes a faucet and testnet wording; a production server is still to be built |
-
 ### Token metadata
 
 | Need    | Value                                                                          |
@@ -214,7 +203,7 @@ See the [metadata launch gate](token-metadata.md#mainnet-launch-gate).
 
 ## Network and access
 
-- Only the portal and the metadata files are public. Nodes, relayer and
+- Metadata files are public. Nodes, relayer and
   reporters accept no inbound connections except from their own operators.
 - Akash and Solana P2P ports must be reachable by peers as each network
   requires; RPC ports must not be.
@@ -251,16 +240,15 @@ disk halted the test network for 29 hours and expired its light client.
 
 ## Failure effects
 
-| Failure                              | Effect                                                | Action                                                                                                                                                                  |
-| ------------------------------------ | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Relayer down                         | Transfers wait; nothing is lost                       | Restart; it resumes an interrupted upload from its state directory; a second relayer covers it                                                                          |
-| Relayer down near 14 days            | Light client expires; mints stop                      | Page early (client age alert). Recovery: deploy a new ICS07 instance, `init-client` from a new checkpoint and `repin` through the multisig; waiting transfers then mint |
-| More than 2 of 7 reporters down      | Transfers mint on Solana but stay pending on Akash    | Restore reporters; governance can settle a stalled transfer with `MsgRestartTransfer`, `MsgConfirmMint` or `MsgConfirmVoid`, using the current `expected_round`         |
-| Daily mint cap reached               | Transfers wait with their AKT locked on Akash         | None needed; they mint once the cap allows                                                                                                                              |
-| Solana RPC history gap               | Reporters cannot confirm older transfers              | Archive source; never shrink retention                                                                                                                                  |
-| Akash node misses upgrade height     | That service stops following the chain                | Manual cosmovisor switch (above)                                                                                                                                        |
-| Portal down                          | Users cannot use the web app; CLI deposits still work | Restart; no keys at risk                                                                                                                                                |
-| Key compromise or suspected bad mint |                                                       | Guardians pause; follow the [runbooks](production-deployment.md#incident-runbooks)                                                                                      |
+| Failure                              | Effect                                             | Action                                                                                                                                                                  |
+| ------------------------------------ | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Relayer down                         | Transfers wait; nothing is lost                    | Restart; it resumes an interrupted upload from its state directory; a second relayer covers it                                                                          |
+| Relayer down near 14 days            | Light client expires; mints stop                   | Page early (client age alert). Recovery: deploy a new ICS07 instance, `init-client` from a new checkpoint and `repin` through the multisig; waiting transfers then mint |
+| More than 2 of 7 reporters down      | Transfers mint on Solana but stay pending on Akash | Restore reporters; governance can settle a stalled transfer with `MsgRestartTransfer`, `MsgConfirmMint` or `MsgConfirmVoid`, using the current `expected_round`         |
+| Daily mint cap reached               | Transfers wait with their AKT locked on Akash      | None needed; they mint once the cap allows                                                                                                                              |
+| Solana RPC history gap               | Reporters cannot confirm older transfers           | Archive source; never shrink retention                                                                                                                                  |
+| Akash node misses upgrade height     | That service stops following the chain             | Manual cosmovisor switch (above)                                                                                                                                        |
+| Key compromise or suspected bad mint |                                                    | Guardians pause; follow the [runbooks](production-deployment.md#incident-runbooks)                                                                                      |
 
 ## Deployment order
 
@@ -282,12 +270,10 @@ disk halted the test network for 29 hours and expired its light client.
    ratio, challenge period, vaults, minimum, seed-window caps and x/sink
    guardian, and turns deposits and refunds on. The multisig enables minting
    right after it passes.
-7. Portal goes live at activation.
 
 ## Open items
 
 - Reviewed source fingerprints, binary hashes and artifact locations for the node, SDK and services.
-- Production portal server.
 - Configured production monitor and reconciler.
 - Reporter operators and their custody setup.
 - Who holds the guardians and multisig seats (decisions L1, L2, L3).
@@ -295,6 +281,5 @@ disk halted the test network for 29 hours and expired its light client.
 
 ## Testnet tooling
 
-The faucet and receipt adapter are documented with the
-[testnet workflow](testnetify.md#maintained-testnet-receipt-adapter). Production
-portal/API hosting is a separate release prerequisite.
+The [testnet workflow](testnetify.md) covers the chain services and local
+verification commands.

@@ -69,10 +69,8 @@ Retain a copy of the pinned binary for reproducibility, or review and
 repin the replacement. This fixture is for local testing, not a mainnet program
 deployment. Mainnet already has the Metaplex program.
 
-On test networks the portal serves `/token/akt.json` with the same name, symbol
-and logo URL. Its description explicitly marks it as a private testnet token,
-and its website link points to the test portal. The JSON allows cross-origin reads. No IPFS upload,
-public bucket, Metaplex registration or wallet-provider submission is needed.
+Host testnet metadata at a reachable URL and label the token as testnet in its
+description. Keep the JSON and image accessible to the clients used for testing.
 
 After the updated mint program is deployed and genesis is initialized, use the
 matching local profile, run name and **verified** genesis hash:
@@ -81,7 +79,7 @@ matching local profile, run name and **verified** genesis hash:
 export AKT_LOCAL_PROFILE=testnetify AKT_LOCAL_RUN=dev
 npm run local:metadata -- \
   --genesis YOUR_VERIFIED_LOCAL_GENESIS_HASH \
-  --uri https://YOUR_PORTAL/token/akt.json
+  --uri https://YOUR_METADATA_HOST/token/v1/akt.json
 ```
 
 The operator checks ledger identity, executable Metaplex program, reachable
@@ -104,7 +102,7 @@ do not expose the testnet to solve a wallet cache or proxy limitation.
 ## Mainnet launch gate
 
 - Use the approved [mainnet values](#mainnet-values) and JSON. Do not publish
-  the private-testnet portal's JSON as mainnet metadata.
+  private-testnet JSON as mainnet metadata.
 - Host JSON and the logo at durable, publicly readable HTTPS URLs with correct
   content types and no authentication. We can self-host them. No external
   approval or disclosure of source code or private keys is required. Use a
