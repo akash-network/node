@@ -66,7 +66,7 @@ test("ceremony accepts metadata and a Squads-style PDA guardian while activation
     ix.setTokenMetadata(
       akt,
       ceremony,
-      "https://raw.githubusercontent.com/akash-network/net/3174df54bb9c4b5c5523c985e43e1405d8cfbb4b/solana/mainnet/akt.json",
+      "https://raw.githubusercontent.com/akash-network/net/3c0b4cce5fd3ab197ea6375ad3de6e8417580217/solana/mainnet/akt.json",
     ),
     ix.setPauseGuardian(akt, ceremony, guardian),
   ]);

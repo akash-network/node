@@ -19,7 +19,7 @@ Use [`metadata/akt.json`](../metadata/akt.json) for mainnet:
 - Name: **Akash Network Token**
 - Symbol: **akt**
 - Decimals: **6**, set on the mint
-- Description: **AKT, the native token of Akash Network, on Solana.**
+- Description: **AKT, the native token of Akash Network.**
 - Website: **https://akash.network/**
 
 The image is the existing Cosmos AKT logo from the
@@ -28,8 +28,8 @@ an unchanged 800-by-800 PNG, copied into `akash-network/net`. The JSON pins
 the image commit in that repository. Its SHA-256 is
 `2f88bb209e166c871439b09c991046318d5fe0291a6f4b4711850d1f89725ce1`.
 
-The approved mainnet JSON is hosted in [akash-network/net](https://github.com/akash-network/net/blob/3174df54bb9c4b5c5523c985e43e1405d8cfbb4b/solana/mainnet/akt.json).
-Pass its [raw JSON URL](https://raw.githubusercontent.com/akash-network/net/3174df54bb9c4b5c5523c985e43e1405d8cfbb4b/solana/mainnet/akt.json)
+The approved mainnet JSON is hosted in [akash-network/net](https://github.com/akash-network/net/blob/3c0b4cce5fd3ab197ea6375ad3de6e8417580217/solana/mainnet/akt.json).
+Pass its [raw JSON URL](https://raw.githubusercontent.com/akash-network/net/3c0b4cce5fd3ab197ea6375ad3de6e8417580217/solana/mainnet/akt.json)
 to `set-token-metadata`. GitHub serves valid JSON as `text/plain; charset=utf-8`;
 verify the parsed body and the image bytes. Publishing this file does not set
 on-chain metadata. The token uses standard
