@@ -17,13 +17,6 @@ export async function loadSigner(path: string, expected?: string) {
       /^[0-9a-f]{64}$/.test(raw),
       "key file must contain a 32-byte lowercase hex secp256k1 key",
     );
-    const scalar = BigInt(`0x${raw}`);
-    assert.ok(
-      scalar > 0n &&
-        scalar <
-          0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141n,
-      "invalid signing key scalar",
-    );
     const key = Buffer.from(raw, "hex");
     const wallet = await DirectSecp256k1Wallet.fromKey(key, "akash");
     // The wallet retains the key for signing; never write it to output.

@@ -87,3 +87,23 @@ test("reporter key files reject seed phrases", async (t) => {
   });
   await assert.rejects(loadSigner(path), /32-byte lowercase hex secp256k1 key/);
 });
+
+test("reporter key imports reject invalid scalars and accept valid boundary keys", async (t) => {
+  const directory = await temporaryDirectory("operator-key-range-");
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const path = join(directory, "reporter.key");
+  const order = secp256k1.Point.Fn.ORDER;
+  for (const scalar of [0n, order, order + 1n]) {
+    await writeFile(path, scalar.toString(16).padStart(64, "0"), {
+      mode: 0o600,
+    });
+    await assert.rejects(loadSigner(path));
+  }
+  for (const scalar of [1n, order - 1n]) {
+    await writeFile(path, scalar.toString(16).padStart(64, "0"), {
+      mode: 0o600,
+    });
+    const wallet = await loadSigner(path);
+    assert.equal((await wallet.getAccounts()).length, 1);
+  }
+});
