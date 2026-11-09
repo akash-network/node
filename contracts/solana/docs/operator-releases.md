@@ -32,13 +32,17 @@ from [node releases](https://github.com/akash-network/node/releases):
 ```bash
 ROLE=reporter # or relayer
 VERSION=0.1.0
-TAG=$ROLE/v$VERSION
 mkdir -p "$HOME/akt-$ROLE"
 cd "$HOME/akt-$ROLE"
-BASE=https://github.com/akash-network/node/releases/download/$TAG
-curl -fL "$BASE/akt-$ROLE-compose.yaml" -o docker-compose.yaml
-curl -fL "$BASE/akt-$ROLE.env.example" -o .env
-curl -fL "$BASE/akt-$ROLE-config.example.json" -o config.json
+BASE=https://github.com/akash-network/node/releases/download/$ROLE%2Fv$VERSION
+curl -fLO "$BASE/akt-$ROLE-compose.yaml"
+curl -fLO "$BASE/akt-$ROLE.env.example"
+curl -fLO "$BASE/akt-$ROLE-config.example.json"
+curl -fLO "$BASE/akt-${ROLE}_${VERSION}_checksums.txt"
+sha256sum --ignore-missing --check "akt-${ROLE}_${VERSION}_checksums.txt"
+mv "akt-$ROLE-compose.yaml" docker-compose.yaml
+mv "akt-$ROLE.env.example" .env
+mv "akt-$ROLE-config.example.json" config.json
 ```
 
 Set the deployment identities and RPC URLs in `config.json`. Inside Docker, `127.0.0.1` means the
@@ -91,7 +95,9 @@ The reporter starts in **preview** mode. After governance admits its address
 and preview scans pass, enable signing explicitly:
 
 ```bash
-curl -fL "$BASE/akt-reporter-broadcast.yaml" -o broadcast.yaml
+curl -fL "$BASE/akt-reporter-broadcast.yaml" -o akt-reporter-broadcast.yaml
+sha256sum --ignore-missing --check "akt-reporter_${VERSION}_checksums.txt"
+mv akt-reporter-broadcast.yaml broadcast.yaml
 docker compose -f docker-compose.yaml -f broadcast.yaml up -d
 ```
 
@@ -144,9 +150,10 @@ For the selected `ROLE`, `VERSION` and `BASE` above:
 ASSET=akt-${ROLE}_${VERSION}_linux_amd64.tar.gz
 curl -fLO "$BASE/$ASSET"
 curl -fLO "$BASE/akt-${ROLE}_${VERSION}_checksums.txt"
-sha256sum --check "akt-${ROLE}_${VERSION}_checksums.txt"
+sha256sum --ignore-missing --check "akt-${ROLE}_${VERSION}_checksums.txt"
 mkdir "akt-$ROLE-$VERSION"
 tar -xzf "$ASSET" -C "akt-$ROLE-$VERSION"
+chmod -R a+rX,go-w "akt-$ROLE-$VERSION"
 "$PWD/akt-$ROLE-$VERSION/bin/akt-$ROLE" --version
 ```
 
@@ -186,6 +193,10 @@ exercises the extracted package and Docker Compose mounts before publishing.
    Keep `prerelease=true` until the deployment is qualified. The workflow
    verifies the tag, publishes `ghcr.io/akash-network/akt-ROLE:VERSION`, then
    publishes the GitHub release. Operator releases never become node's latest release.
+
+For the first image publication, set the GHCR package visibility to **Public**.
+The workflow checks anonymous image access before publishing the GitHub release;
+if that check stops the first run, change visibility and rerun the draft release.
 
 GoReleaser's free edition does not support monorepo tag prefixes. The dedicated
 config uses its archive/snapshot mode with the validated service version;

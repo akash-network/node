@@ -6,8 +6,9 @@ cd "$solana_repo"
 test -f "$SOLANA_CACHE/chain-sdk.tgz"
 npm ci
 python3 scripts/fetch-light-client.py
-out=$SOLANA_CACHE/service-inputs
-mkdir -p "$out" "$CARGO_TARGET_DIR/idl" "$CARGO_TARGET_DIR/types"
+out=$(mktemp -d "$SOLANA_CACHE/operator-interfaces.XXXXXX")
+trap 'rm -rf "$out"' EXIT
+mkdir -p "$CARGO_TARGET_DIR/idl" "$CARGO_TARGET_DIR/types"
 anchor idl build --program-name akt --out "$out/akt.json" --out-ts "$out/akt.ts" -- --locked
 cp "$out/akt.json" "$CARGO_TARGET_DIR/idl/"
 cp "$out/akt.ts" "$CARGO_TARGET_DIR/types/"
@@ -22,7 +23,6 @@ for program in ics07_tendermint access_manager; do
 done
 mkdir -p "$upstream/target/types"
 cp "$out/ics07_tendermint.ts" "$out/access_manager.ts" "$upstream/target/types/"
-printf 'commit %s\n' "$(git rev-parse HEAD)" > "$out/build-info.txt"
 npm run typecheck
 npm run test:services
 npm run test:deployment

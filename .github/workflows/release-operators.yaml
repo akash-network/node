@@ -60,10 +60,9 @@ jobs:
           echo "OPERATOR_TAG=$tag" >> "$GITHUB_ENV"
           if [[ "$PUBLISH" == true ]]; then
             test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/$tag^{commit}")"
-            if gh release view "$tag" --json isDraft > .release-state.json 2>/dev/null; then
-              test "$(jq -r .isDraft .release-state.json)" = true
+            if draft=$(gh release view "$tag" --json isDraft --jq .isDraft 2>/dev/null); then
+              test "$draft" = true
             fi
-            rm -f .release-state.json
           fi
       - uses: actions/setup-node@v4
         with:
@@ -97,6 +96,7 @@ jobs:
           args: release --snapshot --clean --config ${{ github.workspace }}/.goreleaser-operators.yaml
       - name: Verify the archived package
         run: |
+          umask 077
           mkdir -p .cache/operator-image/package
           cd .cache/operator-dist
           sha256sum --check "akt-${OPERATOR_ROLE}_${OPERATOR_VERSION}_checksums.txt"
@@ -109,6 +109,9 @@ jobs:
           if [[ "$OPERATOR_ROLE" == reporter ]]; then
             cp _run/akt-reporter/broadcast.yaml .cache/operator-dist/akt-reporter-broadcast.yaml
           fi
+          cd .cache/operator-dist
+          sha256sum ./*.yaml ./*.example ./*config.example.json >> "akt-${OPERATOR_ROLE}_${OPERATOR_VERSION}_checksums.txt"
+          sha256sum --check "akt-${OPERATOR_ROLE}_${OPERATOR_VERSION}_checksums.txt"
       - uses: docker/setup-buildx-action@v3
       - name: Build and exercise the actual image
         run: |
@@ -151,6 +154,13 @@ jobs:
           image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/akt-$OPERATOR_ROLE:$OPERATOR_VERSION"
           docker tag "akt-$OPERATOR_ROLE:verify" "$image"
           docker push "$image"
+          docker image inspect "$image" --format '{{index .RepoDigests 0}}' > .cache/operator-dist/image-digest.txt
+          gh release upload "$OPERATOR_TAG" .cache/operator-dist/image-digest.txt --clobber
+          mkdir -p .cache/anonymous-docker
+          docker --config "$PWD/.cache/anonymous-docker" manifest inspect "$image" >/dev/null || {
+            echo 'Set this GHCR package visibility to Public, then rerun. The GitHub release remains a draft.' >&2
+            exit 1
+          }
       - name: Publish the operator release
         if: inputs.publish
         env:

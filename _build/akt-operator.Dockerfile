@@ -8,6 +8,7 @@ ARG ROLE
 COPY package/ /opt/akt/
 RUN test "$ROLE" = relayer -o "$ROLE" = reporter \
     && test -x "/opt/akt/bin/akt-$ROLE" \
+    && find /opt/akt -type d -exec chmod 0755 {} + \
     && mkdir /data && chown 10001:10001 /data
 
 USER 10001:10001
