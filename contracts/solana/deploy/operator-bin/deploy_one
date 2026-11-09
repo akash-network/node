@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# Upload one missing program. --check performs only read-only checks.
+set -euo pipefail
+umask 077
+check=0
+if [[ ${1:-} == --check ]]; then check=1; shift; fi
+[[ $# == 1 ]] || {
+  echo 'usage: deploy_one [--check] access_manager|ics07_tendermint|akt' >&2
+  exit 2
+}
+program=$1
+case "$program" in access_manager|ics07_tendermint|akt) ;; *) exit 2 ;; esac
+for name in MANIFEST BUILD_DIR CEREMONY PROGRAM_KEYS CEREMONY_PUB GENESIS RPC RELEASE_DIR; do
+  [[ -n ${!name:-} ]] || { echo "Missing $name; enter the prepared launch directory." >&2; exit 2; }
+done
+cd "$(dirname "$0")/../.."
+manifest_value() { bash deploy/operator-bin/manifest_value "$1"; }
+node --import tsx deploy/programs.ts check --manifest "$MANIFEST"
+test "$GENESIS" = "$(manifest_value solanaGenesisHash)"
+test "$CEREMONY_PUB" = "$(manifest_value ceremonyAuthority)"
+test "$(solana-keygen pubkey "$CEREMONY")" = "$CEREMONY_PUB"
+id=$(manifest_value "programs.$program")
+test "$(solana-keygen pubkey "$PROGRAM_KEYS/$program-keypair.json")" = "$id"
+test "$(solana --config /dev/null --url "$RPC" genesis-hash)" = "$GENESIS"
+node - "$MANIFEST" "$BUILD_DIR" <<'JS'
+const assert = require('node:assert/strict');
+const { realpathSync } = require('node:fs');
+const { dirname, resolve } = require('node:path');
+const manifest = require(process.argv[2]);
+assert.equal(realpathSync(process.argv[3]), realpathSync(resolve(dirname(process.argv[2]), manifest.buildDirectory)));
+JS
+preflight=$(node --import tsx deploy/programs.ts preflight --manifest "$MANIFEST" --url "$RPC")
+printf '%s\n' "$preflight"
+printf '%s\n' "$preflight" | node -e '
+  let text = "";
+  process.stdin.setEncoding("utf8").on("data", part => text += part).on("end", () => {
+    const result = JSON.parse(text.slice(text.indexOf("{")));
+    if (!result.missing.includes(process.argv[1])) {
+      console.error("Program is already deployed; verify it instead of uploading again.");
+      process.exitCode = 1;
+    }
+  });
+' "$program"
+command=(solana --config /dev/null --url "$RPC" --keypair "$CEREMONY"
+  --commitment finalized program deploy "$BUILD_DIR/$program.so"
+  --program-id "$PROGRAM_KEYS/$program-keypair.json"
+  --upgrade-authority "$CEREMONY"
+  --max-len "$(( $(wc -c < "$BUILD_DIR/$program.so") ))"
+  --with-compute-unit-price 0)
+printf 'Upload command: '
+printf '%q ' "${command[@]}"
+printf '\n'
+if ((check)); then
+  echo 'Read-only checks passed. No transaction sent.'
+  exit 0
+fi
+mkdir -p "$RELEASE_DIR/logs"
+log=$(mktemp "$RELEASE_DIR/logs/$program-deploy.XXXXXX")
+printf 'Uploading %s. Private recovery log: %s\n' "$program" "$log"
+if "${command[@]}" > "$log" 2>&1; then
+  SOLANA_KEYPAIR="$CEREMONY" bash deploy/verify-program.sh --url "$RPC" \
+    "$id" "$BUILD_DIR/$program.so" "$CEREMONY_PUB"
+else
+  status=$?
+  printf 'Upload failed (exit %s). Keep %s private; it may contain buffer recovery material.\n' "$status" "$log" >&2
+  echo 'Check deployment state and recover the existing buffer before retrying.' >&2
+  exit "$status"
+fi

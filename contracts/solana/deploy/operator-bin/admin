@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+umask 077
+: "${GENESIS:?Enter the prepared launch directory first}"
+: "${RPC:?Enter the prepared launch directory first}"
+: "${AKT_ID:?Enter the prepared launch directory first}"
+cd "$(dirname "$0")/../.."
+exec node --import tsx local/bridge-admin.ts "$@" \
+  --genesis "$GENESIS" --url "$RPC" --akt-program "$AKT_ID"

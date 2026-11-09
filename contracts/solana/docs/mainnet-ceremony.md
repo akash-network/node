@@ -234,8 +234,11 @@ relayer cannot move the checkpoint height between them. Check the chain,
 checkpoint, limits, metadata, guardian, open-relaying marker, zero supply, and
 paused bridge. Start the relayer promptly to keep the client fresh; it waits
 on minting while the bridge is paused. The separate service branch and PR own
-Linux service builds and rollout; coordinate readiness using
-[service deployment](deploy-services.md).
+Linux service builds and rollout. Start reporters in preview after this setup;
+verify their sources, signer access and fees, then enable the intended reporters
+in broadcast mode before activating minting in Step 7. See the
+[service timing checklist](mainnet-launch-commands.md#when-the-linux-services-come-up)
+and [service deployment](deploy-services.md).
 
 ## 6. Hand all authority to Squads
 

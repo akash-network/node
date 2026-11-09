@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+: "${MANIFEST:?Enter the prepared launch directory first}"
+[[ $# == 1 && "$MANIFEST" == /* ]] || {
+  echo 'usage: manifest_value FIELD (MANIFEST must be absolute)' >&2
+  exit 2
+}
+exec node -e '
+  let value = require(process.argv[1]);
+  for (const key of process.argv[2].split(".")) value = value[key];
+  if (typeof value !== "string") throw new Error("Expected a string manifest field");
+  process.stdout.write(value);
+' "$MANIFEST" "$1"

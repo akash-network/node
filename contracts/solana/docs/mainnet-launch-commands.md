@@ -25,7 +25,37 @@ time lock is **0 seconds (none)**, matching the current on-chain setting.
 Before activation: the separately managed relayer, reporter and backing checks
 must be ready. Service builds are outside this procedure.
 
+## When the Linux services come up
+
+These services remain owned by the separate service branch/PR. Their commands
+run on the Linux hosts, not in the Mac deployment directory.
+
+- **Before Step 3:** prepare the relayer host, install its header encoder, choose
+  and fund its separate Solana payer, and provide `RELAYER_PUB`. The services
+  do not need to run yet for Step 2's program uploads.
+- **Immediately after Step 5:** start the relayer with the configured header
+  encoder and confirm the light-client height advances while minting is still
+  paused. Start reporters in preview and resolve configuration, RPC and alert
+  errors. The header encoder is invoked by the relayer; it is not another
+  Solana contract to deploy.
+- **Before Step 7:** complete reporter preview checks, verify governance-listed
+  reporter identities, signer access and Akash fee funding, then switch the
+  intended reporters to broadcast. Confirm the required reporter quorum,
+  relayer health, backing checks and monitoring before enabling minting.
+
+Follow the [Linux service commands](deploy-services.md#supervise-and-activate).
+Do not initialize the checkpoint and then leave the relayer offline indefinitely:
+the trusting period runs from the trusted header's timestamp.
+
 ## 0. Set local paths and public settings
+
+**Already prepared with direnv?** Enter the operator directory and let direnv
+load. `MANIFEST`, `BUILD_DIR`, `CEREMONY`, `PROGRAM_KEYS`, the public IDs and
+`admin` / `manifest_value` / `deploy_one` are already available. Keep using that
+same directory so transaction records persist. Skip this setup block; start at
+Step 2 after the read-only checks and release review are complete.
+
+For a new manual setup, use the block below.
 
 **Needs:** the prepared node checkout, Node 24/dependencies, Solana CLI 2.3.13,
 and the existing launch-key directory. Replace the two local paths below.
@@ -47,18 +77,12 @@ export GENESIS=5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d
 export MULTISIG_PROGRAM=SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf
 export METADATA_URI='https://raw.githubusercontent.com/akash-network/net/84b94d96287d3507830a1d9832f55925f24b8dc8/solana/mainnet/akt.json'
 
-manifest_value() {
-  node -e 'let v=require(process.argv[1]); for(const k of process.argv[2].split(".")) v=v[k]; process.stdout.write(v)' "$MANIFEST" "$1"
-}
+export PATH="$PWD/deploy/operator-bin:$PATH"
 export VAULT=$(manifest_value upgradeAuthority)
 export CEREMONY_PUB=$(manifest_value ceremonyAuthority)
 export AKT_ID=$(manifest_value programs.akt)
 export ICS07_ID=$(manifest_value programs.ics07_tendermint)
 export AM_ID=$(manifest_value programs.access_manager)
-admin() {
-  node --import tsx local/bridge-admin.ts "$@" \
-    --genesis "$GENESIS" --url "$RPC" --akt-program "$AKT_ID"
-}
 ```
 
 The command creates a fresh release directory; keep its path for this ceremony.
@@ -94,32 +118,33 @@ passed; it does not replace that comparison.
 **Needs:** reviewed build, funded ceremony key, the three existing program keys,
 and a successful mainnet preflight. Deploy only programs reported missing.
 
-Define the upload command; defining it sends nothing:
+The prepared `deploy_one` command checks release hashes, signer/program IDs,
+mainnet genesis and existing deployments before uploading. It refuses an
+already-deployed program and verifies the uploaded bytes and ceremony authority
+on success. Optional read-only previews are:
 
 ```bash
-deploy_one() {
-  local program="$1"
-  test "$(solana-keygen pubkey "$CEREMONY")" = "$CEREMONY_PUB" || return
-  test "$(solana-keygen pubkey "$PROGRAM_KEYS/$program-keypair.json")" = "$(manifest_value programs.$program)" || return
-  test "$(solana --config /dev/null --url "$RPC" genesis-hash)" = "$GENESIS" || return
-  solana --config /dev/null --url "$RPC" --keypair "$CEREMONY" \
-    --commitment finalized program deploy "$BUILD_DIR/$program.so" \
-    --program-id "$PROGRAM_KEYS/$program-keypair.json" \
-    --upgrade-authority "$CEREMONY" \
-    --max-len "$(( $(wc -c < "$BUILD_DIR/$program.so") ))" \
-    --with-compute-unit-price 0
-}
+deploy_one --check access_manager
+deploy_one --check ics07_tendermint
+deploy_one --check akt
 ```
 
-Run each separately, checking success before the next:
+Run each separately, checking success before the next. Each command below
+**sends mainnet transactions** and takes time to upload the binary.
+
+**Access manager:** deploys the role and administration program.
 
 ```bash
 deploy_one access_manager
 ```
 
+**Tendermint verifier:** deploys the program that verifies Akash headers and proofs.
+
 ```bash
 deploy_one ics07_tendermint
 ```
+
+**AKT mint:** deploys the token and bridge program; it does not mint tokens yet.
 
 ```bash
 deploy_one akt
@@ -131,8 +156,10 @@ Then verify the uploaded bytes and ceremony authority:
 npm run deploy:programs -- verify --manifest "$MANIFEST" --url "$RPC" --authority ceremony
 ```
 
-Keep upload logs private: interrupted uploads can print buffer recovery
-material. After a failure, rerun preflight and follow
+The helper captures upload output in owner-only files under `$RELEASE_DIR/logs`
+and prints their paths. Keep those files private: failed uploads may include
+buffer recovery material. It prints public verification results on success.
+After a failure, rerun preflight and follow
 [buffer recovery](deploy-program.md#4-deploy); do not blindly redeploy completed programs.
 
 ## 3. Initialize administration and the mint — write
@@ -140,6 +167,8 @@ material. After a failure, rerun preflight and follow
 **Does:** creates a paused mint with zero supply and enables explicit open relaying.
 **Needs:** verified deployments and `RELAYER_PUB` from the separate service team.
 That payer also receives the pruning role; it needs its own SOL for service work.
+In the prepared direnv workspace, put this public address in `inputs.env` so it
+persists when reopening the terminal. Do not put the private payer key there.
 
 ```bash
 : "${RELAYER_PUB:?Set the service payer public key first}"
@@ -240,8 +269,12 @@ admin show --access-manager "$AM_ID" > "$RELEASE_DIR/before-handover.json"
 ```
 
 Expect the agreed checkpoint, open relaying, supply `0` and minting still paused.
-The separate service team now keeps the client current. No treasury/seed transfer
-or recipient-vault allowlist is configured.
+**Start the relayer now on its Linux host**, with its configured header encoder.
+Run `admin show --access-manager "$AM_ID"` again after it has relayed a fresh
+header: require `client.status: active` and an advancing `client.latestHeight`,
+with `bridgeEnabled: false`. Start reporters in preview and review their results.
+Keep the relayer running through handover and afterward. No treasury/seed
+transfer or recipient-vault allowlist is configured.
 
 ## 6. Hand authority to Squads — prepare, review, write
 
@@ -273,7 +306,9 @@ zero and minting stays paused. Retire keys only under the agreed custody plan.
 
 **Does:** enables ordinary portal-backed minting.
 **Needs:** step 6, healthy relayer/reporter, backing checks, available Squads
-members for the required approvals. The confirmed time lock is zero seconds.
+members for the required approvals. Reporter preview, signer access and fee
+funding checks must have passed; the intended reporters must be broadcasting
+and meet the governed quorum. The confirmed time lock is zero seconds.
 
 ```bash
 admin set-bridge-enabled --enabled true \
