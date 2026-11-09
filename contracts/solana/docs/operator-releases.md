@@ -189,16 +189,24 @@ contracts. It builds generated interfaces from the checkout, tests the services,
 builds an installable package, uses GoReleaser for its archive/checksums, and
 exercises the extracted package and Docker Compose mounts before publishing.
 
-1. Merge the reviewed changes. Keep the locked SDK archive available at an HTTPS
-   URL; `npm ci` verifies its committed integrity. See [SDK integration](sdk-integration.md).
-2. Run `release-operators` with the role, version and SDK archive URL and
-   `publish=false`. Inspect its tests and downloadable artifacts.
-3. Create and push a signed tag at that same commit: `relayer/v0.1.0` or
-   `reporter/v0.1.0`. Their versions advance independently.
-4. Run the workflow on that tag with the same inputs and `publish=true`.
-   Keep `prerelease=true` until the deployment is qualified. The workflow
-   verifies the tag, publishes `ghcr.io/akash-network/akt-ROLE:VERSION`, then
-   publishes the GitHub release. Operator releases never become node's latest release.
+Merge the reviewed changes into `main`, then tag that commit:
+
+```bash
+git fetch origin main --tags
+git tag -s relayer/v0.1.0 origin/main -m 'akt-relayer v0.1.0'
+git push origin relayer/v0.1.0
+```
+
+Use `reporter/v0.1.0` to release the reporter independently. A tag ending in
+`-rc.1`, for example `relayer/v0.1.0-rc.1`, produces a prerelease; use this until
+the deployment is qualified.
+
+Pushing the tag automatically starts `release-operators`. It verifies that the
+commit is on `main`, prepares the [pinned SDK](sdk-integration.md), runs the
+checks above, then publishes the download, Compose files and
+`ghcr.io/akash-network/akt-ROLE:VERSION` image. The relayer package includes the
+Rust header encoder. No manual workflow inputs are needed. Operator releases
+never become node's latest release.
 
 For the first image publication, set the GHCR package visibility to **Public**.
 The workflow checks anonymous image access before publishing the GitHub release;

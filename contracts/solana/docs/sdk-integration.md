@@ -10,11 +10,20 @@ Canonical queries are `Transfer`, `Transfers`, `Disputes`, `Account`, `State`, `
 
 ## Supply the locked package
 
-Node's `go.mod` pins `pkg.akt.dev/go` and `pkg.akt.dev/go/cli` to chain-sdk `ea3d90b3757435b4adf1e1620f9a95be7a2b80da`. The services consume the TypeScript package `@akashnetwork/chain-sdk` `1.0.0-alpha.46` from `../../.cache/solana/chain-sdk.tgz`, locked by integrity in `package-lock.json`. That archive was built from chain-sdk `3b977f0785eef4a5cfdd06747a8084f2cd5161ba` with its own `npm run build` pipeline and consumed as a reviewed `.tgz` input; `ea3d90b3` changes only Go reporter validation, not the TypeScript package. Version alone does not identify this prerelease build. `npm ci`
-verifies its integrity against `package-lock.json`; `npm run setup` never builds
-or replaces it implicitly. Production packaging must receive that same archive.
-A published version can replace this input once the matching SDK is released;
-release/package publication is a separate task.
+Node's `go.mod` pins `pkg.akt.dev/go` and `pkg.akt.dev/go/cli` to chain-sdk `ea3d90b3757435b4adf1e1620f9a95be7a2b80da`. The services consume the TypeScript package `@akashnetwork/chain-sdk` `1.0.0-alpha.46` from `../../.cache/solana/chain-sdk.tgz`, locked by integrity in `package-lock.json`. The archive uses chain-sdk `3b977f0785eef4a5cfdd06747a8084f2cd5161ba`; `ea3d90b3` changes only Go reporter validation, not the TypeScript package. Version alone does not identify this prerelease build.
+
+From `contracts/solana`, prepare the exact input with Node 24.22.1:
+
+```bash
+bash scripts/prepare-sdk.sh
+```
+
+The script downloads that pinned source, runs its own `npm ci` and `npm run
+build`, and packs the output with fixed archive metadata, excluding TypeScript's
+machine-specific incremental-build cache. It verifies the committed integrity
+before replacing the local archive. Operator releases run this step
+automatically; `npm run setup` never builds or replaces it implicitly.
+`npm ci` also verifies the archive against `package-lock.json`.
 
 To update the dependency deliberately during SDK development, build the selected
 SDK checkout first, then pack it and review the resulting lockfile change:

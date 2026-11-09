@@ -1,35 +1,16 @@
 name: release-operators
 
 on:
-  workflow_dispatch:
-    inputs:
-      operator:
-        description: Service to build independently
-        type: choice
-        options: [relayer, reporter]
-        required: true
-      version:
-        description: Service version without v (for example 0.1.0)
-        type: string
-        required: true
-      sdk_archive_url:
-        description: HTTPS URL of the SDK archive matching the committed npm lock
-        type: string
-        required: true
-      publish:
-        description: Publish the matching relayer/vVERSION or reporter/vVERSION tag
-        type: boolean
-        default: false
-      prerelease:
-        description: Mark the operator release as a prerelease
-        type: boolean
-        default: true
+  push:
+    tags:
+      - relayer/v*
+      - reporter/v*
 
 permissions:
   contents: read
 
 concurrency:
-  group: operator-${{ inputs.operator }}-${{ inputs.version }}
+  group: operator-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -40,9 +21,6 @@ jobs:
       contents: write
       packages: write
     env:
-      OPERATOR_ROLE: ${{ inputs.operator }}
-      OPERATOR_VERSION: ${{ inputs.version }}
-      SDK_ARCHIVE_URL: ${{ inputs.sdk_archive_url }}
       CARGO_BUILD_JOBS: "4"
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
@@ -51,22 +29,28 @@ jobs:
           fetch-depth: 0
       - name: Check release identity
         env:
-          PUBLISH: ${{ inputs.publish }}
+          TAG: ${{ github.ref_name }}
         run: |
-          [[ "$OPERATOR_ROLE" =~ ^(relayer|reporter)$ ]]
-          [[ "$OPERATOR_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]
-          [[ "$SDK_ARCHIVE_URL" == https://* ]]
-          tag="$OPERATOR_ROLE/v$OPERATOR_VERSION"
-          echo "OPERATOR_TAG=$tag" >> "$GITHUB_ENV"
-          if [[ "$PUBLISH" == true ]]; then
-            test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/$tag^{commit}")"
-            if draft=$(gh release view "$tag" --json isDraft --jq .isDraft 2>/dev/null); then
-              test "$draft" = true
-            fi
+          [[ "$TAG" =~ ^(relayer|reporter)/v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[a-zA-Z0-9.-]+)?$ ]]
+          test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/$TAG^{commit}")"
+          git merge-base --is-ancestor HEAD origin/main
+          if draft=$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null); then
+            test "$draft" = true
           fi
+          version=${TAG#*/v}
+          prerelease=false
+          [[ "$version" != *-* ]] || prerelease=true
+          {
+            echo "OPERATOR_ROLE=${TAG%%/*}"
+            echo "OPERATOR_VERSION=$version"
+            echo "OPERATOR_TAG=$TAG"
+            echo "PRERELEASE=$prerelease"
+          } >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
           node-version: 24.22.1
+      - name: Prepare the locked SDK input
+        run: bash contracts/solana/scripts/prepare-sdk.sh
       - name: Install build tools
         run: |
           sudo apt-get update
@@ -74,11 +58,6 @@ jobs:
           rustup toolchain install 1.89.0 --profile minimal --component rustfmt,clippy
           bash contracts/solana/scripts/install-anchor.sh
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
-      - name: Supply the locked SDK input
-        run: |
-          mkdir -p .cache/solana
-          curl --fail --location --retry 3 --max-time 180 "$SDK_ARCHIVE_URL" -o .cache/solana/chain-sdk.tgz
-          # npm ci verifies package-lock.json integrity before code executes.
       - name: Build and test the selected operator
         run: |
           bash contracts/solana/deploy/build-operator.sh "$OPERATOR_ROLE" "$OPERATOR_VERSION" "$PWD/.cache/operator-package"
@@ -123,15 +102,14 @@ jobs:
           bash contracts/solana/deploy/test-operator-compose.sh "$OPERATOR_ROLE" "akt-$OPERATOR_ROLE:verify"
       - uses: actions/upload-artifact@v4
         with:
-          name: akt-${{ inputs.operator }}-${{ inputs.version }}
+          name: akt-${{ env.OPERATOR_ROLE }}-${{ env.OPERATOR_VERSION }}
           path: .cache/operator-dist/*
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: akt-${{ inputs.operator }}-dependency-review
+          name: akt-${{ env.OPERATOR_ROLE }}-dependency-review
           path: .cache/solana/operator-npm-audit.json
       - name: Create a draft operator release
-        if: inputs.publish
         run: |
           if ! gh release view "$OPERATOR_TAG" >/dev/null 2>&1; then
             gh release create "$OPERATOR_TAG" --verify-tag --draft --latest=false \
@@ -141,13 +119,11 @@ jobs:
           gh release upload "$OPERATOR_TAG" .cache/operator-dist/*.tar.gz .cache/operator-dist/*checksums.txt \
             .cache/operator-dist/*.yaml .cache/operator-dist/*.example .cache/operator-dist/*config.example.json --clobber
       - uses: docker/login-action@v3
-        if: inputs.publish
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish this operator image
-        if: inputs.publish
         run: |
           image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/akt-$OPERATOR_ROLE:$OPERATOR_VERSION"
           docker tag "akt-$OPERATOR_ROLE:verify" "$image"
@@ -160,7 +136,4 @@ jobs:
             exit 1
           }
       - name: Publish the operator release
-        if: inputs.publish
-        env:
-          PRERELEASE: ${{ inputs.prerelease }}
         run: gh release edit "$OPERATOR_TAG" --draft=false --latest=false --prerelease="$PRERELEASE"
