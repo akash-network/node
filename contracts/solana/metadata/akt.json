@@ -2,6 +2,6 @@
   "name": "Akash Network Token",
   "symbol": "akt",
   "description": "AKT, the native token of Akash Network.",
-  "image": "https://raw.githubusercontent.com/chainapsis/keplr-chain-registry/01ec438b4597b032cbf7a0dcdcd9c0300b2fb52b/images/akashnet/uakt.png",
+  "image": "https://raw.githubusercontent.com/akash-network/net/7eeeb75a09af5db44fd68566a5af8599e2c31760/solana/mainnet/akt.png",
   "external_url": "https://akash.network/"
 }
