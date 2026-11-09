@@ -112,9 +112,14 @@ The IBC source revision must be available to an independent builder. Record
 both commits in the release evidence. Local source changes and mutable branch
 names are not release inputs.
 
-The build scripts select `--provider.cluster mainnet` for the three launch
-programs. This selects their configuration; compiling does not send a transaction.
-The provider default and test-proxy mapping remain `localnet` for local testing.
+The launch mappings use `[programs.mainnet]`, selected explicitly by the build
+scripts. The AKT script prepares Anchor's `target/deploy` directory before
+configuration discovery: Anchor 0.32.1 otherwise generates and syncs new IDs
+when the localnet mapping is absent. New `target` paths point into the workspace
+cache; existing Anchor target directories are preserved. The provider default
+and test-proxy mapping remain `localnet` for local testing. Compiling does not
+send a transaction. The verifiable build rejects changes to committed
+lockfiles or program identities.
 
 ## 3. Reproducible build and hashes
 

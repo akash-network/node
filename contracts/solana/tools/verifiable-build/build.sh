@@ -9,14 +9,20 @@ cd /build/contracts/solana
 source scripts/workspace.sh
 python3 scripts/fetch-light-client.py > "$out/upstream.txt"
 
-locks=(Cargo.lock "$upstream/ibc-solana/Cargo.lock")
-before=$(sha256sum "${locks[@]}")
+inputs=(
+  Cargo.lock Anchor.toml programs/akt/src/lib.rs
+  "$upstream/ibc-solana/Cargo.lock"
+  "$upstream/ibc-solana/Anchor.toml"
+  "$upstream/ibc-solana/programs/ics07-tendermint/src/lib.rs"
+  "$upstream/ibc-solana/programs/access-manager/src/lib.rs"
+)
+before=$(sha256sum "${inputs[@]}")
 bash scripts/setup-light-client.sh
 bash scripts/build-programs.sh
-# Builds must not resolve dependencies differently from the committed locks,
+# Builds must preserve the committed dependency locks and program identities,
 # and must reproduce the committed CPI interfaces.
-if [[ "$(sha256sum "${locks[@]}")" != "$before" ]]; then
-  echo "A build changed a committed Cargo.lock" >&2
+if [[ "$(sha256sum "${inputs[@]}")" != "$before" ]]; then
+  echo "A build changed a committed lockfile or program identity" >&2
   exit 1
 fi
 cmp idls/ics07_tendermint.json "$upstream/ibc-solana/target/idl/ics07_tendermint.json"
