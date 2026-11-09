@@ -17,6 +17,7 @@
     "test": "bash scripts/test-contract.sh",
     "localnet": "bash scripts/localnet.sh",
     "rehearse:launch": "bash deploy/rehearse-launch.sh",
+    "rehearse:ceremony": "bash deploy/rehearse-ceremony.sh",
     "logs": "solana logs --url http://127.0.0.1:${AKT_LOCALNET_RPC_PORT:-17899}",
     "typecheck": "tsc --noEmit",
     "format": "cargo fmt --all && cargo fmt --manifest-path tools/header-encoder/Cargo.toml && prettier --write tests reporter local shared deploy package.json tsconfig.json README.md docs idls/README.md",
@@ -42,7 +43,7 @@
     "testnet:reconcile": "AKT_LOCAL_PROFILE=testnetify tsx local/reconcile.ts",
     "test:receipts": "tsx local/scale.ts receipts",
     "test:durable": "tsx --test local/durable.test.ts",
-    "test:ops": "tsx --test local/relay-policy.test.ts local/reconcile-policy.test.ts local/monitor.test.ts local/relay-config.test.ts local/admin-instructions.test.ts",
+    "test:ops": "tsx --test local/relay-policy.test.ts local/reconcile-policy.test.ts local/monitor.test.ts local/relay-config.test.ts local/admin-instructions.test.ts local/ceremony.test.ts",
     "test:recovery": "tsx local/scale.ts recovery",
     "test:misbehaviour": "tsx local/scale.ts misbehaviour",
     "test:expiry": "tsx local/scale.ts expiry",
@@ -81,6 +82,7 @@
     "zod": "4.6.5"
   },
   "devDependencies": {
+    "@sqds/multisig": "2.1.4",
     "@types/node": "24.19.1",
     "prettier": "3.9.9",
     "typescript": "5.9.3"

@@ -3,7 +3,8 @@ import { MerkleProof } from "cosmjs-types/ibc/core/commitment/v1/commitment";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { toBech32 } from "@cosmjs/encoding";
-import { BN, web3 } from "@coral-xyz/anchor";
+import { BN, web3, type IdlTypes } from "@coral-xyz/anchor";
+import type { Akt } from "../../../.cache/solana/target/types/akt";
 import {
   type TransferState,
   RecordData,
@@ -161,7 +162,7 @@ export function settlementProofValue(
   return Buffer.from(value);
 }
 export function matchesAnchorId(
-  value: ReturnType<typeof anchorId>,
+  value: IdlTypes<Akt>["transferId"],
   id: SinkId,
 ): boolean {
   const expected = anchorId(id);

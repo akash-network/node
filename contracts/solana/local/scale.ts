@@ -491,16 +491,20 @@ async function testOpenRelaying(
     Uint8Array.from(
       JSON.parse(
         await readFile(
-          join(
-            DEPS,
-            "ibc-contracts/solana-keypairs/localnet/ics07_tendermint-keypair.json",
-          ),
+          process.env.AKT_OPEN_RELAYING_PROGRAM_KEYPAIR ??
+            join(
+              DEPS,
+              "ibc-contracts/solana-keypairs/localnet/ics07_tendermint-keypair.json",
+            ),
           "utf8",
         ),
       ),
     ),
   );
-  assert.ok(programKey.publicKey.equals(CLIENT_ID));
+  assert.ok(
+    programKey.publicKey.equals(CLIENT_ID),
+    "Set AKT_OPEN_RELAYING_PROGRAM_KEYPAIR to the keypair matching the built verifier",
+  );
   const loader = new web3.PublicKey(
     "BPFLoaderUpgradeab1e11111111111111111111111",
   );

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { AnchorProvider, Program, web3 } from "@coral-xyz/anchor";
@@ -13,7 +13,13 @@ import type { Ics07Tendermint } from "../../../.cache/solana/deps/ibc-contracts/
 import type { AccessManager } from "../../../.cache/solana/deps/ibc-contracts/ibc-solana/target/types/access_manager";
 import { readTokenMetadata } from "../shared/token-metadata";
 import { MAINNET_GENESIS } from "../shared/networks";
+import { checkRelease, verifyProgram } from "../deploy/programs";
 import * as ix from "./admin-instructions";
+import {
+  ceremonyBundle,
+  handoverInstructions,
+  type LaunchManifest,
+} from "./ceremony";
 import { LE64, PROGRAM_ID, ROOT, SOLANA_RPC, json, pda } from "./common";
 
 // Bridge administration. Every chain command needs the verified Solana genesis
@@ -44,6 +50,10 @@ import { LE64, PROGRAM_ID, ROOT, SOLANA_RPC, json, pda } from "./common";
 //   grant-relayer --key KEY | revoke-relayer --key KEY [--program ID]
 //   open-relaying | close-relaying [--program ID]
 //   upgrade-program --program ID --buffer KEY [--spill KEY] [--expect-sha256 HEX]
+//   ceremony-handover --manifest FILE --emit FILE --authority CEREMONY
+// Ceremony setup, before authority handover:
+//   ceremony-execute FILE --manifest FILE --keypair PATH
+//   Add --rehearsal only for an isolated loopback validator.
 // Read-only:
 //   show [--program ID] [--access-manager ID] | relayers [--program ID]
 //   events --signature SIG    AKT events of a transaction, also inside a CPI
@@ -100,6 +110,8 @@ function options() {
       "cpi-proxy": { type: "string" },
       signature: { type: "string" },
       out: { type: "string" },
+      manifest: { type: "string" },
+      rehearsal: { type: "boolean", default: false },
     },
   });
 }
@@ -313,6 +325,112 @@ async function requireAuthority(
   return info;
 }
 
+async function ceremonyRelease(ctx: Context) {
+  assert.ok(ctx.values.manifest, "Pass --manifest with the reviewed release");
+  const release = await checkRelease(ctx.values.manifest);
+  const { manifest, directory } = release;
+  if (ctx.values.rehearsal) {
+    const rpc = new URL(ctx.values.url ?? SOLANA_RPC);
+    assert.ok(
+      ["127.0.0.1", "localhost", "[::1]"].includes(rpc.hostname),
+      "rehearsals require an isolated loopback RPC",
+    );
+    assert.notEqual(
+      ctx.genesis,
+      MAINNET_GENESIS,
+      "mainnet is never a rehearsal",
+    );
+  } else {
+    assert.equal(
+      ctx.genesis,
+      manifest.solanaGenesisHash,
+      "release names another cluster",
+    );
+  }
+  assert.equal(
+    ctx.authority.toBase58(),
+    manifest.ceremonyAuthority,
+    "wrong ceremony signer",
+  );
+  assert.equal(
+    ctx.aktId.toBase58(),
+    manifest.programs.akt,
+    "wrong AKT program",
+  );
+  for (const [name, id] of Object.entries(manifest.programs))
+    await verifyProgram(
+      ctx.connection,
+      new web3.PublicKey(id),
+      await readFile(join(directory, `${name}.so`)),
+      manifest.ceremonyAuthority,
+    );
+  assert.equal(
+    (await launch(ctx)).bridgeEnabled,
+    false,
+    "ceremony requires paused minting",
+  );
+  assert.equal((await token(ctx)).supply, "0", "ceremony requires zero supply");
+  const access = await accessState(
+    ctx.wallet,
+    new web3.PublicKey(manifest.programs.access_manager),
+  );
+  assert.deepEqual(
+    base58(access.admins),
+    [manifest.ceremonyAuthority],
+    "ceremony must be the sole access-manager admin",
+  );
+  return release;
+}
+
+async function readyForHandover(ctx: Context, manifest: LaunchManifest) {
+  const client = new web3.PublicKey(manifest.programs.ics07_tendermint);
+  const bridge = await bridgeConfig(ctx);
+  assert.ok(
+    bridge.lightClientProgram.equals(client),
+    "bridge pins another light client",
+  );
+  const status = await clientStatus(ctx.wallet, client);
+  assert.equal(status.status, "active", "light client must be active");
+  assert.equal(
+    status.chainId,
+    bridge.chainId,
+    "bridge and client chains differ",
+  );
+  const relay = await relaying(ctx.wallet, client);
+  assert.equal(
+    relay.program.toBase58(),
+    manifest.programs.access_manager,
+    "wrong access manager",
+  );
+  assert.equal(
+    relay.summary.pendingAccessManager,
+    null,
+    "pending access-manager migration",
+  );
+  assert.ok(relay.summary.openRelaying, "explicit open relaying is required");
+  assert.ok(
+    base58(relay.cpiCallers).includes(
+      "SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf",
+    ),
+    "Squads v4 CPI caller is not configured",
+  );
+  assert.equal(
+    await guardianKey(ctx),
+    manifest.upgradeAuthority,
+    "pause guardian must be the Squads vault",
+  );
+  assert.equal(bridge.policy.vaults.length, 0, "launch has no seed allocation");
+  const metadata = await readTokenMetadata(ctx.connection, ctx.addresses.mint);
+  assert.ok(metadata, "token metadata is not configured");
+  return {
+    client: printable(status),
+    relaying: relay.summary,
+    guardian: await guardianKey(ctx),
+    metadataUri: metadata.uri,
+    policy: showPolicy(bridge.policy),
+  };
+}
+
 function policyFrom(values: Values): ix.MintPolicy {
   return {
     perTransferMax: ix.u64(values["per-transfer-max"], "--per-transfer-max"),
@@ -502,6 +620,21 @@ async function plan(command: string, ctx: Context): Promise<Plan> {
   };
 
   switch (command) {
+    case "ceremony-handover": {
+      assert.ok(ctx.emit, "emit the handover for review before executing it");
+      const { manifest } = await ceremonyRelease(ctx);
+      const checks = await readyForHandover(ctx, manifest);
+      return {
+        instructions: handoverInstructions(manifest),
+        checks: { ...checks, newAuthority: manifest.upgradeAuthority },
+        deployments: {
+          access_manager: new web3.PublicKey(manifest.programs.access_manager),
+          ics07_tendermint: new web3.PublicKey(
+            manifest.programs.ics07_tendermint,
+          ),
+        },
+      };
+    }
     case "initialize": {
       assert.equal(
         await program.account.launchConfig.fetchNullable(
@@ -1141,8 +1274,12 @@ async function main() {
   } else {
     if (mainnet)
       assert.ok(
-        ["initialize", "init-access-manager", "pause"].includes(command) &&
-          values.keypair,
+        [
+          "initialize",
+          "init-access-manager",
+          "pause",
+          "ceremony-execute",
+        ].includes(command) && values.keypair,
         "Mainnet admin changes go through the multisig: pass --emit FILE --authority VAULT",
       );
     signer = await keypair(values.keypair ?? join(ROOT, "solana-keypair.json"));
@@ -1215,6 +1352,56 @@ async function main() {
     program: new Program<Akt>({ ...idl, address: aktId.toBase58() }, wallet),
     addresses: ix.aktAddresses(aktId),
   };
+
+  if (command === "ceremony-execute") {
+    assert.ok(
+      signer && values.keypair,
+      "Pass the ceremony --keypair explicitly",
+    );
+    assert.ok(
+      !emit && !values["cpi-proxy"],
+      "ceremony execution signs directly",
+    );
+    assert.equal(inputs.length, 1, "Pass one reviewed bundle");
+    const { manifest, directory } = await ceremonyRelease(ctx);
+    const bundle = ceremonyBundle(await json(inputs[0]), manifest, genesis);
+    if (bundle.phase === "handover") await readyForHandover(ctx, manifest);
+    const signature = await send(connection, bundle.instructions, [signer]);
+    assert.equal(
+      (await launch(ctx)).bridgeEnabled,
+      false,
+      "minting must remain paused",
+    );
+    assert.equal((await token(ctx)).supply, "0", "supply must remain zero");
+    if (bundle.phase === "handover") {
+      for (const [name, id] of Object.entries(manifest.programs))
+        await verifyProgram(
+          connection,
+          new web3.PublicKey(id),
+          await readFile(join(directory, `${name}.so`)),
+          manifest.upgradeAuthority,
+        );
+      const access = await accessState(
+        wallet,
+        new web3.PublicKey(manifest.programs.access_manager),
+      );
+      assert.deepEqual(base58(access.admins), [manifest.upgradeAuthority]);
+    }
+    process.stdout.write(
+      JSON.stringify(
+        ix.plain({
+          command,
+          phase: bundle.phase,
+          signature,
+          events: await transactionEvents(connection, signature, ctx.akt),
+          state: await show(ctx),
+        }),
+        null,
+        2,
+      ) + "\n",
+    );
+    return;
+  }
 
   if (command === "show") {
     console.log(JSON.stringify(await show(ctx), null, 2));

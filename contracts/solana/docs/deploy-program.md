@@ -6,6 +6,10 @@ by a time-locked multisig. [Production deployment](production-deployment.md)
 decides who holds each power and which values to use; this page says how.
 Nothing here has run on mainnet.
 
+For a launch with no seed allocation, explicit open relaying, and setup before
+the Squads authority handover, use [the setup-first ceremony](mainnet-ceremony.md).
+That sequence replaces this page's early handover and seed-window steps.
+
 `bash deploy/rehearse-launch.sh` runs steps 4 to 9 below, then a guardian
 pause, a re-pin and a program upgrade, on a temporary local validator, with a
 keypair standing in for the multisig vault. It executes each

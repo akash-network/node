@@ -321,7 +321,7 @@ export class SolanaObserver {
     const slot = BigInt(status.resolvedAtSlot.toString());
     assert.ok(slot > 0n && slot <= contextSlot, "status is not finalized");
     let outcome: Outcome;
-    if ("minted" in status.outcome) {
+    if (status.outcome.minted !== undefined) {
       assert.equal(
         BigInt(status.outcome.minted.amount.toString()),
         record.amount,
@@ -332,7 +332,7 @@ export class SolanaObserver {
         "mint recipient differs from Akash deposit",
       );
       outcome = Outcome.OUTCOME_MINTED;
-    } else if ("voided" in status.outcome) {
+    } else if (status.outcome.voided !== undefined) {
       outcome = Outcome.OUTCOME_VOIDED;
     } else {
       throw new Error("unknown transfer outcome");
@@ -434,8 +434,8 @@ export class SolanaObserver {
           matchesAnchorId(event.id, record.id) &&
           BigInt(event.proofHeight.toString()) > record.height &&
           BigInt(event.resolvedAtSlot.toString()) === BigInt(tx.slot) &&
-          kind in event.outcome &&
-          (!("minted" in event.outcome) ||
+          event.outcome[kind] !== undefined &&
+          (event.outcome.minted === undefined ||
             (event.outcome.minted.recipient.equals(record.recipient) &&
               BigInt(event.outcome.minted.amount.toString()) ===
                 record.amount)),

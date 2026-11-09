@@ -427,6 +427,29 @@ export const revokeRole = (
   account: web3.PublicKey,
 ) => roleChange("revoke_role", program, admin, role, account);
 
+export function handoverAccessManager(
+  program: IdlProgram,
+  signer: web3.PublicKey,
+  vault: web3.PublicKey,
+) {
+  assert.ok(
+    !signer.equals(vault),
+    "new admin must differ from ceremony signer",
+  );
+  return [
+    grantRole(program, signer, ADMIN_ROLE, vault),
+    program.instruction(
+      "renounce_role",
+      { role_id: bn(ADMIN_ROLE) },
+      {
+        access_manager: accessManagerState(program.programId),
+        caller: signer,
+        instructions_sysvar: web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+      },
+    ),
+  ];
+}
+
 // The access manager's initialize rejects CPI, so a multisig cannot run it.
 // Its upgrade authority (the ceremony key) initializes it as the first admin,
 // allows the multisig program to call admin instructions by CPI, hands
@@ -465,14 +488,7 @@ export function initAccessManager(
   for (const relayer of relayers)
     instructions.push(grantRole(program, signer, RELAYER_ROLE, relayer));
   if (!admin.equals(signer))
-    instructions.push(
-      grantRole(program, signer, ADMIN_ROLE, admin),
-      program.instruction(
-        "renounce_role",
-        { role_id: bn(ADMIN_ROLE) },
-        { access_manager: state, caller: signer, instructions_sysvar: sysvar },
-      ),
-    );
+    instructions.push(...handoverAccessManager(program, signer, admin));
   return instructions;
 }
 
@@ -558,6 +574,32 @@ const UPGRADE_ACCOUNTS: FlatAccount[] = [
   { name: "clock", writable: false, signer: false },
   { name: "authority", writable: false, signer: true },
 ];
+
+const SET_AUTHORITY_ACCOUNTS: FlatAccount[] = [
+  { name: "program_data", writable: true, signer: false },
+  { name: "authority", writable: false, signer: true },
+  { name: "new_authority", writable: false, signer: false },
+];
+
+// Loader-v3 SetAuthority accepts a PDA such as a Squads vault as the new
+// authority. The current authority signs; the PDA does not sign this transfer.
+export function setUpgradeAuthority(
+  program: web3.PublicKey,
+  authority: web3.PublicKey,
+  vault: web3.PublicKey,
+) {
+  assert.ok(!vault.equals(web3.PublicKey.default), "new authority is required");
+  const keys = [programData(program), authority, vault];
+  return new web3.TransactionInstruction({
+    programId: BPF_LOADER_UPGRADEABLE,
+    keys: SET_AUTHORITY_ACCOUNTS.map((account, index) => ({
+      pubkey: keys[index],
+      isSigner: account.signer,
+      isWritable: account.writable,
+    })),
+    data: Buffer.from([4, 0, 0, 0]),
+  });
+}
 
 // BPF upgradeable loader Upgrade (instruction 3): replaces the program with a
 // buffer whose authority is the program's upgrade authority. The buffer's
@@ -682,24 +724,30 @@ export function decodeInstruction(
   let program: IdlProgram | undefined;
   if (name === "bpf_loader_upgradeable") {
     assert.ok(ix.programId.equals(BPF_LOADER_UPGRADEABLE), "not the loader");
-    assert.ok(
-      ix.data.equals(Buffer.from([3, 0, 0, 0])),
-      "only the loader's Upgrade instruction is supported",
-    );
-    instruction = "upgrade";
-    args = {};
-    expected = UPGRADE_ACCOUNTS.map((account, index) =>
-      index === 4
-        ? { ...account, address: web3.SYSVAR_RENT_PUBKEY.toBase58() }
-        : index === 5
-          ? { ...account, address: web3.SYSVAR_CLOCK_PUBKEY.toBase58() }
-          : account,
-    );
-    assert.ok(
-      ix.keys.length === expected.length &&
-        programData(ix.keys[1].pubkey).equals(ix.keys[0].pubkey),
-      "program_data does not belong to program",
-    );
+    if (ix.data.equals(Buffer.from([4, 0, 0, 0]))) {
+      instruction = "set_authority";
+      args = {};
+      expected = SET_AUTHORITY_ACCOUNTS;
+    } else {
+      assert.ok(
+        ix.data.equals(Buffer.from([3, 0, 0, 0])),
+        "only the loader's Upgrade and SetAuthority instructions are supported",
+      );
+      instruction = "upgrade";
+      args = {};
+      expected = UPGRADE_ACCOUNTS.map((account, index) =>
+        index === 4
+          ? { ...account, address: web3.SYSVAR_RENT_PUBKEY.toBase58() }
+          : index === 5
+            ? { ...account, address: web3.SYSVAR_CLOCK_PUBKEY.toBase58() }
+            : account,
+      );
+      assert.ok(
+        ix.keys.length === expected.length &&
+          programData(ix.keys[1].pubkey).equals(ix.keys[0].pubkey),
+        "program_data does not belong to program",
+      );
+    }
   } else {
     program = new IdlProgram(name, ix.programId);
     let decoded: ReturnType<typeof program.coder.instruction.decode>;
