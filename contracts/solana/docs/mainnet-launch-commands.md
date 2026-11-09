@@ -20,8 +20,8 @@ Before the first write: independent build/hash comparison and human launch revie
 including the [recorded compiler diagnostics](../deployments/mainnet/README.md#verification).
 The [selected checkpoint](../deployments/mainnet/checkpoint-29447440.json), three
 RPC URLs and concrete trust settings are supplied in Step 5. Review these launch
-settings before initialization. The separate service team still needs to supply
-its funded relayer payer public address before Step 3.
+settings before initialization. All three funded relayer payer addresses supplied
+by the service team are included in Step 3 and loaded in the prepared workspace.
 Before handover: confirm Squads control, members, threshold and access to its
 custom transaction builder. Observed threshold: **2 of 5**. The confirmed launch
 time lock is **0 seconds (none)**, matching the current on-chain setting.
@@ -30,14 +30,14 @@ must be ready. Service builds are outside this procedure.
 
 ## Inputs still needed
 
-| Before | Input or evidence still needed                                                                                                                                                      |
-| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Step 2 | Independent second-machine build/hash comparison and human release review. Completion is not recorded. No missing upload variables or flags in the prepared workspace.              |
-| Step 3 | `RELAYER_PUB`: the separate Linux relayer's funded Solana payer public address. It receives pruning permission; open relaying does not require this role for other header relayers. |
-| Step 5 | Relayer host and encoder ready to start; review the concrete checkpoint and trust settings below. Independent checkpoint holders compare the supplied checkpoint.                   |
-| Step 6 | Actual Squads member control and transaction-builder access; verify the observed 2-of-5 threshold and zero time lock.                                                               |
-| Step 7 | Running relayer, intended reporter quorum broadcasting, backing checks, monitoring and portal readiness from the separate service rollout.                                          |
-| Step 8 | `ACTIVATION_SIGNATURE`, produced by Step 7, and an agreed ordinary portal transfer amount/destination. This signature cannot exist in advance.                                      |
+| Before | Input or evidence still needed                                                                                                                                         |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Step 2 | Independent second-machine build/hash comparison and human release review. Completion is not recorded. No missing upload variables or flags in the prepared workspace. |
+| Step 3 | Three funded relayer payers are supplied below; confirm the operators control them. Their private keys stay on their service hosts.                                    |
+| Step 5 | Relayer host and encoder ready to start; review the concrete checkpoint and trust settings below. Independent checkpoint holders compare the supplied checkpoint.      |
+| Step 6 | Actual Squads member control and transaction-builder access; verify the observed 2-of-5 threshold and zero time lock.                                                  |
+| Step 7 | Running relayer, intended reporter quorum broadcasting, backing checks, monitoring and portal readiness from the separate service rollout.                             |
+| Step 8 | `ACTIVATION_SIGNATURE`, produced by Step 7, and an agreed ordinary portal transfer amount/destination. This signature cannot exist in advance.                         |
 
 No treasury address, seed amount or additional program ID is needed. The ceremony
 wallet signs and pays for Steps 2–6. Squads members approve and execute Step 7.
@@ -48,8 +48,8 @@ The relayer uses its separate payer once it starts.
 These services remain owned by the separate service branch/PR. Their commands
 run on the Linux hosts, not in the Mac deployment directory.
 
-- **Before Step 3:** prepare the relayer host, install its header encoder, choose
-  and fund its separate Solana payer, and provide `RELAYER_PUB`. The services
+- **Before Step 3:** prepare the relayer host, install its header encoder, confirm
+  the three separately funded Solana payers listed in Step 3. The services
   do not need to run yet for Step 2's program uploads.
 - **Immediately after Step 5:** start the relayer with the configured header
   encoder and confirm the light-client height advances while minting is still
@@ -190,16 +190,40 @@ After a failure, rerun preflight and follow
 ## 3. Initialize administration and the mint — write
 
 **Does:** creates a paused mint with zero supply and enables explicit open relaying.
-**Needs:** verified deployments and `RELAYER_PUB` from the separate service team.
-That payer also receives the pruning role; it needs its own SOL for service work.
-In the prepared direnv workspace, put this public address in `inputs.env` so it
-persists when reopening the terminal. Do not put the private payer key there.
+**Needs:** verified deployments and the three service payer addresses below.
+All three are valid on-curve system wallets and each held approximately 25 SOL
+at finalized slot `467501570` on November 9. This verifies account funding,
+not the operators' private-key custody or service readiness. Each receives
+pruning permission. Open relaying remains available to any signer.
+
+These public values are already loaded from `inputs.env` in the prepared
+workspace. For manual setup, export them before proceeding:
 
 ```bash
-: "${RELAYER_PUB:?Set the service payer public key first}"
+export RELAYER_PUB='96RPHV4gXoHCupNc2aDkY135ServUtrBsyjVX1MB5vuL'
+export RELAYER_PUB_2='9QvbvqkVbbwfCL4rgDnYF4opmw1RvJdX3jQhZFtkou3w'
+export RELAYER_PUB_3='3YCnqDjRFEEEd2368h3hEnJsqhxJmrfqaAVLgDULFPno'
+```
+
+**3a. Initialize administration:** the ceremony wallet stays sole admin;
+Squads v4 is allowed to call administrative instructions; the verifier ID
+activates the open-relaying marker and all three service payers receive the
+pruning role. The ceremony wallet signs and funds this transaction.
+
+```bash
 admin init-access-manager --keypair "$CEREMONY" --access-manager "$AM_ID" \
   --admin "$CEREMONY_PUB" --cpi-caller "$MULTISIG_PROGRAM" \
-  --relayer "$ICS07_ID" --relayer "$RELAYER_PUB"
+  --relayer "$ICS07_ID" --relayer "$RELAYER_PUB" \
+  --relayer "$RELAYER_PUB_2" --relayer "$RELAYER_PUB_3"
+```
+
+Check the returned role list: sole ceremony admin, Squads CPI caller, and four
+relayer entries (the open marker plus the three service payers). Then proceed.
+
+**3b. Initialize the mint:** creates the six-decimal AKT mint with zero supply
+and minting paused. This is a separate ceremony-signed transaction.
+
+```bash
 admin initialize --keypair "$CEREMONY"
 admin show --access-manager "$AM_ID"
 ```

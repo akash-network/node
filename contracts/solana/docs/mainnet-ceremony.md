@@ -151,15 +151,20 @@ npm run deploy:programs -- verify --manifest "$MANIFEST" --url "$RPC" --authorit
 
 ## 3. Initialize with open relaying and zero supply
 
-Set `RELAYER_PUB` to the service payer's public key. Open relaying lets any
-signer submit valid headers and misbehaviour; the service payer also needs an
-explicit role for pruning. It must have its own SOL balance.
+The three service payers below each receive pruning permission and maintain
+their own SOL balance. Open relaying lets any signer submit valid headers and
+misbehaviour; it does not grant everyone pruning permission. See the
+[Step 3 commands](mainnet-launch-commands.md#3-initialize-administration-and-the-mint--write)
+for the separate administration and mint transactions.
 
 ```bash
-export RELAYER_PUB='REPLACE_WITH_SERVICE_PAYER_PUBLIC_KEY'
+export RELAYER_PUB='96RPHV4gXoHCupNc2aDkY135ServUtrBsyjVX1MB5vuL'
+export RELAYER_PUB_2='9QvbvqkVbbwfCL4rgDnYF4opmw1RvJdX3jQhZFtkou3w'
+export RELAYER_PUB_3='3YCnqDjRFEEEd2368h3hEnJsqhxJmrfqaAVLgDULFPno'
 admin init-access-manager --keypair "$CEREMONY" --access-manager "$AM_ID" \
   --admin "$CEREMONY_PUB" --cpi-caller "$MULTISIG_PROGRAM" \
-  --relayer "$ICS07_ID" --relayer "$RELAYER_PUB"
+  --relayer "$ICS07_ID" --relayer "$RELAYER_PUB" \
+  --relayer "$RELAYER_PUB_2" --relayer "$RELAYER_PUB_3"
 admin initialize --keypair "$CEREMONY"
 admin show --access-manager "$AM_ID"
 ```
