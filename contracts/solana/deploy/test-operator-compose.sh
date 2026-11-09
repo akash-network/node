@@ -16,15 +16,18 @@ trap '"${compose[@]}" down --remove-orphans >/dev/null 2>&1; rm -rf "$fixture"' 
 mkdir "$OPERATOR_STATE"
 address=$(docker run --rm --platform linux/amd64 --network none --user "$OPERATOR_UID:$OPERATOR_GID" \
   --mount "type=bind,src=$fixture,dst=/keys" "$image" keys create --out /keys/key)
-python3 - "$NODE_SINK_DIR/_run/akt-$role/config.example.json" "$OPERATOR_CONFIG" "$role" "$address" <<'PY'
+program=GTr2HRp7Bavsc6rzSXq1a6W1p1H9B2v8gTf2UNSiiBvF
+mint=$(docker run --rm --platform linux/amd64 --network none \
+  --workdir /opt/akt/contracts/solana --entrypoint /opt/akt/runtime/bin/node "$image" \
+  -e 'const { web3 } = require("@coral-xyz/anchor"); console.log(web3.PublicKey.findProgramAddressSync([Buffer.from("mint")], new web3.PublicKey(process.argv[1]))[0].toBase58())' "$program")
+python3 - "$NODE_SINK_DIR/_run/akt-$role/config.example.json" "$OPERATOR_CONFIG" "$role" "$address" "$program" "$mint" <<'PY'
 import json, sys
-source, destination, role, address = sys.argv[1:]
+source, destination, role, address, program, mint = sys.argv[1:]
 with open(source) as file:
     config = json.load(file)
-program = 'GTr2HRp7Bavsc6rzSXq1a6W1p1H9B2v8gTf2UNSiiBvF'
 config.update(akashChainId='akash-bridge-v2-compose-test-1', solanaGenesisHash=program, programId=program)
 if role == 'reporter':
-    config.update(reporter=address, mint=program)
+    config.update(reporter=address, mint=mint)
 with open(destination, 'w') as file:
     json.dump(config, file)
 PY

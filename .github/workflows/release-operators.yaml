@@ -79,15 +79,13 @@ jobs:
           mkdir -p .cache/solana
           curl --fail --location --retry 3 --max-time 180 "$SDK_ARCHIVE_URL" -o .cache/solana/chain-sdk.tgz
           # npm ci verifies package-lock.json integrity before code executes.
-      - name: Generate interfaces and test
+      - name: Build and test the selected operator
         run: |
-          bash contracts/solana/deploy/prepare-services.sh
+          bash contracts/solana/deploy/build-operator.sh "$OPERATOR_ROLE" "$OPERATOR_VERSION" "$PWD/.cache/operator-package"
           cd contracts/solana
           node deploy/audit-operator.mjs
           cargo test --locked --manifest-path tools/header-encoder/Cargo.toml
           shellcheck -x -P SCRIPTDIR deploy/{build-operator,node-runtime,operator,prepare-services,test-operator,test-operator-compose}.sh
-      - name: Build the selected operator
-        run: bash contracts/solana/deploy/build-operator.sh "$OPERATOR_ROLE" "$OPERATOR_VERSION" "$PWD/.cache/operator-package"
       - uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser

@@ -4,6 +4,13 @@ set -euo pipefail
 source "$(dirname "$0")/../scripts/workspace.sh"
 package=${1:?package directory required} role=${2:?role required}
 [[ "$role" =~ ^(relayer|reporter)$ ]]
+test -f "$package/operator-configuration.md"
+(
+  cd "$package/contracts/solana"
+  "$package/runtime/bin/node" --import ./node_modules/tsx/dist/loader.mjs --input-type=module - "$role" <<'JS'
+await import(process.argv[2] === 'relayer' ? './local/relay.ts' : './reporter/run.ts');
+JS
+)
 if find "$package/contracts/solana/node_modules/bigint-buffer" -name '*.node' -print -quit | grep -q .; then
   echo 'Native bigint-buffer binding must not be shipped.' >&2; exit 1
 fi
@@ -25,11 +32,14 @@ fi
 const { readFileSync, writeFileSync } = require('node:fs');
 const [root, fixture, role, address] = process.argv.slice(2);
 const config = JSON.parse(readFileSync(`${root}/deploy/config.example.json`, 'utf8'));
+const { web3 } = require(`${root}/contracts/solana/node_modules/@coral-xyz/anchor`);
 const program = 'GTr2HRp7Bavsc6rzSXq1a6W1p1H9B2v8gTf2UNSiiBvF';
 config.programId = program;
 if (role === 'reporter') {
   config.reporter = address;
-  config.mint = program;
+  config.mint = web3.PublicKey.findProgramAddressSync(
+    [Buffer.from('mint')], new web3.PublicKey(program),
+  )[0].toBase58();
 }
 writeFileSync(`${fixture}/mainnet.json`, JSON.stringify(config));
 writeFileSync(`${fixture}/testnet.json`, JSON.stringify({ ...config,

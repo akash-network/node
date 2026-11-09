@@ -12,6 +12,7 @@ import {
 import { TOKEN_PROGRAM_ID, unpackMint } from "@solana/spl-token";
 import assert from "node:assert/strict";
 import { isDeepStrictEqual } from "node:util";
+import { validateMint } from "./config";
 import idl from "../../../.cache/solana/target/idl/akt.json";
 import type { Akt } from "../../../.cache/solana/target/types/akt";
 import { matchesAnchorId } from "../shared/proof";
@@ -165,7 +166,7 @@ export class SolanaObserver {
       { ...idl, address: config.programId.toBase58() },
       { connection: rpc },
     );
-    assert.ok(config.mint.equals(this.pda("mint")), "noncanonical mint");
+    validateMint(config);
   }
 
   private pda(seed: string, suffix?: Buffer) {

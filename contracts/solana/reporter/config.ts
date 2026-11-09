@@ -28,6 +28,17 @@ const CONFIG_FIELDS = [
   "keyFile",
 ];
 
+export function validateMint(config: {
+  programId: web3.PublicKey;
+  mint: web3.PublicKey;
+}) {
+  const [mint] = web3.PublicKey.findProgramAddressSync(
+    [Buffer.from("mint")],
+    config.programId,
+  );
+  assert.ok(config.mint.equals(mint), "noncanonical mint");
+}
+
 // The command runs without a shell, so require an absolute path.
 export function signerCommand(command: unknown) {
   assert.ok(

@@ -23,7 +23,7 @@ cp reporter/config.example.json ~/.config/akt-reporter/config.json
 | `akashChainId`       | Akash chain ID; also checked against the bridge account                                          |
 | `solanaRpc`          | Your Solana node                                                                                 |
 | `solanaGenesisHash`  | From your own node: `solana --url <node> genesis-hash`. A validator reset changes it             |
-| `programId`, `mint`  | AKT program and canonical mint PDA. Another program ID requires rebuilding the IDL               |
+| `programId`, `mint`  | Compatible AKT program and its canonical mint PDA. Set both in config; no IDL rebuild is needed  |
 | `reporter`           | Your reporter account                                                                            |
 | `lightClientProgram` | Optional pin. Leave unset to follow the bridge account; see [light client](#light-client)        |
 | `maxAgeSeconds`      | Freshness bound for both nodes, at most 600                                                      |

@@ -211,8 +211,14 @@ test("configured software key is loaded for broadcast, never preview", async (t)
     (failure: unknown) => {
       assert.ok(
         failure instanceof Error &&
+          "stdout" in failure &&
+          typeof failure.stdout === "string" &&
           "stderr" in failure &&
           typeof failure.stderr === "string",
+      );
+      assert.match(
+        failure.stdout,
+        /"error":"Solana node is temporarily unavailable"/,
       );
       assert.ok(
         !failure.stderr.includes("ENOENT") && !failure.stderr.includes(keyFile),

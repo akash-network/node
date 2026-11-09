@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { z } from "zod";
 import { parseRelayConfig } from "../local/relay-config";
-import { parseConfig } from "../reporter/config";
+import { parseConfig, validateMint } from "../reporter/config";
 import { MAINNET_GENESIS } from "../shared/networks";
 
 export function checkServiceConfig(
@@ -19,6 +19,7 @@ export function checkServiceConfig(
     service === "relayer"
       ? parseRelayConfig(raw, dirname(file))
       : parseConfig(raw);
+  if ("mint" in config) validateMint(config);
   const genesis =
     "genesisHash" in config ? config.genesisHash : config.solanaGenesisHash;
   if (network === "mainnet") {

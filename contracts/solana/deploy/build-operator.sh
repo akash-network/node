@@ -10,6 +10,7 @@ role=$1 version=$2 out=$3
 cd "$NODE_SINK_DIR"
 [[ -z "$(git status --porcelain)" ]] || { echo 'Release source must be committed and clean.' >&2; exit 1; }
 commit=$(git rev-parse HEAD)
+bash "$solana_repo/deploy/prepare-services.sh"
 stage=$(mktemp -d "$SOLANA_CACHE/operator-package.XXXXXX")
 trap 'rm -rf "$stage"' EXIT
 package=$stage/package
@@ -40,6 +41,11 @@ install -m 755 "$solana_repo/deploy/operator.sh" "$package/bin/akt-$role"
 cp -R "_run/akt-$role" "$package/deploy"
 sed -i "s|^OPERATOR_IMAGE=.*|OPERATOR_IMAGE=ghcr.io/akash-network/akt-$role:$version|" "$package/deploy/.env.example"
 cp contracts/solana/docs/operator-releases.md "$package/README.md"
+cp contracts/solana/docs/operator-configuration.md "$package/"
+for doc in sdk-integration operators reporter; do
+  sed -i "s|($doc.md|(https://github.com/akash-network/node/blob/$commit/contracts/solana/docs/$doc.md|g" \
+    "$package/README.md" "$package/operator-configuration.md"
+done
 {
   printf 'service akt-%s\nversion %s\ncommit %s\nplatform linux_amd64\n' "$role" "$version" "$commit"
   sha256sum "$SOLANA_CACHE/chain-sdk.tgz"

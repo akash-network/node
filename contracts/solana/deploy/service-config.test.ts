@@ -21,13 +21,30 @@ const relayer = {
 };
 const reporter = {
   ...network,
-  mint: web3.Keypair.generate().publicKey.toBase58(),
+  mint: web3.PublicKey.findProgramAddressSync(
+    [Buffer.from("mint")],
+    new web3.PublicKey(network.programId),
+  )[0].toBase58(),
   reporter: toBech32("akash", new Uint8Array(20).fill(1)),
   maxAgeSeconds: 60,
   pollSeconds: 15,
   feeAmountUakt: "12500",
   gasLimit: "500000",
 };
+
+test("reporter checks reject a mint from another deployment", () => {
+  for (const role of ["reporter-preview", "reporter-broadcast"]) {
+    assert.throws(
+      () =>
+        checkServiceConfig(
+          role,
+          { ...reporter, mint: network.programId },
+          file,
+        ),
+      /noncanonical mint/,
+    );
+  }
+});
 
 test("explicit testnet mode requires both chains to be non-mainnet", () => {
   const config = {

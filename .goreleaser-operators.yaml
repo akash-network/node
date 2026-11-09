@@ -19,6 +19,7 @@ archives:
       - service-build-info.txt
       - LICENSE
       - README.md
+      - operator-configuration.md
 
 checksum:
   name_template: "akt-{{ .Env.OPERATOR_ROLE }}_{{ .Version }}_checksums.txt"
