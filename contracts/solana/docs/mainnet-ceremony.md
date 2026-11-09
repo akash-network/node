@@ -1,5 +1,8 @@
 # Mainnet ceremony: setup before Squads handover
 
+For a compact operator checklist with command prerequisites, use
+[the command-by-command plan](mainnet-launch-commands.md).
+
 This sequence deploys AKT, the Tendermint light client, and its access manager
 on existing Solana mainnet. The ceremony key completes setup while minting is
 paused, then transfers all three upgrade authorities and the access-manager
@@ -214,8 +217,9 @@ Client initialization and bridge configuration execute atomically, so a public
 relayer cannot move the checkpoint height between them. Check the chain,
 checkpoint, limits, metadata, guardian, open-relaying marker, zero supply, and
 paused bridge. Start the relayer promptly to keep the client fresh; it waits
-on minting while the bridge is paused. Use the Linux ARM64 service archive on
-the ARM64 host, following [service deployment](deploy-services.md).
+on minting while the bridge is paused. The separate service branch and PR own
+Linux service builds and rollout; coordinate readiness using
+[service deployment](deploy-services.md).
 
 ## 6. Hand all authority to Squads
 
