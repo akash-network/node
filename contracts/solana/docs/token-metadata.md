@@ -22,14 +22,14 @@ Use [`metadata/akt.json`](../metadata/akt.json) for mainnet:
 - Description: **AKT, the native token of Akash Network.**
 - Website: **https://akash.network/**
 
-The image is the existing Cosmos AKT logo from the
-[Cosmos chain registry](https://github.com/cosmos/chain-registry/blob/f98e34339a1d30b4a2734b78d6dfcbba9cb02f8e/akash/images/akt.png),
-an unchanged 800-by-800 PNG, copied into `akash-network/net`. The JSON pins
-the image commit in that repository. Its SHA-256 is
-`2f88bb209e166c871439b09c991046318d5fe0291a6f4b4711850d1f89725ce1`.
+The image is the exact 256-by-256 AKT PNG referenced by
+[Keplr's official Akash configuration](https://github.com/chainapsis/keplr-chain-registry/blob/01ec438b4597b032cbf7a0dcdcd9c0300b2fb52b/cosmos/akashnet.json).
+The JSON points directly to the commit-pinned `images/akashnet/uakt.png` in
+that registry; no image is copied into `akash-network/net`. Its SHA-256 is
+`1a7f1335cbf71e2e8484128421993360d5809925fe0cd4e2da3dfcd3aec9b1ff`.
 
-The approved mainnet JSON is hosted in [akash-network/net](https://github.com/akash-network/net/blob/3c0b4cce5fd3ab197ea6375ad3de6e8417580217/solana/mainnet/akt.json).
-Pass its [raw JSON URL](https://raw.githubusercontent.com/akash-network/net/3c0b4cce5fd3ab197ea6375ad3de6e8417580217/solana/mainnet/akt.json)
+The approved mainnet JSON is hosted in [akash-network/net](https://github.com/akash-network/net/blob/9a7a07cef2737e91784573d109a5d65bd92a1d53/solana/mainnet/akt.json).
+Pass its [raw JSON URL](https://raw.githubusercontent.com/akash-network/net/9a7a07cef2737e91784573d109a5d65bd92a1d53/solana/mainnet/akt.json)
 to `set-token-metadata`. GitHub serves valid JSON as `text/plain; charset=utf-8`;
 verify the parsed body and the image bytes. Publishing this file does not set
 on-chain metadata. The token uses standard
