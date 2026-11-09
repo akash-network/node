@@ -15,6 +15,11 @@ interfaces, [SHA256SUMS](build/SHA256SUMS) and [build-info.txt](build/build-info
 [manifest.json](manifest.json) binds their hashes to the launch program IDs,
 ceremony public key, Squads vault and Solana mainnet genesis hash.
 
+[checkpoint-29447440.json](checkpoint-29447440.json) is the public post-upgrade
+Akash checkpoint agreed by three RPC providers on November 9, 2026. It is runtime
+launch input, separate from the compiled build. The [command guide](../../docs/mainnet-launch-commands.md#5-set-the-checkpoint-and-bridge-limits--read-prepare-review-write)
+records its comparison procedure, selected trust settings and expiry.
+
 ## Source and rebuild
 
 - Node source: [`431953bb96a3cfdd1e1888210cae6dbf7d05a4ad`](https://github.com/akash-network/node/commit/431953bb96a3cfdd1e1888210cae6dbf7d05a4ad).

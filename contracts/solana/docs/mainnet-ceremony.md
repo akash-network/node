@@ -190,10 +190,14 @@ authorities. Never use `--rehearsal` on mainnet.
 
 ## 5. Agree the checkpoint and launch limits
 
-After the Akash upgrade, checkpoint holders select one post-upgrade
-`akashnet-2` height and independently fetch it from at least three independent
-nodes. Use the [checkpoint comparison procedure](deploy-program.md#8-checkpoint-and-bridge)
-and save the agreed file as `$RELEASE_DIR/checkpoint.json`.
+The prepared launch selects post-upgrade `akashnet-2` height **29,447,440**,
+verified against Akash Network, Polkachu and PublicNode on November 9, 2026.
+The [command guide](mainnet-launch-commands.md#5-set-the-checkpoint-and-bridge-limits--read-prepare-review-write)
+provides the exact RPC URLs, saved checkpoint, 14-day trusting period,
+21-day unbonding period, 60-second drift allowance and expiry. Recheck those
+settings and repeat its checkpoint comparison before initialization.
+Checkpoint holders still independently compare the result using the
+[checkpoint comparison procedure](deploy-program.md#8-checkpoint-and-bridge).
 
 Approve these public inputs before constructing the transaction:
 
@@ -215,7 +219,7 @@ does not make it a special token recipient.
 admin init-client --program "$ICS07_ID" --access-manager "$AM_ID" \
   --checkpoint "$RELEASE_DIR/checkpoint.json" \
   --trusting-period "$TRUSTING_PERIOD" --unbonding-period "$UNBONDING_PERIOD" \
-  --max-clock-drift "$MAX_CLOCK_DRIFT" \
+  --max-clock-drift "$MAX_CLOCK_DRIFT" --trust-level 1/3 \
   --emit "$RELEASE_DIR/tx/client.json" --authority "$CEREMONY_PUB"
 admin configure-bridge --program "$ICS07_ID" --chain-id akashnet-2 \
   --per-transfer-max "$PER_TRANSFER_MAX" --daily-mint-cap "$DAILY_MINT_CAP" \

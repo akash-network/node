@@ -1,0 +1,24 @@
+{
+  "chainId": "akashnet-2",
+  "height": "29447440",
+  "time": "2026-11-09T23:14:24.517889279Z",
+  "timestamp": "1794266064517889279",
+  "root": "6ed10d53c864471c86967c4d33caa31f5ab847d202482b47df6147468db898e3",
+  "nextValidatorsHash": "93eaf5f298af8b7ab15faeacd2f739b81581edc4ae71f81eb8db71265fd1fcb6",
+  "validatorsHash": "93eaf5f298af8b7ab15faeacd2f739b81581edc4ae71f81eb8db71265fd1fcb6",
+  "blockHash": "b51d8ca3102e6b2ef8d77cefc3b95e971a7e6ef4ce26da3a54cb1d29fdaac29f",
+  "sources": [
+    {
+      "rpc": "https://rpc.akashnet.net",
+      "fetchedAt": "2026-11-09T23:16:20.951Z"
+    },
+    {
+      "rpc": "https://akash-rpc.polkachu.com",
+      "fetchedAt": "2026-11-09T23:16:21.338Z"
+    },
+    {
+      "rpc": "https://akash-rpc.publicnode.com",
+      "fetchedAt": "2026-11-09T23:16:21.629Z"
+    }
+  ]
+}

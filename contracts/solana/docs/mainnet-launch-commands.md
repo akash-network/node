@@ -6,8 +6,9 @@ Use the existing keys and program IDs. There is no initial AKT allocation.
 
 ## Readiness
 
-Checked on 2026-11-09: the ceremony wallet holds **20.1 SOL**; all three program
-addresses are undeployed; the build and exact-byte local Squads rehearsal passed.
+At the initial pre-deployment check on 2026-11-09, the ceremony wallet held
+**20.1 SOL** and all three program addresses were undeployed. The build and
+exact-byte local Squads rehearsal passed.
 The [full local verification](mainnet-local-verification.md) also passed open
 header relay, proof-backed minting, replay rejection and pause/resume with no
 time lock.
@@ -17,13 +18,30 @@ Recheck balance and rent immediately before deployment.
 
 Before the first write: independent build/hash comparison and human launch review,
 including the [recorded compiler diagnostics](../deployments/mainnet/README.md#verification).
-Before checkpoint setup: approved trusting period/drift, three independent Akash
-RPCs, an agreed height, and a ready relayer with its public payer address.
+The [selected checkpoint](../deployments/mainnet/checkpoint-29447440.json), three
+RPC URLs and concrete trust settings are supplied in Step 5. Review these launch
+settings before initialization. The separate service team still needs to supply
+its funded relayer payer public address before Step 3.
 Before handover: confirm Squads control, members, threshold and access to its
 custom transaction builder. Observed threshold: **2 of 5**. The confirmed launch
 time lock is **0 seconds (none)**, matching the current on-chain setting.
 Before activation: the separately managed relayer, reporter and backing checks
 must be ready. Service builds are outside this procedure.
+
+## Inputs still needed
+
+| Before | Input or evidence still needed                                                                                                                                                      |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Step 2 | Independent second-machine build/hash comparison and human release review. Completion is not recorded. No missing upload variables or flags in the prepared workspace.              |
+| Step 3 | `RELAYER_PUB`: the separate Linux relayer's funded Solana payer public address. It receives pruning permission; open relaying does not require this role for other header relayers. |
+| Step 5 | Relayer host and encoder ready to start; review the concrete checkpoint and trust settings below. Independent checkpoint holders compare the supplied checkpoint.                   |
+| Step 6 | Actual Squads member control and transaction-builder access; verify the observed 2-of-5 threshold and zero time lock.                                                               |
+| Step 7 | Running relayer, intended reporter quorum broadcasting, backing checks, monitoring and portal readiness from the separate service rollout.                                          |
+| Step 8 | `ACTIVATION_SIGNATURE`, produced by Step 7, and an agreed ordinary portal transfer amount/destination. This signature cannot exist in advance.                                      |
+
+No treasury address, seed amount or additional program ID is needed. The ceremony
+wallet signs and pays for Steps 2–6. Squads members approve and execute Step 7.
+The relayer uses its separate payer once it starts.
 
 ## When the Linux services come up
 
@@ -42,6 +60,11 @@ run on the Linux hosts, not in the Mac deployment directory.
   reporter identities, signer access and Akash fee funding, then switch the
   intended reporters to broadcast. Confirm the required reporter quorum,
   relayer health, backing checks and monitoring before enabling minting.
+
+The current Akash parameters list five reporters with threshold `0.667`, which
+requires **four matching reporter votes**. This is separate from the Squads
+**two-of-five** approval threshold. Recheck the governed reporter list and
+threshold before activation.
 
 Follow the [Linux service commands](deploy-services.md#supervise-and-activate).
 Do not initialize the checkpoint and then leave the relayer offline indefinitely:
@@ -69,6 +92,7 @@ export RELEASE_DIR=$(mktemp -d "$PWD/../../.cache/launch/mainnet-09005e02.XXXXXX
 mkdir -p "$RELEASE_DIR/tx"
 cp -R deployments/mainnet/build "$RELEASE_DIR/"
 cp deployments/mainnet/manifest.json "$RELEASE_DIR/manifest.json"
+cp deployments/mainnet/checkpoint-29447440.json "$RELEASE_DIR/checkpoint.json"
 export MANIFEST="$RELEASE_DIR/manifest.json"
 export BUILD_DIR="$RELEASE_DIR/build"
 export CEREMONY="$KEY_DIR/ceremony.json"
@@ -106,8 +130,9 @@ test "$(solana --config /dev/null --url "$RPC" genesis-hash)" = "$GENESIS"
 solana --config /dev/null --url "$RPC" --commitment finalized balance "$CEREMONY_PUB"
 ```
 
-Stop on any mismatch. The expected preflight result currently lists all three
-programs as missing. Another person must follow the
+Stop on any mismatch. Before the first upload, preflight lists all three
+programs as missing; each completed upload removes one from that list. Verify
+completed programs instead of uploading them again. Another person must follow the
 [independent rebuild commands](../deployments/mainnet/README.md#source-and-rebuild)
 on another machine and compare all nine hashes. The local rehearsal has already
 passed; it does not replace that comparison.
@@ -210,9 +235,42 @@ admin show --access-manager "$AM_ID"
 ## 5. Set the checkpoint and bridge limits — read, prepare, review, write
 
 **Does:** starts the Akash light client and connects it to the mint, still paused.
-**Needs:** an agreed post-upgrade height `H`, three independent Akash RPC URLs,
-approved `TRUSTING_PERIOD` and `MAX_CLOCK_DRIFT` in seconds, and the relayer ready
-to keep the new client current immediately afterward. These remain unset inputs.
+**Needs:** Steps 3–4, the supplied checkpoint and reviewed settings below, and the
+relayer ready to keep the new client current immediately afterward. The prepared
+direnv workspace already loads these values from `inputs.env`.
+
+The selected `akashnet-2` checkpoint is **29,447,440**, timestamp
+**2026-11-09 23:14:24.517889279 UTC**. Akash Network, Polkachu and PublicNode
+(Allnodes), with distinct node IDs, returned identical canonical checkpoint
+fields. Both Akash Network and Polkachu also report the v2.2.0 upgrade applied
+at height **29,399,482**, so this checkpoint is post-upgrade.
+
+| Setting            | Selected value                     | Meaning                                                                      |
+| ------------------ | ---------------------------------- | ---------------------------------------------------------------------------- |
+| `H`                | `29447440`                         | The saved, three-provider checkpoint.                                        |
+| `AKASH_RPC_1`      | `https://rpc.akashnet.net`         | Akash Network.                                                               |
+| `AKASH_RPC_2`      | `https://akash-rpc.polkachu.com`   | Polkachu.                                                                    |
+| `AKASH_RPC_3`      | `https://akash-rpc.publicnode.com` | PublicNode / Allnodes.                                                       |
+| Trust level        | `1/3`, passed explicitly           | Existing Tendermint client default.                                          |
+| `TRUSTING_PERIOD`  | `1209600` seconds / 14 days        | Repository launch precedent; two thirds of the live 21-day unbonding period. |
+| `UNBONDING_PERIOD` | `1814400` seconds / 21 days        | Rechecked against both Akash REST providers.                                 |
+| `MAX_CLOCK_DRIFT`  | `60` seconds                       | Selected future-header allowance relative to Solana's clock.                 |
+
+The trusting period and clock drift are **selected launch settings**, not Akash
+governance parameters or already-applied on-chain values. Review them in the
+Step 5 transaction. Six live samples over 27 seconds on November 9 compared
+all three Akash heads with Solana's processed Clock sysvar: headers were
+5.79–10.94 seconds behind Solana, with none ahead. The 60-second allowance
+provides headroom; this short observation is not a bound on future clock drift.
+The relayer must monitor clocks and keep the client current.
+
+Without a later trusted header, this checkpoint expires on **November 23, 2026
+at 23:14:24.517889279 UTC** under the selected 14-day period. Start the relayer
+immediately after initialization; do not use the expiry as a planned deadline.
+If launch is delayed, recheck the same height's availability and remaining
+lifetime. If it is stale, unavailable or expired, select a newer common
+post-upgrade height and repeat the three-provider and holder comparison before
+emitting new transaction files. Do not replace a reviewed checkpoint silently.
 
 Recheck governance limits and staking unbonding before using the values below:
 
@@ -230,14 +288,27 @@ trusting period.
 export PER_TRANSFER_MAX=1000000000000
 export DAILY_MINT_CAP=10000000000000
 export UNBONDING_PERIOD=1814400
-: "${H:?Set the agreed checkpoint height}"
-: "${AKASH_RPC_1:?Set independent RPC 1}"
-: "${AKASH_RPC_2:?Set independent RPC 2}"
-: "${AKASH_RPC_3:?Set independent RPC 3}"
+export H=29447440
+export AKASH_RPC_1='https://rpc.akashnet.net'
+export AKASH_RPC_2='https://akash-rpc.polkachu.com'
+export AKASH_RPC_3='https://akash-rpc.publicnode.com'
+export TRUSTING_PERIOD=1209600
+export MAX_CLOCK_DRIFT=60
+export CHECKPOINT_RECHECK="$RELEASE_DIR/checkpoint-recheck-$(date -u +%Y%m%dT%H%M%SZ).json"
 admin checkpoint --height "$H" \
   --akash-rpc "$AKASH_RPC_1" --akash-rpc "$AKASH_RPC_2" --akash-rpc "$AKASH_RPC_3" \
-  --out "$RELEASE_DIR/checkpoint.json"
+  --out "$CHECKPOINT_RECHECK"
+diff <(jq -S 'del(.sources)' "$RELEASE_DIR/checkpoint.json") \
+     <(jq -S 'del(.sources)' "$CHECKPOINT_RECHECK")
+jq '{chainId, height, time, blockHash, root, validatorsHash, nextValidatorsHash}' \
+  "$CHECKPOINT_RECHECK"
 ```
+
+The `diff` must exit successfully with no output. It compares every checkpoint
+field except fetch provenance with the supplied file; any disagreement stops
+setup. Each recheck writes a new file because the CLI never overwrites review
+artifacts. The prepared workspace already contains `checkpoint.json`; the manual
+Step 0 copies it from the published release directory.
 
 Checkpoint holders must independently agree on the same result using the
 [checkpoint comparison procedure](deploy-program.md#8-checkpoint-and-bridge).
@@ -249,7 +320,7 @@ Then prepare both instructions for one atomic transaction:
 admin init-client --program "$ICS07_ID" --access-manager "$AM_ID" \
   --checkpoint "$RELEASE_DIR/checkpoint.json" \
   --trusting-period "$TRUSTING_PERIOD" --unbonding-period "$UNBONDING_PERIOD" \
-  --max-clock-drift "$MAX_CLOCK_DRIFT" \
+  --max-clock-drift "$MAX_CLOCK_DRIFT" --trust-level 1/3 \
   --emit "$RELEASE_DIR/tx/client.json" --authority "$CEREMONY_PUB"
 admin configure-bridge --program "$ICS07_ID" --chain-id akashnet-2 \
   --per-transfer-max "$PER_TRANSFER_MAX" --daily-mint-cap "$DAILY_MINT_CAP" \
