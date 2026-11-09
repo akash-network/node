@@ -1,0 +1,45 @@
+services:
+  relayer:
+    image: ${OPERATOR_IMAGE:?Set OPERATOR_IMAGE to a published version or digest}
+    platform: linux/amd64
+    user: "${OPERATOR_UID:-10001}:${OPERATOR_GID:-10001}"
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    command:
+      [
+        run,
+        --config,
+        /etc/akt/config.json,
+        --network,
+        "${OPERATOR_NETWORK:-mainnet}",
+        --watch,
+      ]
+    volumes:
+      - type: bind
+        source: ${OPERATOR_CONFIG:?Set OPERATOR_CONFIG to an existing config file}
+        target: /etc/akt/config.json
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${OPERATOR_KEY:?Set OPERATOR_KEY to an existing private key file}
+        target: /run/keys/key
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${OPERATOR_STATE:?Set OPERATOR_STATE to an existing state directory}
+        target: /data
+        bind:
+          create_host_path: false
+    restart: unless-stopped
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

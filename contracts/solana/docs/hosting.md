@@ -2,7 +2,7 @@
 
 For DevOps. It lists what the Akash to Solana AKT transfer system needs hosted
 on mainnet, what each piece talks to, what to back up and what to watch.
-Versions, binary links and some owners are not final; they are marked **TBD**.
+Use [operator downloads and Docker Compose](operator-releases.md) for service installation. Some infrastructure owners remain **TBD**.
 Launch steps and governance are in [production deployment](production-deployment.md);
 this guide covers the infrastructure under them.
 
@@ -155,15 +155,15 @@ its own payer and state directory for redundancy and bursts.
 Each reporter operator runs one. DevOps runs ours and gives other operators
 this section.
 
-| Need    | Value                                                                                                                                                                                                                                                              |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Runtime | Node 24 plus the `contracts/solana` artifact                                                                                                                                                                                                                       |
-| Config  | JSON file, see [reporter](reporter.md#run-an-independent-reporter) (`reporter/config.example.json`)                                                                                                                                                                |
-| Inputs  | Its own Akash node and its own Solana RPC node                                                                                                                                                                                                                     |
-| Key     | Akash account key in a KMS or HSM through the external signer interface ([key custody](reporter.md#key-custody)). A key file is for testing only                                                                                                                   |
-| Funds   | AKT for transaction fees in the reporter account                                                                                                                                                                                                                   |
-| Process | `akt-reporter.service` runs `deploy/service.sh reporter-preview`. After governance adds the reporter, a reviewed drop-in switches it to `reporter-broadcast`, which requires `externalSigner`; see [service deployment](deploy-services.md#supervise-and-activate) |
-| Rule    | One signing process per reporter account                                                                                                                                                                                                                           |
+| Need    | Value                                                                                                                                                                                                                                                                           |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Runtime | Node 24 plus the `contracts/solana` artifact                                                                                                                                                                                                                                    |
+| Config  | JSON file, see [reporter](reporter.md#run-an-independent-reporter) (`reporter/config.example.json`)                                                                                                                                                                             |
+| Inputs  | Its own Akash node and its own Solana RPC node                                                                                                                                                                                                                                  |
+| Key     | Owner-only raw Akash private-key file, or an optional external signer ([key custody](reporter.md#key-custody))                                                                                                                                                                  |
+| Funds   | AKT for transaction fees in the reporter account                                                                                                                                                                                                                                |
+| Process | `akt-reporter.service` runs `deploy/service.sh reporter-preview`. After governance adds the reporter, a reviewed drop-in switches it to `reporter-broadcast`, which requires `keyFile` or `externalSigner`; see [service deployment](deploy-services.md#supervise-and-activate) |
+| Rule    | One signing process per reporter account                                                                                                                                                                                                                                        |
 
 ### Monitoring and reconciliation
 
@@ -224,14 +224,14 @@ See the [metadata launch gate](token-metadata.md#mainnet-launch-gate).
 
 ## Keys
 
-| Key                                               | Where it lives                                                                                                                         | On a server?            |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| Program upgrade authorities, access-manager admin | Squads multisig vault (members on hardware wallets)                                                                                    | No                      |
-| Ceremony key                                      | Offline machine; deleted after launch                                                                                                  | No                      |
-| Solana pause guardian                             | On-call holder chosen by governance; AEP-95 also requires the monitor to hold it for the automatic pause, which is not implemented yet | No (on-call device)     |
-| x/sink pause guardian                             | On-call key, multisig or group policy chosen by governance                                                                             | No                      |
-| Relayer fee payer                                 | Relayer host, mode 0600, small balance                                                                                                 | Yes                     |
-| Reporter account keys                             | Each operator's KMS or HSM                                                                                                             | Through the signer only |
+| Key                                               | Where it lives                                                                                                                         | On a server?         |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| Program upgrade authorities, access-manager admin | Squads multisig vault (members on hardware wallets)                                                                                    | No                   |
+| Ceremony key                                      | Offline machine; deleted after launch                                                                                                  | No                   |
+| Solana pause guardian                             | On-call holder chosen by governance; AEP-95 also requires the monitor to hold it for the automatic pause, which is not implemented yet | No (on-call device)  |
+| x/sink pause guardian                             | On-call key, multisig or group policy chosen by governance                                                                             | No                   |
+| Relayer fee payer                                 | Relayer host, mode 0600, small balance                                                                                                 | Yes                  |
+| Reporter account keys                             | Each operator; encrypted backup of the service key or external custody                                                                 | Signing process only |
 
 Guardians can only pause. Practice a pause with them before launch.
 
@@ -241,7 +241,7 @@ Guardians can only pause. Practice a pause with them before launch.
 | ------------------------------------------------------------------------------------ | ------------------------ | ---------------------------------------------------------------------------------- |
 | Relayer config and state directory                                                   | Yes, frequently          | Journals resume interrupted uploads; the spend ledger keeps limits across restarts |
 | Relayer payer key                                                                    | Yes, in a secret manager | Losing it only costs its balance, but replacing it needs a multisig role grant     |
-| Reporter configs                                                                     | Yes                      | Keys stay in the KMS                                                               |
+| Reporter configs                                                                     | Yes                      | Back up keys separately and securely                                               |
 | Launch records (program hashes, checkpoint, transaction signatures, metadata hashes) | Yes, permanently         | Audit trail                                                                        |
 | Akash and Solana node data                                                           | No                       | Restore from snapshots or resync; keep tested snapshot sources                     |
 | Logs                                                                                 | 30 days or more          | Incident review                                                                    |

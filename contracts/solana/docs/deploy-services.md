@@ -5,6 +5,9 @@ They do not start validators, initialize programs, change authorities or enable
 Sink. Complete the [program ceremony](deploy-program.md), checkpoint and bridge
 configuration before starting the relayer. Start each reporter in preview.
 
+For independent downloads and Docker Compose, use [operator releases](operator-releases.md).
+The manifest-based source build below remains available for deployment ceremonies.
+
 ## Build one reviewed release
 
 Use a clean checkout of the launch commit on a Linux builder matching the
@@ -74,7 +77,7 @@ Copy the appropriate [relayer](../relayer/config.example.json) or
 Replace every placeholder with the deployed program/mint and operator identity.
 RPCs may be loopback proxies to private nodes. The full mainnet genesis hash is
 pinned independently of the RPC endpoint. Each reporter needs independent
-sources and an external signer as described in [reporter custody](reporter.md#key-custody).
+sources and a private key file or external signer as described in [reporter custody](reporter.md#key-custody).
 
 For the relayer, explicitly set:
 
@@ -126,7 +129,7 @@ ExecStart=/bin/bash /opt/akt-bridge/current/contracts/solana/deploy/service.sh r
 ```
 
 Run `systemctl daemon-reload` and restart the reporter. The broadcast entry point
-requires `externalSigner`; it does not accept local test key files. Run exactly
+requires `keyFile` or `externalSigner`. Run exactly
 one signing process per reporter account. Validate real signer access and fees
 before activation; config validation alone does not prove either.
 

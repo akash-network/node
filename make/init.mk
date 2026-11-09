@@ -94,7 +94,7 @@ STATIK                           := $(AKASH_DEVCACHE_BIN)/statik
 COSMOVISOR                       := $(AKASH_DEVCACHE_BIN)/cosmovisor
 COSMOVISOR_DEBUG                 := $(AKASH_RUN_BIN)/cosmovisor
 
-RELEASE_TAG                      ?= $(shell git describe --tags --abbrev=0)
+RELEASE_TAG                      ?= $(shell git describe --tags --match 'v[0-9]*' --abbrev=0)
 
 WASMVM_LIBS  := libwasmvm_muslc.x86_64.a \
 libwasmvm_muslc.aarch64.a \
