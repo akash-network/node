@@ -39,7 +39,7 @@ export CEREMONY='/secure/path/ceremony.json'
 export PROGRAM_KEYS='/secure/path/program-keys'
 export GENESIS=5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d
 export MULTISIG_PROGRAM=SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf
-export METADATA_URI=https://akash.network/token/solana/v1/akt.json
+export METADATA_URI=https://raw.githubusercontent.com/akash-network/net/3174df54bb9c4b5c5523c985e43e1405d8cfbb4b/solana/mainnet/akt.json
 
 manifest_value() {
   node -e 'let v=require(process.argv[1]); for(const k of process.argv[2].split(".")) v=v[k]; process.stdout.write(v)' "$MANIFEST" "$1"
@@ -63,8 +63,8 @@ threshold, and current time lock. Using the vault as pause guardian means a
 pause also needs the Squads approvals and time lock. The Akash `x/sink` guardian
 is a separate Akash address configured through Akash governance.
 
-The website metadata must be published before mainnet setup: fetch the JSON
-and its image over HTTPS, check their contents and content types, and complete
+The metadata is hosted in `akash-network/net`, with the JSON and image pinned
+to immutable commits. Fetch both raw HTTPS URLs, check their contents, and complete
 the [metadata launch gate](token-metadata.md#mainnet-launch-gate).
 
 Run the local rehearsal with the exact release and program IDs:

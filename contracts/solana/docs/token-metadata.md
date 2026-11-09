@@ -24,12 +24,15 @@ Use [`metadata/akt.json`](../metadata/akt.json) for mainnet:
 
 The image is the existing Cosmos AKT logo from the
 [Cosmos chain registry](https://github.com/cosmos/chain-registry/blob/f98e34339a1d30b4a2734b78d6dfcbba9cb02f8e/akash/images/akt.png),
-an unchanged 800-by-800 PNG. The JSON pins that GitHub revision. Its SHA-256 is
+an unchanged 800-by-800 PNG, copied into `akash-network/net`. The JSON pins
+the image commit in that repository. Its SHA-256 is
 `2f88bb209e166c871439b09c991046318d5fe0291a6f4b4711850d1f89725ce1`.
 
-Host this JSON at a permanent public HTTPS URL and pass that URL to
-`set-token-metadata`. The mainnet JSON URL is a deployment input; no metadata
-has been published or set on mainnet by this change. The token uses standard
+The approved mainnet JSON is hosted in [akash-network/net](https://github.com/akash-network/net/blob/3174df54bb9c4b5c5523c985e43e1405d8cfbb4b/solana/mainnet/akt.json).
+Pass its [raw JSON URL](https://raw.githubusercontent.com/akash-network/net/3174df54bb9c4b5c5523c985e43e1405d8cfbb4b/solana/mainnet/akt.json)
+to `set-token-metadata`. GitHub serves valid JSON as `text/plain; charset=utf-8`;
+verify the parsed body and the image bytes. Publishing this file does not set
+on-chain metadata. The token uses standard
 SPL Token with Metaplex fungible metadata. Initializing the mint does not create
 metadata.
 
@@ -105,8 +108,9 @@ do not expose the testnet to solve a wallet cache or proxy limitation.
 
 - Use the approved [mainnet values](#mainnet-values) and JSON. Do not publish
   the private-testnet portal's JSON as mainnet metadata.
-- Host JSON and the logo at durable, publicly readable HTTPS URLs with correct
-  content types and no authentication. We can self-host them. No external
+- Host JSON and the logo at durable, publicly readable HTTPS URLs with no
+  authentication. Check that the body parses as the approved JSON and that the
+  image is served as `image/png`; GitHub raw JSON uses `text/plain`. No external
   approval or disclosure of source code or private keys is required. Use a
   versioned URI and retain the content/hash in the launch record.
 - Confirm the production program, canonical mint, six decimals, absent freeze
