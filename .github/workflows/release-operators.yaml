@@ -79,12 +79,22 @@ jobs:
       - name: Install build tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y protobuf-compiler libssl-dev pkg-config shellcheck
+          sudo apt-get install -y protobuf-compiler libssl-dev pkg-config shellcheck bzip2 libudev1
           rustup toolchain install 1.89.0 --profile minimal --component rustfmt,clippy
           bash contracts/solana/scripts/install-anchor.sh
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - name: Install pinned Solana CLI for Anchor IDL generation
+        run: |
+          mkdir -p .cache/solana/toolchain
+          curl -fsSL --retry 3 -o .cache/solana/toolchain/agave.tar.bz2 \
+            https://github.com/anza-xyz/agave/releases/download/v2.3.13/solana-release-x86_64-unknown-linux-gnu.tar.bz2
+          echo 'c43539ebdf6942472e8b87635d6ea55f428a51e3d0219f7b6f720fc6b19fade0  .cache/solana/toolchain/agave.tar.bz2' | sha256sum --check
+          tar -xjf .cache/solana/toolchain/agave.tar.bz2 -C .cache/solana/toolchain --strip-components=1
+          rm .cache/solana/toolchain/agave.tar.bz2
+          echo "$GITHUB_WORKSPACE/.cache/solana/toolchain/bin" >> "$GITHUB_PATH"
       - name: Build and test the selected operator
         run: |
+          source contracts/solana/scripts/workspace.sh
           bash contracts/solana/deploy/build-operator.sh "$OPERATOR_ROLE" "$OPERATOR_VERSION" "$PWD/.cache/operator-package"
           cd contracts/solana
           node deploy/audit-operator.mjs
@@ -104,7 +114,7 @@ jobs:
             cd "$dist"
             sha256sum --check "akt-${OPERATOR_ROLE}_${OPERATOR_VERSION}_checksums.txt"
           )
-          tar -xzf "$dist/akt-${OPERATOR_ROLE}_${OPERATOR_VERSION}_linux_amd64.tar.gz" -C .cache/operator-image/package
+          tar -xzpf "$dist/akt-${OPERATOR_ROLE}_${OPERATOR_VERSION}_linux_amd64.tar.gz" -C .cache/operator-image/package
           bash contracts/solana/deploy/test-operator.sh "$PWD/.cache/operator-image/package" "$OPERATOR_ROLE"
           cp "_run/akt-$OPERATOR_ROLE/docker-compose.yaml" "$dist/akt-$OPERATOR_ROLE-compose.yaml"
           cp .cache/operator-image/package/deploy/.env.example "$dist/akt-$OPERATOR_ROLE.env.example"
