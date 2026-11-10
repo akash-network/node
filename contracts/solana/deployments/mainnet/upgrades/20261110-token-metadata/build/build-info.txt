@@ -1,4 +1,4 @@
-commit 29b038b146377fbcab1d211ebef1439426645e6e
+commit c815e3d9cc5dfcd4ebefc20dfd9ed7b3be3dc708
 image sha256:0af7adf523c4556981d3f378fc473d9615e6a9c6e4e4d7bd4192b634e657c2f5
 upstream-repository https://github.com/akash-network/ibc-contracts
 upstream b3f25b45c785a9cb571cb169e5b612fb6c94e1f8

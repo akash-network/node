@@ -1,7 +1,7 @@
 # AKT mainnet program artifacts
 
-The uppercase-symbol upgrade candidate is in
-[upgrades/20261110-symbol-uppercase](upgrades/20261110-symbol-uppercase/README.md).
+The token metadata upgrade candidate is in
+[upgrades/20261110-token-metadata](upgrades/20261110-token-metadata/README.md).
 The original launch artifacts below are preserved.
 
 Public build artifacts for the prepared AKT Solana mainnet launch. Deployment

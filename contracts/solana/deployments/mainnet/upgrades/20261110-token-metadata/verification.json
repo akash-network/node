@@ -1,7 +1,7 @@
 {
   "sourceScope": {
     "deployedSourceCommit": "431953bb96a3cfdd1e1888210cae6dbf7d05a4ad",
-    "upgradeSourceCommit": "29b038b146377fbcab1d211ebef1439426645e6e",
+    "upgradeSourceCommit": "c815e3d9cc5dfcd4ebefc20dfd9ed7b3be3dc708",
     "compiledInputsCompared": [
       "Anchor.toml",
       "Cargo.toml",
@@ -17,19 +17,26 @@
       "tools/verifiable-build"
     ],
     "changedCompiledFiles": ["contracts/solana/programs/akt/src/constants.rs"],
-    "onlySymbolLiteralChanged": true,
-    "comparedProgramsAndDependencyPins": true
+    "onlyNameAndSymbolLiteralsChanged": true,
+    "name": {
+      "before": "Akash Network Token",
+      "after": "Akash"
+    },
+    "symbol": {
+      "before": "akt",
+      "after": "AKT"
+    }
   },
   "buildComparison": {
     "deployedSourceCommit": "431953bb96a3cfdd1e1888210cae6dbf7d05a4ad",
-    "upgradeSourceCommit": "29b038b146377fbcab1d211ebef1439426645e6e",
+    "upgradeSourceCommit": "c815e3d9cc5dfcd4ebefc20dfd9ed7b3be3dc708",
     "artifacts": [
       {
         "file": "akt.so",
         "oldBytes": 1040040,
-        "newBytes": 1040040,
+        "newBytes": 1039968,
         "oldSha256": "4cf85bb90cee9da1ebdaaed9921a9316d58d00d4142670b50419a5ca0ac22942",
-        "newSha256": "6265e16194c84248cfc6439536f59952bba4c772bb0fdf0c3179c56df7c0f905",
+        "newSha256": "d5dd4f833259b5f234461cd8af35e33092bc0e0015ac8097a9e7aeefd910c0ca",
         "identical": false
       },
       {
@@ -98,29 +105,14 @@
       }
     ],
     "sameBuilderAndToolchain": true,
-    "aktDifferingBytes": 3,
-    "aktDifferences": [
-      {
-        "offset": 390628,
-        "length": 1,
-        "beforeHex": "74",
-        "afterHex": "54",
-        "sections": [".text"]
-      },
-      {
-        "offset": 390644,
-        "length": 2,
-        "beforeHex": "616b",
-        "afterHex": "414b",
-        "sections": [".text"]
-      }
-    ],
-    "stackOffsetDiagnostics": 7
+    "stackOffsetDiagnostics": 7,
+    "stackOffsetDiagnosticsIdenticalToPreviousCandidate": true
   },
   "metadata": {
-    "uri": "https://raw.githubusercontent.com/akash-network/net/0603230f9c7a394ba48ac283208756e28deef42d/solana/mainnet/akt.json",
+    "uri": "https://raw.githubusercontent.com/akash-network/net/130ca0ac6fab3bc1999e3612a1fbca83d57b439c/solana/mainnet/akt.json",
     "httpStatus": 200,
     "contentType": "text/plain; charset=utf-8",
+    "name": "Akash",
     "symbol": "AKT",
     "exactLocalMetadataMatch": true,
     "imageHttpStatus": 200,
