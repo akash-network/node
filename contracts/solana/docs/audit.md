@@ -1,6 +1,6 @@
 # AKT Solana audit reference
 
-This reference describes the native protobuf proof contract used with the paired node and chain-sdk revisions. The earlier `audit-v1` artifact hashes and validator results do not certify this program. A deployment needs a matching node, SDK archive, program, IDL, services and portal, with their commits and artifact hashes recorded together.
+This reference describes the native protobuf proof contract used with the paired node and chain-sdk revisions. The earlier `audit-v1` artifact hashes and validator results do not certify this program. A deployment needs a matching node, SDK archive, program, IDL, services and clients, with their commits and artifact hashes recorded together.
 
 [Bridge protocol](bridge-protocol.md) specifies the keys and proven values. [Launch and recovery](sink-migration-v2.md) specifies the service journals, budgets and recovery rules. [Production deployment](production-deployment.md) covers authorities and operational acceptance.
 
@@ -104,7 +104,6 @@ npm run build
 npm run test:unit
 npm run typecheck
 npm run test:services
-npm run test:portal-contract
 npm test
 npm run test:sink
 npm run build:verifiable

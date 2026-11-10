@@ -6,11 +6,7 @@ import { BN, Program, web3, type IdlAccounts } from "@coral-xyz/anchor";
 import { MintLayout, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import idl from "../../../.cache/solana/target/idl/akt.json";
 import type { Akt } from "../../../.cache/solana/target/types/akt";
-import {
-  SolanaObserver,
-  SolanaUnavailableError,
-  decodeRecord,
-} from "../reporter/solana";
+import { SolanaObserver, SolanaUnavailableError, decodeRecord } from "./solana";
 
 async function fixture(t: TestContext) {
   const rpc = new web3.Connection("http://127.0.0.1:8899");
@@ -103,7 +99,7 @@ async function fixture(t: TestContext) {
   };
 }
 
-test("portal reads finalized mint after pruning, but reporter still requires block evidence", async (t) => {
+test("reporter requires block evidence even when finalized status survives pruning", async (t) => {
   const f = await fixture(t);
   const result = await f.observer.observeFinalized(f.record);
   assert.equal(result.kind, "resolved");

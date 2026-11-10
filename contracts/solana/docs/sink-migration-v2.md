@@ -4,8 +4,8 @@ This account layout is for a new launch with an unused Sink module and fresh Sol
 
 ## Prepare the namespace
 
-1. Build the SDK and install the same local archive into the bridge and portal. Preserve package versions and unrelated lock entries. Compare installed package bytes with the archive before testing.
-2. Build the program and generated IDL with `npm run build`. Configure observers, relayers and the portal with the program, its canonical mint, the Akash chain ID and both genesis identities.
+1. Build the SDK and install the same local archive into all consumers. Preserve package versions and unrelated lock entries. Compare installed package bytes with the archive before testing.
+2. Build the program and generated IDL with `npm run build`. Configure observers and relayers with the program, its canonical mint, the Akash chain ID and both genesis identities.
 3. Choose a fresh run name with `AKT_LOCAL_RUN`. The defaults remain `live-stack-v2` and `testnetify-stack-v2` under the node repository's `.cache/solana/run`. These directory names do not identify the protobuf schema.
 4. Export complete Sink genesis using the paired node version. Retain `records`, `accounts`, `policies`, `policy_sequence`, send usage and refund usage, together with the complete native `x/epochs` state. Each record contains its ID, immutable data, settlement and financial status. Preserve permanent void authorizations and every referenced vote or veto policy.
 5. Set `initial_height` above the exported height and `genesis_time` at or after that height's committed block time. Keep the raw export and prepare a separate import file. The importer rebuilds derived indexes and rejects inconsistent escrow, totals, identities or policy references. Do not relabel an earlier schema or truncate its evidence.
@@ -27,7 +27,7 @@ The permanent outcome PDA uses `transfer`, SHA-256 of the raw owner bytes, LE64 
 
 The five financial populations are `TRANSFER_PENDING`, `MINTED`, `VOIDED`, `REFUND_PENDING` and `REFUNDED`. Each has its own Coin amount and uint64 count in totals. Escrow contains the first four populations. Refunded amounts have already left escrow.
 
-`VOIDED` is a governance order awaiting a Solana outcome. The receipt API calls it `void_requested`. It promises no refund. `SolanaReceipt.kind: "voided"` describes an actual confirmed Solana outcome. A permanent minted PDA blocks voiding, and a permanent voided PDA blocks minting.
+`VOIDED` is a governance order awaiting a Solana outcome. It promises no refund. A permanent minted PDA blocks voiding, and a permanent voided PDA blocks minting.
 
 Holds are independent of financial status. Conflicts can include terminal records. Reporter messages carry the current policy version and settlement round, with flat `observation: { outcome, slot, transaction_signature }`. The first quorum freezes its certificate. One opposite witness can create a conflict. Same-outcome reports cannot enlarge a frozen certificate, and further reports after conflict have no effect. The reporter avoids paying for those no-op submissions.
 
@@ -63,10 +63,10 @@ The relayer reads the actual allocation and uploaded prefix after restart. It gr
 
 Each pass reads every dispute, then refund-pending, void-requested and transfer-pending records at one pinned height. There is no backlog count limit. Durable unfinished jobs also return to the queue after restart. `Transfers` pagination keys are opaque server-issued tokens; clients neither construct them from IDs nor compare their bytes for ordering. Discovery saves the token that starts its last page and the last processed ID. At EOF it replays that page, skips already-seen IDs, and discovers later deposits. The `relay-discovery-v3` file records this checkpoint. Older v2 discovery files are preserved and cause a one-time rescan; spending ledgers and unfinished proof jobs are retained.
 
-Unknown or pruned heights and malformed pages remain failures. A failed history or audit query retains its checkpoint while open transfers continue. A failed open-transfer scan stops the pass. The receipt API preserves the newest 100 owner records, its `truncated` flag and null creation dates only for genuinely pruned block history.
+Unknown or pruned heights and malformed pages remain failures. A failed history or audit query retains its checkpoint while open transfers continue. A failed open-transfer scan stops the pass.
 
 ## Verification commands
 
-Run `npm run typecheck`, `npm run test:services` and `npm run test:portal-contract` after installing the paired SDK and IDL. Service tests drive the actual relayer tick and signed transaction journal with controlled RPC boundaries. They are not validator membership evidence.
+Run `npm run typecheck` and `npm run test:services` after installing the paired SDK and IDL. Service tests drive the actual relayer tick and signed transaction journal with controlled RPC boundaries. They are not validator membership evidence.
 
 Run `npm test` for the program's isolated validator tests and `npm run test:sink` for a chain-produced proof after the node fixture gate passes. Go tests use the committed pins by default; local SDK development must explicitly select the existing `go.work` mechanism. Preserve their fresh test directories. Live headers, full refund recovery, cross-host services and populated mainnet-fork recovery remain separate gates.

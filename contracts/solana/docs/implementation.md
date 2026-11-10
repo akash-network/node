@@ -76,20 +76,19 @@ header updates, freezing, pruning, and relayer permissions.
 
 ## Services
 
-| File                                                                                        | What it does                                                                     |
-| ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| [`reporter/akash.ts`](../reporter/akash.ts)                                                 | Read native queries at a fixed committed height.                                 |
-| [`local/open-transfers.ts`](../local/open-transfers.ts)                                     | Discover transfers with the server's pagination tokens.                          |
-| [`local/proof-job.ts`](../local/proof-job.ts) and [`local/durable.ts`](../local/durable.ts) | Persist proof jobs and signed transaction recovery state.                        |
-| [`shared/id.ts`](../shared/id.ts) and [`shared/proof.ts`](../shared/proof.ts)               | Share identity, proof, and Solana account derivation between clients.            |
-| [`reporter/run.ts`](../reporter/run.ts)                                                     | Start the reporter in preview or signing mode.                                   |
-| [`local/bridge-admin.ts`](../local/bridge-admin.ts)                                         | Inspect state and prepare or execute authorized administration.                  |
-| [`local/stack.ts`](../local/stack.ts)                                                       | Start development chains and services.                                           |
-| [`local/team.ts`](../local/team.ts)                                                         | Testnet receipt API and faucet. The portal UI is in `akash-network/sink-portal`. |
+| File                                                                                        | What it does                                                          |
+| ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| [`reporter/akash.ts`](../reporter/akash.ts)                                                 | Read native queries at a fixed committed height.                      |
+| [`local/open-transfers.ts`](../local/open-transfers.ts)                                     | Discover transfers with the server's pagination tokens.               |
+| [`local/proof-job.ts`](../local/proof-job.ts) and [`local/durable.ts`](../local/durable.ts) | Persist proof jobs and signed transaction recovery state.             |
+| [`shared/id.ts`](../shared/id.ts) and [`shared/proof.ts`](../shared/proof.ts)               | Share identity, proof, and Solana account derivation between clients. |
+| [`reporter/run.ts`](../reporter/run.ts)                                                     | Start the reporter in preview or signing mode.                        |
+| [`local/bridge-admin.ts`](../local/bridge-admin.ts)                                         | Inspect state and prepare or execute authorized administration.       |
+| [`local/stack.ts`](../local/stack.ts)                                                       | Start development chains and services.                                |
 
 The production relayer and admin CLI currently live under `local/`.
 [`deploy/service.sh`](../deploy/service.sh) runs production services with explicit
-configuration. The testnet launcher and faucet are separate development tools.
+configuration. The testnet launcher is a separate development tool.
 
 ## Build, deploy, and test
 

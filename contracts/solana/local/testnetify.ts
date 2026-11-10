@@ -102,7 +102,7 @@ export async function startValidator(index: number) {
       "nothing",
       "--log_level",
       "warn",
-      ...(index === 0 && process.env.AKT_TEAM_API === "1"
+      ...(index === 0 && process.env.AKT_AKASH_API === "1"
         ? [
             "--api.enable",
             "--api.address",
@@ -116,7 +116,7 @@ export async function startValidator(index: number) {
       AKASH_RPC_PORT + index * 10,
       AKASH_RPC_PORT - 1 + index * 10,
       AKASH_GRPC_PORT + index * 10,
-      ...(index === 0 && process.env.AKT_TEAM_API === "1"
+      ...(index === 0 && process.env.AKT_AKASH_API === "1"
         ? [AKASH_REST_PORT]
         : []),
     ],

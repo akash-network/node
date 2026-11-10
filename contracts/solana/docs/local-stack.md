@@ -106,8 +106,8 @@ RPC, peer and gRPC ports. Reserve those ranges before starting a second stack.
 Before public deployment, finish the production checkpoint/expiry ceremony, full-set transitions and long-running throughput tests, protected signer custody, independent reporter nodes and alerts. Select approved upgrade parameters, multisig/time locks and metadata, resolve reachable upstream build diagnostics, and audit all new code.
 
 The single-validator profile also exposes Akash REST on `127.0.0.1:1318`
-(the four-validator profile uses `1317`). Portal RPC, REST and developer
-endpoints follow the selected profile, so parallel local stacks cannot route
-wallet requests to the other Akash chain.
+(the four-validator profile uses `1317`). The testnetify profile enables REST
+when started with `AKT_AKASH_API=1`. Set `AKT_AKASH_REST_PORT` consistently
+when running a stack on different ports.
 
 The Sink service uses the current native Sink interface and native protobuf proofs. Follow [launch and recovery](sink-migration-v2.md) before running these commands against a new namespace. Existing numeric-ID deployments remain separate.
