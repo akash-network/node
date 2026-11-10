@@ -16,7 +16,7 @@ badge.
 
 Use [`metadata/akt.json`](../metadata/akt.json) for mainnet:
 
-- Name: **Akash Network Token**
+- Name: **Akash**
 - Symbol: **AKT**
 - Decimals: **6**, set on the mint
 - Description: **AKT, the native token of Akash Network.**
@@ -29,8 +29,8 @@ Its `images/akashnet/uakt.png` is copied byte-for-byte into
 in net. Its SHA-256 is
 `1a7f1335cbf71e2e8484128421993360d5809925fe0cd4e2da3dfcd3aec9b1ff`.
 
-The uppercase-symbol JSON is hosted in [akash-network/net](https://github.com/akash-network/net/blob/0603230f9c7a394ba48ac283208756e28deef42d/solana/mainnet/akt.json).
-Pass its [raw JSON URL](https://raw.githubusercontent.com/akash-network/net/0603230f9c7a394ba48ac283208756e28deef42d/solana/mainnet/akt.json)
+The updated token metadata JSON is hosted in [akash-network/net](https://github.com/akash-network/net/blob/130ca0ac6fab3bc1999e3612a1fbca83d57b439c/solana/mainnet/akt.json).
+Pass its [raw JSON URL](https://raw.githubusercontent.com/akash-network/net/130ca0ac6fab3bc1999e3612a1fbca83d57b439c/solana/mainnet/akt.json)
 to `set-token-metadata`. GitHub serves valid JSON as `text/plain; charset=utf-8`;
 verify the parsed body and the image bytes. Publishing this file does not set
 on-chain metadata. The token uses standard
@@ -40,7 +40,7 @@ metadata.
 ## Contract and authority
 
 `set_token_metadata(uri)` creates or updates the canonical Metaplex metadata
-account for the existing AKT mint. It fixes the name to `Akash Network Token`, symbol
+account for the existing AKT mint. It fixes the name to `Akash`, symbol
 to `AKT`, and royalties to zero. Metaplex records the token as fungible. The URI
 must be HTTPS and fit its 200-byte field.
 

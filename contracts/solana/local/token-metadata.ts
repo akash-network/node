@@ -68,7 +68,7 @@ async function main() {
     /^application\/json\b/,
   );
   const json = object(await response.json());
-  assert.equal(json.name, "Akash Network Token");
+  assert.equal(json.name, "Akash");
   assert.equal(json.symbol, "AKT");
   assert.ok(typeof json.image === "string", "image URL required");
   const image = await fetch(httpsUrl(json.image), {
@@ -90,12 +90,7 @@ async function main() {
   const before = await getMint(wallet.connection, mint, "finalized");
   const old = await readTokenMetadata(wallet.connection, mint);
   let signature: string | null = null;
-  if (
-    !old ||
-    old.uri !== uri ||
-    old.name !== "Akash Network Token" ||
-    old.symbol !== "AKT"
-  ) {
+  if (!old || old.uri !== uri || old.name !== "Akash" || old.symbol !== "AKT") {
     signature = await program.methods
       .setTokenMetadata(uri)
       .accountsStrict({
@@ -116,7 +111,7 @@ async function main() {
   }
   const metadata = await readTokenMetadata(wallet.connection, mint);
   assert.ok(metadata);
-  assert.equal(metadata.name, "Akash Network Token");
+  assert.equal(metadata.name, "Akash");
   assert.equal(metadata.symbol, "AKT");
   assert.equal(metadata.uri, uri);
   assert.equal(metadata.updateAuthority, mintAuthority.toBase58());
