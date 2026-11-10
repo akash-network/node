@@ -1,0 +1,142 @@
+{
+  "sourceScope": {
+    "deployedSourceCommit": "431953bb96a3cfdd1e1888210cae6dbf7d05a4ad",
+    "upgradeSourceCommit": "29b038b146377fbcab1d211ebef1439426645e6e",
+    "compiledInputsCompared": [
+      "Anchor.toml",
+      "Cargo.toml",
+      "Cargo.lock",
+      "rust-toolchain.toml",
+      "programs",
+      "idls",
+      "scripts/fetch-light-client.py",
+      "scripts/workspace.sh",
+      "scripts/setup-light-client.sh",
+      "scripts/build-programs.sh",
+      "tools/header-encoder/Cargo.toml",
+      "tools/verifiable-build"
+    ],
+    "changedCompiledFiles": ["contracts/solana/programs/akt/src/constants.rs"],
+    "onlySymbolLiteralChanged": true,
+    "comparedProgramsAndDependencyPins": true
+  },
+  "buildComparison": {
+    "deployedSourceCommit": "431953bb96a3cfdd1e1888210cae6dbf7d05a4ad",
+    "upgradeSourceCommit": "29b038b146377fbcab1d211ebef1439426645e6e",
+    "artifacts": [
+      {
+        "file": "akt.so",
+        "oldBytes": 1040040,
+        "newBytes": 1040040,
+        "oldSha256": "4cf85bb90cee9da1ebdaaed9921a9316d58d00d4142670b50419a5ca0ac22942",
+        "newSha256": "6265e16194c84248cfc6439536f59952bba4c772bb0fdf0c3179c56df7c0f905",
+        "identical": false
+      },
+      {
+        "file": "ics07_tendermint.so",
+        "oldBytes": 1442552,
+        "newBytes": 1442552,
+        "oldSha256": "c9c47cd810a4c9f83e2826f4a006be14b211c2708f7955905bfdc3fbca3fe4ef",
+        "newSha256": "c9c47cd810a4c9f83e2826f4a006be14b211c2708f7955905bfdc3fbca3fe4ef",
+        "identical": true
+      },
+      {
+        "file": "access_manager.so",
+        "oldBytes": 429928,
+        "newBytes": 429928,
+        "oldSha256": "19c2e6c51d8d324033931f177744cd21d4bcd6609d00d79759aa87c3afad5cd4",
+        "newSha256": "19c2e6c51d8d324033931f177744cd21d4bcd6609d00d79759aa87c3afad5cd4",
+        "identical": true
+      },
+      {
+        "file": "akt.json",
+        "oldBytes": 54232,
+        "newBytes": 54232,
+        "oldSha256": "d24da1ffec5b478eafcb2f63dde97a00eb5351c45fe7ea7752ced447992a8b41",
+        "newSha256": "d24da1ffec5b478eafcb2f63dde97a00eb5351c45fe7ea7752ced447992a8b41",
+        "identical": true
+      },
+      {
+        "file": "ics07_tendermint.json",
+        "oldBytes": 57460,
+        "newBytes": 57460,
+        "oldSha256": "e6b5a03503637fa50d0f10780b3b89b4375b8e38af97ff4c9bcb66a354af5ff5",
+        "newSha256": "e6b5a03503637fa50d0f10780b3b89b4375b8e38af97ff4c9bcb66a354af5ff5",
+        "identical": true
+      },
+      {
+        "file": "access_manager.json",
+        "oldBytes": 37485,
+        "newBytes": 37485,
+        "oldSha256": "b64c91599016eec014a1d9f745423670d47c0fa16a4220202045302672af677a",
+        "newSha256": "b64c91599016eec014a1d9f745423670d47c0fa16a4220202045302672af677a",
+        "identical": true
+      },
+      {
+        "file": "akt.ts",
+        "oldBytes": 54342,
+        "newBytes": 54342,
+        "oldSha256": "493b59485355646931d1a00e4dd44d491cfc98b98b1aecea2b3a22b52d0bd706",
+        "newSha256": "493b59485355646931d1a00e4dd44d491cfc98b98b1aecea2b3a22b52d0bd706",
+        "identical": true
+      },
+      {
+        "file": "ics07_tendermint.ts",
+        "oldBytes": 57543,
+        "newBytes": 57543,
+        "oldSha256": "789024287ca3ef99a222f8e904cd27f603ad0e3425498dcfd231b6e453835add",
+        "newSha256": "789024287ca3ef99a222f8e904cd27f603ad0e3425498dcfd231b6e453835add",
+        "identical": true
+      },
+      {
+        "file": "access_manager.ts",
+        "oldBytes": 37609,
+        "newBytes": 37609,
+        "oldSha256": "87b3882ac199259a51150a3e5c8be82cef340adfea9ddd0c5444905d697ca269",
+        "newSha256": "87b3882ac199259a51150a3e5c8be82cef340adfea9ddd0c5444905d697ca269",
+        "identical": true
+      }
+    ],
+    "sameBuilderAndToolchain": true,
+    "aktDifferingBytes": 3,
+    "aktDifferences": [
+      {
+        "offset": 390628,
+        "length": 1,
+        "beforeHex": "74",
+        "afterHex": "54",
+        "sections": [".text"]
+      },
+      {
+        "offset": 390644,
+        "length": 2,
+        "beforeHex": "616b",
+        "afterHex": "414b",
+        "sections": [".text"]
+      }
+    ],
+    "stackOffsetDiagnostics": 7
+  },
+  "metadata": {
+    "uri": "https://raw.githubusercontent.com/akash-network/net/0603230f9c7a394ba48ac283208756e28deef42d/solana/mainnet/akt.json",
+    "httpStatus": 200,
+    "contentType": "text/plain; charset=utf-8",
+    "symbol": "AKT",
+    "exactLocalMetadataMatch": true,
+    "imageHttpStatus": 200,
+    "imageSha256": "1a7f1335cbf71e2e8484128421993360d5809925fe0cd4e2da3dfcd3aec9b1ff",
+    "imageBytes": 1291
+  },
+  "checks": {
+    "pinnedDockerBuild": "passed",
+    "rustUnitTests": {
+      "passed": 23,
+      "failed": 0
+    },
+    "typescript": "passed; all six newly generated interfaces match the checked interfaces",
+    "scopedFormattingAndShellChecks": "passed",
+    "runtimeUpgradeRehearsal": "not run",
+    "independentMachineBuild": "not run",
+    "mainnetUpgrade": "not performed"
+  }
+}

@@ -1,5 +1,9 @@
 # AKT mainnet program artifacts
 
+The uppercase-symbol upgrade candidate is in
+[upgrades/20261110-symbol-uppercase](upgrades/20261110-symbol-uppercase/README.md).
+The original launch artifacts below are preserved.
+
 Public build artifacts for the prepared AKT Solana mainnet launch. Deployment
 and independent build approval remain pending. Private keys are not part of
 this directory.

@@ -1,0 +1,10 @@
+commit 29b038b146377fbcab1d211ebef1439426645e6e
+image sha256:0af7adf523c4556981d3f378fc473d9615e6a9c6e4e4d7bd4192b634e657c2f5
+upstream-repository https://github.com/akash-network/ibc-contracts
+upstream b3f25b45c785a9cb571cb169e5b612fb6c94e1f8
+solana-cli 2.3.13 (src:5466f459; feat:2142755730, client:Agave)
+solana-cargo-build-sbf 2.3.13
+platform-tools v1.48
+rustc 1.84.1
+anchor-cli 0.32.1
+rustc 1.89.0 (29483883e 2025-08-04)
