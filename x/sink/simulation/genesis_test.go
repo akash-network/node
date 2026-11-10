@@ -35,7 +35,8 @@ func TestRandomizedGenesis(t *testing.T) {
 
 				cdc.MustUnmarshalJSON(state.GenState[types.ModuleName], &genesis)
 
-				require.NoError(t, genesis.Validate())
+				err := genesis.ValidateBasic()
+				require.NoError(t, err)
 
 				require.Equal(t, count > 0, genesis.Params.Enabled)
 				require.Equal(t, types.DefaultParams().ReporterChallengePeriod, genesis.Params.ReporterChallengePeriod)

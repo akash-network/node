@@ -141,7 +141,7 @@ func (q Querier) Account(ctx context.Context, req *types.QueryAccountRequest) (*
 
 	sctx := sdk.UnwrapSDKContext(ctx)
 
-	epoch, err := q.quotaEpoch(sctx)
+	epoch, err := q.getEpochID(sctx)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +174,7 @@ func (q Querier) State(ctx context.Context, _ *types.QueryStateRequest) (*types.
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	epoch, err := q.quotaEpoch(sctx)
+	epoch, err := q.getEpochID(sctx)
 	if err != nil {
 		return nil, err
 	}

@@ -14,6 +14,7 @@ var (
 	AccountsKey       = collections.NewPrefix([]byte{0x04, 0x01})
 	SendUsageKey      = collections.NewPrefix([]byte{0x04, 0x02})
 	RefundUsageKey    = collections.NewPrefix([]byte{0x04, 0x03})
+	TotalsCurrKey     = collections.NewPrefix([]byte{0x04, 0x04})
 	RefundQueueKey    = collections.NewPrefix([]byte{0x05, 0x00})
 	SequenceKey       = collections.NewPrefix([]byte{0x06, 0x00})
 	PoliciesKey       = collections.NewPrefix([]byte{0x07, 0x00})

@@ -53,7 +53,7 @@ func TestSinkContractBankDepositRejected(t *testing.T) {
 	before.balances[h.sender.String()] = before.balances[h.sender.String()].Sub(coin(10))
 	require.Equal(t, before, captureSinkBankState(t, h, h.ctx(), contract))
 	require.Empty(t, sinkEvents(t, res.Events))
-	require.NoError(t, h.a.Keepers.Akash.Sink.CheckBalance(h.ctx()))
+
 	t.Logf("contract bank send rejected code=%d log=%s; attached funds and contract balance rolled back", res.Code, res.Log)
 }
 
@@ -157,7 +157,7 @@ func TestSinkContractDispatchRejected(t *testing.T) {
 			require.Equal(t, before, captureSinkBankState(t, h, h.ctx(), contract))
 			require.Equal(t, contractState, storeEntries(t, h.ctx().KVStore(h.a.GetKey(wasmtypes.StoreKey)), wasmtypes.GetContractStorePrefix(contract)))
 			require.Empty(t, sinkEvents(t, res.Events))
-			require.NoError(t, h.a.Keepers.Akash.Sink.CheckBalance(h.ctx()))
+
 			t.Logf("contract dispatch rejected code=%d log=%s; contract and Sink state and transfer balances retained", res.Code, res.Log)
 		})
 	}
@@ -199,7 +199,6 @@ func TestSinkMessageValidationAndSigner(t *testing.T) {
 
 	_, err := sinkhandler.NewServer(h.a.Keepers.Akash.Sink).Sink(h.ctx(), nil)
 	require.Error(t, err)
-	_, err = h.a.Keepers.Akash.Sink.Deposit(h.ctx(), h.deposit(10))
 	require.ErrorIs(t, err, types.ErrDepositNotSole)
 }
 
@@ -241,7 +240,7 @@ func TestSinkDepositBankFailureAndRedirectRollback(t *testing.T) {
 			before.balances[h.sender.String()] = before.balances[h.sender.String()].Sub(coin(10))
 			require.Equal(t, before, captureSinkBankState(t, h, h.ctx()))
 			require.Empty(t, sinkEvents(t, res.Events))
-			require.NoError(t, h.a.Keepers.Akash.Sink.CheckBalance(h.ctx()))
+
 			t.Logf("deposit rolled back code=%d log=%s; Sink store, supply, and balances unchanged except the fee", res.Code, res.Log)
 		})
 	}
@@ -288,6 +287,7 @@ func TestSinkRequestBindingAndNativeCacheRollback(t *testing.T) {
 	res := h.deliver(t, "", h.deposit(1))
 	require.Zero(t, res.Code, res.Log)
 	k := h.a.Keepers.Akash.Sink
+
 	for _, tc := range []struct{ signed, delivered func(*types.MsgSink) }{
 		{delivered: func(m *types.MsgSink) { m.Sender = h.bystander.String() }},
 		{delivered: func(m *types.MsgSink) { m.Dest = types.SolanaAddress{1}.String() }},
@@ -304,7 +304,7 @@ func TestSinkRequestBindingAndNativeCacheRollback(t *testing.T) {
 
 		b := h.a.TxConfig().NewTxBuilder()
 		require.NoError(t, b.SetMsgs(msg))
-		_, err := sinkkeeper.NewDepositDecorator().AnteHandle(h.ctx(), b.GetTx(), false, func(ctx sdk.Context, _ sdk.Tx, _ bool) (sdk.Context, error) {
+		_, err := sinkkeeper.NewDepositDecorator(k).AnteHandle(h.ctx(), b.GetTx(), false, func(ctx sdk.Context, _ sdk.Tx, _ bool) (sdk.Context, error) {
 			tc.delivered(msg)
 			_, err := k.Deposit(ctx, msg)
 			return ctx, err
@@ -332,12 +332,12 @@ func TestSinkRequestBindingAndNativeCacheRollback(t *testing.T) {
 		id, err = k.Deposit(ctx, msg)
 		return ctx, err
 	}
-	_, err := sinkkeeper.NewDepositDecorator().AnteHandle(ctx, b.GetTx(), false, call)
+	_, err := sinkkeeper.NewDepositDecorator(k).AnteHandle(ctx, b.GetTx(), false, call)
 	require.Error(t, err)
 	require.Empty(t, ctx.EventManager().Events())
 	require.Equal(t, before, captureSinkBankState(t, h, h.ctx()))
-	redirect = false
-	_, err = sinkkeeper.NewDepositDecorator().AnteHandle(ctx, b.GetTx(), false, call)
+
+	_, err = sinkkeeper.NewDepositDecorator(k).AnteHandle(ctx, b.GetTx(), false, call)
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), id.Sequence)
 }

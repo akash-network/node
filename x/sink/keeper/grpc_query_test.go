@@ -254,7 +254,7 @@ func TestQueryStoredStateFailuresAreInternal(t *testing.T) {
 
 	usage, err := collections.EncodeKeyWithPrefix(AccountsKey.Bytes(), sdk.AccAddressKey, testOwner(6))
 	require.NoError(t, err)
-	settlement, err := SettlementKey(*types.NewSettlementID(g.Records[0].Status, g.Records[0].ID))
+	settlement, err := SettlementKey(types.NewSettlementID(g.Records[0].Status, g.Records[0].ID))
 	require.NoError(t, err)
 	// A refund queue entry under the governance scope whose deadline is truncated.
 	refund := append(append(bytes.Clone(RefundQueueKey.Bytes()), make([]byte, 8)...), 1)

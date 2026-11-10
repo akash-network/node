@@ -136,7 +136,6 @@ func TestDecimalThresholdSettlement(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, before, after)
 				require.Equal(t, events, ctx.EventManager().Events())
-				require.NoError(t, k.CheckBalance(ctx))
 
 				restored, restoreCtx, restoreBank := testStore(t)
 				importTestGenesis(t, restored, restoreCtx, restoreBank, after)

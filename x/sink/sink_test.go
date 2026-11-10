@@ -551,7 +551,7 @@ func TestSinkLimitsAndGovernanceVoid(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, got.Settlement.VoidAuthorization)
 	require.Equal(t, sinktypes.StatusVoided, got.Status)
-	key, err := sinkkeeper.SettlementKey(*sinktypes.NewSettlementID(got.Status, h.id(1)))
+	key, err := sinkkeeper.SettlementKey(sinktypes.NewSettlementID(got.Status, h.id(1)))
 	require.NoError(t, err)
 	value, err := got.Settlement.Marshal()
 	require.NoError(t, err)
@@ -655,14 +655,17 @@ func TestSinkIDNeverWraps(t *testing.T) {
 	require.Zero(t, res.Code, res.Log)
 	ctx := h.ctx().WithBlockHeight(h.height + 1)
 	key := h.a.GetTKey(sinktypes.TStoreKey)
+
 	ctx.TransientStore(key).Set(sinkkeeper.SequenceKey.Bytes(), binary.BigEndian.AppendUint64(nil, math.MaxUint64))
 	msg := h.deposit(1)
 	builder := h.a.TxConfig().NewTxBuilder()
 	require.NoError(t, builder.SetMsgs(msg))
-	_, err := sinkkeeper.NewDepositDecorator().AnteHandle(ctx, builder.GetTx(), false, func(ctx sdk.Context, _ sdk.Tx, _ bool) (sdk.Context, error) {
+
+	_, err := sinkkeeper.NewDepositDecorator(h.a.Keepers.Akash.Sink).AnteHandle(ctx, builder.GetTx(), false, func(ctx sdk.Context, _ sdk.Tx, _ bool) (sdk.Context, error) {
 		_, err := h.a.Keepers.Akash.Sink.Deposit(ctx, msg)
 		return ctx, err
 	})
+
 	require.ErrorIs(t, err, sinktypes.ErrOverflow)
 	require.Equal(t, uint64(1), h.totals().PendingCount)
 	require.NoError(t, h.a.Keepers.Akash.Sink.BeginBlocker(ctx))
