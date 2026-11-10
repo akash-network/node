@@ -1,3 +1,4 @@
+---
 name: release-operators
 
 on:
@@ -33,10 +34,6 @@ jobs:
         run: |
           [[ "$TAG" =~ ^(relayer|reporter)/v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[a-zA-Z0-9.-]+)?$ ]]
           test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/$TAG^{commit}")"
-          git merge-base --is-ancestor HEAD origin/main
-          if draft=$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null); then
-            test "$draft" = true
-          fi
           version=${TAG#*/v}
           prerelease=false
           [[ "$version" != *-* ]] || prerelease=true

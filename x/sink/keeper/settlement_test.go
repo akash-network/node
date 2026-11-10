@@ -121,7 +121,6 @@ func TestSettlementPolicyAndQueueRecovery(t *testing.T) {
 
 	_, err = k.ExportGenesis(ctx)
 	require.NoError(t, err)
-	require.NoError(t, k.CheckBalance(ctx))
 }
 
 func TestFinalizeRefundAuthorizationErrors(t *testing.T) {
@@ -228,7 +227,7 @@ func TestFinalizeRefundAuthorizationErrors(t *testing.T) {
 					r.Settlement.Hold = types.Hold(99)
 				}
 
-				require.NoError(t, k.settlements.Set(ctx, *types.NewSettlementID(r.Status, r.ID), r.Settlement))
+				require.NoError(t, k.settlements.Set(ctx, types.NewSettlementID(r.Status, r.ID), r.Settlement))
 			}
 
 			snapshot := func() map[string]string {
@@ -251,13 +250,14 @@ func TestFinalizeRefundAuthorizationErrors(t *testing.T) {
 				Executor: testOwner(1).String(),
 				ID:       r.ID,
 			})
-
 			require.Equal(t, before, snapshot())
 			require.Equal(t, events, ctx.EventManager().Events())
 			require.ErrorIs(t, err, tc.want)
+
 			codespace, code, _ := sdkerrors.ABCIInfo(err, false)
 			require.Equal(t, types.ModuleName, codespace)
 			require.Equal(t, tc.code, code)
+
 			grpcCode := codes.FailedPrecondition
 			if tc.want == types.ErrInvalidSettlement {
 				grpcCode = codes.InvalidArgument

@@ -97,7 +97,7 @@ func TestNativeBoundaryVectors(t *testing.T) {
 		})
 	}
 	require.NoError(t, settlement.Validate(id, types.StatusRefundPending, map[uint64]types.ReporterPolicy{1: policy}))
-	key, err := keeper.SettlementKey(*types.NewSettlementID(types.StatusRefundPending, id))
+	key, err := keeper.SettlementKey(types.NewSettlementID(types.StatusRefundPending, id))
 	require.NoError(t, err)
 	value, err := codec.CollValue[types.SettlementData](cdc).Encode(settlement)
 	require.NoError(t, err)
