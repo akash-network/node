@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { AnchorProvider, Program } from "@coral-xyz/anchor";
+import { AnchorProvider, Program, web3 } from "@coral-xyz/anchor";
 import type { Ics07Tendermint } from "../../../.cache/solana/deps/ibc-contracts/ibc-solana/target/types/ics07_tendermint";
 import { pda, LE64 } from "./common";
 
@@ -33,15 +33,16 @@ export async function assertClientActive(
       LE64(BigInt(state.latestHeight.revisionHeight.toString())),
     ),
   );
-  const time = await wallet.connection.getBlockTime(
-    await wallet.connection.getSlot("confirmed"),
+  const clock = await wallet.connection.getAccountInfo(
+    web3.SYSVAR_CLOCK_PUBKEY,
+    "confirmed",
   );
-  assert.ok(time !== null, "Solana clock unavailable");
+  assert.ok(clock && clock.data.length === 40, "Solana clock unavailable");
   const status = clientStatus({
     frozenHeight: BigInt(state.frozenHeight.revisionHeight.toString()),
     consensusTimestampNs: BigInt(latest.consensusState.timestamp.toString()),
     trustingPeriodSeconds: BigInt(state.trustingPeriod.toString()),
-    solanaTimeSeconds: BigInt(time),
+    solanaTimeSeconds: clock.data.readBigInt64LE(32),
   });
   assert.equal(
     status,
