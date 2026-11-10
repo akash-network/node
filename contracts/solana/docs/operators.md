@@ -77,8 +77,8 @@ quickly.
 ## Run
 
 For production installation, supervision and rollback use
-[service deployment](deploy-services.md). The generic commands below also
-support explicitly configured development networks.
+[service deployment](https://akash.network/docs/node-operators/akash-sink/). Use the release-matched configuration and bundled header encoder. The source-runner
+commands below describe this checkout, not the packaged service.
 
 ```bash
 npm run relayer -- --config /etc/akt-relayer/config.json

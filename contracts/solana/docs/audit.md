@@ -2,7 +2,7 @@
 
 This reference describes the native protobuf proof contract used with the paired node and chain-sdk revisions. The earlier `audit-v1` artifact hashes and validator results do not certify this program. A deployment needs a matching node, SDK archive, program, IDL, services and portal, with their commits and artifact hashes recorded together.
 
-[Bridge protocol](bridge-protocol.md) specifies the keys and proven values. [Launch and recovery](sink-migration-v2.md) specifies the service journals, budgets and recovery rules. [Production deployment](production-deployment.md) covers authorities and operational acceptance.
+[Bridge protocol](sink-migration-v2.md#proof-and-settlement-reference) specifies the keys and proven values. [Launch and recovery](sink-migration-v2.md) specifies the service journals, budgets and recovery rules. [Production deployment](deploy-program.md) covers authorities and operational acceptance.
 
 ## Scope and trust
 
@@ -19,7 +19,7 @@ The program's audit scope includes `programs/akt`, its membership dependencies i
 | Reporters                                    | Observe finalized Solana outcomes and authorize Akash settlement under its reporter policy. They have no Solana mint authority.       |
 | Akash governance                             | Orders a void in canonical settlement state and can resolve Akash disputes using asserted Solana evidence.                            |
 
-Upgrade authorities are trusted for issuance. A malicious AKT upgrade can bypass caps, and a malicious verifier or checkpoint can authenticate false state. Production authority controls are specified in [production deployment](production-deployment.md#authorities-and-keys).
+Upgrade authorities are trusted for issuance. A malicious AKT upgrade can bypass caps, and a malicious verifier or checkpoint can authenticate false state. Production authority controls are specified in [production deployment](deploy-program.md#mainnet-workspace).
 
 ## Source map
 
@@ -116,7 +116,7 @@ Canonical implementation checks include native proof vectors, program unit tests
 
 ## Limitations and operational risks
 
-- The planned deployment uses up to seven reporters. The existing 16,384-byte proof buffer bounds complete uploads; reporter-policy changes require checking the resulting proof size.
+- Use the reviewed reporter policy and query current membership. The existing 16,384-byte proof buffer bounds complete uploads; reporter-policy changes require checking the resulting proof size.
 - This layout uses a Borsh byte vector for the owner and hashed owner PDA seeds. It requires an unused Sink launch and fresh Solana namespace. It is not an in-place upgrade or a replay-safe replacement for an already operating bridge.
 
 - Governance evidence and reporter quorum are Akash trust decisions. Solana cannot prove that Akash has not refunded a transfer. Honest refund processing needs a real finalized Solana void first. A false governance confirmation can violate that assumption.

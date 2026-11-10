@@ -1,17 +1,19 @@
 # AKT on Solana
 
-Build and deploy the AKT program, the IBC light client, and its access manager.
-Run commands from `contracts/solana` unless stated otherwise.
+The mainnet bridge is deployed. Use these entry points:
 
-## Contents
+| Task                                                            | Reference                                                                                      |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Contract launch, administration, upgrades and incident response | [Canonical deployment guide](docs/deploy-program.md)                                           |
+| Deployed binaries, IDLs, source pins and historical evidence    | [Mainnet artifacts](deployments/mainnet/README.md)                                             |
+| Public program, mint and multisig addresses                     | [Mainnet reference](https://akash.network/docs/learn/akash-sink/mainnet/)                      |
+| Install or upgrade relayers and reporters                       | [Operator guides](https://akash.network/docs/node-operators/akash-sink/)                       |
+| Native Akash upgrade                                            | [Sink deployment](../../_docs/sink-deployment.md)                                              |
+| Program design and verification                                 | [Implementation](docs/implementation.md), [verifier](docs/verifier.md), [audit](docs/audit.md) |
+| Protocol, proof and service recovery details                    | [Sink reference](docs/sink-migration-v2.md)                                                    |
 
-- [Build](#build)
-- [Deploy](#deploy)
-- [Start a Solana testnet](#start-a-solana-testnet)
-- [Code walkthrough](docs/implementation.md)
-- [Program deployment guide](docs/deploy-program.md)
-- [Local E2E with the CLI](../../_docs/sink-local-e2e.md)
-- [Deploy Akash and Solana](../../_docs/sink-deployment.md)
+Run development commands from `contracts/solana`. Local test networks and fresh
+program namespaces are separate from the existing mainnet deployment.
 
 ## Build
 
@@ -43,45 +45,6 @@ npm run test:unit
 npm run typecheck
 npm run test:services
 ```
-
-## Deploy
-
-For a new production deployment, set the production program IDs and commit the
-changes using [the launch instructions](docs/deploy-program.md#2-launch-commit).
-The current account layout requires fresh Solana state and an unused native
-Sink module.
-
-Build the committed release with Docker:
-
-```bash
-source scripts/workspace.sh
-export RELEASE_DIR="$SOLANA_CACHE/releases/$(git rev-parse HEAD)"
-npm run build:verifiable -- --rev "$(git rev-parse HEAD)" "$RELEASE_DIR/build"
-cp deploy/manifest.example.json "$RELEASE_DIR/manifest.json"
-```
-
-Fill in the manifest with the reviewed program IDs, authorities, commit, and
-build hashes. Set `buildDirectory` to `build`. Set `RPC` to the target cluster.
-
-```bash
-export RPC=https://your-solana-rpc.example
-npm run deploy:programs -- check --manifest "$RELEASE_DIR/manifest.json"
-npm run deploy:programs -- preflight --manifest "$RELEASE_DIR/manifest.json" --url "$RPC"
-```
-
-Deploy the three programs with the Solana CLI, then initialize them, transfer
-the upgrade authorities, and configure the bridge. Follow
-[the deployment guide](docs/deploy-program.md) in order, keeping the same
-`RELEASE_DIR`. It includes the commands and checks for each transaction.
-
-After the ceremony, verify the deployed bytes and authorities:
-
-```bash
-npm run deploy:programs -- verify --manifest "$RELEASE_DIR/manifest.json" --url "$RPC" --authority multisig
-```
-
-[Service installation](docs/deploy-services.md) covers starting the relayer and
-reporters against the deployed programs.
 
 ## Start a Solana testnet
 

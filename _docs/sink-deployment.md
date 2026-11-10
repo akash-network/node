@@ -11,7 +11,7 @@ For a disposable CLI test, use [local E2E](sink-local-e2e.md).
 - [Configure and enable Sink](#configure-and-enable-sink)
 - [Verify the deployment](#verify-the-deployment)
 - [Stop or recover](#stop-or-recover)
-- [Solana production runbook](../contracts/solana/docs/production-deployment.md)
+- [Solana production runbook](../contracts/solana/docs/deploy-program.md)
 
 ## Build the release
 
@@ -34,9 +34,8 @@ Prepare the locked [SDK archive](../contracts/solana/docs/sdk-integration.md).
 Produce the launch commit with its pinned IBC source, the reproducible program
 build and the reviewed manifest with
 [program deployment steps 1 to 3](../contracts/solana/docs/deploy-program.md#1-program-keypairs).
-Then build the [service archive](../contracts/solana/docs/deploy-services.md#build-one-reviewed-release)
-from that manifest. Record source commits, program IDs, binary and IDL hashes,
-and archive hashes.
+Install the separately versioned [operator releases](https://akash.network/docs/node-operators/akash-sink/).
+Record image digests alongside the program source commits, IDs and hashes.
 
 ## Upgrade Akash
 
@@ -101,12 +100,12 @@ Follow these guides in order, using the same Akash chain ID and Solana genesis:
 1. [Deploy and initialize the programs](../contracts/solana/docs/deploy-program.md#4-deploy).
    Verify all three programs and authorities, then trust a post-upgrade Akash checkpoint.
    Run its step 9, `set_bridge_enabled`, only after the proposal below passes.
-2. [Install the relayer and reporters](../contracts/solana/docs/deploy-services.md).
+2. [Install the relayer and reporters](https://akash.network/docs/node-operators/akash-sink/).
    Start the relayer promptly to keep the checkpoint fresh. Run reporters in preview.
    Until the proposal below lists them, each pass stops with `not a current reporter`,
    so preview confirms only configuration and connectivity.
 
-Give each production reporter a funded Akash account, external signer and
+Give each production reporter a funded Akash account, protected signing key and
 independent observation infrastructure. Do not attach a new mint to already
 resolved native deposits without a reviewed migration.
 
@@ -120,7 +119,7 @@ akash query sink params --node "$RPC" --output json |
 ```
 
 One proposal opens transfers. Edit `params.json` with the approved reporters,
-decimal threshold, challenge period, vaults, minimum, seed-window limits and
+decimal threshold, challenge period, vaults, minimum, transfer/refund limits and
 guardian, and set both `enabled` and `refunds_enabled` to true. Preserve
 unrelated fields, then generate the unsigned message:
 
@@ -141,13 +140,14 @@ jq --arg deposit "$GOV_DEPOSIT" '{messages:.body.messages, metadata:"",
 
 Review and submit `$DEPLOY_RUN/params-proposal.json` with the same network and signing flags
 as the upgrade proposal. After passage, query `params` and `reporters 0` and
-compare with the approved values. For example, seven reporters at `0.67`
-require five votes. Choose the actual policy through governance.
+compare with the approved values. For example, five reporters at `0.667`
+require four votes. Choose the actual policy through governance.
 
-Follow the [activation sequence](../contracts/solana/docs/production-deployment.md#5-activation):
-right after the proposal passes, the multisig runs `set_bridge_enabled(true)`;
-enable reporter broadcasting after preview checks; after the seed mints, lower
-both chains' caps to their launch values.
+Follow the [activation sequence](../contracts/solana/docs/deploy-program.md#9-activation):
+after the proposal passes, complete reporter preview checks and enable broadcasting.
+With the required reporter quorum and a healthy relayer, the multisig enables
+minting. Verify a small ordinary CLI deposit; there is no seed allocation or
+temporary seed-window policy.
 
 ## Verify the deployment
 
@@ -180,6 +180,6 @@ checks separately, including unpaid refunds and untested full-state imports.
 ## Stop or recover
 
 Pause new deposits through the guardian or governance. Preserve data and journals;
-follow the [incident runbooks](../contracts/solana/docs/production-deployment.md#incident-runbooks).
+follow the [incident runbooks](../contracts/solana/docs/deploy-program.md#incident-runbooks).
 Do not start the old binary on a migrated database. Database recovery requires
 a coordinated network plan; rolling back a service cannot undo chain transactions.

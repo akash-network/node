@@ -1,6 +1,6 @@
 # Launch and recover canonical Sink services
 
-This account layout is for a new launch with an unused Sink module and fresh Solana program, mint and service state. It changes instruction, account and event encoding and every permanent status PDA, including 20-byte owners. Do not upgrade an existing program in place or point a fresh program at previously resolved native deposits: the old outcome accounts would no longer prevent replay. Existing test deployments remain on their original binaries and namespaces. Preserve their keys, ledgers and receipt history.
+This account layout is for a new launch with an unused Sink module and fresh Solana program, mint and service state. It changes instruction, account and event encoding and every permanent status PDA, including 20-byte owners. Do not migrate a live deployment to this account layout in place or point a fresh program at previously resolved native deposits: the old outcome accounts would no longer prevent replay. Existing test deployments remain on their original binaries and namespaces. Preserve their keys, ledgers and receipt history.
 
 ## Prepare the namespace
 
@@ -47,7 +47,7 @@ Solana keeps its independent per-transfer and daily mint caps. Mints submit imme
 
 ## Buffer funding and recovery
 
-The planned deployment uses up to seven reporters. Proofs use the existing 16,384-byte buffer and full native settlement verification. Check the complete proof size when changing the reporter policy.
+Use the reviewed reporter policy and check the current member count. Proofs use the existing 16,384-byte buffer and full native settlement verification. Check the complete proof size when changing the reporter policy.
 
 For a proof that fits, the account needs an 80-byte header plus its declared proof length. Creation allocates at most 10,240 bytes. `growProofBuffer()` funds and allocates the rest, at most one growth with the current capacity. Uploads append at most 500 bytes per transaction. Resolution requests a 256 KiB heap and the existing compute limit.
 
@@ -70,3 +70,29 @@ Unknown or pruned heights and malformed pages remain failures. A failed history 
 Run `npm run typecheck`, `npm run test:services` and `npm run test:portal-contract` after installing the paired SDK and IDL. Service tests drive the actual relayer tick and signed transaction journal with controlled RPC boundaries. They are not validator membership evidence.
 
 Run `npm test` for the program's isolated validator tests and `npm run test:sink` for a chain-produced proof after the node fixture gate passes. Go tests use the committed pins by default; local SDK development must explicitly select the existing `go.work` mechanism. Preserve their fresh test directories. Live headers, full refund recovery, cross-host services and populated mainnet-fork recovery remain separate gates.
+
+## Proof and settlement reference
+
+`mint_transfer(id, recipient_key, amount, proof_height)` reconstructs native protobuf `RecordData` from a composite Anchor `TransferId`, recipient public key and positive u64 amount. `void_transfer(id, settlement_status, proof_height)` proves the complete canonical settlement with its permanent void authorization. Both create the same permanent status PDA. The actual proven key determines the full 32-byte SHA-256 proof-buffer nonce. Identity is authenticated by the canonical proof key.
+
+The mint instruction verifies the client pin, active trusting period, proof height and real ICS23 membership before validating recipient eligibility. Mint outcomes record recipient and amount. Void outcomes record invalid-recipient or governance reason. Both status and event record full identity, proof height and resolved slot. Governance void validates the permanent authorization in the full proven settlement value under its current status key. The request height and round must fit that snapshot.
+
+Only top-level mint and void instructions are accepted. Only compute-budget instructions may precede them. Recipient checks, ATA ownership, vault curve exceptions, mint authority, daily and individual amount caps, payer-owned proof buffers and transaction rollback remain mandatory. Pause and cap failures create no permanent status. Invalid recipients can resolve to void, never to a deadline refund.
+
+Repinning a light client does not change transfer identity or replay protection. Status accounts are permanent and cannot be closed. A mint prevents a later void and a void prevents a later mint.
+
+`tests/bridge.ts` creates real IAVL and multistore ICS23 proofs and initializes explicit trusted roots on a fresh validator. `tests/sink-proof.ts` consumes the actual signed-deposit app fixture and exports finalized reporter transactions. The first suite tests membership and program execution. The second also tests chain-produced proof bytes. Neither substitutes for signed-header verification, which uses the relayer/header scenarios.
+
+### Query and reporter contract
+
+The current service contract is this reference. IDs contain owner, height and sequence. SDK types are `Sink_ID`, `Sink_Status`, `RecordData`, `ReporterPolicy`, `SolanaEvidence` and `TransferState` from the generated Akash v1 barrel.
+
+`Transfer` accepts one composite ID. `Transfers` supports owner and financial-status filters with native pagination. Unfiltered global history is chronological. `Disputes` includes every held terminal record. `Account` exposes normalized account amount usage. `State` includes five financial amount/count pairs, the native `day` epoch, normalized send/refund usage and the canonical refund queue head. `Params` supplies params and `Reporters` (version 0) the current reporter policy.
+
+Every page in a scan uses one committed height. Missing or pruned state is an error. There is no scalar lookup, synthetic public status, OpenTransfers endpoint or 1-to-last-ID scan.
+
+A report uses `MsgReportOutcome` with current policy version, exact round and flat observation slot and signature. Quorum freezes the certificate. The first opposite observation creates a conflict; subsequent reports have no effect. `MsgVetoVoid` can stop an unpaid refund during its challenge. Governance resolves stale or conflicting authorization with `MsgRestartTransfer`, `MsgConfirmMint` or `MsgConfirmVoid`, always carrying `expected_round`.
+
+Only `MsgFinalizeRefund` pays. It needs the refund conditions in [limits and deadlines](#limits-and-deadlines). A void order, maturity or an absent Solana status cannot replace finalized void evidence.
+
+`TransferState.status` contains the financial status. `SettlementData.policy` embeds the authorizing policy. `governance_observation`, flat veto fields and permanent `void_authorization` survive the applicable lifecycle transitions. `challenge_end` is integer Unix seconds. Status 3 maps to HTTP `void_requested`; it does not describe a confirmed Solana void or promise a refund.

@@ -36,7 +36,11 @@ cp reporter/config.example.json ~/.config/akt-reporter/config.json
 
 Unknown configuration fields are rejected. `reporter` must be a lowercase 20-byte `akash` address. The chain compares it with the listed members as exact strings, so governance must list it in that lowercase form; x/sink also rejects a module account as a reporter.
 
-For production installation, supervision and rollback use [service deployment](deploy-services.md). Its packaged `akt-reporter.service` starts in preview, and its broadcast entry point checks the production configuration and requires `externalSigner` in the config file. The generic commands below also support explicitly configured development networks.
+For production, use the separately released [reporter image and guide](https://akash.network/docs/node-operators/akash-sink/reporter/).
+That package supports an owner-only software key or an external signer. The
+source-runner commands below describe this checkout, not the packaged service.
+Preview before governance admission stops with `not a current reporter`; it
+is not a successful observation scan.
 
 Preview one pass without loading a key, then run continuously once the output looks right:
 
