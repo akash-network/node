@@ -131,7 +131,7 @@ export async function runMetadataTests(t: TestContext) {
       );
       assert.ok(data);
       assert.equal(data.name, "Akash Network Token");
-      assert.equal(data.symbol, "akt");
+      assert.equal(data.symbol, "AKT");
       assert.equal(data.uri, uri);
       assert.equal(data.updateAuthority, mintAuthority.toBase58());
       assert.equal(data.sellerFeeBasisPoints, 0);

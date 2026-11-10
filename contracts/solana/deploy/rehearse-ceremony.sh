@@ -124,7 +124,7 @@ admin init-access-manager --keypair "$run/keys/ceremony.json" --access-manager "
   --admin "$ceremony" --cpi-caller "$squads" --relayer "$client_id" --relayer "$relayer" > "$run/access-manager.json"
 admin initialize --keypair "$run/keys/ceremony.json" > "$run/initialize.json"
 emit_authority=$ceremony
-emit metadata set-token-metadata --uri https://raw.githubusercontent.com/akash-network/net/84b94d96287d3507830a1d9832f55925f24b8dc8/solana/mainnet/akt.json
+emit metadata set-token-metadata --uri https://raw.githubusercontent.com/akash-network/net/0603230f9c7a394ba48ac283208756e28deef42d/solana/mainnet/akt.json
 emit guardian set-guardian --guardian "$vault"
 admin bundle --emit "$run/tx/metadata-guardian.json" "$run/tx/metadata.json" "$run/tx/guardian.json"
 ceremony_execute metadata-guardian
@@ -184,8 +184,8 @@ for state in [before,after,final]:
  assert state['token']['mintAuthorityIsPda'] and state['token']['freezeAuthority'] is None
  assert state['relaying']['openRelaying'] and client in state['relaying']['relayers']
  assert state['guardian']==vault and state['policy']=={'perTransferMax':'1000000000000','dailyMintCap':'10000000000000','vaults':[]}
- assert state['metadata']['name']=='Akash Network Token' and state['metadata']['symbol']=='akt'
- assert state['metadata']['uri']=='https://raw.githubusercontent.com/akash-network/net/84b94d96287d3507830a1d9832f55925f24b8dc8/solana/mainnet/akt.json'
+ assert state['metadata']['name']=='Akash Network Token' and state['metadata']['symbol']=='AKT'
+ assert state['metadata']['uri']=='https://raw.githubusercontent.com/akash-network/net/0603230f9c7a394ba48ac283208756e28deef42d/solana/mainnet/akt.json'
  assert state['metadata']['updateAuthority']==state['token']['mintAuthority']
  assert state['client']['status']=='active'
 assert final['client']['latestHeight']=='3'

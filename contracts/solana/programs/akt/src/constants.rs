@@ -38,7 +38,7 @@ pub const LAUNCH_CONFIG_VERSION: u8 = 2;
 /// Metaplex display name.
 pub const TOKEN_NAME: &str = "Akash Network Token";
 /// Metaplex symbol.
-pub const TOKEN_SYMBOL: &str = "akt";
+pub const TOKEN_SYMBOL: &str = "AKT";
 /// Required metadata URI scheme.
 pub const METADATA_URI_SCHEME: &str = "https://";
 /// Longest metadata URI `set_token_metadata` accepts, in bytes.

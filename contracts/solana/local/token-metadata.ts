@@ -69,7 +69,7 @@ async function main() {
   );
   const json = object(await response.json());
   assert.equal(json.name, "Akash Network Token");
-  assert.equal(json.symbol, "akt");
+  assert.equal(json.symbol, "AKT");
   assert.ok(typeof json.image === "string", "image URL required");
   const image = await fetch(httpsUrl(json.image), {
     signal: AbortSignal.timeout(15_000),
@@ -94,7 +94,7 @@ async function main() {
     !old ||
     old.uri !== uri ||
     old.name !== "Akash Network Token" ||
-    old.symbol !== "akt"
+    old.symbol !== "AKT"
   ) {
     signature = await program.methods
       .setTokenMetadata(uri)
@@ -117,7 +117,7 @@ async function main() {
   const metadata = await readTokenMetadata(wallet.connection, mint);
   assert.ok(metadata);
   assert.equal(metadata.name, "Akash Network Token");
-  assert.equal(metadata.symbol, "akt");
+  assert.equal(metadata.symbol, "AKT");
   assert.equal(metadata.uri, uri);
   assert.equal(metadata.updateAuthority, mintAuthority.toBase58());
   assert.equal(metadata.sellerFeeBasisPoints, 0);

@@ -313,7 +313,7 @@ step.
 ### Metadata and pause guardian
 
 Use the approved [`metadata/akt.json`](../metadata/akt.json): name
-**Akash Network Token**, symbol **akt**, and the existing Cosmos AKT logo.
+**Akash Network Token**, symbol **AKT**, and the existing Cosmos AKT logo.
 The mint keeps **6 decimals**. Host the JSON at a permanent public HTTPS URL
 and pass it below. See [mainnet metadata](token-metadata.md#mainnet-values)
 for the description and logo source.
