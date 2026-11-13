@@ -87,9 +87,10 @@ func Compare(a, b ID) int {
 // KeySuffix returns len(owner) || owner || BE64(height) || BE64(sequence).
 func (id ID) KeySuffix() []byte {
 	out := make([]byte, 0, 1+len(id.OwnerBytes)+16)
-	out = append(out, byte(len(id.OwnerBytes)))
+	// Parse guarantees 1 <= len(OwnerBytes) <= maxOwnerBytes (255) and 1 <= Height <= MaxInt64.
+	out = append(out, byte(len(id.OwnerBytes))) //nolint:gosec // bounded by Parse: at most 255
 	out = append(out, id.OwnerBytes...)
-	out = binary.BigEndian.AppendUint64(out, uint64(id.Height))
+	out = binary.BigEndian.AppendUint64(out, uint64(id.Height)) //nolint:gosec // bounded by Parse: positive int64
 
 	return binary.BigEndian.AppendUint64(out, id.Sequence)
 }

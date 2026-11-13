@@ -14,6 +14,11 @@ import (
 	"pkg.akt.dev/node/v2/operator/reporter/sinkid"
 )
 
+const (
+	denomUakt    = "uakt"
+	errRecipient = "noncanonical recipient"
+)
+
 func transfer(t *testing.T, dest string, coin sdk.Coin) sinkv1.TransferState {
 	t.Helper()
 
@@ -29,7 +34,7 @@ func TestDecodeRecord(t *testing.T) {
 	recipient := solana.NewWallet().PublicKey()
 
 	t.Run("valid", func(t *testing.T) {
-		state := transfer(t, recipient.String(), sdk.NewInt64Coin("uakt", 1500))
+		state := transfer(t, recipient.String(), sdk.NewInt64Coin(denomUakt, 1500))
 
 		rec, err := sinkid.DecodeRecord(state)
 		require.NoError(t, err)
@@ -40,7 +45,7 @@ func TestDecodeRecord(t *testing.T) {
 	})
 
 	t.Run("max uint64", func(t *testing.T) {
-		coin := sdk.NewCoin("uakt", sdkmath.NewIntFromUint64(math.MaxUint64))
+		coin := sdk.NewCoin(denomUakt, sdkmath.NewIntFromUint64(math.MaxUint64))
 
 		rec, err := sinkid.DecodeRecord(transfer(t, recipient.String(), coin))
 		require.NoError(t, err)
@@ -59,20 +64,20 @@ func TestDecodeRecord(t *testing.T) {
 		},
 		"noncanonical recipient": {
 			state: func(t *testing.T) sinkv1.TransferState {
-				return transfer(t, recipient.String()+"1", sdk.NewInt64Coin("uakt", 1))
+				return transfer(t, recipient.String()+"1", sdk.NewInt64Coin(denomUakt, 1))
 			},
-			err: "noncanonical recipient",
+			err: errRecipient,
 		},
 		"short recipient": {
 			state: func(t *testing.T) sinkv1.TransferState {
-				return transfer(t, "abc", sdk.NewInt64Coin("uakt", 1))
+				return transfer(t, "abc", sdk.NewInt64Coin(denomUakt, 1))
 			},
-			err: "noncanonical recipient",
+			err: errRecipient,
 		},
 		"transfer amount exceeds uint64": {
 			state: func(t *testing.T) sinkv1.TransferState {
 				over := sdkmath.NewIntFromUint64(math.MaxUint64).AddRaw(1)
-				return transfer(t, recipient.String(), sdk.Coin{Denom: "uakt", Amount: over})
+				return transfer(t, recipient.String(), sdk.Coin{Denom: denomUakt, Amount: over})
 			},
 			err: "transfer amount exceeds uint64",
 		},
@@ -84,7 +89,7 @@ func TestDecodeRecord(t *testing.T) {
 		},
 		"amount must be positive": {
 			state: func(t *testing.T) sinkv1.TransferState {
-				return transfer(t, recipient.String(), sdk.NewInt64Coin("uakt", 0))
+				return transfer(t, recipient.String(), sdk.NewInt64Coin(denomUakt, 0))
 			},
 			err: "amount must be positive",
 		},
@@ -96,7 +101,7 @@ func TestDecodeRecord(t *testing.T) {
 	}
 
 	t.Run("invalid ID", func(t *testing.T) {
-		state := transfer(t, recipient.String(), sdk.NewInt64Coin("uakt", 1))
+		state := transfer(t, recipient.String(), sdk.NewInt64Coin(denomUakt, 1))
 		state.ID.Height = 0
 
 		_, err := sinkid.DecodeRecord(state)
@@ -106,21 +111,21 @@ func TestDecodeRecord(t *testing.T) {
 
 func TestCoinAmount(t *testing.T) {
 	t.Run("zero allowed unless positive", func(t *testing.T) {
-		amount, err := sinkid.CoinAmount(sdk.NewInt64Coin("uakt", 0), false)
+		amount, err := sinkid.CoinAmount(sdk.NewInt64Coin(denomUakt, 0), false)
 		require.NoError(t, err)
 		require.True(t, amount.IsZero())
 
-		_, err = sinkid.CoinAmount(sdk.NewInt64Coin("uakt", 0), true)
+		_, err = sinkid.CoinAmount(sdk.NewInt64Coin(denomUakt, 0), true)
 		require.EqualError(t, err, "amount must be positive")
 	})
 
 	t.Run("uninitialized amount", func(t *testing.T) {
-		_, err := sinkid.CoinAmount(sdk.Coin{Denom: "uakt"}, false)
+		_, err := sinkid.CoinAmount(sdk.Coin{Denom: denomUakt}, false)
 		require.EqualError(t, err, "invalid uakt Coin")
 	})
 
 	t.Run("negative amount", func(t *testing.T) {
-		_, err := sinkid.CoinAmount(sdk.Coin{Denom: "uakt", Amount: sdkmath.NewInt(-1)}, false)
+		_, err := sinkid.CoinAmount(sdk.Coin{Denom: denomUakt, Amount: sdkmath.NewInt(-1)}, false)
 		require.EqualError(t, err, "invalid uakt Coin")
 	})
 
@@ -131,7 +136,7 @@ func TestCoinAmount(t *testing.T) {
 
 	t.Run("beyond uint64 is not an error", func(t *testing.T) {
 		big := sdkmath.NewIntFromUint64(math.MaxUint64).MulRaw(4)
-		amount, err := sinkid.CoinAmount(sdk.Coin{Denom: "uakt", Amount: big}, true)
+		amount, err := sinkid.CoinAmount(sdk.Coin{Denom: denomUakt, Amount: big}, true)
 		require.NoError(t, err)
 		require.True(t, amount.Equal(big))
 	})

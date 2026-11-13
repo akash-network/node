@@ -45,7 +45,7 @@ func TestFakeClockNonPositiveDelayFiresImmediately(t *testing.T) {
 }
 
 func TestRealClock(t *testing.T) {
-	var c clock.Clock = clock.Real()
+	c := clock.Real()
 
 	before := time.Now()
 	require.False(t, c.Now().Before(before))
