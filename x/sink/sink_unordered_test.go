@@ -8,14 +8,19 @@ import (
 	sdkmath "cosmossdk.io/math"
 	abci "github.com/cometbft/cometbft/abci/types"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
+	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authsign "github.com/cosmos/cosmos-sdk/x/auth/signing"
+	gogoproto "github.com/cosmos/gogoproto/proto"
 	"github.com/stretchr/testify/require"
 
 	sinktypes "pkg.akt.dev/go/node/sink/v1"
 	"pkg.akt.dev/go/sdkutil"
+
+	"pkg.akt.dev/node/v2/operator/reporter/signer"
+	reportertx "pkg.akt.dev/node/v2/operator/reporter/tx"
 )
 
 const unorderedFee = 10
@@ -132,6 +137,81 @@ func TestUnorderedReplayKey(t *testing.T) {
 		require.Zero(t, res.Code, res.Log)
 		requireReplayRefused(t, c.h.deliverBytes(t, c.second))
 		c.requireOneExecution(t)
+	})
+}
+
+// keySigner signs with a harness key, as the reporter's signer would.
+type keySigner struct{ key *secp256k1.PrivKey }
+
+var _ signer.Signer = keySigner{}
+
+func (s keySigner) Address() sdk.AccAddress { return sdk.AccAddress(s.key.PubKey().Address()) }
+
+func (s keySigner) PubKey() cryptotypes.PubKey { return s.key.PubKey() }
+
+func (s keySigner) Sign(_ context.Context, signBytes []byte) ([]byte, error) {
+	return s.key.Sign(signBytes)
+}
+
+// TestUnorderedSimulate runs the reporter's simulation bytes through the simulate path of gRPC
+// cosmos.tx.v1beta1.Service/Simulate (BaseApp.Simulate) against the latest committed state.
+func TestUnorderedSimulate(t *testing.T) {
+	setup := func(t *testing.T) (*testSuite, *reportertx.Builder, sdk.Msg) {
+		t.Helper()
+		h := setupReportingTestSuite(t)
+		res := h.deliver(t, "", h.deposit(10))
+		require.Zero(t, res.Code, res.Log)
+
+		account := h.a.Keepers.Cosmos.Acct.GetAccount(h.ctx(), h.reporter0())
+		b := reportertx.NewBuilder(h.a.TxConfig(), h.a.ChainID(), account.GetAccountNumber(), keySigner{key: h.reporters[0]})
+
+		return h, b, h.reportMsg(t, 0, 1, sinktypes.OutcomeMinted)
+	}
+
+	t.Run("records the vote without committing it", func(t *testing.T) {
+		h, b, msg := setup(t)
+		before := h.a.Keepers.Cosmos.Bank.GetBalance(h.ctx(), h.reporter0(), sdkutil.DenomUakt)
+
+		bz, err := b.SimBytes([]sdk.Msg{msg}, h.now.Add(time.Minute))
+		require.NoError(t, err)
+
+		gas, result, err := h.a.Simulate(bz)
+		require.NoError(t, err)
+		require.Positive(t, gas.GasUsed)
+
+		reported := 0
+		for _, event := range result.Events {
+			if event.Type != gogoproto.MessageName(&sinktypes.EventOutcomeReported{}) {
+				continue
+			}
+
+			typed, err := sdk.ParseTypedEvent(event)
+			require.NoError(t, err)
+			ev, ok := typed.(*sinktypes.EventOutcomeReported)
+			require.True(t, ok)
+			require.Equal(t, h.reporterAddress(0), ev.Reporter)
+			require.Equal(t, h.id(1), ev.ID)
+			require.Equal(t, sinktypes.OutcomeMinted, ev.Outcome)
+			reported++
+		}
+		require.Equal(t, 1, reported, "simulation must record reporter 0's vote")
+
+		for _, vote := range h.transfer(t, 1).Settlement.Votes {
+			require.NotEqual(t, h.reporterAddress(0), vote.Reporter)
+		}
+		require.Equal(t, before, h.a.Keepers.Cosmos.Bank.GetBalance(h.ctx(), h.reporter0(), sdkutil.DenomUakt))
+	})
+
+	t.Run("a timeout beyond the max TTL fails without a message index", func(t *testing.T) {
+		h, b, msg := setup(t)
+
+		bz, err := b.SimBytes([]sdk.Msg{msg}, h.now.Add(11*time.Minute))
+		require.NoError(t, err)
+
+		_, _, err = h.a.Simulate(bz)
+		require.ErrorIs(t, err, sdkerrors.ErrInvalidRequest)
+		require.ErrorContains(t, err, "unordered tx ttl exceeds")
+		require.NotContains(t, err.Error(), "message index")
 	})
 }
 
