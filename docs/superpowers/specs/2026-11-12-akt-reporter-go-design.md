@@ -436,7 +436,7 @@ Older snapshots only defer messages; they never affect safety.
 - If simulation fails at `message index: N`, message N is dropped with `{id, error}` and the batch is simulated again, for up to three rounds. Messages still left after that are deferred (section 6.5), because a slot carries at most one live transaction per window.
 - A simulation failure without a message index, such as insufficient funds or an invalid timeout, fails the whole batch before submission. Each message gets `{id, error}`, and its entry is released.
 - The fee is `fees` when that is set, otherwise ceil(gas limit × `gas-prices`).
-- Caps: the gas limit must be at most `tx.max-gas` and the fee at most `tx.max-fee`. A batch over a cap is halved, and the second half is deferred. A single message over a cap gets `{id, error}` and is not sent.
+- Caps: the gas limit must be at most `tx.max-gas` and the fee at most `tx.max-fee`. A batch over a cap is halved, and the second half is deferred. A single message over a cap gets `{id, error}` and is not sent. The signer's sign-bytes limit, when it declares one, is a cap like `tx.max-gas`: batches are sized to fit it, a batch over it is halved and its second half deferred, and a single message over it gets `{id, error}`.
 
 ### 6.5 Confirmation and the slot table
 
@@ -513,6 +513,7 @@ Cosmos-KMS (`github.com/cosmos/kms`) is the documented successor to tmkms. tmkms
   2. The response may be a 64-byte r‖s or a 65-byte r‖s‖v; v is dropped.
   3. The signature is normalized to low-S and verified over SHA-256(sign bytes) with the key from startup.
   4. On any failure nothing is broadcast, and each message gets `{id, error}`.
+  5. For `ECDSA_SECP256K1`, Cosmos-KMS signs through AWS KMS raw messages, which are limited to 4096 bytes, so the remote signer declares that limit and refuses longer sign bytes; `ECDSA_SECP256K1ETH` sends a 32-byte digest and has no limit.
 - **Transport:** TLS only; there is no plaintext option.
   - `signer.remote.ca-file` sets the trusted CA; system roots are used when it is empty.
   - `signer.remote.server-name` overrides the verified server name.

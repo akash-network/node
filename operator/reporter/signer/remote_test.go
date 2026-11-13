@@ -479,6 +479,65 @@ func TestRemoteRejects(t *testing.T) {
 	})
 }
 
+func TestRemoteSignBytesLimit(t *testing.T) {
+	newSigner := func(t *testing.T, scheme kmspb.SignatureScheme, sign func(*secp256k1.PrivateKey) func(context.Context, []byte) ([]byte, error)) (Signer, *fakeKMS) {
+		t.Helper()
+
+		pki := newTestPKI(t)
+		priv := newPriv(t)
+		f := &fakeKMS{
+			key:  &kmspb.Key{Id: testKeyID, Pubkey: priv.PubKey().SerializeCompressed(), Scheme: scheme},
+			sign: sign(priv),
+		}
+		addr := serve(t, pki, f, false)
+
+		s, err := NewRemote(context.Background(), remoteOpts(pki, addr), reporterOf(priv))
+		require.NoError(t, err)
+		t.Cleanup(func() { closeSigner(t, s) })
+
+		return s, f
+	}
+
+	t.Run("ECDSA_SECP256K1 declares 4096 and signs exactly 4096 bytes", func(t *testing.T) {
+		s, f := newSigner(t, kmspb.SignatureScheme_ECDSA_SECP256K1, rsSigner)
+		require.Equal(t, 4096, SignBytesLimit(s))
+
+		signBytes := make([]byte, 4096)
+		sig, err := s.Sign(context.Background(), signBytes)
+		require.NoError(t, err)
+		require.True(t, s.PubKey().VerifySignature(signBytes, sig))
+
+		payloads, _ := f.seen()
+		require.Len(t, payloads, 1)
+	})
+
+	t.Run("ECDSA_SECP256K1 refuses 4097 bytes before calling the KMS", func(t *testing.T) {
+		s, f := newSigner(t, kmspb.SignatureScheme_ECDSA_SECP256K1, rsSigner)
+
+		signBytes := []byte(strings.Repeat("x", 4097))
+		sig, err := s.Sign(context.Background(), signBytes)
+		require.EqualError(t, err, "sign bytes exceed the remote signer limit of 4096 bytes")
+		require.Nil(t, sig)
+
+		payloads, _ := f.seen()
+		require.Empty(t, payloads)
+	})
+
+	t.Run("ECDSA_SECP256K1ETH declares none and signs sign bytes far above 4096", func(t *testing.T) {
+		s, f := newSigner(t, kmspb.SignatureScheme_ECDSA_SECP256K1ETH, rsvHighSSigner)
+		require.Equal(t, 0, SignBytesLimit(s))
+
+		signBytes := make([]byte, 64*1024)
+		sig, err := s.Sign(context.Background(), signBytes)
+		require.NoError(t, err)
+		require.True(t, s.PubKey().VerifySignature(signBytes, sig))
+
+		digest := sha256.Sum256(signBytes)
+		payloads, _ := f.seen()
+		require.Equal(t, [][]byte{digest[:]}, payloads)
+	})
+}
+
 // TestRemoteAgainstKMS is the release gate against a real kms binary (Task
 // 27). It needs REPORTER_KMS_ADDR, REPORTER_KMS_CA and REPORTER_KMS_KEYS.
 func TestRemoteAgainstKMS(t *testing.T) {

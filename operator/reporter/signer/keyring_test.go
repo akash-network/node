@@ -69,6 +69,13 @@ func TestKeyringSigner(t *testing.T) {
 		require.True(t, s.PubKey().VerifySignature(msg, sig))
 	})
 
+	t.Run("declares no sign-bytes limit", func(t *testing.T) {
+		s, err := signer.NewKeyring(kr, "r", addr)
+		require.NoError(t, err)
+
+		require.Equal(t, 0, signer.SignBytesLimit(s))
+	})
+
 	t.Run("resolves a bech32 address", func(t *testing.T) {
 		bech, err := sdk.Bech32ifyAddressBytes(testPrefix, addr)
 		require.NoError(t, err)

@@ -25,6 +25,18 @@ type Signer interface {
 	Sign(ctx context.Context, signBytes []byte) ([]byte, error)
 }
 
+// SignBytesLimiter is implemented by signers that cannot sign sign bytes longer than SignBytesLimit.
+type SignBytesLimiter interface{ SignBytesLimit() int }
+
+// SignBytesLimit returns s's limit, or 0 when it declares none.
+func SignBytesLimit(s Signer) int {
+	if l, ok := s.(SignBytesLimiter); ok {
+		return l.SignBytesLimit()
+	}
+
+	return 0
+}
+
 // NormalizeAndVerify turns a raw signer answer into the signature the chain
 // accepts. sig is r||s (64 bytes) or r||s||v (65 bytes, v is dropped). It
 // rejects zero or out-of-range r and s, converts a high s to low-S, and checks

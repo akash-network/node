@@ -52,9 +52,15 @@ type remoteSigner struct {
 	pub     cryptotypes.PubKey
 }
 
+// rawMessageLimit is the most sign bytes an ECDSA_SECP256K1 key can sign:
+// Cosmos-KMS signs them as AWS KMS raw messages, which upstream caps at 4096
+// bytes (kmsRawMessageLimit in signing/awskms/signer.go).
+const rawMessageLimit = 4096
+
 var (
-	_ Signer    = (*remoteSigner)(nil)
-	_ io.Closer = (*remoteSigner)(nil)
+	_ Signer           = (*remoteSigner)(nil)
+	_ SignBytesLimiter = (*remoteSigner)(nil)
+	_ io.Closer        = (*remoteSigner)(nil)
 )
 
 // NewRemote connects to the SignerService at opts.Address and checks, once,
@@ -184,11 +190,25 @@ func (s *remoteSigner) Address() sdk.AccAddress { return s.addr }
 
 func (s *remoteSigner) PubKey() cryptotypes.PubKey { return s.pub }
 
+// SignBytesLimit is 4096 for ECDSA_SECP256K1 and none (0) for
+// ECDSA_SECP256K1ETH, whose payload is always a 32-byte digest.
+func (s *remoteSigner) SignBytesLimit() int {
+	if s.scheme == kmspb.SignatureScheme_ECDSA_SECP256K1 {
+		return rawMessageLimit
+	}
+
+	return 0
+}
+
 // Sign sends the payload for the key's scheme and returns the verified low-S
 // r||s. Errors never carry the payload, the sign bytes or the signature; a
 // failed call reports only its gRPC status code, because the server's
 // description is not under our control.
 func (s *remoteSigner) Sign(ctx context.Context, signBytes []byte) ([]byte, error) {
+	if limit := s.SignBytesLimit(); limit > 0 && len(signBytes) > limit {
+		return nil, fmt.Errorf("sign bytes exceed the remote signer limit of %d bytes", limit)
+	}
+
 	payload := signBytes
 	if s.scheme == kmspb.SignatureScheme_ECDSA_SECP256K1ETH {
 		digest := sha256.Sum256(signBytes)
