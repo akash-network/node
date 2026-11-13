@@ -26,6 +26,7 @@ require (
 	github.com/cosmos/ibc-go/v10 v10.7.0
 	github.com/cosmos/ics23/go v0.11.0
 	github.com/cosmos/rosetta v0.50.12
+	github.com/gagliardetto/solana-go v1.14.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/go-github/v62 v62.0.0
 	github.com/gorilla/mux v1.8.1
@@ -165,7 +166,6 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/gagliardetto/binary v0.8.0 // indirect
-	github.com/gagliardetto/solana-go v1.14.0 // indirect
 	github.com/gagliardetto/treeout v0.1.4 // indirect
 	github.com/getsentry/sentry-go v0.42.0 // indirect
 	github.com/go-errors/errors v1.5.1 // indirect
