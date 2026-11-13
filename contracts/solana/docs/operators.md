@@ -148,7 +148,7 @@ same validator set fails the same way.
 
 ## Costs and funding
 
-A relay pays for proof creation, optional growth, each 500-byte upload chunk, resolution and close. Query the actual cluster fee and rent schedules when funding the payer.
+A relay pays for proof creation, optional growth, uploads of up to two 450-byte chunks per transaction, resolution and close. Query the actual cluster fee and rent schedules when funding the payer.
 
 Proof buffers contain an 80-byte header and at most 16,384 proof bytes. Creation allocates at most 10,240 bytes, and one growth funds the remaining allocation when needed. This rent is temporary liquidity. Resolution also locks permanent outcome-account rent and, for a new recipient token account, ATA rent.
 
@@ -201,6 +201,24 @@ relayers. The reconciler reports unbacked records.
 The relayer queries every dispute, then refund-pending, then void-requested (`VOIDED`), then transfer-pending transfer. It also discovers immutable history in chronological order. Every page uses one committed height. A durable full-ID checkpoint survives empty `next_key` pages and restarts. No numeric fallback exists. An open-set listing error stops the pass. A history discovery failure raises `relay-discovery-failed` and retains the checkpoint; open transfers still run.
 
 A terminal conflict is still discoverable. An Akash refund-pending or paid refund without a finalized Solana status produces an alert and no mint. An immutable governance order is a distinct proof action, not a changed deposit value.
+
+After cap admission, fresh pending deposits use a stable order derived from the
+payer's public key so different relayers are less likely to start the same upload.
+Disputes, refunds, void orders and retained uploads keep their queue positions.
+Every relayer still considers every eligible transfer; no roster or additional
+configuration is needed. Races remain possible, and using the same payer gives
+the same order.
+
+At most two historical proofs prepare concurrently. Payments remain sequential,
+with current-state checks before spending and resolution. A slow proof read can
+delay its batch partner.
+
+`relay-stage-duration` logs `stage`, optional transfer `id`, `elapsedMs` and
+`completed`. Use these to locate slow queries, uploads, header updates or ticks.
+`completed` means the operation returned without throwing, not that the Akash
+settlement is complete. Paid stages include transaction preparation and
+confirmation; the total tick includes its child stages, so do not add them
+together.
 
 ## Alerts
 

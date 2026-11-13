@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile, readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import test, { type TestContext } from "node:test";
+import { setImmediate } from "node:timers/promises";
 import { temporaryDirectory } from "./test-workspace";
 import {
   AnchorProvider,
@@ -35,6 +36,7 @@ import {
 } from "../shared/proof";
 import { object, PROGRAM_ID } from "./common";
 import { relayContext } from "./relay";
+import { relayOrder } from "./relay-policy";
 import {
   FakeSolana,
   testBridge,
@@ -53,6 +55,7 @@ class PayingSolana extends FakeSolana {
     name: string;
     address: string;
     offset?: number;
+    bytes?: number;
     key?: string;
   }[] = [];
   balance = 1_000_000_000;
@@ -106,6 +109,7 @@ class PayingSolana extends FakeSolana {
   }
   override async sendRawTransaction(raw: Buffer | Uint8Array | number[]) {
     assert.ok(this.context);
+    assert.ok(raw.length <= web3.PACKET_DATA_SIZE);
     const { program, wallet } = this.context;
     const tx = web3.VersionedTransaction.deserialize(Uint8Array.from(raw));
     const signature = utils.bytes.bs58.encode(tx.signatures[0]);
@@ -186,6 +190,7 @@ class PayingSolana extends FakeSolana {
             name,
             address: address.toBase58(),
             offset: state.data.length - args.chunk.length,
+            bytes: args.chunk.length,
           });
         }
         const header = account.data.subarray(0, 80);
@@ -442,6 +447,382 @@ async function fixture(
   };
 }
 
+async function transferBatch(t: TestContext, count = 5) {
+  const f = await fixture(t, Status.STATUS_TRANSFER_PENDING);
+  const transfers = Array.from({ length: count }, (_, index) =>
+    testTransfer(index + 1, 50n),
+  );
+  const history = transfers.map((transfer) =>
+    TransferState.fromPartial(transfer),
+  );
+  function connect() {
+    f.context.akash.transfer = async (id, height) => {
+      assert.ok(height === HEIGHT || height === TRUSTED - 1);
+      const rows = height === HEIGHT ? transfers : history;
+      const transfer = rows.find((row) => parseSinkId(row.id) === id);
+      assert.ok(transfer);
+      return TransferState.fromPartial(transfer);
+    };
+    f.context.akash.transfers = async (height, options = {}) => {
+      assert.equal(height, HEIGHT);
+      return {
+        transfers: transfers.filter(
+          (row) =>
+            options.status === undefined || row.status === options.status,
+        ),
+        nextKey: new Uint8Array(),
+      };
+    };
+    f.context.akash.comet.abciQuery = async (query) => {
+      assert.equal(query.path, "/store/sink/key");
+      assert.equal(query.height, TRUSTED - 1);
+      const transfer = history.find((row) =>
+        Buffer.from(transferKey(parseSinkId(row.id))).equals(query.data),
+      );
+      assert.ok(transfer);
+      const key = transferKey(parseSinkId(transfer.id));
+      const value = encodeRecord(transfer.data);
+      return {
+        code: 0,
+        codespace: "",
+        log: "",
+        info: "",
+        index: 0,
+        height: TRUSTED - 1,
+        key,
+        value,
+        proof: query.prove ? proofOps(key, value, false) : undefined,
+      };
+    };
+  }
+  connect();
+  return { f, transfers, connect };
+}
+
+test("two historical proofs prepare together while all payments retain queue order", async (t) => {
+  const { f, transfers } = await transferBatch(t);
+  let reading = 0,
+    peakReads = 0,
+    sending = 0,
+    peakSends = 0,
+    queries = 0;
+  const preparedKeys: string[] = [];
+  const query = f.context.akash.comet.abciQuery.bind(f.context.akash.comet);
+  f.context.akash.comet.abciQuery = async (request) => {
+    reading++;
+    peakReads = Math.max(peakReads, reading);
+    queries++;
+    preparedKeys.push(Buffer.from(request.data).toString("hex"));
+    try {
+      await setImmediate();
+      return await query(request);
+    } finally {
+      reading--;
+    }
+  };
+  const send = f.connection.sendRawTransaction.bind(f.connection);
+  f.connection.sendRawTransaction = async (raw) => {
+    assert.equal(
+      reading,
+      0,
+      "the bounded read batch must finish before payments",
+    );
+    sending++;
+    peakSends = Math.max(peakSends, sending);
+    try {
+      return await send(raw);
+    } finally {
+      sending--;
+    }
+  };
+  await f.context.tick();
+  assert.equal(queries, transfers.length);
+  assert.equal(peakReads, 2);
+  assert.equal(peakSends, 1);
+  assert.equal(reading, 0);
+  assert.equal(sending, 0);
+  assert.deepEqual(
+    preparedKeys,
+    relayOrder(
+      transfers.map((row) => {
+        assert.ok(row.settlement);
+        return {
+          id: parseSinkId(row.id),
+          akash: row.status,
+          hold: row.settlement.hold,
+          retained: false,
+        };
+      }),
+      f.context.wallet.publicKey,
+    ).map((entry) => Buffer.from(transferKey(entry.id)).toString("hex")),
+  );
+  assert.deepEqual(
+    f.connection.actions
+      .filter((action) => action.name === "mintTransfer")
+      .map((action) => action.key),
+    preparedKeys,
+  );
+  const ledger = await f.ledger();
+  for (const row of transfers) {
+    const entry = object(ledger[parseSinkId(row.id)]);
+    assert.equal(entry.completed, true);
+    assert.equal(entry.bufferFundedLamports, entry.bufferReclaimedLamports);
+    assert.equal(entry.spentLamports, 1_020_000);
+  }
+});
+
+test("a failed prepared proof does not prevent the other transfer from resolving", async (t) => {
+  const { f, transfers } = await transferBatch(t, 2);
+  const failed = parseSinkId(transfers[0].id);
+  const succeeded = parseSinkId(transfers[1].id);
+  const query = f.context.akash.comet.abciQuery.bind(f.context.akash.comet);
+  f.context.akash.comet.abciQuery = async (request) => {
+    if (Buffer.from(request.data).equals(transferKey(failed)))
+      throw new Error("first proof unavailable");
+    return query(request);
+  };
+  await f.context.tick();
+  assert.equal(
+    await f.connection.getAccountInfo(statusAddress(PROGRAM_ID, failed)),
+    null,
+  );
+  assert.ok(
+    await f.connection.getAccountInfo(statusAddress(PROGRAM_ID, succeeded)),
+  );
+  const ledger = await f.ledger();
+  assert.equal(object(ledger[failed]).spentLamports, 0);
+  assert.equal(object(object(ledger[failed]).retry).failures, 1);
+  assert.equal(object(ledger[succeeded]).completed, true);
+});
+
+test("payer ordering cannot admit a transfer beyond the reserved daily cap", async (t) => {
+  const { f, transfers } = await transferBatch(t, 4);
+  const [bridge] = web3.PublicKey.findProgramAddressSync(
+    [Buffer.from("bridge")],
+    PROGRAM_ID,
+  );
+  const config = await f.context.program.account.bridgeConfig.fetch(bridge);
+  config.policy.dailyMintCap = new BN(120);
+  f.connection.set(
+    bridge,
+    PROGRAM_ID,
+    await f.context.program.coder.accounts.encode("bridgeConfig", config),
+  );
+  await f.context.tick();
+  const admitted = transfers
+    .slice(0, 2)
+    .map((row) =>
+      Buffer.from(transferKey(parseSinkId(row.id))).toString("hex"),
+    );
+  const minted = f.connection.actions
+    .filter((action) => action.name === "mintTransfer")
+    .map((action) => action.key);
+  assert.equal(minted.length, 2);
+  assert.deepEqual(new Set(minted), new Set(admitted));
+  for (const transfer of transfers.slice(2)) {
+    const id = parseSinkId(transfer.id);
+    assert.equal(
+      await f.connection.getAccountInfo(statusAddress(PROGRAM_ID, id)),
+      null,
+    );
+    assert.equal((await f.ledger())[id], undefined);
+  }
+});
+
+test("a competing mint takes precedence over an unused failed proof read", async (t) => {
+  const { f, transfers } = await transferBatch(t, 2);
+  const transfer = transfers[0];
+  const id = parseSinkId(transfer.id);
+  const query = f.context.akash.comet.abciQuery.bind(f.context.akash.comet);
+  f.context.akash.comet.abciQuery = async (request) => {
+    if (!Buffer.from(request.data).equals(transferKey(id)))
+      return query(request);
+    assert.ok(transfer.data);
+    f.connection.set(
+      statusAddress(PROGRAM_ID, id),
+      PROGRAM_ID,
+      await f.context.program.coder.accounts.encode("transferStatus", {
+        id: anchorId(id),
+        proofHeight: new BN(TRUSTED),
+        resolvedAtSlot: new BN(1),
+        outcome: {
+          minted: {
+            amount: new BN(60),
+            recipient: new web3.PublicKey(transfer.data.dest),
+          },
+        },
+      }),
+    );
+    throw new Error("unused proof unavailable");
+  };
+  await f.context.tick();
+  assert.deepEqual(
+    f.connection.actions
+      .filter((action) => action.name === "mintTransfer")
+      .map((action) => action.key),
+    [Buffer.from(transferKey(parseSinkId(transfers[1].id))).toString("hex")],
+  );
+  assert.equal((await f.ledger())[id], undefined);
+  assert.ok(!f.logs.some((line) => line.includes("relay-retry")));
+});
+
+test("a prefetched mint proof cannot spend after a native void order arrives", async (t) => {
+  const { f, transfers } = await transferBatch(t, 2);
+  const changed = transfers[1];
+  const id = parseSinkId(changed.id);
+  const query = f.context.akash.comet.abciQuery.bind(f.context.akash.comet);
+  f.context.akash.comet.abciQuery = async (request) => {
+    const result = await query(request);
+    if (Buffer.from(request.data).equals(transferKey(id))) {
+      assert.ok(changed.settlement);
+      changed.settlement.round++;
+      changed.status = Status.STATUS_VOIDED;
+      changed.settlement.voidAuthorization = {
+        requestedHeight: BigInt(HEIGHT),
+        requestedRound: changed.settlement.round,
+      };
+    }
+    return result;
+  };
+  await f.context.tick();
+  assert.ok(
+    await f.connection.getAccountInfo(
+      statusAddress(PROGRAM_ID, parseSinkId(transfers[0].id)),
+    ),
+  );
+  assert.equal(
+    await f.connection.getAccountInfo(statusAddress(PROGRAM_ID, id)),
+    null,
+  );
+  assert.equal(
+    await f.connection.getAccountInfo(
+      proofAddress(PROGRAM_ID, f.context.wallet.publicKey, transferKey(id)),
+    ),
+    null,
+  );
+  assert.equal((await f.ledger())[id], undefined);
+});
+
+test("a lost append in one prepared transfer preserves the next transfer and recovers on restart", async (t) => {
+  const { f, transfers, connect } = await transferBatch(t, 2);
+  const first = parseSinkId(transfers[0].id);
+  const second = parseSinkId(transfers[1].id);
+  f.connection.crashAfter = "appendProof";
+  await f.context.tick();
+  const outcomes = await Promise.all(
+    [first, second].map((id) =>
+      f.connection.getAccountInfo(statusAddress(PROGRAM_ID, id)),
+    ),
+  );
+  assert.equal(outcomes.filter(Boolean).length, 1);
+  await f.restart();
+  connect();
+  const advanced = Date.now() + 61_000;
+  t.mock.method(Date, "now", () => advanced);
+  await f.context.tick();
+  for (const id of [first, second]) {
+    assert.ok(await f.connection.getAccountInfo(statusAddress(PROGRAM_ID, id)));
+    const entry = object((await f.ledger())[id]);
+    assert.equal(entry.completed, true);
+    assert.equal(entry.spentLamports, 1_020_000);
+    assert.equal(entry.bufferFundedLamports, entry.bufferReclaimedLamports);
+  }
+  for (const name of ["createProofBuffer", "appendProof", "mintTransfer"])
+    assert.equal(
+      f.connection.actions.filter((action) => action.name === name).length,
+      2,
+      `${name} must happen exactly once for each transfer`,
+    );
+});
+
+test("proof uploads use fewer finalized transactions without changing the proof bytes", async (t) => {
+  const f = await fixture(t, Status.STATUS_VOIDED, true);
+  await f.context.tick();
+  const coder = new BorshInstructionCoder(f.context.program.idl);
+  const chunks: Buffer[] = [];
+  let uploads = 0;
+  let offset = 0;
+  for (const transaction of f.connection.transactions.values()) {
+    let appends = 0;
+    for (const ix of transaction.transaction.message.compiledInstructions) {
+      const instruction = coder.decode(Buffer.from(ix.data));
+      if (instruction?.name !== "appendProof") continue;
+      const args = object(instruction.data);
+      assert.equal(args.offset, offset);
+      assert.ok(Buffer.isBuffer(args.chunk));
+      assert.ok(args.chunk.length > 0 && args.chunk.length <= 500);
+      chunks.push(args.chunk);
+      offset += args.chunk.length;
+      appends++;
+    }
+    assert.ok(appends <= 2);
+    if (appends) uploads++;
+  }
+  const key = settlementKey(f.id, Status.STATUS_VOIDED);
+  assert.ok(f.transfer.settlement);
+  const value = SettlementData.encode(f.transfer.settlement).finish();
+  const expected = MerkleProof.encode({
+    proofs: proofOps(key, value, true).ops.map((op) =>
+      CommitmentProof.decode(op.data),
+    ),
+  }).finish();
+  assert.deepEqual(Buffer.concat(chunks), Buffer.from(expected));
+  assert.ok(uploads < Math.ceil(expected.length / 500));
+  assert.ok(
+    (
+      await f.context.program.account.transferStatus.fetch(
+        statusAddress(PROGRAM_ID, f.id),
+      )
+    ).outcome.voided,
+  );
+  assert.equal(
+    object((await f.ledger())[f.id]).spentLamports,
+    f.connection.transactions.size * 5000 + 1_000_000,
+  );
+});
+
+test("stage timings identify query delays and preserve the original failure", async (t) => {
+  for (const fail of [false, true]) {
+    await t.test(fail ? "failed query" : "successful query", async (t) => {
+      const f = await fixture(t);
+      let elapsed = 0;
+      t.mock.method(performance, "now", () => elapsed);
+      const query = f.context.akash.comet.abciQuery.bind(f.context.akash.comet);
+      const failure = new Error("test proof RPC unavailable");
+      f.context.akash.comet.abciQuery = async (request) => {
+        elapsed += 37;
+        if (fail) throw failure;
+        return query(request);
+      };
+      if (fail) {
+        await assert.rejects(
+          () => f.context.relay(f.id, TRUSTED),
+          (error) => error === failure,
+        );
+        assert.equal(f.connection.transactions.size, 0);
+      } else {
+        assert.equal(await f.context.relay(f.id, TRUSTED), "resolved");
+      }
+      const timings = f.logs
+        .map((line) => object(JSON.parse(line)))
+        .filter(
+          (entry) =>
+            entry.event === "relay-stage-duration" &&
+            entry.stage === "proof-query",
+        );
+      assert.deepEqual(timings, [
+        {
+          event: "relay-stage-duration",
+          stage: "proof-query",
+          id: f.id,
+          elapsedMs: 37,
+          completed: !fail,
+        },
+      ]);
+    });
+  }
+});
+
 test("a real relayer tick grows, resumes a durable signed upload after restart, resolves and reclaims rent", async (t) => {
   const f = await fixture(t, Status.STATUS_VOIDED, true);
   f.connection.crashAfter = "appendProof";
@@ -449,7 +830,7 @@ test("a real relayer tick grows, resumes a durable signed upload after restart, 
   const first = f.connection.actions.filter(
     (action) => action.name === "appendProof",
   );
-  assert.equal(first.length, 1, f.logs.join("\n"));
+  assert.equal(first.length, 2, f.logs.join("\n"));
   assert.equal(first[0].offset, 0);
   const buffer = proofAddress(
     PROGRAM_ID,
@@ -482,13 +863,13 @@ test("a real relayer tick grows, resumes a durable signed upload after restart, 
       .length,
     1,
   );
-  const offsets = f.connection.actions
-    .filter((action) => action.name === "appendProof")
-    .map((action) => action.offset);
-  assert.deepEqual(
-    offsets,
-    offsets.map((_, i) => i * 500),
-  );
+  let uploaded = 0;
+  for (const action of f.connection.actions) {
+    if (action.name !== "appendProof") continue;
+    assert.equal(action.offset, uploaded);
+    assert.ok(typeof action.bytes === "number");
+    uploaded += action.bytes;
+  }
   const entry = object((await f.ledger())[f.id]);
   assert.equal(entry.bufferReclaimedLamports, locked);
   assert.equal(entry.bufferFundedLamports, locked);

@@ -1,5 +1,6 @@
 import {
   Sink_Status as Status,
+  Hold,
   TransferState,
 } from "@akashnetwork/chain-sdk/private-types/akash.v1";
 import { web3 } from "@coral-xyz/anchor";
@@ -29,12 +30,75 @@ import {
   headerRefresh,
   mintWait,
   recipientMints,
+  relayOrder,
   relaySettings,
   selectCommitSignatures,
   unbackedMint,
   type CommitSignature,
   type SetMember,
 } from "./relay-policy";
+
+test("each payer orders fresh deposits independently without dropping work", () => {
+  const entries = Array.from({ length: 24 }, (_, i) => ({
+    id: testId(i + 1),
+    akash: Status.STATUS_TRANSFER_PENDING,
+    hold: Hold.HOLD_NONE,
+    retained: false,
+  }));
+  const original = entries.slice();
+  const orders = [1, 2, 3].map((value) => {
+    const payer = new web3.PublicKey(new Uint8Array(32).fill(value));
+    const ordered = relayOrder(entries, payer);
+    assert.deepEqual(ordered, relayOrder(entries, payer));
+    assert.deepEqual(new Set(ordered), new Set(entries));
+    assert.equal(ordered.length, entries.length);
+    assert.deepEqual(relayOrder([], payer), []);
+    assert.deepEqual(
+      relayOrder(entries.slice(0, 1), payer),
+      entries.slice(0, 1),
+    );
+    return ordered;
+  });
+  assert.deepEqual(entries, original);
+  assert.equal(new Set(orders.map((order) => order[0].id)).size, 3);
+});
+
+test("work spreading preserves urgent and resumable queue positions", () => {
+  const entries = [
+    {
+      id: testId(1),
+      akash: Status.STATUS_TRANSFER_PENDING,
+      hold: Hold.HOLD_CONFLICT,
+    },
+    { id: testId(2), akash: Status.STATUS_REFUND_PENDING },
+    { id: testId(3), akash: Status.STATUS_TRANSFER_PENDING },
+    { id: testId(4), akash: Status.STATUS_VOIDED },
+    {
+      id: testId(5),
+      akash: Status.STATUS_TRANSFER_PENDING,
+      retained: true,
+    },
+    { id: testId(6), akash: Status.STATUS_TRANSFER_PENDING },
+    {
+      id: testId(7),
+      akash: Status.STATUS_TRANSFER_PENDING,
+      authorization: { requestedHeight: 50n, requestedRound: 1n },
+    },
+    { id: testId(8), akash: Status.STATUS_REFUNDED },
+  ].map((entry) => ({ hold: Hold.HOLD_NONE, retained: false, ...entry }));
+  for (const value of [1, 2, 3]) {
+    const ordered = relayOrder(
+      entries,
+      new web3.PublicKey(new Uint8Array(32).fill(value)),
+    );
+    for (const index of [0, 1, 3, 4, 6, 7])
+      assert.equal(ordered[index], entries[index]);
+    assert.deepEqual(
+      new Set([ordered[2], ordered[5]]),
+      new Set([entries[2], entries[5]]),
+    );
+  }
+});
 
 test("headers refresh only for a needed proof or an aging client", () => {
   const base = {

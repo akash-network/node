@@ -1,5 +1,6 @@
 import { parseSinkId, type SinkId } from "../shared/id";
 import { web3 } from "@coral-xyz/anchor";
+import { createHash } from "node:crypto";
 import {
   ACCOUNT_SIZE,
   AccountLayout,
@@ -9,6 +10,7 @@ import {
 } from "@solana/spl-token";
 import {
   Sink_Status as Status,
+  Hold,
   SettlementData,
   type TransferState,
 } from "@akashnetwork/chain-sdk/private-types/akash.v1";
@@ -21,6 +23,34 @@ export const STATUS_BATCH = 100;
 // An idle client is refreshed after this share of its trusting period, below
 // the monitor's warning at 25%.
 export const DEFAULT_REFRESH_FRACTION = 1 / 5;
+
+// Spread fresh deposits across payers without assigning exclusive work.
+// Urgent orders and retained uploads keep their existing queue positions.
+export function relayOrder<
+  T extends {
+    id: SinkId;
+    akash: Status;
+    hold: Hold;
+    authorization?: SettlementData["voidAuthorization"];
+    retained: boolean;
+  },
+>(entries: readonly T[], payer: web3.PublicKey): T[] {
+  const fresh = (entry: T) =>
+    entry.akash === Status.STATUS_TRANSFER_PENDING &&
+    entry.hold === Hold.HOLD_NONE &&
+    !entry.authorization &&
+    !entry.retained;
+  const seed = payer.toBuffer();
+  const ranked = entries
+    .filter(fresh)
+    .map((entry) => ({
+      entry,
+      rank: createHash("sha256").update(seed).update(entry.id).digest(),
+    }))
+    .sort((a, b) => Buffer.compare(a.rank, b.rank));
+  let next = 0;
+  return entries.map((entry) => (fresh(entry) ? ranked[next++].entry : entry));
+}
 
 export function relaySettings(env: Record<string, string | undefined>) {
   const refreshFraction = Number(

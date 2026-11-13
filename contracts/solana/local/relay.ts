@@ -95,6 +95,7 @@ import {
   headerRefresh,
   mintWait,
   recipientMints,
+  relayOrder,
   selectCommitSignatures,
   unbackedMint,
   type CommitSignature,
@@ -284,6 +285,28 @@ export async function relayContext(options?: {
     error instanceof Error ? error.message : String(error);
   const log = (value: object) => console.log(JSON.stringify(value));
   const alert = (value: object) => console.error(JSON.stringify(value));
+
+  async function timed<T>(
+    stage: string,
+    action: () => Promise<T>,
+    id?: SinkId,
+  ): Promise<T> {
+    const started = performance.now();
+    let completed = false;
+    try {
+      const result = await action();
+      completed = true;
+      return result;
+    } finally {
+      log({
+        event: "relay-stage-duration",
+        stage,
+        id,
+        elapsedMs: Math.round(performance.now() - started),
+        completed,
+      });
+    }
+  }
 
   // Failed transfers back off exponentially; each attempt can pay for several
   // proof transactions. Header failures back off separately and never block
@@ -827,20 +850,26 @@ export async function relayContext(options?: {
     const max = settings.maxLamportsPerTransfer;
     if (!reclaims && (await readLedger()).exhausted(id, max))
       throw new BudgetExhausted(`transfer ${id} is over its spend limit`);
-    const result = await sendTransaction({
-      wallet,
+    return timed(
       stage,
-      instructions,
-      preflight: true,
-      pendingPath: jobPath(id),
-      observe: (result) => chargeResult(id, result),
-    });
-    assert.equal(
-      result.error,
-      null,
-      `${stage} failed: ${JSON.stringify(result.error)} (${result.signature})`,
+      async () => {
+        const result = await sendTransaction({
+          wallet,
+          stage,
+          instructions,
+          preflight: true,
+          pendingPath: jobPath(id),
+          observe: (result) => chargeResult(id, result),
+        });
+        assert.equal(
+          result.error,
+          null,
+          `${stage} failed: ${JSON.stringify(result.error)} (${result.signature})`,
+        );
+        return result.signature;
+      },
+      id,
     );
-    return result.signature;
   }
   async function closeProofBuffer(id: SinkId) {
     const job = await readProofJob(id);
@@ -973,12 +1002,22 @@ export async function relayContext(options?: {
     }
     while (state.uploaded < proof.length) {
       const offset = state.uploaded;
-      await paid(id, "proof-append", [
-        await program.methods
-          .appendProof(offset, proof.subarray(offset, offset + 500))
-          .accountsStrict({ submitter: wallet.publicKey, proofBuffer })
-          .instruction(),
-      ]);
+      // Two 450-byte appends fit in one transaction below the 1232-byte limit.
+      const chunkSize = 450;
+      const end = Math.min(offset + 2 * chunkSize, proof.length);
+      const instructions: web3.TransactionInstruction[] = [];
+      for (let start = offset; start < end; start += chunkSize) {
+        instructions.push(
+          await program.methods
+            .appendProof(
+              start,
+              proof.subarray(start, Math.min(start + chunkSize, end)),
+            )
+            .accountsStrict({ submitter: wallet.publicKey, proofBuffer })
+            .instruction(),
+        );
+      }
+      await paid(id, "proof-append", instructions);
       state = await progress();
       assert.ok(
         state && state.uploaded > offset,
@@ -1037,27 +1076,12 @@ export async function relayContext(options?: {
       }
     });
   }
-  async function relayWith(
-    lc: Followed,
-    id: SinkId,
-    height: number,
-  ): Promise<"resolved" | "already-resolved" | "skipped"> {
-    await resumePayment(id);
-    const status = await wallet.connection.getAccountInfo(statusAt(id));
-    if (status && status.owner.equals(programId) && status.data.length > 8) {
-      assert.ok(
-        matchesAnchorId(
-          (await program.account.transferStatus.fetch(statusAt(id))).id,
-          id,
-        ),
-        "status identity mismatch",
-      );
-      await finishProofBuffers(id);
-      return "already-resolved";
-    }
-    if ((await readLedger()).exhausted(id, settings.maxLamportsPerTransfer))
-      return "skipped";
-    const transfer = await akash.transfer(id, height - 1);
+  async function prepareProof(id: SinkId, height: number) {
+    const transfer = await timed(
+      "transfer-query",
+      () => akash.transfer(id, height - 1),
+      id,
+    );
     const record = decodeRecord(transfer);
     const authorization = transfer.settlement?.voidAuthorization;
     const key = Buffer.from(
@@ -1065,12 +1089,17 @@ export async function relayContext(options?: {
         ? authorizedSettlement(transfer, BigInt(height - 1)).key
         : transferKey(id),
     );
-    const reply = await akash.comet.abciQuery({
-      path: "/store/sink/key",
-      data: key,
-      height: height - 1,
-      prove: true,
-    });
+    const reply = await timed(
+      "proof-query",
+      () =>
+        akash.comet.abciQuery({
+          path: "/store/sink/key",
+          data: key,
+          height: height - 1,
+          prove: true,
+        }),
+      id,
+    );
     assert.ok(
       reply.code === 0 &&
         reply.height === height - 1 &&
@@ -1088,10 +1117,44 @@ export async function relayContext(options?: {
       "record proof differs from snapshot",
     );
     const proof = encodeMembershipProof({ key, value, ops: reply.proof.ops });
+    return { transfer, record, authorization, key, value, proof };
+  }
+  type PreparedProof = Awaited<ReturnType<typeof prepareProof>>;
+
+  async function relayWith(
+    lc: Followed,
+    id: SinkId,
+    height: number,
+    prepared?: PromiseSettledResult<PreparedProof>,
+  ): Promise<"resolved" | "already-resolved" | "skipped"> {
+    await resumePayment(id);
+    const status = await wallet.connection.getAccountInfo(statusAt(id));
+    if (status && status.owner.equals(programId) && status.data.length > 8) {
+      assert.ok(
+        matchesAnchorId(
+          (await program.account.transferStatus.fetch(statusAt(id))).id,
+          id,
+        ),
+        "status identity mismatch",
+      );
+      await finishProofBuffers(id);
+      return "already-resolved";
+    }
+    if ((await readLedger()).exhausted(id, settings.maxLamportsPerTransfer))
+      return "skipped";
+    if (prepared?.status === "rejected") throw prepared.reason;
+    const { transfer, record, authorization, key, value, proof } =
+      prepared?.status === "fulfilled"
+        ? prepared.value
+        : await prepareProof(id, height);
     // Last Akash read before paying: a void order or refund since planning
     // means minting would leave the refund as unbacked supply.
-    const latest = await akash.state();
-    const now = await akash.transfer(id, latest.height);
+    const latest = await timed("state-query", () => akash.state(), id);
+    const now = await timed(
+      "transfer-query",
+      () => akash.transfer(id, latest.height),
+      id,
+    );
     assert.ok(now.settlement, "missing sink settlement");
     const changed = finalCheck(transfer, now);
     if (changed) {
@@ -1122,8 +1185,12 @@ export async function relayContext(options?: {
       }),
     );
     // Upload can span many blocks. Repeat the state and outcome guard immediately before resolution.
-    const finalState = await akash.state();
-    const finalTransfer = await akash.transfer(id, finalState.height);
+    const finalState = await timed("state-query", () => akash.state(), id);
+    const finalTransfer = await timed(
+      "transfer-query",
+      () => akash.transfer(id, finalState.height),
+      id,
+    );
     if (finalCheck(transfer, finalTransfer)) {
       await closeProofBuffer(id);
       return "skipped";
@@ -1314,15 +1381,17 @@ export async function relayContext(options?: {
     );
     const created = Number(record.height);
     assert.ok(transfer.settlement, "missing sink settlement");
+    const saved = await readProofJob(id);
     const planned = {
       id,
       record,
       authorization: transfer.settlement.voidAuthorization,
       akash: transfer.status,
+      hold: transfer.settlement.hold,
+      retained: saved !== undefined,
       unbacked: unbackedMint(transfer),
     };
     // Header H proves state committed at H - 1.
-    const saved = await readProofJob(id);
     let resumeHeight = saved?.proofHeight;
     let minimum = created + 1;
     if (saved) {
@@ -1556,8 +1625,10 @@ export async function relayContext(options?: {
       await reclaimLookups(wallet, headerDirectory);
       throw error;
     }
-    const state = await akash.state();
-    const { pending, known } = await unresolved(state);
+    const state = await timed("state-query", () => akash.state());
+    const { pending, known } = await timed("discovery", () =>
+      unresolved(state),
+    );
     const ledger = await readLedger();
     const trusted = await lc.client.account.clientState.fetch(lc.clientState);
     let current = trusted.latestHeight.revisionHeight.toNumber();
@@ -1627,27 +1698,44 @@ export async function relayContext(options?: {
           trusted: current,
           target,
         });
-        await update(target);
+        await timed("header-update", () => update(target));
       }, target);
       if (updated) headerRetries.clear(0n);
       current = (
         await lc.client.account.clientState.fetch(lc.clientState)
       ).latestHeight.revisionHeight.toNumber();
     }
-    for (const entry of ready) {
-      if (entry.height > current) continue; // Wait for a covering header.
-      try {
-        await withUploadLock(payerLock, () =>
-          relayWith(lc, entry.id, entry.resumeHeight ?? current),
-        );
-        await updateLedger((ledger) => {
-          ledger.clearRetry(entry.id);
-          return true;
-        });
-      } catch (error) {
-        // The next pass alerts once and stops paying for it.
-        if (error instanceof BudgetExhausted) continue;
-        await relayFailed(entry.id, error);
+    const covered = relayOrder(
+      ready.filter((entry) => entry.height <= current),
+      wallet.publicKey,
+    );
+    // Bound readonly proof preparation; paid work keeps its order and payer lock.
+    for (let offset = 0; offset < covered.length; offset += 2) {
+      const batch = covered.slice(offset, offset + 2);
+      const prepared = await Promise.allSettled(
+        batch.map((entry) =>
+          prepareProof(entry.id, entry.resumeHeight ?? current),
+        ),
+      );
+      for (const [index, entry] of batch.entries()) {
+        try {
+          await withUploadLock(payerLock, () =>
+            relayWith(
+              lc,
+              entry.id,
+              entry.resumeHeight ?? current,
+              prepared[index],
+            ),
+          );
+          await updateLedger((ledger) => {
+            ledger.clearRetry(entry.id);
+            return true;
+          });
+        } catch (error) {
+          // The next pass alerts once and stops paying for it.
+          if (error instanceof BudgetExhausted) continue;
+          await relayFailed(entry.id, error);
+        }
       }
     }
     // After relays have used the latest height, which is never pruned.
@@ -1660,7 +1748,7 @@ export async function relayContext(options?: {
     update,
     ensureClientActive,
     resumeHeader,
-    tick,
+    tick: () => timed("tick", tick),
     resetBudget,
     lightClient: follow,
     settings,
