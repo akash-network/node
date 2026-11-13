@@ -40,7 +40,7 @@ Each planned message goes out in its own transaction, and the reporter waits up 
   - each costs 2,240 extra gas;
   - the signer sequence must be 0;
   - the replay key is (timeout in nanoseconds, signer).
-- **Duplicate votes are harmless.** `MsgReportOutcome` succeeds without effect for duplicate or late same-outcome votes. It fails only on a stale policy or round (`x/sink/keeper/settlement.go:88`).
+- **Duplicate votes are harmless.** `MsgReportOutcome` succeeds without effect for duplicate or late same-outcome votes (`x/sink/keeper/settlement.go:88-139`). Apart from invalid input, such as a signer outside the policy or an unknown transfer, a vote fails only on a stale policy or round.
 - **Solana v1 transactions** (SIMD-0385) have been on mainnet since 2026-09-15. The node pins `gagliardetto/solana-go` v1.14.0 through chain-sdk, and that version cannot decode them in binary form. Upgrading it would change the consensus binary's dependencies. The TS reporter reads blocks and transactions as JSON, which needs no binary decoding.
 - **CGO.** `pkg.akt.dev/go/cli`, which holds akash's config handling, builds only with CGO because of wasmd and wasmvm. Everything the reporter needs builds with `CGO_ENABLED=0` against the module's pinned dependencies (`GOWORK=off`): chain-sdk sink types, cosmos-sdk client, tx, keyring and keys packages, the CometBFT RPC client, solana-go keys, grpc, viper and prometheus.
 
@@ -66,15 +66,16 @@ Each planned message goes out in its own transaction, and the reporter waits up 
 ### Success criteria
 
 1. **Parity.** Every golden scenario (section 11.2) produces events structurally identical to the TS reporter's, under the ordering rules in section 9.1. The only exceptions are the intentional differences listed in section 5.6.
-2. **Performance.** The `steady-100k` benchmark (section 11.4) completes a pass in at most 60 s, with peak heap at most 512 MiB, on a 4-vCPU GitHub runner.
+2. **Review throughput.** The `steady-100k` benchmark (section 11.4) completes a pass in at most 60 s, with no failures, the expected decisions, and peak heap at most 512 MiB, on a 4-vCPU GitHub runner.
 3. **Build.** `CGO_ENABLED=0 GOWORK=off` builds succeed for linux and darwin on amd64 and arm64.
 4. **Image.** `docker run <image>` starts scanning when configuration comes from the environment or a mounted home.
 5. **Broadcast.** Component tests (section 11.3) show:
    - unordered transactions with sequence 0 and unique timeouts;
-   - batching;
-   - simulation pruning;
-   - fee caps;
-   - in-flight de-duplication.
+   - batching, send priority, simulation pruning and fee caps;
+   - in-flight de-duplication, including releases after every failure before submission, and no re-send planned from a snapshot older than an inclusion;
+   - a vote backlog draining while reviews proceed without waiting;
+   - refunds progressing through the refund queue without waiting for another pass.
+6. **Node load.** On the same runner, the real application's gRPC server, seeded with 100,000 transfers, sustains at least 2,000 height-pinned `Transfer` queries per second from 32 concurrent clients (section 11.4).
 
 ## 4. Decisions
 
@@ -147,7 +148,9 @@ Every dependency is already in `go.mod`. The Cosmos-KMS proto is copied into `op
   - `cosmos.auth.v1beta1.Query/Account`;
   - `cosmos.tx.v1beta1.Service/Simulate`.
 
-  Each `akash.sink.v1` read sends `x-cosmos-block-height: H`, and the response header must repeat H; the TS reporter checks `reply.height` the same way. `Account` (read once at startup) and `Simulate` run against the node's latest state. Messages are gogoproto, encoded with the SDK's gRPC codec. The client accepts responses up to 64 MiB.
+  Each `akash.sink.v1` read sends `x-cosmos-block-height: H`, and the response header must repeat H, as the TS reporter checks `reply.height`. The server echoes the height it was asked for, and answers a request that arrived without the header at its latest height. The check therefore catches a header lost on the way; that the read used H rests on the server honoring the header. `Account` (read once at startup) and `Simulate` run against the node's latest state. Messages are gogoproto, encoded with the SDK's gRPC codec. The client accepts responses up to 64 MiB.
+
+  A node serves gRPC without TLS. Loopback addresses therefore always use plaintext. Other addresses use TLS unless `grpc-insecure` is set.
 - **CometBFT RPC (`node`)** carries `status`, `abci_info`, `block`, `broadcast_tx_sync` and `tx`.
 - **Same node.** At startup, CometBFT `/status` `node_info.id` must equal `default_node_info.default_node_id` from gRPC `cosmos.base.tendermint.v1beta1.Service/GetNodeInfo`. The two endpoints must be one node so that height H exists on both.
 
@@ -199,13 +202,13 @@ Every dependency is already in `go.mod`. The Cosmos-KMS proto is copied into `op
 
 1. `getGenesisHash` must equal `solana.genesis-hash`; otherwise `wrong Solana cluster`.
 2. One `getMultipleAccounts` covers the program, `PDA("config")`, `PDA("bridge")`, the mint and the chunk's status PDAs. The RPC allows at most 100 keys per call, which is why a chunk holds 96 transfers. The context slot must be positive.
-3. `getBlockTime(slot)` is cached per slot. The age is computed when used and must be in [−10 s, `max-age`]; otherwise `stale Solana finalized state`.
+3. `getBlockTime(slot)` is cached per slot. The age is checked when the snapshot is taken, before any evidence fetch, and must be in [−10 s, `max-age`]; otherwise `stale Solana finalized state`. A missing (null) block time counts as stale, as in TS.
 4. Deployment checks:
    - the program is executable;
    - the launch and bridge accounts are owned by the program and not executable;
    - launch version is 2, and launch mint equals `solana.mint`;
    - bridge chain ID equals `chain-id`;
-   - the light-client check (section 5.6);
+   - the light-client check on the bridge account's `light_client_program` (section 5.6);
    - the mint is owned by the SPL Token program, is 82 bytes, initialized, with 6 decimals, no freeze authority, and mint authority `PDA("mint_authority")`.
 
 The pass-start snapshot (section 5.2) runs the same checks without status accounts.
@@ -213,16 +216,17 @@ The pass-start snapshot (section 5.2) runs the same checks without status accoun
 **Resolved path** (port of `observeFinalized` and `observe`).
 
 - The status account must be owned by the program and not executable, and must decode. It must match all three ID components, with proof height > deposit height and 0 < resolved slot ≤ context slot. A mint must also match the Akash amount and recipient.
-- Evidence: reuse this reporter's own stored vote when its outcome and slot match and its signature is 64 non-zero bytes. Otherwise look the status up in the per-slot evidence index.
+- Evidence: reuse this reporter's own stored vote when its outcome and slot match and its signature is 64 bytes, not all zero. Otherwise look the status up in the per-slot evidence index.
 
 **Audit early exit.** An audit entry whose status is terminal is checked against the chunk snapshot first. When Solana resolved it and `settledConsistently` holds, the review stops and writes the short audit event (Appendix A).
 
 **Per-slot evidence index** (port of `resolutionSignature` and `resolves`).
 
-- **Fetch.** One `getBlock` per slot, shared by concurrent lookups and limited by `scan.block-concurrency`. The indexes of the 256 most recent slots are kept.
-- **Decode.** The block is decoded as a stream, one transaction at a time; it is never held whole in memory. A transaction becomes a candidate when it succeeded, has log messages, and its logs yield at least one `TransferResolved` event from an AKT program frame. For each candidate the index keeps the first signature, the writable account keys and the events.
-- **Lookup.** For status account A at slot S, select candidates that write A and carry an event matching the status: ID, proof height, resolved slot and outcome (amount and recipient, or void reason).
-  - Two or more matches give `multiple resolution transactions in block`.
+- **Fetch.** One `getBlock` per slot, shared by concurrent lookups and limited by `scan.block-concurrency`.
+- **Decode.** The block is decoded as a stream, one transaction at a time; it is never held whole in memory. A transaction becomes a candidate when it succeeded, has log messages, and its logs yield at least one `TransferResolved` event from an AKT program frame. For each such event the index keeps the event, the transaction's first signature, and whether the transaction writes the status PDA derived from the event's ID. A matching event carries the status's own ID, so that PDA is exactly the status account a lookup asks about.
+- **Retention.** The indexes of the 256 most recent slots are kept, within 64 MiB in total, evicting the oldest slot first. An evicted slot is fetched again on its next lookup.
+- **Lookup.** For a status at slot S, select entries whose event matches the status and whose transaction writes the status account. Matching covers the ID, proof height, resolved slot and outcome (amount and recipient, or void reason).
+  - Two or more matching transactions give `multiple resolution transactions in block`.
   - None gives `resolution evidence unavailable in its block`.
   - A missing, skipped or pruned block, or an RPC error, gives `resolution evidence unavailable: block missing from owned node history`.
 - **Writability.** Static keys use the message header's signed and unsigned read-only counts. They are followed by `meta.loadedAddresses.writable`, then `meta.loadedAddresses.readonly`. These are the rules web3.js applies to legacy, v0 and v1 messages. A transaction version other than legacy, 0 or 1 supplies no evidence.
@@ -276,15 +280,18 @@ Caches are keyed by height or slot, so nothing is ever invalidated:
 
 - the latest Akash snapshot;
 - block time per slot (4,096 slots);
-- the evidence index per slot (256 slots).
+- the evidence index per slot (256 slots, at most 64 MiB).
 
 Each HTTP endpoint gets one keep-alive connection pool sized to its concurrency.
 
 **Guarantees kept from TS.**
 
 1. Each decision uses one Akash height and one finalized Solana slot.
-2. A `light-client-changed` alert is written before any event decided under the new client. Changes are recorded and written under one lock, and snapshots older than the last recorded change are ignored.
-3. A light-client pin mismatch stops the pass. No new chunk starts, the `light-client-mismatch` alert and an error are written, and no summary follows. Messages already planned are still sent; TS had sent them before it reached the mismatch.
+2. A `light-client-changed` alert is written before any event decided under the new client. On every observation, the followed program and the highest observed snapshot slot are updated together under one lock, and the alert is written under the same lock. An observation from an older slot is ignored, as in TS (`solana.ts:271-275`).
+3. A light-client pin mismatch stops the pass.
+   - No new chunk starts, and running chunks are cancelled; events they already wrote stand.
+   - The `light-client-mismatch` alert and an error are written once every running chunk has stopped, so no review event follows them. No summary is written.
+   - Messages already planned are still sent; TS had sent them before it reached the mismatch.
 4. Pass-start identity and freshness failures, and listing errors, end the pass with an error line and no summary. During reviews, snapshot and observation errors fail only the affected transfers (`{id, error}`), and the pass continues.
 5. Stale nodes, missing history, RPC errors and signer failures never produce a veto or a refund.
 6. No local state is needed after a restart. Recovery comes from votes and terminal states on chain.
@@ -299,15 +306,16 @@ Each HTTP endpoint gets one keep-alive connection pool sized to its concurrency.
 6. Mint `COption` tags other than 0 and 1 are rejected. TS treated any non-zero tag as present.
 7. TS assertions that had no message get descriptive Go messages. CheckTx rejection and expiry get their own error texts (section 6.4).
 8. The audit page is min(`scan.audit-per-scan`, `scan.page-size`). TS used min(`auditPerScan`, 500), which is identical at the default page size.
+9. After each confirmed refund finalization, the new refund head is reviewed at once (section 6.5). TS reached a later head in the same pass only when it was listed after the refund just paid.
 
 ### 5.7 Shutdown
 
 On the first SIGINT or SIGTERM:
 
 1. No new chunk starts. In-flight requests finish or time out.
-2. No new transaction is signed. Planned but unsent messages are dropped and planned again on the next start.
+2. No new transaction is signed. Queued messages are released without an event and planned again on the next start; TS also skipped submissions after a signal.
 3. In-flight transactions get up to 30 s to confirm.
-4. The summary of the partial pass is written and events are flushed.
+4. The summary of the partial pass is written and events are flushed. As in TS, `scanned` is the number of open transfers listed, even when reviews stopped early.
 
 `start` then exits 0, and `scan` exits 1 if the pass had failures. A second signal exits immediately.
 
@@ -319,7 +327,9 @@ On the first SIGINT or SIGTERM:
 - `MsgVetoVoid` and `MsgFinalizeRefund` get one transaction each. They can fail on the challenge window, refund order or caps, and one failed message fails its whole transaction.
 - A batch is sent when it is full, after `tx.batch-window`, or when the pass ends.
 - Before signing, the latest snapshot must still list `reporter` (otherwise `reporter was removed`), and the signer's address must equal `reporter`.
-- At most `tx.max-in-flight` transactions are unconfirmed at once.
+- At most `tx.max-in-flight` transactions are unconfirmed at once. When a slot frees, the broadcaster sends `MsgVetoVoid` first, then `MsgFinalizeRefund`, then vote batches in plan order.
+- Reviews never wait for broadcasting, so a slow or unavailable signer delays submissions, not passes. The queue needs no separate bound: the in-flight table admits at most one entry per transfer and message kind (section 6.4), so the queue never exceeds the open set. A queued message leaves the queue only when it is sent, when it fails before submission (section 6.4), or on shutdown. `scan` submits all of them and waits for their outcomes.
+- With the defaults, at most 200 votes are unconfirmed at once (`tx.max-in-flight` × `tx.max-msgs`). A larger vote backlog drains over several blocks, across passes.
 
 ### 6.2 Unordered transactions
 
@@ -329,34 +339,56 @@ On the first SIGINT or SIGTERM:
   - `timeout_timestamp` = T + `tx.timeout` + δ;
   - no `timeout_height`.
 
-  T is the latest snapshot's block time. δ is a per-process nanosecond counter, randomly seeded below one second and strictly increasing. Every transaction therefore has its own replay key, also against a standby process signing with the same key.
-- **Auth info:** one signer, `SIGN_MODE_DIRECT`, sequence 0, the fee and the gas limit. The account number is read once at startup.
-- **Timeout bounds.** In broadcast mode, validation requires `tx.timeout` > `max-age`, so a timeout derived from an accepted snapshot is still in the future. It also requires `tx.timeout` ≤ 9 min, which stays inside the chain's 10 min limit.
+  T is the block time of the latest snapshot when the transaction is built, right before signing. δ is a nanosecond offset that makes each timeout the process issues strictly greater than the previous one, so one process never repeats a replay key. A standby process signing with the same key starts its offset at a random value below one second, so a collision between the two is unlikely but possible. A collision is a CheckTx rejection (`failed to add unordered nonce`), handled like any other rejection (section 6.4); a later pass plans the message again with a new timeout.
+- **Auth info:** one signer, `SIGN_MODE_DIRECT`, sequence 0, the fee and the gas limit. The account number is read once at startup. If the account does not exist, because the address never received funds, broadcast mode refuses to start with `reporter account not found`.
+- **Timeout bounds.** In broadcast mode, validation requires `tx.timeout` ≥ `max-age` + the signer timeout (`signer.remote.timeout`, or 0 for the keyring) + 30 s. A transaction built from an accepted but stale snapshot is then still valid after a slow signature and broadcast. It also requires `tx.timeout` ≤ 9 min, which stays inside the chain's 10 min limit.
+- **No fallback.** If the chain stops accepting unordered transactions, every broadcast is rejected with `unordered transactions are not enabled`, reported per message. There is no ordered fallback (D6).
 
 ### 6.3 Simulation, gas and fees
 
 - Every batch is simulated through gRPC `Simulate` before signing.
-- With `gas = auto`, the gas limit is ceil(gas used × `gas-adjustment`). A numeric `gas` is used as given.
+- With `gas = auto`, the gas limit is ceil(gas used × `gas-adjustment`). A numeric `gas` is per message, so the limit is `gas` × the number of messages.
 - If simulation fails at `message index: N`, message N is dropped with `{id, error}` and the batch is simulated again, for up to three rounds. Any messages still left are then sent one per transaction.
+- A simulation failure without a message index, such as insufficient funds or an invalid timeout, fails the whole batch before submission. Each message gets `{id, error}`, and its entry is released.
 - The fee is `fees` when that is set, otherwise ceil(gas limit × `gas-prices`).
 - Caps: the gas limit must be at most `tx.max-gas` and the fee at most `tx.max-fee`. A batch over a cap is split in half. A single message over a cap gets `{id, error}` and is not sent.
 
 ### 6.4 Confirmation and the in-flight table
 
-- **Broadcast** uses `broadcast_tx_sync`.
-  - A CheckTx rejection gives each message `{id, error: "sink transaction rejected: <HASH> code <n>: <log>"}`.
-  - Transport errors re-send the same signed bytes until the timeout. The replay key makes that safe.
+- **Broadcast** uses `broadcast_tx_sync`. After a transport error, the same signed bytes are re-sent until the timeout; the replay key makes that safe.
+- **Re-sends.** For a transaction already sent once, a `tx already exists in cache` reply or a `failed to add unordered nonce` rejection means an earlier copy may be pending or included. The transaction stays submitted and is confirmed or expires as below.
+- **Rejection.** Any other CheckTx rejection is final after one `tx(hash)` lookup finds nothing; without a transaction index it is final at once. So is a nonce rejection on the first send, which means a replay-key collision with another process (section 6.2). Each message gets `{id, error: "sink transaction rejected: <HASH> code <n>: <log>"}`.
 - **Confirmation.** While any transaction is unconfirmed, the broadcaster refreshes the height tracker once a second, including between passes. On every new height, each unconfirmed transaction is looked up with `tx(hash)`:
   - code 0 gives `{id, transactionHash}` for each message, with the hash in uppercase hex as cosmjs printed it;
-  - any other code gives `{id, error: "sink transaction failed: <HASH> code <n>"}`, the TS text;
-  - a transaction still missing after a block time passes its timeout gets one final lookup, then `{id, error: "sink transaction expired: <HASH>"}`.
-- **No transaction index.** If `/status` reports `node_info.other.tx_index` as anything other than `on`, the reporter logs a warning once. CheckTx results are still reported; inclusion is not. Entries leave the table when they expire, and the next pass reflects the outcome.
-- **In-flight table.**
-  - The key is (transfer ID, message type), plus (outcome, round, policy version) for votes.
-  - An entry is added when its message is queued. It is removed on inclusion, on a CheckTx or simulation rejection, or on expiry.
-  - Planned messages whose key is present are skipped.
-- **Failure counting.** `scan` waits for its transactions to resolve, bounded by `tx.timeout`, before writing the summary, so its exit code includes them. `start` counts an outcome in whichever pass is running when it resolves.
+  - any other code gives `{id, error: "sink transaction failed: <HASH> code <n>"}`, the TS text.
+- **Expiry** is decided by chain time only. Once a committed block's time passes the timeout, a final lookup runs. A transaction still missing can never be included, and each message gets `{id, error: "sink transaction expired: <HASH>"}`.
+- **Waiting limit.** `scan` waits until its transactions resolve, or until `tx.timeout` plus 60 s of wall-clock time has passed since its last submission.
+  - A transaction still unresolved then, for example because the chain halted, gives `{id, error: "sink transaction unconfirmed: <HASH>"}` and counts as a failure. It is not called expired.
+  - `start` keeps such a transaction submitted until inclusion or chain-time expiry, re-sending only its existing bytes.
+- **No transaction index.** If `/status` reports `node_info.other.tx_index` as anything other than `on`, the reporter logs a warning once, because outcomes cannot be observed.
+  - CheckTx rejections are still reported.
+  - Accepted transactions get no outcome event, do not count as failures, and leave the table at chain-time expiry. `scan` does not wait for them.
+  - The next pass reflects their effect.
+- **In-flight table.** Only the broadcaster adds and removes entries and writes outcome events.
+  - The key is (transfer ID, message type), plus (outcome, round, policy version) for votes. A planned message whose key is present is skipped, so the table holds at most one entry per transfer and message kind.
+  - An entry is *queued* from planning until its transaction's first broadcast. It is then *submitted*, because from then on inclusion is possible.
+  - A queued entry is released on any failure before the first broadcast, and each such failure writes `{id, error}`: simulation rejection, signing failure, membership or signer-identity failure, or a cap rejection. On shutdown it is released without an event (section 5.7). A later pass can plan the message again.
+  - A submitted entry stays until inclusion (any code), a final CheckTx rejection, or chain-time expiry.
+  - Inclusion with code 0 leaves a marker carrying the inclusion height. A plan for the same key from a snapshot below that height is skipped, because such a snapshot cannot see the transaction's effect. The marker is dropped once no running chunk planned below that height.
+- **Failure counting.** `scan` counts every outcome before its summary, so its exit code includes them. `start` counts an outcome in whichever pass is running when it resolves.
 - **Restart.** The table is lost. The worst case is a duplicate vote (no effect, fee paid) or a refund the chain rejects; nothing executes twice.
+
+### 6.5 Refund-head progression
+
+`x/sink` pays refunds strictly in queue order. `MsgFinalizeRefund` succeeds only for the current refund head, which advances only when that refund executes (`x/sink/keeper/settlement.go:430-437`). The transfers of a chunk share one snapshot, so on its own a pass finalizes at most the head it saw.
+
+The broadcaster therefore keeps the queue moving:
+
+1. When a `MsgFinalizeRefund` is included with code 0, the broadcaster takes a fresh snapshot at once.
+2. It reviews the new refund head as a one-transfer chunk: re-read at H′, Solana snapshot, plan.
+3. If that review plans another finalization, it is sent the same way, and the steps repeat.
+
+Progression stops when the head plans no finalization (not yet eligible, held, or the epoch capacity is used), or on shutdown. `scan` waits for progression to stop before its summary. The in-flight table keeps a pass review and a progression review from sending the same finalization twice. Refunds are paid at about one per block.
 
 ## 7. Signing
 
@@ -364,12 +396,12 @@ Broadcast needs exactly one signer: the keyring (`from`) or the remote signer (`
 
 ### 7.1 Keyring, in-process
 
-- Settings: `from` (key name or address), `keyring-backend` (default `test`) and `keyring-dir` (default: the home directory).
+- Settings: `from` (key name or address), `keyring-backend` (default `test`) and `keyring-dir` (default: the home directory). `keys` reads these settings from the same configuration as `start` (flags, environment, file), so both use one keyring. The cosmos-sdk default of `os` does not apply.
 - The key must be secp256k1 and must derive `reporter`; otherwise `signer does not match reporter`.
 - Backends:
-  - `test`: files in the home, mode 0600. This is the container default.
-  - `file`: encrypted at rest; the passphrase is read from stdin at startup.
-  - `os`: the Linux secret service. It is unavailable in darwin builds, which have no CGO.
+  - `test`: files in the home, mode 0600, owned by the service user (UID 10001 in the image). This is the container default.
+  - `file`: encrypted at rest. The passphrase is read from stdin once at startup, so this backend suits interactive runs or systemd with `StandardInput=file:`. Containers use `test` or the remote signer.
+  - `os`: the Linux secret service. It needs a D-Bus session, which containers and system services usually lack, and it is unavailable in darwin builds, which have no CGO.
 - `akt-reporter keys` exposes the cosmos-sdk key commands, including `import-hex`. Without the hex argument, `import-hex` reads the key from stdin, which keeps it out of shell history.
 
 ### 7.2 Cosmos-KMS SignerService, remote
@@ -389,6 +421,7 @@ Cosmos-KMS (`github.com/cosmos/kms`) is the documented successor to tmkms. tmkms
   - An optional client certificate (`cert-file`, `key-file`) is for an mTLS proxy in front of the KMS.
   - `signer.remote.timeout` applies per call.
 - **Access.** The `SignerService` authenticates no caller. Operators must restrict network access so that only the reporter can reach it.
+- **Release gate.** A release enables the remote signer only after a CI job against a real `kms` binary passes for each supported scheme.
 
 ## 8. CLI and configuration
 
@@ -401,9 +434,9 @@ This follows `cmd/akash` and chain-sdk's `InterceptConfigsPreRunHandler`. It is 
   - Flags use the key name, for example `--solana.rpc`, as cosmos-sdk does with `--grpc.address`.
   - Environment variables add the prefix `AKT_REPORTER_` and map `.` and `-` to `_`, for example `AKT_REPORTER_SOLANA_RPC`.
 - **Precedence:** flag, then environment, then file, then default. This uses viper plus a copy of chain-sdk's `bindFlags`.
-- **Unknown keys** in the file, and unknown `AKT_REPORTER_*` variables, are errors.
+- **Unknown keys** in the file are errors. Unknown `AKT_REPORTER_*` variables are logged as warnings and ignored, because platforms add their own. For example, Kubernetes injects `AKT_REPORTER_SERVICE_HOST` and similar variables when a Service is named `akt-reporter`.
 - **Logging flags** match akash: `--log_level`, `--log_format plain|json`, `--log_color` and `--log_timestamp`. Logs go to stderr; stdout carries only events.
-- **Writes.** Only `init` writes files.
+- **Writes.** Only `init` and `keys` write files.
 
 ### 8.2 Commands
 
@@ -428,13 +461,13 @@ This follows `cmd/akash` and chain-sdk's `InterceptConfigsPreRunHandler`. It is 
 | `chain-id`                                          | required                        |                                                                | `akashChainId`                   |
 | `node`                                              | `tcp://localhost:26657`         | `tcp`, `http` or `https`; no credentials in the URL            | `akashRpc`                       |
 | `grpc-addr`                                         | `localhost:9090`                | `host:port`                                                    | none                             |
-| `grpc-insecure`                                     | `false`                         | Plaintext gRPC, for a co-located node                          | none                             |
+| `grpc-insecure`                                     | `false`                         | Plaintext gRPC for a non-loopback address; loopback addresses always use plaintext | none           |
 | `max-age`                                           | `60s`                           | Above 0, at most `10m`                                         | `maxAgeSeconds`                  |
 | `request-timeout`                                   | `15s`                           | `1s` to `60s`                                                  | none                             |
 | `from`                                              | empty                           | Keyring key name or address                                    | `keyFile`                        |
-| `keyring-backend`                                   | `test`                          | `os`, `file` or `test`                                         | none                             |
+| `keyring-backend`                                   | `test`                          | `os`, `file` or `test`; also used by `keys`                    | none                             |
 | `keyring-dir`                                       | the home directory              |                                                                | none                             |
-| `gas`                                               | `auto`                          | `auto`, or an integer of at most `tx.max-gas`                  | `gasLimit`                       |
+| `gas`                                               | `auto`                          | `auto`, or gas per message; the transaction limit is that times the message count, at most `tx.max-gas` | `gasLimit` |
 | `gas-adjustment`                                    | `1.3`                           | `1.0` to `10.0`                                                | none                             |
 | `gas-prices`                                        | `0.025uakt`                     | `uakt` only                                                    | none                             |
 | `fees`                                              | empty                           | `uakt` only, at most `tx.max-fee`; overrides `gas-prices`      | `feeAmountUakt`                  |
@@ -455,7 +488,7 @@ This follows `cmd/akash` and chain-sdk's `InterceptConfigsPreRunHandler`. It is 
 | `tx.max-fee`                                        | `1000000uakt`                   | `uakt`, at most `1000000uakt`                                  | Bound on `feeAmountUakt`         |
 | `tx.max-msgs`                                       | `25`                            | 1 to 100                                                       | none                             |
 | `tx.batch-window`                                   | `500ms`                         | `0` to `5s`                                                    | none                             |
-| `tx.timeout`                                        | `2m`                            | `30s` to `9m`; when broadcasting, greater than `max-age`       | none                             |
+| `tx.timeout`                                        | `2m`                            | `30s` to `9m`; when broadcasting, at least `max-age` + signer timeout + 30 s (section 6.2) | none   |
 | `tx.max-in-flight`                                  | `8`                             | 1 to 64                                                        | none                             |
 | `signer.remote.address`                             | empty                           | `host:port`                                                    | `externalSigner`                 |
 | `signer.remote.key-id`                              | empty                           | Required with `address`                                        | none                             |
@@ -492,7 +525,7 @@ This follows `cmd/akash` and chain-sdk's `InterceptConfigsPreRunHandler`. It is 
 - **Ordering that is kept:**
   - For each transfer, its review event or error comes before its transaction events.
   - A `light-client-changed` alert comes before every event decided under the new client.
-  - The summary is the pass's last event. The exception is transaction outcome events in `start` (section 6.4).
+  - The summary is the pass's last event. The exceptions are transaction outcome events and refund-progression reviews in `start` (sections 6.4 and 6.5).
   - Events of different transfers have no defined order.
 
 ### 9.2 Logs on stderr
@@ -559,7 +592,8 @@ ENTRYPOINT ["/usr/bin/akt-reporter"]
 CMD ["start"]
 ```
 
-- `docker run <image>` starts the reporter. Any arguments replace the default command, for example `docker run <image> keys import-hex reporter`.
+- `docker run <image>` starts the reporter. Any arguments replace the default command.
+- The image's home is not writable, so commands that write need the home mounted, owned by UID 10001. For example: `docker run --rm -i -v <home>:/home/akt-reporter <image> keys import-hex reporter < reporter.key`.
 - The Dockerfile has no `RUN` step, so the arm64 image builds without emulation.
 
 ### 10.3 Make
@@ -612,6 +646,7 @@ The Go unit tests port the TS suites.
   - writability for legacy, v0 and v1 messages;
   - the streaming block decoder.
 - `sinkid`: canonical parsing, ordering and the key suffix.
+- `observe`: snapshots completing out of slot order under the light-client follow rule, including A→B→A changes and newer unchanged snapshots.
 - `akash`: tracker checks, listing checks and cursor rules, from the cases in `scan.test.ts` and `akash.test.ts`.
 - `config`: validation rules, the network guard, precedence and unknown keys.
 - `signer`:
@@ -621,7 +656,7 @@ The Go unit tests port the TS suites.
 ### 11.2 Parity goldens
 
 - **Simulator.** `simnode` serves a scenario's chain state over CometBFT RPC (including `abci_query`, which the TS reporter uses), gRPC and Solana JSON-RPC.
-- **TS export.** The development-only script `contracts/solana/reporter/goldens.ts` runs the TS `Scanner` in preview against `simnode` for each scenario. It writes the events to `operator/reporter/testdata/goldens/<scenario>.jsonl`.
+- **TS export.** The development-only script `contracts/solana/reporter/goldens.ts` runs the TS `Scanner` in preview for each scenario, against `simnode` built from `operator/reporter/internal/simnode/cmd/simnode`. It writes the events to `operator/reporter/testdata/goldens/<scenario>.jsonl`.
 - **Go comparison.** A Go test runs the Go reporter against the same scenarios and compares events as parsed JSON, under the ordering rules of section 9.1. Error texts are compared where TS asserts with an explicit message.
 - **Scenarios** cover the cases listed under "Tests and schema" in `contracts/solana/docs/reporter.md`:
   - replayed evidence, CPI and truncated logs, and block spam;
@@ -640,36 +675,54 @@ The Go unit tests port the TS suites.
 These are Go tests against an in-process `simnode`. They cover:
 
 - **Broadcast mode:**
-  - the unordered flag, sequence 0 and unique timeouts;
-  - batch limits and the batch window;
-  - simulation pruning and splitting at the caps;
-  - CheckTx rejection, failed delivery and expiry;
-  - in-flight de-duplication across passes;
+  - the unordered flag, sequence 0 and unique timeouts, and recovery from a replay-key collision with a second signing process;
+  - batch limits, the batch window and send priority;
+  - simulation pruning, batch failures without a message index, and splitting at the caps;
+  - CheckTx rejection, re-sends after a lost response, failed delivery and expiry;
+  - in-flight de-duplication across passes: queued entries released after every failure before submission, submitted entries kept after an ambiguous broadcast, and no re-send planned from a snapshot below an inclusion;
   - the membership re-check before signing;
-  - the no-index fallback.
-- **Startup:** refusal on a node-ID mismatch, a gRPC height mismatch, or a KMS key that does not derive `reporter`.
+  - the no-index fallback;
+  - a chain that halts after accepting a transaction: `scan` reports `unconfirmed` and exits 1 at the waiting limit, while `start` keeps the entry;
+  - refund-head progression across several eligible refunds.
+- **Drain:** 5,000 planned votes against a `simnode` that produces a block every second.
+  - Unconfirmed transactions never exceed `tx.max-in-flight`.
+  - Every vote is confirmed within 50 blocks (twice ⌈5,000 / 200⌉), with no message sent twice.
+  - The pass finishes without waiting for the drain.
+  - A signer that is slow (100 ms per signature), then unavailable for 10 s, recovers without a restart, and the affected messages are planned again.
+- **Startup:** refusal on a node-ID mismatch, a gRPC height mismatch, a KMS key that does not derive `reporter`, or a missing reporter account.
 - **Shutdown:** behavior and exit codes for `scan` and `start`.
 
 ### 11.4 Benchmark `steady-100k`
 
 The benchmark runs in preview mode against an in-process `simnode`.
 
-- **Akash:** 100,000 open transfers (1,000 held disputes, 4,000 refund-pending, 5,000 void-requested, 90,000 transfer-pending), a 3-member policy and an audit page of 100.
-- **Solana:**
-  - 70,000 statuses absent;
-  - 25,000 resolved, with this reporter's matching vote stored;
-  - 5,000 resolved without one, spread over 100 blocks of 1,500 transactions each.
+- **Workload:** 100,000 open transfers, a 3-member policy, and an audit page of 100.
+  - 70,000 transfer-pending with no votes and no Solana status. They are absent with no reported observations, so they need no `getTransaction` calls.
+  - 20,000 transfer-pending, 4,000 refund-pending before their challenge ends, and 1,000 held disputes. All are resolved on Solana with this reporter's matching vote stored, so evidence is reused and no blocks are read.
+  - 5,000 void-requested, voided on Solana without this reporter's vote, spread over 100 blocks of 1,500 transactions each.
+  - An audit page of 100 terminal transfers, settled consistently.
 - **Injected latency:** 2 ms per Akash request, 5 ms per Solana request, plus 200 ms per `getBlock`.
-- **Pass criteria:** the pass takes at most 60 s, and peak heap, sampled from `runtime/metrics`, stays at most 512 MiB. CPU and heap profiles are kept as artifacts.
-- **Where it runs:** as `BenchmarkPass` and as a test gated by `AKT_REPORTER_PERF=1`, nightly and on `workflow_dispatch`. It does not run on every pull request.
+- **Pass criteria:**
+  - the pass takes at most 60 s, and peak heap, sampled from `runtime/metrics`, stays at most 512 MiB;
+  - the summary reports no failures, and the events match the expected decisions: 5,000 planned `MsgReportOutcome`, 1,000 `Transfer requires governance review` alerts, 100 audit early exits, and no other message or alert;
+  - CPU and heap profiles are kept as artifacts.
+- **Where it runs:** as `BenchmarkPass` and as a test gated by `REPORTER_PERF=1`, nightly and on `workflow_dispatch`. It does not run on every pull request.
+
+**Node-load benchmark.**
+
+- **Setup:** 100,000 transfers seeded into an in-process akash application built with the repository's `testutil/network` helpers.
+- **Measurement:** height-pinned `Transfer` queries over the application's real gRPC server, from 32 concurrent clients.
+- **Target:** at least 2,000 queries per second on the same runner, which leaves the 60 s pass room for listing and Solana work.
+- **Load on the operator's node:** up to about 2,000 queries per second while a pass runs.
+- **Gate:** this benchmark gates the first release. If it misses the target, the plan revisits the re-read strategy before release (section 14).
 
 ### 11.5 End-to-end
 
-With `AKT_REPORTER_BIN` set, `local/stack.ts` runs the Go binary for its three reporters. For each reporter it:
+With `REPORTER_GO_BIN` set, `local/stack.ts` runs the Go binary for its three reporters. The variable has no `AKT_REPORTER_` prefix, because child processes inherit it. For each reporter it:
 
 1. creates a home;
 2. imports the development key into the `test` backend with `keys import-hex`;
-3. writes a `reporter.toml` with `node`, `grpc-addr`, the Solana settings and `broadcast = true`;
+3. writes a `reporter.toml` with `node`, `grpc-addr` (a loopback address, so plaintext), the Solana settings and `broadcast = true`;
 4. runs `akt-reporter start`.
 
 The stack already starts Akash with `--grpc.address` (`local/stack.ts:328`).
@@ -680,7 +733,7 @@ The stack already starts Akash with `--grpc.address` (`local/stack.ts:328`).
 
 These steps go in the new `contracts/solana/docs/reporter-migration.md`.
 
-1. Enable gRPC on the Akash node (`app.toml`: `[grpc] enable = true`) and set `grpc-addr`.
+1. Enable gRPC on the Akash node (`app.toml`: `[grpc] enable = true`) and set `grpc-addr`. The node serves gRPC without TLS. A loopback address works as is; for a node on another host, set `grpc-insecure = true` on a private network, or put TLS in front.
 2. Run `akt-reporter init --home <home>`, then carry settings over using the TS field column in section 8.3.
 3. Move the signing key.
    - For a key file: `akt-reporter keys import-hex reporter --keyring-backend test --home <home> < reporter.key`, then set `from = "reporter"`.
@@ -703,7 +756,7 @@ TS command-line flags map as follows:
 
 - Rewrite `reporter.md`, `operator-releases.md`, `operator-configuration.md` and the reporter parts of `deploy-services.md`.
 - Replace `_run/akt-reporter/` with:
-  - a `docker-compose.yaml` without `command`, the home mounted read-only at `/home/akt-reporter`, an optional `env_file`, today's hardening, and `stop_grace_period: 60s` to cover the 30 s confirmation wait plus one request timeout;
+  - a `docker-compose.yaml` without `command` and without today's `platform: linux/amd64`, since the image is multi-arch. It keeps today's hardening and adds an optional `env_file`. The home is mounted read-only at `/home/akt-reporter` and must be owned by the container user (`OPERATOR_UID`, default 10001). `stop_grace_period: 60s` covers the 30 s confirmation wait plus one request timeout;
   - `.env.example` and `reporter.example.toml`.
 
   `broadcast.yaml` is removed; broadcast becomes `AKT_REPORTER_BROADCAST=true` or `broadcast = true`.
@@ -735,7 +788,9 @@ TS command-line flags map as follows:
 
 | Risk                                                                                                    | Mitigation                                                                                                                                  |
 | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| Cosmos-KMS is young: the repository dates from 2026-06, and its README and proto disagree on secp256k1 output | Pinned proto; support for both schemes; local verification; contract tests against a fake server; an optional CI job against a real `kms` binary |
+| Cosmos-KMS is young: the repository dates from 2026-06, and its README and proto disagree on secp256k1 output | Pinned proto; support for both schemes; local verification; contract tests against a fake server; a CI job against a real `kms` binary gates every release that enables the remote signer |
+| Operators whose custody cannot be exposed as a Cosmos-KMS `SignerService` lose their external-signer integration (D7) | The service is three calls (`GetKey`, `GetKeys`, `Sign`); the migration guide documents a minimal adapter, and the keyring remains available |
+| Real per-query cost on a node: each height-pinned query builds a multistore view at that height | The node-load benchmark (section 11.4) gates the first release. If it misses, reuse listed states while the snapshot height is unchanged |
 | GoReleaser OSS cannot handle `reporter/` tag prefixes                                                   | `GORELEASER_CURRENT_TAG` with `--skip=validate`, dry-run first on a prerelease tag. Fallback: snapshot build, `docker buildx imagetools create`, `gh` upload |
 | The JSON shape of Solana v1 transactions                                                                | A fixture captured from an Agave 4.2.2 or later test validator; unknown versions supply no evidence                                         |
 | Node setup: gRPC must be enabled, both endpoints must be one node, confirmations need a transaction index | Startup checks with explicit errors, the no-index fallback, documentation                                                                 |
