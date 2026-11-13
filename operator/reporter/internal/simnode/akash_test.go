@@ -327,6 +327,12 @@ func TestHeightHeaderEcho(t *testing.T) {
 	require.EqualValues(t, 8, res.Response.Height)
 	var params sinkv1.QueryParamsResponse
 	require.NoError(t, params.Unmarshal(res.Response.Value))
+
+	// An unpinned query answers at the latest height and echoes it, as BaseApp.Query does.
+	res, err = rpc.ABCIQueryWithOptions(t.Context(), "/akash.sink.v1.Query/Params", nil, rpcclient.ABCIQueryOptions{})
+	require.NoError(t, err)
+	require.Zero(t, res.Response.Code, res.Response.Log)
+	require.EqualValues(t, latest, res.Response.Height)
 	require.True(t, params.Params.ReportersThreshold.Equal(threshold))
 	require.Equal(t, challenge, params.Params.ReporterChallengePeriod)
 
@@ -352,6 +358,12 @@ func TestABCIQueryNotFound(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, 22, res.Response.Code)
 	require.Equal(t, "sdk", res.Response.Codespace)
+	require.EqualValues(t, latest, res.Response.Height)
+
+	// Unpinned, the error echoes the latest height too.
+	res, err = comet(t, n).ABCIQueryWithOptions(t.Context(), "/akash.sink.v1.Query/Transfer", req, rpcclient.ABCIQueryOptions{})
+	require.NoError(t, err)
+	require.EqualValues(t, 22, res.Response.Code)
 	require.EqualValues(t, latest, res.Response.Height)
 
 	// A known transfer answers with its protobuf encoding.
@@ -615,6 +627,12 @@ func TestReplayKeyRule(t *testing.T) {
 	require.Len(t, sinkTransfer(t, q, latest+1, c.vote).Settlement.Votes, 1)
 	require.Empty(t, sinkTransfer(t, q, latest+1, c.vote2).Settlement.Votes)
 
+	// A transaction included with a failure leaves the cache, so its bytes reach CheckTx again; the key is still held.
+	code, codespace, log = broadcast(t, rpc, second)
+	require.EqualValues(t, 18, code)
+	require.Equal(t, "sdk", codespace)
+	require.Contains(t, log, "failed to add unordered nonce")
+
 	// Once a block's time passes the timeout, the key is gone and the timeout is refused as expired.
 	fake.Advance(2 * time.Minute)
 	n.CommitBlock()
@@ -732,7 +750,8 @@ func TestMessageEffectsVersioned(t *testing.T) {
 
 	// A governance resolution starts round 2 in its own block, with a new challenge window from that block's time.
 	fake.Advance(10 * time.Second)
-	n.Resolve(c.veto, sinkv1.StatusRefundPending)
+	evidence := sinkv1.Observation{Slot: 77, TransactionSignature: bytes.Repeat([]byte{7}, 64)}
+	n.Resolve(c.veto, sinkv1.StatusRefundPending, evidence)
 	resolved := sinkTransfer(t, q, latestHeight(t, rpc), c.veto)
 	require.Equal(t, h+8, latestHeight(t, rpc))
 	require.Equal(t, sinkv1.StatusRefundPending, resolved.Status)
@@ -749,6 +768,9 @@ func TestMessageEffectsVersioned(t *testing.T) {
 		wantEnd++
 	}
 	require.Equal(t, wantEnd, s.ChallengeEnd)
+	// A confirmed void records governance's observation, taking the slot and signature from the evidence.
+	require.Equal(t, &sinkv1.Observation{Outcome: sinkv1.OutcomeVoided, Slot: 77, TransactionSignature: evidence.TransactionSignature},
+		s.GovernanceObservation)
 
 	// A veto executes again in the new round, keyed by the round it executed in.
 	send(&sinkv1.MsgVetoVoid{Signer: c.reporter, ID: c.veto.Proto(), Reason: "again"})
@@ -758,6 +780,157 @@ func TestMessageEffectsVersioned(t *testing.T) {
 		typeVeto + "|" + c.veto.String() + "|2": 1,
 		typeRefund + "|" + c.refundA.String():   2,
 	}, n.Executions())
+
+	// A confirmed mint records a minted observation; a restart records none.
+	n.Resolve(c.vote2, sinkv1.StatusMinted)
+	minted := sinkTransfer(t, q, latestHeight(t, rpc), c.vote2)
+	require.Equal(t, sinkv1.StatusMinted, minted.Status)
+	require.Equal(t, &sinkv1.Observation{Outcome: sinkv1.OutcomeMinted}, minted.Settlement.GovernanceObservation)
+	require.Zero(t, minted.Settlement.ChallengeEnd)
+
+	n.Resolve(c.veto, sinkv1.StatusVoided)
+	restarted := sinkTransfer(t, q, latestHeight(t, rpc), c.veto)
+	require.Equal(t, sinkv1.StatusVoided, restarted.Status)
+	require.EqualValues(t, 3, restarted.Settlement.Round)
+	require.Nil(t, restarted.Settlement.GovernanceObservation)
+	require.Zero(t, restarted.Settlement.ChallengeEnd)
+}
+
+// TestVoteBranches covers each branch of ReportOutcome (x/sink/keeper/settlement.go:88-150) under policy 2.
+func TestVoteBranches(t *testing.T) {
+	c := newChain(t)
+	v2 := c.policy
+	v2.Version = 2
+	other := c.policy.Members[1]
+
+	vote := func(id sinkid.ID, version, round uint64, outcome sinkv1.Outcome) *sinkv1.MsgReportOutcome {
+		m := c.voteMsg(id, round)
+		m.PolicyVersion, m.Observation.Outcome = version, outcome
+
+		return m
+	}
+	ballot := func(reporter string, outcome sinkv1.Outcome, version uint64) sinkv1.Vote {
+		return sinkv1.Vote{Reporter: reporter, Observation: sinkv1.Observation{Outcome: outcome}, PolicyVersion: version}
+	}
+	under := func(id sinkid.ID, st sinkv1.Status, edit func(*sinkv1.SettlementData)) simnode.Transfer {
+		tr := c.transfer(id, st, 0)
+		tr.Settlement.Policy = v2
+		edit(&tr.Settlement)
+
+		return simnode.Transfer{Transfer: tr}
+	}
+
+	var (
+		refresh      = sinkID(t, 0x21, 3, 1)
+		conflictHeld = sinkID(t, 0x22, 3, 2)
+		terminal     = sinkID(t, 0x23, 3, 3)
+		refundWait   = sinkID(t, 0x24, 3, 4)
+		held         = sinkID(t, 0x25, 3, 5)
+		voted        = sinkID(t, 0x26, 3, 6)
+		conflict     = sinkID(t, 0x27, 3, 7)
+	)
+
+	stale := c.transfer(refresh, sinkv1.StatusTransferPending, start.Unix())
+	stale.Settlement.Votes = []sinkv1.Vote{ballot(other, sinkv1.OutcomeVoided, 1)}
+
+	sc := c.scenario(t)
+	sc.Akash.Policies = append(sc.Akash.Policies, v2)
+	sc.Akash.Transfers = []simnode.Transfer{
+		{Transfer: stale},
+		under(conflictHeld, sinkv1.StatusTransferPending, func(s *sinkv1.SettlementData) { s.Hold = sinkv1.HoldConflict }),
+		under(terminal, sinkv1.StatusMinted, func(*sinkv1.SettlementData) {}),
+		under(refundWait, sinkv1.StatusRefundPending, func(s *sinkv1.SettlementData) { s.ChallengeEnd = start.Unix() }),
+		under(held, sinkv1.StatusTransferPending, func(s *sinkv1.SettlementData) { s.Hold = sinkv1.HoldVeto }),
+		under(voted, sinkv1.StatusTransferPending, func(s *sinkv1.SettlementData) {
+			s.Votes = []sinkv1.Vote{ballot(c.reporter, sinkv1.OutcomeVoided, 2)}
+		}),
+		under(conflict, sinkv1.StatusTransferPending, func(s *sinkv1.SettlementData) {
+			s.Votes = []sinkv1.Vote{ballot(other, sinkv1.OutcomeMinted, 2)}
+		}),
+	}
+	before := map[string]sinkv1.TransferState{}
+	for _, tr := range sc.Akash.Transfers {
+		id, err := sinkid.FromProto(tr.Transfer.ID)
+		require.NoError(t, err)
+		before[id.String()] = tr.Transfer
+	}
+
+	n, _ := startAkash(t, sc, simnode.Options{})
+	rpc := comet(t, n)
+	q := sinkv1.NewQueryClient(grpcConn(t, n))
+	next := start.Add(latestOffset + time.Minute)
+	send := func(msgs ...sdk.Msg) (code uint32, codespace string) {
+		next = next.Add(time.Millisecond)
+		raw := c.tx(t, next, "", msgs...)
+		code, _, log := broadcast(t, rpc, raw)
+		require.Zero(t, code, log)
+		n.CommitBlock()
+		_, code, codespace, _ = txResult(t, rpc, raw)
+
+		return code, codespace
+	}
+
+	// The message's policy must be the current one, and its round the settlement's.
+	for _, m := range []*sinkv1.MsgReportOutcome{
+		vote(refresh, 1, 1, sinkv1.OutcomeVoided),
+		vote(conflict, 2, 2, sinkv1.OutcomeVoided),
+	} {
+		code, codespace := send(m)
+		require.Equal(t, sinkv1.ErrStaleReport.ABCICode(), code)
+		require.Equal(t, sinkv1.ModuleName, codespace)
+	}
+	require.Empty(t, n.Executions())
+
+	ids := []sinkid.ID{refresh, conflictHeld, terminal, refundWait, held, voted, conflict}
+	msgs := make([]sdk.Msg, len(ids))
+	for i, id := range ids {
+		msgs[i] = vote(id, 2, 1, sinkv1.OutcomeVoided)
+	}
+	code, _ := send(msgs...)
+	require.Zero(t, code)
+	h := latest + 3
+
+	// A stale settlement policy is refreshed: the current policy, no earlier votes, no challenge end, and the status
+	// back to void-requested since a void order exists. Then the vote is recorded.
+	got := sinkTransfer(t, q, h, refresh)
+	require.Equal(t, sinkv1.StatusVoided, got.Status)
+	require.Equal(t, v2.Version, got.Settlement.Policy.Version)
+	require.Zero(t, got.Settlement.ChallengeEnd)
+	require.Equal(t, []sinkv1.Vote{ballot(c.reporter, sinkv1.OutcomeVoided, 2)}, stripVotes(got.Settlement.Votes))
+
+	// A conflict hold, a terminal, refund-pending or held transfer, and a repeated reporter change nothing.
+	for _, id := range []sinkid.ID{conflictHeld, terminal, refundWait, held, voted} {
+		want := before[id.String()]
+		got := sinkTransfer(t, q, h, id)
+		require.Equal(t, want.Status, got.Status, id.String())
+		require.Equal(t, want.Settlement.Hold, got.Settlement.Hold, id.String())
+		require.Equal(t, stripVotes(want.Settlement.Votes), stripVotes(got.Settlement.Votes), id.String())
+	}
+
+	// A contradicting vote is recorded and holds the transfer for governance.
+	got = sinkTransfer(t, q, h, conflict)
+	require.Equal(t, sinkv1.HoldConflict, got.Settlement.Hold)
+	require.Equal(t, []sinkv1.Vote{
+		ballot(other, sinkv1.OutcomeMinted, 2),
+		ballot(c.reporter, sinkv1.OutcomeVoided, 2),
+	}, stripVotes(got.Settlement.Votes))
+
+	// Every one of them executed with code 0, the no-ops included.
+	want := map[string]int{}
+	for _, id := range ids {
+		want[typeVote+"|"+id.String()+"|"+strconv.Itoa(int(sinkv1.OutcomeVoided))+"|1|2"] = 1
+	}
+	require.Equal(t, want, n.Executions())
+}
+
+// stripVotes keeps the fields the branches set, so votes compare equal however their evidence was built.
+func stripVotes(votes []sinkv1.Vote) []sinkv1.Vote {
+	out := make([]sinkv1.Vote, len(votes))
+	for i, v := range votes {
+		out[i] = sinkv1.Vote{Reporter: v.Reporter, Observation: sinkv1.Observation{Outcome: v.Observation.Outcome}, PolicyVersion: v.PolicyVersion}
+	}
+
+	return out
 }
 
 func TestTransfersPagination(t *testing.T) {

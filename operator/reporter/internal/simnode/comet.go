@@ -197,6 +197,7 @@ func (n *Node) query(path string, data []byte, height int64) *abci.ResponseQuery
 		return sdkerrors.QueryResult(errorsmod.Wrapf(sdkerrors.ErrUnknownRequest, "unknown query path %s", path), false)
 	}
 
+	// BaseApp.Query answers an unpinned query at the last block height and echoes that height (baseapp/abci.go:162-163).
 	h, err := n.queryHeight(height)
 	if err != nil {
 		return sdkerrors.QueryResult(err, false)
@@ -206,12 +207,12 @@ func (n *Node) query(path string, data []byte, height int64) *abci.ResponseQuery
 	res, err := handler(withView(context.Background(), view{height: h, time: t}), data)
 	if err != nil {
 		r := sdkerrors.QueryResult(grpcErrorToSDK(err), false)
-		r.Height = height
+		r.Height = h
 
 		return r
 	}
 
-	return &abci.ResponseQuery{Height: height + n.sc.Akash.EchoOffset, Value: res}
+	return &abci.ResponseQuery{Height: h + n.sc.Akash.EchoOffset, Value: res}
 }
 
 func (n *Node) broadcastTxSync(_ *rpctypes.Context, raw cmttypes.Tx) (*ctypes.ResultBroadcastTx, error) {

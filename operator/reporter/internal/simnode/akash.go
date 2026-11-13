@@ -358,6 +358,17 @@ func (n *Node) queryHeight(h int64) (int64, error) {
 	return h, nil
 }
 
+// policy returns the retained policy of version.
+func (n *Node) policy(version uint64) (sinkv1.ReporterPolicy, bool) {
+	for _, p := range n.sc.Akash.Policies {
+		if p.Version == version {
+			return p, true
+		}
+	}
+
+	return sinkv1.ReporterPolicy{}, false
+}
+
 func (n *Node) currentPolicy() uint64 {
 	var v uint64
 	for _, p := range n.sc.Akash.Policies {
@@ -438,13 +449,15 @@ func (n *Node) CommitBlock() {
 
 // Resolve applies a governance resolution in a block of its own, as x/sink/keeper/settlement.go:296-362 does: a new
 // round under the current policy, without votes, hold or veto, with status, and a new challenge window from the
-// block's time when status is STATUS_REFUND_PENDING. Pending transactions stay pending. The block is produced even on
-// a halted node. It panics on an unknown transfer, a test error.
-func (n *Node) Resolve(id sinkid.ID, status sinkv1.Status) {
+// block's time when status is STATUS_REFUND_PENDING. A confirmation (STATUS_MINTED, or STATUS_REFUND_PENDING for a
+// confirmed void) records the governance observation, with the slot and signature of evidence[0] when given; the
+// restart statuses record none. Pending transactions stay pending. The block is produced even on a halted node. It
+// panics on an unknown transfer, a test error.
+func (n *Node) Resolve(id sinkid.ID, status sinkv1.Status, evidence ...sinkv1.Observation) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
-	current := n.currentPolicy()
+	current, _ := n.policy(n.currentPolicy())
 	n.commit(false, func(s *stage) {
 		t, key, err := s.get(id.Proto())
 		if err != nil {
@@ -455,19 +468,29 @@ func (n *Node) Resolve(id sinkid.ID, status sinkv1.Status) {
 		st := &next.Settlement
 		next.Status = status
 		st.Round++
-		for _, p := range n.sc.Akash.Policies {
-			if p.Version == current {
-				st.Policy = p
-			}
-		}
+		st.Policy = current
 		st.Votes, st.Hold = nil, sinkv1.HoldNone
 		st.VetoBy, st.VetoReason, st.VetoPolicyVersion = "", "", 0
 		st.ChallengeEnd, st.GovernanceObservation = 0, nil
+		if outcome, ok := confirmedOutcome[status]; ok {
+			observed := sinkv1.Observation{Outcome: outcome}
+			if len(evidence) > 0 {
+				observed.Slot, observed.TransactionSignature = evidence[0].Slot, evidence[0].TransactionSignature
+			}
+			st.GovernanceObservation = &observed
+		}
 		if status == sinkv1.StatusRefundPending {
 			st.ChallengeEnd = deadline(s.time, n.sc.Akash.Params.ReporterChallengePeriod)
 		}
 		s.put(key, &next)
 	})
+}
+
+// confirmedOutcome is the outcome a governance confirmation of each status records: ConfirmMint produces
+// STATUS_MINTED and ConfirmVoid STATUS_REFUND_PENDING (x/sink/keeper/settlement.go:310-357).
+var confirmedOutcome = map[sinkv1.Status]sinkv1.Outcome{
+	sinkv1.StatusMinted:        sinkv1.OutcomeMinted,
+	sinkv1.StatusRefundPending: sinkv1.OutcomeVoided,
 }
 
 // deadline is the challenge end in whole Unix seconds, rounded up as x/sink/keeper/settlement.go challengeDeadline does.
@@ -535,8 +558,15 @@ func (n *Node) commit(withTxs bool, effect func(*stage)) {
 			}
 
 			// 3. The rest execute in arrival order.
-			n.ak.results[tx.hash] = &txRecord{height: h, index: uint32(len(txs)), raw: tx.raw, result: n.deliver(s, tx, t)} //nolint:gosec // block sizes are small
+			r := &txRecord{height: h, index: uint32(len(txs)), raw: tx.raw, result: n.deliver(s, tx, t)} //nolint:gosec // block sizes are small
+			n.ak.results[tx.hash] = r
 			txs = append(txs, tx.raw)
+
+			// CometBFT keeps only successful transactions in its cache (mempool/clist_mempool.go Update, with
+			// KeepInvalidTxsInCache false), so a failed one can be sent again.
+			if r.result.code != 0 {
+				delete(n.ak.known, tx.hash)
+			}
 		}
 	}
 
@@ -749,30 +779,62 @@ func (s *stage) apply(msg sdk.Msg) (string, error) {
 	}
 }
 
-// vote appends the vote, or is a no-op when the reporter already voted (x/sink/keeper/settlement.go:135-138). Quorum
-// and status transitions are not modelled.
+// vote follows ReportOutcome (x/sink/keeper/settlement.go:88-150): a stale policy or round fails; a conflict hold, a
+// terminal, refund-pending or held transfer, or a repeated reporter makes it a no-op; a stale settlement policy is
+// refreshed first; a contradicting vote sets HOLD_CONFLICT. Quorum and the status changes it causes are not modelled.
 func (s *stage) vote(m *sinkv1.MsgReportOutcome) (string, error) {
 	t, key, err := s.get(m.ID)
 	if err != nil {
 		return "", err
 	}
 
-	st := t.Settlement
-	if m.Round != st.Round || m.PolicyVersion != st.Policy.Version {
+	current, ok := s.n.policy(s.n.currentPolicy())
+	if !ok || m.PolicyVersion != current.Version || m.Round != t.Settlement.Round {
 		return "", sinkv1.ErrStaleReport
 	}
 
 	exec := fmt.Sprintf("%s|%s|%d|%d|%d", sdk.MsgTypeURL(m), idText(m.ID), m.Observation.Outcome, m.Round, m.PolicyVersion)
-	if slices.ContainsFunc(st.Votes, func(v sinkv1.Vote) bool { return v.Reporter == m.Reporter }) {
+	if t.Settlement.Hold == sinkv1.HoldConflict {
 		return exec, nil
 	}
 
+	// Changes stay on next and are written only when the vote is recorded, as the keeper writes its cache context.
 	next := *t
-	next.Settlement.Votes = append(slices.Clone(st.Votes), sinkv1.Vote{
+	st := &next.Settlement
+	if st.Policy.Version != current.Version && st.Hold == sinkv1.HoldNone && !next.Status.Terminal() && st.GovernanceObservation == nil {
+		st.Policy, st.Votes, st.ChallengeEnd = current, nil, 0
+		next.Status = sinkv1.StatusTransferPending
+		if st.VoidAuthorization != nil {
+			next.Status = sinkv1.StatusVoided
+		}
+	}
+
+	primary := sinkv1.OutcomeUnspecified
+	switch {
+	case st.GovernanceObservation != nil:
+		primary = st.GovernanceObservation.Outcome
+	case len(st.Votes) > 0:
+		primary = st.Votes[0].Observation.Outcome
+	}
+
+	conflict := primary != sinkv1.OutcomeUnspecified && primary != m.Observation.Outcome
+	if !conflict {
+		if next.Status.Terminal() || next.Status == sinkv1.StatusRefundPending || st.Hold != sinkv1.HoldNone {
+			return exec, nil
+		}
+		if slices.ContainsFunc(st.Votes, func(v sinkv1.Vote) bool { return v.Reporter == m.Reporter }) {
+			return exec, nil
+		}
+	}
+
+	st.Votes = append(slices.Clone(st.Votes), sinkv1.Vote{
 		Reporter:      m.Reporter,
 		Observation:   m.Observation,
 		PolicyVersion: m.PolicyVersion,
 	})
+	if conflict {
+		st.Hold = sinkv1.HoldConflict
+	}
 	s.put(key, &next)
 
 	return exec, nil
