@@ -417,6 +417,7 @@ func (n *Node) walk(h int64, w walk, resume []byte, page sdkquery.PageRequest) (
 
 	out := make([]sinkv1.TransferState, 0)
 	skip := page.Offset
+	var last []byte
 	for ; i >= 0 && i < len(order); i += step {
 		e := order[i]
 		t := e.at(h)
@@ -430,9 +431,14 @@ func (n *Node) walk(h int64, w walk, resume []byte, page sdkquery.PageRequest) (
 		}
 
 		if uint64(len(out)) == limit {
+			if n.sc.Akash.PageOverlap && last != nil {
+				return out, encodeCursor(w, last)
+			}
+
 			return out, encodeCursor(w, e.key)
 		}
 		out = append(out, *t)
+		last = e.key
 	}
 
 	return out, nil

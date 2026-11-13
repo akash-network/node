@@ -59,6 +59,9 @@ type Akash struct {
 	AppHeight int64 `json:"appHeight,omitempty"`
 	// EchoOffset is added to the height that query answers repeat, to serve a node that answers another height.
 	EchoOffset int64 `json:"echoOffset,omitempty"`
+	// PageOverlap serves an inconsistent pagination: a full page's next key resumes at its own last entry, so the next
+	// page repeats it.
+	PageOverlap bool `json:"pageOverlap,omitempty"`
 
 	Params sinkv1.Params `json:"params"`
 	// Policies holds every retained reporter policy; the highest version is current.

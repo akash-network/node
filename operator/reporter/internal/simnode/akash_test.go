@@ -994,6 +994,49 @@ func TestTransfersPagination(t *testing.T) {
 	require.Equal(t, codes.NotFound, status.Code(err))
 }
 
+func TestPageOverlap(t *testing.T) {
+	c := newChain(t)
+	sc := c.scenario(t)
+	sc.Akash.PageOverlap = true
+	n, _ := startAkash(t, sc, simnode.Options{})
+	q := sinkv1.NewQueryClient(grpcConn(t, n))
+	ctx := metadata.NewOutgoingContext(t.Context(), pinned(latest))
+
+	ids := func(ts []sinkv1.TransferState) []string {
+		out := make([]string, len(ts))
+		for i, tr := range ts {
+			out[i] = tr.ID.Owner + "/" + strconv.FormatInt(tr.ID.Height, 10)
+		}
+
+		return out
+	}
+
+	// The next page starts with the last entry of the full page before it.
+	first, err := q.Transfers(ctx, &sinkv1.QueryTransfersRequest{Status: sinkv1.StatusRefundPending, Pagination: &sdkquery.PageRequest{Limit: 2}})
+	require.NoError(t, err)
+	require.Len(t, first.Transfers, 2)
+	second, err := q.Transfers(ctx, &sinkv1.QueryTransfersRequest{Pagination: &sdkquery.PageRequest{Key: first.Pagination.NextKey, Limit: 2}})
+	require.NoError(t, err)
+	require.Equal(t, ids(first.Transfers)[1], ids(second.Transfers)[0])
+}
+
+func TestNamedScenariosRoundTripJSON(t *testing.T) {
+	for name, build := range simnode.Scenarios() {
+		t.Run(name, func(t *testing.T) {
+			sc := build()
+			require.GreaterOrEqual(t, sc.PassCount(), 1)
+
+			raw, err := json.Marshal(sc)
+			require.NoError(t, err)
+			var back simnode.Scenario
+			require.NoError(t, json.Unmarshal(raw, &back))
+			again, err := json.Marshal(back)
+			require.NoError(t, err)
+			require.JSONEq(t, string(raw), string(again))
+		})
+	}
+}
+
 func TestLagAndAlign(t *testing.T) {
 	c := newChain(t)
 	n, _ := startAkash(t, c.scenario(t), simnode.Options{})

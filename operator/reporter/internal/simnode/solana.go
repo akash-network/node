@@ -110,6 +110,10 @@ func (n *Node) serveSolana(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.Method == "getMultipleAccounts" {
+		n.applyChanges(n.Calls(req.Method))
+	}
+
 	if f, ok := n.takeFailure(req.Method); ok {
 		if f.HTTPStatus != 0 {
 			w.WriteHeader(f.HTTPStatus)
@@ -154,6 +158,36 @@ func writeSolana(w http.ResponseWriter, id, result json.RawMessage, rerr *rpcErr
 
 	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write(body)
+}
+
+// applyChanges applies, in order, the account changes due once getMultipleAccounts has been called calls times. It
+// peeks under the read lock first, as takeFailure does.
+func (n *Node) applyChanges(calls int) {
+	n.mu.RLock()
+	due := len(n.sc.Solana.Changes) > 0 && n.sc.Solana.Changes[0].AfterCalls < calls
+	n.mu.RUnlock()
+	if !due {
+		return
+	}
+
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
+	s := &n.sc.Solana
+	for len(s.Changes) > 0 && s.Changes[0].AfterCalls < calls {
+		c := s.Changes[0]
+		s.Changes = s.Changes[1:]
+
+		if c.Slot != 0 {
+			s.Slot = c.Slot
+		}
+		if s.Accounts == nil {
+			s.Accounts = map[solana.PublicKey]Account{}
+		}
+		for k, a := range c.Accounts {
+			s.Accounts[k] = a
+		}
+	}
 }
 
 // takeFailure returns the failure injected for method, consuming one of its Times. It peeks under the read lock

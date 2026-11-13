@@ -473,6 +473,40 @@ func TestGetMultipleAccountsLimit(t *testing.T) {
 	require.Equal(t, 2, n.Calls("getMultipleAccounts"))
 }
 
+func TestAccountChanges(t *testing.T) {
+	f := newFixture(t)
+	sc := f.scenario()
+	moved := f.bridgeCfg
+	moved.LightClientProgram = key(8)
+	sc.Solana.Changes = []simnode.AccountChange{{
+		AfterCalls: 1,
+		Slot:       finalSlot + 1,
+		Accounts:   map[solana.PublicKey]simnode.Account{f.bridge: {Owner: f.program, Lamports: 3, Data: simnode.EncodeBridgeConfig(moved)}},
+	}}
+	n := startNode(t, sc, simnode.Options{})
+	rpc := client(n)
+
+	read := func() (uint64, aktsolana.BridgeConfig) {
+		slot, accounts, err := rpc.MultipleAccounts(t.Context(), []solana.PublicKey{f.bridge})
+		require.NoError(t, err)
+		bridge, err := aktsolana.DecodeBridgeConfig(accounts[0].Data)
+		require.NoError(t, err)
+
+		return slot, bridge
+	}
+
+	// The first read is served before the change, every later read after it.
+	slot, bridge := read()
+	require.Equal(t, uint64(finalSlot), slot)
+	require.Equal(t, f.light, bridge.LightClientProgram)
+
+	for range 2 {
+		slot, bridge = read()
+		require.Equal(t, uint64(finalSlot+1), slot)
+		require.Equal(t, key(8), bridge.LightClientProgram)
+	}
+}
+
 func TestLatencyInjection(t *testing.T) {
 	f := newFixture(t)
 	n := startNode(t, f.scenario(), simnode.Options{SolanaLatency: 5 * time.Millisecond, BlockFetchLatency: 20 * time.Millisecond})

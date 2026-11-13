@@ -12,12 +12,18 @@ import (
 // Scenario is the chain state a Node serves. It round-trips through encoding/json. Every time in it is an offset
 // from the moment Start runs, so the state is equally fresh whenever and wherever it is served.
 type Scenario struct {
-	// Passes is how many passes the goldens run; zero means one.
+	// Passes is how many passes the goldens run; zero means one. Read it through PassCount.
 	Passes int `json:"passes,omitempty"`
+	// LightClientPin configures the reporter the goldens run, not the chain: when set, that reporter pins this light
+	// client; otherwise it follows the bridge.
+	LightClientPin *solana.PublicKey `json:"lightClientPin,omitempty"`
 	// Akash is absent from a scenario that serves only Solana; the node then serves no CometBFT or gRPC endpoint.
 	Akash  *Akash `json:"akash,omitempty"`
 	Solana Solana `json:"solana"`
 }
+
+// PassCount is how many passes the goldens run: Passes, or one when it is zero.
+func (s Scenario) PassCount() int { return max(s.Passes, 1) }
 
 // Solana is the finalized state of the Solana cluster.
 type Solana struct {
@@ -29,6 +35,17 @@ type Solana struct {
 	Accounts   map[solana.PublicKey]Account `json:"accounts,omitempty"`
 	Blocks     map[uint64]Block             `json:"blocks,omitempty"`
 	Failures   map[string]Failure           `json:"failures,omitempty"`
+	// Changes apply in order, each before the first getMultipleAccounts call beyond its AfterCalls is served, as a
+	// finalized slot that moves on while a reporter reads.
+	Changes []AccountChange `json:"changes,omitempty"`
+}
+
+// AccountChange replaces accounts, and the finalized slot when Slot is non-zero, after AfterCalls getMultipleAccounts
+// calls.
+type AccountChange struct {
+	AfterCalls int                          `json:"afterCalls"`
+	Slot       uint64                       `json:"slot,omitempty"`
+	Accounts   map[solana.PublicKey]Account `json:"accounts,omitempty"`
 }
 
 // Account is an account as the finalized bank holds it.
