@@ -57,7 +57,7 @@ Each planned message goes out in its own transaction, and the reporter waits up 
 4. GoReleaser-built binaries and images. The image starts the reporter with no arguments.
 5. Unordered Akash transactions.
 6. Signing in-process (Cosmos keyring) or through a Cosmos-KMS `SignerService`.
-7. No repeated votes: at most one transaction carrying a given vote, veto or refund executes, across restarts, processes and nodes.
+7. No repeated votes: each vote, veto and refund executes at most once, as defined in section 6.1, across restarts, processes and nodes.
 
 ### Non-goals
 
@@ -302,7 +302,7 @@ Each HTTP endpoint gets one keep-alive connection pool sized to its concurrency.
 5. Stale nodes, missing history, RPC errors and signer failures never produce a veto or a refund.
 6. No local state is needed after a restart. Recovery comes from votes and terminal states on chain.
 
-**Guarantee added in Go.** No vote, veto or refund executes twice (section 6.1).
+**Guarantee added in Go.** No vote, veto or refund executes twice, as defined in section 6.1.
 
 **Intentional differences from TS.**
 
@@ -342,7 +342,8 @@ The chain refuses a second transaction with the same signer and `timeout_timesta
 | Veto and refund slots         | 1,024, numbered 128 to 1,151 |
 | Spacing between slot timeouts | 1 ms                         |
 
-- **Message key:** the transfer ID and message kind, plus the outcome, round and policy version for a vote.
+- **Message key:** the transfer ID and message kind, plus the outcome, round and policy version for a vote. A veto's key has no round, on purpose. `MsgVetoVoid` carries none and the keeper checks none (`x/sink/keeper/settlement.go:204-240`), so a veto planned in one round can execute after a governance resolution starts the next. A round-less key puts it in the same slot as any veto planned in that next round.
+- **Execution:** inclusion with code 0. A transaction that fails delivery pays its fee, but its messages change nothing.
 - **Window of a planned message:** w = ⌊t / W⌋, where t is the block time, in Unix nanoseconds, of the snapshot the message was planned from.
 - **Slot of a message:** h is the first 8 bytes, big-endian, of SHA-256 over:
   - the ASCII label `akt-reporter/nonce/v1`;
@@ -354,25 +355,47 @@ The chain refuses a second transaction with the same signer and `timeout_timesta
 - **Timeout:** T(w, s) = (w + 1) · W − (s + 1) ms. The 1,152 timeouts of a window are distinct and fall in its last 1.152 s. T(w, s) is at most W after the planning snapshot's block time.
 - **One slot per transaction:** a transaction carries messages of a single window and slot, and its `timeout_timestamp` is that slot's T(w, s).
 - **Send cutoff:** a slot's transaction is signed only while T(w, s) minus the latest block time seen is at least 20 s plus the signer timeout (`signer.remote.timeout`, or 0 for the keyring). The cutoff keeps transactions from expiring unsent; safety does not depend on it.
-- **Changing the scheme.** A later version that changes the window, the slot counts, the spacing or the hash input must ship an upgrade note: stop every old process and wait one window before starting the new one. Test vectors pin the constants (section 11.1).
+- **Changing the scheme.** A later version that changes the window, the slot counts, the spacing or the hash input must ship an upgrade note: stop every old process and wait four minutes before starting the new one. That is one window for the old timeouts to pass, plus the age of the oldest snapshot the new version may accept (`max-age` and clock skew, section 6.3), so its first plans see every old execution. Test vectors pin the constants (section 11.1).
 
 **Why no message executes twice.** Take two transactions X and Y that carry the same message key k, planned in windows w_X ≤ w_Y.
 
 1. **Same window.** X and Y have the same signer and timeout, hence the same replay key. The first to pass the ante handler stores the key, and the other fails it, with no effect and no fee. The key stays until a block's time reaches the timeout, and every later block refuses both transactions as expired. The block whose time equals the timeout is the one exception (residual risk, below).
-2. **Different windows.** If X executes, its block's time is at most T(w_X, s), which is before w_Y starts, and so before the block time of Y's planning snapshot. Block times strictly increase, so that snapshot's height is above X's block, and its state shows k executed. The policy never plans a message whose execution its snapshot shows (below), so Y cannot carry k.
-3. **Lower snapshots** need no height floor. In the same window, rule 1 applies. A snapshot from an earlier window yields timeouts that have already passed, so the broadcaster never sends its plans, and the chain would refuse them as expired.
+2. **Different windows.** If X executes, its block's time is at most T(w_X, s), which is before w_Y starts, and so before the block time of Y's planning snapshot. Block times strictly increase, so that snapshot's height is above X's block, and its state includes X's effect. By the policy lemma below, no such state in the same settlement round plans k. Y can therefore carry k only after a governance resolution has started a new round, and only a veto's key cannot tell those rounds apart.
+3. **Lower snapshots** need no height floor. In the same window, rule 1 applies. A plan from an earlier window carries a timeout the chain has already passed, so it can never execute. The broadcaster defers it once it has seen a later block; a process that has seen only a lagging node may send it, but no future block can include it.
 
-So restarts, lost responses, separate `scan` runs, lagging or load-balanced nodes, a missing transaction index and processes sharing a key cannot make a message execute twice. A second execution could only come from a new policy decision on a state that already shows the first, and for a vote that never happens within one round and policy version.
+So restarts, lost responses, separate `scan` runs, lagging or load-balanced nodes, a missing transaction index and processes sharing a key cannot make a message execute twice:
 
-**Policy property.** `PlanOutcome` never plans a message whose execution is visible in its snapshot:
+- a vote executes at most once per (transfer, outcome, round, policy version);
+- a veto executes at most once per transfer and settlement round;
+- a refund executes at most once per transfer.
 
-- a vote is blocked by `alreadyReported`, and `refresh` ends once the vote moves the settlement to the current policy version (`policy.ts:203-220`);
-- a veto needs `HOLD_NONE`, and an executed veto sets `HOLD_VETO` (`x/sink/keeper/settlement.go:233`);
-- a refund needs `STATUS_REFUND_PENDING`, and an executed refund sets `STATUS_REFUNDED` (`x/sink/keeper/settlement.go:475`).
+A governance resolution starts a new round (`settlement.go:339-347`). A veto after it is a new decision, which TS also makes. The one exception is the SDK boundary under "Residual risk".
 
-Tests pin this property for every message kind (section 11.1).
+**Policy lemma.** Once k has executed, no later state in the same settlement round plans k; for a vote, the policy version must also be the same.
 
-**Residual risk.** The SDK removes a replay key at the start of the block whose time equals its timeout, and that block still accepts the timeout (section 2.2). A duplicate could then execute only if a node kept it in its mempool after the first one executed, which needs mempool recheck disabled on the proposer (CometBFT's default is on), and if a block time matched the timeout to the nanosecond.
+An execution can leave no trace: `MsgReportOutcome` returns without effect under a conflict hold, or when the transfer is terminal, refund-pending or held (`settlement.go:110-112`, `131-133`). The lemma holds anyway, because within one round and policy version the state only moves forward:
+
+- statuses only advance;
+- a hold is cleared only by a governance resolution, which starts a new round;
+- votes only accumulate.
+
+So, per message kind:
+
+- **Vote.** `PlanOutcome` plans one only with `HOLD_NONE` and an active status, or on a contradiction, and only when not `alreadyReported`. It also plans one for `refresh` (`policy.ts:203-220`). Each way is closed after the vote executes:
+  - a recorded vote sets `alreadyReported`;
+  - a vote without effect met a state that stays inactive and uncontradicted;
+  - a contradicting vote sets `HOLD_CONFLICT`;
+  - `refresh` needs a stale policy version, and the first vote under the current version replaces it (`settlement.go:114-120`).
+- **Veto.** It needs `STATUS_REFUND_PENDING`, `HOLD_NONE` and an open challenge window (`policy.ts:172-185`). An executed veto sets `HOLD_VETO` (`settlement.go:232-234`).
+- **Refund.** It needs `STATUS_REFUND_PENDING`. An executed refund sets `STATUS_REFUNDED`, which is terminal (`settlement.go:475`).
+
+Tests pin the lemma for every message kind, including the executions without effect (section 11.1).
+
+**Residual risk.** The SDK removes a replay key at the start of the block whose time equals its timeout, and that block still accepts the timeout (section 2.2).
+
+- **What can happen:** a second execution in a block whose time equals the timeout to the nanosecond, if that block also includes another transaction with the same replay key.
+- **Why it needs an unusual proposer:** honest proposers draw blocks from mempools that recheck has cleared of such copies, CometBFT's default. Akash's proposal handlers do not filter block contents (`app/app.go:287-292`). So it takes a proposer that skips recheck or builds its own blocks.
+- **Status:** upstream cosmos-sdk rejects this case since cosmos/cosmos-sdk#26672. Until the Akash fork adopts that change, this is the one exception to the guarantee (section 14).
 
 **TS transactions** are ordered and expire 20 blocks after they are built, outside this scheme. Section 12.1 gives the migration step.
 
@@ -381,10 +404,11 @@ Tests pin this property for every message kind (section 11.1).
 - `MsgReportOutcome` messages of one window and slot are batched, up to `tx.max-msgs` per transaction.
 - `MsgVetoVoid` and `MsgFinalizeRefund` get one transaction each, in their own slot range. They can fail on the challenge window, refund order or caps, and one failed message fails its whole transaction.
 - A vote batch is sent when it is full, when the review that filled it ends, or 10 s before its send cutoff. Vetoes and refunds are sent at once.
+- A slot carries at most one live transaction per window. A transaction refused on its first send never held the replay key, so its slot can be used again in that window.
 - Before signing, the latest snapshot must still list `reporter` (otherwise `reporter was removed`), the signer's address must equal `reporter`, and the send cutoff must not have passed.
 - At most `tx.max-in-flight` transactions are unconfirmed at once. When one resolves, the broadcaster sends `MsgVetoVoid` first, then `MsgFinalizeRefund`, then vote batches in plan order.
 - Reviews never wait for broadcasting, so a slow or unavailable signer delays submissions, not passes. The slot table needs no separate bound: it admits each message key at most once per window (section 6.5), so it never exceeds the open set. `scan` sends everything it planned and waits for the outcomes.
-- With the defaults, at most 200 votes are unconfirmed at once (`tx.max-in-flight` × `tx.max-msgs`), and a window carries at most 128 vote transactions. A 5,000-vote backlog drains in about three windows.
+- With the defaults, at most 200 votes are unconfirmed at once (`tx.max-in-flight` × `tx.max-msgs`). A window carries at most 128 vote transactions, which is also about what 8 in flight over the roughly 16 blocks before the cutoff can confirm. A 5,000-vote backlog drains in three to four windows on a fresh node.
 
 ### 6.3 Unordered transactions
 
@@ -394,14 +418,22 @@ Tests pin this property for every message kind (section 11.1).
   - `timeout_timestamp` = T(w, s) of the transaction's slot (section 6.1);
   - no `timeout_height`.
 - **Auth info:** one signer, `SIGN_MODE_DIRECT`, sequence 0, the fee and the gas limit. The account number is read once at startup. If the account does not exist, because the address never received funds, broadcast mode refuses to start with `reporter account not found`.
-- **Timeout bounds.** T(w, s) is at most 2 min after the planning snapshot's block time, well inside the chain's 10 min limit. In broadcast mode, validation requires `max-age` + the signer timeout ≤ 90 s, so a message planned early in a window from the oldest accepted snapshot can still be sent before its cutoff.
+- **Timeout bounds.** T(w, s) is at most 2 min after the planning snapshot's block time, well inside the chain's 10 min limit. In broadcast mode, validation requires `max-age` + the signer timeout ≤ 80 s, so a message planned early in a window from the oldest accepted snapshot can still be sent before its cutoff. The budget:
+
+- 120 s, the window;
+- minus 1.152 s, the earliest slot timeout's distance from the window's end;
+- minus 10 s, the clock skew the freshness check allows;
+- minus 20 s, the cutoff base;
+- leaves 88.8 s. The 8.8 s above 80 s covers review and signing.
+
+Older snapshots only defer messages; they never affect safety.
 - **No fallback.** If the chain stops accepting unordered transactions, every broadcast is rejected with `unordered transactions are not enabled`, reported per message. There is no ordered fallback (D6).
 
 ### 6.4 Simulation, gas and fees
 
 - Every batch is simulated through gRPC `Simulate` before signing. Simulation skips the replay-key check (section 2.2), so it cannot tell whether a slot is taken.
 - With `gas = auto`, the gas limit is ceil(gas used × `gas-adjustment`). A numeric `gas` is per message, so the limit is `gas` × the number of messages.
-- If simulation fails at `message index: N`, message N is dropped with `{id, error}` and the batch is simulated again, for up to three rounds. Messages still left after that are deferred (section 6.5), because a slot sends one transaction per window.
+- If simulation fails at `message index: N`, message N is dropped with `{id, error}` and the batch is simulated again, for up to three rounds. Messages still left after that are deferred (section 6.5), because a slot carries at most one live transaction per window.
 - A simulation failure without a message index, such as insufficient funds or an invalid timeout, fails the whole batch before submission. Each message gets `{id, error}`, and its entry is released.
 - The fee is `fees` when that is set, otherwise ceil(gas limit × `gas-prices`).
 - Caps: the gas limit must be at most `tx.max-gas` and the fee at most `tx.max-fee`. A batch over a cap is halved, and the second half is deferred. A single message over a cap gets `{id, error}` and is not sent.
@@ -411,11 +443,12 @@ Tests pin this property for every message kind (section 11.1).
 - **Slot table.** Only the broadcaster's owner goroutine reads or writes it, and only that goroutine writes outcome events. It does no I/O: workers simulate, sign, broadcast and look up transactions, then report back.
   - Entries are keyed by window and slot. Each holds the queued messages, then the transaction built from them.
   - A planned message whose key is already queued or sent in its slot is skipped.
-  - A planned message is **deferred** when its slot already has another transaction in that window (sent, or refused because its replay key is taken), when its batch is full, or when its send cutoff has passed. A deferral is not an outcome and writes no event.
+  - A planned message is **deferred** when its slot already has another transaction in that window (sent, or refused because its replay key is taken), when its batch is full, or when its send cutoff has passed. A plan from a window earlier than the latest block seen counts as past its cutoff. A deferral is not an outcome and writes no event.
   - A queued message is released on any failure before its first broadcast, and each such failure writes `{id, error}`: simulation rejection, signing failure, membership or signer-identity failure, or a cap rejection. On shutdown it is released without an event (section 5.7). A later review can plan it again.
   - A window's entries leave the table once a block's time passes the window's end and their final lookups have run.
 - **Broadcast** uses `broadcast_tx_sync`. After a transport error, the same signed bytes are re-sent until the timeout passes.
-- **Re-sends.** For a transaction already sent once, `tx already exists in cache` or `failed to add unordered nonce` means an earlier copy may be pending or included. The transaction stays sent.
+- **Identical copies.** `tx already exists in cache` arrives as a JSON-RPC error, not a CheckTx code (`rpc/core/mempool.go:35-42` in the CometBFT fork). On any send, first or not, it means identical bytes are already pending or were included. Another process, or a restarted one, can build identical bytes, because signing is deterministic. The transaction is marked sent and confirmed by its hash.
+- **Re-sends.** For a transaction already sent once, `failed to add unordered nonce` also means an earlier copy may be pending or included. The transaction stays sent.
 - **Slot taken.** `failed to add unordered nonce` on a first send means another transaction holds the slot's replay key: an earlier attempt by this process or another one. The slot is closed for the window, and its messages are deferred.
 - **Rejection.** Any other CheckTx rejection of a first send is final. Each message gets `{id, error: "sink transaction rejected: <HASH> code <n>: <log>"}`, and the slot stays usable in that window. A rejection of a re-send is not final; the transaction stays sent.
 - **Confirmation.** While any transaction is unconfirmed, the broadcaster refreshes the height tracker once a second, including between passes. On every new height, each unconfirmed transaction is looked up with `tx(hash)`:
@@ -426,13 +459,15 @@ Tests pin this property for every message kind (section 11.1).
 - **Deferral.** Deferred transfers are reviewed again once a block from a later window is seen, through the follow-up reviews of section 6.6. If a deferred message executed in the meantime, through another process's transaction or an earlier attempt, that review plans nothing.
 - **Waiting limit.** `scan` waits until no transaction is unresolved, nothing is deferred and follow-up reviews are idle, or until 3 min of wall-clock time pass without progress: a submission, a resolved outcome or a new window.
   - A transaction still unresolved then, for example because the chain halted, gives `{id, error: "sink transaction unconfirmed: <HASH>"}`. It is not called expired.
-  - A message still deferred gives `{id, error: "sink message not sent: nonce slot busy until <time>"}`, with the slot's timeout in RFC 3339.
+  - A message still deferred gives `{id, error: "sink message not sent: deferred (<reason>) until <time>"}`, with its deferral reason (section 9.3) and its slot's timeout in RFC 3339.
   - Both count as failures. `start` keeps both: a sent transaction stays until inclusion or chain-time expiry, re-sending only its existing bytes, and a deferred message is reviewed again in the next window.
 - **No transaction index.** If `/status` reports `node_info.other.tx_index` as anything other than `on`, the reporter logs a warning once, because outcomes cannot be observed.
   - CheckTx rejections, including a taken slot, are still reported or deferred as above.
   - Accepted transactions get no outcome event, do not count as failures, and leave the table at chain-time expiry. `scan` does not wait for them.
   - Reviews in the next window reflect their effect. Safety does not depend on the index.
 - **Failure counting.** `scan` counts every outcome before its summary, so its exit code includes them. `start` counts an outcome in whichever pass is running when it resolves.
+- **Deferred vetoes** wait up to one window. That is negligible against the 72 h minimum challenge period. On networks built with a shorter period (the `sinkdev` tag allows 1 s), a deferred veto can miss its challenge window.
+- **A lagging node** makes the reporter plan from old snapshots, and the send cutoff is measured against what that node has seen. The chain may then refuse the resulting transactions as expired, which shows up as expiry events and `cutoff` deferrals. The remedy is a healthy node or a lower `max-age`.
 - **Restart.** The table is lost, and nothing needs to be persisted. A new process that plans a message the old one had in flight uses the same slot in the same window, so the chain executes at most one of the two (section 6.1).
 
 ### 6.6 Follow-up reviews
@@ -448,6 +483,8 @@ Between passes, the broadcaster asks the scanner to review specific transfers in
 Progression stops when the head plans no finalization (not yet eligible, held, or the epoch capacity is used), or on shutdown. Refunds are paid at about one per block; a refund whose slot is taken in the current window waits for the next one.
 
 **Deferred transfers.** Once a block from a later window is seen, the deferred transfers are reviewed in chunks of up to 96, each with a fresh snapshot (section 6.5).
+
+Each follow-up review needs a snapshot at least as high as the block that triggered it: the inclusion, or the first block seen in the new window. A lower snapshot from a load-balanced node is retried at the tracker's refresh rate until the waiting limit or shutdown, so progression cannot stop on a stale refund head.
 
 Follow-up reviews run one at a time, never on the owner goroutine, and write the normal review events. `scan` waits for them before its summary. The slot table keeps a pass and a follow-up review from sending the same message twice in one window.
 
@@ -523,7 +560,7 @@ This follows `cmd/akash` and chain-sdk's `InterceptConfigsPreRunHandler`. It is 
 | `node`                                              | `tcp://localhost:26657`         | `tcp`, `http` or `https`; no credentials in the URL            | `akashRpc`                       |
 | `grpc-addr`                                         | `localhost:9090`                | `host:port`                                                    | none                             |
 | `grpc-insecure`                                     | `false`                         | Plaintext gRPC for a non-loopback address; loopback addresses always use plaintext | none           |
-| `max-age`                                           | `60s`                           | Above 0, at most `10m`; when broadcasting, `max-age` + signer timeout at most 90 s (section 6.3) | `maxAgeSeconds` |
+| `max-age`                                           | `60s`                           | Above 0, at most `10m`; when broadcasting, `max-age` + signer timeout at most 80 s (section 6.3) | `maxAgeSeconds` |
 | `request-timeout`                                   | `15s`                           | `1s` to `60s`                                                  | none                             |
 | `from`                                              | empty                           | Keyring key name or address                                    | `keyFile`                        |
 | `keyring-backend`                                   | `test`                          | `os`, `file` or `test`; also used by `keys`                    | none                             |
@@ -615,7 +652,7 @@ When `metrics.listen` is set, `/metrics` serves:
 | `akt_reporter_tx_in_flight`                    | gauge     |                    |
 | `akt_reporter_deferred_messages_total`         | counter   | `reason`           |
 
-`result` is `ok` or `error` for reviews, `hit` or `miss` for caches, and `included`, `failed`, `rejected`, `slot_taken` or `expired` for transactions. `chain` is `akash` or `solana`. `reason` is `slot_busy`, `slot_full`, `cutoff`, `simulation` or `cap`.
+`result` is `ok` or `error` for reviews, `hit` or `miss` for caches, and `included`, `failed`, `rejected`, `slot_taken`, `expired` or `unconfirmed` for transactions. `chain` is `akash` or `solana`. `reason` is `slot_busy`, `slot_full`, `cutoff` (including plans from an earlier window), `simulation` or `cap`.
 
 ## 10. Build, image and release
 
@@ -698,7 +735,7 @@ The same change narrows `release-operators.yaml` to `relayer/v*`, so one tag nev
 
 The Go unit tests port the TS suites.
 
-- `policy`: every case in `policy.test.ts`, plus the property of section 6.1: for each message kind, a snapshot showing the message executed plans nothing for its key.
+- `policy`: every case in `policy.test.ts`, plus the lemma of section 6.1. For each message kind, no state after its execution in the same round plans it again. That includes executions without effect: a conflict hold, and a terminal, refund-pending or held transfer. A governance resolution then starts a round in which a veto may be planned again.
 - `tx` slots: pinned vectors (fixed message keys map to fixed slots and timeouts), the 1,152 timeouts of a window distinct and within its last 1.152 s, and the send cutoff.
 - `solana`:
   - program-log attribution: CPI frames, truncation, unbalanced logs, failed frames;
@@ -739,19 +776,26 @@ These are Go tests against an in-process `simnode`. They cover:
   - the unordered flag, sequence 0 and slot timeouts; a slot already taken by another process or an earlier attempt defers its messages to the next window;
   - batch limits per slot, sending when full, at the end of a review and before the cutoff, and send priority;
   - simulation pruning, batch failures without a message index, and splitting at the caps, with leftovers and second halves deferred;
-  - CheckTx rejection, re-sends after a lost response, failed delivery, a replay-key failure inside a block, and expiry;
+  - CheckTx rejection, re-sends after a lost response, an identical copy already in the node's cache on a first send, failed delivery, a replay-key failure inside a block, and expiry;
   - the slot table: de-duplication within a window, releases after every failure before submission, deferral and re-review in the next window, and plans from an earlier window never sent;
   - the membership re-check before signing;
   - the no-index fallback;
   - a chain that halts after accepting a transaction: `scan` reports `unconfirmed`, or `not sent` for deferred messages, and exits 1 at the waiting limit, while `start` keeps the entries;
   - refund-head progression across several eligible refunds.
-- **No repeated execution:** `TestNoVoteExecutesTwice` runs randomized interleavings of lower snapshots, restarts (a new broadcaster against the same `simnode`), lost responses, two processes sharing a key, and nodes with and without a transaction index. `simnode` enforces the chain's replay-key rule and counts executions. No vote, veto or refund may execute more than once.
-- **Drain:** 5,000 planned votes against a `simnode` that produces a block every 6 s of chain time. The test shortens the window and the block interval by the same factor through a test-only hook.
+- **No repeated execution:** `TestNoVoteExecutesTwice` runs randomized interleavings of:
+  - lower snapshots;
+  - restarts (a new broadcaster against the same `simnode`);
+  - lost responses;
+  - two processes sharing a key;
+  - nodes with and without a transaction index.
+
+  `simnode` enforces the chain's replay-key rule and counts executions. Planning goes through a real scanner, never synthetic plans. No vote, veto or refund may execute more than once, as defined in section 6.1. A separate test sends a veto before a governance resolution and lets it execute after.
+- **Drain:** 5,000 planned votes against a `simnode` that produces a block every 6 s of chain time. The test shortens the window and the block interval by the same factor through a test-only hook, and starts 90% into a window.
   - Unconfirmed transactions never exceed `tx.max-in-flight`.
-  - Every vote is confirmed within four windows, and none executes twice.
+  - Every vote is confirmed and none executes twice. At the defaults, the drain should take three to four windows (section 6.2); the test fails beyond eight.
   - The pass finishes without waiting for the drain.
   - A signer that is slow (100 ms per signature), then unavailable for 10 s, recovers without a restart, and the affected messages are planned again.
-- **Replay key on the real application:** an `x/sink` test, using the test harness, delivers two unordered transactions from one reporter with the same timeout and the same vote, once in one block and once in consecutive blocks. The second fails with `failed to add unordered nonce`, the reporter pays one fee, and the vote is recorded once. The test runs on every pull request, so an SDK upgrade that changes the replay-key rule fails CI.
+- **Replay key on the real application:** an `x/sink` test, using the test harness, delivers two unordered transactions from one reporter with the same timeout and the same vote, once in one block and once in consecutive blocks. The second fails with `failed to add unordered nonce`, the reporter pays one fee, and the vote is recorded once. The test runs on every pull request, so an SDK upgrade that changes the replay-key rule fails CI. A companion test, `TestUnorderedReplayKeyBoundary`, asserts that a copy delivered in a block whose time equals the timeout is refused. It stays skipped until the Akash fork adopts cosmos/cosmos-sdk#26672 (section 14).
 - **Startup:** refusal on a node-ID mismatch, a gRPC height mismatch, a KMS key that does not derive `reporter`, or a missing reporter account.
 - **Shutdown:** behavior and exit codes for `scan` and `start`.
 
@@ -788,7 +832,7 @@ With `REPORTER_GO_BIN` set, `local/stack.ts` runs the Go binary for its three re
 3. writes a `reporter.toml` with `node`, `grpc-addr` (a loopback address, so plaintext), the Solana settings and `broadcast = true`;
 4. runs `akt-reporter start`.
 
-The stack already starts Akash with `--grpc.address` (`local/stack.ts:328`). The demo must still reach `STATUS_MINTED` within its 300 s wait; a deferral delays a vote by at most about one window.
+The stack already starts Akash with `--grpc.address` (`local/stack.ts:328`). The demo's two 300 s waits, for `STATUS_MINTED` and for `STATUS_REFUNDED`, must still pass. A deferral delays a message by at most about one window.
 
 ## 12. Migration and documentation
 
@@ -802,7 +846,7 @@ These steps go in the new `contracts/solana/docs/reporter-migration.md`.
    - For a key file: `akt-reporter keys import-hex reporter --keyring-backend test --home <home> < reporter.key`, then set `from = "reporter"`.
    - For an external signer: run Cosmos-KMS with a secp256k1 key for the reporter account and set `signer.remote.*`.
 4. Run `akt-reporter check`, then `start` in preview. Preview never signs, so it can run next to the TS reporter.
-5. Stop the TS reporter and wait 21 blocks, so that its last ordered transactions have been included or have expired (section 6.1). Then set `broadcast = true`. Never run the TS reporter and akt-reporter with the same key.
+5. Stop the TS reporter. On the node akt-reporter uses, wait until 21 blocks have been committed after the stop, so that its last ordered transactions have been included or have expired (section 6.1). Then wait two more minutes, so that every snapshot akt-reporter can still accept (at most `max-age` old, plus 10 s of clock skew) shows them. Only then set `broadcast = true`. Never run the TS reporter and akt-reporter with the same key.
 6. Keep the existing alert routing. The event schema is unchanged; only the order across transfers differs.
 7. Adjust fees. TS paid `feeAmountUakt` for each single-message transaction; with batching, use `gas = auto` and `gas-prices`.
 
@@ -825,7 +869,7 @@ TS command-line flags map as follows:
 
   `broadcast.yaml` is removed; broadcast becomes `AKT_REPORTER_BROADCAST=true` or `broadcast = true`.
 - Update `deploy/systemd/akt-reporter.service` to `ExecStart=/usr/local/bin/akt-reporter start --home /var/lib/akt-reporter`, keeping the same sandboxing.
-- Two akt-reporter processes with one key are safe. For every message they plan in the same window they share one replay key, so the chain executes at most one transaction and charges nothing for the refused one (section 6.1). The documentation allows a warm standby but recommends one active signing process, because a second one wastes signatures and node load.
+- Two akt-reporter processes with one key are safe. For every message they plan in the same window they share one replay key, so the chain executes at most one transaction and charges nothing for the refused one (section 6.1). Byte-identical copies are recognized by their hash (section 6.5). The documentation allows a warm standby but recommends one active signing process, because a second one wastes signatures and node load.
 
 ### 12.3 Sequencing
 
@@ -862,13 +906,15 @@ TS command-line flags map as follows:
 | Batched fees differ from the TS per-message fee                                                         | Caps unchanged, `gas = auto`, documentation                                                                                                 |
 | darwin builds lack the `os` keyring backend                                                             | darwin is a development platform; `file` and `test` work                                                                                   |
 | The no-repeat guarantee rests on the SDK's replay key (signer, timeout)                                  | A test on the real application pins it on every pull request (section 11.3), so an SDK upgrade that changes it fails CI                    |
-| The SDK drops a replay key at the start of the block whose time equals its timeout                      | A duplicate could execute only with mempool recheck disabled on the proposer and a block time equal to the timeout to the nanosecond (section 6.1) |
+| The SDK drops a replay key at the start of the block whose time equals its timeout, and that block still accepts the timeout | Only a proposer that skips mempool recheck or builds its own blocks can exploit it, and only at a block time equal to the timeout to the nanosecond (section 6.1). Upstream fixed it in cosmos/cosmos-sdk#26672 (follow-up 3) |
+| A node lagging by up to `max-age` makes the reporter sign transactions the chain refuses as expired | Expiry events and `cutoff` deferrals show it; the remedy is a healthy node or a lower `max-age` (section 6.5) |
 | Slots trade batching for uniqueness: a burst spreads over up to 128 vote transactions per window, and a 5,000-vote backlog takes about three windows | A message waits at most about one window longer; the drain test bounds the backlog; `tx.max-msgs` and `tx.max-in-flight` stay tunable |
 
 Follow-ups, each a separate decision:
 
 1. **The `solana.max-slot-lead` default** is ported unchanged: (max-age + 60 s) × 5 slots per second. That assumes 2.5 slots per second with a 2× margin, and faster Solana slots (SIMD-0525 and later) shrink the margin.
 2. **TS reporter packaging** is removed after `reporter/v0.2.0` (section 12.3).
+3. **The replay-key boundary.** Adopt cosmos/cosmos-sdk#26672 in the Akash cosmos-sdk fork, then un-skip `TestUnorderedReplayKeyBoundary`. This is a consensus change and needs a chain upgrade.
 
 ## 15. Out of scope
 
@@ -890,7 +936,7 @@ The same lines as the TS reporter. Values are illustrative.
 {"id":"akash1…/1100/1","audit":true,"observed":"resolved","messages":[],"alerts":[]}
 {"id":"akash1…/1200/4","transactionHash":"<HEX>"}
 {"id":"akash1…/1200/5","error":"resolution evidence unavailable in its block"}
-{"id":"akash1…/1200/6","error":"sink message not sent: nonce slot busy until 2026-11-12T10:01:59.871Z"}
+{"id":"akash1…/1200/6","error":"sink message not sent: deferred (slot_busy) until 2026-11-12T10:01:59.871Z"}
 {"alert":"light-client-changed","previous":"<base58>","current":"<base58>","slot":"350000000"}
 {"alert":"light-client-mismatch","pinned":"<base58>","current":"<base58>"}
 {"alert":"audit-unavailable","error":"<message>"}
