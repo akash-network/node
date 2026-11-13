@@ -1,0 +1,21 @@
+getblock_v1.json: the raw JSON-RPC getBlock response for a block holding one
+System Program transfer sent as a version 1 (SIMD-0385) transaction.
+
+Captured: 2026-11-12
+Agave: solana-test-validator 4.2.2 (src:c9c6f328; feat:21b0d33a, client:Agave)
+  from https://github.com/anza-xyz/agave/releases/download/v4.2.2/solana-release-aarch64-apple-darwin.tar.bz2
+solana-go: github.com/solana-foundation/solana-go/v2 v2.1.0 (go1.26.2 darwin/arm64)
+
+Commands:
+  .cache/agave-4.2.2/bin/solana-test-validator --reset --ledger .cache/agave-4.2.2/ledger --rpc-port 18899 --quiet
+  cd "$(mktemp -d)" && go mod init capture && go get github.com/solana-foundation/solana-go/v2@v2.1.0
+  go run . > block.json
+
+The capture program airdrops 2 SOL to a fresh key, waits for finalization, then
+sends a 1,000,000-lamport transfer built with
+solana.TransactionV1Config(solana.TransactionConfig{ComputeUnitLimit: 10000,
+LoadedAccountsDataSizeLimit: 65536}). It waits for the transfer to finalize
+(signature 4Ra4SosTpT3Qxc9TzL1MS1YvDwFvuACnGahNK5Hrd9dBSuoRYpBbTDEUqdfN8dU8qKgYJCJQS1rESbBAyz5c81cK,
+slot 147). It then posts getBlock(147, {commitment: finalized, encoding: json,
+maxSupportedTransactionVersion: 1, transactionDetails: full, rewards: false})
+and writes the response indented with json.Indent.
