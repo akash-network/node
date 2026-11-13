@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gagliardetto/solana-go"
 	"github.com/stretchr/testify/require"
 
 	"pkg.akt.dev/node/v2/operator/reporter/akash"
@@ -69,9 +70,9 @@ func TestGoldens(t *testing.T) {
 	for _, f := range files {
 		stored = append(stored, strings.TrimSuffix(filepath.Base(f), ".jsonl"))
 	}
-	require.ElementsMatch(t, slices.Collect(maps.Keys(scenarios)), stored, "every scenario has exactly one golden")
+	require.ElementsMatch(t, simnode.Goldens(), stored, "every golden scenario has exactly one golden")
 
-	for _, name := range slices.Sorted(maps.Keys(scenarios)) {
+	for _, name := range simnode.Goldens() {
 		t.Run(name, func(t *testing.T) {
 			sc := scenarios[name]()
 			want := goldenPasses(t, readEvents(t, filepath.Join(goldenDir, name+".jsonl")), sc.PassCount())
@@ -178,44 +179,11 @@ func runGoldenPasses(t *testing.T, sc simnode.Scenario) [][]event {
 	require.NoError(t, err)
 	t.Cleanup(n.Close)
 
-	a, err := akash.Dial(t.Context(), akash.Options{
-		Node:           n.CometURL,
-		GRPCAddr:       n.GRPCAddr,
-		ChainID:        simnode.ChainID,
-		MaxAge:         simnode.ReporterMaxAge,
-		RequestTimeout: goldenTimeout,
-		Concurrency:    goldenAkashReads,
-	})
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = a.Close() })
-
-	rpc := aktsolana.NewRPC(aktsolana.RPCOptions{
-		URL:              n.SolanaURL,
-		Timeout:          goldenTimeout,
-		Concurrency:      goldenSolanaReads,
-		BlockConcurrency: goldenBlockReads,
-	})
-
 	var out bytes.Buffer
 	ev := events.NewWriter(&out)
-
-	var scanner *scan.Scanner
-	o := observe.New(rpc, aktsolana.NewEvidenceIndex(rpc, simnode.ProgramID, goldenEvidenceSize, goldenEvidenceMem), observe.Options{
-		GenesisHash:    simnode.GenesisHash,
-		ProgramID:      simnode.ProgramID,
-		Mint:           simnode.MintAddress,
-		LightClientPin: sc.LightClientPin,
-		ChainID:        simnode.ChainID,
-		MaxAge:         simnode.ReporterMaxAge,
-		SlotLead:       goldenSlotLead,
-	}, func(c observe.Change) { scanner.OnChange(c) })
-
-	scanner = scan.New(a, o, ev, scan.Options{
-		Reporter:     simnode.Reporter,
-		Workers:      goldenWorkers,
-		PageSize:     goldenPageSize,
-		AuditPerScan: goldenAuditPerScan,
-	}, nil)
+	scanner := newPreviewScanner(t, previewNode{
+		cometURL: n.CometURL, grpcAddr: n.GRPCAddr, solanaURL: n.SolanaURL, pin: sc.LightClientPin,
+	}, ev)
 
 	for pass := range sc.PassCount() {
 		scanner.Pass(t.Context(), nil)
@@ -236,6 +204,55 @@ func runGoldenPasses(t *testing.T, sc simnode.Scenario) [][]event {
 	require.Empty(t, current)
 
 	return passes
+}
+
+// previewNode is what a preview scanner is wired against: the node's endpoints and the light client to pin, if any.
+type previewNode struct {
+	cometURL, grpcAddr, solanaURL string
+	pin                           *solana.PublicKey
+}
+
+// newPreviewScanner wires a preview scanner writing to ev as cmd/akt-reporter wires it, with the CLI defaults.
+func newPreviewScanner(tb testing.TB, n previewNode, ev *events.Writer) *scan.Scanner {
+	tb.Helper()
+
+	a, err := akash.Dial(tb.Context(), akash.Options{
+		Node:           n.cometURL,
+		GRPCAddr:       n.grpcAddr,
+		ChainID:        simnode.ChainID,
+		MaxAge:         simnode.ReporterMaxAge,
+		RequestTimeout: goldenTimeout,
+		Concurrency:    goldenAkashReads,
+	})
+	require.NoError(tb, err)
+	tb.Cleanup(func() { _ = a.Close() })
+
+	rpc := aktsolana.NewRPC(aktsolana.RPCOptions{
+		URL:              n.solanaURL,
+		Timeout:          goldenTimeout,
+		Concurrency:      goldenSolanaReads,
+		BlockConcurrency: goldenBlockReads,
+	})
+
+	var scanner *scan.Scanner
+	o := observe.New(rpc, aktsolana.NewEvidenceIndex(rpc, simnode.ProgramID, goldenEvidenceSize, goldenEvidenceMem), observe.Options{
+		GenesisHash:    simnode.GenesisHash,
+		ProgramID:      simnode.ProgramID,
+		Mint:           simnode.MintAddress,
+		LightClientPin: n.pin,
+		ChainID:        simnode.ChainID,
+		MaxAge:         simnode.ReporterMaxAge,
+		SlotLead:       goldenSlotLead,
+	}, func(c observe.Change) { scanner.OnChange(c) })
+
+	scanner = scan.New(a, o, ev, scan.Options{
+		Reporter:     simnode.Reporter,
+		Workers:      goldenWorkers,
+		PageSize:     goldenPageSize,
+		AuditPerScan: goldenAuditPerScan,
+	}, nil)
+
+	return scanner
 }
 
 // comparePass compares one pass under the ordering rules of spec §9.1: the terminal event is last; events without

@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/json"
+	"maps"
+	"slices"
 	"strconv"
 	"time"
 
@@ -70,9 +72,26 @@ const (
 	fabricatedSlot = uint64(1) << 63
 )
 
+// benchmarks are the named scenarios that only benchmarks serve. They have no golden, so simnode list and the goldens
+// leave them out.
+var benchmarks = map[string]func() Scenario{
+	// steady-100k: the 100,000 open transfers of spec §11.4.
+	"steady-100k": Steady100k,
+}
+
+// Goldens returns the sorted names of the scenarios that have a parity golden: every scenario but the benchmarks.
+func Goldens() []string { return slices.Sorted(maps.Keys(goldenScenarios())) }
+
 // Scenarios returns the named scenarios that goldens and benchmarks serve, each built fresh by its function. The
-// comment of each names the parity cases of spec §11.2 it covers.
+// comment of each golden scenario names the parity cases of spec §11.2 it covers.
 func Scenarios() map[string]func() Scenario {
+	all := goldenScenarios()
+	maps.Copy(all, benchmarks)
+
+	return all
+}
+
+func goldenScenarios() map[string]func() Scenario {
 	return map[string]func() Scenario{
 		// clean: open transfers without a Solana status or reported observation, which plan nothing.
 		"clean": func() Scenario { return openScenario(time.Second, cleanCount) },

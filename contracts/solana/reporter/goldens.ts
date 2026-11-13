@@ -1,6 +1,7 @@
-// Development only: writes the parity goldens of the Go reporter (operator/reporter/testdata). For each simnode
-// scenario it runs this TS reporter in preview against `simnode serve` and records every event it writes. It also
-// writes PDA vectors derived by the TS helpers. Run from contracts/solana: npx tsx reporter/goldens.ts
+// Development only: writes the parity goldens of the Go reporter (operator/reporter/testdata). For each scenario
+// `simnode list` prints, which leaves out the benchmark scenarios, it runs this TS reporter in preview against
+// `simnode serve` and records every event it writes. It also writes PDA vectors derived by the TS helpers. Run from
+// contracts/solana: npx tsx reporter/goldens.ts
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
 import { once } from "node:events";

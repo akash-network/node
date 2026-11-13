@@ -1049,9 +1049,10 @@ func TestHistoryFailure(t *testing.T) {
 }
 
 func TestNamedScenariosRoundTripJSON(t *testing.T) {
-	for name, build := range simnode.Scenarios() {
+	scenarios := simnode.Scenarios()
+	for _, name := range simnode.Goldens() {
 		t.Run(name, func(t *testing.T) {
-			sc := build()
+			sc := scenarios[name]()
 			require.GreaterOrEqual(t, sc.PassCount(), 1)
 
 			raw, err := json.Marshal(sc)

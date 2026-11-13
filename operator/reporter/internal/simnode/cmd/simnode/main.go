@@ -4,6 +4,7 @@
 //	simnode list
 //	simnode serve --scenario NAME [--akash-latency D] [--solana-latency D] [--block-fetch-latency D]
 //
+// list prints the scenarios that have a parity golden; serve also serves the benchmark scenarios, such as steady-100k.
 // serve prints one JSON line with the node's endpoints and the reporter configuration the scenario expects, then
 // serves until stdin closes or the process is interrupted.
 package main
@@ -15,10 +16,8 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"maps"
 	"os"
 	"os/signal"
-	"slices"
 	"syscall"
 	"time"
 
@@ -58,7 +57,7 @@ func run(args []string, stdin io.Reader, stdout io.Writer) error {
 
 	switch args[0] {
 	case "list":
-		for _, name := range slices.Sorted(maps.Keys(simnode.Scenarios())) {
+		for _, name := range simnode.Goldens() {
 			if _, err := fmt.Fprintln(stdout, name); err != nil {
 				return err
 			}
