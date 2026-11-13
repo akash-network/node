@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"google.golang.org/grpc"
@@ -51,6 +52,8 @@ type Node struct {
 
 	callsMu sync.Mutex
 	calls   map[string]int
+	// historyWalks counts the chronological history walks served, for Akash.FailHistory.
+	historyWalks atomic.Int64
 
 	servers    []*http.Server
 	grpcServer *grpc.Server

@@ -60,7 +60,9 @@ const (
 	pagingCount = 501
 	// auditCount spans three audit pages of the default audit-per-scan, 100.
 	auditCount = 250
-	spamCount  = 500
+	// auditResumeCount spans two audit pages.
+	auditResumeCount = 150
+	spamCount        = 500
 	// challengeEnded and challengeOpen are challenge ends long past and far ahead of any run, in Unix seconds.
 	challengeEnded = int64(1_000_000_000)
 	challengeOpen  = int64(4_000_000_000)
@@ -108,8 +110,10 @@ func Scenarios() map[string]func() Scenario {
 		"paging-overlap": pagingOverlapScenario,
 		// audit-unavailable: an invalid terminal record fails the audit page but not the open listing.
 		"audit-unavailable": auditUnavailableScenario,
-		// audit-round-robin: three passes audit consecutive pages of settled transfers, then start over.
+		// audit-round-robin: three passes audit consecutive pages of settled transfers; the fourth starts over.
 		"audit-round-robin": auditRoundRobinScenario,
+		// audit-resume: a failed audit page keeps the cursor, so the next pass resumes where the failed one began.
+		"audit-resume": auditResumeScenario,
 	}
 }
 
@@ -786,14 +790,31 @@ func auditUnavailableScenario() Scenario {
 	return sc
 }
 
-// auditRoundRobinScenario has only minted transfers, settled consistently with Solana; each pass audits the next
-// page of them.
+// auditRoundRobinScenario has only minted transfers, settled consistently with Solana. Passes 1 to 3 audit the three
+// pages of them; the third is the last, so pass 4 audits the first page again.
 func auditRoundRobinScenario() Scenario {
-	sc := baseScenario(time.Second)
+	sc := settledScenario(auditCount)
+	sc.Passes = 4
+
+	return sc
+}
+
+// auditResumeScenario has two pages of settled transfers. Pass 1 audits the first page; pass 2's audit page fails;
+// pass 3 resumes at the second page, because a failed audit keeps the cursor.
+func auditResumeScenario() Scenario {
+	sc := settledScenario(auditResumeCount)
 	sc.Passes = 3
+	sc.Akash.FailHistory = []int{2}
+
+	return sc
+}
+
+// settledScenario has n minted transfers, settled consistently with Solana, so each audit takes the early exit.
+func settledScenario(n int) Scenario {
+	sc := baseScenario(time.Second)
 	a, s := sc.Akash, &sc.Solana
 
-	for i := range auditCount {
+	for i := range n {
 		a.add(pendingTransfer(a, i, sinkv1.StatusMinted))
 		s.putStatus(statusOf(i, resolvedSlotBase, mintedTo(i)))
 	}

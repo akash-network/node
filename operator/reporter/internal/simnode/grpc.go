@@ -269,6 +269,13 @@ func (q *sinkQuery) Transfers(ctx context.Context, req *sinkv1.QueryTransfersReq
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
+	if w.path == pathHistory {
+		walk := int(q.n.historyWalks.Add(1))
+		if slices.Contains(q.n.sc.Akash.FailHistory, walk) {
+			return nil, status.Errorf(codes.Unavailable, "simnode: history walk %d fails", walk)
+		}
+	}
+
 	transfers, next := q.n.walk(viewOf(ctx).height, w, resume, page)
 
 	return &sinkv1.QueryTransfersResponse{

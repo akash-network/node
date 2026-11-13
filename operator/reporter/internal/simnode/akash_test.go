@@ -1020,6 +1020,34 @@ func TestPageOverlap(t *testing.T) {
 	require.Equal(t, ids(first.Transfers)[1], ids(second.Transfers)[0])
 }
 
+func TestHistoryFailure(t *testing.T) {
+	c := newChain(t)
+	sc := c.scenario(t)
+	sc.Akash.FailHistory = []int{2}
+	n, _ := startAkash(t, sc, simnode.Options{})
+	q := sinkv1.NewQueryClient(grpcConn(t, n))
+	ctx := metadata.NewOutgoingContext(t.Context(), pinned(latest))
+	history := &sinkv1.QueryTransfersRequest{Pagination: &sdkquery.PageRequest{Limit: 100}}
+
+	// Walk 1 succeeds; a status bucket is not a history walk.
+	_, err := q.Transfers(ctx, history)
+	require.NoError(t, err)
+	_, err = q.Transfers(ctx, &sinkv1.QueryTransfersRequest{Status: sinkv1.StatusRefundPending})
+	require.NoError(t, err)
+
+	// Walk 2 fails, here over abci_query as the TS client reads it.
+	req, err := history.Marshal()
+	require.NoError(t, err)
+	res, err := comet(t, n).ABCIQueryWithOptions(t.Context(), "/akash.sink.v1.Query/Transfers", cmtbytes.HexBytes(req), rpcclient.ABCIQueryOptions{Height: latest})
+	require.NoError(t, err)
+	require.NotZero(t, res.Response.Code)
+	require.Contains(t, res.Response.Log, "simnode: history walk 2 fails")
+
+	// Walk 3 succeeds again.
+	_, err = q.Transfers(ctx, history)
+	require.NoError(t, err)
+}
+
 func TestNamedScenariosRoundTripJSON(t *testing.T) {
 	for name, build := range simnode.Scenarios() {
 		t.Run(name, func(t *testing.T) {

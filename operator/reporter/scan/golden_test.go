@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -54,7 +55,10 @@ type allowance struct {
 }
 
 // allowances are the only accepted differences from the goldens.
-var allowances []allowance
+var allowances = []allowance{
+	// The failed audit query's text is the transport's: TS reads the history through abci_query, Go through gRPC.
+	{scenario: "audit-resume", field: "error", difference: 3},
+}
 
 func TestGoldens(t *testing.T) {
 	scenarios := simnode.Scenarios()
@@ -77,6 +81,27 @@ func TestGoldens(t *testing.T) {
 			for i := range want {
 				comparePass(t, name, i+1, want[i], got[i])
 			}
+		})
+	}
+}
+
+func TestGoldensErrorCut(t *testing.T) {
+	for _, c := range []struct{ name, text, want string }{
+		{"one line", "stale Akash node", "stale Akash node"},
+		{
+			"actual-expected diff",
+			"mint amount differs from Akash deposit\n+ actual - expected\n\n+ 1000001n\n- 1000000n\n        ^\n",
+			"mint amount differs from Akash deposit",
+		},
+		{"strict inequality", "custom text\n\n1n !== 2n\n", "custom text"},
+		// Any other second line is part of the text, so it fails against a one-line Go error.
+		{"other second line", "A\nanything", "A\nanything"},
+		{"marker not at the start", "A\nx + actual - expected\n", "A\nx + actual - expected\n"},
+		{"blank line without inequality", "A\n\nB\n", "A\n\nB\n"},
+		{"inequality not on its own line", "A\n\n1n !== 2n\nmore", "A\n\n1n !== 2n\nmore"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			require.Equal(t, c.want, tsMessage(c.text))
 		})
 	}
 }
@@ -310,11 +335,21 @@ func equalEvent(t *testing.T, where, scenario, id string, want, got event) {
 	}
 }
 
-// tsMessage is the TS-authored message of an error text. Every TS message is one line; node:assert's equal appends a
-// diff of the actual and expected values after a newline, in a format that depends on the Node version.
+// assertDiff matches what node:assert's equal appends after a message, in either of its formats: a "+ actual -
+// expected" diff, or a blank line and "<actual> !== <expected>".
+var assertDiff = regexp.MustCompile(`\A(\+ actual - expected\n(?s:.*)|\n[^\n]* !== [^\n]*\n)\z`)
+
+// tsMessage strips the node:assert diff from a golden error text. It is the goldens' one normalization that does not
+// depend on time: node:assert appends the diff after the TS-authored message, in a format that depends on the Node
+// version. It applies to one golden event: wrong-accounts, transfer /11/1 ("mint amount differs from Akash deposit").
+// Any other multi-line error text is compared whole.
 func tsMessage(text string) string {
-	message, _, _ := strings.Cut(text, "\n")
-	return message
+	message, rest, ok := strings.Cut(text, "\n")
+	if ok && assertDiff.MatchString(rest) {
+		return message
+	}
+
+	return text
 }
 
 func allowed(scenario, id, field string) (allowance, bool) {

@@ -62,6 +62,9 @@ type Akash struct {
 	// PageOverlap serves an inconsistent pagination: a full page's next key resumes at its own last entry, so the next
 	// page repeats it.
 	PageOverlap bool `json:"pageOverlap,omitempty"`
+	// FailHistory lists the ordinals, from 1, of the chronological history walks (Transfers without a status or owner
+	// filter, over gRPC or abci_query) that fail with codes.Unavailable.
+	FailHistory []int `json:"failHistory,omitempty"`
 
 	Params sinkv1.Params `json:"params"`
 	// Policies holds every retained reporter policy; the highest version is current.
