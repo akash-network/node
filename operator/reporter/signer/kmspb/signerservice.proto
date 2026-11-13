@@ -1,0 +1,59 @@
+// Copied verbatim from github.com/cosmos/kms at commit
+// e3dbb2736910f0f07de71d618238928bf706df88, proto/signerservice/signerservice.proto.
+// Only this header is added; the Go package comes from M options in generate.go.
+
+syntax = "proto3";
+
+package cosmos.kms.signerservice;
+
+option go_package = "github.com/cosmos/kms/gen/signerservice";
+
+service SignerService {
+    rpc GetKey(GetKeyRequest) returns (GetKeyResponse) {}
+    rpc GetKeys(GetKeysRequest) returns (GetKeysResponse) {}
+    rpc Sign(SignRequest) returns (SignResponse) {}
+}
+
+enum SignatureScheme {
+  UNKNOWN = 0;
+  ECDSA_SECP256K1 = 1;   // input: 32-byte raw message (not hashed);  output: 64-byte r‖s low-S signature with input hashed by sha256
+  ED25519         = 2;   // input: message (not hashed);              output: 64-byte signature with input hashed by sha256
+  ECDSA_SECP256K1ETH = 3;   // input: 32-byte digest (pre-hashed);    output: 65-byte r‖s‖v (recoverable); input is not hashed (to support keccak)
+}
+
+message Payload {
+  oneof kind {
+    bytes generic = 1;
+  }
+}
+
+message Key {
+    string id = 1;
+    bytes pubkey = 2;
+    SignatureScheme scheme = 3;
+}
+
+
+message GetKeyRequest {
+    string id = 1;
+}
+
+message GetKeyResponse {
+    Key key = 1;
+}
+
+message GetKeysRequest {}
+
+message GetKeysResponse {
+    repeated Key keys = 1;
+}
+
+message SignRequest {
+    string key_id = 1;
+    Payload payload = 2;
+}
+
+message SignResponse {
+    bytes signature = 1;
+}
+
