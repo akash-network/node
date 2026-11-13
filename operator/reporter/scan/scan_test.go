@@ -1016,3 +1016,95 @@ func TestReviewWaitsForHeight(t *testing.T) {
 	require.Empty(t, h.lines())
 	require.Len(t, q.all(), 1)
 }
+
+func TestReviewRetriesFailedSnapshot(t *testing.T) {
+	sc := simnode.Scenarios()["votes"]()
+	ids := idsOf(t, sc)
+	h := newHarness(t, sc, setup{queue: &recorder{}})
+	syncing := func(on bool) { h.node.Mutate(func(sc *simnode.Scenario) { sc.Akash.CatchingUp = on }) }
+
+	// The node fails the first snapshot, then recovers.
+	syncing(true)
+	statuses := h.node.Calls("status")
+	done := make(chan error, 1)
+	go func() { done <- h.scanner.Review(t.Context(), ids[:1], 0) }()
+
+	require.Eventually(t, func() bool { return h.node.Calls("status") > statuses }, 5*time.Second, time.Millisecond)
+	select {
+	case err := <-done:
+		t.Fatalf("Review returned on a failed snapshot: %v", err)
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	syncing(false)
+	var err error
+	finished := false
+	for i := 0; i < 10 && !finished; i++ {
+		h.clock.Advance(time.Second)
+		select {
+		case err = <-done:
+			finished = true
+		case <-time.After(200 * time.Millisecond):
+		}
+	}
+	require.True(t, finished, "Review returns once a snapshot succeeds")
+	require.NoError(t, err)
+	require.Equal(t, []string{ids[0].String()}, reviews(t, h.lines()))
+
+	// A context that ends while snapshots fail returns the last snapshot error.
+	syncing(true)
+	h.clock.Advance(time.Second)
+	ctx, cancel := context.WithCancel(t.Context())
+	statuses = h.node.Calls("status")
+	go func() { done <- h.scanner.Review(ctx, ids[1:2], 0) }()
+	require.Eventually(t, func() bool { return h.node.Calls("status") > statuses }, 5*time.Second, time.Millisecond)
+	select {
+	case err = <-done:
+		t.Fatalf("Review returned on a failed snapshot: %v", err)
+	case <-time.After(50 * time.Millisecond): // the failed snapshot has reached the retry wait
+	}
+	cancel()
+	select {
+	case err = <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("Review did not return after its context ended")
+	}
+	require.EqualError(t, err, "Akash node is syncing")
+	require.Empty(t, h.lines())
+}
+
+func TestFollowUpFailuresCount(t *testing.T) {
+	t.Run("per-transfer errors count in the next pass", func(t *testing.T) {
+		ids, transfers := pending(t, 2)
+		h := newHarness(t, scenario(transfers...), setup{solana: chunkCalls(func(_ *http.Request, call int) bool { return call == 1 })})
+
+		require.NoError(t, h.scanner.Review(t.Context(), ids, 0))
+		require.Len(t, errorLines(t, h.lines()), 2)
+
+		require.Equal(t, 2, h.scanner.Pass(t.Context(), nil))
+		lines := h.lines()
+		require.Equal(t, summary(2, 2, 2), summaryOf(t, lines[len(lines)-1]))
+
+		require.Equal(t, 0, h.scanner.Pass(t.Context(), nil), "counted once")
+	})
+
+	t.Run("a mismatch found by a follow-up that settle waits for counts in the summary", func(t *testing.T) {
+		ids, transfers := pending(t, 2)
+		pin := simnode.LightClient
+		h := newHarness(t, scenario(transfers...), setup{pin: &pin})
+
+		failures := h.scanner.Pass(t.Context(), func() int {
+			setBridge(h.node, other)
+
+			var mismatch *observe.MismatchError
+			require.ErrorAs(t, h.scanner.Review(t.Context(), ids[:1], 0), &mismatch)
+
+			return 0
+		})
+		require.Equal(t, 1, failures)
+
+		lines := h.lines()
+		require.JSONEq(t, `{"alert":"light-client-mismatch","pinned":"`+pin.String()+`","current":"`+other.String()+`"}`, lines[len(lines)-2])
+		require.Equal(t, summary(2, 2, 1), summaryOf(t, lines[len(lines)-1]))
+	})
+}

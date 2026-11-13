@@ -79,6 +79,8 @@ type Scanner struct {
 
 	// cursor is where the next audit page starts.
 	cursor *akash.AuditCursor
+	// followUpFailures counts the failures of follow-up reviews until a pass adds them to its own.
+	followUpFailures atomic.Int64
 }
 
 // New returns a scanner. q is nil in preview.
@@ -142,6 +144,8 @@ func (s *Scanner) Pass(ctx context.Context, settle func() int) int {
 	if settle != nil {
 		t.failures.Add(int64(settle()))
 	}
+	// Follow-up reviews count in the pass they finish in; in scan, those settle waited for (spec �6.5).
+	t.failures.Add(s.followUpFailures.Swap(0))
 
 	if err != nil {
 		t.failures.Add(1)
@@ -551,13 +555,16 @@ func (s *Scanner) Review(ctx context.Context, ids []sinkid.ID, minHeight int64) 
 	return nil
 }
 
-// followUp reviews one chunk of a follow-up from st. A pin mismatch writes its alert and is returned; a ctx that ended
-// during the reviews returns its error.
+// followUp reviews one chunk of a follow-up from st. Its failures, and a pin mismatch, count in the next pass's
+// failures. A pin mismatch writes its alert and is returned; a ctx that ended during the reviews returns its error.
 func (s *Scanner) followUp(ctx context.Context, st *akash.State, chunk []entry) error {
-	err := s.reviewAt(reviewRun{stop: ctx, req: context.WithoutCancel(ctx), state: st, tally: &tally{}, followUp: true}, chunk)
+	var t tally
+	err := s.reviewAt(reviewRun{stop: ctx, req: context.WithoutCancel(ctx), state: st, tally: &t, followUp: true}, chunk)
+	s.followUpFailures.Add(t.failures.Load())
 
 	var mismatch *observe.MismatchError
 	if errors.As(err, &mismatch) {
+		s.followUpFailures.Add(1)
 		s.mismatchAlert(mismatch)
 		return err
 	}
@@ -565,24 +572,29 @@ func (s *Scanner) followUp(ctx context.Context, st *akash.State, chunk []entry) 
 	return ctx.Err()
 }
 
-// latestAt returns the tracker's latest snapshot once it is at least minHeight high, asking again every
-// RetryInterval until ctx ends.
+// latestAt returns the tracker's latest snapshot once it is at least minHeight high. A failed snapshot is retried like
+// a low one, every RetryInterval, so progression cannot stop on a transient node error (spec §6.6). When ctx ends, it
+// returns the last snapshot error, or ctx's error when the last snapshot was only too low.
 func (s *Scanner) latestAt(ctx context.Context, minHeight int64) (*akash.State, error) {
+	var last error
+
 	for {
 		st, err := s.akash.Latest(ctx)
-		if err != nil {
-			if ctx.Err() != nil {
-				return nil, ctx.Err()
-			}
-
-			return nil, err
-		}
-		if st.Height >= minHeight {
+		switch {
+		case err == nil && st.Height >= minHeight:
 			return st, nil
+		case err == nil:
+			last = nil
+		case ctx.Err() == nil:
+			last = err
 		}
 
 		select {
 		case <-ctx.Done():
+			if last != nil {
+				return nil, last
+			}
+
 			return nil, ctx.Err()
 		case <-s.opts.Clock.After(s.opts.RetryInterval):
 		}
