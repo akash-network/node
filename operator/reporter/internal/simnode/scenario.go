@@ -13,7 +13,9 @@ import (
 // from the moment Start runs, so the state is equally fresh whenever and wherever it is served.
 type Scenario struct {
 	// Passes is how many passes the goldens run; zero means one.
-	Passes int    `json:"passes,omitempty"`
+	Passes int `json:"passes,omitempty"`
+	// Akash is absent from a scenario that serves only Solana; the node then serves no CometBFT or gRPC endpoint.
+	Akash  *Akash `json:"akash,omitempty"`
 	Solana Solana `json:"solana"`
 }
 
