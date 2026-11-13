@@ -1,6 +1,7 @@
 package events
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -33,7 +34,16 @@ func (r Review) MarshalJSON() ([]byte, error) {
 		r.Alerts = []string{}
 	}
 
-	return json.Marshal(plain(r))
+	var buf bytes.Buffer
+
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+
+	if err := enc.Encode(plain(r)); err != nil {
+		return nil, err
+	}
+
+	return bytes.TrimSuffix(buf.Bytes(), []byte("\n")), nil
 }
 
 // Absent is the observed value when Solana holds no finalized status for the transfer.

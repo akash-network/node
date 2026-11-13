@@ -21,6 +21,7 @@ var signature = []byte{0xfb, 0xff, 0x00, 0x01, 0x02}
 const (
 	signatureBase64 = "+/8AAQI="
 	kindResolved    = "resolved"
+	modePreview     = "preview"
 )
 
 func emit(t *testing.T, v any) string {
@@ -83,7 +84,7 @@ func TestEventsMatchAppendixA(t *testing.T) {
 			name: "absent review",
 			event: events.Review{
 				ID:   owner + "/1200/3",
-				Mode: "preview",
+				Mode: modePreview,
 				Observed: events.Absent{
 					Kind:        "absent",
 					ContextSlot: events.U64(contextSlot),
@@ -124,7 +125,7 @@ func TestEventsMatchAppendixA(t *testing.T) {
 			name: "review with veto, refund and plan alert",
 			event: events.Review{
 				ID:       owner + "/1200/5",
-				Mode:     "preview",
+				Mode:     modePreview,
 				Observed: kindResolved,
 				Messages: []events.Message{veto, refund},
 				Alerts:   []string{"Transfer requires governance review"},
@@ -225,6 +226,29 @@ func TestObservationOfEmptySignature(t *testing.T) {
 func TestWriterDoesNotEscapeHTML(t *testing.T) {
 	line := emit(t, events.PassError{Error: "a<b>&c"})
 	require.Equal(t, `{"error":"a<b>&c"}`+"\n", line)
+
+	veto, err := events.MessageOf(&sinkv1.MsgVetoVoid{
+		Signer: owner,
+		ID:     sinkv1.ID{Owner: owner, Height: 1, Sequence: 1},
+		Reason: "a<b>&c",
+	})
+	require.NoError(t, err)
+
+	review := events.Review{
+		ID:       owner + "/1/1",
+		Mode:     modePreview,
+		Observed: kindResolved,
+		Messages: []events.Message{veto},
+		Alerts:   []string{"x<y>&z"},
+	}
+
+	for _, v := range []any{review, &review} {
+		line := emit(t, v)
+
+		require.Contains(t, line, `"reason":"a<b>&c"`)
+		require.Contains(t, line, `"alerts":["x<y>&z"]`)
+		require.NotContains(t, line, `\u00`)
+	}
 }
 
 func TestWriterEmitAfterClose(t *testing.T) {
