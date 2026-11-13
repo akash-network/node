@@ -156,11 +156,20 @@ func writeSolana(w http.ResponseWriter, id, result json.RawMessage, rerr *rpcErr
 	_, _ = w.Write(body)
 }
 
-// takeFailure returns the failure injected for method, consuming one of its Times.
+// takeFailure returns the failure injected for method, consuming one of its Times. It peeks under the read lock
+// first, so a scenario without failures never takes the write lock and never waits behind block encodes.
 func (n *Node) takeFailure(method string) (Failure, bool) {
+	n.mu.RLock()
+	_, ok := n.sc.Solana.Failures[method]
+	n.mu.RUnlock()
+	if !ok {
+		return Failure{}, false
+	}
+
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
+	// Re-check: a concurrent request or Mutate may have removed the entry since the peek.
 	f, ok := n.sc.Solana.Failures[method]
 	if !ok {
 		return Failure{}, false

@@ -9,11 +9,14 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/types/bech32"
 	"github.com/gagliardetto/solana-go"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"pkg.akt.dev/node/v2/operator/reporter/internal/clock"
@@ -569,6 +572,78 @@ func TestFailureInjectionAndMutate(t *testing.T) {
 	tx, err = rpc.Transaction(ctx, v0Sig+"x")
 	require.NoError(t, err)
 	require.EqualValues(t, legacyOnly, tx.Slot)
+}
+
+func TestConcurrentRequestsMutateAndFailures(t *testing.T) {
+	const (
+		workers   = 8
+		rounds    = 20
+		failTimes = 10
+	)
+
+	f := newFixture(t)
+	sc := f.scenario()
+	sc.Solana.Failures = map[string]simnode.Failure{"getGenesisHash": {Code: -32005, Message: "Node is unhealthy", Times: failTimes}}
+	n := startNode(t, sc, simnode.Options{})
+	rpc := aktsolana.NewRPC(aktsolana.RPCOptions{URL: n.SolanaURL, Timeout: 10 * time.Second, Concurrency: workers, BlockConcurrency: workers})
+	ctx := t.Context()
+
+	stop := make(chan struct{})
+	mutated := make(chan int)
+	go func() {
+		count := 0
+		defer func() { mutated <- count }()
+		for {
+			select {
+			case <-stop:
+				return
+			default:
+			}
+			n.Mutate(func(s *simnode.Scenario) {
+				if s.Solana.Slot == finalSlot {
+					s.Solana.Slot = finalSlot + 5
+				} else {
+					s.Solana.Slot = finalSlot
+				}
+			})
+			count++
+		}
+	}()
+
+	var failed atomic.Int64
+	var wg sync.WaitGroup
+	for range workers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for range rounds {
+				if _, err := rpc.GenesisHash(ctx); err != nil {
+					assert.ErrorIs(t, err, aktsolana.ErrUnavailable)
+					failed.Add(1)
+				}
+
+				slot, accts, err := rpc.MultipleAccounts(ctx, []solana.PublicKey{f.status})
+				if assert.NoError(t, err) {
+					assert.Contains(t, []uint64{finalSlot, finalSlot + 5}, slot)
+					assert.NotNil(t, accts[0])
+				}
+
+				txs := 0
+				assert.NoError(t, rpc.StreamBlock(ctx, resolveSlot, func(aktsolana.Tx) error {
+					txs++
+					return nil
+				}))
+				assert.Equal(t, 3, txs)
+			}
+		}()
+	}
+	wg.Wait()
+	close(stop)
+
+	require.Positive(t, <-mutated)
+	require.EqualValues(t, failTimes, failed.Load())
+	require.Equal(t, workers*rounds, n.Calls("getGenesisHash"))
+	require.Equal(t, workers*rounds, n.Calls("getBlock"))
 }
 
 // chainText renders the whole wrapped chain, since ErrUnavailable keeps only its own text.
