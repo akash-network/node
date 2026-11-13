@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -599,4 +600,41 @@ func TestCancelledLeaderDoesNotFailWaiters(t *testing.T) {
 	got := <-waiter
 	require.NoError(t, got.err)
 	require.Equal(t, sigString(7, 0), got.sig.String())
+}
+
+func TestRequestTimeoutIsMissingHistory(t *testing.T) {
+	f := newEvidenceFixture(t)
+
+	var calls atomic.Int32
+
+	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		calls.Add(1)
+
+		// The server notices a client that left only after the request body is read.
+		_, _ = io.Copy(io.Discard, r.Body)
+		<-r.Context().Done()
+	}))
+	t.Cleanup(srv.Close)
+
+	client := aktsolana.NewRPC(aktsolana.RPCOptions{
+		URL: srv.URL, Timeout: 100 * time.Millisecond, Concurrency: 1, BlockConcurrency: 1,
+	})
+	index := aktsolana.NewEvidenceIndex(client, f.program, evidenceSlots, evidenceBytes)
+
+	done := make(chan error, 1)
+
+	go func() {
+		_, err := index.Lookup(context.Background(), evidenceSlot, f.address, f.status)
+		done <- err
+	}()
+
+	select {
+	case err := <-done:
+		require.ErrorIs(t, err, aktsolana.ErrBlockMissing)
+		require.EqualError(t, err, "resolution evidence unavailable: block missing from owned node history")
+	case <-time.After(3 * time.Second):
+		t.Fatal("Lookup kept retrying after the request timeout")
+	}
+
+	require.EqualValues(t, 1, calls.Load())
 }

@@ -26,6 +26,9 @@ var (
 	// ErrMultipleInBlock reports more than one transaction proving the resolution; the status account is created once.
 	ErrMultipleInBlock = errors.New("multiple resolution transactions in block")
 
+	// errLeaderGone marks a fetch that stopped because the context of the caller running it ended.
+	errLeaderGone = errors.New("fetching caller's context ended")
+
 	errSlotMismatch = errors.New("resolution slot mismatch")
 	errSignature    = errors.New("resolution transaction signature is not a non-zero 64 byte signature")
 )
@@ -190,8 +193,12 @@ func (e *EvidenceIndex) entries(ctx context.Context, slot uint64) ([]entry, erro
 				return r.Val.([]entry), nil //nolint:forcetypeassert // fetch returns []entry
 			}
 
-			// The fetch ran under another caller's context; that caller giving up is not this caller's error.
-			if ctx.Err() == nil && (errors.Is(r.Err, context.Canceled) || errors.Is(r.Err, context.DeadlineExceeded)) {
+			if errors.Is(r.Err, errLeaderGone) {
+				// The fetch ran under a caller's context that ended; that is not this caller's error.
+				if err := ctx.Err(); err != nil {
+					return nil, err
+				}
+
 				continue
 			}
 
@@ -228,12 +235,9 @@ func (e *EvidenceIndex) fetch(ctx context.Context, slot uint64) ([]entry, error)
 		return nil
 	})
 	if err != nil {
+		// A request timeout is not this: StreamBlock reports it as unavailable and the caller's context is alive.
 		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-
-		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-			return nil, err
+			return nil, errLeaderGone
 		}
 
 		return nil, &causeError{sentinel: ErrBlockMissing, cause: err}
