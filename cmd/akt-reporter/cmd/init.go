@@ -43,7 +43,8 @@ func runInit(cmd *cobra.Command, _ []string) error {
 		}
 	}
 
-	cfg, err := loadConfig(cmd)
+	// init renders defaults, flags and environment only; the file it may replace is never read (spec §8.2).
+	cfg, err := loadConfigWith(cmd, config.LoadWithoutFile)
 	if err != nil {
 		return err
 	}

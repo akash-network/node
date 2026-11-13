@@ -13,6 +13,7 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	// Registers the akash Bech32 prefixes.
 	_ "pkg.akt.dev/go/sdkutil"
@@ -187,7 +188,15 @@ func parseTimestampFormat(val string) (string, error) {
 
 // loadConfig loads the configuration of cmd and logs the unknown environment variables it ignored.
 func loadConfig(cmd *cobra.Command) (config.Config, error) {
-	cfg, warnings, err := config.Load(cmd.Flags(), os.Environ())
+	return loadConfigWith(cmd, config.Load)
+}
+
+// loadConfigWith loads the configuration of cmd with load and logs the unknown environment variables it ignored.
+func loadConfigWith(
+	cmd *cobra.Command,
+	load func(*pflag.FlagSet, []string) (config.Config, []string, error),
+) (config.Config, error) {
+	cfg, warnings, err := load(cmd.Flags(), os.Environ())
 	if err != nil {
 		return config.Config{}, err
 	}

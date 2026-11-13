@@ -65,6 +65,16 @@ func ResolveHome(flags *pflag.FlagSet, environ []string) (string, error) {
 // AddFlags and be parsed. It does not validate values; see Resolve. Unknown keys in the file are errors.
 // Unknown AKT_REPORTER_* variables are returned as warnings.
 func Load(flags *pflag.FlagSet, environ []string) (Config, []string, error) {
+	return load(flags, environ, true)
+}
+
+// LoadWithoutFile is Load without the configuration file: the precedence is flag, environment, default. init renders
+// it, so that an existing file never leaks into its replacement.
+func LoadWithoutFile(flags *pflag.FlagSet, environ []string) (Config, []string, error) {
+	return load(flags, environ, false)
+}
+
+func load(flags *pflag.FlagSet, environ []string, readFile bool) (Config, []string, error) {
 	home, err := ResolveHome(flags, environ)
 	if err != nil {
 		return Config{}, nil, err
@@ -80,19 +90,10 @@ func Load(flags *pflag.FlagSet, environ []string) (Config, []string, error) {
 		v.SetDefault(key, f.Interface())
 	})
 
-	path := FilePath(home)
-
-	switch data, err := os.ReadFile(path); { //nolint:gosec // the operator names the home directory
-	case err == nil:
-		if err := checkFileKeys(path, data, known); err != nil {
+	if readFile {
+		if err := readConfigFile(v, FilePath(home), known); err != nil {
 			return Config{}, nil, err
 		}
-
-		if err := v.ReadConfig(bytes.NewReader(data)); err != nil {
-			return Config{}, nil, fmt.Errorf("%s: %w", path, err)
-		}
-	case !errors.Is(err, os.ErrNotExist):
-		return Config{}, nil, fmt.Errorf("read %s: %w", path, err)
 	}
 
 	env := parseEnviron(environ)
@@ -115,6 +116,24 @@ func Load(flags *pflag.FlagSet, environ []string) (Config, []string, error) {
 	}
 
 	return cfg, unknownEnv(environ, known), nil
+}
+
+// readConfigFile reads the file at path into v when it exists. Unknown keys are errors.
+func readConfigFile(v *viper.Viper, path string, known map[string]bool) error {
+	switch data, err := os.ReadFile(path); { //nolint:gosec // the operator names the home directory
+	case err == nil:
+		if err := checkFileKeys(path, data, known); err != nil {
+			return err
+		}
+
+		if err := v.ReadConfig(bytes.NewReader(data)); err != nil {
+			return fmt.Errorf("%s: %w", path, err)
+		}
+	case !errors.Is(err, os.ErrNotExist):
+		return fmt.Errorf("read %s: %w", path, err)
+	}
+
+	return nil
 }
 
 // checkDurations rejects a duration key whose value is not a string, such as the TOML integer max-age = 60, which

@@ -133,6 +133,29 @@ func TestInitWritesAndRefusesOverwrite(t *testing.T) {
 	require.Contains(t, string(data), `chain-id = "other-1"`)
 }
 
+func TestInitOverwriteIgnoresOldFile(t *testing.T) {
+	home := t.TempDir()
+	path := config.FilePath(home)
+
+	const stale = "StaLeProgram1111111111111111111111111111111"
+	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o700))
+	require.NoError(t, os.WriteFile(path, []byte("retired-key = 1\n\n[solana]\nprogram-id = \""+stale+"\"\n"), 0o600))
+
+	t.Setenv("AKT_REPORTER_CHAIN_ID", "env-1")
+
+	code, stdout, stderr := execute(t, "", "init", "--home", home, "--overwrite", "--network", "testnet")
+	require.Equal(t, 0, code, stderr)
+	require.Contains(t, stdout, "solana.program-id: is required", "the old program ID must not satisfy the rule")
+
+	data, err := os.ReadFile(path) //nolint:gosec // a test directory
+	require.NoError(t, err)
+	require.NotContains(t, string(data), "retired-key")
+	require.NotContains(t, string(data), stale)
+	require.Contains(t, string(data), `program-id = ""`)
+	require.Contains(t, string(data), `network = "testnet"`, "flags still apply")
+	require.Contains(t, string(data), `chain-id = "env-1"`, "the environment still applies")
+}
+
 func TestKeysUseConfiguredBackend(t *testing.T) {
 	t.Run("configured test backend", func(t *testing.T) {
 		home := t.TempDir()

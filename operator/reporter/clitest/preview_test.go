@@ -154,6 +154,23 @@ func TestScanExitCodes(t *testing.T) {
 	})
 }
 
+func TestScanPinMismatch(t *testing.T) {
+	n := startNode(t, "clean")
+
+	// The bridge names simnode.LightClient; pin another program.
+	pinned := simnode.ProgramID.String()
+	r := runToEnd(t, command(t, n, "scan", "--solana.light-client-program", pinned)...)
+	require.Equal(t, 1, r.code, r.stderr)
+
+	events := lines(t, r.stdout)
+	require.Len(t, events, 2, r.stdout)
+	require.Equal(t, "light-client-mismatch", events[0]["alert"])
+	require.Equal(t, pinned, events[0]["pinned"])
+	require.Equal(t, simnode.LightClient.String(), events[0]["current"])
+	require.Contains(t, events[1], "error")
+	require.Zero(t, summaries(events))
+}
+
 func TestStartStopsOnCancel(t *testing.T) {
 	n := startNode(t, "clean")
 

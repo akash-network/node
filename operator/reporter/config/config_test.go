@@ -64,6 +64,19 @@ func valid(t *testing.T) config.Config {
 func load(t *testing.T, file string, environ []string, args ...string) (config.Config, []string, error) {
 	t.Helper()
 
+	return loadWith(t, config.Load, file, environ, args...)
+}
+
+// loadWith is load with another loader.
+func loadWith(
+	t *testing.T,
+	loader func(*pflag.FlagSet, []string) (config.Config, []string, error),
+	file string,
+	environ []string,
+	args ...string,
+) (config.Config, []string, error) {
+	t.Helper()
+
 	home := t.TempDir()
 	if file != "" {
 		require.NoError(t, os.MkdirAll(filepath.Join(home, "config"), 0o750))
@@ -74,7 +87,7 @@ func load(t *testing.T, file string, environ []string, args ...string) (config.C
 	config.AddFlags(fs)
 	require.NoError(t, fs.Parse(append([]string{flagHome, home}, args...)))
 
-	return config.Load(fs, environ)
+	return loader(fs, environ)
 }
 
 func TestDefaults(t *testing.T) {
@@ -176,6 +189,26 @@ func TestPrecedence(t *testing.T) {
 	c, _, err = load(t, file, env, "--scan.workers", "9")
 	require.NoError(t, err)
 	require.Equal(t, 9, c.Scan.Workers, "flag")
+}
+
+func TestLoadWithoutFile(t *testing.T) {
+	file := "retired-key = 1\n[scan]\nworkers = 7\n"
+
+	c, _, err := loadWith(t, config.LoadWithoutFile, file, nil)
+	require.NoError(t, err, "the file, with its unknown key, is never read")
+	require.Equal(t, 16, c.Scan.Workers, "default, not the file")
+
+	env := []string{"AKT_REPORTER_SCAN_WORKERS=8", "AKT_REPORTER_SERVICE_HOST=1"}
+
+	c, warnings, err := loadWith(t, config.LoadWithoutFile, file, env)
+	require.NoError(t, err)
+	require.Equal(t, 8, c.Scan.Workers, "environment")
+	require.Len(t, warnings, 1)
+
+	c, _, err = loadWith(t, config.LoadWithoutFile, file, env, "--scan.workers", "9")
+	require.NoError(t, err)
+	require.Equal(t, 9, c.Scan.Workers, "flag")
+	require.NotEmpty(t, c.KeyringDir, "keyring-dir still defaults to the home directory")
 }
 
 func TestPrecedenceKinds(t *testing.T) {
