@@ -111,7 +111,7 @@ func Default() Config {
 		RequestTimeout: 15 * time.Second,
 		KeyringBackend: "test",
 		Gas:            "auto",
-		GasAdjustment:  1.3,
+		GasAdjustment:  1.5,
 		GasPrices:      "0.025uakt",
 		Solana: Solana{
 			RPC: "http://localhost:8899",

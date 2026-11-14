@@ -156,17 +156,31 @@ func TestBuildUnordered(t *testing.T) {
 	require.Equal(t, msgs[0].String(), decoded.GetMsgs()[0].String())
 }
 
+// TestSimBytes checks that the simulated transaction has the signed one's gas-relevant shape: the fee, which the
+// ante handler deducts only when it is set, the gas limit field, and a signature of full length.
 func TestSimBytes(t *testing.T) {
 	s := testSigner(t)
 	timeout := SlotTimeout(15_000_000, 200)
+	fee := sdk.NewCoins(sdk.NewInt64Coin("uakt", 2500))
+	msgs := []sdk.Msg{voteMsg(s)}
+	b := NewBuilder(testTxConfig(), testChainID, testAccountNumber, s)
 
-	bz, err := NewBuilder(testTxConfig(), testChainID, testAccountNumber, s).SimBytes([]sdk.Msg{voteMsg(s)}, timeout)
+	bz, err := b.SimBytes(msgs, 100_000, fee, timeout)
 	require.NoError(t, err)
 
 	raw, body, auth := decodeRaw(t, bz)
 	requireUnorderedBody(t, body, auth, timeout)
+	require.Equal(t, uint64(100_000), auth.Fee.GasLimit)
+	require.Equal(t, fee, auth.Fee.Amount)
 	require.Len(t, raw.Signatures, 1)
-	require.Empty(t, raw.Signatures[0])
+	require.Len(t, raw.Signatures[0], simSignatureLen)
+	require.Equal(t, make([]byte, simSignatureLen), raw.Signatures[0])
+
+	signed, _, err := b.Build(context.Background(), msgs, 100_000, fee, timeout)
+	require.NoError(t, err)
+	_, _, signedAuth := decodeRaw(t, signed)
+	require.Len(t, bz, len(signed))
+	require.Equal(t, signedAuth, auth)
 }
 
 func TestSignBytesLimit(t *testing.T) {
@@ -341,6 +355,55 @@ func TestPrune(t *testing.T) {
 			require.Equal(t, []int{3, 2}, sim.sizes)
 		}
 	})
+}
+
+// capturingChain records the transactions it simulates.
+type capturingChain struct {
+	Chain
+	simulated [][]byte
+}
+
+func (c *capturingChain) Simulate(_ context.Context, txBytes []byte) (uint64, error) {
+	c.simulated = append(c.simulated, txBytes)
+	return 1, nil
+}
+
+// TestSimulatorShape checks the fee and gas limit the broadcaster simulates with: the exact ones when they are known
+// before simulating, otherwise a fee of one unit of each gas-price denomination, so the ante handler still deducts
+// a fee, and a limit of tx.max-gas, at least as long as the final one.
+func TestSimulatorShape(t *testing.T) {
+	s := testSigner(t)
+	timeout := SlotTimeout(15_000_000, 3)
+	fees := sdk.NewCoins(sdk.NewInt64Coin("uakt", 9000))
+	prices := sdk.NewDecCoins(sdk.NewDecCoinFromDec("uakt", sdkmath.LegacyMustNewDecFromStr("0.025")))
+	msgs := []sdk.Msg{voteMsg(s), voteMsg(s)}
+
+	cases := []struct {
+		name string
+		o    Options
+		gas  uint64
+		fee  sdk.Coins
+	}{
+		{"auto with gas prices", Options{GasPrices: prices, MaxGas: 20_000_000}, 20_000_000, sdk.NewCoins(sdk.NewInt64Coin("uakt", 1))},
+		{"auto with fees", Options{GasPrices: prices, Fees: fees, MaxGas: 20_000_000}, 20_000_000, fees},
+		{"gas per message with gas prices", Options{GasPerMessage: 70_000, GasPrices: prices, MaxGas: 20_000_000}, 140_000, sdk.NewCoins(sdk.NewInt64Coin("uakt", 3500))},
+		{"gas per message with fees", Options{GasPerMessage: 70_000, GasPrices: prices, Fees: fees, MaxGas: 20_000_000}, 140_000, fees},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			chain := &capturingChain{}
+			b := New(c.o, chain, NewBuilder(testTxConfig(), testChainID, testAccountNumber, s), nil)
+
+			_, err := b.simulator(timeout)(msgs)
+			require.NoError(t, err)
+			require.Len(t, chain.simulated, 1)
+
+			raw, _, auth := decodeRaw(t, chain.simulated[0])
+			require.Equal(t, c.gas, auth.Fee.GasLimit)
+			require.Equal(t, c.fee, auth.Fee.Amount)
+			require.Len(t, raw.Signatures[0], simSignatureLen)
+		})
+	}
 }
 
 // chainErr is a simulation failure as the node's gRPC Simulate returns it.

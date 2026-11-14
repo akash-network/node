@@ -834,13 +834,36 @@ func (b *Broadcaster) firstSend(msgs []policy.Planned, raw, hash []byte, fee sdk
 // failure, not a transport error.
 func (b *Broadcaster) simulator(timeout time.Time) func([]sdk.Msg) (uint64, error) {
 	return func(msgs []sdk.Msg) (uint64, error) {
-		bz, err := b.b.SimBytes(msgs, timeout)
+		gas, fee := b.simShape(len(msgs))
+		bz, err := b.b.SimBytes(msgs, gas, fee, timeout)
 		if err != nil {
 			return 0, status.Error(codes.Internal, err.Error())
 		}
 
 		return b.chain.Simulate(b.work, bz)
 	}
+}
+
+// simShape returns the gas limit and fee to simulate n messages with. Known before simulating, they are exact.
+// With gas = auto the limit is tx.max-gas, whose encoding is at least as long as the final limit's, and a fee
+// priced from gas prices is one unit of each denomination: the fee deduction is simulated, and a reporter whose
+// balance covers the real fee never fails simulation on it.
+func (b *Broadcaster) simShape(n int) (uint64, sdk.Coins) {
+	if b.o.GasPerMessage > 0 {
+		gas := b.gasLimit(0, n)
+		return gas, FeeFor(gas, b.o.GasPrices, b.o.Fees)
+	}
+
+	if !b.o.Fees.IsZero() {
+		return b.o.MaxGas, b.o.Fees
+	}
+
+	fee := make([]sdk.Coin, 0, len(b.o.GasPrices))
+	for _, price := range b.o.GasPrices {
+		fee = append(fee, sdk.NewInt64Coin(price.Denom, 1))
+	}
+
+	return b.o.MaxGas, sdk.NewCoins(fee...)
 }
 
 // gasLimit is GasPerMessage × n, or with gas = auto ceil(used × GasAdjustment) (spec §6.4).

@@ -106,7 +106,7 @@ func TestDefaults(t *testing.T) {
 	require.Equal(t, "test", c.KeyringBackend)
 	require.Empty(t, c.KeyringDir)
 	require.Equal(t, "auto", c.Gas)
-	require.Equal(t, 1.3, c.GasAdjustment)
+	require.Equal(t, 1.5, c.GasAdjustment)
 	require.Equal(t, "0.025uakt", c.GasPrices)
 	require.Empty(t, c.Fees)
 	require.Equal(t, "http://localhost:8899", c.Solana.RPC)

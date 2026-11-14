@@ -15,8 +15,12 @@ import (
 	"pkg.akt.dev/node/v2/operator/reporter/signer"
 )
 
-// memo is the memo of every reporter transaction.
-const memo = "AKT sink reporter"
+const (
+	// memo is the memo of every reporter transaction.
+	memo = "AKT sink reporter"
+	// simSignatureLen is the length of a secp256k1 signature, which SimBytes puts in place of the real one.
+	simSignatureLen = 64
+)
 
 // ErrSignBytesLimit reports sign bytes longer than the signer's declared limit.
 var ErrSignBytesLimit = errors.New("sign bytes exceed the signer's limit")
@@ -34,11 +38,18 @@ func NewBuilder(cfg client.TxConfig, chainID string, accountNumber uint64, s sig
 	return &Builder{cfg: cfg, chainID: chainID, accountNumber: accountNumber, signer: s}
 }
 
-// SimBytes returns the transaction to simulate msgs with: unsigned, with no fee and no gas limit.
-func (b *Builder) SimBytes(msgs []sdk.Msg, timeout time.Time) ([]byte, error) {
-	txb, _, err := b.unsigned(msgs, 0, nil, timeout)
+// SimBytes returns the transaction to simulate msgs with. It has the gas-relevant shape of the signed transaction:
+// the fee, which the ante handler deducts only when it is set, the gas limit, and a zero signature of full length in
+// place of the real one. Simulation does not verify signatures.
+func (b *Builder) SimBytes(msgs []sdk.Msg, gasLimit uint64, fee sdk.Coins, timeout time.Time) ([]byte, error) {
+	txb, sig, err := b.unsigned(msgs, gasLimit, fee, timeout)
 	if err != nil {
 		return nil, err
+	}
+
+	sig.Data = &signing.SingleSignatureData{SignMode: signing.SignMode_SIGN_MODE_DIRECT, Signature: make([]byte, simSignatureLen)}
+	if err := txb.SetSignatures(sig); err != nil {
+		return nil, fmt.Errorf("set signature: %w", err)
 	}
 
 	return b.cfg.TxEncoder()(txb.GetTx())

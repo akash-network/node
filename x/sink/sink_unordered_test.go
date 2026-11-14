@@ -186,7 +186,7 @@ func TestUnorderedSimulate(t *testing.T) {
 		h, b, msg := setup(t)
 		before := h.a.Keepers.Cosmos.Bank.GetBalance(h.ctx(), h.reporter0(), sdkutil.DenomUakt)
 
-		bz, err := b.SimBytes([]sdk.Msg{msg}, h.now.Add(time.Minute))
+		bz, err := b.SimBytes([]sdk.Msg{msg}, simGasLimit, simFee, h.now.Add(time.Minute))
 		require.NoError(t, err)
 
 		gas, result, err := h.a.Simulate(bz)
@@ -219,7 +219,7 @@ func TestUnorderedSimulate(t *testing.T) {
 	t.Run("a timeout beyond the max TTL fails without a message index", func(t *testing.T) {
 		h, b, msg := setup(t)
 
-		bz, err := b.SimBytes([]sdk.Msg{msg}, h.now.Add(11*time.Minute))
+		bz, err := b.SimBytes([]sdk.Msg{msg}, simGasLimit, simFee, h.now.Add(11*time.Minute))
 		require.NoError(t, err)
 
 		_, _, err = h.a.Simulate(bz)
