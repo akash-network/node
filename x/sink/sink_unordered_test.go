@@ -7,6 +7,7 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 	abci "github.com/cometbft/cometbft/abci/types"
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -25,8 +26,9 @@ import (
 
 const unorderedFee = 10
 
-// unorderedTx is the unordered variant of txFromMode: sequence 0, SIGN_MODE_DIRECT and the given timeout timestamp.
-func (h *testSuite) unorderedTx(t *testing.T, key *secp256k1.PrivKey, timeout time.Time, memo string, msgs ...sdk.Msg) []byte {
+// signedTx is the signing core shared by unorderedTx and depositTx: a SIGN_MODE_DIRECT transaction of key at the
+// given sequence, which configure may adjust (for example to mark it unordered) before it is signed.
+func (h *testSuite) signedTx(t *testing.T, key *secp256k1.PrivKey, sequence uint64, memo string, msgs []sdk.Msg, configure func(client.TxBuilder)) []byte {
 	t.Helper()
 	sender := sdk.AccAddress(key.PubKey().Address())
 	cfg := h.a.TxConfig()
@@ -35,13 +37,15 @@ func (h *testSuite) unorderedTx(t *testing.T, key *secp256k1.PrivKey, timeout ti
 	b.SetMemo(memo)
 	b.SetGasLimit(500_000)
 	b.SetFeeAmount(sdk.NewCoins(sdk.NewInt64Coin(sdkutil.DenomUakt, unorderedFee)))
-	b.SetUnordered(true)
-	b.SetTimeoutTimestamp(timeout)
+	if configure != nil {
+		configure(b)
+	}
+
 	account := h.a.Keepers.Cosmos.Acct.GetAccount(h.ctx(), sender)
 	sig := signing.SignatureV2{
 		PubKey:   key.PubKey(),
 		Data:     &signing.SingleSignatureData{SignMode: signing.SignMode_SIGN_MODE_DIRECT},
-		Sequence: 0,
+		Sequence: sequence,
 	}
 
 	require.NoError(t, b.SetSignatures(sig))
@@ -50,7 +54,7 @@ func (h *testSuite) unorderedTx(t *testing.T, key *secp256k1.PrivKey, timeout ti
 			Address:       sender.String(),
 			ChainID:       h.a.ChainID(),
 			AccountNumber: account.GetAccountNumber(),
-			Sequence:      0,
+			Sequence:      sequence,
 			PubKey:        key.PubKey(),
 		}, b.GetTx())
 	require.NoError(t, err)
@@ -62,6 +66,16 @@ func (h *testSuite) unorderedTx(t *testing.T, key *secp256k1.PrivKey, timeout ti
 	require.NoError(t, err)
 
 	return bz
+}
+
+// unorderedTx is the unordered variant of txFromMode: sequence 0, SIGN_MODE_DIRECT and the given timeout timestamp.
+func (h *testSuite) unorderedTx(t *testing.T, key *secp256k1.PrivKey, timeout time.Time, memo string, msgs ...sdk.Msg) []byte {
+	t.Helper()
+
+	return h.signedTx(t, key, 0, memo, msgs, func(b client.TxBuilder) {
+		b.SetUnordered(true)
+		b.SetTimeoutTimestamp(timeout)
+	})
 }
 
 type replayCase struct {
