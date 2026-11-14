@@ -127,6 +127,8 @@ type ownerState struct {
 	stopping   bool
 
 	followBusy bool
+	// followJobs numbers the follow-up reviews.
+	followJobs uint64
 	// followFailed is the window of the last follow-up that failed; none is retried before a later window.
 	followFailed int64
 
@@ -137,6 +139,8 @@ type ownerState struct {
 }
 
 type followJob struct {
+	// id tells the batches this review fills from the others; it is never passFiller.
+	id        uint64
 	ids       []sinkid.ID
 	keys      []policy.Key
 	window    int64
@@ -226,24 +230,29 @@ func (b *Broadcaster) call(f func()) bool {
 
 // Queue offers a planned message. It reports false when the message was skipped, because its key is already queued
 // or sent in its slot, or deferred to a later window. It is safe for concurrent use and never waits for signing.
-func (b *Broadcaster) Queue(p policy.Planned) bool {
+func (b *Broadcaster) Queue(p policy.Planned) bool { return b.queueFrom(p, passFiller) }
+
+func (b *Broadcaster) queueFrom(p policy.Planned, filler uint64) bool {
 	var ok bool
-	if !b.call(func() { ok = b.queue(p) }) {
+	if !b.call(func() { ok = b.queue(p, filler) }) {
 		return false
 	}
 
 	return ok
 }
 
-// Flush sends the partial vote batches now: the reviews that fed them have ended.
+// followQueuer takes the plans of one follow-up review, so that the batches it fills go out when it ends.
+type followQueuer struct {
+	b   *Broadcaster
+	job uint64
+}
+
+func (q followQueuer) Queue(p policy.Planned) bool { return q.b.queueFrom(p, q.job) }
+
+// Flush reports that the pass feeding Queue has ended: the partial vote batches it filled go out now, except those a
+// follow-up review is still filling.
 func (b *Broadcaster) Flush() {
-	b.post(func() {
-		for _, e := range b.st.entries {
-			if len(e.queued) > 0 {
-				e.ready = true
-			}
-		}
-	})
+	b.post(func() { b.reviewEnded(passFiller) })
 }
 
 // TakeFailures returns the failures resolved since the last call.
@@ -419,7 +428,8 @@ func (b *Broadcaster) pump() {
 // startBuild hands e's queued messages to a worker as one transaction.
 func (b *Broadcaster) startBuild(e *slotEntry) {
 	tx := &liveTx{msgs: e.queued, phase: building, busy: true, inFlight: true}
-	e.tx, e.queued, e.ready = tx, nil, false
+	e.tx = tx
+	e.clearQueue()
 	b.st.inFlight++
 	b.o.Metrics.AddTxInFlight(1)
 
@@ -490,6 +500,8 @@ func (b *Broadcaster) startFollowUp() {
 	}
 
 	slices.SortFunc(job.ids, sinkid.Compare)
+	s.followJobs++
+	job.id = s.followJobs
 	s.followBusy = true
 	b.follow <- job
 }
@@ -501,10 +513,8 @@ func (b *Broadcaster) followUps(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case job := <-b.follow:
-			err := b.getReviewer().Review(ctx, job.ids, job.minHeight)
-			if err == nil {
-				b.Flush()
-			} else if !errors.Is(err, scan.ErrPassAborted) && ctx.Err() == nil {
+			err := b.getReviewer().Review(scan.WithQueuer(ctx, followQueuer{b: b, job: job.id}), job.ids, job.minHeight)
+			if err != nil && !errors.Is(err, scan.ErrPassAborted) && ctx.Err() == nil {
 				b.log.Warn().Err(err).Int("transfers", len(job.ids)).Msg("follow-up review failed; retrying in the next window")
 			}
 
@@ -513,11 +523,12 @@ func (b *Broadcaster) followUps(ctx context.Context) {
 	}
 }
 
-// followDone drops the deferrals a successful review covered. A failed or skipped review keeps them, counting
-// nothing, for the next window.
+// followDone releases the batches the review filled and drops the deferrals a successful review covered. A failed or
+// skipped review keeps them, counting nothing, for the next window.
 func (b *Broadcaster) followDone(job followJob, err error) {
 	s := &b.st
 	s.followBusy = false
+	b.reviewEnded(job.id)
 
 	if err != nil {
 		s.followFailed = job.window

@@ -76,6 +76,9 @@ type liveTx struct {
 	observed bool
 	// inFlight means the transaction counts against MaxInFlight.
 	inFlight bool
+	// abandoned means Wait reported the messages of this transaction, still being built, as not sent: nothing more is
+	// written for them, and a transaction the build sends anyway keeps its slot without being observed.
+	abandoned bool
 }
 
 // slotEntry is a slot in one window: the messages queued for it, then the transaction built from them.
@@ -86,8 +89,11 @@ type slotEntry struct {
 	// seq orders entries by their first queued message, which is plan order.
 	seq    uint64
 	queued []policy.Planned
-	// ready marks a partial vote batch that goes out without waiting to fill.
-	ready bool
+	// filling holds the reviews still queuing into the batch: passFiller, or a follow-up's job number. A partial vote
+	// batch goes out once every review that filled it has ended, or at its flush lead (spec §6.2).
+	filling map[uint64]struct{}
+	// lead marks a vote batch that has reached its flush lead.
+	lead bool
 	// keys holds every message key queued or sent in the slot this window.
 	keys map[policy.Key]struct{}
 	tx   *liveTx
@@ -96,6 +102,19 @@ type slotEntry struct {
 }
 
 func (e *slotEntry) drop(p policy.Planned) { delete(e.keys, p.Key) }
+
+// clearQueue empties the batch, which no review fills any more.
+func (e *slotEntry) clearQueue() {
+	e.queued, e.lead = nil, false
+	clear(e.filling)
+}
+
+// reviewEnded records that filler has stopped queuing: batches it alone was still filling can go out.
+func (b *Broadcaster) reviewEnded(filler uint64) {
+	for _, e := range b.st.entries {
+		delete(e.filling, filler)
+	}
+}
 
 // deferral is a message that waits for a review in a later window.
 type deferral struct {
@@ -125,8 +144,11 @@ func (b *Broadcaster) capacity(kind policy.MsgKind) int {
 	return 1
 }
 
-// queue admits a planned message to its slot, or skips or defers it (spec §6.5).
-func (b *Broadcaster) queue(p policy.Planned) bool {
+// passFiller is the review behind a plain Queue: a pass, whose end Flush reports.
+const passFiller = 0
+
+// queue admits a message that the review filler planned to its slot, or skips or defers it (spec §6.5).
+func (b *Broadcaster) queue(p policy.Planned, filler uint64) bool {
 	s := &b.st
 	if s.stopping {
 		return false
@@ -150,7 +172,7 @@ func (b *Broadcaster) queue(p policy.Planned) bool {
 	}
 
 	if e == nil {
-		e = &slotEntry{key: k, timeout: timeout, kind: p.Key.Kind, keys: map[policy.Key]struct{}{}}
+		e = &slotEntry{key: k, timeout: timeout, kind: p.Key.Kind, keys: map[policy.Key]struct{}{}, filling: map[uint64]struct{}{}}
 		s.entries[k] = e
 	}
 
@@ -170,6 +192,7 @@ func (b *Broadcaster) queue(p policy.Planned) bool {
 
 	e.queued = append(e.queued, p)
 	e.keys[p.Key] = struct{}{}
+	e.filling[filler] = struct{}{}
 	delete(s.deferred, p.Key)
 
 	return true
@@ -218,9 +241,9 @@ func (b *Broadcaster) checkQueued() {
 				e.drop(p)
 				b.deferMsg(p, reasonCutoff, e.key.window, e.timeout)
 			}
-			e.queued, e.ready = nil, false
+			e.clearQueue()
 		case left <= cutoff+timing.flushLead:
-			e.ready = true
+			e.lead = true
 		}
 	}
 }
@@ -233,7 +256,7 @@ func (b *Broadcaster) sendable() []*slotEntry {
 		if e.tx != nil || e.closed || len(e.queued) == 0 {
 			continue
 		}
-		if e.kind == policy.MsgVote && !e.ready && len(e.queued) < b.o.MaxMsgs {
+		if e.kind == policy.MsgVote && !e.lead && len(e.filling) > 0 && len(e.queued) < b.o.MaxMsgs {
 			continue
 		}
 		out = append(out, e)
@@ -262,11 +285,17 @@ func (b *Broadcaster) settleWindows() {
 	}
 }
 
-// applyBuild records a worker's simulation, signing and first broadcast of e's transaction.
+// applyBuild records a worker's simulation, signing and first broadcast of e's transaction. After Wait reported an
+// abandoned build's messages, nothing more is written or deferred for them; what it sent still holds its slot.
 func (b *Broadcaster) applyBuild(e *slotEntry, tx *liveTx, res buildResult) {
 	tx.busy = false
 	if res.seen != nil {
 		b.observe(res.seen.Height, res.seen.Time)
+	}
+
+	if tx.abandoned {
+		b.applyAbandoned(e, tx, res)
+		return
 	}
 
 	for _, f := range res.failed {
@@ -317,6 +346,34 @@ func (b *Broadcaster) applyBuild(e *slotEntry, tx *liveTx, res buildResult) {
 			b.o.Metrics.RecordTxMessage(sdk.MsgTypeURL(p.Msg))
 		}
 		b.progressed()
+	}
+}
+
+func (b *Broadcaster) applyAbandoned(e *slotEntry, tx *liveTx, res buildResult) {
+	for _, f := range res.failed {
+		e.drop(f.planned)
+	}
+	for _, d := range res.deferred {
+		e.drop(d.planned)
+	}
+	for _, p := range res.released {
+		e.drop(p)
+	}
+
+	r := res.sent
+	switch {
+	case r == nil || r.outcome == sendRejected:
+		for _, p := range tx.msgs {
+			e.drop(p)
+		}
+		b.endTx(e)
+	case r.outcome == sendSlotTaken:
+		b.endTx(e)
+		e.closed = true
+	default:
+		tx.msgs, tx.raw, tx.hash, tx.fee = r.msgs, r.raw, r.hash, r.fee
+		tx.phase, tx.resend, tx.observed = sent, r.outcome == sendTransport, false
+		b.leaveFlight(tx)
 	}
 }
 
@@ -376,7 +433,7 @@ func (b *Broadcaster) idle() bool {
 	}
 
 	for _, e := range s.entries {
-		if len(e.queued) > 0 || (e.tx != nil && (e.tx.phase == building || e.tx.observed)) {
+		if len(e.queued) > 0 || (e.tx != nil && ((e.tx.phase == building && !e.tx.abandoned) || e.tx.observed)) {
 			return false
 		}
 	}
@@ -385,7 +442,7 @@ func (b *Broadcaster) idle() bool {
 }
 
 // giveUp ends Wait at its limit (spec §6.5): unresolved transactions are reported unconfirmed and stop being awaited,
-// though they keep their slot until expiry; queued and deferred messages are reported not sent.
+// though they keep their slot until expiry; queued, building and deferred messages are reported not sent.
 func (b *Broadcaster) giveUp() {
 	s := &b.st
 
@@ -405,11 +462,18 @@ func (b *Broadcaster) giveUp() {
 			b.leaveFlight(tx)
 		}
 
+		if tx := e.tx; tx != nil && tx.phase == building && !tx.abandoned {
+			tx.abandoned = true
+			for _, p := range tx.msgs {
+				b.fail(p, notSent(e))
+			}
+		}
+
 		for _, p := range e.queued {
 			e.drop(p)
-			b.fail(p, "sink message not sent: queued until "+rfc3339(e.timeout))
+			b.fail(p, notSent(e))
 		}
-		e.queued, e.ready = nil, false
+		e.clearQueue()
 	}
 
 	deferred := make([]*deferral, 0, len(s.deferred))
@@ -435,7 +499,7 @@ func (b *Broadcaster) shutdown() {
 		for _, p := range e.queued {
 			e.drop(p)
 		}
-		e.queued, e.ready = nil, false
+		e.clearQueue()
 	}
 	clear(s.deferred)
 }
@@ -450,5 +514,8 @@ func (b *Broadcaster) settled() bool {
 
 	return true
 }
+
+// notSent is the report of a message still queued or being built in e when Wait gives up (spec §6.5).
+func notSent(e *slotEntry) string { return "sink message not sent: queued until " + rfc3339(e.timeout) }
 
 func rfc3339(t time.Time) string { return t.UTC().Format(time.RFC3339Nano) }

@@ -22,6 +22,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	sinkv1 "pkg.akt.dev/go/node/sink/v1"
 
@@ -500,12 +502,13 @@ func (h *harness) options() Options {
 	}
 }
 
-// start runs a broadcaster on chain (h.chain when nil) until the test ends.
-func (h *harness) start(o Options, s signer.Signer, chain *akash.Client) *proc {
-	return h.startCtx(context.Background(), o, s, chain)
+// start runs a broadcaster on chain (h.chain when nil) until the test ends; wrap, when given, changes what the
+// broadcaster sees of the chain.
+func (h *harness) start(o Options, s signer.Signer, chain *akash.Client, wrap ...func(Chain) Chain) *proc {
+	return h.startCtx(context.Background(), o, s, chain, wrap...)
 }
 
-func (h *harness) startCtx(ctx context.Context, o Options, s signer.Signer, chain *akash.Client) *proc {
+func (h *harness) startCtx(ctx context.Context, o Options, s signer.Signer, chain *akash.Client, wrap ...func(Chain) Chain) *proc {
 	h.t.Helper()
 
 	if chain == nil {
@@ -514,7 +517,11 @@ func (h *harness) startCtx(ctx context.Context, o Options, s signer.Signer, chai
 
 	p := &proc{h: h, o: o, chain: chain, out: &output{}, done: make(chan struct{})}
 	p.ev = events.NewWriter(p.out)
-	p.b = New(o, chain, h.builder(s), p.ev)
+	var c Chain = chain
+	for _, w := range wrap {
+		c = w(c)
+	}
+	p.b = New(o, c, h.builder(s), p.ev)
 
 	ctx, p.cancel = context.WithCancel(ctx)
 	go func() {
@@ -1077,6 +1084,102 @@ func TestDeferredReviewedNextWindow(t *testing.T) {
 	require.Empty(t, p.lines())
 }
 
+// gatedReviewer holds each review until gate is closed.
+type gatedReviewer struct {
+	Reviewer
+	gate  chan struct{}
+	calls atomic.Int64
+	ended atomic.Int64
+}
+
+func (r *gatedReviewer) Review(ctx context.Context, ids []sinkid.ID, minHeight int64) error {
+	r.calls.Add(1)
+	defer r.ended.Add(1)
+	<-r.gate
+
+	return r.Reviewer.Review(ctx, ids, minHeight)
+}
+
+func TestFollowUpSendsOnlyItsBatches(t *testing.T) {
+	t.Run("a pass and a follow-up fill different slots", func(t *testing.T) {
+		h := newHarness(t, setup{change: func(sc *simnode.Scenario) {
+			sc.Akash.BroadcastFaults = []simnode.BroadcastFault{{Kind: simnode.FaultNonceTaken}}
+		}})
+		p := h.start(h.options(), h.signer, nil)
+		rev := &gatedReviewer{gate: make(chan struct{})}
+		p.wire(func(s *scan.Scanner) Reviewer { rev.Reviewer = s; return rev })
+
+		// X is deferred in window w: its slot is taken.
+		st := h.snapshot()
+		w := WindowOf(st.Time)
+		pair := h.sameSlotVotes(st, 2)
+		var x policy.Planned
+		for i := range mixVotes {
+			if c := h.plan(st, i); slotOf(c) != slotOf(pair[0]) && !containsID(pair, c.ID) {
+				x = c
+				break
+			}
+		}
+		require.True(t, p.b.Queue(x))
+		p.b.Flush()
+		require.Eventually(t, func() bool { return p.deferred()[x.ID.String()] == reasonSlotBusy }, 5*time.Second, time.Millisecond)
+
+		// In window w+1 a pass starts filling slot A while the follow-up for X waits to start.
+		h.blockAt(WindowStart(w + 1).Add(time.Second))
+		h.tick()
+		next := h.snapshot()
+		require.Equal(t, w+1, WindowOf(next.Time))
+		pair = h.sameSlotVotes(next, 2)
+		require.True(t, p.b.Queue(pair[0]))
+		h.eventually(func() bool { return rev.calls.Load() == 1 }, "the follow-up starts")
+
+		// The follow-up queues X into its own slot and ends: only X goes out.
+		close(rev.gate)
+		require.Eventually(t, func() bool { return rev.ended.Load() == 1 }, 5*time.Second, time.Millisecond)
+		got := h.waitBroadcasts(2)
+		require.Equal(t, []string{x.ID.String()}, got[1].ids)
+		for range 3 {
+			h.tick()
+		}
+		require.Len(t, h.node.Broadcasts(), 2, "the pass's batch keeps filling")
+
+		// The pass's later vote for its slot joins the batch, and the batch goes out when the pass ends.
+		require.True(t, p.b.Queue(pair[1]))
+		require.Empty(t, p.deferred())
+		p.b.Flush()
+		require.ElementsMatch(t, []string{pair[0].ID.String(), pair[1].ID.String()}, h.waitBroadcasts(3)[2].ids)
+	})
+
+	t.Run("a batch both filled waits for the later review", func(t *testing.T) {
+		h := newHarness(t, setup{})
+		p := h.start(h.options(), h.signer, nil)
+		pair := h.sameSlotVotes(h.snapshot(), 2)
+		follow := followQueuer{b: p.b, job: 7}
+
+		require.True(t, p.b.Queue(pair[0]))
+		require.True(t, follow.Queue(pair[1]))
+
+		p.b.Flush()
+		for range 3 {
+			h.tick()
+		}
+		require.Empty(t, h.node.Broadcasts(), "the follow-up still fills the batch")
+
+		require.True(t, p.b.call(func() { p.b.reviewEnded(follow.job) }))
+		require.Len(t, h.waitBroadcasts(1)[0].ids, 2)
+	})
+
+	t.Run("the flush lead does not wait for reviews", func(t *testing.T) {
+		h := newHarness(t, setup{})
+		p := h.start(h.options(), h.signer, nil)
+		vote := h.plan(h.snapshot(), 0)
+
+		require.True(t, followQueuer{b: p.b, job: 7}.Queue(vote))
+		h.blockAt(SlotTimeout(WindowOf(vote.PlanTime), slotOf(vote)).Add(-29 * time.Second))
+		h.eventually(func() bool { return len(h.node.Broadcasts()) == 1 }, "sent at its flush lead")
+	})
+}
+
 func TestInFlightStates(t *testing.T) {
 	// requeue checks that a released message can be queued again and is then sent.
 	requeue := func(t *testing.T, h *harness, p *proc, pl policy.Planned, fix func()) {
@@ -1460,6 +1563,61 @@ func TestHaltedChain(t *testing.T) {
 		require.Contains(t, errs[vote.ID.String()], "until 2026-11-12T10:01:59.")
 	})
 
+	for _, halted := range []bool{true, false} {
+		t.Run(fmt.Sprintf("a message still being built (halted %v)", halted), func(t *testing.T) {
+			h := newHarness(t, setup{})
+			var down atomic.Bool
+			down.Store(true)
+			o := h.options()
+			o.WaitLimit = 20 * time.Second
+			p := h.start(o, h.signer, nil, func(c Chain) Chain { return &unavailableSim{Chain: c, down: &down} })
+			veto := h.plan(h.snapshot(), firstVeto)
+			if halted {
+				h.node.Halt()
+			}
+
+			// Chain time stands still, so the build retries the unavailable simulation without reaching its cutoff.
+			require.True(t, p.b.Queue(veto))
+			require.Eventually(t, func() bool { phase, _ := p.entry(veto); return phase == phaseBuilding }, 5*time.Second, time.Millisecond)
+
+			done := make(chan int, 1)
+			go func() { done <- p.b.Wait(t.Context()) }()
+			var failures int
+			finished := false
+			for i := 0; i < 20 && !finished; i++ {
+				h.clock.Advance(2 * time.Second)
+				select {
+				case failures = <-done:
+					finished = true
+				case <-time.After(20 * time.Millisecond):
+				}
+			}
+			require.True(t, finished, "Wait returns at the waiting limit")
+			require.Equal(t, 1, failures, "the building message counts")
+			_, errs := outcomes(t, p.lines())
+			require.Equal(t, map[string]string{
+				veto.ID.String(): "sink message not sent: queued until " + SlotTimeout(WindowOf(veto.PlanTime), slotOf(veto)).Format(time.RFC3339Nano),
+			}, errs)
+
+			// The build sends after all: the transaction keeps its slot, and nothing more is written for the veto.
+			down.Store(false)
+			h.eventually(func() bool { phase, _ := p.entry(veto); return phase == phaseSent }, "sent after Wait gave up")
+			require.Len(t, h.node.Broadcasts(), 1)
+			require.False(t, p.b.Queue(veto), "the slot keeps the key")
+			require.Zero(t, p.b.Wait(t.Context()), "an abandoned transaction is not awaited")
+
+			if !halted {
+				h.commit()
+				h.eventually(func() bool { return h.executions()[executedVeto(veto.ID, 1)] == 1 }, "included")
+			}
+			for range 3 {
+				h.tick()
+			}
+			require.Empty(t, p.lines(), "no second event for the veto")
+			require.Zero(t, p.b.TakeFailures())
+		})
+	}
+
 	t.Run("start keeps both", func(t *testing.T) {
 		h, p, veto, vote := prepare(t)
 
@@ -1473,6 +1631,20 @@ func TestHaltedChain(t *testing.T) {
 		require.Equal(t, phaseSent, phase)
 		require.Equal(t, map[string]string{vote.ID.String(): reasonSlotBusy}, p.deferred())
 	})
+}
+
+// unavailableSim fails every simulation in transport while down is set.
+type unavailableSim struct {
+	Chain
+	down *atomic.Bool
+}
+
+func (c *unavailableSim) Simulate(ctx context.Context, txBytes []byte) (uint64, error) {
+	if c.down.Load() {
+		return 0, status.Error(codes.Unavailable, "connection refused")
+	}
+
+	return c.Chain.Simulate(ctx, txBytes)
 }
 
 // logBuffer collects log lines; it is safe for concurrent writers.

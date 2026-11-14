@@ -981,6 +981,21 @@ func TestReviewIDs(t *testing.T) {
 	}
 }
 
+func TestReviewWithQueuer(t *testing.T) {
+	sc := simnode.Scenarios()["votes"]()
+	ids := idsOf(t, sc)
+	q, own := &recorder{}, &recorder{}
+	h := newHarness(t, sc, setup{queue: q})
+
+	require.NoError(t, h.scanner.Review(scan.WithQueuer(t.Context(), own), ids[:2], 0))
+	require.Len(t, own.all(), 2, "the context's queuer takes the follow-up's plans")
+	require.Empty(t, q.all())
+
+	require.NoError(t, h.scanner.Review(t.Context(), ids[2:3], 0))
+	require.Len(t, q.all(), 1)
+	require.Len(t, own.all(), 2)
+}
+
 func TestReviewRefundHead(t *testing.T) {
 	sc := simnode.Scenarios()["votes"]()
 	ids := idsOf(t, sc)

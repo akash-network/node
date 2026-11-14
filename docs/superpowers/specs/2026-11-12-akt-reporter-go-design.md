@@ -406,7 +406,7 @@ Tests pin the lemma for every message kind, including the executions without eff
 - A vote batch is sent when it is full, when the review that filled it ends, or 10 s before its send cutoff. Vetoes and refunds are sent at once.
 - A slot carries at most one live transaction per window. A transaction refused on its first send never held the replay key, so its slot can be used again in that window.
 - Before signing, the latest snapshot must still list `reporter` (otherwise `reporter was removed`), the signer's address must equal `reporter`, and the send cutoff must not have passed.
-- At most `tx.max-in-flight` transactions are unconfirmed at once. When one resolves, the broadcaster sends `MsgVetoVoid` first, then `MsgFinalizeRefund`, then vote batches in plan order.
+- At most `tx.max-in-flight` transactions are unconfirmed at once. When one resolves, the broadcaster sends `MsgVetoVoid` first, then `MsgFinalizeRefund`, then vote batches in plan order. Without a transaction index, a sent transaction leaves the in-flight count but keeps its slot until chain time passes its timeout.
 - Reviews never wait for broadcasting, so a slow or unavailable signer delays submissions, not passes. The slot table needs no separate bound: it admits each message key at most once per window (section 6.5), so it never exceeds the open set. `scan` sends everything it planned and waits for the outcomes.
 - With the defaults, at most 200 votes are unconfirmed at once (`tx.max-in-flight` × `tx.max-msgs`). A window carries at most 128 vote transactions, which is also about what 8 in flight over the roughly 16 blocks before the cutoff can confirm. A 5,000-vote backlog drains in three to four windows on a fresh node.
 
@@ -461,6 +461,7 @@ Older snapshots only defer messages; they never affect safety.
 - **Waiting limit.** `scan` waits until no transaction is unresolved, nothing is deferred and follow-up reviews are idle, or until 3 min of wall-clock time pass without progress: a submission, a resolved outcome or a new window.
   - A transaction still unresolved then, for example because the chain halted, gives `{id, error: "sink transaction unconfirmed: <HASH>"}`. It is not called expired.
   - A message still deferred gives `{id, error: "sink message not sent: deferred (<reason>) until <time>"}`, with its deferral reason (section 9.3) and its slot's timeout in RFC 3339.
+  - A message still queued, or in a transaction still being built, gives `{id, error: "sink message not sent: queued until <time>"}`, where `<time>` is its slot's timeout in RFC 3339. If that build sends its transaction afterwards, the transaction keeps its slot, and no further event is written for its messages.
   - Both count as failures. `start` keeps both: a sent transaction stays until inclusion or chain-time expiry, re-sending only its existing bytes, and a deferred message is reviewed again in the next window.
 - **No transaction index.** If `/status` reports `node_info.other.tx_index` as anything other than `on`, the reporter logs a warning once, because outcomes cannot be observed.
   - CheckTx rejections, including a taken slot, are still reported or deferred as above.

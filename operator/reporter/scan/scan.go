@@ -57,6 +57,14 @@ type Queuer interface {
 	Queue(policy.Planned) bool
 }
 
+type queuerKey struct{}
+
+// WithQueuer returns a context under which the reviews of a broadcasting scanner hand their plans to q instead of
+// the scanner's Queuer, so that the broadcaster can tell which review filled a batch (spec §6.2).
+func WithQueuer(ctx context.Context, q Queuer) context.Context {
+	return context.WithValue(ctx, queuerKey{}, q)
+}
+
 // Options configures a Scanner.
 type Options struct {
 	Reporter string
@@ -460,12 +468,18 @@ func (s *Scanner) review(r reviewRun, chunk *observe.Chunk, t sinkv1.TransferSta
 	}
 
 	// As in TS, nothing is handed on once the reviews were told to stop.
-	if s.queue == nil || r.stop.Err() != nil {
+	q := s.queue
+	if q != nil {
+		if own, ok := r.stop.Value(queuerKey{}).(Queuer); ok {
+			q = own
+		}
+	}
+	if q == nil || r.stop.Err() != nil {
 		return nil
 	}
 
 	for _, msg := range plan.Messages {
-		s.queue.Queue(policy.Planned{
+		q.Queue(policy.Planned{
 			ID:         rec.ID,
 			Msg:        msg,
 			Key:        policy.KeyOf(rec.ID, msg),
