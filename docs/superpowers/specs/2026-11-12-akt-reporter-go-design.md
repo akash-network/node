@@ -853,6 +853,8 @@ These steps go in the new `contracts/solana/docs/reporter-migration.md`.
 6. Keep the existing alert routing. The event schema is unchanged; only the order across transfers differs.
 7. Adjust fees. TS paid `feeAmountUakt` for each single-message transaction; with batching, use `gas = auto` and `gas-prices`.
 
+To roll back, stop akt-reporter, wait until the node it used shows a block whose time is at least 2 minutes after it exited, then wait the TS reporter's `maxAgeSeconds` plus 10 s before the TS reporter broadcasts. Never run both on one key.
+
 TS command-line flags map as follows:
 
 | TS flag                         | Go replacement                              |

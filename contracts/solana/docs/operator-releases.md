@@ -31,8 +31,9 @@ needs AKT for fees and admission to the Akash reporter policy. Each reporter
 must use independent Akash and replaying Solana nodes with sufficient history
 for the challenge period and expected outages. The reporter's Akash node must
 have gRPC enabled and a transaction index, and `node` and `grpc-addr` must reach
-that one node ([node requirements](reporter.md#akash-node)). Run one signing
-process per key.
+that one node ([node requirements](reporter.md#akash-node)). Run one active
+signing process per key; a warm standby is safe but wasteful
+([two processes on one key](reporter.md#two-processes-on-one-key)).
 
 ## Docker Compose
 
@@ -41,10 +42,18 @@ from [node releases](https://github.com/akash-network/node/releases).
 
 ### Reporter
 
+Use a directory and a Compose project of their own for the Go reporter. If the
+TypeScript reporter runs from `$HOME/akt-reporter`, its project and service names
+are the same as the Go reporter's, so setting up the Go files there would recreate
+the TypeScript container as a Go preview and overwrite its `.env`. Never do that.
+Leave the TypeScript directory alone until the
+[migration](reporter-migration.md#steps) is complete. A fresh install with no
+TypeScript reporter can use any directory.
+
 ```bash
 VERSION=0.2.0
-mkdir -p "$HOME/akt-reporter"
-cd "$HOME/akt-reporter"
+mkdir -p "$HOME/akt-reporter-go"
+cd "$HOME/akt-reporter-go"
 BASE=https://github.com/akash-network/node/releases/download/reporter%2Fv$VERSION
 curl -fLO "$BASE/akt-reporter-compose.yaml"
 curl -fLO "$BASE/akt-reporter.env.example"
@@ -54,11 +63,13 @@ curl -fLO "$BASE/akt-reporter_${VERSION}_checksums.txt"
 sha256sum --ignore-missing --check "akt-reporter_${VERSION}_checksums.txt"
 mv akt-reporter-compose.yaml docker-compose.yaml
 mv akt-reporter.env.example .env
+echo COMPOSE_PROJECT_NAME=akt-reporter-go >> .env
 cp reporter.env.example reporter.env
 ```
 
 `.env` holds the Compose substitutions: `OPERATOR_IMAGE`, `OPERATOR_UID`,
-`OPERATOR_GID` and `OPERATOR_HOME`. `reporter.env` is optional and holds
+`OPERATOR_GID` and `OPERATOR_HOME`, plus the project name that keeps this
+deployment apart from any other. `reporter.env` is optional and holds
 commented `AKT_REPORTER_*` overrides. Do not put keys or seed phrases in either
 file. Inside Docker, `localhost` means the reporter container, not your host or
 your nodes: set `node`, `grpc-addr` and `solana.rpc` to addresses the container
@@ -66,14 +77,18 @@ can reach.
 
 The reporter's home is mounted read-only at `/home/akt-reporter`. Create it as the
 administrator, owned by the container user (UID/GID `10001` by default; set
-`OPERATOR_UID` and `OPERATOR_GID` in `.env` to use a dedicated account). Edit
-a copy of the example, then install it:
+`OPERATOR_UID` and `OPERATOR_GID` in `.env` to use a dedicated account). The
+TypeScript reporter kept its config and key in `/etc/akt-reporter`; give the Go
+reporter a different home, such as `/etc/akt-reporter-go`, and set it as
+`OPERATOR_HOME` in `.env`, so that its container never mounts the old key. Edit a
+copy of the example, then install it:
 
 ```bash
+REPORTER_HOME=/etc/akt-reporter-go
 cp reporter.example.toml reporter.toml
 "${EDITOR:-vi}" reporter.toml
-sudo install -d -o 10001 -g 10001 -m 0700 /etc/akt-reporter /etc/akt-reporter/config
-sudo install -o 10001 -g 10001 -m 0600 reporter.toml /etc/akt-reporter/config/reporter.toml
+sudo install -d -o 10001 -g 10001 -m 0700 "$REPORTER_HOME" "$REPORTER_HOME/config"
+sudo install -o 10001 -g 10001 -m 0600 reporter.toml "$REPORTER_HOME/config/reporter.toml"
 ```
 
 Set `reporter`, `chain-id`, `node`, `grpc-addr` and the `solana.*` keys. Set
@@ -85,7 +100,7 @@ mounted read-write, so they run outside Compose:
 
 ```bash
 IMAGE=ghcr.io/akash-network/akt-reporter:$VERSION
-docker run --rm -i -v /etc/akt-reporter:/home/akt-reporter "$IMAGE" \
+docker run --rm -i -v "$REPORTER_HOME":/home/akt-reporter "$IMAGE" \
   keys import-hex reporter < reporter.key
 ```
 
@@ -115,7 +130,8 @@ scans pass and, when replacing the TypeScript reporter, the
 docker compose up -d
 ```
 
-Set it back to `false` to return to preview. Compose gives the reporter 60
+Set it back to `false` to return to preview. After a successful migration the
+TypeScript directory can be removed. Compose gives the reporter 60
 seconds to stop, which covers its 30-second confirmation wait.
 
 ### Relayer

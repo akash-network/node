@@ -42,32 +42,32 @@ Trust model, in one line each:
 
 ## Components
 
-| Component                     | What it runs                           | Count                                       | Who operates                                   | Public?     |
-| ----------------------------- | -------------------------------------- | ------------------------------------------- | ---------------------------------------------- | ----------- |
-| Akash full node               | `akash` with x/sink                    | 1 per relayer, reporter, monitor and portal | Each operator for their own                    | No          |
-| Solana RPC node               | Agave (`agave-validator` in RPC mode)  | 1 per reporter; 2 sources for the relayer   | Each operator for their own                    | No          |
-| Relayer                       | `local/relay.ts --config`              | 1 required, 2 or more recommended           | DevOps (and anyone else)                       | No          |
-| Reporter                      | `reporter/run.ts --watch --broadcast`  | 7 or more                                   | 7 independent operators; DevOps runs only ours | No          |
-| Monitoring and reconciliation | Alert rules plus the supply reconciler | 1                                           | DevOps                                         | No          |
-| Portal                        | Static web app plus a small API        | 1                                           | DevOps                                         | Yes (HTTPS) |
-| Token metadata                | `akt.json` and `akt.png`               | 1                                           | DevOps                                         | Yes (HTTPS) |
+| Component                     | What it runs                              | Count                                       | Who operates                                   | Public?     |
+| ----------------------------- | ----------------------------------------- | ------------------------------------------- | ---------------------------------------------- | ----------- |
+| Akash full node               | `akash` with x/sink                       | 1 per relayer, reporter, monitor and portal | Each operator for their own                    | No          |
+| Solana RPC node               | Agave (`agave-validator` in RPC mode)     | 1 per reporter; 2 sources for the relayer   | Each operator for their own                    | No          |
+| Relayer                       | `local/relay.ts --config`                 | 1 required, 2 or more recommended           | DevOps (and anyone else)                       | No          |
+| Reporter                      | `akt-reporter start` (`broadcast = true`) | 7 or more                                   | 7 independent operators; DevOps runs only ours | No          |
+| Monitoring and reconciliation | Alert rules plus the supply reconciler    | 1                                           | DevOps                                         | No          |
+| Portal                        | Static web app plus a small API           | 1                                           | DevOps                                         | Yes (HTTPS) |
+| Token metadata                | `akt.json` and `akt.png`                  | 1                                           | DevOps                                         | Yes (HTTPS) |
 
 Keep each component on its own host or VM. Never run the relayer, a reporter
 and the portal on one machine, and keep no keys on the portal host.
 
 ## Versions and artifacts
 
-| Item                        | Version                                                                                  | Source                                                             |
-| --------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| Akash node with x/sink      | Reviewed native Sink source and matching SDK dependency                                  | Build the reviewed node checkout and retain its source fingerprint |
-| Akash chain SDK             | Same local archive in the bridge and portal; retain its package version and archive hash | [SDK integration](sdk-integration.md)                              |
-| Agave (Solana)              | Pin the runtime and build tools in the reviewed deployment manifest                      | Retain the exact binary and its hash                               |
-| Relayer, reporter and tools | Reviewed `contracts/solana` source paired with that SDK and program IDL                  | Build with the checked-in package lock                             |
-| Node.js                     | 24.14.1                                                                                  | nodejs.org                                                         |
-| Rust                        | 1.89.0 (`contracts/solana/rust-toolchain.toml`)                                          | rustup                                                             |
-| Anchor CLI                  | 0.32.1                                                                                   | build host only                                                    |
-| Go                          | 1.26.2 (node `go.mod`)                                                                   | build host only                                                    |
-| Program hashes              | Record the ELF, IDL and generated TypeScript hashes from one build                       | `npm run build:verifiable` output and the deployment manifest      |
+| Item                   | Version                                                                                  | Source                                                             |
+| ---------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Akash node with x/sink | Reviewed native Sink source and matching SDK dependency                                  | Build the reviewed node checkout and retain its source fingerprint |
+| Akash chain SDK        | Same local archive in the bridge and portal; retain its package version and archive hash | [SDK integration](sdk-integration.md)                              |
+| Agave (Solana)         | Pin the runtime and build tools in the reviewed deployment manifest                      | Retain the exact binary and its hash                               |
+| Relayer and tools      | Reviewed `contracts/solana` source paired with that SDK and program IDL                  | Build with the checked-in package lock                             |
+| Node.js                | 24.14.1                                                                                  | nodejs.org                                                         |
+| Rust                   | 1.89.0 (`contracts/solana/rust-toolchain.toml`)                                          | rustup                                                             |
+| Anchor CLI             | 0.32.1                                                                                   | build host only                                                    |
+| Go                     | 1.26.2 (node `go.mod`)                                                                   | build host only                                                    |
+| Program hashes         | Record the ELF, IDL and generated TypeScript hashes from one build                       | `npm run build:verifiable` output and the deployment manifest      |
 
 Build on a clean Linux builder and install immutable service artifacts using
 [service deployment](deploy-services.md). That process includes the locked
@@ -155,15 +155,15 @@ its own payer and state directory for redundancy and bursts.
 Each reporter operator runs one. DevOps runs ours and gives other operators
 this section.
 
-| Need    | Value                                                                                                                                                                                                                                                                           |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Runtime | Node 24 plus the `contracts/solana` artifact                                                                                                                                                                                                                                    |
-| Config  | JSON file, see [reporter](reporter.md#run-an-independent-reporter) (`reporter/config.example.json`)                                                                                                                                                                             |
-| Inputs  | Its own Akash node and its own Solana RPC node                                                                                                                                                                                                                                  |
-| Key     | Owner-only raw Akash private-key file, or an optional external signer ([key custody](reporter.md#key-custody))                                                                                                                                                                  |
-| Funds   | AKT for transaction fees in the reporter account                                                                                                                                                                                                                                |
-| Process | `akt-reporter.service` runs `deploy/service.sh reporter-preview`. After governance adds the reporter, a reviewed drop-in switches it to `reporter-broadcast`, which requires `keyFile` or `externalSigner`; see [service deployment](deploy-services.md#supervise-and-activate) |
-| Rule    | One signing process per reporter account                                                                                                                                                                                                                                        |
+| Need    | Value                                                                                                                                                                                                                     |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Runtime | The static `akt-reporter` binary or the `ghcr.io/akash-network/akt-reporter` image; see [operator releases](operator-releases.md)                                                                                         |
+| Config  | `reporter.toml` in the reporter home, plus `AKT_REPORTER_*` variables and flags; see the [configuration reference](operator-configuration.md#reporter-configuration)                                                      |
+| Inputs  | Its own Akash node with gRPC enabled and a transaction index, where `node` and `grpc-addr` reach the same node ([node requirements](reporter.md#akash-node)), and its own Solana RPC node                                 |
+| Key     | A keyring key (`test` or `file` backend) or a Cosmos-KMS signer ([key custody](reporter.md#key-custody))                                                                                                                  |
+| Funds   | AKT for transaction fees in the reporter account                                                                                                                                                                          |
+| Process | `akt-reporter start --home …` (`akt-reporter.service`, or the image's default command) starts in preview. After governance adds the reporter, set `broadcast = true` as the [migration guide](reporter-migration.md) says |
+| Rule    | One active signing process per reporter account; a warm standby is safe but wasteful                                                                                                                                      |
 
 ### Monitoring and reconciliation
 

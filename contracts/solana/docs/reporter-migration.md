@@ -62,7 +62,21 @@ when.
    [Docker Compose](operator-releases.md#docker-compose) or the
    [systemd unit](deploy-services.md#supervise-and-activate).
 
-5. **Switch over.** **Stop the TypeScript reporter. On the Akash node that
+   With Compose, run the Go reporter from its **own directory and its own Compose
+   project**, for example `$HOME/akt-reporter-go` with
+   `COMPOSE_PROJECT_NAME=akt-reporter-go` in its `.env` (or
+   `docker compose -p akt-reporter-go`), and its own home such as
+   `/etc/akt-reporter-go`. The TypeScript reporter's directory has the same Compose
+   project and service names. Setting the Go files up there would recreate its
+   container as a Go preview, stop its voting without the deliberate stop of step 5,
+   and overwrite its `.env`. Leave the TypeScript directory and files alone until
+   step 5 is complete.
+
+5. **Switch over.** Stop the TypeScript reporter with its own files, from its own
+   directory: `docker compose -f docker-compose.yaml -f broadcast.yaml down`, or
+   `systemctl stop` for a service. Then follow this rule.
+
+   **Stop the TypeScript reporter. On the Akash node that
    `akt-reporter` uses, wait until 21 blocks have been committed after the stop,
    then wait two more minutes. Only then enable broadcast (`broadcast = true`, or
    `AKT_REPORTER_BROADCAST=true`). Never run the TypeScript reporter and
@@ -76,6 +90,11 @@ when.
    `max-age` old, plus 10 seconds of clock skew), so its first plans already see the
    effect of those transactions.
 
+   After a successful migration, the TypeScript directory (its `docker-compose.yaml`,
+   `broadcast.yaml`, `.env` and `config.json`) can be removed once you no longer
+   need it for rollback. A fresh install with no TypeScript reporter can use any
+   directory.
+
 6. **Keep the existing alert routing.** The event schema is unchanged; only the
    order across transfers differs. The [alerts table](reporter.md#alerts) is the
    same. `akt-reporter` adds Prometheus metrics: set `metrics.listen`.
@@ -87,12 +106,22 @@ when.
 
 After step 5, confirm that `{id, transactionHash}` events appear when there is work
 to do, and that `akt_reporter_tx_total{result="included"}` grows. Once broadcast
-is on, run one signing process. A warm standby is safe
+is on, run one active signing process. A warm standby is safe
 ([two processes on one key](reporter.md#two-processes-on-one-key)), but wastes
 signatures and node load.
 
-To go back to the TypeScript reporter, stop `akt-reporter` first and wait for it to
-exit, which takes up to a minute. Never run both at once.
+**Rolling back to the TypeScript reporter.** Stop `akt-reporter` and wait for it to
+exit, which takes up to a minute. **Then wait until the reporter's own Akash node
+shows a block whose time is at least 2 minutes after `akt-reporter` exited, and
+then wait the TypeScript reporter's `maxAgeSeconds` plus 10 more seconds. Only then
+start the TypeScript reporter in broadcast mode. Never run both on one key.**
+
+Why: when `akt-reporter` exits, the unordered transactions it already sent stay
+valid until their timeouts, up to one two-minute window after the snapshot they were
+planned from. A TypeScript reporter that broadcast at once would plan from snapshots
+that do not yet show them, and send ordered transactions for the same messages. The
+wait is step 5 in reverse. You can start the TypeScript reporter in preview at any
+time.
 
 ## Configuration mapping
 
