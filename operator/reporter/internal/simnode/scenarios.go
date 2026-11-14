@@ -79,6 +79,10 @@ var benchmarks = map[string]func() Scenario{
 	"steady-100k": Steady100k,
 	// broadcast-mix: the votes, vetoes and refunds the broadcaster's component tests send (spec §11.3).
 	"broadcast-mix": broadcastMixScenario,
+	// refund-queue: three eligible refunds that the broadcaster finalizes one after another (spec §6.6).
+	"refund-queue": refundQueueScenario,
+	// drain-5000: the 5,000 planned votes of the drain test (spec §11.3).
+	"drain-5000": drainScenario,
 }
 
 // Goldens returns the sorted names of the scenarios that have a parity golden: every scenario but the benchmarks.
@@ -422,6 +426,55 @@ func broadcastMixScenario() Scenario {
 		slot := resolvedSlotBase + uint64(i) //nolint:gosec // small
 		a.add(refundPending(a, i, challengeEnded+int64(k), vote(Reporter, 1, sinkv1.OutcomeVoided, slot, sigBytes(scenarioID(i).String()))))
 		s.resolve(statusOf(i, slot, voidedFor(VoidGovernance)))
+	}
+
+	return sc
+}
+
+// Shape of refund-queue and drain-5000.
+const (
+	refundQueueCount = 3
+	drainVotes       = 5_000
+	drainBlocks      = 100
+)
+
+// refundQueueScenario has refunds past their challenge windows with this reporter's void vote and the void
+// finalized on Solana, queued in transfer order. Only the head plans a finalization; each payment makes the next
+// one the head.
+func refundQueueScenario() Scenario {
+	sc := baseScenario(time.Second)
+	a, s := sc.Akash, &sc.Solana
+
+	for i := range refundQueueCount {
+		slot := resolvedSlotBase + uint64(i) //nolint:gosec // small
+		a.add(refundPending(a, i, challengeEnded+int64(i), vote(Reporter, 1, sinkv1.OutcomeVoided, slot, sigBytes(scenarioID(i).String()))))
+		s.resolve(statusOf(i, slot, voidedFor(VoidGovernance)))
+	}
+
+	return sc
+}
+
+// drainScenario has void-requested transfers voided on Solana without this reporter's vote, each planning one
+// MsgReportOutcome, like votes. Their resolutions are spread over 100 blocks.
+func drainScenario() Scenario {
+	sc := baseScenario(time.Second)
+	a, s := sc.Akash, &sc.Solana
+	a.Transfers = make([]Transfer, 0, drainVotes)
+
+	perBlock := drainVotes / drainBlocks
+	blocks := make([][]Transaction, drainBlocks)
+	for i := range drainVotes {
+		b := i / perBlock
+		a.add(voidRequested(a, i))
+
+		st := statusOf(i, resolvedSlotBase+uint64(b), voidedFor(VoidGovernance)) //nolint:gosec // small
+		s.putStatus(st)
+		blocks[b] = append(blocks[b], resolutionTx(st, st.ID.String(),
+			aktFrame("Program log: Instruction: VoidTransfer", TransferResolvedLog(st))))
+	}
+
+	for b, txs := range blocks {
+		s.putBlock(resolvedSlotBase+uint64(b), txs...) //nolint:gosec // small
 	}
 
 	return sc

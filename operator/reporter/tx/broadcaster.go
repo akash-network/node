@@ -82,6 +82,9 @@ type Options struct {
 	// Clock drives timers only; chain time comes from snapshots. Nil means the system clock.
 	Clock   clock.Clock
 	Metrics *metrics.Metrics
+
+	// changed, set only by tests, sees the owner's state after every change, on the owner goroutine.
+	changed func(*ownerState)
 }
 
 // Broadcaster sends planned messages as batched unordered transactions under the nonce-slot rules of spec §6. One
@@ -131,6 +134,10 @@ type ownerState struct {
 	followJobs uint64
 	// followFailed is the window of the last follow-up that failed; none is retried before a later window.
 	followFailed int64
+	// refundAt is the highest inclusion height of a finalized refund whose refund-head review has not started; zero
+	// means none. refundHeld keeps it from starting after a failed review, until the next inclusion or pass.
+	refundAt   int64
+	refundHeld bool
 
 	// progress is when the last submission, outcome or new window happened.
 	progress time.Time
@@ -140,7 +147,9 @@ type ownerState struct {
 
 type followJob struct {
 	// id tells the batches this review fills from the others; it is never passFiller.
-	id        uint64
+	id uint64
+	// refund marks a review of the refund head; the others review deferred transfers.
+	refund    bool
 	ids       []sinkid.ID
 	keys      []policy.Key
 	window    int64
@@ -250,17 +259,20 @@ type followQueuer struct {
 func (q followQueuer) Queue(p policy.Planned) bool { return q.b.queueFrom(p, q.job) }
 
 // Flush reports that the pass feeding Queue has ended: the partial vote batches it filled go out now, except those a
-// follow-up review is still filling.
+// follow-up review is still filling. A refund-head review that failed is retried.
 func (b *Broadcaster) Flush() {
-	b.post(func() { b.reviewEnded(passFiller) })
+	b.post(func() {
+		b.reviewEnded(passFiller)
+		b.st.refundHeld = false
+	})
 }
 
 // TakeFailures returns the failures resolved since the last call.
 func (b *Broadcaster) TakeFailures() int { return int(b.failures.Swap(0)) }
 
-// Wait returns once nothing is queued, unresolved or deferred and no follow-up review runs, or once WaitLimit passes
-// without progress; it then reports what is left (spec §6.5). It also returns when ctx ends. It returns the failures
-// resolved since the last TakeFailures.
+// Wait returns once nothing is queued, unresolved or deferred and no follow-up review runs or waits to start, or once
+// WaitLimit passes without progress; it then reports what is left (spec §6.5). It also returns when ctx ends. It
+// returns the failures resolved since the last TakeFailures.
 func (b *Broadcaster) Wait(ctx context.Context) int {
 	began := b.o.Clock.Now()
 
@@ -421,6 +433,10 @@ func (b *Broadcaster) pump() {
 		b.startFollowUp()
 	}
 
+	if b.o.changed != nil {
+		b.o.changed(s)
+	}
+
 	close(s.notify)
 	s.notify = make(chan struct{})
 }
@@ -476,10 +492,33 @@ func (b *Broadcaster) resend(e *slotEntry, tx *liveTx) {
 	})
 }
 
-// startFollowUp reviews the transfers deferred in earlier windows once a block of a later window is seen (spec §6.6).
+// refundIncluded records a finalized refund's inclusion: the refund head is reviewed next (spec §6.6).
+func (b *Broadcaster) refundIncluded(height int64) {
+	if b.getReviewer() == nil {
+		return
+	}
+
+	s := &b.st
+	s.refundAt = max(s.refundAt, height)
+	s.refundHeld = false
+}
+
+// startFollowUp starts the next follow-up review (spec §6.6), one at a time: the refund head after a refund's
+// inclusion, at the highest inclusion height seen; otherwise, once a block of a later window is seen, the transfers
+// deferred in earlier windows.
 func (b *Broadcaster) startFollowUp() {
 	s := &b.st
-	if s.followBusy || s.window <= s.followFailed || b.getReviewer() == nil {
+	if s.followBusy || b.getReviewer() == nil {
+		return
+	}
+
+	if s.refundAt > 0 && !s.refundHeld {
+		b.startJob(followJob{refund: true, minHeight: s.refundAt})
+		s.refundAt = 0
+		return
+	}
+
+	if s.window <= s.followFailed {
 		return
 	}
 
@@ -500,6 +539,11 @@ func (b *Broadcaster) startFollowUp() {
 	}
 
 	slices.SortFunc(job.ids, sinkid.Compare)
+	b.startJob(job)
+}
+
+func (b *Broadcaster) startJob(job followJob) {
+	s := &b.st
 	s.followJobs++
 	job.id = s.followJobs
 	s.followBusy = true
@@ -513,9 +557,21 @@ func (b *Broadcaster) followUps(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case job := <-b.follow:
-			err := b.getReviewer().Review(scan.WithQueuer(ctx, followQueuer{b: b, job: job.id}), job.ids, job.minHeight)
+			r, queued := b.getReviewer(), scan.WithQueuer(ctx, followQueuer{b: b, job: job.id})
+
+			var err error
+			if job.refund {
+				err = r.ReviewRefundHead(queued, job.minHeight)
+			} else {
+				err = r.Review(queued, job.ids, job.minHeight)
+			}
+
 			if err != nil && !errors.Is(err, scan.ErrPassAborted) && ctx.Err() == nil {
-				b.log.Warn().Err(err).Int("transfers", len(job.ids)).Msg("follow-up review failed; retrying in the next window")
+				if job.refund {
+					b.log.Warn().Err(err).Int64("height", job.minHeight).Msg("refund-head review failed; retrying on the next inclusion or pass")
+				} else {
+					b.log.Warn().Err(err).Int("transfers", len(job.ids)).Msg("follow-up review failed; retrying in the next window")
+				}
 			}
 
 			b.post(func() { b.followDone(job, err) })
@@ -524,11 +580,20 @@ func (b *Broadcaster) followUps(ctx context.Context) {
 }
 
 // followDone releases the batches the review filled and drops the deferrals a successful review covered. A failed or
-// skipped review keeps them, counting nothing, for the next window.
+// skipped review keeps them, counting nothing, for the next window; a failed or skipped refund-head review is held
+// until the next inclusion or pass.
 func (b *Broadcaster) followDone(job followJob, err error) {
 	s := &b.st
 	s.followBusy = false
 	b.reviewEnded(job.id)
+
+	if job.refund {
+		// A later inclusion recorded meanwhile supersedes the retry.
+		if err != nil && s.refundAt == 0 {
+			s.refundAt, s.refundHeld = job.minHeight, true
+		}
+		return
+	}
 
 	if err != nil {
 		s.followFailed = job.window

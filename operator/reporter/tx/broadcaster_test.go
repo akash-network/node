@@ -2,6 +2,7 @@ package tx
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"crypto/sha256"
 	"encoding/json"
@@ -77,14 +78,19 @@ func (o *output) text() string {
 
 // setup configures a harness.
 type setup struct {
-	// change edits the broadcast-mix scenario before the node starts.
+	// scenario names the scenario the node serves; empty means broadcast-mix.
+	scenario string
+	// change edits the scenario before the node starts.
 	change func(*simnode.Scenario)
 	// real runs on the system clock, with a block every blockInterval.
 	real          bool
 	blockInterval time.Duration
+	// minRefresh is the clients' tracker refresh interval on the system clock; zero means 5 ms.
+	minRefresh time.Duration
 }
 
-// harness is one simnode serving broadcast-mix, on a fake clock unless the setup asks for the real one.
+// harness is one simnode serving a named scenario, broadcast-mix by default, on a fake clock unless the setup asks
+// for the real one.
 type harness struct {
 	t     *testing.T
 	node  *simnode.Node
@@ -96,18 +102,23 @@ type harness struct {
 	lead   time.Duration
 	signer signer.Signer
 	// step is how far tick advances the fake clock: the broadcasters' refresh interval.
-	step time.Duration
+	step       time.Duration
+	minRefresh time.Duration
 }
 
 func newHarness(t *testing.T, s setup) *harness {
 	t.Helper()
 
-	sc := simnode.Scenarios()["broadcast-mix"]()
+	name := s.scenario
+	if name == "" {
+		name = "broadcast-mix"
+	}
+	sc := simnode.Scenarios()[name]()
 	if s.change != nil {
 		s.change(&sc)
 	}
 
-	h := &harness{t: t, step: time.Second}
+	h := &harness{t: t, step: time.Second, minRefresh: s.minRefresh}
 	opts := simnode.Options{BlockInterval: s.blockInterval}
 	if s.real {
 		h.clk = clock.Real()
@@ -143,7 +154,7 @@ func (h *harness) dial() *akash.Client {
 
 	refresh := time.Nanosecond
 	if h.clock == nil {
-		refresh = 5 * time.Millisecond
+		refresh = cmp.Or(h.minRefresh, 5*time.Millisecond)
 	}
 
 	a, err := akash.Dial(h.t.Context(), akash.Options{

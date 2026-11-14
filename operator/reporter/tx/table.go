@@ -403,6 +403,9 @@ func (b *Broadcaster) applyLookup(e *slotEntry, tx *liveTx, h int64, final bool,
 		for _, p := range tx.msgs {
 			b.ev.Emit(events.TxHash{ID: p.ID.String(), TransactionHash: hash})
 		}
+		if e.kind == policy.MsgRefund {
+			b.refundIncluded(r.Height)
+		}
 		b.progressed()
 	case r.Code == replayCode && r.Codespace == replayCodespace && strings.Contains(r.Log, nonceTaken):
 		// Another transaction took the slot first; this one paid nothing and changed nothing.
@@ -425,10 +428,11 @@ func (b *Broadcaster) applyLookup(e *slotEntry, tx *liveTx, h int64, final bool,
 	e.closed = true
 }
 
-// idle reports nothing queued, building, awaiting an observable outcome or deferred, and no follow-up review running.
+// idle reports nothing queued, building, awaiting an observable outcome or deferred, and no follow-up review running
+// or waiting to start.
 func (b *Broadcaster) idle() bool {
 	s := &b.st
-	if s.followBusy || len(s.deferred) > 0 {
+	if s.followBusy || (s.refundAt > 0 && !s.refundHeld) || len(s.deferred) > 0 {
 		return false
 	}
 
