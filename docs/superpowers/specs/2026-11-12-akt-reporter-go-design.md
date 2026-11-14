@@ -434,7 +434,8 @@ Older snapshots only defer messages; they never affect safety.
 - Every batch is simulated through gRPC `Simulate` before signing. Simulation skips the replay-key check (section 2.2), so it cannot tell whether a slot is taken.
 - With `gas = auto`, the gas limit is ceil(gas used × `gas-adjustment`). A numeric `gas` is per message, so the limit is `gas` × the number of messages.
 - If simulation fails at `message index: N`, message N is dropped with `{id, error}` and the batch is simulated again, for up to three rounds. Messages still left after that are deferred (section 6.5), because a slot carries at most one live transaction per window.
-- A simulation failure without a message index, such as insufficient funds or an invalid timeout, fails the whole batch before submission. Each message gets `{id, error}`, and its entry is released.
+- A simulation failure without a message index, such as an invalid timeout, fails the whole batch before submission. Each message gets `{id, error}`, and its entry is released.
+- Simulation carries no fee, so an account that cannot pay is refused at CheckTx, reported per message, and its entry released.
 - The fee is `fees` when that is set, otherwise ceil(gas limit × `gas-prices`).
 - Caps: the gas limit must be at most `tx.max-gas` and the fee at most `tx.max-fee`. A batch over a cap is halved, and the second half is deferred. A single message over a cap gets `{id, error}` and is not sent. The signer's sign-bytes limit, when it declares one, is a cap like `tx.max-gas`: batches are sized to fit it, a batch over it is halved and its second half deferred, and a single message over it gets `{id, error}`.
 

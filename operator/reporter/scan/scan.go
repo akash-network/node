@@ -46,6 +46,11 @@ const (
 
 var errNotReporter = errors.New("not a current reporter")
 
+// ErrPassAborted is what Review and ReviewRefundHead return, at once and without writing or counting anything, after a
+// pass ended on a light-client pin mismatch and until the next pass begins. The pass's own alert and error stay its
+// last output (spec §5.6).
+var ErrPassAborted = errors.New("follow-up review skipped: the pass ended on a light-client pin mismatch")
+
 // Queuer takes the messages a review planned. Queue reports whether the message was taken; false means it was skipped
 // or deferred.
 type Queuer interface {
@@ -81,6 +86,8 @@ type Scanner struct {
 	cursor *akash.AuditCursor
 	// followUpFailures counts the failures of follow-up reviews until a pass adds them to its own.
 	followUpFailures atomic.Int64
+	// aborted is set from a pin mismatch that ended a pass until the next pass begins; follow-ups then skip.
+	aborted atomic.Bool
 }
 
 // New returns a scanner. q is nil in preview.
@@ -137,9 +144,15 @@ func (s *Scanner) OnChange(c observe.Change) {
 // pass reached its reviews, or else the pass error.
 func (s *Scanner) Pass(ctx context.Context, settle func() int) int {
 	began := time.Now()
+	s.aborted.Store(false)
 
 	var t tally
 	summary, err := s.pass(ctx, &t)
+
+	var mismatch *observe.MismatchError
+	if errors.As(err, &mismatch) {
+		s.aborted.Store(true)
+	}
 
 	if settle != nil {
 		t.failures.Add(int64(settle()))
@@ -520,8 +533,12 @@ func (s *Scanner) ownVote(t sinkv1.TransferState) *sinkv1.Observation {
 }
 
 // ReviewRefundHead reviews the refund head of a snapshot at least minHeight high as a one-transfer chunk. A snapshot
-// without a refund head reviews nothing.
+// without a refund head reviews nothing. After a pass that ended on a pin mismatch, it returns ErrPassAborted.
 func (s *Scanner) ReviewRefundHead(ctx context.Context, minHeight int64) error {
+	if s.aborted.Load() {
+		return ErrPassAborted
+	}
+
 	st, err := s.latestAt(ctx, minHeight)
 	if err != nil {
 		return err
@@ -529,12 +546,16 @@ func (s *Scanner) ReviewRefundHead(ctx context.Context, minHeight int64) error {
 	if st.RefundHead == nil {
 		return nil
 	}
+	if s.aborted.Load() {
+		return ErrPassAborted
+	}
 
 	return s.followUp(ctx, st, []entry{{id: *st.RefundHead}})
 }
 
 // Review reviews ids in chunks of up to 96, each from a snapshot at least minHeight high, writing the normal review
-// events and queuing what it plans. IDs that are no longer open are skipped.
+// events and queuing what it plans. IDs that are no longer open are skipped. After a pass that ended on a pin
+// mismatch, it returns ErrPassAborted.
 func (s *Scanner) Review(ctx context.Context, ids []sinkid.ID, minHeight int64) error {
 	entries := make([]entry, len(ids))
 	for i, id := range ids {
@@ -542,9 +563,16 @@ func (s *Scanner) Review(ctx context.Context, ids []sinkid.ID, minHeight int64) 
 	}
 
 	for start := 0; start < len(entries); start += chunkSize {
+		if s.aborted.Load() {
+			return ErrPassAborted
+		}
+
 		st, err := s.latestAt(ctx, minHeight)
 		if err != nil {
 			return err
+		}
+		if s.aborted.Load() {
+			return ErrPassAborted
 		}
 
 		if err := s.followUp(ctx, st, entries[start:min(start+chunkSize, len(entries))]); err != nil {
@@ -564,6 +592,11 @@ func (s *Scanner) followUp(ctx context.Context, st *akash.State, chunk []entry) 
 
 	var mismatch *observe.MismatchError
 	if errors.As(err, &mismatch) {
+		// A pass that ended on the mismatch meanwhile writes the one alert.
+		if s.aborted.Load() {
+			return ErrPassAborted
+		}
+
 		s.followUpFailures.Add(1)
 		s.mismatchAlert(mismatch)
 		return err

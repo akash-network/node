@@ -72,11 +72,13 @@ const (
 	fabricatedSlot = uint64(1) << 63
 )
 
-// benchmarks are the named scenarios that only benchmarks serve. They have no golden, so simnode list and the goldens
-// leave them out.
+// benchmarks are the named scenarios that only benchmarks and component tests serve. They have no golden, so simnode
+// list and the goldens leave them out.
 var benchmarks = map[string]func() Scenario{
 	// steady-100k: the 100,000 open transfers of spec §11.4.
 	"steady-100k": Steady100k,
+	// broadcast-mix: the votes, vetoes and refunds the broadcaster's component tests send (spec §11.3).
+	"broadcast-mix": broadcastMixScenario,
 }
 
 // Goldens returns the sorted names of the scenarios that have a parity golden: every scenario but the benchmarks.
@@ -373,17 +375,53 @@ func openScenario(age time.Duration, n int) Scenario {
 
 // votesScenario has void-requested transfers that Solana voided by governance void order, with the resolution
 // transaction in its block, and no vote from Reporter: each plans one MsgReportOutcome.
-func votesScenario() Scenario {
+func votesScenario() Scenario { return votesScenarioOf(votesCount) }
+
+// votesScenarioOf is votesScenario with n transfers.
+func votesScenarioOf(n int) Scenario {
 	sc := baseScenario(time.Second)
 	a, s := sc.Akash, &sc.Solana
 
-	for i := range votesCount {
+	for i := range n {
 		a.add(voidRequested(a, i))
 
 		st := statusOf(i, resolvedSlotBase+uint64(i), voidedFor(VoidGovernance)) //nolint:gosec // small
 		s.putStatus(st)
 		s.putBlock(st.ResolvedAtSlot, resolutionTx(st, st.ID.String(),
 			aktFrame("Program log: Instruction: VoidTransfer", TransferResolvedLog(st))))
+	}
+
+	return sc
+}
+
+// Shape of broadcast-mix.
+const (
+	mixVotes   = 40
+	mixVetoes  = 4
+	mixRefunds = 2
+)
+
+// broadcastMixScenario plans one message per open transfer: transfers 0 to 39 are void-requested and voided on
+// Solana, each a vote; 40 to 43 are refunds pending inside their challenge window that other members report voided
+// without a Solana status, each a veto; 44 and 45 are refunds past their window with this reporter's void vote. 44 is
+// the refund head and plans a finalization; 45 is next in the queue.
+func broadcastMixScenario() Scenario {
+	sc := votesScenarioOf(mixVotes)
+	a, s := sc.Akash, &sc.Solana
+
+	for k := range mixVetoes {
+		i := mixVotes + k
+		slot := uint64(950 + k) //nolint:gosec // small
+		a.add(refundPending(a, i, challengeOpen,
+			vote(memberA, 1, sinkv1.OutcomeVoided, slot, sigBytes("mix void a "+strconv.Itoa(i))),
+			vote(memberB, 1, sinkv1.OutcomeVoided, slot, sigBytes("mix void b "+strconv.Itoa(i)))))
+	}
+
+	for k := range mixRefunds {
+		i := mixVotes + mixVetoes + k
+		slot := resolvedSlotBase + uint64(i) //nolint:gosec // small
+		a.add(refundPending(a, i, challengeEnded+int64(k), vote(Reporter, 1, sinkv1.OutcomeVoided, slot, sigBytes(scenarioID(i).String()))))
+		s.resolve(statusOf(i, slot, voidedFor(VoidGovernance)))
 	}
 
 	return sc

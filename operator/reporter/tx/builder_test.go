@@ -18,6 +18,8 @@ import (
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	sinkv1 "pkg.akt.dev/go/node/sink/v1"
 	"pkg.akt.dev/go/sdkutil"
@@ -249,7 +251,7 @@ func (s *scriptedSim) sim(msgs []sdk.Msg) (uint64, error) {
 func TestPrune(t *testing.T) {
 	t.Run("drops the failing message", func(t *testing.T) {
 		batch := planned(3)
-		failure := errors.New("failed to execute message; message index: 1: transfer not found")
+		failure := chainErr("failed to execute message; message index: 1: transfer not found")
 		sim := &scriptedSim{answers: []error{failure}, gas: 777}
 
 		res := Prune(sim.sim, batch)
@@ -264,9 +266,9 @@ func TestPrune(t *testing.T) {
 	t.Run("three failing rounds defer the rest", func(t *testing.T) {
 		batch := planned(5)
 		errs := []error{
-			errors.New("message index: 0: a"),
-			errors.New("message index: 2: b"),
-			errors.New("message index: 0: c"),
+			chainErr("message index: 0: a"),
+			chainErr("message index: 2: b"),
+			chainErr("message index: 0: c"),
 		}
 		sim := &scriptedSim{answers: errs}
 
@@ -284,7 +286,7 @@ func TestPrune(t *testing.T) {
 
 	t.Run("an error without an index drops the batch", func(t *testing.T) {
 		batch := planned(3)
-		failure := errors.New("insufficient funds")
+		failure := chainErr("insufficient funds")
 		sim := &scriptedSim{answers: []error{failure}}
 
 		res := Prune(sim.sim, batch)
@@ -299,7 +301,7 @@ func TestPrune(t *testing.T) {
 
 	t.Run("an index outside the batch drops the batch", func(t *testing.T) {
 		batch := planned(2)
-		failure := errors.New("message index: 2: out of range")
+		failure := chainErr("message index: 2: out of range")
 
 		res := Prune((&scriptedSim{answers: []error{failure}}).sim, batch)
 		require.Empty(t, res.Kept)
@@ -308,7 +310,7 @@ func TestPrune(t *testing.T) {
 
 	t.Run("dropping every message stops simulating", func(t *testing.T) {
 		batch := planned(1)
-		failure := errors.New("message index: 0: bad")
+		failure := chainErr("message index: 0: bad")
 		sim := &scriptedSim{answers: []error{failure}}
 
 		res := Prune(sim.sim, batch)
@@ -317,7 +319,32 @@ func TestPrune(t *testing.T) {
 		require.Equal(t, []Dropped{{Planned: batch[0], Err: failure}}, res.Dropped)
 		require.Equal(t, []int{1}, sim.sizes)
 	})
+
+	t.Run("an error the chain did not return stops without dropping", func(t *testing.T) {
+		for _, failure := range []error{
+			errors.New("connection refused"),
+			status.Error(codes.Unavailable, "message index: 0: transport is closing"),
+			status.Error(codes.DeadlineExceeded, "context deadline exceeded"),
+			status.Error(codes.Canceled, "context canceled"),
+			status.Error(codes.ResourceExhausted, "too many requests"),
+		} {
+			batch := planned(3)
+			first := chainErr("message index: 1: transfer not found")
+			sim := &scriptedSim{answers: []error{first, failure}}
+
+			res := Prune(sim.sim, batch)
+			require.Equal(t, []Dropped{{Planned: batch[1], Err: first}}, res.Dropped, failure)
+			require.Equal(t, failure, res.Unavailable)
+			require.Equal(t, []policy.Planned{batch[0], batch[2]}, res.Retry)
+			require.Empty(t, res.Kept)
+			require.Empty(t, res.Deferred)
+			require.Equal(t, []int{3, 2}, sim.sizes)
+		}
+	})
 }
+
+// chainErr is a simulation failure as the node's gRPC Simulate returns it.
+func chainErr(msg string) error { return status.Error(codes.Unknown, msg) }
 
 func TestFeeFor(t *testing.T) {
 	prices := sdk.NewDecCoins(sdk.NewDecCoinFromDec("uakt", sdkmath.LegacyMustNewDecFromStr("0.025")))

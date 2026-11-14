@@ -820,6 +820,46 @@ func TestPinMismatchStopsAfterRunningChunks(t *testing.T) {
 	})
 }
 
+func TestNoFollowUpAfterPinMismatch(t *testing.T) {
+	ids, transfers := pending(t, 2)
+	pin := simnode.LightClient
+	h := newHarness(t, scenario(transfers...), setup{pin: &pin})
+	setBridge(h.node, other)
+	states := h.node.Calls(pathState)
+
+	var review, head error
+	failures := h.scanner.Pass(t.Context(), func() int {
+		review = h.scanner.Review(t.Context(), ids, 0)
+		head = h.scanner.ReviewRefundHead(t.Context(), 0)
+
+		return 0
+	})
+	require.ErrorIs(t, review, scan.ErrPassAborted)
+	require.ErrorIs(t, head, scan.ErrPassAborted)
+	require.Equal(t, 1, failures, "the skipped follow-ups count nothing")
+
+	lines := h.lines()
+	require.Len(t, lines, 2, "the pass's alert and error are its only output")
+	require.JSONEq(t, `{"alert":"light-client-mismatch","pinned":"`+pin.String()+`","current":"`+other.String()+`"}`, lines[0])
+	require.Contains(t, decode(t, lines[1])["error"], "differs from pinned")
+
+	// Between passes the follow-ups still skip, reading nothing.
+	require.ErrorIs(t, h.scanner.Review(t.Context(), ids, 0), scan.ErrPassAborted)
+	require.Empty(t, h.lines())
+	require.Equal(t, states, h.node.Calls(pathState), "no follow-up snapshot")
+
+	// The next pass clears the flag as it begins.
+	setBridge(h.node, pin)
+	h.clock.Advance(time.Second)
+	var again error
+	require.Equal(t, 0, h.scanner.Pass(t.Context(), func() int {
+		again = h.scanner.Review(t.Context(), ids[:1], 0)
+		return 0
+	}))
+	require.NoError(t, again)
+	require.Equal(t, 0, h.scanner.Pass(t.Context(), nil), "the earlier skips are not counted later")
+}
+
 func TestChunkErrorsArePerTransfer(t *testing.T) {
 	ids, transfers := pending(t, 150)
 	h := newHarness(t, scenario(transfers...), setup{solana: chunkCalls(func(_ *http.Request, call int) bool { return call == 1 })})

@@ -5,6 +5,8 @@ import (
 	"strconv"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"pkg.akt.dev/node/v2/operator/reporter/policy"
 )
@@ -28,10 +30,15 @@ type PruneResult struct {
 	Dropped []Dropped
 	// Deferred holds the messages still left after three failing rounds.
 	Deferred []policy.Planned
+	// Unavailable is a simulation error that is not the chain's answer, such as a transport failure. Pruning stopped
+	// at it, and Retry holds the messages it had not decided yet.
+	Unavailable error
+	Retry       []policy.Planned
 }
 
 // Prune simulates batch and drops the message each failure names, for up to three failing rounds. A failure
-// without a message index, or with one outside the batch, drops every remaining message.
+// without a message index, or with one outside the batch, drops every remaining message. An error that is not the
+// chain's answer stops pruning without dropping anything more.
 func Prune(sim func([]sdk.Msg) (uint64, error), batch []policy.Planned) PruneResult {
 	var res PruneResult
 
@@ -47,6 +54,13 @@ func Prune(sim func([]sdk.Msg) (uint64, error), batch []policy.Planned) PruneRes
 		if err == nil {
 			res.Kept = remaining
 			res.GasUsed = gas
+
+			return res
+		}
+
+		if unavailable(err) {
+			res.Unavailable = err
+			res.Retry = remaining
 
 			return res
 		}
@@ -69,6 +83,22 @@ func Prune(sim func([]sdk.Msg) (uint64, error), batch []policy.Planned) PruneRes
 	}
 
 	return res
+}
+
+// unavailable reports a simulation error the chain did not return: one without a gRPC status, or a status that a
+// transport, a deadline, a cancellation or an overloaded node produces.
+func unavailable(err error) bool {
+	st, ok := status.FromError(err)
+	if !ok {
+		return true
+	}
+
+	switch st.Code() {
+	case codes.Unavailable, codes.DeadlineExceeded, codes.Canceled, codes.ResourceExhausted:
+		return true
+	}
+
+	return false
 }
 
 func failedIndex(err error, n int) (int, bool) {
