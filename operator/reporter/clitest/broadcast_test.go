@@ -48,7 +48,8 @@ const (
 )
 
 // startVotes starts the votes scenario on a node whose Akash time is window-aligned and that commits a block every
-// blockInterval. change edits the scenario first.
+// blockInterval, or, when opts.BlockInterval is negative, only when the test commits one. change edits the scenario
+// first.
 func startVotes(t *testing.T, opts simnode.Options, change func(*simnode.Scenario)) *simnode.Node {
 	t.Helper()
 
@@ -58,8 +59,11 @@ func startVotes(t *testing.T, opts simnode.Options, change func(*simnode.Scenari
 	}
 
 	opts.AlignWindow = true
-	if opts.BlockInterval == 0 {
+	switch {
+	case opts.BlockInterval == 0:
 		opts.BlockInterval = blockInterval
+	case opts.BlockInterval < 0:
+		opts.BlockInterval = 0
 	}
 
 	n, err := simnode.Start(t.Context(), s, opts)
@@ -533,38 +537,122 @@ func TestSigtermOrdering(t *testing.T) {
 		return strings.Contains(stdout.String(), `"transactionHash"`)
 	}, 60*time.Second, 5*time.Millisecond, "no transaction confirmed: %s", stderr.String())
 
-	self, err := os.FindProcess(os.Getpid())
-	require.NoError(t, err)
-	require.NoError(t, self.Signal(syscall.SIGTERM))
 	signalled := len(n.Broadcasts())
-
-	var code int
-	select {
-	case code = <-done:
-	case <-time.After(60 * time.Second):
-		t.Fatal("scan did not stop after SIGTERM")
-	}
-	require.Equal(t, 0, code, stderr.String())
+	sigterm(t)
+	require.Equal(t, 0, exitCodeOf(t, done), stderr.String())
 
 	events := lines(t, stdout.String())
 	require.Equal(t, []int{len(events) - 1}, summaryIndexes(events), "the summary is the last line")
 	require.EqualValues(t, votes, events[len(events)-1]["scanned"])
 	require.EqualValues(t, 0, events[len(events)-1]["failures"])
+	require.Less(t, reviewCount(events), votes, "the pass stopped early")
 
-	reviews := 0
-	for _, ev := range events {
-		if _, ok := ev["observed"]; ok {
-			reviews++
-		}
-	}
-	require.Less(t, reviews, votes, "the pass stopped early")
-
-	// Every transaction sent confirmed within the grace, and no more than the in-flight ones were signed after the
-	// signal.
+	// Every transaction sent confirmed within the grace, and at most the one being built at the signal was signed
+	// after it.
 	broadcasts := n.Broadcasts()
 	require.LessOrEqual(t, len(broadcasts)-signalled, 1, "transactions were signed after the signal")
 	require.Len(t, txHashes(events), len(broadcasts))
 	requireVotedOnce(t, n, len(broadcasts))
+}
+
+// TestStartSigtermOrdering signals start mid-pass while transactions are in flight: they resolve within the grace,
+// before the pass's summary, which counts the failure among them and is the last line.
+func TestStartSigtermOrdering(t *testing.T) {
+	const votes = 30
+
+	// Blocks come only when the test commits them, so that transactions are in flight when the signal arrives.
+	n := startVotes(t, simnode.Options{BlockInterval: -1, BlockFetchLatency: 300 * time.Millisecond}, nil)
+
+	var stdout, stderr syncBuffer
+	done := make(chan int, 1)
+	go func() {
+		done <- run(t.Context(), &stdout, &stderr, reporterArgs(n, withKey(t), "start",
+			append([]string{"--scan.interval", "60s", "--tx.max-msgs", "1", "--scan.workers", "1"}, keyringBroadcast...)...)...)
+	}()
+
+	require.Eventually(t, func() bool {
+		n.CommitBlock()
+		return strings.Contains(stdout.String(), `"transactionHash"`)
+	}, 60*time.Second, 200*time.Millisecond, "no transaction confirmed: %s", stderr.String())
+
+	// Without blocks, the next votes stay pending; the first of them to execute fails.
+	require.Eventually(t, func() bool {
+		return len(n.Broadcasts()) > len(n.Executions())
+	}, 30*time.Second, 5*time.Millisecond, "no transaction in flight")
+	n.Mutate(func(sc *simnode.Scenario) {
+		sc.Akash.Deliveries = []simnode.Delivery{{Code: 5, Codespace: "sdk", Log: "insufficient funds"}}
+	})
+	require.NotContains(t, stdout.String(), `"scanned"`, "the pass ended before the signal")
+
+	signalled := len(n.Broadcasts())
+	sigterm(t)
+
+	stop := make(chan struct{})
+	defer close(stop)
+	go func() {
+		for {
+			select {
+			case <-stop:
+				return
+			case <-time.After(200 * time.Millisecond):
+				n.CommitBlock()
+			}
+		}
+	}()
+
+	require.Equal(t, 0, exitCodeOf(t, done), stderr.String())
+
+	events := lines(t, stdout.String())
+	require.Equal(t, []int{len(events) - 1}, summaryIndexes(events), "the summary is the last line")
+	require.EqualValues(t, votes, events[len(events)-1]["scanned"])
+	require.EqualValues(t, 1, events[len(events)-1]["failures"], "the summary counts the failure resolved in the grace")
+	require.Less(t, reviewCount(events), votes, "the pass stopped early")
+
+	var errs []string
+	for _, ev := range events {
+		if e, ok := ev["error"].(string); ok {
+			errs = append(errs, e)
+		}
+	}
+	require.Len(t, errs, 1)
+	require.Contains(t, errs[0], "sink transaction failed")
+
+	broadcasts := n.Broadcasts()
+	require.LessOrEqual(t, len(broadcasts)-signalled, 1, "transactions were signed after the signal")
+	require.Len(t, txHashes(events), len(broadcasts)-1, "every other transaction confirmed within the grace")
+	requireVotedOnce(t, n, len(broadcasts)-1)
+}
+
+// sigterm sends SIGTERM to the test process, which the running CLI handles.
+func sigterm(t *testing.T) {
+	t.Helper()
+
+	self, err := os.FindProcess(os.Getpid())
+	require.NoError(t, err)
+	require.NoError(t, self.Signal(syscall.SIGTERM))
+}
+
+func exitCodeOf(t *testing.T, done <-chan int) int {
+	t.Helper()
+
+	select {
+	case code := <-done:
+		return code
+	case <-time.After(60 * time.Second):
+		t.Fatal("the CLI did not stop after SIGTERM")
+		return -1
+	}
+}
+
+func reviewCount(events []map[string]any) int {
+	n := 0
+	for _, ev := range events {
+		if _, ok := ev["observed"]; ok {
+			n++
+		}
+	}
+
+	return n
 }
 
 func TestReadOnlyHome(t *testing.T) {

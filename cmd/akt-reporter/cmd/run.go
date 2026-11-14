@@ -32,8 +32,11 @@ const (
 	evidenceSlots = 256
 	evidenceBytes = 64 << 20
 
-	// shutdownGrace is how long scan's settle may wait for sent transactions after a signal (spec §5.7).
+	// shutdownGrace is how long the broadcaster waits for sent transactions after a signal (spec §5.7).
 	shutdownGrace = 30 * time.Second
+	// settleMargin keeps scan's settle waiting past the broadcaster's grace, so that the broadcaster ends the wait
+	// and no outcome is written after the summary.
+	settleMargin = 5 * time.Second
 
 	modePreview   = "preview"
 	modeBroadcast = "broadcast"
@@ -125,7 +128,7 @@ func runReporter(cmd *cobra.Command, once bool) (err error) {
 		return nil
 	}
 
-	r.loop(runCtx, cfg.Scan.Interval)
+	r.loop(runCtx, cfg.Scan.Interval, stopBroadcaster)
 
 	// A signal ends start with exit code 0 (spec §5.7).
 	return listenerFailure(ctx, runCtx)
@@ -292,6 +295,7 @@ func (r *reporter) newBroadcaster(accountNumber uint64) *tx.Broadcaster {
 		MaxGas:        cfg.Tx.MaxGas,
 		MaxFee:        cfg.MaxFee,
 		SignerTimeout: r.signerTimeout(),
+		ShutdownGrace: shutdownGrace,
 		Metrics:       r.metrics,
 	}, r.akash, tx.NewBuilder(txConfig(), cfg.ChainID, accountNumber, r.signer), r.events)
 }
@@ -306,7 +310,7 @@ func txConfig() client.TxConfig {
 
 // startBroadcaster runs the broadcaster, if any, until ctx ends; ctx carries the logger that Run warns through. The
 // returned function stops it and waits until it returns: once its context ends nothing new is signed, and sent
-// transactions get the broadcaster's shutdown grace.
+// transactions get the broadcaster's shutdown grace. It may be called more than once.
 func (r *reporter) startBroadcaster(ctx context.Context) func() {
 	b := r.broadcaster
 	if b == nil {
@@ -323,21 +327,22 @@ func (r *reporter) startBroadcaster(ctx context.Context) func() {
 		}
 	}()
 
-	return func() {
+	return sync.OnceFunc(func() {
 		stop()
 		<-done
-	}
+	})
 }
 
-// scanOnce runs scan's pass. In broadcast mode its settle waits for the pass's transactions and follow-up reviews;
-// once a signal ends ctx, that wait has the shutdown grace left (spec §5.7).
+// scanOnce runs scan's pass. In broadcast mode its settle waits for the pass's transactions and follow-up reviews.
+// Once a signal ends ctx, the broadcaster's shutdown grace ends the wait when it returns; settleCtx outlasts that
+// grace and only bounds a broadcaster that never returns (spec §5.7).
 func (r *reporter) scanOnce(ctx context.Context) int {
 	b := r.broadcaster
 	if b == nil {
 		return r.scanner.Pass(ctx, nil)
 	}
 
-	settleCtx, cancel := graceContext(ctx, shutdownGrace)
+	settleCtx, cancel := graceContext(ctx, shutdownGrace+settleMargin)
 	defer cancel()
 
 	return r.scanner.Pass(ctx, func() int { b.Flush(); return b.Wait(settleCtx) })
@@ -394,11 +399,20 @@ func (r *reporter) serveMetrics(ctx context.Context, fail context.CancelCauseFun
 
 // loop runs passes until ctx ends, waiting interval between them. It never begins a pass once ctx is done. In
 // broadcast mode a pass counts the transaction failures resolved since the previous pass; it does not wait for its
-// own transactions.
-func (r *reporter) loop(ctx context.Context, interval time.Duration) {
+// own transactions, which the next pass counts. A pass that a signal ended has no next pass: its settle stops the
+// broadcaster, which gives sent transactions their grace, so that their outcomes precede and count in its summary
+// (spec §5.7). After a signal between passes, the caller's stopBroadcaster gives that grace instead, and outcome
+// events may follow the last summary (spec §9.1).
+func (r *reporter) loop(ctx context.Context, interval time.Duration, stopBroadcaster func()) {
 	var settle func() int
 	if b := r.broadcaster; b != nil {
-		settle = func() int { b.Flush(); return b.TakeFailures() }
+		settle = func() int {
+			b.Flush()
+			if ctx.Err() != nil {
+				stopBroadcaster()
+			}
+			return b.TakeFailures()
+		}
 	}
 
 	for ctx.Err() == nil {
