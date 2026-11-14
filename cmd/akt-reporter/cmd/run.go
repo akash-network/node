@@ -4,12 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"sync"
 	"time"
 
+	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
+
+	sinkv1 "pkg.akt.dev/go/node/sink/v1"
+	"pkg.akt.dev/go/sdkutil"
 
 	"pkg.akt.dev/node/v2/operator/reporter/akash"
 	"pkg.akt.dev/node/v2/operator/reporter/config"
@@ -17,7 +22,9 @@ import (
 	"pkg.akt.dev/node/v2/operator/reporter/metrics"
 	"pkg.akt.dev/node/v2/operator/reporter/observe"
 	"pkg.akt.dev/node/v2/operator/reporter/scan"
+	"pkg.akt.dev/node/v2/operator/reporter/signer"
 	aktsolana "pkg.akt.dev/node/v2/operator/reporter/solana"
+	"pkg.akt.dev/node/v2/operator/reporter/tx"
 )
 
 const (
@@ -25,10 +32,12 @@ const (
 	evidenceSlots = 256
 	evidenceBytes = 64 << 20
 
-	modePreview = "preview"
-)
+	// shutdownGrace is how long scan's settle may wait for sent transactions after a signal (spec §5.7).
+	shutdownGrace = 30 * time.Second
 
-var errBroadcastUnavailable = errors.New("broadcast mode is not available yet; set broadcast = false to preview")
+	modePreview   = "preview"
+	modeBroadcast = "broadcast"
+)
 
 func newStartCmd() *cobra.Command {
 	return &cobra.Command{
@@ -52,28 +61,27 @@ func newScanCmd() *cobra.Command {
 	}
 }
 
-// reporter is the wiring of one start or scan run.
+// reporter is the wiring of one start or scan run. signer and broadcaster are nil in preview.
 type reporter struct {
-	cfg     config.Resolved
-	log     *zerolog.Logger
-	akash   *akash.Client
-	events  *events.Writer
-	scanner *scan.Scanner
-	metrics *metrics.Metrics
-	gather  prometheus.Gatherer
+	cfg         config.Resolved
+	log         *zerolog.Logger
+	akash       *akash.Client
+	signer      signer.Signer
+	broadcaster *tx.Broadcaster
+	events      *events.Writer
+	scanner     *scan.Scanner
+	metrics     *metrics.Metrics
+	gather      prometheus.Gatherer
 }
 
 // runReporter validates the configuration, connects, starts the metrics listener and runs one pass (scan) or passes
-// until the command's context ends (start).
+// until the command's context ends (start). In broadcast mode the broadcaster runs across the passes.
 func runReporter(cmd *cobra.Command, once bool) (err error) {
 	ctx := cmd.Context()
 
 	cfg, err := resolveConfig(cmd)
 	if err != nil {
 		return err
-	}
-	if cfg.Broadcast {
-		return errBroadcastUnavailable
 	}
 
 	r := &reporter{cfg: cfg, log: zerolog.Ctx(ctx)}
@@ -94,15 +102,19 @@ func runReporter(cmd *cobra.Command, once bool) (err error) {
 		}
 	}()
 
-	// A failing metrics listener stops the run.
+	// A signal or a failing metrics listener ends runCtx: no new pass, review or signing starts.
 	runCtx, cancel := context.WithCancelCause(ctx)
 	defer cancel(nil)
 
 	stopMetrics := r.serveMetrics(runCtx, cancel)
 	defer stopMetrics()
 
+	// Deferred last, so it runs first: the broadcaster stops before the signer, the clients and the events close.
+	stopBroadcaster := r.startBroadcaster(runCtx)
+	defer stopBroadcaster()
+
 	if once {
-		failures := r.scanner.Pass(runCtx, nil)
+		failures := r.scanOnce(runCtx)
 		if cause := listenerFailure(ctx, runCtx); cause != nil {
 			return cause
 		}
@@ -119,9 +131,10 @@ func runReporter(cmd *cobra.Command, once bool) (err error) {
 	return listenerFailure(ctx, runCtx)
 }
 
-// connect dials Akash, which checks that both endpoints are one node, and builds the Solana client, the observer and
-// the scanner.
-func (r *reporter) connect(ctx context.Context, cmd *cobra.Command) error {
+// connect dials Akash, which checks that both endpoints are one node, runs the broadcast startup checks, and builds
+// the Solana client, the observer, the scanner and, in broadcast mode, the broadcaster. On error it releases what it
+// opened.
+func (r *reporter) connect(ctx context.Context, cmd *cobra.Command) (err error) {
 	cfg := r.cfg
 
 	reg := prometheus.NewRegistry()
@@ -142,8 +155,21 @@ func (r *reporter) connect(ctx context.Context, cmd *cobra.Command) error {
 		return fmt.Errorf("connect to Akash: %w", err)
 	}
 	r.akash = a
+	defer func() {
+		if err != nil {
+			_ = r.release()
+		}
+	}()
+
 	r.log.Info().Str("node", cfg.Node).Str("grpc-addr", cfg.GRPCAddr).Bool("tx-index", a.TxIndexEnabled()).
 		Msg("connected to Akash")
+
+	var accountNumber uint64
+	if cfg.Broadcast {
+		if accountNumber, err = r.prepareBroadcast(ctx, cmd); err != nil {
+			return err
+		}
+	}
 
 	rpc := aktsolana.NewRPC(aktsolana.RPCOptions{
 		URL:              cfg.Solana.RPC,
@@ -155,6 +181,13 @@ func (r *reporter) connect(ctx context.Context, cmd *cobra.Command) error {
 	index := aktsolana.NewEvidenceIndex(rpc, cfg.ProgramID, evidenceSlots, evidenceBytes)
 
 	r.events = events.NewWriter(cmd.OutOrStdout())
+
+	// The scanner hands its plans to the broadcaster, which runs its follow-up reviews through the scanner.
+	var queuer scan.Queuer
+	if cfg.Broadcast {
+		r.broadcaster = r.newBroadcaster(accountNumber)
+		queuer = r.broadcaster
+	}
 
 	// The observer reports light-client changes to the scanner, which is built after it. OnChange writes synchronously.
 	var sc *scan.Scanner
@@ -170,15 +203,165 @@ func (r *reporter) connect(ctx context.Context, cmd *cobra.Command) error {
 
 	sc = scan.New(a, observer, r.events, scan.Options{
 		Reporter:     cfg.Config.Reporter,
-		Broadcast:    false,
+		Broadcast:    cfg.Broadcast,
 		Workers:      cfg.Scan.Workers,
 		PageSize:     cfg.Scan.PageSize,
 		AuditPerScan: cfg.Scan.AuditPerScan,
 		Metrics:      r.metrics,
-	}, nil)
+	}, queuer)
 	r.scanner = sc
 
+	if r.broadcaster != nil {
+		r.broadcaster.SetReviewer(sc)
+	}
+
 	return nil
+}
+
+// prepareBroadcast runs the broadcast startup checks that follow the node-ID check, in order: the first snapshot,
+// the signer, which must derive reporter, and the reporter's account number, which it returns. Run logs the
+// transaction-index warning. Preview never calls it, so it never opens the keyring or dials the remote signer
+// (spec §7).
+func (r *reporter) prepareBroadcast(ctx context.Context, cmd *cobra.Command) (uint64, error) {
+	cfg := r.cfg
+
+	if _, err := r.akash.Latest(ctx); err != nil {
+		return 0, fmt.Errorf("read Akash state: %w", err)
+	}
+
+	kind := "keyring"
+	if cfg.From != "" {
+		kr, err := newKeyring(cfg.KeyringBackend, cfg.KeyringDir, cmd.InOrStdin(), sdkutil.MakeEncodingConfig().Codec)
+		if err != nil {
+			return 0, err
+		}
+
+		if r.signer, err = signer.NewKeyring(kr, cfg.From, cfg.Reporter); err != nil {
+			return 0, fmt.Errorf("keyring signer %q: %w", cfg.From, err)
+		}
+	} else {
+		kind = "remote"
+		remote := cfg.Signer.Remote
+
+		s, err := signer.NewRemote(ctx, signer.RemoteOptions{
+			Address:    remote.Address,
+			KeyID:      remote.KeyID,
+			CAFile:     remote.CAFile,
+			ServerName: remote.ServerName,
+			CertFile:   remote.CertFile,
+			KeyFile:    remote.KeyFile,
+			Timeout:    remote.Timeout,
+		}, cfg.Reporter)
+		if err != nil {
+			return 0, fmt.Errorf("remote signer %s: %w", remote.Address, err)
+		}
+		r.signer = s
+	}
+
+	accountNumber, err := r.akash.AccountNumber(ctx, cfg.Reporter)
+	if err != nil {
+		return 0, fmt.Errorf("read the account of reporter %s: %w", cfg.Config.Reporter, err)
+	}
+
+	r.log.Info().Str("signer", kind).Str("address", r.signer.Address().String()).Uint64("account-number", accountNumber).
+		Msg("loaded signer")
+
+	return accountNumber, nil
+}
+
+// signerTimeout is the remote signer's timeout, which lengthens the send cutoff, or 0 for the keyring.
+func (r *reporter) signerTimeout() time.Duration {
+	if r.cfg.From != "" {
+		return 0
+	}
+
+	return r.cfg.Signer.Remote.Timeout
+}
+
+func (r *reporter) newBroadcaster(accountNumber uint64) *tx.Broadcaster {
+	cfg := r.cfg
+
+	return tx.New(tx.Options{
+		Reporter:      cfg.Config.Reporter,
+		MaxMsgs:       cfg.Tx.MaxMsgs,
+		MaxInFlight:   cfg.Tx.MaxInFlight,
+		GasPerMessage: cfg.GasPerMessage,
+		GasAdjustment: cfg.GasAdjustment,
+		GasPrices:     cfg.GasPrices,
+		Fees:          cfg.Fees,
+		MaxGas:        cfg.Tx.MaxGas,
+		MaxFee:        cfg.MaxFee,
+		SignerTimeout: r.signerTimeout(),
+		Metrics:       r.metrics,
+	}, r.akash, tx.NewBuilder(txConfig(), cfg.ChainID, accountNumber, r.signer), r.events)
+}
+
+// txConfig encodes the reporter's transactions with akash's encoding config and the sink types.
+func txConfig() client.TxConfig {
+	enc := sdkutil.MakeEncodingConfig()
+	sinkv1.RegisterInterfaces(enc.InterfaceRegistry)
+
+	return enc.TxConfig
+}
+
+// startBroadcaster runs the broadcaster, if any, until ctx ends; ctx carries the logger that Run warns through. The
+// returned function stops it and waits until it returns: once its context ends nothing new is signed, and sent
+// transactions get the broadcaster's shutdown grace.
+func (r *reporter) startBroadcaster(ctx context.Context) func() {
+	b := r.broadcaster
+	if b == nil {
+		return func() {}
+	}
+
+	ctx, stop := context.WithCancel(ctx)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+
+		if err := b.Run(ctx); err != nil {
+			r.log.Error().Err(err).Msg("broadcaster stopped")
+		}
+	}()
+
+	return func() {
+		stop()
+		<-done
+	}
+}
+
+// scanOnce runs scan's pass. In broadcast mode its settle waits for the pass's transactions and follow-up reviews;
+// once a signal ends ctx, that wait has the shutdown grace left (spec §5.7).
+func (r *reporter) scanOnce(ctx context.Context) int {
+	b := r.broadcaster
+	if b == nil {
+		return r.scanner.Pass(ctx, nil)
+	}
+
+	settleCtx, cancel := graceContext(ctx, shutdownGrace)
+	defer cancel()
+
+	return r.scanner.Pass(ctx, func() int { b.Flush(); return b.Wait(settleCtx) })
+}
+
+// graceContext returns a context that ends grace after ctx does, or when cancel is called.
+func graceContext(ctx context.Context, grace time.Duration) (context.Context, context.CancelFunc) {
+	gctx, cancel := context.WithCancel(context.WithoutCancel(ctx))
+
+	stop := context.AfterFunc(ctx, func() {
+		t := time.NewTimer(grace)
+		defer t.Stop()
+
+		select {
+		case <-t.C:
+			cancel()
+		case <-gctx.Done():
+		}
+	})
+
+	return gctx, func() {
+		stop()
+		cancel()
+	}
 }
 
 // serveMetrics starts the metrics listener when metrics.listen is set. A listener error cancels ctx with its cause.
@@ -209,10 +392,17 @@ func (r *reporter) serveMetrics(ctx context.Context, fail context.CancelCauseFun
 	}
 }
 
-// loop runs passes until ctx ends, waiting interval between them. It never begins a pass once ctx is done.
+// loop runs passes until ctx ends, waiting interval between them. It never begins a pass once ctx is done. In
+// broadcast mode a pass counts the transaction failures resolved since the previous pass; it does not wait for its
+// own transactions.
 func (r *reporter) loop(ctx context.Context, interval time.Duration) {
+	var settle func() int
+	if b := r.broadcaster; b != nil {
+		settle = func() int { b.Flush(); return b.TakeFailures() }
+	}
+
 	for ctx.Err() == nil {
-		r.scanner.Pass(ctx, nil)
+		r.scanner.Pass(ctx, settle)
 
 		timer := time.NewTimer(interval)
 		select {
@@ -225,12 +415,23 @@ func (r *reporter) loop(ctx context.Context, interval time.Duration) {
 	r.log.Info().Msg("stopped")
 }
 
-// close flushes the events and releases the Akash connections.
+// close releases the signer and the Akash connections, then flushes the events last, so that the pass's summary or
+// error stays the last line (spec §5.7). The broadcaster must have stopped.
 func (r *reporter) close() error {
+	rerr := r.release()
 	werr := r.events.Close()
-	aerr := r.akash.Close()
 
-	return errors.Join(werr, aerr)
+	return errors.Join(rerr, werr)
+}
+
+// release closes the remote signer, if any, and the Akash client.
+func (r *reporter) release() error {
+	var serr error
+	if c, ok := r.signer.(io.Closer); ok {
+		serr = c.Close()
+	}
+
+	return errors.Join(serr, r.akash.Close())
 }
 
 type listenerError struct{ err error }
@@ -259,8 +460,13 @@ func logStartup(log *zerolog.Logger, cfg config.Resolved) {
 		lightClient = cfg.LightClientPin.String()
 	}
 
+	mode := modePreview
+	if cfg.Broadcast {
+		mode = modeBroadcast
+	}
+
 	log.Info().
-		Str("mode", modePreview).
+		Str("mode", mode).
 		Str("network", cfg.Network).
 		Str("chain-id", cfg.ChainID).
 		Str("reporter", cfg.Config.Reporter).
