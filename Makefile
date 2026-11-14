@@ -109,3 +109,4 @@ include make/test-integration.mk
 include make/test-simulation.mk
 include make/tools.mk
 include make/codegen.mk
+include make/reporter.mk
