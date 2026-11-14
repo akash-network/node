@@ -1,7 +1,6 @@
 services:
   reporter:
     image: ${OPERATOR_IMAGE:?Set OPERATOR_IMAGE to a published version or digest}
-    platform: linux/amd64
     user: "${OPERATOR_UID:-10001}:${OPERATOR_GID:-10001}"
     init: true
     read_only: true
@@ -9,30 +8,18 @@ services:
     security_opt: [no-new-privileges:true]
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=64m
-    command:
-      [
-        run,
-        --config,
-        /etc/akt/config.json,
-        --network,
-        "${OPERATOR_NETWORK:-mainnet}",
-        --watch,
-      ]
+    env_file:
+      - path: reporter.env
+        required: false
     volumes:
       - type: bind
-        source: ${OPERATOR_CONFIG:?Set OPERATOR_CONFIG to an existing config file}
-        target: /etc/akt/config.json
-        read_only: true
-        bind:
-          create_host_path: false
-      - type: bind
-        source: ${OPERATOR_KEY:?Set OPERATOR_KEY to an existing private key file}
-        target: /run/keys/key
+        source: ${OPERATOR_HOME:?Set OPERATOR_HOME to the existing reporter home directory}
+        target: /home/akt-reporter
         read_only: true
         bind:
           create_host_path: false
     restart: unless-stopped
-    stop_grace_period: 30s
+    stop_grace_period: 60s
     logging:
       driver: json-file
       options:

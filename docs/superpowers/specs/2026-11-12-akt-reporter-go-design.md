@@ -482,7 +482,7 @@ Between passes, the broadcaster asks the scanner to review specific transfers in
 2. It reviews the new refund head as a one-transfer chunk: re-read at H′, Solana snapshot, plan.
 3. If that review plans another finalization, it is sent the same way, and the steps repeat.
 
-Progression stops when the head plans no finalization (not yet eligible, held, or the epoch capacity is used), or on shutdown. Refunds are paid at about one per block; a refund whose slot is taken in the current window waits for the next one.
+Progression stops when the head plans no finalization (not yet eligible, held, or the epoch capacity is used), or on shutdown. Without a transaction index no lookup confirms a refund, so refund-head progression does not run and only passes advance the head. Refunds are paid at about one per block; a refund whose slot is taken in the current window waits for the next one.
 
 **Deferred transfers.** Once a block from a later window is seen, the deferred transfers are reviewed in chunks of up to 96, each with a fresh snapshot (section 6.5).
 
