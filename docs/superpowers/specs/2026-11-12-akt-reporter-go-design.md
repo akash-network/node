@@ -433,9 +433,11 @@ Older snapshots only defer messages; they never affect safety.
 
 - Every batch is simulated through gRPC `Simulate` before signing. Simulation skips the replay-key check (section 2.2), so it cannot tell whether a slot is taken.
 - With `gas = auto`, the gas limit is ceil(gas used × `gas-adjustment`). A numeric `gas` is per message, so the limit is `gas` × the number of messages.
+- Simulation runs against the latest committed state, so the limit must also cover other reporters' votes landing first in the same block, including the vote that completes the quorum; the `gas-adjustment` default of 1.5 covers that for a policy of 3 members.
+- The simulated transaction has the signed one's gas-relevant shape: a fee, a gas limit and a full-length placeholder signature. The fee and limit are the final ones when they are known before simulating (`fees`, or a numeric `gas`). Otherwise the fee is one unit of each `gas-prices` denomination and the limit is `tx.max-gas`.
 - If simulation fails at `message index: N`, message N is dropped with `{id, error}` and the batch is simulated again, for up to three rounds. Messages still left after that are deferred (section 6.5), because a slot carries at most one live transaction per window.
 - A simulation failure without a message index, such as an invalid timeout, fails the whole batch before submission. Each message gets `{id, error}`, and its entry is released.
-- Simulation carries no fee, so an account that cannot pay is refused at CheckTx, reported per message, and its entry released.
+- With `gas-prices`, simulation carries only a one-unit fee, so an account that cannot pay the real fee is refused at CheckTx, reported per message, and its entry released. With `fees`, simulation fails on it as above.
 - The fee is `fees` when that is set, otherwise ceil(gas limit × `gas-prices`).
 - Caps: the gas limit must be at most `tx.max-gas` and the fee at most `tx.max-fee`. A batch over a cap is halved, and the second half is deferred. A single message over a cap gets `{id, error}` and is not sent. The signer's sign-bytes limit, when it declares one, is a cap like `tx.max-gas`: batches are sized to fit it, a batch over it is halved and its second half deferred, and a single message over it gets `{id, error}`.
 
@@ -569,7 +571,7 @@ This follows `cmd/akash` and chain-sdk's `InterceptConfigsPreRunHandler`. It is 
 | `keyring-backend`                                   | `test`                          | `os`, `file` or `test`; also used by `keys`                    | none                             |
 | `keyring-dir`                                       | the home directory              |                                                                | none                             |
 | `gas`                                               | `auto`                          | `auto`, or gas per message; the transaction limit is that times the message count, at most `tx.max-gas` | `gasLimit` |
-| `gas-adjustment`                                    | `1.3`                           | `1.0` to `10.0`                                                | none                             |
+| `gas-adjustment`                                    | `1.5`                           | `1.0` to `10.0`                                                | none                             |
 | `gas-prices`                                        | `0.025uakt`                     | `uakt` only                                                    | none                             |
 | `fees`                                              | empty                           | `uakt` only, at most `tx.max-fee`; overrides `gas-prices`      | `feeAmountUakt`                  |
 | `solana.rpc`                                        | `http://localhost:8899`         | `http` or `https`; no credentials in the URL                   | `solanaRpc`                      |

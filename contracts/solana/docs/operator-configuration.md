@@ -74,7 +74,7 @@ for the mapping from the TypeScript reporter's JSON fields.
 | `keyring-backend`                                   | `test`                      | `os`, `file` or `test`; also used by `keys`                                                             |
 | `keyring-dir`                                       | the home directory          |                                                                                                         |
 | `gas`                                               | `auto`                      | `auto`, or gas per message; the transaction limit is that times the message count, at most `tx.max-gas` |
-| `gas-adjustment`                                    | `1.3`                       | `1.0` to `10.0`                                                                                         |
+| `gas-adjustment`                                    | `1.5`                       | `1.0` to `10.0`                                                                                         |
 | `gas-prices`                                        | `0.025uakt`                 | `uakt` only                                                                                             |
 | `fees`                                              | empty                       | `uakt` only, at most `tx.max-fee`; overrides `gas-prices`                                               |
 | `solana.rpc`                                        | `http://localhost:8899`     | `http` or `https`; no credentials in the URL                                                            |
