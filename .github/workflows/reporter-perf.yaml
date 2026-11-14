@@ -1,0 +1,42 @@
+---
+name: reporter-perf
+
+defaults:
+  run:
+    shell: bash
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reporter-perf
+  cancel-in-progress: false
+
+jobs:
+  perf:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup environment
+        uses: ./.github/actions/setup-ubuntu
+      - name: Run performance gates
+        run: |
+          REPORTER_PERF=1 REPORTER_PERF_OUT="$RUNNER_TEMP/perf" GOWORK=off \
+            go test ./operator/reporter/scan/ ./operator/reporter/tx/ ./x/sink/ \
+            -run 'TestSteady100k|TestReporterNodeLoad|TestNoVoteExecutesTwice' \
+            -timeout 60m -v
+      - name: Upload profiles and node-load report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reporter-perf
+          path: ${{ runner.temp }}/perf
+          if-no-files-found: warn
