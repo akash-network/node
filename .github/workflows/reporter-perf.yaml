@@ -15,7 +15,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: reporter-perf
+  # A release calls this through workflow_call; its event (push) and tag keep it out of nightly and dispatch runs.
+  group: reporter-perf-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:

@@ -538,16 +538,50 @@ func TestRemoteSignBytesLimit(t *testing.T) {
 	})
 }
 
+// kmsGateKey is one REPORTER_KMS_KEYS entry: a key ID and the scheme GetKey
+// must report for it.
+type kmsGateKey struct {
+	id     string
+	scheme kmspb.SignatureScheme
+}
+
+// parseKMSGateKeys reads REPORTER_KMS_KEYS entries of the form id:SCHEME,
+// separated by commas. Empty entries are skipped.
+func parseKMSGateKeys(t *testing.T, raw string) []kmsGateKey {
+	t.Helper()
+
+	var keys []kmsGateKey
+
+	for _, entry := range strings.Split(raw, ",") {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
+			continue
+		}
+
+		id, name, ok := strings.Cut(entry, ":")
+		require.True(t, ok, "REPORTER_KMS_KEYS entry %q is not id:SCHEME", entry)
+
+		scheme, known := kmspb.SignatureScheme_value[name]
+		require.True(t, known, "REPORTER_KMS_KEYS entry %q names an unknown scheme", entry)
+
+		keys = append(keys, kmsGateKey{id: id, scheme: kmspb.SignatureScheme(scheme)})
+	}
+
+	return keys
+}
+
 // TestRemoteAgainstKMS is the release gate against a real kms binary (Task
-// 27). It needs REPORTER_KMS_ADDR, REPORTER_KMS_CA and REPORTER_KMS_KEYS.
+// 27). It needs REPORTER_KMS_ADDR, REPORTER_KMS_CA and REPORTER_KMS_KEYS, the
+// last as id:SCHEME entries, for example
+// secp-eth:ECDSA_SECP256K1ETH,secp:ECDSA_SECP256K1.
 func TestRemoteAgainstKMS(t *testing.T) {
 	addr := os.Getenv("REPORTER_KMS_ADDR")
 	if addr == "" {
 		t.Skip("REPORTER_KMS_ADDR is not set")
 	}
 
-	keys := strings.Split(os.Getenv("REPORTER_KMS_KEYS"), ",")
-	require.NotEmpty(t, strings.TrimSpace(keys[0]), "REPORTER_KMS_KEYS lists no key IDs")
+	keys := parseKMSGateKeys(t, os.Getenv("REPORTER_KMS_KEYS"))
+	require.NotEmpty(t, keys, "REPORTER_KMS_KEYS lists no keys")
 
 	creds, err := remoteCredentials(RemoteOptions{CAFile: os.Getenv("REPORTER_KMS_CA")})
 	require.NoError(t, err)
@@ -557,10 +591,9 @@ func TestRemoteAgainstKMS(t *testing.T) {
 	defer func() { require.NoError(t, conn.Close()) }()
 
 	client := kmspb.NewSignerServiceClient(conn)
-	signBytes := []byte("akt-reporter release gate sign doc")
 
-	for _, id := range keys {
-		id = strings.TrimSpace(id)
+	for _, key := range keys {
+		id := key.id
 
 		t.Run(id, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -568,6 +601,7 @@ func TestRemoteAgainstKMS(t *testing.T) {
 
 			resp, err := client.GetKey(ctx, &kmspb.GetKeyRequest{Id: id})
 			require.NoError(t, err)
+			require.Equal(t, key.scheme, resp.GetKey().GetScheme())
 
 			pub, err := parseRemoteKey(resp.GetKey().GetPubkey())
 			require.NoError(t, err)
@@ -584,12 +618,25 @@ func TestRemoteAgainstKMS(t *testing.T) {
 
 			require.True(t, s.Address().Equals(reporter))
 
-			sig, err := s.Sign(ctx, signBytes)
-			require.NoError(t, err)
+			docs := [][]byte{[]byte("akt-reporter release gate sign doc")}
 
-			out, err := NormalizeAndVerify(s.PubKey(), signBytes, sig)
-			require.NoError(t, err)
-			require.Equal(t, sig, out)
+			switch key.scheme {
+			case kmspb.SignatureScheme_ECDSA_SECP256K1:
+				require.Equal(t, 4096, SignBytesLimit(s))
+				docs = append(docs, []byte(strings.Repeat("a", 4096)))
+			case kmspb.SignatureScheme_ECDSA_SECP256K1ETH:
+				require.Equal(t, 0, SignBytesLimit(s))
+				docs = append(docs, []byte(strings.Repeat("e", 16*1024)))
+			}
+
+			for _, signBytes := range docs {
+				sig, err := s.Sign(ctx, signBytes)
+				require.NoError(t, err, "sign %d bytes", len(signBytes))
+
+				out, err := NormalizeAndVerify(s.PubKey(), signBytes, sig)
+				require.NoError(t, err)
+				require.Equal(t, sig, out)
+			}
 		})
 	}
 }
