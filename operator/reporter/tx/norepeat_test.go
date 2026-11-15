@@ -7,6 +7,7 @@ import (
 	"math/rand/v2"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -398,6 +399,24 @@ func noRepeatRound(t *testing.T, rng *rand.Rand) {
 	stopB()
 	h.node.SetLag(0)
 
+	// The round must have exercised something: every vote and veto executed, and the reporters' own broadcasts met
+	// injected faults. The rival only gossips, so its transactions consume no fault.
 	ex := h.executions()
-	require.NotEmpty(t, ex, "the round executed messages")
+	votes := 0
+	for key := range ex {
+		if strings.HasPrefix(key, sdk.MsgTypeURL(&sinkv1.MsgReportOutcome{})+"|") {
+			votes++
+		}
+	}
+	require.Equal(t, mixVotes, votes, "every vote executed")
+	require.GreaterOrEqual(t, len(ex), headRefund, "every vote and veto executed")
+
+	consumed, fired := 0, 0
+	h.node.Mutate(func(sc *simnode.Scenario) { consumed = len(faults) - len(sc.Akash.BroadcastFaults) })
+	for _, f := range faults[:consumed] {
+		if f.Kind != simnode.FaultNone {
+			fired++
+		}
+	}
+	require.Positive(t, fired, "no injected fault fired: the reporters made %d broadcasts", consumed)
 }

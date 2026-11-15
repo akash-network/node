@@ -162,6 +162,8 @@ func drain(t *testing.T, wrap func(signer.Signer) signer.Signer) map[string]stri
 
 	require.LessOrEqual(t, used, int64(drainWindows))
 	require.True(t, first.Before(ended), "the first pass returns before the drain ends")
+	require.Positive(t, unconfirmed.Load(), "the drain had unconfirmed transactions")
+	require.Positive(t, inFlight.Load(), "the drain had transactions in flight")
 	require.LessOrEqual(t, unconfirmed.Load(), int64(o.MaxInFlight))
 	require.LessOrEqual(t, inFlight.Load(), int64(o.MaxInFlight))
 
