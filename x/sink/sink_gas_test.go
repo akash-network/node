@@ -9,6 +9,7 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 	abci "github.com/cometbft/cometbft/abci/types"
+	cmttypes "github.com/cometbft/cometbft/types"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
@@ -20,11 +21,29 @@ import (
 	reportertx "pkg.akt.dev/node/v2/operator/reporter/tx"
 )
 
-// simGasLimit and simFee are the gas limit and fee the reporter simulates with under its defaults: gas = auto,
-// tx.max-gas and gas prices in uakt.
-const simGasLimit = 20_000_000
+// simGasLimit and simFee are the gas limit and fee the reporter simulates with under its defaults, gas = auto and gas
+// prices in uakt: no limit, which no block max gas refuses, and one unit of the fee denomination.
+const simGasLimit = 0
 
 var simFee = sdk.NewCoins(coin(1))
+
+// simBytes is the transaction the reporter's broadcaster simulates msg with, under the default configuration and
+// blockMaxGas.
+func (g *gasProbe) simBytes(t *testing.T, reporter int, blockMaxGas int64, msg sdk.Msg, timeout time.Time) []byte {
+	t.Helper()
+	d := config.Default()
+	b := reportertx.New(reportertx.Options{
+		GasAdjustment: d.GasAdjustment,
+		GasPrices:     g.prices,
+		MaxGas:        d.Tx.MaxGas,
+		BlockMaxGas:   blockMaxGas,
+	}, nil, g.builders[reporter], nil)
+
+	bz, err := b.SimBytes([]sdk.Msg{msg}, timeout)
+	require.NoError(t, err)
+
+	return bz
+}
 
 // gasProbe builds reporter transactions with the reporter's real builder on a policy where every member must vote:
 // 3 members at threshold 0.75, as in the local stack, or 5 members at threshold 1.
@@ -75,9 +94,7 @@ func (g *gasProbe) prepare(t *testing.T, reporter int, adjustment float64, msg s
 	h, b := g.h, g.builders[reporter]
 	timeout := h.now.Add(time.Minute)
 
-	sim, err := b.SimBytes([]sdk.Msg{msg}, simGasLimit, simFee, timeout)
-	require.NoError(t, err)
-	info, _, err := h.a.Simulate(sim)
+	info, _, err := h.a.Simulate(g.simBytes(t, reporter, 0, msg, timeout))
 	require.NoError(t, err)
 
 	adj := sdkmath.LegacyMustNewDecFromStr(strconv.FormatFloat(adjustment, 'f', -1, 64))
@@ -143,6 +160,44 @@ func TestReporterGasQuorumVote(t *testing.T) {
 			})
 		}
 	}
+}
+
+// TestReporterSimulationUnderBlockMaxGas checks that the reporter's simulation passes the ante handler's block max gas
+// check on a chain whose block max gas is below tx.max-gas, and that its signed limit fits in a block (spec §6.4).
+func TestReporterSimulationUnderBlockMaxGas(t *testing.T) {
+	const blockMaxGas = 10_000_000
+	g := newGasProbe(t, 3)
+	h := g.h
+	require.Greater(t, config.Default().Tx.MaxGas, uint64(blockMaxGas))
+
+	// The test app starts without consensus parameters; store CometBFT's defaults with the lower block max gas.
+	cp := cmttypes.DefaultConsensusParams().ToProto()
+	cp.Block.MaxGas = blockMaxGas
+	require.NoError(t, h.a.StoreConsensusParams(h.ctx(), cp))
+	h.commitBlock(t, h.now.Add(time.Second))
+	require.Equal(t, int64(blockMaxGas), h.a.GetConsensusParams(h.ctx()).Block.MaxGas)
+
+	msg, timeout := h.reportMsg(t, 0, 1, sinktypes.OutcomeMinted), h.now.Add(time.Minute)
+
+	// A transaction declaring tx.max-gas is refused, in simulation too.
+	declared, err := g.builders[0].SimBytes([]sdk.Msg{msg}, config.Default().Tx.MaxGas, simFee, timeout)
+	require.NoError(t, err)
+	_, _, err = h.a.Simulate(declared)
+	require.ErrorContains(t, err, "exceeds block max gas")
+
+	info, _, err := h.a.Simulate(g.simBytes(t, 0, blockMaxGas, msg, timeout))
+	require.NoError(t, err)
+	require.Positive(t, info.GasUsed)
+
+	limit := reportertx.EffectiveMaxGas(config.Default().Tx.MaxGas, blockMaxGas)
+	require.Equal(t, uint64(blockMaxGas), limit)
+	adj := sdkmath.LegacyMustNewDecFromStr(strconv.FormatFloat(config.Default().GasAdjustment, 'f', -1, 64))
+	gas := sdkmath.LegacyNewDecFromInt(sdkmath.NewIntFromUint64(info.GasUsed)).Mul(adj).Ceil().TruncateInt().Uint64()
+	require.LessOrEqual(t, gas, limit)
+	bz, _, err := g.builders[0].Build(t.Context(), []sdk.Msg{msg}, gas, reportertx.FeeFor(gas, g.prices, nil), timeout)
+	require.NoError(t, err)
+	res := h.deliverBytes(t, bz)
+	require.Zero(t, res.Code, res.Log)
 }
 
 // TestReporterGasMeasure logs delivered/simulated gas for the reporter's transactions. It only measures.

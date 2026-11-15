@@ -1770,61 +1770,6 @@ func TestAbortedScanReportsDeferred(t *testing.T) {
 	require.Empty(t, p.deferred())
 }
 
-func TestAbortedScanReportsDeferred(t *testing.T) {
-	h := newHarness(t, setup{change: func(sc *simnode.Scenario) {
-		sc.Akash.BroadcastFaults = []simnode.BroadcastFault{{Kind: simnode.FaultNonceTaken}}
-	}})
-	p := h.start(h.options(), h.signer, nil)
-	pin := simnode.LightClient
-	s := h.pinnedScanner(p.chain, p.ev, p.b, p.b.o.RefreshInterval, &pin)
-	p.b.SetReviewer(s)
-
-	// A vote is deferred: its slot is taken.
-	vote := h.plan(h.snapshot(), 0)
-	require.True(t, p.b.Queue(vote))
-	p.b.Flush()
-	require.Eventually(t, func() bool { return p.deferred()[vote.ID.String()] == reasonSlotBusy }, 5*time.Second, time.Millisecond)
-
-	// Governance re-pins the bridge, so the scan's pass ends on a pin mismatch while blocks keep coming.
-	other := solana.PublicKeyFromBytes(bytes.Repeat([]byte{5}, 32))
-	h.node.Mutate(func(sc *simnode.Scenario) {
-		sc.Solana.Accounts[aktsolana.PDA(simnode.ProgramID, []byte("bridge"))] = simnode.Account{
-			Owner: simnode.ProgramID, Lamports: 1, Data: simnode.EncodeBridgeConfig(simnode.BridgeConfig{
-				LightClientProgram: other, ChainID: simnode.ChainID,
-				PerTransferMax: 1_000_000_000_000, DailyMintCap: 1_000_000_000_000,
-			}),
-		}
-	})
-
-	done := make(chan int, 1)
-	go func() { done <- s.Pass(t.Context(), p.settle(t.Context())) }()
-
-	var failures int
-	finished := false
-	for i := 0; i < 100 && !finished; i++ {
-		h.clock.Advance(10 * time.Second)
-		h.node.CommitBlock()
-		select {
-		case failures = <-done:
-			finished = true
-		case <-time.After(20 * time.Millisecond):
-		}
-	}
-	require.True(t, finished, "scan returns over 1,000 s of healthy blocks")
-	require.Equal(t, 2, failures, "the deferred vote and the pass error")
-
-	lines := p.lines()
-	require.Len(t, lines, 3)
-	_, errs := outcomes(t, lines[:1])
-	require.Equal(t, map[string]string{
-		vote.ID.String(): "sink message not sent: deferred (slot_busy) until " +
-			SlotTimeout(WindowOf(vote.PlanTime), slotOf(vote)).Format(time.RFC3339Nano),
-	}, errs)
-	require.JSONEq(t, `{"alert":"light-client-mismatch","pinned":"`+pin.String()+`","current":"`+other.String()+`"}`, lines[1])
-	require.Contains(t, lines[2], "differs from pinned")
-	require.Empty(t, p.deferred())
-}
-
 func TestWaitDoesNotSpin(t *testing.T) {
 	h := newHarness(t, setup{})
 	var pumps atomic.Int64
@@ -1922,19 +1867,25 @@ func (h *harness) voteSlots(st *akash.State) map[int]int {
 
 func TestCapsSplitBatches(t *testing.T) {
 	gasCases := []struct {
-		name   string
-		maxGas uint64
+		name        string
+		maxGas      uint64
+		blockMaxGas int64
+		over        string
 	}{
 		// With adjustment 1, simnode uses 60,000 + 40,000 per message: two messages 140,000, one 100,000.
-		{"batch halved", 120_000},
-		{"single over the cap", 90_000},
+		{"batch halved", 120_000, 0, ""},
+		{"single over the cap", 90_000, 0, "gas limit 100000 exceeds tx.max-gas 90000"},
+		{"batch halved at the block max gas", 20_000_000, 120_000, ""},
+		{"single over the block max gas", 20_000_000, 90_000, "gas limit 100000 exceeds the block max gas 90000"},
+		{"tx.max-gas under the block max gas", 90_000, 120_000, "gas limit 100000 exceeds tx.max-gas 90000"},
 	}
 	for _, c := range gasCases {
 		t.Run(c.name, func(t *testing.T) {
-			h := newHarness(t, setup{})
+			h := newHarness(t, setup{change: func(sc *simnode.Scenario) { sc.Akash.BlockMaxGas = c.blockMaxGas }})
 			o := h.options()
 			o.GasAdjustment = 1
 			o.MaxGas = c.maxGas
+			o.BlockMaxGas = c.blockMaxGas
 			p := h.start(o, h.signer, nil)
 			pair := h.sameSlotVotes(h.snapshot(), 2)
 
@@ -1943,7 +1894,7 @@ func TestCapsSplitBatches(t *testing.T) {
 			}
 			p.b.Flush()
 
-			if c.maxGas >= 100_000 {
+			if c.over == "" {
 				d := h.waitBroadcasts(1)[0]
 				require.Equal(t, []string{pair[0].ID.String()}, d.ids)
 				require.Equal(t, uint64(100_000), d.gas)
@@ -1953,7 +1904,7 @@ func TestCapsSplitBatches(t *testing.T) {
 
 			require.Eventually(t, func() bool { return p.count() > 0 }, 5*time.Second, time.Millisecond)
 			_, errs := outcomes(t, p.lines())
-			require.Equal(t, map[string]string{pair[0].ID.String(): "gas limit 100000 exceeds tx.max-gas 90000"}, errs)
+			require.Equal(t, map[string]string{pair[0].ID.String(): c.over}, errs)
 			require.Equal(t, map[string]string{pair[1].ID.String(): reasonCap}, p.deferred())
 			require.Empty(t, h.node.Broadcasts())
 		})

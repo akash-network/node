@@ -452,6 +452,43 @@ func TestScanTwiceNoRepeat(t *testing.T) {
 	requireVotedOnce(t, n, votes)
 }
 
+func TestScanUnderBlockMaxGas(t *testing.T) {
+	t.Run("simulation and sending under a block max gas below tx.max-gas", func(t *testing.T) {
+		const votes = 30
+		n := startVotes(t, simnode.Options{}, func(sc *simnode.Scenario) { sc.Akash.BlockMaxGas = 10_000_000 })
+
+		r := runToEnd(t, reporterArgs(n, withKey(t), "scan", keyringBroadcast...)...)
+		require.Equal(t, 0, r.code, r.stderr)
+		require.Contains(t, r.stderr, "gas-cap=10000000")
+
+		events := lines(t, r.stdout)
+		require.EqualValues(t, 0, events[len(events)-1]["failures"])
+		require.Len(t, txHashes(events), votes)
+		requireVotedOnce(t, n, votes)
+	})
+
+	t.Run("a vote over the block max gas is not sent", func(t *testing.T) {
+		// One vote needs 100,000 gas in simnode, a limit of 200,000 at gas-adjustment 2.0.
+		n := startVotes(t, simnode.Options{}, func(sc *simnode.Scenario) {
+			sc.Akash.Transfers = sc.Akash.Transfers[:1]
+			sc.Akash.BlockMaxGas = 150_000
+		})
+
+		r := runToEnd(t, reporterArgs(n, withKey(t), "scan", keyringBroadcast...)...)
+		require.Equal(t, 1, r.code, r.stderr)
+		require.Contains(t, r.stderr, "gas-cap=150000")
+
+		var errs []string
+		for _, ev := range lines(t, r.stdout) {
+			if e, ok := ev["error"].(string); ok {
+				errs = append(errs, e)
+			}
+		}
+		require.Equal(t, []string{"gas limit 200000 exceeds the block max gas 150000"}, errs)
+		require.Empty(t, n.Broadcasts())
+	})
+}
+
 // oneVote keeps only the first transfer of the votes scenario and fails the first executed transaction.
 func oneVote(sc *simnode.Scenario) {
 	sc.Akash.Transfers = sc.Akash.Transfers[:1]

@@ -75,6 +75,8 @@ type reporter struct {
 	scanner     *scan.Scanner
 	metrics     *metrics.Metrics
 	gather      prometheus.Gatherer
+	// blockMaxGas is the chain's consensus block max gas, read at broadcast startup.
+	blockMaxGas int64
 }
 
 // runReporter validates the configuration, connects, starts the metrics listener and runs one pass (scan) or passes
@@ -222,7 +224,8 @@ func (r *reporter) connect(ctx context.Context, cmd *cobra.Command) (err error) 
 }
 
 // prepareBroadcast runs the broadcast startup checks that follow the node-ID check, in order: the first snapshot,
-// the signer, which must derive reporter, and the reporter's account number, which it returns. Run logs the
+// the signer, which must derive reporter, and the reporter's account number, which it returns. It then reads the
+// block max gas, which caps the gas limit below tx.max-gas when it is lower, and logs the cap. Run logs the
 // transaction-index warning. Preview never calls it, so it never opens the keyring or dials the remote signer
 // (spec §7).
 func (r *reporter) prepareBroadcast(ctx context.Context, cmd *cobra.Command) (uint64, error) {
@@ -269,6 +272,13 @@ func (r *reporter) prepareBroadcast(ctx context.Context, cmd *cobra.Command) (ui
 	r.log.Info().Str("signer", kind).Str("address", r.signer.Address().String()).Uint64("account-number", accountNumber).
 		Msg("loaded signer")
 
+	if r.blockMaxGas, err = r.akash.BlockMaxGas(ctx); err != nil {
+		return 0, fmt.Errorf("read the consensus block max gas: %w", err)
+	}
+
+	r.log.Info().Uint64("tx.max-gas", cfg.Tx.MaxGas).Int64("block-max-gas", r.blockMaxGas).
+		Uint64("gas-cap", tx.EffectiveMaxGas(cfg.Tx.MaxGas, r.blockMaxGas)).Msg("gas cap")
+
 	return accountNumber, nil
 }
 
@@ -293,6 +303,7 @@ func (r *reporter) newBroadcaster(accountNumber uint64) *tx.Broadcaster {
 		GasPrices:     cfg.GasPrices,
 		Fees:          cfg.Fees,
 		MaxGas:        cfg.Tx.MaxGas,
+		BlockMaxGas:   r.blockMaxGas,
 		MaxFee:        cfg.MaxFee,
 		SignerTimeout: r.signerTimeout(),
 		ShutdownGrace: shutdownGrace,

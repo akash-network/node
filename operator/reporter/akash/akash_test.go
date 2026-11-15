@@ -585,6 +585,20 @@ func TestShutdownCancelsQueuedReads(t *testing.T) {
 	require.Equal(t, calls-opts.Concurrency, cancelled, "the reads waiting for a permit are cancelled")
 }
 
+func TestBlockMaxGas(t *testing.T) {
+	n, fake := startNode(t, clean(), simnode.Options{})
+	got, err := dial(t, options(n, fake)).BlockMaxGas(t.Context())
+	require.NoError(t, err)
+	require.Equal(t, int64(-1), got, "unlimited")
+
+	sc := clean()
+	sc.Akash.BlockMaxGas = 5_000_000
+	n, fake = startNode(t, sc, simnode.Options{})
+	got, err = dial(t, options(n, fake)).BlockMaxGas(t.Context())
+	require.NoError(t, err)
+	require.Equal(t, int64(5_000_000), got)
+}
+
 func TestTrackerCachesFailure(t *testing.T) {
 	n, fake := startNode(t, simnode.Scenarios()["stale-akash"](), simnode.Options{})
 	c := dial(t, options(n, fake))

@@ -83,6 +83,10 @@ type Akash struct {
 	BroadcastFaults []BroadcastFault `json:"broadcastFaults,omitempty"`
 	// UnorderedDisabled refuses every transaction as a chain without unordered transactions does.
 	UnorderedDisabled bool `json:"unorderedDisabled,omitempty"`
+	// BlockMaxGas is the consensus block max gas that cosmos.consensus.v1.Query/Params serves; zero serves -1,
+	// unlimited. When positive, the ante checks refuse a transaction declaring more gas, in simulation too
+	// (x/auth/ante/setup.go).
+	BlockMaxGas int64 `json:"blockMaxGas,omitempty"`
 	// Deliveries are consumed one per executed transaction, in block order; a non-zero Code fails that transaction
 	// after its replay key is stored, so it pays its fee and changes nothing.
 	Deliveries []Delivery `json:"deliveries,omitempty"`
@@ -648,6 +652,8 @@ func (n *Node) anteError(tx *akashTx, blockTime time.Time) error {
 	switch {
 	case tx.decodeErr != nil:
 		return errorsmod.Wrap(sdkerrors.ErrTxDecode, tx.decodeErr.Error())
+	case n.sc.Akash.BlockMaxGas > 0 && tx.gas > uint64(n.sc.Akash.BlockMaxGas): //nolint:gosec // positive
+		return errorsmod.Wrapf(sdkerrors.ErrInvalidGasLimit, "tx gas limit %d exceeds block max gas %d", tx.gas, n.sc.Akash.BlockMaxGas)
 	case n.sc.Akash.UnorderedDisabled:
 		return errorsmod.Wrap(sdkerrors.ErrNotSupported, "unordered transactions are not enabled")
 	case !tx.unordered:

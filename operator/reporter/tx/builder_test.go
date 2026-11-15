@@ -370,7 +370,7 @@ func (c *capturingChain) Simulate(_ context.Context, txBytes []byte) (uint64, er
 
 // TestSimulatorShape checks the fee and gas limit the broadcaster simulates with: the exact ones when they are known
 // before simulating, otherwise a fee of one unit of each gas-price denomination, so the ante handler still deducts
-// a fee, and a limit of tx.max-gas, at least as long as the final one.
+// a fee, and a limit of 0, which no block max gas refuses; simulation meters no limit.
 func TestSimulatorShape(t *testing.T) {
 	s := testSigner(t)
 	timeout := SlotTimeout(15_000_000, 3)
@@ -384,8 +384,9 @@ func TestSimulatorShape(t *testing.T) {
 		gas  uint64
 		fee  sdk.Coins
 	}{
-		{"auto with gas prices", Options{GasPrices: prices, MaxGas: 20_000_000}, 20_000_000, sdk.NewCoins(sdk.NewInt64Coin("uakt", 1))},
-		{"auto with fees", Options{GasPrices: prices, Fees: fees, MaxGas: 20_000_000}, 20_000_000, fees},
+		{"auto with gas prices", Options{GasPrices: prices, MaxGas: 20_000_000}, 0, sdk.NewCoins(sdk.NewInt64Coin("uakt", 1))},
+		{"auto with fees", Options{GasPrices: prices, Fees: fees, MaxGas: 20_000_000}, 0, fees},
+		{"auto under a block max gas", Options{GasPrices: prices, MaxGas: 20_000_000, BlockMaxGas: 10_000_000}, 0, sdk.NewCoins(sdk.NewInt64Coin("uakt", 1))},
 		{"gas per message with gas prices", Options{GasPerMessage: 70_000, GasPrices: prices, MaxGas: 20_000_000}, 140_000, sdk.NewCoins(sdk.NewInt64Coin("uakt", 3500))},
 		{"gas per message with fees", Options{GasPerMessage: 70_000, GasPrices: prices, Fees: fees, MaxGas: 20_000_000}, 140_000, fees},
 	}
@@ -402,6 +403,10 @@ func TestSimulatorShape(t *testing.T) {
 			require.Equal(t, c.gas, auth.Fee.GasLimit)
 			require.Equal(t, c.fee, auth.Fee.Amount)
 			require.Len(t, raw.Signatures[0], simSignatureLen)
+
+			exported, err := b.SimBytes(msgs, timeout)
+			require.NoError(t, err)
+			require.Equal(t, chain.simulated[0], exported, "SimBytes is what the broadcaster simulates")
 		})
 	}
 }

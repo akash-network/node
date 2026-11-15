@@ -14,6 +14,7 @@ import (
 
 	errorsmod "cosmossdk.io/errors"
 	p2pproto "github.com/cometbft/cometbft/proto/tendermint/p2p"
+	cmttypes "github.com/cometbft/cometbft/types"
 	"github.com/cosmos/cosmos-sdk/client/grpc/cmtservice"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -25,6 +26,7 @@ import (
 	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	consensustypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
 	gogoproto "github.com/cosmos/gogoproto/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -73,6 +75,7 @@ func (r queryRouter) RegisterService(sd *grpc.ServiceDesc, ss any) {
 func (n *Node) registerQueries(s gogoServer) {
 	sinkv1.RegisterQueryServer(s, &sinkQuery{n: n})
 	authtypes.RegisterQueryServer(s, &authQuery{n: n})
+	consensustypes.RegisterQueryServer(s, &consensusQuery{n: n})
 }
 
 type gogoServer interface {
@@ -488,6 +491,22 @@ func (q *authQuery) Account(_ context.Context, req *authtypes.QueryAccountReques
 	}
 
 	return nil, status.Errorf(codes.NotFound, "account %s not found", req.Address)
+}
+
+// consensusQuery serves the consensus parameters' block limits; the other parameters are CometBFT's defaults.
+type consensusQuery struct {
+	consensustypes.UnimplementedQueryServer
+	n *Node
+}
+
+func (q *consensusQuery) Params(context.Context, *consensustypes.QueryParamsRequest) (*consensustypes.QueryParamsResponse, error) {
+	params := cmttypes.DefaultConsensusParams().ToProto()
+	params.Block.MaxGas = -1
+	if g := q.n.sc.Akash.BlockMaxGas; g > 0 {
+		params.Block.MaxGas = g
+	}
+
+	return &consensustypes.QueryParamsResponse{Params: &params}, nil
 }
 
 // txService simulates against the latest state, without the replay-key check (x/auth/ante/sigverify.go).

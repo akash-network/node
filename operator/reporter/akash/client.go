@@ -25,6 +25,7 @@ import (
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	vestingtypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
+	consensustypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
 	"golang.org/x/sync/semaphore"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -380,6 +381,20 @@ func (c *Client) AccountNumber(ctx context.Context, addr sdk.AccAddress) (uint64
 	}
 
 	return acc.GetAccountNumber(), nil
+}
+
+// BlockMaxGas reads the consensus block max gas at the node's latest state; -1 or 0 means unlimited.
+func (c *Client) BlockMaxGas(ctx context.Context) (int64, error) {
+	res, err := consensustypes.NewQueryClient(c.conn).Params(ctx, &consensustypes.QueryParamsRequest{})
+	if err != nil {
+		return 0, err
+	}
+
+	if res.Params == nil || res.Params.Block == nil {
+		return 0, errors.New("consensus parameters have no block parameters")
+	}
+
+	return res.Params.Block.MaxGas, nil
 }
 
 // Simulate runs txBytes against the node's latest state and returns the gas it used. A failure keeps the node's

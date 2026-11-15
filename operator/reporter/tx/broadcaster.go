@@ -70,7 +70,9 @@ type Options struct {
 	GasPrices     sdk.DecCoins
 	Fees          sdk.Coins
 	MaxGas        uint64
-	MaxFee        sdk.Coin
+	// BlockMaxGas is the chain's consensus block max gas; when positive and below MaxGas, it is the gas cap.
+	BlockMaxGas int64
+	MaxFee      sdk.Coin
 	// SignerTimeout is the remote signer's timeout, 0 for the keyring; it lengthens the send cutoff.
 	SignerTimeout time.Duration
 	// RefreshInterval paces snapshot refreshes, re-sends and retries; zero means one second.
@@ -862,8 +864,7 @@ func (b *Broadcaster) firstSend(msgs []policy.Planned, raw, hash []byte, fee sdk
 // failure, not a transport error.
 func (b *Broadcaster) simulator(timeout time.Time) func([]sdk.Msg) (uint64, error) {
 	return func(msgs []sdk.Msg) (uint64, error) {
-		gas, fee := b.simShape(len(msgs))
-		bz, err := b.b.SimBytes(msgs, gas, fee, timeout)
+		bz, err := b.SimBytes(msgs, timeout)
 		if err != nil {
 			return 0, status.Error(codes.Internal, err.Error())
 		}
@@ -872,10 +873,17 @@ func (b *Broadcaster) simulator(timeout time.Time) func([]sdk.Msg) (uint64, erro
 	}
 }
 
+// SimBytes returns the transaction the broadcaster simulates msgs with, under timeout.
+func (b *Broadcaster) SimBytes(msgs []sdk.Msg, timeout time.Time) ([]byte, error) {
+	gas, fee := b.simShape(len(msgs))
+	return b.b.SimBytes(msgs, gas, fee, timeout)
+}
+
 // simShape returns the gas limit and fee to simulate n messages with. Known before simulating, they are exact.
-// With gas = auto the limit is tx.max-gas, whose encoding is at least as long as the final limit's, and a fee
-// priced from gas prices is one unit of each denomination: the fee deduction is simulated, and a reporter whose
-// balance covers the real fee never fails simulation on it.
+// With gas = auto the limit is 0: simulation meters no limit, and the declared one only meets the block max gas
+// check, which 0 always passes, and adds a few bytes of size gas, which gas-adjustment covers. A fee priced from gas
+// prices is one unit of each denomination: the fee deduction is simulated, and a reporter whose balance covers the
+// real fee never fails simulation on it.
 func (b *Broadcaster) simShape(n int) (uint64, sdk.Coins) {
 	if b.o.GasPerMessage > 0 {
 		gas := b.gasLimit(0, n)
@@ -883,7 +891,7 @@ func (b *Broadcaster) simShape(n int) (uint64, sdk.Coins) {
 	}
 
 	if !b.o.Fees.IsZero() {
-		return b.o.MaxGas, b.o.Fees
+		return 0, b.o.Fees
 	}
 
 	fee := make([]sdk.Coin, 0, len(b.o.GasPrices))
@@ -891,7 +899,7 @@ func (b *Broadcaster) simShape(n int) (uint64, sdk.Coins) {
 		fee = append(fee, sdk.NewInt64Coin(price.Denom, 1))
 	}
 
-	return b.o.MaxGas, sdk.NewCoins(fee...)
+	return 0, sdk.NewCoins(fee...)
 }
 
 // gasLimit is GasPerMessage × n, or with gas = auto ceil(used × GasAdjustment) (spec §6.4).
@@ -908,10 +916,24 @@ func (b *Broadcaster) gasLimit(used uint64, n int) uint64 {
 	return sdkmath.LegacyNewDecFromInt(sdkmath.NewIntFromUint64(used)).Mul(adjustment).Ceil().TruncateInt().Uint64()
 }
 
+// EffectiveMaxGas is the gas cap of a transaction: tx.max-gas, or the chain's block max gas when that is positive
+// and lower, since no block includes a transaction declaring more (spec §6.4).
+func EffectiveMaxGas(maxGas uint64, blockMaxGas int64) uint64 {
+	if blockMaxGas <= 0 {
+		return maxGas
+	}
+
+	return min(maxGas, uint64(blockMaxGas)) //nolint:gosec // positive
+}
+
 // overCap describes a gas limit or fee above its cap, or returns "".
 func (b *Broadcaster) overCap(gas uint64, fee sdk.Coins) string {
-	if b.o.MaxGas > 0 && gas > b.o.MaxGas {
-		return fmt.Sprintf("gas limit %d exceeds tx.max-gas %d", gas, b.o.MaxGas)
+	if capped := EffectiveMaxGas(b.o.MaxGas, b.o.BlockMaxGas); capped > 0 && gas > capped {
+		if capped < b.o.MaxGas {
+			return fmt.Sprintf("gas limit %d exceeds the block max gas %d", gas, capped)
+		}
+
+		return fmt.Sprintf("gas limit %d exceeds tx.max-gas %d", gas, capped)
 	}
 
 	if capped := b.o.MaxFee; !capped.Amount.IsNil() && fee.AmountOf(capped.Denom).GT(capped.Amount) {
