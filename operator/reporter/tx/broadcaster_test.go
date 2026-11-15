@@ -770,6 +770,70 @@ func TestPriority(t *testing.T) {
 	}, order)
 }
 
+// vetoInSlot returns a veto, not valid on chain, of another transfer that shares p's single-message slot.
+func vetoInSlot(t *testing.T, p policy.Planned) policy.Planned {
+	t.Helper()
+
+	for k := uint64(1_000); k < 1_000_000; k++ {
+		id := p.ID
+		id.Sequence = k
+		q := policy.Planned{ID: id, Msg: &sinkv1.MsgVetoVoid{Signer: simnode.Reporter, ID: id.Proto(), Reason: "No Solana status"}}
+		q.Key, q.PlanHeight, q.PlanTime = policy.KeyOf(q.ID, q.Msg), p.PlanHeight, p.PlanTime
+		if slotOf(q) == slotOf(p) {
+			return q
+		}
+	}
+	t.Fatal("no veto shares the slot")
+
+	return policy.Planned{}
+}
+
+func TestReleasedSlotTakesNewKind(t *testing.T) {
+	h := newHarness(t, setup{})
+	o := h.options()
+	o.MaxInFlight = 1
+	p := h.start(o, h.signer, nil)
+	rev := &queuedHeads{release: make(chan error, 10)}
+	for range 10 {
+		rev.release <- nil
+	}
+	p.b.SetReviewer(rev)
+	st := h.snapshot()
+
+	// A veto of a transfer the chain does not have fails before submission and releases its slot.
+	refund := h.plan(st, headRefund)
+	stale := vetoInSlot(t, refund)
+	require.True(t, p.b.Queue(stale))
+	require.Eventually(t, func() bool { return p.count() == 1 }, 5*time.Second, time.Millisecond)
+	_, errs := outcomes(t, p.lines())
+	require.Contains(t, errs[stale.ID.String()], "message index: 0")
+	phase, closed := p.entry(refund)
+	require.Empty(t, phase)
+	require.False(t, closed)
+
+	// A vote holds the one in-flight place while the refund, in the released slot, and a veto queue.
+	require.True(t, p.b.Queue(h.plan(st, 0)))
+	p.b.Flush()
+	h.waitBroadcasts(1)
+	veto := h.plan(st, firstVeto)
+	require.NotEqual(t, slotOf(refund), slotOf(veto))
+	require.True(t, p.b.Queue(refund))
+	require.True(t, p.b.Queue(veto))
+
+	var order []string
+	for n := 2; n <= 3; n++ {
+		h.commit()
+		got := h.waitBroadcasts(n)
+		order = append(order, got[n-1].ids...)
+	}
+	require.Equal(t, []string{veto.ID.String(), refund.ID.String()}, order, "the veto goes before the refund")
+
+	// The refund's inclusion reviews the refund head.
+	h.commit()
+	h.eventually(func() bool { return h.executions()[executedRefund(refund.ID)] == 1 }, "the refund is included")
+	h.eventually(func() bool { return len(rev.calls()) == 1 }, "the refund head is reviewed")
+}
+
 func TestSlotBatching(t *testing.T) {
 	t.Run("one transaction per slot", func(t *testing.T) {
 		h := newHarness(t, setup{})

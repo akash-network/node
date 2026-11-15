@@ -185,9 +185,11 @@ func (b *Broadcaster) queue(p policy.Planned, filler uint64) bool {
 		return false
 	}
 
+	// The first message of an empty batch sets its kind: vetoes and refunds share a slot range, and a slot released
+	// before its first broadcast can be used again in its window by the other kind.
 	if len(e.queued) == 0 {
 		s.seq++
-		e.seq = s.seq
+		e.seq, e.kind = s.seq, p.Key.Kind
 	}
 
 	e.queued = append(e.queued, p)
