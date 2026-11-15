@@ -40,7 +40,7 @@ import {
 } from "./common";
 import { govern, governanceAddress } from "./governance";
 import { reconcile } from "./reconcile";
-import { relayContext } from "./relay";
+import { relayContext } from "./go-relay";
 import { processes, stop } from "./stack";
 export async function expectRefundError(
   send: () => Promise<Pick<DeliverTxResponse, "code" | "rawLog">>,

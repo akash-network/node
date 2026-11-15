@@ -17,8 +17,8 @@ cd "$solana_repo"
 node --import tsx deploy/programs.ts check --manifest "$manifest"
 commit=$(node -e 'process.stdout.write(require(process.argv[1]).sourceCommit)' "$manifest")
 [[ "$(git rev-parse HEAD)" == "$commit" ]] || { echo 'Checkout must match the launch commit.' >&2; exit 1; }
-git diff --quiet HEAD -- .
-[[ -z "$(git ls-files --others --exclude-standard -- .)" ]] || { echo 'Commit or remove untracked Solana source first.' >&2; exit 1; }
+git -C "$NODE_SINK_DIR" diff --quiet HEAD -- .
+[[ -z "$(git -C "$NODE_SINK_DIR" ls-files --others --exclude-standard -- .)" ]] || { echo 'Commit or remove untracked node source first.' >&2; exit 1; }
 [[ "$(node --version)" == v24.* ]] || { echo 'Node 24 is required.' >&2; exit 1; }
 
 stage=$(mktemp -d "$SOLANA_CACHE/services.XXXXXX")
@@ -36,15 +36,13 @@ cp "$build/ics07_tendermint.ts" \
   "$build/access_manager.ts" "$stage/root/$upstream_types/"
 cmp "$build/ics07_tendermint.json" idls/ics07_tendermint.json
 cmp "$build/access_manager.json" idls/access_manager.json
-(
-  cd "$stage/root/contracts/solana"
-  source scripts/workspace.sh
-  cargo build --locked --release --manifest-path tools/header-encoder/Cargo.toml
-)
 mkdir -p "$stage/root/bin"
-cp "$stage/root/.cache/solana/target/release/akt-header-encoder" "$stage/root/bin/"
-# Retain only runtime IDLs/types and the SDK archive, never build caches.
-rm -rf "$stage/root/.cache/solana/target/release" "$stage/root/.cache/solana/target/.rustc_info.json"
+(
+  cd "$NODE_SINK_DIR"
+  CGO_ENABLED=0 go build -mod=readonly -trimpath -buildvcs=false \
+    -ldflags "-s -w -X main.version=manifest-$commit -X main.commit=$commit" \
+    -o "$stage/root/bin/akt-relayer" ./cmd/akt-relayer
+)
 (
   cd "$stage/root/contracts/solana"
   npm ci --include=dev
@@ -58,6 +56,7 @@ rm -rf "$stage/root/.cache/solana/target/release" "$stage/root/.cache/solana/tar
   node --version
   npm --version
   cat "$build/build-info.txt"
+  (cd "$stage/root"; sha256sum bin/akt-relayer)
 } > "$stage/root/service-build-info.txt"
 cp "$manifest" "$stage/root/launch-manifest.json"
 mkdir -p "$(dirname "$out")"

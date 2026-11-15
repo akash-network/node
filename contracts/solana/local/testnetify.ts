@@ -9,7 +9,7 @@ import { fromBech32, toBech32 } from "@cosmjs/encoding";
 import { Comet38Client, HttpClient } from "@cosmjs/tendermint-rpc";
 import { MsgCreateValidator } from "cosmjs-types/cosmos/staking/v1beta1/tx";
 import { PubKey } from "cosmjs-types/cosmos/crypto/ed25519/keys";
-import { relayContext } from "./relay";
+import { relayContext } from "./go-relay";
 import { start, stop, processes, running, ready } from "./stack";
 import {
   ROOT,

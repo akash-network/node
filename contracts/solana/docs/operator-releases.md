@@ -1,13 +1,14 @@
 # Run a relayer or reporter
 
-Relayer and reporter source lives in `node/contracts/solana`. Each service has
+The Go relayer lives in `cmd/akt-relayer` and `internal/relayer`; the reporter
+lives in `contracts/solana/reporter`. Each service has
 its own release and Docker image. Neither requires installing the Akash node,
 Node.js, npm or Rust. Configuration selects a compatible bridge deployment;
 changing its addresses does not require rebuilding the service.
 
-The images contain the pinned Node runtime and production dependencies. Only
-the relayer includes the header encoder and minimal Python runtime for its
-process lock. Both run as an unprivileged user.
+The relayer image contains a static Go binary with built-in header encoding
+and native process locking. The reporter image retains its pinned Node runtime
+and production dependencies. Both run as an unprivileged user.
 
 - [Docker Compose](#docker-compose)
 - [Existing wallets](#existing-wallets)
@@ -79,8 +80,7 @@ UID with mode `0600`. Do not put keys or seed phrases in `.env` or JSON config.
 Edit `.env` to select the image, network and host paths. Set
 `OPERATOR_NETWORK=testnet` for an isolated deployment; replace both mainnet
 identities in `config.json`. Keep the example's **container** key path
-`/run/keys/key`; the host path goes in `.env`. The relayer uses `/data` and
-`/opt/akt/bin/akt-header-encoder` inside the container.
+`/run/keys/key`; the host path goes in `.env`. The relayer stores durable state in `/data` inside the container.
 
 ```bash
 docker compose pull
@@ -94,6 +94,10 @@ Use `--network testnet` in the check command when `.env` selects testnet. The
 check validates configuration without reading the key or contacting RPC. It
 does not prove chain health. Watch runtime logs for verified chain identities,
 fresh blocks and successful scans; missing history is not evidence of a void.
+
+Relayer events are JSON objects, one per line. Parse their fields when collecting
+or alerting on logs. Property order and JSON string escaping can differ between
+the Go and TypeScript releases even when the decoded values match.
 
 The reporter starts in **preview** mode. After governance admits its address
 and preview scans pass, enable signing explicitly:
@@ -146,8 +150,9 @@ transactions leave the process; the private key is not sent to either chain.
 
 ## Download without Docker
 
-Use Ubuntu 24.04 amd64 or a compatible glibc 2.39+ host with Bash, Python 3,
-CA certificates and libstdc++6. Python supplies the relayer's process lock.
+The Go relayer needs Linux amd64 and CA certificates; it does not need Node,
+Python, Rust or a system C library. The reporter needs Ubuntu 24.04 amd64 or
+a compatible glibc 2.39+ host with Bash, CA certificates and libstdc++6.
 For the selected `ROLE`, `VERSION` and `BASE` above:
 
 ```bash
@@ -164,13 +169,20 @@ chmod -R a+rX,go-w "akt-$ROLE-$VERSION"
 Install the complete extracted directory as root-owned files under
 `/opt/akt-$ROLE/releases/$VERSION`. Use a dedicated unprivileged service account.
 Copy `deploy/config.example.json`; replace Docker paths with absolute host
-paths. For the relayer, set `headerEncoder` to the extracted
-`bin/akt-header-encoder`, and keep `stateDir` outside the release directory.
+paths. For the relayer, keep `stateDir` outside the release directory.
+Legacy `headerEncoder` values are validated and deprecated but never executed.
+The examples retain this field so the configuration also works with the previous
+TypeScript release. Go-only deployments may omit it.
 Run `bin/akt-$ROLE check --config /absolute/config.json`, then
 `bin/akt-$ROLE run --config /absolute/config.json --watch`. A reporter needs
 `--broadcast` to sign. Add `--network testnet` for an isolated deployment.
 
 ## Upgrade
+
+Go relayers read the existing TypeScript relayer's deployment-bound journals
+and spend ledger and use the same process locks. Preserve the entire state
+directory during upgrades. For rollback to a TypeScript release, retain that
+release's bundled encoder and its original `headerEncoder` configuration.
 
 Stop the service before changing its image or installation path. Back up the
 config and relayer journals; keep them outside the installation. Set
@@ -202,10 +214,10 @@ Use `reporter/v0.1.0` to release the reporter independently. A tag ending in
 the deployment is qualified.
 
 Pushing the tag automatically starts `release-operators`. It verifies that the
-commit is on `main`, prepares the [pinned SDK](sdk-integration.md), runs the
-checks above, then publishes the download, Compose files and
-`ghcr.io/akash-network/akt-ROLE:VERSION` image. The relayer package includes the
-Rust header encoder. No manual workflow inputs are needed. Operator releases
+commit is on `main`, runs the checks above, then publishes the download,
+Compose files and `ghcr.io/akash-network/akt-ROLE:VERSION` image. The reporter
+build prepares the [pinned SDK](sdk-integration.md); the relayer builds directly
+from the node Go module, including its header encoder. No manual workflow inputs are needed. Operator releases
 never become node's latest release.
 
 For the first image publication, set the GHCR package visibility to **Public**.
@@ -220,9 +232,9 @@ lookups select only `v[0-9]*` tags so operator tags cannot become node versions.
 
 ### Dependency review
 
-The operator release disables npm install scripts and rejects packages containing
+The reporter release disables npm install scripts and rejects packages containing
 the native `bigint-buffer` binding. Zod includes the patched collection validator.
-These inherited advisory dispositions apply only to the packaged operator paths:
+These inherited advisory dispositions apply only to the packaged reporter paths:
 
 | Dependency/advisories                                                                                           | Operator use                                                                                    |
 | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |

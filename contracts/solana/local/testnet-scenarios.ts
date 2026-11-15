@@ -42,7 +42,7 @@ import {
   sleep,
 } from "./common";
 import { reconcile } from "./reconcile";
-import { relayContext } from "./relay";
+import { relayContext } from "./go-relay";
 import { processes, stop } from "./stack";
 import { comet, startValidator, validatorName } from "./testnetify";
 

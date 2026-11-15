@@ -9,6 +9,7 @@ import { reporterRegistry } from "../reporter/akash";
 
 export const REPO = resolve(__dirname, "..");
 export const CACHE = resolve(REPO, "../../.cache/solana");
+export const GO_RELAYER = resolve(REPO, "../../.cache/bin/akt-relayer");
 export const DEPS = join(CACHE, "deps");
 export const TARGET = join(CACHE, "target");
 export const RUN = join(CACHE, "run");

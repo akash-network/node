@@ -1,0 +1,1349 @@
+{
+  "source": "Pinned Anchor/TS IDLs and web3.js. AKT vectors hand-encoded from pinned owning Rust declarations.",
+  "versions": {
+    "anchor": "0.32.1",
+    "web3": "1.99.0"
+  },
+  "sourceHashes": {
+    "contracts/solana/idls/ics07_tendermint.json": "2548f685cae1162069e68980fe63b779dc83922fde091413b450208125bb2687",
+    "contracts/solana/idls/access_manager.json": "aebc2ff22163e965992b7c2470867a00a87ff3679aa41e77d790751a562ff27a",
+    "contracts/solana/programs/akt/src/state.rs": "4f357efa8f56d20263832382408cb730ff0acc83c9a971fdc9c99e4dd8f7a168",
+    "contracts/solana/programs/akt/src/wire.rs": "a088dd442eae1dbd6f48c8fe4652df7172ad28aa5882a76b8dc0c45263540b4d",
+    "contracts/solana/programs/akt/src/lib.rs": "103605b9948da1ba90540a94b2e5366e98e17543a30fd861b934c812911f9f6d",
+    "contracts/solana/programs/akt/src/instructions/mint_transfer.rs": "b2bb0f9f2052d7f7feda82bfbcc38796804142cc13d51b13c9597c6beb56e0a2",
+    "contracts/solana/programs/akt/src/instructions/void_transfer.rs": "5d36dbab06bf0c355b84d441de04909b70b3484f8e78502bfd75d530777c0740",
+    "contracts/solana/programs/akt/src/instructions/proof_buffer.rs": "7451d83be179e6bed307e030bd1f5c18329f6983af09dad6bf9cae925fa06641",
+    "contracts/solana/programs/akt/src/instructions/genesis.rs": "0bd7ec7781ea0901a0650d5e58d2939aa05815915ef41858cddd405c71268bfe",
+    "contracts/solana/programs/akt/src/instructions/bridge_admin.rs": "e94a08d9bb4567e99b5ab62ed9c6e9b3e942da4939ec8dead1d6927caa4ff307",
+    "contracts/solana/programs/akt/src/instructions/upgrade_authority.rs": "46a58f4204ffe878b614e10e1b22371ee34d520f1cd30deb1d46120a6b528ee8",
+    "contracts/solana/programs/akt/tests/fixtures/proof_vectors.json": "8793b9578189631f9f0d980f29ad3c8c0694d01f51f7f1e75b456f1a29c28811"
+  },
+  "owner": "akash1zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3vx69t4",
+  "owner_hex": "1111111111111111111111111111111111111111",
+  "height": "9001",
+  "sequence": "42",
+  "nativeKey": "02001411111111111111111111111111111111111111110000000000002329000000000000002a",
+  "addresses": {
+    "config": "13k8oBgVsC9Yyi9MhYeLuQW5LjAdmcXNutSRaVacpQMx",
+    "bridge": "3fuSgwuUhjmskxWdMKgcWrAsa46HubpyaU1c3wCzEJSk",
+    "mint": "FKkZoS8wbAYNkMtsH5dpqiNcz7XZJpDopSVY52E1wsZu",
+    "mint_authority": "Ad8mQkYBtQ1YDx8moRuES1ra7sYxdsBQLH5cVkvvPimo",
+    "status": "ETKqAMELBGg7uuUvFg1Gt99kmhJrHwrLCN69xsGAcZ29",
+    "proof_buffer": "5nid6S9UK5dczWvrhC2tBrS2n4dpUVTqviEKHfZqqJnp",
+    "client_state": "9rNd6ZXnQC5PBe4tH3L95mhBB1fDqSr47NiBSiVGnKTN",
+    "app_state": "8ghWgSb6Wqp3vt464p9TxQuJKuUedB8zApgPYYSYezLh",
+    "access_manager": "7DKHBfQdkZ1smkhWjZ3HsPdAsLM9UsFdaUKiXy8XdAx5",
+    "trusted_consensus_state": "HwnEkp1kekG6rPDujnx3rTcQLRZG6xB5gRZJ5VZwQqUG",
+    "new_consensus_state_store": "GF59CUU2te9EjHU6znbaRgugu8nFHDmMqLbcg1FtpPMd",
+    "signature_batch": "Cs1tv4ZRHQtWa4YCfEywuA7VFELpVWirr746pqL6yP4X",
+    "chunk": "HeCQYw1PR23xLPrkHyLaztYttQvki4AiAwz8A9KXeWS3",
+    "lookup": "3ioqEbGnFcUXMyzpociYj8JNeyTB4evtjeZ8PnvmDPqr"
+  },
+  "instructions": {
+    "signature-create": {
+      "program": "8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR",
+      "data": "108fd345d6491d770606060606060606060606060606060606060606060606060606060606060606",
+      "keys": [
+        {
+          "key": "Cs1tv4ZRHQtWa4YCfEywuA7VFELpVWirr746pqL6yP4X",
+          "signer": false,
+          "writable": true
+        },
+        {
+          "key": "8ghWgSb6Wqp3vt464p9TxQuJKuUedB8zApgPYYSYezLh",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "7DKHBfQdkZ1smkhWjZ3HsPdAsLM9UsFdaUKiXy8XdAx5",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "signer": true,
+          "writable": true
+        },
+        {
+          "key": "Sysvar1nstructions1111111111111111111111111",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "11111111111111111111111111111111",
+          "signer": false,
+          "writable": false
+        }
+      ]
+    },
+    "signature": {
+      "program": "8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR",
+      "data": "4edca09be29a94fe09090909090909090909090909090909090909090909090909090909090909090a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a030000000b0c0d0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e",
+      "keys": [
+        {
+          "key": "Cs1tv4ZRHQtWa4YCfEywuA7VFELpVWirr746pqL6yP4X",
+          "signer": false,
+          "writable": true
+        },
+        {
+          "key": "8ghWgSb6Wqp3vt464p9TxQuJKuUedB8zApgPYYSYezLh",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "7DKHBfQdkZ1smkhWjZ3HsPdAsLM9UsFdaUKiXy8XdAx5",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "signer": true,
+          "writable": false
+        },
+        {
+          "key": "Sysvar1nstructions1111111111111111111111111",
+          "signer": false,
+          "writable": false
+        }
+      ]
+    },
+    "chunk": {
+      "program": "8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR",
+      "data": "9a26528f3802182114000000000000000003000000010203",
+      "keys": [
+        {
+          "key": "HeCQYw1PR23xLPrkHyLaztYttQvki4AiAwz8A9KXeWS3",
+          "signer": false,
+          "writable": true
+        },
+        {
+          "key": "9rNd6ZXnQC5PBe4tH3L95mhBB1fDqSr47NiBSiVGnKTN",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "8ghWgSb6Wqp3vt464p9TxQuJKuUedB8zApgPYYSYezLh",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "7DKHBfQdkZ1smkhWjZ3HsPdAsLM9UsFdaUKiXy8XdAx5",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "signer": true,
+          "writable": true
+        },
+        {
+          "key": "Sysvar1nstructions1111111111111111111111111",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "11111111111111111111111111111111",
+          "signer": false,
+          "writable": false
+        }
+      ]
+    },
+    "assembly": {
+      "program": "8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR",
+      "data": "56d7c74f834fb49e1400000000000000011300000000000000",
+      "keys": [
+        {
+          "key": "9rNd6ZXnQC5PBe4tH3L95mhBB1fDqSr47NiBSiVGnKTN",
+          "signer": false,
+          "writable": true
+        },
+        {
+          "key": "8ghWgSb6Wqp3vt464p9TxQuJKuUedB8zApgPYYSYezLh",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "7DKHBfQdkZ1smkhWjZ3HsPdAsLM9UsFdaUKiXy8XdAx5",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "HwnEkp1kekG6rPDujnx3rTcQLRZG6xB5gRZJ5VZwQqUG",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "GF59CUU2te9EjHU6znbaRgugu8nFHDmMqLbcg1FtpPMd",
+          "signer": false,
+          "writable": true
+        },
+        {
+          "key": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "signer": true,
+          "writable": true
+        },
+        {
+          "key": "11111111111111111111111111111111",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "Sysvar1nstructions1111111111111111111111111",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "HeCQYw1PR23xLPrkHyLaztYttQvki4AiAwz8A9KXeWS3",
+          "signer": false,
+          "writable": true
+        },
+        {
+          "key": "Cs1tv4ZRHQtWa4YCfEywuA7VFELpVWirr746pqL6yP4X",
+          "signer": false,
+          "writable": true
+        }
+      ]
+    },
+    "cleanup": {
+      "program": "8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR",
+      "data": "35368e7a5b323cab",
+      "keys": [
+        {
+          "key": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "signer": true,
+          "writable": true
+        },
+        {
+          "key": "HeCQYw1PR23xLPrkHyLaztYttQvki4AiAwz8A9KXeWS3",
+          "signer": false,
+          "writable": true
+        },
+        {
+          "key": "Cs1tv4ZRHQtWa4YCfEywuA7VFELpVWirr746pqL6yP4X",
+          "signer": false,
+          "writable": true
+        }
+      ]
+    },
+    "prune": {
+      "program": "8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR",
+      "data": "8c478d0fcb4f9fc91400000000000000",
+      "keys": [
+        {
+          "key": "9rNd6ZXnQC5PBe4tH3L95mhBB1fDqSr47NiBSiVGnKTN",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "8ghWgSb6Wqp3vt464p9TxQuJKuUedB8zApgPYYSYezLh",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "7DKHBfQdkZ1smkhWjZ3HsPdAsLM9UsFdaUKiXy8XdAx5",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "GF59CUU2te9EjHU6znbaRgugu8nFHDmMqLbcg1FtpPMd",
+          "signer": false,
+          "writable": true
+        },
+        {
+          "key": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "signer": true,
+          "writable": true
+        },
+        {
+          "key": "Sysvar1nstructions1111111111111111111111111",
+          "signer": false,
+          "writable": false
+        }
+      ]
+    },
+    "client-initialize": {
+      "program": "8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR",
+      "data": "afaf6d1f0d989bed0d000000616b6173682d6c6f63616c2d3101000000000000000300000000000000ffffffffffffffff80af1b00000000000a000000000000000000000000000000000000000000000001000000000000001400000000000000ffffffffffffffff070707070707070707070707070707070707070707070707070707070707070708080808080808080808080808080808080808080808080808080808080808080303030303030303030303030303030303030303030303030303030303030303",
+      "keys": [
+        {
+          "key": "9rNd6ZXnQC5PBe4tH3L95mhBB1fDqSr47NiBSiVGnKTN",
+          "signer": false,
+          "writable": true
+        },
+        {
+          "key": "GF59CUU2te9EjHU6znbaRgugu8nFHDmMqLbcg1FtpPMd",
+          "signer": false,
+          "writable": true
+        },
+        {
+          "key": "8ghWgSb6Wqp3vt464p9TxQuJKuUedB8zApgPYYSYezLh",
+          "signer": false,
+          "writable": true
+        },
+        {
+          "key": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "signer": true,
+          "writable": true
+        },
+        {
+          "key": "11111111111111111111111111111111",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "6QqhM6ffwu1gjQ5Da5wqjSFmQZeoh4Gmyb6hAxBUcYAH",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "signer": true,
+          "writable": false
+        }
+      ]
+    },
+    "access-initialize": {
+      "program": "CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8",
+      "data": "afaf6d1f0d989bed0404040404040404040404040404040404040404040404040404040404040404",
+      "keys": [
+        {
+          "key": "7DKHBfQdkZ1smkhWjZ3HsPdAsLM9UsFdaUKiXy8XdAx5",
+          "signer": false,
+          "writable": true
+        },
+        {
+          "key": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "signer": true,
+          "writable": true
+        },
+        {
+          "key": "11111111111111111111111111111111",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "Sysvar1nstructions1111111111111111111111111",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "2gMrgtenCigu8Fv9Pfq1zyvcnrHMVdeH9YsUiv9bs1Sx",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "signer": true,
+          "writable": false
+        }
+      ]
+    },
+    "grant-role": {
+      "program": "CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8",
+      "data": "daea800f5221ecfd01000000000000000404040404040404040404040404040404040404040404040404040404040404",
+      "keys": [
+        {
+          "key": "7DKHBfQdkZ1smkhWjZ3HsPdAsLM9UsFdaUKiXy8XdAx5",
+          "signer": false,
+          "writable": true
+        },
+        {
+          "key": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "signer": true,
+          "writable": false
+        },
+        {
+          "key": "Sysvar1nstructions1111111111111111111111111",
+          "signer": false,
+          "writable": false
+        }
+      ]
+    },
+    "create_proof_buffer": {
+      "program": "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi",
+      "data": "2a24e2138d46428d40c0a27974d44740cc9f3c1c3c1224d630145268ebe0fc0c77a546466901c4e1d2040000",
+      "keys": [
+        {
+          "key": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "signer": true,
+          "writable": true
+        },
+        {
+          "key": "5nid6S9UK5dczWvrhC2tBrS2n4dpUVTqviEKHfZqqJnp",
+          "signer": false,
+          "writable": true
+        },
+        {
+          "key": "11111111111111111111111111111111",
+          "signer": false,
+          "writable": false
+        }
+      ]
+    },
+    "grow_proof_buffer": {
+      "program": "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi",
+      "data": "d07736c6794c3b5e",
+      "keys": [
+        {
+          "key": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "signer": true,
+          "writable": true
+        },
+        {
+          "key": "5nid6S9UK5dczWvrhC2tBrS2n4dpUVTqviEKHfZqqJnp",
+          "signer": false,
+          "writable": true
+        },
+        {
+          "key": "11111111111111111111111111111111",
+          "signer": false,
+          "writable": false
+        }
+      ]
+    },
+    "append_proof": {
+      "program": "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi",
+      "data": "ae7eed06b1f682a8c201000003000000010203",
+      "keys": [
+        {
+          "key": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "signer": true,
+          "writable": false
+        },
+        {
+          "key": "5nid6S9UK5dczWvrhC2tBrS2n4dpUVTqviEKHfZqqJnp",
+          "signer": false,
+          "writable": true
+        }
+      ]
+    },
+    "close_proof_buffer": {
+      "program": "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi",
+      "data": "82960623c122f357",
+      "keys": [
+        {
+          "key": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "signer": true,
+          "writable": true
+        },
+        {
+          "key": "5nid6S9UK5dczWvrhC2tBrS2n4dpUVTqviEKHfZqqJnp",
+          "signer": false,
+          "writable": true
+        }
+      ]
+    },
+    "mint_transfer": {
+      "program": "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi",
+      "data": "e5a9c7325f752cf514000000111111111111111111111111111111111111111129230000000000002a000000000000000505050505050505050505050505050505050505050505050505050505050505ffffffffffffffff1300000000000000",
+      "keys": [
+        {
+          "key": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "signer": true,
+          "writable": true
+        },
+        {
+          "key": "13k8oBgVsC9Yyi9MhYeLuQW5LjAdmcXNutSRaVacpQMx",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "3fuSgwuUhjmskxWdMKgcWrAsa46HubpyaU1c3wCzEJSk",
+          "signer": false,
+          "writable": true
+        },
+        {
+          "key": "5nid6S9UK5dczWvrhC2tBrS2n4dpUVTqviEKHfZqqJnp",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "ETKqAMELBGg7uuUvFg1Gt99kmhJrHwrLCN69xsGAcZ29",
+          "signer": false,
+          "writable": true
+        },
+        {
+          "key": "8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "9rNd6ZXnQC5PBe4tH3L95mhBB1fDqSr47NiBSiVGnKTN",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "GF59CUU2te9EjHU6znbaRgugu8nFHDmMqLbcg1FtpPMd",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "HwnEkp1kekG6rPDujnx3rTcQLRZG6xB5gRZJ5VZwQqUG",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "FKkZoS8wbAYNkMtsH5dpqiNcz7XZJpDopSVY52E1wsZu",
+          "signer": false,
+          "writable": true
+        },
+        {
+          "key": "Ad8mQkYBtQ1YDx8moRuES1ra7sYxdsBQLH5cVkvvPimo",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "LbUiWL3xVV8hTFYBVdbTNrpDo41NKS6o3LHHuDzjfcY",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "FYAH4vjE8ctRgnuKTBeWyP2Kshk1R68qHA8jr4bNfgzW",
+          "signer": false,
+          "writable": true
+        },
+        {
+          "key": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "11111111111111111111111111111111",
+          "signer": false,
+          "writable": false
+        }
+      ]
+    },
+    "void_transfer": {
+      "program": "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi",
+      "data": "f2db489f51b9641714000000111111111111111111111111111111111111111129230000000000002a00000000000000051300000000000000",
+      "keys": [
+        {
+          "key": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "signer": true,
+          "writable": true
+        },
+        {
+          "key": "3fuSgwuUhjmskxWdMKgcWrAsa46HubpyaU1c3wCzEJSk",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "5nid6S9UK5dczWvrhC2tBrS2n4dpUVTqviEKHfZqqJnp",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "ETKqAMELBGg7uuUvFg1Gt99kmhJrHwrLCN69xsGAcZ29",
+          "signer": false,
+          "writable": true
+        },
+        {
+          "key": "8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "9rNd6ZXnQC5PBe4tH3L95mhBB1fDqSr47NiBSiVGnKTN",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "GF59CUU2te9EjHU6znbaRgugu8nFHDmMqLbcg1FtpPMd",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "HwnEkp1kekG6rPDujnx3rTcQLRZG6xB5gRZJ5VZwQqUG",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "11111111111111111111111111111111",
+          "signer": false,
+          "writable": false
+        }
+      ]
+    },
+    "initialize": {
+      "program": "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi",
+      "data": "afaf6d1f0d989bed",
+      "keys": [
+        {
+          "key": "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "2c3ojRd17KfRwQtJFTaedayTr3Nw7k6oQFApHjMC35ct",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "signer": true,
+          "writable": true
+        },
+        {
+          "key": "13k8oBgVsC9Yyi9MhYeLuQW5LjAdmcXNutSRaVacpQMx",
+          "signer": false,
+          "writable": true
+        },
+        {
+          "key": "FKkZoS8wbAYNkMtsH5dpqiNcz7XZJpDopSVY52E1wsZu",
+          "signer": false,
+          "writable": true
+        },
+        {
+          "key": "Ad8mQkYBtQ1YDx8moRuES1ra7sYxdsBQLH5cVkvvPimo",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "11111111111111111111111111111111",
+          "signer": false,
+          "writable": false
+        }
+      ]
+    },
+    "configure_bridge": {
+      "program": "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi",
+      "data": "3ed4edfecccba0d00d000000616b6173682d6c6f63616c2d31e8030000000000001027000000000000010000000505050505050505050505050505050505050505050505050505050505050505",
+      "keys": [
+        {
+          "key": "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "2c3ojRd17KfRwQtJFTaedayTr3Nw7k6oQFApHjMC35ct",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "signer": true,
+          "writable": true
+        },
+        {
+          "key": "13k8oBgVsC9Yyi9MhYeLuQW5LjAdmcXNutSRaVacpQMx",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "3fuSgwuUhjmskxWdMKgcWrAsa46HubpyaU1c3wCzEJSk",
+          "signer": false,
+          "writable": true
+        },
+        {
+          "key": "8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "9rNd6ZXnQC5PBe4tH3L95mhBB1fDqSr47NiBSiVGnKTN",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "GF59CUU2te9EjHU6znbaRgugu8nFHDmMqLbcg1FtpPMd",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "11111111111111111111111111111111",
+          "signer": false,
+          "writable": false
+        }
+      ]
+    },
+    "set_bridge_enabled": {
+      "program": "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi",
+      "data": "b1f0154c8a68b01d01",
+      "keys": [
+        {
+          "key": "4vJ9JU1bJJE96FWSJKvHsmmFADCg4gpZQff4P3bkLKi",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "2c3ojRd17KfRwQtJFTaedayTr3Nw7k6oQFApHjMC35ct",
+          "signer": false,
+          "writable": false
+        },
+        {
+          "key": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "signer": true,
+          "writable": true
+        },
+        {
+          "key": "13k8oBgVsC9Yyi9MhYeLuQW5LjAdmcXNutSRaVacpQMx",
+          "signer": false,
+          "writable": true
+        },
+        {
+          "key": "3fuSgwuUhjmskxWdMKgcWrAsa46HubpyaU1c3wCzEJSk",
+          "signer": false,
+          "writable": true
+        }
+      ]
+    },
+    "ed25519": {
+      "program": "Ed25519SigVerify111111111111111111111111111",
+      "data": "01003000ffff1000ffff70000300ffff0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0b0c0d",
+      "keys": []
+    },
+    "compute-limit": {
+      "program": "ComputeBudget111111111111111111111111111111",
+      "data": "02c05c1500",
+      "keys": []
+    },
+    "compute-heap": {
+      "program": "ComputeBudget111111111111111111111111111111",
+      "data": "0100000400",
+      "keys": []
+    },
+    "lookup-create": {
+      "program": "AddressLookupTab1e1111111111111111111111111",
+      "data": "000000007b00000000000000fb",
+      "keys": [
+        {
+          "key": "3ioqEbGnFcUXMyzpociYj8JNeyTB4evtjeZ8PnvmDPqr",
+          "signer": false,
+          "writable": true
+        },
+        {
+          "key": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "signer": true,
+          "writable": false
+        },
+        {
+          "key": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "signer": true,
+          "writable": true
+        },
+        {
+          "key": "11111111111111111111111111111111",
+          "signer": false,
+          "writable": false
+        }
+      ]
+    },
+    "lookup-extend": {
+      "program": "AddressLookupTab1e1111111111111111111111111",
+      "data": "020000000200000000000000f74260ab31461f37fafbfe0bc717c5815284e090869902f32d47cea3a675e928b0409bd4f01d1b4c73a1e5395da4840246c59ab9341e0f8d11793da26f96b354",
+      "keys": [
+        {
+          "key": "3ioqEbGnFcUXMyzpociYj8JNeyTB4evtjeZ8PnvmDPqr",
+          "signer": false,
+          "writable": true
+        },
+        {
+          "key": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "signer": true,
+          "writable": false
+        },
+        {
+          "key": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "signer": true,
+          "writable": true
+        },
+        {
+          "key": "11111111111111111111111111111111",
+          "signer": false,
+          "writable": false
+        }
+      ]
+    },
+    "lookup-deactivate": {
+      "program": "AddressLookupTab1e1111111111111111111111111",
+      "data": "03000000",
+      "keys": [
+        {
+          "key": "3ioqEbGnFcUXMyzpociYj8JNeyTB4evtjeZ8PnvmDPqr",
+          "signer": false,
+          "writable": true
+        },
+        {
+          "key": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "signer": true,
+          "writable": false
+        }
+      ]
+    },
+    "lookup-close": {
+      "program": "AddressLookupTab1e1111111111111111111111111",
+      "data": "04000000",
+      "keys": [
+        {
+          "key": "3ioqEbGnFcUXMyzpociYj8JNeyTB4evtjeZ8PnvmDPqr",
+          "signer": false,
+          "writable": true
+        },
+        {
+          "key": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "signer": true,
+          "writable": false
+        },
+        {
+          "key": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "signer": false,
+          "writable": true
+        }
+      ]
+    }
+  },
+  "accounts": {
+    "ClientState": "930af950917cdb3c0d000000616b6173682d6c6f63616c2d3101000000000000000300000000000000ffffffffffffffff80af1b00000000000a000000000000000000000000000000000000000000000001000000000000001400000000000000",
+    "ConsensusStateStore": "527e82bb444050201400000000000000ffffffffffffffff07070707070707070707070707070707070707070707070707070707070707070808080808080808080808080808080808080808080808080808080808080808",
+    "AppState": "d97592c80cdf1237030303030303030303030303030303030303030303030303030303030303030301050505050505050505050505050505050505050505050505050505050505050511111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111",
+    "HeaderChunk": "ec0fdc85800691f0040404040404040404040404040404040404040404040404040404040404040403000000010203",
+    "SignatureBatch": "3adc65f64f9897380104040404040404040404040404040404040404040404040404040404040404040606060606060606060606060606060606060606060606060606060606060606fe0200000009090909090909090909090909090909090909090909090909090909090909090a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
+    "AccessManager": "81cf3a972ff65c2301000000010000000000000002000000020202020202020202020202020202020202020202020202020202020202020204040404040404040404040404040404040404040404040404040404040404040100000005050505050505050505050505050505050505050505050505050505050505050100000002020202020202020202020202020202020202020202020202020202020202020505050505050505050505050505050505050505050505050505050505050505",
+    "LaunchConfig": "12a109e066911d5e020404040404040404040404040404040404040404040404040404040404040404d4d154cb8c49c9175eb5946821cfe1d8bb4697ae3c5e773ff360bd65f85cb94c012a00000000000000fdfc",
+    "BridgeConfig": "28ce33e9f628b25502020202020202020202020202020202020202020202020202020202020202020d000000616b6173682d6c6f63616c2d31e803000000000000102700000000000001000000050505050505050505050505050505050505050505050505050505050505050507000000000000008403000000000000",
+    "ProofBuffer": "4785e15e098228a1040404040404040404040404040404040404040404040404040404040404040440c0a27974d44740cc9f3c1c3c1224d630145268ebe0fc0c77a546466901c4e1d204000003000000010203",
+    "TransferStatus": "20c81efd21997f2d14000000111111111111111111111111111111111111111129230000000000002a0000000000000014000000000000002a0000000000000000ffffffffffffffff0505050505050505050505050505050505050505050505050505050505050505",
+    "TransferStatusVoided": "20c81efd21997f2d14000000111111111111111111111111111111111111111129230000000000002a0000000000000014000000000000002a000000000000000101"
+  },
+  "curves": [
+    {
+      "hex": "0000000000000000000000000000000000000000000000000000000000000000",
+      "onCurve": true
+    },
+    {
+      "hex": "0100000000000000000000000000000000000000000000000000000000000080",
+      "onCurve": false
+    },
+    {
+      "hex": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "onCurve": false
+    },
+    {
+      "hex": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "onCurve": false
+    },
+    {
+      "hex": "47952a4fc4ac307ce2c7db808a19ab6887eeb5aa0ca8d0ae7861ca7e8d0afd80",
+      "onCurve": false
+    },
+    {
+      "hex": "ad790fdeadfd0bce6f6bfd63e73139bb5d77306c95f5dc5969368d4fbdbb67e4",
+      "onCurve": true
+    },
+    {
+      "hex": "e43ea9cedea1b2597db9ba04c2c8617f6be4415c7ab8572abfb48b9f88f8fd8a",
+      "onCurve": true
+    },
+    {
+      "hex": "75257ecf5b3c2f07567ceda6e5732c48cb265c9dc2850dcc6fcd6b0915cf90e5",
+      "onCurve": true
+    },
+    {
+      "hex": "884cce5292558dfc94078baa1ffe6d427689fb347cdebf2b9053ce916f6e604e",
+      "onCurve": true
+    },
+    {
+      "hex": "67594d45af76a158334427b75622c61c5d1f256b3edcda1d6db6e7ec4f0c8384",
+      "onCurve": false
+    },
+    {
+      "hex": "f8d75a9e34a253274dbe988faad3d5725895b6cb14cbd1a292196a2680af215b",
+      "onCurve": true
+    },
+    {
+      "hex": "179293f247ab47ebb132a9dedc857df55ceafc8f2be2a56b6b0f102f91611bb6",
+      "onCurve": true
+    },
+    {
+      "hex": "cb28793acf9419bf688cd633961f2633bded5c5082972153489920f95a615889",
+      "onCurve": false
+    },
+    {
+      "hex": "069df6a72e55b4c064480ae3f119644da0a90515f207aa861212413404018847",
+      "onCurve": false
+    },
+    {
+      "hex": "93b152604e4af7c9fbba3fe57c8893b7fef36badf8158f04bf3b0189ade60fc9",
+      "onCurve": false
+    },
+    {
+      "hex": "4b052adf50ddd062215329862775c6f02d847d46e75161bebcafa286de8f8a92",
+      "onCurve": false
+    },
+    {
+      "hex": "5194a079b6102f51b0df0c7872bd85693529c879d66eeced27fa6e2d79b550b0",
+      "onCurve": true
+    },
+    {
+      "hex": "62be81f6dc811a3aacff4f01a0c8e623cb6489d0d085677ba49e8d1a81066b6b",
+      "onCurve": false
+    },
+    {
+      "hex": "ab31b3bdc8760f8ffaf2b50e610ed99c34a221f3487cb419ec175199833a6539",
+      "onCurve": true
+    },
+    {
+      "hex": "6123dc966de5b80bc18fb09fbcd9d934ff32811369f37fc9c7d193cf69ccc5a9",
+      "onCurve": true
+    },
+    {
+      "hex": "1d08b0f1722606f549157287df4e6d88dddc3bc629b5a0827e3f724495e2f3eb",
+      "onCurve": false
+    },
+    {
+      "hex": "c2cb01787af7a4cd9db0b7a5a3e994b9374373121dfe10813924d57f1e5d412b",
+      "onCurve": true
+    },
+    {
+      "hex": "081d6b160342570f4a370644006872d81eb78b52cf7932a5d5b787441a07c3ba",
+      "onCurve": true
+    },
+    {
+      "hex": "1b45a7755e8e6a9ad48d951ae5e93b23e410fd0520d8430ceec6d13523797ef5",
+      "onCurve": false
+    },
+    {
+      "hex": "ee48a2f2f6cdfa783959b71b33ca63472e8cff7c585a08f3e5855ef7258f4a47",
+      "onCurve": false
+    },
+    {
+      "hex": "a2070db479898778f0dc6d57bbed6b71d185cc5adda2979962aa219ade4b9641",
+      "onCurve": false
+    },
+    {
+      "hex": "d04d40c10a9111964c6610e3d6ceee2e65a8165da98510a23a4dbbfdf7f580e0",
+      "onCurve": false
+    },
+    {
+      "hex": "e3ba922ef654ef0d6ed0b1c2b689f84aa8b4fa83730616207084d5baf19f8096",
+      "onCurve": false
+    },
+    {
+      "hex": "7d50ce0e88d526c763d3a562ca6242c7a58b59a981f6d6b776e3c0979b8762ac",
+      "onCurve": false
+    },
+    {
+      "hex": "b67c8c60a2eea4ff73b11a6e903df87e81b211ad129db8fb3d3b48901e0b6dd1",
+      "onCurve": true
+    },
+    {
+      "hex": "91c491c39e6d09164eb9a14470fe9362fa33775a8ea452955eac680da8cdd44f",
+      "onCurve": false
+    },
+    {
+      "hex": "cccc9a20a407a353b794f66e024517f7c013a7b86b2f7220ff25ebb72d8fe1b1",
+      "onCurve": true
+    },
+    {
+      "hex": "48ee536453cd76f788257362fd100926339b3140656c6aca6646d28347bb2f32",
+      "onCurve": false
+    },
+    {
+      "hex": "9c4e8832127fcd0e9bbb17998a2d9ed6f0932e13ac34693e52e89931ddd83186",
+      "onCurve": true
+    },
+    {
+      "hex": "9d7da1dfddbb83d41a25b75fdb3559d99d53d75ad9806c04a9c65cc679db2b22",
+      "onCurve": true
+    },
+    {
+      "hex": "5cdf05ed573879847abf1a68f49ef43b1cfac76ae9b99450041e932de152c8e0",
+      "onCurve": false
+    },
+    {
+      "hex": "0d208bb80c842a6fa87ea007ce1b2ad8a5e9d958fb79c911b1ca364bd302621a",
+      "onCurve": true
+    },
+    {
+      "hex": "06869b246062133f680a6b931a86c8ad3edb3b138ba420377090e1200c3f3e66",
+      "onCurve": false
+    },
+    {
+      "hex": "304fa1b0315ed633d77f8943ca456daa074ec4fe285c63b6ad1386949b87fe27",
+      "onCurve": true
+    },
+    {
+      "hex": "0dcb1b4a0455fa6b545530d0fe9069aa40fd82c3e4bd5f36e9286ea3c16977c3",
+      "onCurve": false
+    },
+    {
+      "hex": "368fbd5094877524dcc544dcdbe3f86dfd2ed8ad04a02fd1942c64b20697f72a",
+      "onCurve": false
+    },
+    {
+      "hex": "f14a4d8c3690843c1bb804901e21ec807b8b860df50f035577e572d1ae9f8989",
+      "onCurve": false
+    },
+    {
+      "hex": "c0a5bd10fbb7ef21b5d236f627fd131a541c0499bd1db39d123625c8a2a2bcb2",
+      "onCurve": false
+    },
+    {
+      "hex": "0b2037d54233206a7cb6b168272835168acf72080e38b45ea65e063f0d88e12c",
+      "onCurve": false
+    },
+    {
+      "hex": "4720fe785e6cebd3d12547a24512781eb143e2eebf67130f253baa44a890afa6",
+      "onCurve": false
+    },
+    {
+      "hex": "96f5493a7efb2faa91f229c526208f02bbd036c7ae1ce0b8cae522195de04a5d",
+      "onCurve": true
+    },
+    {
+      "hex": "e3e0ba79fea0a83fa0e281cf8075c9e20e3992c3f38edcd888724ec15da83e9c",
+      "onCurve": true
+    },
+    {
+      "hex": "a8c8595511f5705b434bcacae6ba47e42d6546f7812ac63912605cf4e763eb56",
+      "onCurve": true
+    },
+    {
+      "hex": "1cc35e0443b71e8b6f4cfbd7e5fa59986b2ee601aa676ad12462199c4c26af74",
+      "onCurve": true
+    },
+    {
+      "hex": "667c58a0997d8fcd7789bf96c502c85c369a34a1cbbc15510f90a405caf4ed24",
+      "onCurve": true
+    },
+    {
+      "hex": "f871ccacfaf1977fd74e590a264471c9439d836bce3913af0b4aac4ab7687476",
+      "onCurve": true
+    },
+    {
+      "hex": "924a95cd5c177396dd3b6fbfab800324820d88b54eccc76b8df22ea943444ca4",
+      "onCurve": true
+    },
+    {
+      "hex": "d4281a574e3f26c01faed3b7b0bae3aecd10a9b14eb29062c5cd13c42423e75e",
+      "onCurve": true
+    },
+    {
+      "hex": "75bf42478a462dbcb07191dfc1070f480cfc9d39dd15c3af01ad08b06b81d49a",
+      "onCurve": false
+    },
+    {
+      "hex": "75fd1ea5db64ab18203f17677dad7f772f67ef4d300fd9b2f526277e5f3d9a92",
+      "onCurve": false
+    },
+    {
+      "hex": "49b405a1786a2d2659a0ba276a848e68dd965cc37424d462614983f8d4905f20",
+      "onCurve": false
+    },
+    {
+      "hex": "e9de01f735498afc9afd66b9a2674bfabcde7fc0675ca608b2516c7877c18cc3",
+      "onCurve": true
+    },
+    {
+      "hex": "c61fadbb66a9f43ad4b24ff0cb5e5d744b73f621d070560f7f276383074bac56",
+      "onCurve": false
+    },
+    {
+      "hex": "570af9a298d31d007dd18dcb2e9985c9e5354ac27c7d79b3367ff820109201b6",
+      "onCurve": false
+    },
+    {
+      "hex": "3255e37343f580409910011b0766d6b191751254eb71f8796489c987c0fd178a",
+      "onCurve": true
+    },
+    {
+      "hex": "9a895f29d328f4900a0c85e412940c4a8954002744ea1b0bf4bc302638ec0825",
+      "onCurve": true
+    },
+    {
+      "hex": "3dfec5fe5ca5b1a84d2df04e176a7347d649b49f3a4ab6dabbce6b2f3b34977e",
+      "onCurve": true
+    },
+    {
+      "hex": "3354bf2aa153914ad6c01af2e6c69975abeba6513b1c3905d465f98f812f2380",
+      "onCurve": true
+    },
+    {
+      "hex": "f5d7468e2caaed1f07df321d89823ae4a23b7ce937b5d4339ce2d70cd6d44401",
+      "onCurve": false
+    },
+    {
+      "hex": "4a579414e3c5582323b4f638b35e328b21d313bad508af1a452b9c18adb56131",
+      "onCurve": true
+    },
+    {
+      "hex": "f02c01f80820b93cdebb1fb52b105bd21b3b4e521373e8376aa49a0877f397a1",
+      "onCurve": false
+    },
+    {
+      "hex": "68ed1076cff29806c36e8d8a6ef9144b1b5fe209a36a4b7d49c9c21fa9acf13f",
+      "onCurve": false
+    },
+    {
+      "hex": "99af5d22012a457708887a402894ebce99eb42cdc6b3c25c56d915f836d79550",
+      "onCurve": false
+    },
+    {
+      "hex": "c7026037f3f8d78f95f0456febd2064b528c1a3a5315389314744b46b61987d6",
+      "onCurve": true
+    },
+    {
+      "hex": "f61994d243150dd217f1622977875d392750bab288497f8769e9028cfc06bdb3",
+      "onCurve": false
+    },
+    {
+      "hex": "ef48bfa769fc19f82c86bb6c0f10576ead48323d0db1b721732e2bd6462ebe42",
+      "onCurve": false
+    },
+    {
+      "hex": "47212279ce01fc20dd4fc3dce0cb4e32de20567e86f794ddbc4a0d2cbe2e5d01",
+      "onCurve": false
+    },
+    {
+      "hex": "60407bfe6654f5149ada5bb8af3eaed84d57a387da3890345c90e8d7d95eff43",
+      "onCurve": false
+    },
+    {
+      "hex": "b955b1655ad795a73b5262585a35d0af5cf8cf37a1db0212033f013243f11818",
+      "onCurve": true
+    },
+    {
+      "hex": "0facca9b18b68829895f07f6bb9df1da0e193bc1b38e39d0dd7a6e60c68bb200",
+      "onCurve": false
+    },
+    {
+      "hex": "3228e39f3c563de1b8f71f72fa8dbae731f835928fba20cf3af3433be44444cb",
+      "onCurve": false
+    },
+    {
+      "hex": "246a9398027c4bd0eb4bccda9ad8fb4531b1d53cd7306ea83274072787935ff8",
+      "onCurve": true
+    },
+    {
+      "hex": "0c9aa4c39ba5831fbe0b9ff71604f0a0ca78ca7f5ef660ba378e3fba3dc5b820",
+      "onCurve": true
+    },
+    {
+      "hex": "9b78b3f932fb85723881fe5d101bcdab8c7ec24f70140e23c1fbd90ca7188871",
+      "onCurve": true
+    },
+    {
+      "hex": "f48ae226acba67ef498366874c59841cabcc5715b96f3b1befed5393e8a8816d",
+      "onCurve": true
+    },
+    {
+      "hex": "8dbaa168efcc42366df00efad152de146375a5901145c47ec1ea30bdef1f9d93",
+      "onCurve": false
+    },
+    {
+      "hex": "9df69bc5096443a014b5230a3d10bc2955757f3d0099a48a0ea3aa39bbb443d4",
+      "onCurve": false
+    },
+    {
+      "hex": "faf434437cf365a690ada3359db36c6949f3502745cf2e853bd2ea51efcacb56",
+      "onCurve": false
+    },
+    {
+      "hex": "2bf193ff4f8c0c81eae1c988c89702e7a9446831a59e14630027854464b38422",
+      "onCurve": false
+    },
+    {
+      "hex": "0c5c087f07e9440f89c4da8bd788d4265c435d8c9abe0a40abf63ec9961267cf",
+      "onCurve": true
+    },
+    {
+      "hex": "315c459c84529d42a102fc148142812b3d954f61ba697675dba78c63247cd242",
+      "onCurve": true
+    },
+    {
+      "hex": "877a4169df07a1fbb8f44037671ecb273bd740cb43f3296ced5ae6f70babc2d0",
+      "onCurve": true
+    },
+    {
+      "hex": "85bd83f1b0c4572ffea6edeb6ece1570c75ae0b4c4955be54f3755aba83d8117",
+      "onCurve": false
+    },
+    {
+      "hex": "2134fd9c5593042ce14004211348e4b6630c87ecbfbaf1414c1583c366036411",
+      "onCurve": false
+    },
+    {
+      "hex": "0235a35161d7f41f934cca549d5427fbaf08c9e67317acdbb47d55aecdea686b",
+      "onCurve": false
+    },
+    {
+      "hex": "9103908aaf8eff8e64e12200db875c98228ac9baaf4ec9defa2d4986551a4637",
+      "onCurve": true
+    },
+    {
+      "hex": "96ffa02d4701eb42354a1d035407505e2fe6ed575e599bb9949c552085cef700",
+      "onCurve": true
+    },
+    {
+      "hex": "7a27b14714935bd1277f6b6d493ffa01cb1551445f6bf4c32b5ad06358a882a6",
+      "onCurve": true
+    },
+    {
+      "hex": "6eca51d848255dfc937dd1826f2ed4ad5a8056a8e27cf6f2a89fe917a07a3a4b",
+      "onCurve": true
+    },
+    {
+      "hex": "df72b271360bc771c1492bc02ffc8fecccb4972fa8171cf39d117fa357998ec1",
+      "onCurve": false
+    },
+    {
+      "hex": "c2f5bdb873a200339a0f05d70fdc887f54ee762724ddc4049f96234cfe561079",
+      "onCurve": false
+    },
+    {
+      "hex": "41b4ad1b20a6fd73f6db42dd5332deda7015e6f8e2f2379ee1ca25d0c6210f99",
+      "onCurve": true
+    },
+    {
+      "hex": "3388d914063c074c445e90abfa2ff743cf76bb2296c338882dce0a3c8897fa81",
+      "onCurve": true
+    },
+    {
+      "hex": "5a7ad1bc9f5565ce43928da679fdb3ec0365fabcfaa8f3366f19d29a1827a7f4",
+      "onCurve": false
+    },
+    {
+      "hex": "186c58f706ef43f97db29210c30e6fb2e518d56fff193139fad0f7faf139e21e",
+      "onCurve": true
+    },
+    {
+      "hex": "9346dcb5610df6b29765909148586dddbfd5b7dd8c66dc8bba095e5bd6fcca61",
+      "onCurve": false
+    },
+    {
+      "hex": "61c31c1a54548cce28ecab1d72dcdd6ef341aa3adf6bb0b3d2c2e06f46e127b8",
+      "onCurve": true
+    },
+    {
+      "hex": "f9a65029c4c72504bff02f248a19520d9a0a83213441f7d6fdbd5ebb74baeaea",
+      "onCurve": false
+    },
+    {
+      "hex": "bd8013192c7825a474c817b0a4302a3a99a14bd5d00192360b8d684c4333a122",
+      "onCurve": false
+    },
+    {
+      "hex": "24fb8a8402824bab7687209655dcb7a27fddd1feea4b268115aec2d70231a649",
+      "onCurve": false
+    },
+    {
+      "hex": "f8ac854a5061072ea9846915ecd15c0925ac8dff349a9f4d68f15edb72f8c6b0",
+      "onCurve": true
+    },
+    {
+      "hex": "4aa02197c061c7426165c763613c13b8449feaac5b49418244aa1e746762b187",
+      "onCurve": true
+    },
+    {
+      "hex": "5d7be2486ed9060f6e8ff96f00f4afc81ffcf5c09c72bfffa07ef028ef33a4e9",
+      "onCurve": true
+    },
+    {
+      "hex": "a4db06254ea8594f4ef632468d29da1e572d0c8fb13f41b48338f182140f5382",
+      "onCurve": true
+    },
+    {
+      "hex": "c8b030740d6fa6aeeae1aa8c8ec00b0bd2e4f2a5cbc3cbe104dad297b31479b2",
+      "onCurve": true
+    },
+    {
+      "hex": "8748a3638e2b9ff8717a8bdb55051ae848211914ec7951c2fca065d612f64996",
+      "onCurve": true
+    },
+    {
+      "hex": "37588709fd42114835a283c4042fd98f558485739f414a2277efc5eac7bb5db1",
+      "onCurve": true
+    },
+    {
+      "hex": "9a312514ae33851fb0eeb464dd738801c60f807c4f3117fccdaca0d94ac4c631",
+      "onCurve": false
+    },
+    {
+      "hex": "dc815b2fa5e73f73e7f3b42d41f098d658fea63aa15c94484bf25e11775ab3dc",
+      "onCurve": false
+    },
+    {
+      "hex": "60fc0f43fd5548a7776678cc9c6b5ee4e51db969f80b9ec26c6f2cd60ee82136",
+      "onCurve": true
+    },
+    {
+      "hex": "a7ff70acb22a4d27623c538fee6ef607067b414d8f8895aabb3f631ddfa4c734",
+      "onCurve": true
+    },
+    {
+      "hex": "906978aedebebc9de68fa514f82eba65da2325bf6eceb3c8d4880f3d141f23d3",
+      "onCurve": false
+    },
+    {
+      "hex": "093b578c561e5a347b73fbea84bc5a3c0df3aca14c5d1fc2b7c9b15b167106a7",
+      "onCurve": true
+    },
+    {
+      "hex": "247b31af53250a7953f47aaeaba6753b7e8a05cb79e7caeb05e2a452ff111f48",
+      "onCurve": true
+    },
+    {
+      "hex": "37d510cb05b6c745bbb3edcdaa8409824f71f093145f718d6245de3e3375d33e",
+      "onCurve": false
+    },
+    {
+      "hex": "45d258cf92c5837f9ab083dd939c286cbebd1f5481cd5c064459ed5b1a908da3",
+      "onCurve": false
+    },
+    {
+      "hex": "d5e27e677adae2304d6dc6f682eaa4bfc0d777dd24d91e42c37489183e44ee06",
+      "onCurve": true
+    },
+    {
+      "hex": "f132049db1f52ac5c2f2e7854c3b1c3c036079fda6cfd7693f83a2349e45ba4d",
+      "onCurve": false
+    },
+    {
+      "hex": "60605e26e91fc75b44f78c5bec1bddbd77d30cd503a5fe227f7faf566c15ef03",
+      "onCurve": true
+    },
+    {
+      "hex": "c0a5fa9f7c27e94f74d2a323de2852f694520a459e64d8c72a7fb8a482359f11",
+      "onCurve": false
+    },
+    {
+      "hex": "99256ac523223a53516f1faf8b813e5bcd1f293d64fe44b2bf1aa0b9e5d28d28",
+      "onCurve": true
+    },
+    {
+      "hex": "5bc1a04f6d07a20288fde76b344a648415d5ce8bb478e671c4217829b90136f2",
+      "onCurve": true
+    },
+    {
+      "hex": "7400d97971827585ad3c7a042fba45c5d68178478f1ddc86b8af01e0c8cbb747",
+      "onCurve": true
+    },
+    {
+      "hex": "3ad0fd0176ae921452680f7e578ee6ba24f33bad830c295d517b97d52a0f11cc",
+      "onCurve": false
+    },
+    {
+      "hex": "702f13100ea37a627eb58ac803d0d9b274b26106faea704a8fa7b2b7838fff7c",
+      "onCurve": true
+    },
+    {
+      "hex": "324e19e1c96eba7add917d197b98713c5811f665ca302f9129a119dedea51e02",
+      "onCurve": true
+    },
+    {
+      "hex": "58cae7043db92916cd748e911565ea4cea405423fdebb6f659e454b0c970f12a",
+      "onCurve": true
+    }
+  ]
+}

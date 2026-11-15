@@ -1,0 +1,1503 @@
+[
+  {
+    "name": "nil-signature-null",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "3",
+          "signature"
+        ],
+        "value": null
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "nil-signature-empty",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "3",
+          "signature"
+        ],
+        "value": ""
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "nil-signature-missing",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "3",
+          "signature"
+        ],
+        "remove": true
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "nil-timestamp-null",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "3",
+          "timestamp"
+        ],
+        "value": null
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "nil-timestamp-empty",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "3",
+          "timestamp"
+        ],
+        "value": ""
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "nil-timestamp-missing",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "3",
+          "timestamp"
+        ],
+        "remove": true
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "nil-validator_address-null",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "3",
+          "validator_address"
+        ],
+        "value": null
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "nil-validator_address-empty",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "3",
+          "validator_address"
+        ],
+        "value": ""
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "nil-validator_address-missing",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "3",
+          "validator_address"
+        ],
+        "remove": true
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "nil-signature-1",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "3",
+          "signature"
+        ],
+        "value": "AA=="
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "nil-signature-63",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "3",
+          "signature"
+        ],
+        "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "nil-signature-65",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "3",
+          "signature"
+        ],
+        "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "absent-signature-null",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "1",
+          "signature"
+        ],
+        "value": null
+      }
+    ],
+    "accept": true
+  },
+  {
+    "name": "absent-signature-empty",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "1",
+          "signature"
+        ],
+        "value": ""
+      }
+    ],
+    "accept": true
+  },
+  {
+    "name": "absent-signature-missing",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "1",
+          "signature"
+        ],
+        "remove": true
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "absent-timestamp-null",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "1",
+          "timestamp"
+        ],
+        "value": null
+      }
+    ],
+    "accept": true
+  },
+  {
+    "name": "absent-timestamp-empty",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "1",
+          "timestamp"
+        ],
+        "value": ""
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "absent-timestamp-missing",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "1",
+          "timestamp"
+        ],
+        "remove": true
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "absent-validator_address-null",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "1",
+          "validator_address"
+        ],
+        "value": null
+      }
+    ],
+    "accept": true
+  },
+  {
+    "name": "absent-validator_address-empty",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "1",
+          "validator_address"
+        ],
+        "value": ""
+      }
+    ],
+    "accept": true
+  },
+  {
+    "name": "absent-validator_address-missing",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "1",
+          "validator_address"
+        ],
+        "remove": true
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "absent-signature-1",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "1",
+          "signature"
+        ],
+        "value": "AA=="
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "absent-signature-63",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "1",
+          "signature"
+        ],
+        "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "absent-signature-65",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "1",
+          "signature"
+        ],
+        "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "commit-signature-null",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "0",
+          "signature"
+        ],
+        "value": null
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "commit-signature-empty",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "0",
+          "signature"
+        ],
+        "value": ""
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "commit-signature-missing",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "0",
+          "signature"
+        ],
+        "remove": true
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "commit-timestamp-null",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "0",
+          "timestamp"
+        ],
+        "value": null
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "commit-timestamp-empty",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "0",
+          "timestamp"
+        ],
+        "value": ""
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "commit-timestamp-missing",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "0",
+          "timestamp"
+        ],
+        "remove": true
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "commit-validator_address-null",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "0",
+          "validator_address"
+        ],
+        "value": null
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "commit-validator_address-empty",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "0",
+          "validator_address"
+        ],
+        "value": ""
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "commit-validator_address-missing",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "0",
+          "validator_address"
+        ],
+        "remove": true
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "commit-signature-1",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "0",
+          "signature"
+        ],
+        "value": "AA=="
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "commit-signature-63",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "0",
+          "signature"
+        ],
+        "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "commit-signature-65",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "0",
+          "signature"
+        ],
+        "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "absent-address-allowed",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "1",
+          "validator_address"
+        ],
+        "value": "719C2DB29350BAA608A1354D1BBC64C63D58138D"
+      }
+    ],
+    "accept": true
+  },
+  {
+    "name": "absent-short-address-allowed",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "1",
+          "validator_address"
+        ],
+        "value": "AA"
+      }
+    ],
+    "accept": true
+  },
+  {
+    "name": "absent-signature-present",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "1",
+          "signature"
+        ],
+        "value": "L2OiXcRzUXFnFQ84BpSCqSni/uDWnBZEUF7dURsbh8qj0Kky/fFRdUknJFOsLd6YOOBFpZTsP3nSDa0IHqI+Dw=="
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "absent-nonzero-time",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "1",
+          "timestamp"
+        ],
+        "value": "2026-10-09T22:19:54Z"
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "absent-subsecond-time",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "1",
+          "timestamp"
+        ],
+        "value": "0001-01-01T00:00:00.000000001Z"
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "absent-all-missing",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "1"
+        ],
+        "value": {
+          "block_id_flag": 1
+        }
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "validators-power",
+    "changes": [
+      {
+        "path": [
+          "validators",
+          "0",
+          "power"
+        ],
+        "value": "11"
+      },
+      {
+        "path": [
+          "validators",
+          "0",
+          "voting_power"
+        ],
+        "remove": true
+      },
+      {
+        "path": [
+          "validators",
+          "1",
+          "power"
+        ],
+        "value": "47"
+      },
+      {
+        "path": [
+          "validators",
+          "1",
+          "voting_power"
+        ],
+        "remove": true
+      },
+      {
+        "path": [
+          "validators",
+          "2",
+          "power"
+        ],
+        "value": "19"
+      },
+      {
+        "path": [
+          "validators",
+          "2",
+          "voting_power"
+        ],
+        "remove": true
+      },
+      {
+        "path": [
+          "validators",
+          "3",
+          "power"
+        ],
+        "value": "31"
+      },
+      {
+        "path": [
+          "validators",
+          "3",
+          "voting_power"
+        ],
+        "remove": true
+      },
+      {
+        "path": [
+          "validators",
+          "4",
+          "power"
+        ],
+        "value": "7"
+      },
+      {
+        "path": [
+          "validators",
+          "4",
+          "voting_power"
+        ],
+        "remove": true
+      },
+      {
+        "path": [
+          "validators",
+          "5",
+          "power"
+        ],
+        "value": "23"
+      },
+      {
+        "path": [
+          "validators",
+          "5",
+          "voting_power"
+        ],
+        "remove": true
+      }
+    ],
+    "accept": true
+  },
+  {
+    "name": "validators-duplicate-power",
+    "changes": [
+      {
+        "path": [
+          "validators",
+          "0",
+          "power"
+        ],
+        "value": "11"
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "validators-total_voting_power",
+    "changes": [
+      {
+        "path": [
+          "validators",
+          "0",
+          "total_voting_power"
+        ],
+        "value": "11"
+      },
+      {
+        "path": [
+          "validators",
+          "0",
+          "voting_power"
+        ],
+        "remove": true
+      },
+      {
+        "path": [
+          "validators",
+          "1",
+          "total_voting_power"
+        ],
+        "value": "47"
+      },
+      {
+        "path": [
+          "validators",
+          "1",
+          "voting_power"
+        ],
+        "remove": true
+      },
+      {
+        "path": [
+          "validators",
+          "2",
+          "total_voting_power"
+        ],
+        "value": "19"
+      },
+      {
+        "path": [
+          "validators",
+          "2",
+          "voting_power"
+        ],
+        "remove": true
+      },
+      {
+        "path": [
+          "validators",
+          "3",
+          "total_voting_power"
+        ],
+        "value": "31"
+      },
+      {
+        "path": [
+          "validators",
+          "3",
+          "voting_power"
+        ],
+        "remove": true
+      },
+      {
+        "path": [
+          "validators",
+          "4",
+          "total_voting_power"
+        ],
+        "value": "7"
+      },
+      {
+        "path": [
+          "validators",
+          "4",
+          "voting_power"
+        ],
+        "remove": true
+      },
+      {
+        "path": [
+          "validators",
+          "5",
+          "total_voting_power"
+        ],
+        "value": "23"
+      },
+      {
+        "path": [
+          "validators",
+          "5",
+          "voting_power"
+        ],
+        "remove": true
+      }
+    ],
+    "accept": true
+  },
+  {
+    "name": "validators-duplicate-total_voting_power",
+    "changes": [
+      {
+        "path": [
+          "validators",
+          "0",
+          "total_voting_power"
+        ],
+        "value": "11"
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "validators-power-missing",
+    "changes": [
+      {
+        "path": [
+          "validators",
+          "0",
+          "voting_power"
+        ],
+        "remove": true
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "validators-power-null",
+    "changes": [
+      {
+        "path": [
+          "validators",
+          "0",
+          "voting_power"
+        ],
+        "value": null
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "validators-power-number",
+    "changes": [
+      {
+        "path": [
+          "validators",
+          "0",
+          "voting_power"
+        ],
+        "value": 1
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "trusted_validators-power",
+    "changes": [
+      {
+        "path": [
+          "trusted_validators",
+          "0",
+          "power"
+        ],
+        "value": "29"
+      },
+      {
+        "path": [
+          "trusted_validators",
+          "0",
+          "voting_power"
+        ],
+        "remove": true
+      },
+      {
+        "path": [
+          "trusted_validators",
+          "1",
+          "power"
+        ],
+        "value": "13"
+      },
+      {
+        "path": [
+          "trusted_validators",
+          "1",
+          "voting_power"
+        ],
+        "remove": true
+      },
+      {
+        "path": [
+          "trusted_validators",
+          "2",
+          "power"
+        ],
+        "value": "7"
+      },
+      {
+        "path": [
+          "trusted_validators",
+          "2",
+          "voting_power"
+        ],
+        "remove": true
+      },
+      {
+        "path": [
+          "trusted_validators",
+          "3",
+          "power"
+        ],
+        "value": "41"
+      },
+      {
+        "path": [
+          "trusted_validators",
+          "3",
+          "voting_power"
+        ],
+        "remove": true
+      }
+    ],
+    "accept": true
+  },
+  {
+    "name": "trusted_validators-duplicate-power",
+    "changes": [
+      {
+        "path": [
+          "trusted_validators",
+          "0",
+          "power"
+        ],
+        "value": "29"
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "trusted_validators-total_voting_power",
+    "changes": [
+      {
+        "path": [
+          "trusted_validators",
+          "0",
+          "total_voting_power"
+        ],
+        "value": "29"
+      },
+      {
+        "path": [
+          "trusted_validators",
+          "0",
+          "voting_power"
+        ],
+        "remove": true
+      },
+      {
+        "path": [
+          "trusted_validators",
+          "1",
+          "total_voting_power"
+        ],
+        "value": "13"
+      },
+      {
+        "path": [
+          "trusted_validators",
+          "1",
+          "voting_power"
+        ],
+        "remove": true
+      },
+      {
+        "path": [
+          "trusted_validators",
+          "2",
+          "total_voting_power"
+        ],
+        "value": "7"
+      },
+      {
+        "path": [
+          "trusted_validators",
+          "2",
+          "voting_power"
+        ],
+        "remove": true
+      },
+      {
+        "path": [
+          "trusted_validators",
+          "3",
+          "total_voting_power"
+        ],
+        "value": "41"
+      },
+      {
+        "path": [
+          "trusted_validators",
+          "3",
+          "voting_power"
+        ],
+        "remove": true
+      }
+    ],
+    "accept": true
+  },
+  {
+    "name": "trusted_validators-duplicate-total_voting_power",
+    "changes": [
+      {
+        "path": [
+          "trusted_validators",
+          "0",
+          "total_voting_power"
+        ],
+        "value": "29"
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "trusted_validators-power-missing",
+    "changes": [
+      {
+        "path": [
+          "trusted_validators",
+          "0",
+          "voting_power"
+        ],
+        "remove": true
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "trusted_validators-power-null",
+    "changes": [
+      {
+        "path": [
+          "trusted_validators",
+          "0",
+          "voting_power"
+        ],
+        "value": null
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "trusted_validators-power-number",
+    "changes": [
+      {
+        "path": [
+          "trusted_validators",
+          "0",
+          "voting_power"
+        ],
+        "value": 1
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "header-time-offset-zero",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "header",
+          "time"
+        ],
+        "value": "2026-10-09T22:19:54.165192+00:00"
+      }
+    ],
+    "accept": true
+  },
+  {
+    "name": "header-time-lowercase-z",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "header",
+          "time"
+        ],
+        "value": "2026-10-09T22:19:54.165192z"
+      }
+    ],
+    "accept": true
+  },
+  {
+    "name": "header-time-lowercase-t",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "header",
+          "time"
+        ],
+        "value": "2026-10-09t22:19:54.165192Z"
+      }
+    ],
+    "accept": true
+  },
+  {
+    "name": "header-time-offset-two",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "header",
+          "time"
+        ],
+        "value": "2026-10-10T00:19:54.165192+02:00"
+      }
+    ],
+    "accept": true
+  },
+  {
+    "name": "commit-time-offset-zero",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "0",
+          "timestamp"
+        ],
+        "value": "2026-10-09T22:19:54.302192111+00:00"
+      }
+    ],
+    "accept": true
+  },
+  {
+    "name": "commit-time-lowercase-z",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "0",
+          "timestamp"
+        ],
+        "value": "2026-10-09T22:19:54.302192111z"
+      }
+    ],
+    "accept": true
+  },
+  {
+    "name": "commit-time-lowercase-t",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "0",
+          "timestamp"
+        ],
+        "value": "2026-10-09t22:19:54.302192111Z"
+      }
+    ],
+    "accept": true
+  },
+  {
+    "name": "commit-time-offset-two",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "0",
+          "timestamp"
+        ],
+        "value": "2026-10-10T00:19:54.302192111+02:00"
+      }
+    ],
+    "accept": true
+  },
+  {
+    "name": "nil-time-offset-zero",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "3",
+          "timestamp"
+        ],
+        "value": "2026-10-09T22:19:54.713192444+00:00"
+      }
+    ],
+    "accept": true
+  },
+  {
+    "name": "nil-time-lowercase-z",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "3",
+          "timestamp"
+        ],
+        "value": "2026-10-09T22:19:54.713192444z"
+      }
+    ],
+    "accept": true
+  },
+  {
+    "name": "nil-time-lowercase-t",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "3",
+          "timestamp"
+        ],
+        "value": "2026-10-09t22:19:54.713192444Z"
+      }
+    ],
+    "accept": true
+  },
+  {
+    "name": "nil-time-offset-two",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "3",
+          "timestamp"
+        ],
+        "value": "2026-10-10T00:19:54.713192444+02:00"
+      }
+    ],
+    "accept": true
+  },
+  {
+    "name": "absent-time-offset-zero",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "1",
+          "timestamp"
+        ],
+        "value": "0001-01-01T00:00:00+00:00"
+      }
+    ],
+    "accept": true
+  },
+  {
+    "name": "absent-time-lowercase-z",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "1",
+          "timestamp"
+        ],
+        "value": "0001-01-01T00:00:00z"
+      }
+    ],
+    "accept": true
+  },
+  {
+    "name": "absent-time-lowercase-t",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "1",
+          "timestamp"
+        ],
+        "value": "0001-01-01t00:00:00Z"
+      }
+    ],
+    "accept": true
+  },
+  {
+    "name": "absent-time-offset-two",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "1",
+          "timestamp"
+        ],
+        "value": "0001-01-01T02:00:00+02:00"
+      }
+    ],
+    "accept": true
+  },
+  {
+    "name": "commit-time-year-zero",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "0",
+          "timestamp"
+        ],
+        "value": "0000-01-01T00:00:00Z"
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "commit-time-leap-second",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "0",
+          "timestamp"
+        ],
+        "value": "2026-10-09T23:59:60Z"
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "commit-time-offset-hour24",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "0",
+          "timestamp"
+        ],
+        "value": "2026-10-09T22:19:54+24:00"
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "commit-time-offset-minute60",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "0",
+          "timestamp"
+        ],
+        "value": "2026-10-09T22:19:54+00:60"
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "commit-time-comma",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "0",
+          "timestamp"
+        ],
+        "value": "2026-10-09T22:19:54,1Z"
+      }
+    ],
+    "accept": false
+  },
+  {
+    "name": "commit-time-one-hour-digit",
+    "changes": [
+      {
+        "path": [
+          "signed_header",
+          "commit",
+          "signatures",
+          "0",
+          "timestamp"
+        ],
+        "value": "2026-10-09T2:19:54Z"
+      }
+    ],
+    "accept": false
+  }
+]

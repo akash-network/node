@@ -16,7 +16,7 @@ Akash's native `x/sink` module and the public `chain-sdk` types live outside it.
 
 1. A wallet submits `MsgSink` to Akash. Native `x/sink` locks the AKT and stores
    a transfer identified by `owner/height/sequence`.
-2. [`local/relay.ts`](../local/relay.ts) discovers the transfer through native
+2. [`internal/relayer`](../../../internal/relayer) discovers the transfer through native
    queries. It obtains a storage proof and updates the Solana light client
    when a newer authenticated Akash root is needed.
 3. The relayer uploads the proof through
@@ -69,25 +69,23 @@ manager controls who can submit header updates. AKT reads these authenticated
 accounts and verifies membership locally through the pinned membership library.
 It does not call ICS07's membership instruction by CPI.
 
-[`tools/header-encoder`](../tools/header-encoder) encodes headers using upstream
-Borsh types. [`local/header-upload.ts`](../local/header-upload.ts) uploads them
-and submits verification transactions. [Verifier details](verifier.md) cover
+[`internal/relayer/header`](../../../internal/relayer/header) encodes headers in Go using CometBFT types and the pinned Borsh layout. The Go relayer uploads them and submits verification transactions. [`tools/header-encoder`](../tools/header-encoder) remains the pinned Rust differential oracle for development; the relayer does not execute it. [Verifier details](verifier.md) cover
 header updates, freezing, pruning, and relayer permissions.
 
 ## Services
 
-| File                                                                                        | What it does                                                                     |
-| ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| [`reporter/akash.ts`](../reporter/akash.ts)                                                 | Read native queries at a fixed committed height.                                 |
-| [`local/open-transfers.ts`](../local/open-transfers.ts)                                     | Discover transfers with the server's pagination tokens.                          |
-| [`local/proof-job.ts`](../local/proof-job.ts) and [`local/durable.ts`](../local/durable.ts) | Persist proof jobs and signed transaction recovery state.                        |
-| [`shared/id.ts`](../shared/id.ts) and [`shared/proof.ts`](../shared/proof.ts)               | Share identity, proof, and Solana account derivation between clients.            |
-| [`reporter/run.ts`](../reporter/run.ts)                                                     | Start the reporter in preview or signing mode.                                   |
-| [`local/bridge-admin.ts`](../local/bridge-admin.ts)                                         | Inspect state and prepare or execute authorized administration.                  |
-| [`local/stack.ts`](../local/stack.ts)                                                       | Start development chains and services.                                           |
-| [`local/team.ts`](../local/team.ts)                                                         | Testnet receipt API and faucet. The portal UI is in `akash-network/sink-portal`. |
+| File                                                                          | What it does                                                                        |
+| ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| [`reporter/akash.ts`](../reporter/akash.ts)                                   | Read native queries at a fixed committed height.                                    |
+| [`internal/relayer/native`](../../../internal/relayer/native)                 | Read fixed-height Akash state, discover transfers and obtain native storage proofs. |
+| [`internal/relayer`](../../../internal/relayer)                               | Persist proof jobs, serialize payer work and recover signed transactions.           |
+| [`shared/id.ts`](../shared/id.ts) and [`shared/proof.ts`](../shared/proof.ts) | Share identity, proof, and Solana account derivation between clients.               |
+| [`reporter/run.ts`](../reporter/run.ts)                                       | Start the reporter in preview or signing mode.                                      |
+| [`local/bridge-admin.ts`](../local/bridge-admin.ts)                           | Inspect state and prepare or execute authorized administration.                     |
+| [`local/stack.ts`](../local/stack.ts)                                         | Start development chains and services.                                              |
+| [`local/team.ts`](../local/team.ts)                                           | Testnet receipt API and faucet. The portal UI is in `akash-network/sink-portal`.    |
 
-The production relayer and admin CLI currently live under `local/`.
+The production relayer entry point is [`cmd/akt-relayer`](../../../cmd/akt-relayer). The admin CLI remains under `local/`. Local stack processes and scenario relayer actions use the same Go binary. Retained TypeScript relayer modules provide legacy differential/recovery fixtures and contract-test helpers; they are not included in the relayer release.
 [`deploy/service.sh`](../deploy/service.sh) runs production services with explicit
 configuration. The testnet launcher and faucet are separate development tools.
 

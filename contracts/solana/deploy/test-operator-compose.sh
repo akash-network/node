@@ -17,9 +17,12 @@ mkdir "$OPERATOR_STATE"
 address=$(docker run --rm --platform linux/amd64 --network none --user "$OPERATOR_UID:$OPERATOR_GID" \
   --mount "type=bind,src=$fixture,dst=/keys" "$image" keys create --out /keys/key)
 program=GTr2HRp7Bavsc6rzSXq1a6W1p1H9B2v8gTf2UNSiiBvF
-mint=$(docker run --rm --platform linux/amd64 --network none \
-  --workdir /opt/akt/contracts/solana --entrypoint /opt/akt/runtime/bin/node "$image" \
-  -e 'const { web3 } = require("@coral-xyz/anchor"); console.log(web3.PublicKey.findProgramAddressSync([Buffer.from("mint")], new web3.PublicKey(process.argv[1]))[0].toBase58())' "$program")
+mint=
+if [[ "$role" == reporter ]]; then
+  mint=$(docker run --rm --platform linux/amd64 --network none \
+    --workdir /opt/akt/contracts/solana --entrypoint /opt/akt/runtime/bin/node "$image" \
+    -e 'const { web3 } = require("@coral-xyz/anchor"); console.log(web3.PublicKey.findProgramAddressSync([Buffer.from("mint")], new web3.PublicKey(process.argv[1]))[0].toBase58())' "$program")
+fi
 python3 - "$NODE_SINK_DIR/_run/akt-$role/config.example.json" "$OPERATOR_CONFIG" "$role" "$address" "$program" "$mint" <<'PY'
 import json, sys
 source, destination, role, address, program, mint = sys.argv[1:]
@@ -44,17 +47,23 @@ PY
 "${compose[@]}" run --rm -T "$role" check --network testnet --config /etc/akt/config.json
 test "$address" = "$("${compose[@]}" run --rm -T "$role" keys address --key-file /run/keys/key)"
 if [[ "$role" == relayer ]]; then
-  "${compose[@]}" run --rm -T --entrypoint /opt/akt/runtime/bin/node relayer \
-    -e 'require("fs").writeFileSync("/data/checkpoint", "retained")'
-  "${compose[@]}" run --rm -T --entrypoint /opt/akt/runtime/bin/node relayer \
-    -e 'require("assert").strictEqual(require("fs").readFileSync("/data/checkpoint", "utf8"), "retained")'
+  "${compose[@]}" run --rm -T --entrypoint /bin/sh relayer \
+    -c 'printf retained > /data/checkpoint'
+  "${compose[@]}" run --rm -T --entrypoint /bin/sh relayer \
+    -c 'printf retained | cmp -s - /data/checkpoint'
+  (
+    cd "$NODE_SINK_DIR"
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go test -mod=readonly -c -trimpath \
+      -o "$fixture/relayer.test" ./internal/relayer
+  )
   docker run --rm --platform linux/amd64 --network none --read-only \
-    --tmpfs /tmp:rw,noexec,nosuid,size=64m \
-    --tmpfs /opt/akt/.cache/solana/tests:rw,noexec,nosuid,size=16m \
-    --mount "type=bind,src=$solana_repo/local/durable.test.ts,dst=/opt/akt/contracts/solana/local/durable.test.ts,readonly" \
-    --workdir /opt/akt/contracts/solana \
-    --entrypoint /opt/akt/runtime/bin/node "$image" \
-    --import tsx --test local/durable.test.ts
+    --tmpfs /data/.cache:rw,noexec,nosuid,size=16m,uid=10001,gid=10001 \
+    --env RELAYER_TEST_CACHE=/data/.cache/tests \
+    --mount "type=bind,src=$fixture/relayer.test,dst=/checks/relayer.test,readonly" \
+    --entrypoint /checks/relayer.test "$image" \
+    '-test.run=^TestDurable(StorePathsAndAtomicReplacement|InjectedWriterFailureRetainsPrevious|FlockNonreentrantWaitAndCancellation)$' \
+    -test.v
+
 else
   "${compose[@]}" -f "$NODE_SINK_DIR/_run/akt-reporter/broadcast.yaml" config --format json > "$fixture/broadcast.json"
   python3 - "$fixture/broadcast.json" <<'PY'

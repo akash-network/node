@@ -35,7 +35,7 @@ test("the example config parses once its deployment ID is filled in", () => {
   assert.equal(config.retryMaxMs, 900_000);
   assert.equal(config.pruneIntervalMs, 600_000);
   assert.equal(config.pollMs, 3000);
-  assert.equal(config.headerEncoder, example.headerEncoder);
+  assert.equal(config.headerEncoder, DEFAULT_HEADER_ENCODER);
 });
 
 test("optional settings default and relative paths follow the config", () => {

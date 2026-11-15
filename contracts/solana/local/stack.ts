@@ -17,6 +17,7 @@ import {
   AKASH_REST_PORT,
   SOLANA_RPC_PORT,
   REPO,
+  GO_RELAYER,
   DEPS,
   TARGET,
   AKASH,
@@ -406,31 +407,18 @@ export async function up(signal?: AbortSignal) {
   }
   const marker = join(ROOT, "services");
   await mkdir(marker, { recursive: true });
-  await exec(
-    process.execPath,
-    [
-      "--import",
-      "tsx",
-      join(REPO, "local/relay.ts"),
-      "--bootstrap",
-      "--state",
-      marker,
-    ],
-    { cwd: REPO, timeout: 600_000, maxBuffer: 2 * 1024 * 1024, signal },
-  ).then((r) => console.log(r.stdout.trim()));
+  await exec(GO_RELAYER, ["local", "--bootstrap", "--state", marker], {
+    cwd: REPO,
+    timeout: 600_000,
+    maxBuffer: 2 * 1024 * 1024,
+    signal,
+  }).then((r) => console.log(r.stdout.trim()));
   if (PROFILE === "testnetify")
     await (await import("./testnetify")).activateValidators();
   await start(
     "relayer",
-    process.execPath,
-    [
-      "--import",
-      "tsx",
-      join(REPO, "local/relay.ts"),
-      "--watch",
-      "--state",
-      marker,
-    ],
+    GO_RELAYER,
+    ["local", "--watch", "--state", marker],
     marker,
   );
   const genesisHash = await wallet.connection.getGenesisHash();
@@ -551,13 +539,8 @@ async function checkHeader() {
   await stop(relayer);
   try {
     const result = await exec(
-      process.execPath,
-      [
-        "--import",
-        "tsx",
-        join(REPO, "local/relay.ts"),
-        "--check-invalid-header",
-      ],
+      GO_RELAYER,
+      ["local", "--check-invalid-header"],
       // Two uploads, each waiting for finalized lookup, assembly and cleanup
       // transactions, took 150 s on a local validator.
       { cwd: REPO, timeout: 360_000, maxBuffer: 2 * 1024 * 1024 },

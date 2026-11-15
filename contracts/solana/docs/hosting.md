@@ -46,7 +46,7 @@ Trust model, in one line each:
 | ----------------------------- | -------------------------------------- | ------------------------------------------- | ---------------------------------------------- | ----------- |
 | Akash full node               | `akash` with x/sink                    | 1 per relayer, reporter, monitor and portal | Each operator for their own                    | No          |
 | Solana RPC node               | Agave (`agave-validator` in RPC mode)  | 1 per reporter; 2 sources for the relayer   | Each operator for their own                    | No          |
-| Relayer                       | `local/relay.ts --config`              | 1 required, 2 or more recommended           | DevOps (and anyone else)                       | No          |
+| Relayer                       | `akt-relayer run --config`             | 1 required, 2 or more recommended           | DevOps (and anyone else)                       | No          |
 | Reporter                      | `reporter/run.ts --watch --broadcast`  | 7 or more                                   | 7 independent operators; DevOps runs only ours | No          |
 | Monitoring and reconciliation | Alert rules plus the supply reconciler | 1                                           | DevOps                                         | No          |
 | Portal                        | Static web app plus a small API        | 1                                           | DevOps                                         | Yes (HTTPS) |

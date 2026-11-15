@@ -7,7 +7,7 @@ import { createKey, keyAddress } from "./keys";
 import { checkServiceConfig } from "./service-config";
 
 async function main() {
-  const role = z.enum(["relayer", "reporter"]).parse(process.argv[2]);
+  const role = z.literal("reporter").parse(process.argv[2]);
   const args = process.argv.slice(3);
   const { values, positionals } = parseArgs({
     args,
@@ -27,13 +27,10 @@ async function main() {
   const network = z.enum(["mainnet", "testnet"]).parse(values.network);
   if (values.help || args.length === 0) {
     process.stdout.write(
-      `akt-${role} run --config /absolute/config.json [--watch]${role === "reporter" ? " [--broadcast]" : ""}\n` +
-        `akt-${role} check --config /absolute/config.json${role === "reporter" ? " [--broadcast]" : ""}\n` +
+      `akt-${role} run --config /absolute/config.json [--watch] [--broadcast]\n` +
+        `akt-${role} check --config /absolute/config.json [--broadcast]\n` +
         `akt-${role} keys create --out /absolute/key-file\n` +
         `akt-${role} keys address --key-file /absolute/key-file\n` +
-        (role === "relayer"
-          ? `akt-relayer run --config /absolute/config.json --reset-budget OWNER/HEIGHT/SEQUENCE|all\n`
-          : "") +
         `akt-${role} --version\n` +
         `run/check: --network testnet opts into isolated test networks (default: mainnet).\n`,
     );
@@ -82,16 +79,7 @@ async function main() {
     !values.out && !values["key-file"],
     "set the signing key path in config.json",
   );
-  assert.ok(
-    role === "reporter" || !values.broadcast,
-    "relayer always submits proofs; --broadcast is reporter-only",
-  );
-  const service =
-    role === "relayer"
-      ? role
-      : values.broadcast
-        ? "reporter-broadcast"
-        : "reporter-preview";
+  const service = values.broadcast ? "reporter-broadcast" : "reporter-preview";
   checkServiceConfig(
     service,
     JSON.parse(await readFile(values.config, "utf8")),
@@ -99,8 +87,7 @@ async function main() {
     network,
   );
   assert.ok(
-    !values["reset-budget"] ||
-      (role === "relayer" && command === "run" && !values.watch),
+    !values["reset-budget"],
     "budget reset requires a one-shot relayer run",
   );
   if (command === "check") {
@@ -112,16 +99,9 @@ async function main() {
   }
   const flags = ["--config", values.config];
   if (values.watch) flags.push("--watch");
-  if (values["reset-budget"])
-    flags.push("--reset-budget", values["reset-budget"]);
-  if (role === "reporter") {
-    if (values.broadcast) flags.push("--broadcast");
-    const { runReporter } = await import("../reporter/run");
-    await runReporter(flags);
-  } else {
-    const { runRelayer } = await import("../local/relay");
-    await runRelayer(flags);
-  }
+  if (values.broadcast) flags.push("--broadcast");
+  const { runReporter } = await import("../reporter/run");
+  await runReporter(flags);
 }
 
 void main().catch((error: unknown) => {

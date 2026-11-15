@@ -39,20 +39,32 @@ Logs go to stdout/stderr, with Compose rotation at three 10 MB files.
 
 ## Relayer JSON fields
 
-| Field                    | Requirement/default                                                         |
-| ------------------------ | --------------------------------------------------------------------------- |
-| `payerKeyFile`           | Absolute path to owner-only Solana JSON keypair; `/run/keys/key` in Compose |
-| `stateDir`               | Absolute durable directory outside the release/cache; `/data` in Compose    |
-| `headerEncoder`          | Absolute bundled encoder path; `/opt/akt/bin/akt-header-encoder` in Compose |
-| `maxLamportsPerTransfer` | Spend budget including retries; default 5,000,000                           |
-| `maxHeaderSignatures`    | Maximum signatures submitted per header; default 100                        |
-| `refreshFraction`        | Refresh point within the trusting period; default 0.2                       |
-| `retryMaxSeconds`        | Maximum retry backoff; default 900                                          |
-| `pruneIntervalSeconds`   | Consensus pruning interval; default 600                                     |
+| Field                    | Requirement/default                                                                                                                          |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `payerKeyFile`           | Absolute path to owner-only Solana JSON keypair; `/run/keys/key` in Compose                                                                  |
+| `stateDir`               | Absolute durable directory outside the release/cache; `/data` in Compose                                                                     |
+| `headerEncoder`          | Deprecated optional absolute path, validated but never executed by the Go relayer; retained in examples for rollback to a TypeScript release |
+| `maxLamportsPerTransfer` | Spend budget including retries; default 5,000,000                                                                                            |
+| `maxHeaderSignatures`    | Maximum signatures submitted per header; default 100                                                                                         |
+| `refreshFraction`        | Refresh point within the trusting period; default 0.2                                                                                        |
+| `retryMaxSeconds`        | Maximum retry backoff; default 900                                                                                                           |
+| `pruneIntervalSeconds`   | Consensus pruning interval; default 600                                                                                                      |
 
 The relayer discovers access-manager and light-client accounts through the
 configured bridge. Keep the spend ledger and header journals on durable storage.
 See [relayer operations](operators.md) for budget recovery and alert handling.
+
+Use explicit `http://` or `https://` RPC URLs with a hostname, a full dotted IPv4
+address, or a bracketed IPv6 address. The Go relayer uses Go URL parsing; it does
+not apply the TypeScript runtime's WHATWG normalization to shorthand IP addresses,
+backslashes, or surrounding whitespace. Akash endpoint paths and query strings
+are preserved. Supply an already normalized, percent-encoded endpoint: Go sends
+dot segments and unencoded query characters as written rather than normalizing
+them as the TypeScript runtime did. Check the exact endpoint before upgrading.
+
+The relayer connects directly to the configured endpoints and ignores proxy
+environment variables, matching the previous runtime. To use an authenticated
+proxy, put its HTTP(S) address in the RPC configuration.
 
 ## Reporter JSON fields
 

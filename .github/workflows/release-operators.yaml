@@ -4,7 +4,6 @@ on:
   push:
     tags:
       - relayer/v*
-      - reporter/v*
 
 permissions:
   contents: read
@@ -31,9 +30,15 @@ jobs:
         env:
           TAG: ${{ github.ref_name }}
         run: |
-          [[ "$TAG" =~ ^(relayer|reporter)/v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[a-zA-Z0-9.-]+)?$ ]]
+          [[ "$TAG" =~ ^relayer/v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[a-zA-Z0-9.-]+)?$ ]]
           test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/$TAG^{commit}")"
-          git merge-base --is-ancestor HEAD origin/main
+          if [[ "$TAG" == relayer/v0.2.0-rc0 ]]; then
+            test "$GITHUB_REPOSITORY" = akash-network/node
+            branch_tip=$(git show-ref --verify --hash 'refs/remotes/origin/jc/relayer-go')
+            test "$(git rev-parse HEAD)" = "$branch_tip"
+          else
+            git merge-base --is-ancestor HEAD origin/main
+          fi
           if draft=$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null); then
             test "$draft" = true
           fi
@@ -54,17 +59,20 @@ jobs:
           go-version-file: go.mod
           cache: false
       - name: Read node's SDK version
+        if: env.OPERATOR_ROLE == 'reporter'
         id: sdk
         run: |
           version=$(GOWORK=off go list -mod=readonly -m -f '{{.Version}}' pkg.akt.dev/go)
           echo "version=$version" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
+        if: env.OPERATOR_ROLE == 'reporter'
         with:
           repository: akash-network/chain-sdk
           ref: go/${{ steps.sdk.outputs.version }}
           path: .cache/chain-sdk
           persist-credentials: false
       - name: Build the pinned TypeScript SDK
+        if: env.OPERATOR_ROLE == 'reporter'
         working-directory: .cache/chain-sdk/ts
         run: |
           umask 022
@@ -76,7 +84,12 @@ jobs:
           mkdir -p "$cache"
           archive=$(npm pack --ignore-scripts --silent --pack-destination "$cache")
           mv "$cache/$archive" "$cache/chain-sdk.tgz"
-      - name: Install build tools
+      - name: Install shell verification tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck python3
+      - name: Install reporter build tools
+        if: env.OPERATOR_ROLE == 'reporter'
         run: |
           sudo apt-get update
           sudo apt-get install -y protobuf-compiler libssl-dev pkg-config shellcheck bzip2 libudev1
@@ -84,6 +97,7 @@ jobs:
           bash contracts/solana/scripts/install-anchor.sh
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
       - name: Install pinned Solana CLI for Anchor IDL generation
+        if: env.OPERATOR_ROLE == 'reporter'
         run: |
           mkdir -p .cache/solana/toolchain
           curl -fsSL --retry 3 -o .cache/solana/toolchain/agave.tar.bz2 \
@@ -96,9 +110,14 @@ jobs:
         run: |
           source contracts/solana/scripts/workspace.sh
           bash contracts/solana/deploy/build-operator.sh "$OPERATOR_ROLE" "$OPERATOR_VERSION" "$PWD/.cache/operator-package"
+          if [[ "$OPERATOR_ROLE" == relayer ]]; then
+            go test -mod=readonly -race ./internal/relayer/...
+          fi
           cd contracts/solana
-          node deploy/audit-operator.mjs
-          cargo test --locked --manifest-path tools/header-encoder/Cargo.toml
+          if [[ "$OPERATOR_ROLE" == reporter ]]; then
+            node deploy/audit-operator.mjs
+            cargo test --locked --manifest-path tools/header-encoder/Cargo.toml
+          fi
           shellcheck -x -P SCRIPTDIR deploy/{build-operator,node-runtime,operator,prepare-services,test-operator,test-operator-compose}.sh
       - uses: goreleaser/goreleaser-action@v6
         with:
@@ -141,14 +160,14 @@ jobs:
           name: akt-${{ env.OPERATOR_ROLE }}-${{ env.OPERATOR_VERSION }}
           path: .cache/goreleaser/operators/*
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && env.OPERATOR_ROLE == 'reporter'
         with:
           name: akt-${{ env.OPERATOR_ROLE }}-dependency-review
           path: .cache/solana/operator-npm-audit.json
       - name: Create a draft operator release
         run: |
           if ! gh release view "$OPERATOR_TAG" >/dev/null 2>&1; then
-            gh release create "$OPERATOR_TAG" --verify-tag --draft --latest=false \
+            gh release create "$OPERATOR_TAG" --verify-tag --draft --latest=false --prerelease="$PRERELEASE" \
               --title "akt-$OPERATOR_ROLE v$OPERATOR_VERSION" \
               --notes "Linux amd64 download and Docker image for akt-$OPERATOR_ROLE. Configuration selects the deployment; verify its published addresses before starting. See contracts/solana/docs/operator-releases.md at this tag."
           fi

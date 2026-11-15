@@ -104,7 +104,7 @@ async function runScenarios({
       },
     ],
     [
-      "./relay",
+      "./go-relay",
       {
         relayContext: async () => ({
           wallet: { publicKey: "wallet" },

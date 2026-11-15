@@ -22,7 +22,7 @@ make -C "$NODE_SINK_DIR" bins
 npm run setup:light-client
 npm run setup:metadata
 npm run build
-npm run build:header-encoder
+npm run build:relayer
 npm run typecheck
 
 echo 'Build complete. See docs/setup.md for the explicit accelerated-testnet build.'

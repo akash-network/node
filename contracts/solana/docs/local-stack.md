@@ -56,7 +56,16 @@ On a fresh checkout, install the pinned toolchain and build first:
 npm run setup
 ```
 
-Setup uses node's existing `make bins` output (`$AKASH`, normally `../../.cache/bin/akash`). Select the accelerated-testnet binary explicitly as described in [setup](setup.md#accelerated-testnet). The host header encoder links the pinned upstream Borsh codec through its commit-pinned Cargo dependency; setup builds these in order. Local preloading uses fixed program IDs and needs no original deployment key.
+Setup uses node's existing `make bins` output (`$AKASH`, normally `../../.cache/bin/akash`). Select the accelerated-testnet binary explicitly as described in [setup](setup.md#accelerated-testnet). The Go relayer includes its header encoder. The Rust encoder remains a development oracle for byte comparisons. Local preloading uses fixed program IDs and needs no original deployment key.
+
+For a custom source-tree run, the former raw TypeScript config entry is available through the Go binary:
+
+```bash
+../../.cache/bin/akt-relayer local --config ./custom-relayer.json --watch
+../../.cache/bin/akt-relayer local --config ./custom-relayer.json --reset-budget all
+```
+
+These commands must run inside the node source workspace. Config paths may be relative to the working directory; paths inside the JSON resolve against its directory. Custom configs cannot enable local bootstrap or header-tampering diagnostics. The packaged `run` and `check` commands retain their production network and absolute-path requirements.
 
 Program files are preloaded when the Solana ledger is first created. Rebuilding `.so` files alone does not upgrade a running or retained ledger. A code-change rehearsal needs an explicit local program upgrade or a fresh paired test environment. There is no automatic reset command that could erase a running chain.
 
@@ -73,13 +82,13 @@ Level changes, and problems that persist for 15 minutes, are logged as `monitor-
 
 Akash genesis enables deposits with an empty sink escrow, and Solana initialization creates the mint with zero supply, so every local AKT on Solana comes from a proven deposit. The local caps are 1,000,000 AKT per transfer, 10,000,000 AKT minted and 1,000,000 AKT refunded per day. Local Akash inflation is disabled to make accounting easier to inspect.
 
-The initial light-client checkpoint is explicitly trusted. Later app roots come from actual CometBFT signed headers. The Rust helper uses the upstream Tendermint types and Borsh encoding; the relayer pre-verifies Ed25519 signatures, uploads header chunks, calls `assemble_and_update_client`, checks the stored app root, then reclaims temporary accounts. It does not deploy ICS26 or use the upstream proof API.
+The initial light-client checkpoint is explicitly trusted. Later app roots come from actual CometBFT signed headers. The Go encoder uses CometBFT types and the pinned Borsh layout, checked against the Rust development oracle; the relayer pre-verifies Ed25519 signatures, uploads header chunks, calls `assemble_and_update_client`, checks the stored app root, then reclaims temporary accounts. It does not deploy ICS26 or use the upstream proof API.
 
 The relayer fetches an ICS23 proof at application height H and submits it against verified header H+1. It chooses committed application state and waits for a canonical CometBFT commit. Proofs are uploaded in chunks before the mint or void instruction. Permanent Solana status prevents a retry from issuing tokens twice.
 
 Each pass re-reads the bridge account for the light client it pins and follows a governance re-pin, logging `light-client-changed`. The local IDs in `local/common.ts` are used only to deploy and bootstrap a fresh network. The relayer queries canonical status buckets and the dispute index, then continues chronological history discovery from its durable full-ID checkpoint. Every page uses one committed height. Before paying for an upload, the relayer checks the bridge pause, the per-transfer maximum, the remaining daily mint cap and whether the recipient would mint or void. It logs `relay-wait` and waits without paying while one of these retryable limits applies. A failed transfer backs off exponentially from 6 seconds up to `AKT_RELAY_RETRY_MAX_SECONDS`, default 900, and logs `relay-retry`. Header update failures back off separately, up to two minutes, and never stop relays that the latest verified height can already prove. Commits with more than `AKT_RELAY_MAX_HEADER_SIGNATURES` votes, default 100, submit only the highest-power signers the verifier needs and mark the rest `Absent`; see [large validator sets](operators.md#large-validator-sets).
 
-Every transaction is simulated before it is sent. The relayer records the fees and resolution rent it pays per transfer in `relay-budget-v2-<genesis>-<program>.json`. Past `AKT_RELAY_MAX_LAMPORTS_PER_TRANSFER`, default 5,000,000, it stops paying for that transfer and logs `relay-budget-exhausted`. After investigating, reset it with `npx tsx local/relay.ts --reset-budget ID` under the stack's `AKT_LOCAL_PROFILE` and `AKT_LOCAL_RUN`. The same relayer runs against any deployment from a config file; see [running a relayer](operators.md).
+Mint and void submissions are simulated before they are sent. Header and temporary-account transactions retain their stage-specific preflight and finality policies. The relayer records the fees and resolution rent it pays per transfer in `relay-budget-v2-<genesis>-<program>.json`. Past `AKT_RELAY_MAX_LAMPORTS_PER_TRANSFER`, default 5,000,000, it stops paying for that transfer and logs `relay-budget-exhausted`. After investigating, reset it with `../../.cache/bin/akt-relayer local --reset-budget ID` under the stack's `AKT_LOCAL_PROFILE` and `AKT_LOCAL_RUN`. The same relayer runs against any deployment from a config file; see [running a relayer](operators.md).
 
 The relayer never mints a record that Akash shows as refund-pending or refunded while Solana has no status for it. It still relays a governance void order in either status, because a permanent Solana void blocks minting without creating supply. It re-reads the record at the newest Akash height before its first paid transaction and skips with `relay-final-check` if the void order changed or a planned mint became unbacked. Without a void order, it pays nothing and logs `relay-unbacked-settlement` when it first sees the state and every 15 minutes while it lasts; the reconciler reports the mismatch. `mint_transfer` remains permissionless, so the mint guard protects only the honest relayer. A governance confirmation must still carry verified Solana evidence.
 

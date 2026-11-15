@@ -1,0 +1,124 @@
+{
+  "oracleSha256": "3c3c5b94b851600ce80cc44d0c05a2170731816bf33e94acbc0d0d16f6d0b911",
+  "templateSha256": "9d2c5d1d4f9a4e30f9e0dec213dc49a5be23958dc26cd967f0727b3a812fe4df",
+  "cases": [
+    {
+      "name": "1-1-equal",
+      "arguments": [
+        "--fixture",
+        "1",
+        "1",
+        "equal"
+      ],
+      "sha256": "04c6006507fda973b1402a8bf38c17c7016ef94088163a54b428f5d76dffe08b",
+      "headerBytes": 813,
+      "signatures": 1
+    },
+    {
+      "name": "4-3-equal",
+      "arguments": [
+        "--fixture",
+        "4",
+        "3",
+        "equal"
+      ],
+      "sha256": "8499a3dfa46e18eba5c39e19b4770484061b7b6fb4656b7926f8697135a6ed18",
+      "headerBytes": 1422,
+      "signatures": 3
+    },
+    {
+      "name": "100-67-equal",
+      "arguments": [
+        "--fixture",
+        "100",
+        "67",
+        "equal"
+      ],
+      "sha256": "18839f39d4fe3c0240dd73d674ece17b8f88148f908b4a39b0a2512a73ed78fd",
+      "headerBytes": 20910,
+      "signatures": 67
+    },
+    {
+      "name": "100-100-equal",
+      "arguments": [
+        "--fixture",
+        "100",
+        "100",
+        "equal"
+      ],
+      "sha256": "953444350ce5987209425f46901d672dd96f3ab6445e8b4045cde986aa704bb1",
+      "headerBytes": 24078,
+      "signatures": 100
+    },
+    {
+      "name": "150-102-equal",
+      "arguments": [
+        "--fixture",
+        "150",
+        "102",
+        "equal"
+      ],
+      "sha256": "ade9c46004a3bf871d79906fbd46dbc92a818194908dacba1ee26fefab6b8f3c",
+      "headerBytes": 31220,
+      "signatures": 102
+    },
+    {
+      "name": "200-134-equal",
+      "arguments": [
+        "--fixture",
+        "200",
+        "134",
+        "equal"
+      ],
+      "sha256": "5971f2a348e9a648e858925cf012baaa3cf43ec57038014fa67188ee441f797a",
+      "headerBytes": 41242,
+      "signatures": 134
+    },
+    {
+      "name": "256-171-equal",
+      "arguments": [
+        "--fixture",
+        "256",
+        "171",
+        "equal"
+      ],
+      "sha256": "01dc5d40e61f9f3a9e95c909a1f8312df407436fad46010662fa3077594f56b3",
+      "headerBytes": 52578,
+      "signatures": 171
+    },
+    {
+      "name": "100-21-weighted",
+      "arguments": [
+        "--fixture",
+        "100",
+        "21",
+        "weighted"
+      ],
+      "sha256": "79187efae6af1fbc0d57aa1766b19539380baf59183ebced0ea4f829c195c890",
+      "headerBytes": 16494,
+      "signatures": 21
+    },
+    {
+      "name": "100-40-weighted",
+      "arguments": [
+        "--fixture",
+        "100",
+        "40",
+        "weighted"
+      ],
+      "sha256": "821cb665efe592f29bb1f5eeba6038ab05bc5b4483ef4e7609f4c4a8ff1e6578",
+      "headerBytes": 18318,
+      "signatures": 40
+    }
+  ],
+  "normalMode": {
+    "case": "normal-mixed",
+    "priorityZeroingVerified": true,
+    "files": {
+      "normal-mixed.zero-priorities.input.json": "4014b94a24709dcf5c17e3aa4d65de260084adbfe28f15f10953b74388c0746e",
+      "normal-mixed.input.json": "f29dc4e9b920ec7a0e8a1f22356907ed06a4e8528e1f386f095a334c1f635a89",
+      "normal-mixed.output.json": "f4240232a8eeebda2c03d24219e0d37e2495f21c0256d4923d0cd5631f8f9cfa",
+      "normal-mixed.zero-priorities.output.json": "f4240232a8eeebda2c03d24219e0d37e2495f21c0256d4923d0cd5631f8f9cfa"
+    }
+  }
+}

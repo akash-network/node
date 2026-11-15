@@ -8,7 +8,11 @@ if (($# != 2)) || [[ "$2" != /* ]]; then
   exit 2
 fi
 case "$1" in
-  relayer) entry=local/relay.ts; mode=() ;;
+  relayer)
+    command=$repo/../../bin/akt-relayer
+    "$command" check --config "$2"
+    exec "$command" run --config "$2" --watch
+    ;;
   reporter-preview) entry=reporter/run.ts; mode=() ;;
   reporter-broadcast) entry=reporter/run.ts; mode=(--broadcast) ;;
   *) echo "unknown service: $1" >&2; exit 2 ;;

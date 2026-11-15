@@ -11,7 +11,8 @@ The manifest-based source build below remains available for deployment ceremonie
 ## Build one reviewed release
 
 Use a clean checkout of the launch commit on a Linux builder matching the
-production CPU architecture and libc/distribution, with Node 24, npm, Rust and the pinned tools from
+production CPU architecture and libc/distribution, with the Go version from
+`go.mod`, Node 24, npm and the pinned contract tools from
 [setup](setup.md). Obtain the reviewed program build and
 [manifest](deploy-program.md#3-reproducible-build-and-hashes). Prepare the exact
 chain-sdk archive recorded by `package-lock.json` at node's
@@ -27,11 +28,12 @@ npm run deploy:services -- /srv/launch/manifest.json /srv/releases/akt-services.
 ```
 
 The builder checks the reviewed commit and program bundle, then builds the
-header encoder from the commit-pinned Cargo dependency with its lockfile. It installs the locked JS dependencies and
-runs typechecking and deployment tests in an isolated staging tree, then removes
-development dependencies with `npm prune --omit=dev`. The archive
-contains the runtime source, dependencies (including `tsx`), generated IDLs and
-types, SDK archive, native header encoder and `service-build-info.txt`.
+static Go relayer with its embedded header encoder. It installs the locked JS
+dependencies and runs typechecking and deployment tests in an isolated staging
+tree, then removes development dependencies with `npm prune --omit=dev`. The
+archive contains the Go relayer, reporter runtime source and dependencies
+(including `tsx`), generated IDLs and types, SDK archive and
+`service-build-info.txt`.
 
 Record the printed SHA-256, source commit, Node version, build platform and SDK
 archive hash in the release record. The copied `launch-manifest.json` is
@@ -50,7 +52,8 @@ archive is checksummed, not claimed to be reproducible across platforms.
 ## Install on each operator's host
 
 Use separate hosts and Unix accounts for the relayer and each reporter. Install
-Node 24 at `/usr/local/bin/node` (or adjust the unit's root-owned PATH). Verify
+Node 24 at `/usr/local/bin/node` on reporter hosts (or adjust the unit's root-owned PATH).
+The relayer runs the bundled static Go binary. Verify
 the archive hash against the release record before extracting it. Keep release
 files owned by root and unwritable by service accounts.
 
@@ -81,7 +84,6 @@ sources and a private key file or external signer as described in [reporter cust
 
 For the relayer, explicitly set:
 
-- `headerEncoder`: `/opt/akt-bridge/current/bin/akt-header-encoder`.
 - `stateDir`: `/var/lib/akt-relayer`; retain this across releases and restarts.
 - `payerKeyFile`: the operator-provisioned key file, owned by `akt-relayer`, mode
   `0600`. Use a separate funded payer per relayer. Keys are never release assets.
@@ -90,13 +92,13 @@ Check configuration without reading a payer or calling a signer:
 
 ```bash
 cd /opt/akt-bridge/current/contracts/solana
-node --import tsx deploy/service-config.ts relayer /etc/akt-relayer/config.json
+../../bin/akt-relayer check --config /etc/akt-relayer/config.json
 # on a reporter host
 node --import tsx deploy/service-config.ts reporter-preview /etc/akt-reporter/config.json
 ```
 
-These checks reject local network identities, development program IDs, implicit
-encoder paths and cache-based relayer state. The services additionally check
+These checks reject local network identities, development program IDs, relative
+key/state paths and cache-based relayer state. The services additionally check
 live network identity, program state and freshness at startup.
 
 ## Supervise and activate

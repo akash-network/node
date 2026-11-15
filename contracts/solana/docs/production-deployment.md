@@ -169,7 +169,7 @@ fraction if the validator set changes quickly.
   for the 1,000,000 AKT seed transfer (AEP-95). The seed-window values, 1,000,000
   AKT per transfer and 10,000,000 AKT per UTC day, admit that transfer and are
   not the launch caps; `deploy/rehearse-launch.sh`, the local stack bootstrap in
-  `local/relay.ts` and `tests/upgrade/sink/setup.sh` use them. After the seed
+  `internal/relayer/bootstrap.go` and `tests/upgrade/sink/setup.sh` use them. After the seed
   mints, both chains lower their caps to the launch values, chosen by governance
   for x/sink and by the multisig for Solana, in the lowering order below.
 - Leave `vaults` empty unless a vault has been reviewed. It must match the x/sink

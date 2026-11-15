@@ -13,6 +13,7 @@ import type { Ics07Tendermint } from "../../../.cache/solana/deps/ibc-contracts/
 import type { AccessManager } from "../../../.cache/solana/deps/ibc-contracts/ibc-solana/target/types/access_manager";
 import {
   REPO,
+  GO_RELAYER,
   DEPS,
   RUN,
   TARGET,
@@ -755,8 +756,14 @@ async function fixture({
   input.trusted_height = trusted;
   const raw = await new Promise<string>((resolve, reject) => {
     const child = spawn(
-      join(TARGET, "debug/akt-header-encoder"),
-      ["--fixture", String(validators), String(signers), distribution],
+      GO_RELAYER,
+      [
+        "header-encode",
+        "--fixture",
+        String(validators),
+        String(signers),
+        distribution,
+      ],
       { stdio: ["pipe", "pipe", "pipe"] },
     );
     let stdout = "",

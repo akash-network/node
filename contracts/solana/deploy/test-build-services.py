@@ -25,10 +25,9 @@ elif name == "git":
 elif name == "node":
     if args[:2] != ["--import", "tsx"]:
         os.execv(os.environ["REAL_NODE"], [os.environ["REAL_NODE"], *args])
-elif name == "cargo":
-    target = pathlib.Path(os.environ["CARGO_TARGET_DIR"]) / "release"
-    target.mkdir(parents=True)
-    (target / "akt-header-encoder").write_text("fixture-encoder")
+elif name == "go":
+    output = pathlib.Path(args[args.index("-o") + 1])
+    output.write_text("fixture-go-relayer")
 elif name == "npm":
     if os.environ.get("FAIL_INSTALL") == "yes": sys.exit(37)
     if args[0] == "ci":
@@ -71,7 +70,7 @@ class ServiceArchiveTests(unittest.TestCase):
             output.add(self.source, arcname="contracts/solana")
         bin_dir = self.root / "bin"
         bin_dir.mkdir()
-        for name in ("uname", "git", "node", "cargo", "npm"):
+        for name in ("uname", "git", "node", "go", "npm"):
             path = bin_dir / name
             path.write_text(STUB.replace("#!/usr/bin/env python3", "#!" + os.path.realpath(os.sys.executable), 1))
             path.chmod(0o755)
@@ -92,7 +91,7 @@ class ServiceArchiveTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         with tarfile.open(self.output) as archive:
             files = set(archive.getnames())
-        for name in ("bin/akt-header-encoder", ".cache/solana/chain-sdk.tgz",
+        for name in ("bin/akt-relayer", ".cache/solana/chain-sdk.tgz",
                      ".cache/solana/target/idl/akt.json",
                      ".cache/solana/target/types/akt.ts",
                      ".cache/solana/deps/ibc-contracts/ibc-solana/target/types/ics07_tendermint.ts",
