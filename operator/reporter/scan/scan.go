@@ -135,7 +135,7 @@ type tally struct {
 
 // reviewRun is the context of one chunk's reviews. stop ends them between transfers, as TS checks its abort signal;
 // requests run under req, which a pin mismatch cancels but shutdown does not, so in-flight requests finish or time out
-// (spec §5.7).
+// (spec §5.7). Shutdown only cancels the Akash reads of req still waiting for a permit (akash.WithStop).
 type reviewRun struct {
 	stop  context.Context
 	req   context.Context
@@ -285,9 +285,10 @@ func merge(open, audited []sinkid.ID) []entry {
 }
 
 // reviewAll feeds chunks to the workers until every chunk is reviewed, ctx ends or a light-client pin mismatch
-// stops the pass. A mismatch cancels the running chunks' requests and is returned once they have stopped.
+// stops the pass. A mismatch cancels the running chunks' requests and is returned once they have stopped. When ctx
+// ends, Akash reads still waiting for a permit are cancelled; those in flight finish or time out.
 func (s *Scanner) reviewAll(ctx context.Context, entries []entry, t *tally) error {
-	req, abort := context.WithCancelCause(context.WithoutCancel(ctx))
+	req, abort := context.WithCancelCause(akash.WithStop(context.WithoutCancel(ctx), ctx))
 	defer abort(nil)
 
 	chunks := make(chan []entry)
@@ -613,7 +614,8 @@ func (s *Scanner) Review(ctx context.Context, ids []sinkid.ID, minHeight int64) 
 // failures. A pin mismatch writes its alert and is returned; a ctx that ended during the reviews returns its error.
 func (s *Scanner) followUp(ctx context.Context, st *akash.State, chunk []entry) error {
 	var t tally
-	err := s.reviewAt(reviewRun{stop: ctx, req: context.WithoutCancel(ctx), state: st, tally: &t, followUp: true}, chunk)
+	req := akash.WithStop(context.WithoutCancel(ctx), ctx)
+	err := s.reviewAt(reviewRun{stop: ctx, req: req, state: st, tally: &t, followUp: true}, chunk)
 	s.followUpFailures.Add(t.failures.Load())
 
 	var mismatch *observe.MismatchError

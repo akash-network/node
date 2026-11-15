@@ -250,6 +250,28 @@ func (c *Client) withTimeout(ctx context.Context) (context.Context, context.Canc
 	return context.WithTimeout(ctx, c.timeout)
 }
 
+type stopKey struct{}
+
+// WithStop returns ctx under which a gRPC call still waiting for a concurrency permit gives up once stop ends. Such a
+// call is not in flight yet, so shutdown cancels it; a call that holds a permit runs under ctx and the request timeout
+// only, and finishes or times out (spec §5.7).
+func WithStop(ctx, stop context.Context) context.Context {
+	return context.WithValue(ctx, stopKey{}, stop)
+}
+
+// acquire takes a concurrency permit, waiting until ctx, or the stop context of WithStop, ends.
+func (c *Client) acquire(ctx context.Context) error {
+	wait := ctx
+	if stop, ok := ctx.Value(stopKey{}).(context.Context); ok && stop != nil {
+		var cancel context.CancelFunc
+		wait, cancel = context.WithCancel(ctx)
+		defer cancel()
+		defer context.AfterFunc(stop, cancel)()
+	}
+
+	return c.reads.Acquire(wait, 1)
+}
+
 // intercept bounds every gRPC call by the concurrency limit and the request timeout, and records it.
 func (c *Client) intercept(
 	ctx context.Context,
@@ -259,7 +281,7 @@ func (c *Client) intercept(
 	invoker grpc.UnaryInvoker,
 	opts ...grpc.CallOption,
 ) error {
-	if err := c.reads.Acquire(ctx, 1); err != nil {
+	if err := c.acquire(ctx); err != nil {
 		return err
 	}
 	defer c.reads.Release(1)

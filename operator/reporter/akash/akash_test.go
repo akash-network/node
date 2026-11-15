@@ -5,12 +5,15 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/binary"
+	"errors"
 	"math"
+	"net"
 	"sync"
 	"testing"
 	"time"
 
 	cmttypes "github.com/cometbft/cometbft/types"
+	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/bech32"
@@ -18,6 +21,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	"github.com/gagliardetto/solana-go"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 
 	sinkv1 "pkg.akt.dev/go/node/sink/v1"
 
@@ -504,6 +511,78 @@ func TestTrackerRefreshAtMostOncePerInterval(t *testing.T) {
 	_, err := c.Latest(t.Context())
 	require.NoError(t, err)
 	require.Equal(t, 2, n.Calls("status")-before)
+}
+
+// hungSink answers no transfer query: each waits until its call ends.
+type hungSink struct {
+	sinkv1.UnimplementedQueryServer
+}
+
+func (*hungSink) Transfer(ctx context.Context, _ *sinkv1.QueryTransferRequest) (*sinkv1.QueryTransferResponse, error) {
+	<-ctx.Done()
+	return nil, status.FromContextError(ctx.Err()).Err()
+}
+
+func TestShutdownCancelsQueuedReads(t *testing.T) {
+	n, fake := startNode(t, clean(), simnode.Options{})
+	opts := options(n, fake)
+	opts.Concurrency = 2
+	opts.RequestTimeout = 500 * time.Millisecond
+	c := dial(t, opts)
+
+	// The sink queries now reach a node that never answers.
+	var lc net.ListenConfig
+	l, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	srv := grpc.NewServer(grpc.ForceServerCodec(codec.NewProtoCodec(c.registry).GRPCCodec()))
+	sinkv1.RegisterQueryServer(srv, &hungSink{})
+	go func() { _ = srv.Serve(l) }()
+	t.Cleanup(srv.Stop)
+	conn, err := grpc.NewClient(l.Addr().String(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.ForceCodec(codec.NewProtoCodec(c.registry).GRPCCodec())),
+		grpc.WithUnaryInterceptor(c.intercept),
+	)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = conn.Close() })
+	c.sink = sinkv1.NewQueryClient(conn)
+
+	// Ten times the concurrency limit: two calls run, the others wait for a permit.
+	const calls = 20
+	stop, shutdown := context.WithCancel(t.Context())
+	ctx := WithStop(context.WithoutCancel(stop), stop)
+	id := newID(t, 1, 10, 1)
+	errs := make(chan error, calls)
+	for range calls {
+		go func() {
+			_, err := c.Transfer(ctx, head, id)
+			errs <- err
+		}()
+	}
+	time.Sleep(100 * time.Millisecond)
+
+	began := time.Now()
+	shutdown()
+	timedOut, cancelled := 0, 0
+	for range calls {
+		select {
+		case err := <-errs:
+			switch {
+			case status.Code(errors.Unwrap(err)) == codes.DeadlineExceeded:
+				timedOut++
+			case errors.Is(err, context.Canceled):
+				cancelled++
+			default:
+				t.Fatalf("unexpected error: %v", err)
+			}
+		case <-time.After(10 * time.Second):
+			t.Fatal("the queued reads did not end")
+		}
+	}
+
+	require.Less(t, time.Since(began), 2*opts.RequestTimeout, "shutdown takes about one request timeout")
+	require.Equal(t, opts.Concurrency, timedOut, "the reads in flight finish or time out")
+	require.Equal(t, calls-opts.Concurrency, cancelled, "the reads waiting for a permit are cancelled")
 }
 
 func TestTrackerCachesFailure(t *testing.T) {

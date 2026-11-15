@@ -87,8 +87,9 @@ func (c *Client) Latest(ctx context.Context) (*State, error) {
 		return r.state, r.err
 	}
 
-	// The refresh outlives a caller that gives up, so the others sharing it still get its result.
-	refreshCtx := context.WithoutCancel(ctx)
+	// The refresh outlives a caller that gives up, or whose stop context of WithStop ends, so the others sharing it
+	// still get its result.
+	refreshCtx := context.WithValue(context.WithoutCancel(ctx), stopKey{}, nil)
 	ch := c.track.group.DoChan("latest", func() (any, error) {
 		// A refresh that finished after this caller missed the cache still counts.
 		if r := c.cached(); r != nil {
