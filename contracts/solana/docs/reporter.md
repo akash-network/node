@@ -217,7 +217,7 @@ A governance resolution starts a new round, so a veto after it is a new decision
 
 - Every batch is simulated before signing. If simulation fails at `message index: N`, message N is dropped with `{id, error}` and the rest is simulated again, for up to three rounds. A failure without a message index fails the whole batch.
 - With `gas = "auto"`, the gas limit is the simulated gas times `gas-adjustment`. A number is gas per message, so the limit is that times the message count.
-- Simulation runs against the latest committed block, so the limit must also cover other reporters' votes landing first in the same block, including the vote that completes the quorum. The default `gas-adjustment` of 1.5 covers that for a policy of 3 members; raise it for larger policies whose votes often land in one block.
+- Simulation runs against the latest committed block, so the limit must also cover other reporters' votes landing first in the same block, including the vote that completes the quorum. The default `gas-adjustment` of 2.0 covers that with a 10% margin for policies of up to 5 members whose votes all land in one block; raise it for larger policies.
 - The fee is `fees` when set, otherwise the gas limit times `gas-prices`. The TypeScript reporter paid `feeAmountUakt` for every single-message transaction; batching makes `gas = "auto"` with `gas-prices` the better choice.
 - **Caps.** The gas limit must be at most `tx.max-gas` and the fee at most `tx.max-fee`. A batch over a cap is halved and its second half deferred. A single message over a cap gets `{id, error}` and is not sent. A signer's sign-bytes limit is a cap of the same kind (see [the 4096-byte limit](#cosmos-kms-remote-signer)).
 

@@ -106,7 +106,7 @@ func TestDefaults(t *testing.T) {
 	require.Equal(t, "test", c.KeyringBackend)
 	require.Empty(t, c.KeyringDir)
 	require.Equal(t, "auto", c.Gas)
-	require.Equal(t, 1.5, c.GasAdjustment)
+	require.Equal(t, 2.0, c.GasAdjustment)
 	require.Equal(t, "0.025uakt", c.GasPrices)
 	require.Empty(t, c.Fees)
 	require.Equal(t, "http://localhost:8899", c.Solana.RPC)
@@ -212,14 +212,14 @@ func TestLoadWithoutFile(t *testing.T) {
 }
 
 func TestPrecedenceKinds(t *testing.T) {
-	c, _, err := load(t, "max-age = \"30s\"\nbroadcast = true\ngas = 200000\ngas-adjustment = 2\n",
+	c, _, err := load(t, "max-age = \"30s\"\nbroadcast = true\ngas = 200000\ngas-adjustment = 3\n",
 		[]string{"AKT_REPORTER_SOLANA_MAX_SLOT_LEAD=500", "AKT_REPORTER_SIGNER_REMOTE_TIMEOUT=5s", "AKT_REPORTER_GRPC_INSECURE=true"},
 		"--request-timeout", "20s")
 	require.NoError(t, err)
 	require.Equal(t, 30*time.Second, c.MaxAge)
 	require.True(t, c.Broadcast)
 	require.Equal(t, "200000", c.Gas)
-	require.Equal(t, 2.0, c.GasAdjustment)
+	require.Equal(t, 3.0, c.GasAdjustment)
 	require.Equal(t, uint64(500), c.Solana.MaxSlotLead)
 	require.Equal(t, 5*time.Second, c.Signer.Remote.Timeout)
 	require.True(t, c.GRPCInsecure)

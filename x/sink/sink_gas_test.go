@@ -9,6 +9,7 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 	abci "github.com/cometbft/cometbft/abci/types"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 
@@ -25,27 +26,35 @@ const simGasLimit = 20_000_000
 
 var simFee = sdk.NewCoins(coin(1))
 
-// gasProbe builds reporter transactions with the reporter's real builder on a 3-member, 0.75-threshold policy, as
-// in the local stack, where every member must vote.
+// gasProbe builds reporter transactions with the reporter's real builder on a policy where every member must vote:
+// 3 members at threshold 0.75, as in the local stack, or 5 members at threshold 1.
 type gasProbe struct {
 	h        *testSuite
 	builders []*reportertx.Builder
 	prices   sdk.DecCoins
 }
 
-func newGasProbe(t *testing.T) *gasProbe {
+func newGasProbe(t *testing.T, members int) *gasProbe {
 	t.Helper()
 	h := setupTestSuite(t, func(p *sinktypes.Params) {
 		p.MaxAmountPerTransfer = coin(100)
 		p.MaxEpochRefund = coin(100)
 		p.RefundsEnabled = true
-		p.Reporters = p.Reporters[:3]
+		switch members {
+		case 3:
+			p.Reporters = p.Reporters[:3]
+		case 5:
+			p.Reporters = append(p.Reporters, sdk.AccAddress(secp256k1.GenPrivKeyFromSecret([]byte("local reporter 4")).PubKey().Address()).String())
+			p.ReportersThreshold = sdkmath.LegacyOneDec()
+		default:
+			t.Fatalf("unsupported policy size %d", members)
+		}
 	})
 	res := h.deliver(t, "", h.deposit(10))
 	require.Zero(t, res.Code, res.Log)
 
 	g := &gasProbe{h: h, prices: sdk.NewDecCoins(sdk.NewDecCoinFromDec(sdkutil.DenomUakt, sdkmath.LegacyMustNewDecFromStr("0.025")))}
-	for i := 0; i < 3; i++ {
+	for i := 0; i < members; i++ {
 		account := h.a.Keepers.Cosmos.Acct.GetAccount(h.ctx(), sdk.AccAddress(h.reporters[i].PubKey().Address()))
 		g.builders = append(g.builders, reportertx.NewBuilder(h.a.TxConfig(), h.a.ChainID(), account.GetAccountNumber(), keySigner{key: h.reporters[i]}))
 	}
@@ -83,9 +92,10 @@ func (g *gasProbe) prepare(t *testing.T, reporter int, adjustment float64, msg s
 // last vote completes the quorum on a state its simulation did not see.
 func (g *gasProbe) quorum(t *testing.T, adjustment float64, outcome sinktypes.Outcome) ([]prepared, []*abci.ExecTxResult) {
 	t.Helper()
-	ps := make([]prepared, 0, 3)
-	txs := make([][]byte, 0, 3)
-	for i := 0; i < 3; i++ {
+	members := len(g.builders)
+	ps := make([]prepared, 0, members)
+	txs := make([][]byte, 0, members)
+	for i := 0; i < members; i++ {
 		p := g.prepare(t, i, adjustment, g.h.reportMsg(t, i, 1, outcome))
 		ps = append(ps, p)
 		txs = append(txs, p.bz)
@@ -101,25 +111,37 @@ func logRatio(t *testing.T, name string, p prepared, res *abci.ExecTxResult) {
 }
 
 // TestReporterGasQuorumVote checks that the default gas-adjustment covers a vote simulated before the other
-// members' votes landed in the same block, including the vote that completes the quorum (spec §6.4).
+// members' votes landed in the same block, including the vote that completes the quorum (spec §6.4), with a 10%
+// margin over the quorum vote's delivered/simulated ratio. With 5 members that ratio times 1.1 exceeds 1.5, which is
+// why the default is 2.0.
 func TestReporterGasQuorumVote(t *testing.T) {
 	adjustment := config.Default().GasAdjustment
 
-	for _, outcome := range []sinktypes.Outcome{sinktypes.OutcomeMinted, sinktypes.OutcomeVoided} {
-		t.Run(outcome.String(), func(t *testing.T) {
-			g := newGasProbe(t)
-			ps, res := g.quorum(t, adjustment, outcome)
-			for i, r := range res {
-				require.Zero(t, r.Code, "vote %d: %s", i, r.Log)
-				require.LessOrEqual(t, r.GasUsed, int64(ps[i].limit)) //nolint:gosec // gas limit
-			}
+	for _, members := range []int{3, 5} {
+		for _, outcome := range []sinktypes.Outcome{sinktypes.OutcomeMinted, sinktypes.OutcomeVoided} {
+			t.Run(fmt.Sprintf("%d members %s", members, outcome), func(t *testing.T) {
+				g := newGasProbe(t, members)
+				ps, res := g.quorum(t, adjustment, outcome)
+				for i, r := range res {
+					require.Zero(t, r.Code, "vote %d: %s", i, r.Log)
+					require.LessOrEqual(t, r.GasUsed, int64(ps[i].limit)) //nolint:gosec // gas limit
+				}
 
-			want := sinktypes.StatusMinted
-			if outcome == sinktypes.OutcomeVoided {
-				want = sinktypes.StatusRefundPending
-			}
-			require.Equal(t, want, g.h.transfer(t, 1).Status)
-		})
+				want := sinktypes.StatusMinted
+				if outcome == sinktypes.OutcomeVoided {
+					want = sinktypes.StatusRefundPending
+				}
+				require.Equal(t, want, g.h.transfer(t, 1).Status)
+
+				// The default keeps a 10% margin over the quorum vote's delivered/simulated ratio.
+				last := len(res) - 1
+				ratio := float64(res[last].GasUsed) / float64(ps[last].simulated)
+				require.GreaterOrEqual(t, adjustment, ratio*1.1, "quorum vote ratio %.3f", ratio)
+				if members == 5 && outcome == sinktypes.OutcomeVoided {
+					require.Greater(t, ratio*1.1, 1.5, "1.5 must not cover the 5-member quorum vote with a 10%% margin")
+				}
+			})
+		}
 	}
 }
 
@@ -132,23 +154,25 @@ func TestReporterGasMeasure(t *testing.T) {
 	const adj = 5.0
 
 	t.Run("lone vote", func(t *testing.T) {
-		g := newGasProbe(t)
+		g := newGasProbe(t, 3)
 		p := g.prepare(t, 0, adj, g.h.reportMsg(t, 0, 1, sinktypes.OutcomeMinted))
 		logRatio(t, "1 lone vote", p, g.h.deliverBytes(t, p.bz))
 	})
 
 	t.Run("votes in one block", func(t *testing.T) {
-		for _, outcome := range []sinktypes.Outcome{sinktypes.OutcomeMinted, sinktypes.OutcomeVoided} {
-			g := newGasProbe(t)
-			ps, res := g.quorum(t, adj, outcome)
-			for i := range ps {
-				logRatio(t, fmt.Sprintf("2/3 %s vote %d of block", outcome, i+1), ps[i], res[i])
+		for _, members := range []int{3, 5} {
+			for _, outcome := range []sinktypes.Outcome{sinktypes.OutcomeMinted, sinktypes.OutcomeVoided} {
+				g := newGasProbe(t, members)
+				ps, res := g.quorum(t, adj, outcome)
+				for i := range ps {
+					logRatio(t, fmt.Sprintf("%d members %s vote %d of block", members, outcome, i+1), ps[i], res[i])
+				}
 			}
 		}
 	})
 
 	t.Run("votes in consecutive blocks", func(t *testing.T) {
-		g := newGasProbe(t)
+		g := newGasProbe(t, 3)
 		ps := make([]prepared, 0, 3)
 		for i := 0; i < 3; i++ {
 			ps = append(ps, g.prepare(t, i, adj, g.h.reportMsg(t, i, 1, sinktypes.OutcomeMinted)))
@@ -159,12 +183,12 @@ func TestReporterGasMeasure(t *testing.T) {
 	})
 
 	t.Run("veto and refund", func(t *testing.T) {
-		g := newGasProbe(t)
+		g := newGasProbe(t, 3)
 		g.quorum(t, adj, sinktypes.OutcomeVoided)
 		veto := g.prepare(t, 1, adj, &sinktypes.MsgVetoVoid{Signer: g.h.reporterAddress(1), ID: g.h.id(1), Reason: "No Solana status at finalized slot 1234"})
 		logRatio(t, "4 veto", veto, g.h.deliverBytes(t, veto.bz))
 
-		g = newGasProbe(t)
+		g = newGasProbe(t, 3)
 		g.quorum(t, adj, sinktypes.OutcomeVoided)
 		g.h.commitBlock(t, time.Unix(g.h.transfer(t, 1).Settlement.ChallengeEnd, 0).UTC())
 		refund := g.prepare(t, 0, adj, &sinktypes.MsgFinalizeRefund{Executor: g.h.reporterAddress(0), ID: g.h.id(1)})
