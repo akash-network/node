@@ -111,8 +111,8 @@ type setup struct {
 	opts  scan.Options
 	pin   *solana.PublicKey
 	queue *recorder
-	// solana, when set, sees each Solana request first, with its method and getMultipleAccounts key count; returning
-	// true fails the request with HTTP 503.
+	// solana, when set, sees each Solana request first, with its body, method and getMultipleAccounts key count;
+	// returning true fails the request with HTTP 503.
 	solana func(r *http.Request, method string, keys int) bool
 }
 
@@ -221,6 +221,7 @@ func proxy(t *testing.T, target string, before func(r *http.Request, method stri
 			_ = json.Unmarshal(req.Params[0], &keys)
 		}
 
+		r.Body = io.NopCloser(bytes.NewReader(body))
 		if before(r, req.Method, len(keys)) {
 			w.WriteHeader(http.StatusServiceUnavailable)
 			return
@@ -858,6 +859,70 @@ func TestNoFollowUpAfterPinMismatch(t *testing.T) {
 	}))
 	require.NoError(t, again)
 	require.Equal(t, 0, h.scanner.Pass(t.Context(), nil), "the earlier skips are not counted later")
+}
+
+func TestOneMismatchAlertPerPass(t *testing.T) {
+	pin := simnode.LightClient
+	sc := simnode.Scenarios()["votes"]()
+	votes := idsOf(t, sc)
+	waiting, transfers := pending(t, 2*chunkSize)
+	for _, tr := range transfers {
+		sc.Akash.Transfers = append(sc.Akash.Transfers, simnode.Transfer{Transfer: tr})
+	}
+	first := aktsolana.StatusAddress(simnode.ProgramID, votes[0]).String()
+
+	// Chunk 1 holds the votes. Its snapshot passes; the other chunks' snapshots wait until its first plan has changed
+	// the bridge, so a running chunk finds the mismatch while chunk 1 is still reviewing.
+	var (
+		n       atomic.Pointer[simnode.Node]
+		release = make(chan struct{})
+	)
+	q := &recorder{}
+	h := newHarness(t, sc, setup{
+		pin:   &pin,
+		queue: q,
+		opts:  scan.Options{Workers: 2},
+		solana: chunkCalls(func(r *http.Request, _ int) bool {
+			body, err := io.ReadAll(r.Body)
+			require.NoError(t, err)
+			if !strings.Contains(string(body), first) {
+				<-release
+			}
+
+			return false
+		}),
+	})
+	n.Store(h.node)
+
+	// While chunk 1 queues its first plan, the pass's running chunk finds the bridge changed; then a follow-up that
+	// hits the same change runs before the pass has returned.
+	var (
+		once     sync.Once
+		followUp error
+	)
+	q.onQueue = func(policy.Planned) {
+		once.Do(func() {
+			setBridge(n.Load(), other)
+			close(release)
+			time.Sleep(300 * time.Millisecond)
+			followUp = h.scanner.Review(t.Context(), waiting[:1], 0)
+		})
+	}
+
+	failures := h.scanner.Pass(t.Context(), nil)
+
+	lines := h.lines()
+	alerts := 0
+	for _, l := range lines {
+		if decode(t, l)["alert"] == "light-client-mismatch" {
+			alerts++
+		}
+	}
+	require.Equal(t, 1, alerts, "one mismatch alert, the pass's own")
+	require.ErrorIs(t, followUp, scan.ErrPassAborted)
+	require.Equal(t, 1, failures, "the skipped follow-up counts nothing")
+	require.JSONEq(t, `{"alert":"light-client-mismatch","pinned":"`+pin.String()+`","current":"`+other.String()+`"}`, lines[len(lines)-2])
+	require.Contains(t, decode(t, lines[len(lines)-1])["error"], "differs from pinned")
 }
 
 func TestChunkErrorsArePerTransfer(t *testing.T) {

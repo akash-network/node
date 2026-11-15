@@ -486,6 +486,12 @@ func (b *Broadcaster) giveUp() {
 	for _, d := range s.deferred {
 		deferred = append(deferred, d)
 	}
+	b.reportDeferred(deferred)
+	clear(s.deferred)
+}
+
+// reportDeferred reports deferred messages not sent, in transfer order (spec §6.5).
+func (b *Broadcaster) reportDeferred(deferred []*deferral) {
 	slices.SortFunc(deferred, func(a, c *deferral) int {
 		return cmp.Or(sinkid.Compare(a.planned.ID, c.planned.ID), cmp.Compare(a.planned.Key.Kind, c.planned.Key.Kind))
 	})
@@ -493,7 +499,6 @@ func (b *Broadcaster) giveUp() {
 	for _, d := range deferred {
 		b.fail(d.planned, fmt.Sprintf("sink message not sent: deferred (%s) until %s", d.reason, rfc3339(d.until)))
 	}
-	clear(s.deferred)
 }
 
 // shutdown releases queued and deferred messages without events (spec §5.7).

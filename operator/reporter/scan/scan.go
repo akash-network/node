@@ -46,8 +46,8 @@ const (
 
 var errNotReporter = errors.New("not a current reporter")
 
-// ErrPassAborted is what Review and ReviewRefundHead return, at once and without writing or counting anything, after a
-// pass ended on a light-client pin mismatch and until the next pass begins. The pass's own alert and error stay its
+// ErrPassAborted is what Review and ReviewRefundHead return, without writing an alert or counting anything, once a
+// pass has found a light-client pin mismatch and until the next pass begins. The pass's own alert and error stay its
 // last output (spec §5.6).
 var ErrPassAborted = errors.New("follow-up review skipped: the pass ended on a light-client pin mismatch")
 
@@ -94,8 +94,18 @@ type Scanner struct {
 	cursor *akash.AuditCursor
 	// followUpFailures counts the failures of follow-up reviews until a pass adds them to its own.
 	followUpFailures atomic.Int64
-	// aborted is set from a pin mismatch that ended a pass until the next pass begins; follow-ups then skip.
+	// aborted is set from the moment a pass finds a pin mismatch until the next pass begins; follow-ups then skip.
+	// abortMu orders setting it against a follow-up's check before it writes its own mismatch alert, so a pass that
+	// ends on a mismatch writes the only alert from then on.
+	abortMu sync.Mutex
 	aborted atomic.Bool
+}
+
+func (s *Scanner) setAborted(v bool) {
+	s.abortMu.Lock()
+	defer s.abortMu.Unlock()
+
+	s.aborted.Store(v)
 }
 
 // New returns a scanner. q is nil in preview.
@@ -152,14 +162,14 @@ func (s *Scanner) OnChange(c observe.Change) {
 // pass reached its reviews, or else the pass error.
 func (s *Scanner) Pass(ctx context.Context, settle func() int) int {
 	began := time.Now()
-	s.aborted.Store(false)
+	s.setAborted(false)
 
 	var t tally
 	summary, err := s.pass(ctx, &t)
 
 	var mismatch *observe.MismatchError
 	if errors.As(err, &mismatch) {
-		s.aborted.Store(true)
+		s.setAborted(true)
 	}
 
 	if settle != nil {
@@ -290,6 +300,8 @@ func (s *Scanner) reviewAll(ctx context.Context, entries []entry, t *tally) erro
 
 			for chunk := range chunks {
 				if err := s.reviewChunk(ctx, req, chunk, t); err != nil {
+					// Follow-ups skip from now on, not only once the running chunks have stopped.
+					s.setAborted(true)
 					abort(err)
 				}
 			}
@@ -606,7 +618,10 @@ func (s *Scanner) followUp(ctx context.Context, st *akash.State, chunk []entry) 
 
 	var mismatch *observe.MismatchError
 	if errors.As(err, &mismatch) {
-		// A pass that ended on the mismatch meanwhile writes the one alert.
+		s.abortMu.Lock()
+		defer s.abortMu.Unlock()
+
+		// A pass that found the mismatch meanwhile writes the one alert.
 		if s.aborted.Load() {
 			return ErrPassAborted
 		}

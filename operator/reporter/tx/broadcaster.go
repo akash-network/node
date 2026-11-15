@@ -598,9 +598,11 @@ func (b *Broadcaster) followUps(ctx context.Context) {
 	}
 }
 
-// followDone releases the batches the review filled and drops the deferrals a successful review covered. A failed or
-// skipped review keeps them, counting nothing, for the next window; a failed or skipped refund-head review is held
-// until the next inclusion or pass.
+// followDone releases the batches the review filled and drops the deferrals a successful review covered. A failed
+// review keeps them, counting nothing, for the next window. A review skipped because the pass ended on a pin mismatch
+// reports them not sent and releases them: no review would cover them before the next pass, and scan's Wait would
+// otherwise wait for them window after window. A failed or skipped refund-head review is held until the next
+// inclusion or pass.
 func (b *Broadcaster) followDone(job followJob, err error) {
 	s := &b.st
 	s.followBusy = false
@@ -614,15 +616,22 @@ func (b *Broadcaster) followDone(job followJob, err error) {
 		return
 	}
 
-	if err != nil {
+	aborted := errors.Is(err, scan.ErrPassAborted)
+	if err != nil && !aborted {
 		s.followFailed = job.window
 		return
 	}
 
+	var covered []*deferral
 	for _, key := range job.keys {
 		if d := s.deferred[key]; d != nil && d.window < job.window {
+			covered = append(covered, d)
 			delete(s.deferred, key)
 		}
+	}
+
+	if aborted {
+		b.reportDeferred(covered)
 	}
 }
 

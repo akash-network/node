@@ -21,6 +21,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/gagliardetto/solana-go"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -568,17 +569,23 @@ func (p *proc) stop() {
 
 // scanner builds a scanner over chain that writes to ev and plans into q.
 func (h *harness) scanner(chain *akash.Client, ev *events.Writer, q scan.Queuer, retry time.Duration) *scan.Scanner {
+	return h.pinnedScanner(chain, ev, q, retry, nil)
+}
+
+// pinnedScanner is scanner with a light-client pin; nil follows the bridge.
+func (h *harness) pinnedScanner(chain *akash.Client, ev *events.Writer, q scan.Queuer, retry time.Duration, pin *solana.PublicKey) *scan.Scanner {
 	rpc := aktsolana.NewRPC(aktsolana.RPCOptions{URL: h.node.SolanaURL, Timeout: 5 * time.Second, Concurrency: 8, BlockConcurrency: 2})
 
 	var s *scan.Scanner
 	o := observe.New(rpc, aktsolana.NewEvidenceIndex(rpc, simnode.ProgramID, 256, 64<<20), observe.Options{
-		GenesisHash: simnode.GenesisHash,
-		ProgramID:   simnode.ProgramID,
-		Mint:        simnode.MintAddress,
-		ChainID:     simnode.ChainID,
-		MaxAge:      testMaxAge,
-		SlotLead:    slotLead,
-		Clock:       h.clk,
+		GenesisHash:    simnode.GenesisHash,
+		ProgramID:      simnode.ProgramID,
+		Mint:           simnode.MintAddress,
+		LightClientPin: pin,
+		ChainID:        simnode.ChainID,
+		MaxAge:         testMaxAge,
+		SlotLead:       slotLead,
+		Clock:          h.clk,
 	}, func(c observe.Change) { s.OnChange(c) })
 
 	s = scan.New(chain, o, ev, scan.Options{
@@ -1706,6 +1713,116 @@ func TestHaltedChain(t *testing.T) {
 		require.Equal(t, phaseSent, phase)
 		require.Equal(t, map[string]string{vote.ID.String(): reasonSlotBusy}, p.deferred())
 	})
+}
+
+func TestAbortedScanReportsDeferred(t *testing.T) {
+	h := newHarness(t, setup{change: func(sc *simnode.Scenario) {
+		sc.Akash.BroadcastFaults = []simnode.BroadcastFault{{Kind: simnode.FaultNonceTaken}}
+	}})
+	p := h.start(h.options(), h.signer, nil)
+	pin := simnode.LightClient
+	s := h.pinnedScanner(p.chain, p.ev, p.b, p.b.o.RefreshInterval, &pin)
+	p.b.SetReviewer(s)
+
+	// A vote is deferred: its slot is taken.
+	vote := h.plan(h.snapshot(), 0)
+	require.True(t, p.b.Queue(vote))
+	p.b.Flush()
+	require.Eventually(t, func() bool { return p.deferred()[vote.ID.String()] == reasonSlotBusy }, 5*time.Second, time.Millisecond)
+
+	// Governance re-pins the bridge, so the scan's pass ends on a pin mismatch while blocks keep coming.
+	other := solana.PublicKeyFromBytes(bytes.Repeat([]byte{5}, 32))
+	h.node.Mutate(func(sc *simnode.Scenario) {
+		sc.Solana.Accounts[aktsolana.PDA(simnode.ProgramID, []byte("bridge"))] = simnode.Account{
+			Owner: simnode.ProgramID, Lamports: 1, Data: simnode.EncodeBridgeConfig(simnode.BridgeConfig{
+				LightClientProgram: other, ChainID: simnode.ChainID,
+				PerTransferMax: 1_000_000_000_000, DailyMintCap: 1_000_000_000_000,
+			}),
+		}
+	})
+
+	done := make(chan int, 1)
+	go func() { done <- s.Pass(t.Context(), p.settle(t.Context())) }()
+
+	var failures int
+	finished := false
+	for i := 0; i < 100 && !finished; i++ {
+		h.clock.Advance(10 * time.Second)
+		h.node.CommitBlock()
+		select {
+		case failures = <-done:
+			finished = true
+		case <-time.After(20 * time.Millisecond):
+		}
+	}
+	require.True(t, finished, "scan returns over 1,000 s of healthy blocks")
+	require.Equal(t, 2, failures, "the deferred vote and the pass error")
+
+	lines := p.lines()
+	require.Len(t, lines, 3)
+	_, errs := outcomes(t, lines[:1])
+	require.Equal(t, map[string]string{
+		vote.ID.String(): "sink message not sent: deferred (slot_busy) until " +
+			SlotTimeout(WindowOf(vote.PlanTime), slotOf(vote)).Format(time.RFC3339Nano),
+	}, errs)
+	require.JSONEq(t, `{"alert":"light-client-mismatch","pinned":"`+pin.String()+`","current":"`+other.String()+`"}`, lines[1])
+	require.Contains(t, lines[2], "differs from pinned")
+	require.Empty(t, p.deferred())
+}
+
+func TestAbortedScanReportsDeferred(t *testing.T) {
+	h := newHarness(t, setup{change: func(sc *simnode.Scenario) {
+		sc.Akash.BroadcastFaults = []simnode.BroadcastFault{{Kind: simnode.FaultNonceTaken}}
+	}})
+	p := h.start(h.options(), h.signer, nil)
+	pin := simnode.LightClient
+	s := h.pinnedScanner(p.chain, p.ev, p.b, p.b.o.RefreshInterval, &pin)
+	p.b.SetReviewer(s)
+
+	// A vote is deferred: its slot is taken.
+	vote := h.plan(h.snapshot(), 0)
+	require.True(t, p.b.Queue(vote))
+	p.b.Flush()
+	require.Eventually(t, func() bool { return p.deferred()[vote.ID.String()] == reasonSlotBusy }, 5*time.Second, time.Millisecond)
+
+	// Governance re-pins the bridge, so the scan's pass ends on a pin mismatch while blocks keep coming.
+	other := solana.PublicKeyFromBytes(bytes.Repeat([]byte{5}, 32))
+	h.node.Mutate(func(sc *simnode.Scenario) {
+		sc.Solana.Accounts[aktsolana.PDA(simnode.ProgramID, []byte("bridge"))] = simnode.Account{
+			Owner: simnode.ProgramID, Lamports: 1, Data: simnode.EncodeBridgeConfig(simnode.BridgeConfig{
+				LightClientProgram: other, ChainID: simnode.ChainID,
+				PerTransferMax: 1_000_000_000_000, DailyMintCap: 1_000_000_000_000,
+			}),
+		}
+	})
+
+	done := make(chan int, 1)
+	go func() { done <- s.Pass(t.Context(), p.settle(t.Context())) }()
+
+	var failures int
+	finished := false
+	for i := 0; i < 100 && !finished; i++ {
+		h.clock.Advance(10 * time.Second)
+		h.node.CommitBlock()
+		select {
+		case failures = <-done:
+			finished = true
+		case <-time.After(20 * time.Millisecond):
+		}
+	}
+	require.True(t, finished, "scan returns over 1,000 s of healthy blocks")
+	require.Equal(t, 2, failures, "the deferred vote and the pass error")
+
+	lines := p.lines()
+	require.Len(t, lines, 3)
+	_, errs := outcomes(t, lines[:1])
+	require.Equal(t, map[string]string{
+		vote.ID.String(): "sink message not sent: deferred (slot_busy) until " +
+			SlotTimeout(WindowOf(vote.PlanTime), slotOf(vote)).Format(time.RFC3339Nano),
+	}, errs)
+	require.JSONEq(t, `{"alert":"light-client-mismatch","pinned":"`+pin.String()+`","current":"`+other.String()+`"}`, lines[1])
+	require.Contains(t, lines[2], "differs from pinned")
+	require.Empty(t, p.deferred())
 }
 
 func TestWaitDoesNotSpin(t *testing.T) {
