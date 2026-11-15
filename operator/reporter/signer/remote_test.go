@@ -570,20 +570,70 @@ func parseKMSGateKeys(t *testing.T, raw string) []kmsGateKey {
 	return keys
 }
 
+// The release gate's environment variables.
+const (
+	envKMSAddr     = "REPORTER_KMS_ADDR"
+	envKMSCA       = "REPORTER_KMS_CA"
+	envKMSKeys     = "REPORTER_KMS_KEYS"
+	envKMSRequired = "REPORTER_KMS_REQUIRED"
+)
+
+func TestKMSGateMissing(t *testing.T) {
+	env := func(vars map[string]string) func(string) string {
+		return func(k string) string { return vars[k] }
+	}
+	all := map[string]string{
+		envKMSAddr: "127.0.0.1:9443",
+		envKMSCA:   "/ca.pem",
+		envKMSKeys: "secp:ECDSA_SECP256K1",
+	}
+
+	missing, required := kmsGateMissing(env(map[string]string{}))
+	require.False(t, required)
+	require.Equal(t, []string{envKMSAddr, envKMSCA, envKMSKeys}, missing)
+
+	missing, required = kmsGateMissing(env(map[string]string{envKMSRequired: "1", envKMSAddr: "127.0.0.1:9443"}))
+	require.True(t, required)
+	require.Equal(t, []string{envKMSCA, envKMSKeys}, missing)
+
+	all[envKMSRequired] = "1"
+	missing, required = kmsGateMissing(env(all))
+	require.True(t, required)
+	require.Empty(t, missing)
+}
+
+// kmsGateMissing returns the release gate's variables that are not set, and whether REPORTER_KMS_REQUIRED=1 makes
+// them all required.
+func kmsGateMissing(getenv func(string) string) (missing []string, required bool) {
+	for _, k := range []string{envKMSAddr, envKMSCA, envKMSKeys} {
+		if strings.TrimSpace(getenv(k)) == "" {
+			missing = append(missing, k)
+		}
+	}
+
+	return missing, getenv(envKMSRequired) == "1"
+}
+
 // TestRemoteAgainstKMS is the release gate against a real kms binary (Task
 // 27). It needs REPORTER_KMS_ADDR, REPORTER_KMS_CA and REPORTER_KMS_KEYS, the
 // last as id:SCHEME entries, for example
-// secp-eth:ECDSA_SECP256K1ETH,secp:ECDSA_SECP256K1.
+// secp-eth:ECDSA_SECP256K1ETH,secp:ECDSA_SECP256K1. Without REPORTER_KMS_ADDR
+// it skips, unless REPORTER_KMS_REQUIRED=1, which the release workflow sets:
+// then any missing variable fails it.
 func TestRemoteAgainstKMS(t *testing.T) {
-	addr := os.Getenv("REPORTER_KMS_ADDR")
+	if missing, required := kmsGateMissing(os.Getenv); required && len(missing) > 0 {
+		t.Fatalf("REPORTER_KMS_REQUIRED=1, but %s not set", strings.Join(missing, ", "))
+	}
+
+	addr := os.Getenv(envKMSAddr)
 	if addr == "" {
 		t.Skip("REPORTER_KMS_ADDR is not set")
 	}
 
-	keys := parseKMSGateKeys(t, os.Getenv("REPORTER_KMS_KEYS"))
+	keys := parseKMSGateKeys(t, os.Getenv(envKMSKeys))
 	require.NotEmpty(t, keys, "REPORTER_KMS_KEYS lists no keys")
 
-	creds, err := remoteCredentials(RemoteOptions{CAFile: os.Getenv("REPORTER_KMS_CA")})
+	creds, err := remoteCredentials(RemoteOptions{CAFile: os.Getenv(envKMSCA)})
 	require.NoError(t, err)
 
 	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(creds))
@@ -610,7 +660,7 @@ func TestRemoteAgainstKMS(t *testing.T) {
 			s, err := NewRemote(ctx, RemoteOptions{
 				Address: addr,
 				KeyID:   id,
-				CAFile:  os.Getenv("REPORTER_KMS_CA"),
+				CAFile:  os.Getenv(envKMSCA),
 				Timeout: 30 * time.Second,
 			}, reporter)
 			require.NoError(t, err)

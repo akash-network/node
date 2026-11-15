@@ -99,9 +99,15 @@ jobs:
             (: < /dev/tcp/127.0.0.1/9443) 2>/dev/null && break
             sleep 1
           done
-          REPORTER_KMS_ADDR=127.0.0.1:9443 REPORTER_KMS_CA="$KMS_HOME/ca.pem" \
+          set -o pipefail
+          log="$RUNNER_TEMP/kms-gate.log"
+          REPORTER_KMS_REQUIRED=1 REPORTER_KMS_ADDR=127.0.0.1:9443 REPORTER_KMS_CA="$KMS_HOME/ca.pem" \
             REPORTER_KMS_KEYS=secp-eth:ECDSA_SECP256K1ETH,secp:ECDSA_SECP256K1 GOWORK=off \
-            go test ./operator/reporter/signer/ -run TestRemoteAgainstKMS -count=1 -v
+            go test ./operator/reporter/signer/ -run TestRemoteAgainstKMS -count=1 -v 2>&1 | tee "$log"
+          # A renamed or skipped test must not pass the gate with "no tests to run".
+          for name in TestRemoteAgainstKMS TestRemoteAgainstKMS/secp-eth TestRemoteAgainstKMS/secp; do
+            grep -Eq "^ *--- PASS: ${name} \(" "$log" || { echo "::error::no PASS line for $name"; exit 1; }
+          done
       - name: Show the kms log
         if: failure()
         run: cat "$RUNNER_TEMP/kms.log" || true
