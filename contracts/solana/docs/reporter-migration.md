@@ -82,6 +82,12 @@ when.
    `AKT_REPORTER_BROADCAST=true`). Never run the TypeScript reporter and
    `akt-reporter` with the same key.**
 
+   With Compose, apply the change with
+   `docker compose up -d --force-recreate reporter`: Compose does not see a change
+   to the bind-mounted `reporter.toml`, so a plain `docker compose up -d` keeps the
+   preview process running. Then check that the newest `starting reporter` log line
+   shows `mode=broadcast` (see [Docker Compose](operator-releases.md#docker-compose)).
+
    Why: the TypeScript reporter's transactions are ordered and expire 20 blocks
    after it builds them. They sit outside the Go reporter's nonce scheme, so
    nothing stops both from executing the same vote. Twenty-one blocks on the

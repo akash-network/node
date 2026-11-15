@@ -90,8 +90,8 @@ for the mapping from the TypeScript reporter's JSON fields.
 | `scan.akash-concurrency`                            | `32`                        | 1 to 256                                                                                                |
 | `scan.solana-concurrency`                           | `8`                         | 1 to 64                                                                                                 |
 | `scan.block-concurrency`                            | `2`                         | 1 to 16                                                                                                 |
-| `tx.max-gas`                                        | `20000000`                  | 1 to 20,000,000                                                                                         |
-| `tx.max-fee`                                        | `1000000uakt`               | `uakt`, at most `1000000uakt`                                                                           |
+| `tx.max-gas`                                        | `20000000`                  | 1 to 20,000,000; a lower positive block max gas of the chain caps it further                            |
+| `tx.max-fee`                                        | `1000000uakt`               | `uakt`, above 0, at most `1000000uakt`                                                                  |
 | `tx.max-msgs`                                       | `25`                        | 1 to 100                                                                                                |
 | `tx.max-in-flight`                                  | `8`                         | 1 to 64                                                                                                 |
 | `signer.remote.address`                             | empty                       | `host:port`                                                                                             |

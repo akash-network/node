@@ -294,9 +294,12 @@ Each HTTP endpoint gets one keep-alive connection pool sized to its concurrency.
 
 1. Each decision uses one Akash height and one finalized Solana slot.
 2. A `light-client-changed` alert is written before any event decided under the new client. On every observation, the followed program and the highest observed snapshot slot are updated together under one lock, and the alert is written under the same lock. An observation from an older slot is ignored, as in TS (`solana.ts:271-275`).
+   - **Limitation.** Because the follow only moves to higher slots, a re-pin and a re-pin back within one chunk's flight (A→B→A) can leave a chunk decided under B without its own alert: a later chunk's snapshot already showed A again and was followed first, so the older snapshot naming B is ignored rather than alerted.
 3. A light-client pin mismatch stops the pass.
    - No new chunk starts, and running chunks are cancelled; events they already wrote stand.
    - The `light-client-mismatch` alert and an error are written once every running chunk has stopped, so no review event follows them. No summary is written.
+   - From the moment a chunk finds the mismatch until the next pass begins, follow-up reviews (section 6.6) are skipped. A follow-up that finds the same change writes no alert of its own, so the pass writes exactly one mismatch alert, followed by its error.
+   - A deferred message whose follow-up review is skipped gets `{id, error: "sink message not sent: deferred (<reason>) until <time>"}`, counts as a failure and is released, so `scan` does not wait for it window after window.
    - Messages already planned are still sent; TS had sent them before it reached the mismatch.
 4. Pass-start identity and freshness failures, and listing errors, end the pass with an error line and no summary. During reviews, snapshot and observation errors fail only the affected transfers (`{id, error}`), and the pass continues.
 5. Stale nodes, missing history, RPC errors and signer failures never produce a veto or a refund.
@@ -320,7 +323,7 @@ Each HTTP endpoint gets one keep-alive connection pool sized to its concurrency.
 
 On the first SIGINT or SIGTERM:
 
-1. No new chunk starts. In-flight requests finish or time out.
+1. No new chunk starts. In-flight requests finish or time out. A review's Akash read still waiting for a concurrency permit is not in flight, and is cancelled.
 2. No new transaction is signed. Queued and deferred messages are released without an event and planned again on the next start; TS also skipped submissions after a signal.
 3. In-flight transactions get up to 30 s to confirm.
 4. The summary of the partial pass is written and events are flushed. As in TS, `scanned` is the number of open transfers listed, even when reviews stopped early.
@@ -434,12 +437,12 @@ Older snapshots only defer messages; they never affect safety.
 - Every batch is simulated through gRPC `Simulate` before signing. Simulation skips the replay-key check (section 2.2), so it cannot tell whether a slot is taken.
 - With `gas = auto`, the gas limit is ceil(gas used × `gas-adjustment`). A numeric `gas` is per message, so the limit is `gas` × the number of messages.
 - Simulation runs against the latest committed state, so the limit must also cover other reporters' votes landing first in the same block, including the vote that completes the quorum; the `gas-adjustment` default of 2.0 covers that with a 10% margin for policies of up to 5 members whose votes all land in one block.
-- The simulated transaction has the signed one's gas-relevant shape: a fee, a gas limit and a full-length placeholder signature. The fee and limit are the final ones when they are known before simulating (`fees`, or a numeric `gas`). Otherwise the fee is one unit of each `gas-prices` denomination and the limit is `tx.max-gas`.
+- The simulated transaction has the signed one's gas-relevant shape: a fee, a gas limit and a full-length placeholder signature. The fee and limit are the final ones when they are known before simulating (`fees`, or a numeric `gas`). Otherwise the fee is one unit of each `gas-prices` denomination when `fees` is empty, and the declared limit is 0. Simulation meters no limit; the declared one only meets the ante handler's block max gas check, which runs in simulation too and which 0 always passes, and adds a few bytes of size gas, which `gas-adjustment` covers.
 - If simulation fails at `message index: N`, message N is dropped with `{id, error}` and the batch is simulated again, for up to three rounds. Messages still left after that are deferred (section 6.5), because a slot carries at most one live transaction per window.
 - A simulation failure without a message index, such as an invalid timeout, fails the whole batch before submission. Each message gets `{id, error}`, and its entry is released.
 - With `gas-prices`, simulation carries only a one-unit fee, so an account that cannot pay the real fee is refused at CheckTx, reported per message, and its entry released. With `fees`, simulation fails on it as above.
 - The fee is `fees` when that is set, otherwise ceil(gas limit × `gas-prices`).
-- Caps: the gas limit must be at most `tx.max-gas` and the fee at most `tx.max-fee`. A batch over a cap is halved, and the second half is deferred. A single message over a cap gets `{id, error}` and is not sent. The signer's sign-bytes limit, when it declares one, is a cap like `tx.max-gas`: batches are sized to fit it, a batch over it is halved and its second half deferred, and a single message over it gets `{id, error}`.
+- Caps: the gas limit must be at most the gas cap and the fee at most `tx.max-fee`. The gas cap is `tx.max-gas`, or the consensus block max gas when that is positive and lower, since no block includes a transaction declaring more; broadcast mode reads it at startup through gRPC `cosmos.consensus.v1.Query/Params` and logs the effective cap. A batch over a cap is halved, and the second half is deferred. A single message over a cap gets `{id, error}` and is not sent. The signer's sign-bytes limit, when it declares one, is a cap like `tx.max-gas`: batches are sized to fit it, a batch over it is halved and its second half deferred, and a single message over it gets `{id, error}`.
 
 ### 6.5 Confirmation and the slot table
 
@@ -524,7 +527,7 @@ Cosmos-KMS (`github.com/cosmos/kms`) is the documented successor to tmkms. tmkms
   - An optional client certificate (`cert-file`, `key-file`) is for an mTLS proxy in front of the KMS.
   - `signer.remote.timeout` applies per call.
 - **Access.** The `SignerService` authenticates no caller. Operators must restrict network access so that only the reporter can reach it.
-- **Release gate.** A release enables the remote signer only after a CI job against a real `kms` binary passes for each supported scheme.
+- **Release gate.** A release enables the remote signer only after a CI job against a real `kms` binary passes for each supported scheme. The job sets `REPORTER_KMS_REQUIRED=1`, so missing gate configuration fails the test instead of skipping it, and it requires the `PASS` line of the test and of each scheme's subtest in the verbose output, so a renamed test cannot pass with "no tests to run".
 
 ## 8. CLI and configuration
 
@@ -552,7 +555,7 @@ This follows `cmd/akash` and chain-sdk's `InterceptConfigsPreRunHandler`. It is 
 | `keys`    | The cosmos-sdk keyring commands: `add`, `import`, `import-hex`, `export`, `list`, `show`, `delete` and the rest.                                                               | `keys create`, `keys address` |
 | `version` | Prints the service name, version, commit, platform and Go version.                                                                                                             | `--version`                   |
 
-`start` and `scan` first run the `check` validation. They then connect to both Akash endpoints and run the node-ID check, plus the transaction-index check in broadcast mode. In broadcast mode they load the signer, check its address and read the account number. Finally they start the metrics listener, if configured.
+`start` and `scan` first run the `check` validation. They then connect to both Akash endpoints and run the node-ID check, plus the transaction-index check in broadcast mode. In broadcast mode they load the signer, check its address, read the account number and read the consensus block max gas (section 6.4). Finally they start the metrics listener, if configured.
 
 ### 8.3 Keys
 
@@ -587,8 +590,8 @@ This follows `cmd/akash` and chain-sdk's `InterceptConfigsPreRunHandler`. It is 
 | `scan.akash-concurrency`                            | `32`                            | 1 to 256                                                       | none                             |
 | `scan.solana-concurrency`                           | `8`                             | 1 to 64                                                        | none                             |
 | `scan.block-concurrency`                            | `2`                             | 1 to 16                                                        | none                             |
-| `tx.max-gas`                                        | `20000000`                      | 1 to 20,000,000                                                | Bound on `gasLimit`              |
-| `tx.max-fee`                                        | `1000000uakt`                   | `uakt`, at most `1000000uakt`                                  | Bound on `feeAmountUakt`         |
+| `tx.max-gas`                                        | `20000000`                      | 1 to 20,000,000; a lower positive block max gas caps it further (section 6.4) | Bound on `gasLimit` |
+| `tx.max-fee`                                        | `1000000uakt`                   | `uakt`, above 0, at most `1000000uakt`                         | Bound on `feeAmountUakt`         |
 | `tx.max-msgs`                                       | `25`                            | 1 to 100                                                       | none                             |
 | `tx.max-in-flight`                                  | `8`                             | 1 to 64                                                        | none                             |
 | `signer.remote.address`                             | empty                           | `host:port`                                                    | `externalSigner`                 |

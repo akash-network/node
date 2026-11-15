@@ -124,15 +124,20 @@ The reporter starts in **preview**. After governance admits its address, preview
 scans pass and, when replacing the TypeScript reporter, the
 [switch-over wait](reporter-migration.md#steps) is over, enable signing: set
 `broadcast = true` in `reporter.toml`, or `AKT_REPORTER_BROADCAST=true` in
-`reporter.env`, then recreate the container:
+`reporter.env`, then recreate the container. `reporter.toml` is a bind-mounted
+file, so Compose does not see a change to it, and a plain `docker compose up -d`
+leaves the old process running; force the recreation:
 
 ```bash
-docker compose up -d
+docker compose up -d --force-recreate reporter
+docker compose logs reporter | grep 'starting reporter'
 ```
 
-Set it back to `false` to return to preview. After a successful migration the
-TypeScript directory can be removed. Compose gives the reporter 60
-seconds to stop, which covers its 30-second confirmation wait.
+The newest `starting reporter` line must show `mode=broadcast`. Set it back to
+`false` and run the same two commands to return to preview; the line then shows
+`mode=preview`. After a successful migration the TypeScript directory can be
+removed. Compose gives the reporter 60 seconds to stop, which covers its
+30-second confirmation wait.
 
 ### Relayer
 
