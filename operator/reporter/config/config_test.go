@@ -423,6 +423,8 @@ func TestResolveRules(t *testing.T) {
 		{"tx.max-gas high", func(c *config.Config) { c.Tx.MaxGas = 20_000_001 }, "tx.max-gas: must be between"},
 		{"tx.max-fee other denom", func(c *config.Config) { c.Tx.MaxFee = "1uatom" }, "tx.max-fee: must be a whole amount of uakt"},
 		{"tx.max-fee high", func(c *config.Config) { c.Tx.MaxFee = "1000001uakt" }, "tx.max-fee: must be at most 1000000uakt"},
+		{"tx.max-fee zero", func(c *config.Config) { c.Tx.MaxFee = "0uakt" }, "tx.max-fee: must be above 0"},
+		{"tx.max-fee one", func(c *config.Config) { c.Tx.MaxFee = "1uakt"; c.Fees = "1uakt" }, ""},
 		{"tx.max-msgs zero", func(c *config.Config) { c.Tx.MaxMsgs = 0 }, "tx.max-msgs: must be between"},
 		{"tx.max-msgs high", func(c *config.Config) { c.Tx.MaxMsgs = 101 }, "tx.max-msgs: must be between"},
 		{"tx.max-in-flight high", func(c *config.Config) { c.Tx.MaxInFlight = 65 }, "tx.max-in-flight: must be between"},

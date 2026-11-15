@@ -95,7 +95,7 @@ block-concurrency = 2
 # gas limit cap for a transaction, 1 to 20000000
 max-gas = 20000000
 
-# fee cap for a transaction in uakt, at most 1000000uakt
+# fee cap for a transaction in uakt, above 0, at most 1000000uakt
 max-fee = "1000000uakt"
 
 # messages per transaction, 1 to 100

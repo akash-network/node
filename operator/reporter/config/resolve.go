@@ -256,7 +256,12 @@ func (r *rules) maxFee(out *Resolved) {
 		return
 	}
 
-	if coin.Amount.GT(sdkmath.NewInt(maxFeeUakt)) {
+	switch {
+	case !coin.Amount.IsPositive():
+		r.add("tx.max-fee", "must be above 0, got %s", out.Tx.MaxFee)
+
+		return
+	case coin.Amount.GT(sdkmath.NewInt(maxFeeUakt)):
 		r.add("tx.max-fee", "must be at most %duakt, got %s", maxFeeUakt, out.Tx.MaxFee)
 
 		return

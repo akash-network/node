@@ -171,7 +171,7 @@ var usages = map[string]string{
 	"scan.solana-concurrency":     "concurrent Solana requests, 1 to 64",
 	"scan.block-concurrency":      "concurrent Solana block fetches, 1 to 16",
 	"tx.max-gas":                  "gas limit cap for a transaction, 1 to 20000000",
-	"tx.max-fee":                  "fee cap for a transaction in uakt, at most 1000000uakt",
+	"tx.max-fee":                  "fee cap for a transaction in uakt, above 0, at most 1000000uakt",
 	"tx.max-msgs":                 "messages per transaction, 1 to 100",
 	"tx.max-in-flight":            "transactions in flight, 1 to 64",
 	"signer.remote.address":       "remote signer host:port; set it or from when broadcasting, not both",

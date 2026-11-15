@@ -886,7 +886,7 @@ func (b *Broadcaster) overCap(gas uint64, fee sdk.Coins) string {
 		return fmt.Sprintf("gas limit %d exceeds tx.max-gas %d", gas, b.o.MaxGas)
 	}
 
-	if capped := b.o.MaxFee; !capped.Amount.IsNil() && capped.IsPositive() && fee.AmountOf(capped.Denom).GT(capped.Amount) {
+	if capped := b.o.MaxFee; !capped.Amount.IsNil() && fee.AmountOf(capped.Denom).GT(capped.Amount) {
 		return fmt.Sprintf("fee %s exceeds tx.max-fee %s", fee, capped)
 	}
 
