@@ -1644,6 +1644,36 @@ func TestHaltedChain(t *testing.T) {
 	})
 }
 
+func TestWaitDoesNotSpin(t *testing.T) {
+	h := newHarness(t, setup{})
+	var pumps atomic.Int64
+	o := h.options()
+	o.changed = func(*ownerState) { pumps.Add(1) }
+	p := h.start(o, h.signer, nil)
+
+	// The veto stays unconfirmed: no block is committed and the fake clock stands still, so nothing ticks.
+	require.True(t, p.b.Queue(h.plan(h.snapshot(), firstVeto)))
+	h.waitBroadcasts(1)
+	require.Eventually(t, func() bool { return p.entryOf(h.ids[firstVeto]) == phaseSent }, 5*time.Second, time.Millisecond)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	done := make(chan int, 1)
+	go func() { done <- p.b.Wait(ctx) }()
+
+	time.Sleep(50 * time.Millisecond)
+	before := pumps.Load()
+	time.Sleep(200 * time.Millisecond)
+	spun := pumps.Load() - before
+
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("Wait did not return after its context ended")
+	}
+	require.Less(t, spun, int64(5), "Wait's own queries do not wake it")
+}
+
 // unavailableSim fails every simulation in transport while down is set.
 type unavailableSim struct {
 	Chain

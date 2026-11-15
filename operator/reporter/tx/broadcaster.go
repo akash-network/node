@@ -95,7 +95,7 @@ type Broadcaster struct {
 	b     *Builder
 	ev    *events.Writer
 
-	ops      chan func()
+	ops      chan op
 	done     chan struct{}
 	follow   chan followJob
 	failures atomic.Int64
@@ -185,7 +185,7 @@ func New(o Options, chain Chain, b *Builder, ev *events.Writer) *Broadcaster {
 		chain:  chain,
 		b:      b,
 		ev:     ev,
-		ops:    make(chan func(), opsBuffer),
+		ops:    make(chan op, opsBuffer),
 		done:   make(chan struct{}),
 		follow: make(chan followJob, 1),
 		st: ownerState{
@@ -212,20 +212,36 @@ func (b *Broadcaster) getReviewer() Reviewer {
 	return b.reviewer
 }
 
-// post hands f to the owner goroutine; it reports false once Run has returned.
-func (b *Broadcaster) post(f func()) bool {
+// op is a function the owner goroutine runs. A query only reads the owner's state: it is not followed by pump, so it
+// wakes no waiter.
+type op struct {
+	f     func()
+	query bool
+}
+
+func (b *Broadcaster) send(o op) bool {
 	select {
-	case b.ops <- f:
+	case b.ops <- o:
 		return true
 	case <-b.done:
 		return false
 	}
 }
 
+// post hands f to the owner goroutine; once Run has returned, f never runs.
+func (b *Broadcaster) post(f func()) { b.send(op{f: f}) }
+
 // call runs f on the owner goroutine and waits for it; it reports false once Run has returned.
-func (b *Broadcaster) call(f func()) bool {
+func (b *Broadcaster) call(f func()) bool { return b.run(op{f: f}) }
+
+// query runs f, which must not change the owner's state, on the owner goroutine and waits for it.
+func (b *Broadcaster) query(f func()) bool { return b.run(op{f: f, query: true}) }
+
+func (b *Broadcaster) run(o op) bool {
 	ran := make(chan struct{})
-	if !b.post(func() { f(); close(ran) }) {
+	f := o.f
+	o.f = func() { f(); close(ran) }
+	if !b.send(o) {
 		return false
 	}
 
@@ -282,7 +298,7 @@ func (b *Broadcaster) Wait(ctx context.Context) int {
 			last    time.Time
 			changed <-chan struct{}
 		)
-		if !b.call(func() { idle, last, changed = b.idle(), b.st.progress, b.st.notify }) || idle {
+		if !b.query(func() { idle, last, changed = b.idle(), b.st.progress, b.st.notify }) || idle {
 			return b.TakeFailures()
 		}
 
@@ -337,8 +353,11 @@ func (b *Broadcaster) Run(ctx context.Context) error {
 
 	for {
 		select {
-		case f := <-b.ops:
-			f()
+		case o := <-b.ops:
+			o.f()
+			if o.query {
+				continue
+			}
 		case <-tick:
 			tick = b.o.Clock.After(b.o.RefreshInterval)
 			b.tick()
