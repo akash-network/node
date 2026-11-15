@@ -65,6 +65,7 @@ func (p *payerSession) reclaimLookups(ctx context.Context) error {
 
 			value := true
 			doc.LookupClosed = &value
+			doc.LookupClosureUnobserved = nil
 			doc.LookupRentReturned = doc.LookupRentClosing
 			doc.LookupCloseTransaction = &result.signature
 			if err := s.store.saveSession(id, doc); err != nil {
@@ -84,7 +85,10 @@ func (p *payerSession) reclaimLookups(ctx context.Context) error {
 		if _, err := p.resume(ctx, path, observer); err != nil {
 			return err
 		}
-		if doc.LookupClosed != nil && *doc.LookupClosed {
+		unobserved := doc.LookupClosureUnobserved != nil && *doc.LookupClosureUnobserved
+		// Older sessions marked an absent table closed before creation landed.
+		// Only an observed closure is terminal; preserve its receipt if present.
+		if doc.LookupClosed != nil && *doc.LookupClosed && (!unobserved || doc.LookupCloseTransaction != nil) {
 			continue
 		}
 
@@ -93,8 +97,11 @@ func (p *payerSession) reclaimLookups(ctx context.Context) error {
 			return err
 		}
 		if table == nil {
+			if doc.LookupClosed == nil && unobserved {
+				continue
+			}
 			value := true
-			doc.LookupClosed = &value
+			doc.LookupClosed = nil
 			doc.LookupClosureUnobserved = &value
 			if err := s.store.saveSession(id, doc); err != nil {
 				return err
@@ -104,6 +111,13 @@ func (p *payerSession) reclaimLookups(ctx context.Context) error {
 
 		if table.State.Authority == nil || *table.State.Authority != s.payer.PublicKey() {
 			return fmt.Errorf("lookup authority mismatch")
+		}
+		if unobserved {
+			doc.LookupClosed = nil
+			doc.LookupClosureUnobserved = nil
+			if err := s.store.saveSession(id, doc); err != nil {
+				return err
+			}
 		}
 		if table.State.DeactivationSlot == math.MaxUint64 {
 			continue
