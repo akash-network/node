@@ -136,7 +136,13 @@ jobs:
         run: |
           [[ "$TAG" =~ ^reporter/v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[a-zA-Z0-9.-]+)?$ ]]
           test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/$TAG^{commit}")"
-          git merge-base --is-ancestor HEAD origin/main
+          if [[ "$TAG" == reporter/v0.2.0-rc0 ]]; then
+            test "$GITHUB_REPOSITORY" = akash-network/node
+            branch_tip=$(git show-ref --verify --hash 'refs/remotes/origin/jc/reporter-go')
+            test "$(git rev-parse HEAD)" = "$branch_tip"
+          else
+            git merge-base --is-ancestor HEAD origin/main
+          fi
           if draft=$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null); then
             test "$draft" = true
           fi
@@ -208,6 +214,7 @@ jobs:
           dist=.cache/goreleaser/reporter
           cp _run/akt-reporter/docker-compose.yaml "$dist/akt-reporter-compose.yaml"
           cp _run/akt-reporter/.env.example "$dist/akt-reporter.env.example"
+          sed -i "s|^OPERATOR_IMAGE=.*|OPERATOR_IMAGE=$RELEASE_IMAGE:$VERSION|" "$dist/akt-reporter.env.example"
           cp _run/akt-reporter/reporter.env.example _run/akt-reporter/reporter.example.toml "$dist/"
           cd "$dist"
           sha256sum akt-reporter-compose.yaml akt-reporter.env.example reporter.env.example reporter.example.toml \
@@ -219,7 +226,7 @@ jobs:
         run: |
           dist=.cache/goreleaser/reporter
           if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release create "$RELEASE_TAG" --verify-tag --draft --latest=false \
+            gh release create "$RELEASE_TAG" --verify-tag --draft --latest=false --prerelease="$PRERELEASE" \
               --title "akt-reporter v$VERSION" \
               --notes "Linux and macOS downloads and the multi-arch Docker image for akt-reporter. Configuration selects the deployment; verify its published addresses before starting. See contracts/solana/docs/operator-releases.md at this tag."
           fi

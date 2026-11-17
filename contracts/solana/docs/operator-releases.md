@@ -322,6 +322,15 @@ git tag -s reporter/v0.2.0 origin/main -m 'akt-reporter v0.2.0'
 git push origin reporter/v0.2.0
 ```
 
+For `reporter/v0.2.0-rc0` only, `akash-network/node` uses an exact branch-tip
+check in place of main ancestry. The tag commit, checkout HEAD and
+`refs/remotes/origin/jc/reporter-go` must match. Push the reviewed, signed
+`jc/reporter-go` branch first and keep its tip fixed through the release.
+All other reporter tags retain the main-ancestry requirement; this exception
+does not apply in other repositories. Finish local release verification
+before pushing the tag: the workflow pushes the image before creating the
+GitHub draft.
+
 A tag ending in `-rc.1`, for example `reporter/v0.2.0-rc.1`, produces a
 prerelease; use this until the deployment is qualified. For the first image
 publication, set the GHCR package visibility to **Public**. The workflow checks

@@ -3,17 +3,57 @@
 `akt-reporter` replaces the TypeScript reporter (`reporter/v0.1.x`, the
 `ghcr.io/akash-network/akt-reporter` image of those releases) from `reporter/v0.2.0`.
 It makes the same decisions and runs the same evidence checks. It reads and writes
-differently: configuration is a TOML file, environment variables and flags, and
-transactions are batched and unordered. The event and alert schema is unchanged.
+differently: native configuration uses a TOML file, environment variables and flags,
+and native mode batches unordered transactions. The event and alert schema is unchanged.
+
+Migrating configuration and custody is optional. To keep existing JSON, RPC
+addresses and key custody, use [legacy JSON compatibility](#legacy-json-compatibility).
+The steps and mapping tables below describe migration to native TOML configuration.
 
 Preview mode never signs, so you can prepare and test the Go reporter next to the
 running TypeScript one. The only dangerous step is enabling broadcast; step 5 says
 when.
 
+## Legacy JSON compatibility
+
+The Go binary supports the existing JSON configuration through explicit `--config`
+selection on `check` and `run`. It uses `akashRpc` for Akash queries and simulation
+through CometBFT RPC, without a gRPC endpoint, and keeps `solanaRpc`. It sends one
+message per unordered transaction, using the fixed `gasLimit` and `feeAmountUakt`,
+subject to the existing gas and fee caps.
+
+```bash
+akt-reporter check --config /absolute/path/config.json
+akt-reporter check --config /absolute/path/config.json --broadcast
+akt-reporter run --config /absolute/path/config.json --watch
+```
+
+Both `check` commands are offline; `--broadcast` also validates broadcast settings.
+`run` previews one pass without `--watch`, or repeats with it. For development
+networks, also pass `--network testnet`. Only add `--broadcast` to `run` after the
+stop and wait in step 5; the rollback waits below apply to this path too. Legacy
+selection does not load native TOML or `AKT_REPORTER_*` configuration overrides.
+Changing only the image leaves its default `start` command, which does not load
+legacy JSON; explicitly set `run --config /absolute/path/config.json --watch`
+and mount the configuration and required custody files at their configured paths.
+
+Broadcast uses either the existing absolute `keyFile` (a reporter-owned,
+owner-only regular file containing a 32-byte lowercase hex key) or `externalSigner`.
+Command custody requires an absolute executable path and a matching secp256k1
+public key, supplied as `externalSigner.publicKeyBase64` or already stored on the
+reporter account. Arguments run without a shell. The distroless image contains no
+shell or interpreter: supply the command executable, its dependencies and required
+mounts; an existing script is not automatically usable in that image. Offline
+checks and preview do not open the key or execute the command.
+
+Preview accepts `maxAgeSeconds` up to 600. Broadcast requires `maxAgeSeconds` plus
+`externalSigner.timeoutSeconds` to be at most 80 seconds (the command timeout
+defaults to 10); with `keyFile`, `maxAgeSeconds` alone must be at most 80.
+
 ## Steps
 
-1. **Enable gRPC on the Akash node** and check its other requirements. In
-   `app.toml`, set `[grpc] enable = true`. Set `grpc-addr` to its address.
+1. **Enable gRPC for native configuration** and check the Akash node's other
+   requirements. In `app.toml`, set `[grpc] enable = true`. Set `grpc-addr` to its address.
    - The node serves gRPC without TLS. A loopback address works as is. For a node
      on another host, set `grpc-insecure = true` on a private network, or put TLS in
      front.
@@ -43,7 +83,7 @@ when.
      [key custody](reporter.md#keyring). Delete the transfer copy of `reporter.key`
      afterwards.
 
-   - **An external signer:** the command-based signer is removed. Run
+   - **An external signer:** to migrate command custody to native configuration, run
      [Cosmos-KMS](https://github.com/cosmos/kms) with a secp256k1 key for the
      reporter account, and set `signer.remote.*`. If your custody cannot be exposed
      as a Cosmos-KMS service, put a small gRPC service in front of it that

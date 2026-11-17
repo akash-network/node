@@ -2,7 +2,7 @@
 
 `akt-reporter` implements finalized Solana observation, Akash settlement decisions and an opt-in Cosmos signer. It is a Go binary built from the node module without CGO, and it previews actions by default. The [complete local stack](local-stack.md) creates development identities and runs three signing processes. This runner supports single-key secp256k1 reporter accounts, whose native addresses are 20 bytes. Governance can select independent operators with their own nodes and keys. This signing restriction does not limit deposit owners, which may have native addresses of 1–255 bytes.
 
-Moving from the TypeScript reporter? Follow the [migration guide](reporter-migration.md) before enabling broadcast.
+Moving from the TypeScript reporter? Follow the [migration guide](reporter-migration.md) before enabling broadcast. Native configuration migration is optional; existing JSON uses [legacy JSON compatibility](reporter-migration.md#legacy-json-compatibility).
 
 - [Run an independent reporter](#run-an-independent-reporter)
 - [Key custody](#key-custody)
@@ -23,7 +23,7 @@ Each reporter needs its own Akash node, its own Solana node and its own key. The
 
 Run the paired Akash build with the matching `x/sink` interface. The node must report the configured chain ID, must not be catching up, and its latest block must be within `max-age`. The reporter reads recent committed heights, so a pruned node works. A pruned requested height fails the affected scan. The reporter queries canonical transfer-pending, void-requested and refund-pending buckets, every dispute and a rolling chronological audit. An audit failure retains its cursor and allows open-transfer reviews to continue.
 
-The node must provide:
+For native TOML configuration, the node must provide:
 
 - **gRPC.** Enable it in `app.toml` with `[grpc] enable = true`, and set `grpc-addr`. Every Akash state read goes through gRPC, pinned to one height. The node serves gRPC without TLS. Loopback addresses always use plaintext. Other addresses use TLS unless `grpc-insecure = true`, which suits a private network; otherwise put TLS in front.
 - **Both endpoints on one node.** `node` (CometBFT RPC) and `grpc-addr` must reach the same node, because height H must exist on both. At startup the reporter compares the node ID of each and refuses to start if they differ. Do not point them at a load balancer that spreads requests across nodes.
@@ -43,7 +43,7 @@ Run a replaying node with `--enable-rpc-transaction-history`, not a public RPC p
 
 ### Configuration
 
-Create the home and its configuration file with `init`. The file is `<home>/config/reporter.toml`, and the home defaults to `$HOME/.akt-reporter` (`--home`, or `AKT_REPORTER_HOME`):
+For native TOML configuration, create the home and its configuration file with `init`. The file is `<home>/config/reporter.toml`, and the home defaults to `$HOME/.akt-reporter` (`--home`, or `AKT_REPORTER_HOME`):
 
 ```bash
 akt-reporter init --home ~/.akt-reporter \
@@ -97,7 +97,7 @@ The reporter pays each Akash transaction's fee and needs no Solana key. Its Akas
 
 ## Key custody
 
-Broadcast requires exactly one signer: the keyring (`from`) or the remote signer (`signer.remote.address`). Preview never opens the keyring or connects to the signer, even when either is configured. Never use a validator consensus key or commit a key.
+Native TOML broadcast requires exactly one signer: the keyring (`from`) or the remote signer (`signer.remote.address`). Preview never opens the keyring or connects to the signer, even when either is configured. Never use a validator consensus key or commit a key.
 
 ### Keyring
 
@@ -141,7 +141,7 @@ ca-file = "/etc/akt-reporter/kms-ca.pem"
 
 The reporter signs only `MsgReportOutcome`, `MsgVetoVoid` and `MsgFinalizeRefund` from the reporter account. A signer service can decode the sign bytes and refuse anything else, another chain ID or another account.
 
-The external-command signer of the TypeScript reporter is removed. To keep custody that cannot be exposed as a Cosmos-KMS `SignerService`, run a small service in front of it that implements `GetKey`, `GetKeys` and `Sign` of [`signerservice.proto`](../../../operator/reporter/signer/kmspb/signerservice.proto), or use the keyring.
+The external-command signer remains available through [legacy JSON compatibility](reporter-migration.md#legacy-json-compatibility). To migrate that custody to native TOML configuration, run a small service in front of it that implements `GetKey`, `GetKeys` and `Sign` of [`signerservice.proto`](../../../operator/reporter/signer/kmspb/signerservice.proto), or use the keyring.
 
 ## Light client
 
