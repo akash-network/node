@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strconv"
@@ -53,7 +54,7 @@ type Resolved struct {
 	GasPerMessage uint64
 	// GasPrices is empty when only fees is set.
 	GasPrices sdk.DecCoins
-	// Fees is empty when fees is not set.
+	// Fees is empty when fees is unset or explicitly zero in legacy JSON.
 	Fees   sdk.Coins
 	MaxFee sdk.Coin
 }
@@ -144,7 +145,10 @@ func parseUakt(s string) (sdk.Coin, error) {
 		return sdk.Coin{}, errors.New("amount is too large")
 	}
 
-	return sdk.Coin{Denom: uaktDenom, Amount: n}, nil
+	return sdk.Coin{
+		Denom:  uaktDenom,
+		Amount: n,
+	}, nil
 }
 
 // Resolve checks every rule of spec sections 8.3 and 8.4 and parses the derived values. The error joins every
@@ -166,7 +170,11 @@ func Resolve(c Config) (Resolved, error) {
 	}
 
 	r.checkURL("node", c.Node, "tcp", "http", "https")
-	r.checkHostPort("grpc-addr", c.GRPCAddr)
+	if c.Legacy == nil {
+		r.checkHostPort("grpc-addr", c.GRPCAddr)
+	} else if c.GRPCAddr != "" || c.GRPCInsecure {
+		r.add("grpc-addr", "legacy JSON uses a single Comet endpoint; do not select gRPC as well")
+	}
 
 	if c.MaxAge <= 0 || c.MaxAge > 10*time.Minute {
 		r.add("max-age", "must be above 0 and at most 10m0s, got %v", c.MaxAge)
@@ -292,13 +300,19 @@ func (r *rules) gas(out *Resolved) {
 }
 
 func (r *rules) fees(out *Resolved) {
+	if out.Legacy != nil && out.Config.GasPrices != "" {
+		r.add("gas-prices", "legacy JSON cannot be combined with gas prices")
+
+		return
+	}
+
 	if out.Config.Fees != "" {
 		coin, err := parseUakt(out.Config.Fees)
 
 		switch {
 		case err != nil:
 			r.add("fees", "%v", err)
-		case !coin.Amount.IsPositive():
+		case !coin.Amount.IsPositive() && out.Legacy == nil:
 			r.add("fees", "must be above 0, got %s", out.Config.Fees)
 		case out.MaxFee.Amount.IsNil():
 			// tx.max-fee is already reported
@@ -375,6 +389,28 @@ func (r *rules) signer(c Config) {
 		r.add("signer.remote.cert-file", "set signer.remote.cert-file and signer.remote.key-file together or not at all")
 	}
 
+	rawFile := ""
+	var command *ExternalSigner
+	if c.Legacy != nil {
+		rawFile = c.Legacy.KeyFile
+		command = c.Legacy.ExternalSigner
+		if command != nil {
+			if rawFile != "" {
+				r.add("externalSigner", "configure keyFile or externalSigner, not both")
+			}
+			if !filepath.IsAbs(command.Options.Command) || len(command.Options.Args) > 32 {
+				r.add("externalSigner", "requires an absolute command and at most 32 arguments")
+			}
+			between(r, "externalSigner.timeoutSeconds", command.Options.Timeout, time.Second, 120*time.Second)
+		}
+		if rawFile != "" && !filepath.IsAbs(rawFile) {
+			r.add("keyFile", "must be absolute")
+		}
+		if c.From != "" || remote.Address != "" || remote.KeyID != "" || remote.CertFile != "" || remote.KeyFile != "" || remote.CAFile != "" || remote.ServerName != "" {
+			r.add("keyFile", "legacy JSON cannot be combined with canonical keyring or remote custody")
+		}
+	}
+
 	if !c.Broadcast {
 		return
 	}
@@ -384,17 +420,29 @@ func (r *rules) signer(c Config) {
 	switch {
 	case c.From != "" && remote.Address != "":
 		r.add("from", "configure from or signer.remote.address, not both")
-	case c.From == "" && remote.Address == "":
-		r.add("from", "broadcast needs exactly one of from and signer.remote.address")
+	case c.From == "" && remote.Address == "" && rawFile == "" && command == nil:
+		if c.Legacy != nil {
+			r.add("keyFile", "legacy broadcast requires keyFile or externalSigner")
+		} else {
+			r.add("from", "broadcast needs exactly one of from and signer.remote.address")
+		}
 	}
 
 	if remote.Address != "" {
 		signerTimeout = remote.Timeout
 	}
 
+	if command != nil {
+		signerTimeout = command.Options.Timeout
+	}
+
 	if c.MaxAge+signerTimeout > maxBroadcastBudget {
-		if remote.Address != "" {
+		if command != nil {
+			r.add("max-age", "maxAgeSeconds (%v) plus externalSigner.timeoutSeconds (%v) must be at most %v when broadcasting", c.MaxAge, signerTimeout, maxBroadcastBudget)
+		} else if remote.Address != "" {
 			r.add("max-age", "max-age (%v) plus signer.remote.timeout (%v) must be at most %v when broadcasting", c.MaxAge, signerTimeout, maxBroadcastBudget)
+		} else if c.Legacy != nil {
+			r.add("max-age", "maxAgeSeconds is unsupported for broadcast: must be at most 80 seconds")
 		} else {
 			r.add("max-age", "max-age (%v) must be at most %v when broadcasting with the keyring signer (from)", c.MaxAge, maxBroadcastBudget)
 		}

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"runtime"
 
 	"github.com/cosmos/cosmos-sdk/version"
@@ -14,10 +15,14 @@ func newVersionCmd() *cobra.Command {
 		Short: "Print the service name, version, commit, platform and Go version",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			_, err := fmt.Fprintf(cmd.OutOrStdout(), "service %s\nversion %s\ncommit %s\nplatform %s_%s\ngo %s\n",
-				serviceName, version.Version, version.Commit, runtime.GOOS, runtime.GOARCH, runtime.Version())
-
-			return err
+			return writeVersion(cmd.OutOrStdout())
 		},
 	}
+}
+
+func writeVersion(out io.Writer) error {
+	_, err := fmt.Fprintf(out, "service %s\nversion %s\ncommit %s\nplatform %s_%s\ngo %s\n",
+		serviceName, version.Version, version.Commit, runtime.GOOS, runtime.GOARCH, runtime.Version())
+
+	return err
 }

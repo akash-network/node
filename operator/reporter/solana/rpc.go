@@ -46,17 +46,25 @@ func (e *causeError) Error() string   { return e.sentinel.Error() }
 func (e *causeError) Unwrap() []error { return []error{e.sentinel, e.cause} }
 
 func unavailable(err error) error {
-	return &causeError{sentinel: ErrUnavailable, cause: err}
+	return &causeError{
+		sentinel: ErrUnavailable,
+		cause:    err,
+	}
 }
 
 func blockUnavailable(err error) error {
-	return &causeError{sentinel: ErrBlockUnavailable, cause: err}
+	return &causeError{
+		sentinel: ErrBlockUnavailable,
+		cause:    err,
+	}
 }
 
 // RPCOptions configures the Solana JSON-RPC client.
 type RPCOptions struct {
-	URL     string
-	Timeout time.Duration
+	// LegacyRedirects follows the packaged TS global-fetch redirect policy.
+	LegacyRedirects bool
+	URL             string
+	Timeout         time.Duration
 	// Concurrency limits concurrent requests other than getBlock.
 	Concurrency int
 	// BlockConcurrency limits concurrent getBlock requests.
@@ -98,10 +106,27 @@ func NewRPC(opts RPCOptions) *RPC {
 		panic(err) // only for a non-positive size
 	}
 
+	httpClient := &http.Client{Transport: transport}
+	if opts.LegacyRedirects {
+		httpClient.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+			req.Header.Del("Referer")
+			if len(via) > 20 {
+				return errors.New("stopped after 20 redirects")
+			}
+			if req.URL.User != nil {
+				return errors.New("redirect URL credentials are not supported")
+			}
+			if req.URL.Scheme != "http" && req.URL.Scheme != "https" {
+				return errors.New("invalid redirect scheme")
+			}
+			return nil
+		}
+	}
+
 	return &RPC{
 		url:     opts.URL,
 		timeout: opts.Timeout,
-		http:    &http.Client{Transport: transport},
+		http:    httpClient,
 		reads:   semaphore.NewWeighted(int64(reads)),
 		blocks:  semaphore.NewWeighted(int64(blocks)),
 		metrics: opts.Metrics,
@@ -164,7 +189,12 @@ func (r *RPC) post(
 		r.metrics.RecordRPC(metricsChain, method, time.Since(start), err)
 	}
 
-	payload, err := json.Marshal(rpcRequest{JSONRPC: "2.0", ID: r.ids.Add(1), Method: method, Params: params})
+	payload, err := json.Marshal(rpcRequest{
+		JSONRPC: "2.0",
+		ID:      r.ids.Add(1),
+		Method:  method,
+		Params:  params,
+	})
 	if err != nil {
 		finish(err)
 		return nil, nil, err
@@ -266,7 +296,10 @@ func (r *RPC) MultipleAccounts(ctx context.Context, keys []solana.PublicKey) (ui
 		} `json:"context"`
 		Value []*accountJSON `json:"value"`
 	}
-	err := r.read(ctx, "getMultipleAccounts", &res, encoded, rpcConfig{Commitment: commitment, Encoding: "base64"})
+	err := r.read(ctx, "getMultipleAccounts", &res, encoded, rpcConfig{
+		Commitment: commitment,
+		Encoding:   "base64",
+	})
 	if err != nil {
 		return 0, nil, err
 	}
@@ -303,7 +336,11 @@ func (a *accountJSON) decode() (*Account, error) {
 		return nil, fmt.Errorf("data: %w", err)
 	}
 
-	return &Account{Owner: owner, Executable: a.Executable, Data: data}, nil
+	return &Account{
+		Owner:      owner,
+		Executable: a.Executable,
+		Data:       data,
+	}, nil
 }
 
 // BlockTime returns the block time of slot, or nil when the node has none. Known times are cached per slot.

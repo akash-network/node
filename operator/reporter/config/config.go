@@ -26,6 +26,8 @@ const (
 
 // Config mirrors the keys of spec section 8.3. The mapstructure tags are the key names, so a key is the dotted path of its tags.
 type Config struct {
+	Legacy *Legacy `mapstructure:"-"`
+
 	Network        string        `mapstructure:"network"`
 	Broadcast      bool          `mapstructure:"broadcast"`
 	Reporter       string        `mapstructure:"reporter"`
@@ -189,6 +191,9 @@ func walk(v reflect.Value, prefix string, fn func(key string, field reflect.Valu
 	t := v.Type()
 	for i := range t.NumField() {
 		key := t.Field(i).Tag.Get("mapstructure")
+		if key == "-" {
+			continue
+		}
 		if prefix != "" {
 			key = prefix + "." + key
 		}

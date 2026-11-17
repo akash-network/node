@@ -11,7 +11,7 @@ import (
 const checkValid = "Configuration valid. No RPC request or transaction sent."
 
 func newCheckCmd() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "check",
 		Short: "Validate the configuration offline, without RPC, keyring or signer access",
 		Args:  cobra.NoArgs,
@@ -25,6 +25,8 @@ func newCheckCmd() *cobra.Command {
 			return err
 		},
 	}
+	addLegacyConfigFlag(cmd)
+	return cmd
 }
 
 // resolveConfig loads and validates the configuration, as check, start and scan do first (spec §8.4).

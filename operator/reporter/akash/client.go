@@ -1,4 +1,4 @@
-// Package akash is the reporter's only path to Akash: height-pinned gRPC state reads, the height tracker, listing and
+// Package akash is the reporter's only path to Akash: height-pinned state reads, the height tracker, listing and
 // the audit cursor, and the CometBFT calls that broadcast and look up transactions (spec §5.3).
 package akash
 
@@ -18,6 +18,8 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/grpc/cmtservice"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	sdksecp "github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
+	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	"github.com/cosmos/cosmos-sdk/std"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/bech32"
@@ -26,6 +28,7 @@ import (
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	vestingtypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
 	consensustypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
+	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"golang.org/x/sync/semaphore"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -68,6 +71,8 @@ var (
 type Options struct {
 	// Node is the CometBFT RPC URL.
 	Node string
+	// ABCI selects generated queries over the single Comet endpoint for legacy JSON.
+	ABCI bool
 	// GRPCAddr is the gRPC host:port of the same node.
 	GRPCAddr string
 	// GRPCInsecure uses plaintext gRPC for a non-loopback address; loopback always uses plaintext.
@@ -77,7 +82,7 @@ type Options struct {
 	MaxAge time.Duration
 	// RequestTimeout bounds each request; zero means no bound.
 	RequestTimeout time.Duration
-	// Concurrency limits concurrent gRPC calls and sizes the CometBFT connection pool.
+	// Concurrency limits concurrent queries and sizes the CometBFT connection pool.
 	Concurrency int
 	// MinRefresh is the shortest interval between tracker refreshes; zero means one second.
 	MinRefresh time.Duration
@@ -86,7 +91,8 @@ type Options struct {
 	Metrics *metrics.Metrics
 }
 
-// Client reads one Akash node through gRPC and CometBFT RPC. It is safe for concurrent use.
+// Client reads one Akash node through gRPC and CometBFT RPC, or CometBFT RPC alone for legacy JSON.
+// It is safe for concurrent use.
 type Client struct {
 	chainID    string
 	maxAge     time.Duration
@@ -98,6 +104,7 @@ type Client struct {
 	transport *http.Transport
 	rpc       *rpchttp.HTTP
 	conn      *grpc.ClientConn
+	queries   grpc.ClientConnInterface
 	registry  codectypes.InterfaceRegistry
 	sink      sinkv1.QueryClient
 	auth      authtypes.QueryClient
@@ -127,6 +134,7 @@ type TxResult struct {
 }
 
 // Dial connects to the node's CometBFT RPC and gRPC endpoints and refuses them unless they are one node.
+// ABCI mode uses only the CometBFT endpoint for legacy JSON.
 func Dial(ctx context.Context, opts Options) (*Client, error) {
 	concurrency := max(opts.Concurrency, 1)
 
@@ -152,8 +160,30 @@ func Dial(ctx context.Context, opts Options) (*Client, error) {
 	c.transport.MaxIdleConnsPerHost = concurrency
 
 	var err error
-	if c.rpc, err = rpchttp.NewWithClient(opts.Node, "/websocket", &http.Client{Transport: c.transport}); err != nil {
+	if opts.ABCI {
+		if opts.GRPCAddr != "" || opts.GRPCInsecure {
+			return nil, errors.New("ABCI and gRPC transport selections conflict")
+		}
+		c.rpc, err = legacyComet(opts.Node, c.transport)
+	} else {
+		c.rpc, err = rpchttp.NewWithClient(opts.Node, "/websocket", &http.Client{Transport: c.transport})
+	}
+	if err != nil {
 		return nil, err
+	}
+
+	if opts.ABCI {
+		c.queries = &abciConn{client: c}
+		c.sink = sinkv1.NewQueryClient(c.queries)
+		c.auth = authtypes.NewQueryClient(c.queries)
+		c.txs = txtypes.NewServiceClient(c.queries)
+		st, err := c.status(ctx)
+		if err != nil {
+			_ = c.Close()
+			return nil, err
+		}
+		c.txIndex = st.NodeInfo.Other.TxIndex == txIndexOn
+		return c, nil
 	}
 
 	creds := credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS12})
@@ -173,7 +203,8 @@ func Dial(ctx context.Context, opts Options) (*Client, error) {
 		return nil, err
 	}
 
-	c.sink = sinkv1.NewQueryClient(c.conn)
+	c.queries = c.conn
+	c.sink = sinkv1.NewQueryClient(c.queries)
 	c.auth = authtypes.NewQueryClient(c.conn)
 	c.txs = txtypes.NewServiceClient(c.conn)
 
@@ -188,7 +219,10 @@ func Dial(ctx context.Context, opts Options) (*Client, error) {
 // Close releases the gRPC connection and idle CometBFT connections.
 func (c *Client) Close() error {
 	c.transport.CloseIdleConnections()
-	return c.conn.Close()
+	if c.conn != nil {
+		return c.conn.Close()
+	}
+	return nil
 }
 
 // sameNode requires CometBFT's node ID to equal gRPC's, so that every height exists on both, and records whether the
@@ -253,7 +287,7 @@ func (c *Client) withTimeout(ctx context.Context) (context.Context, context.Canc
 
 type stopKey struct{}
 
-// WithStop returns ctx under which a gRPC call still waiting for a concurrency permit gives up once stop ends. Such a
+// WithStop returns ctx under which a query still waiting for a concurrency permit gives up once stop ends. Such a
 // call is not in flight yet, so shutdown cancels it; a call that holds a permit runs under ctx and the request timeout
 // only, and finishes or times out (spec §5.7).
 func WithStop(ctx, stop context.Context) context.Context {
@@ -273,7 +307,7 @@ func (c *Client) acquire(ctx context.Context) error {
 	return c.reads.Acquire(wait, 1)
 }
 
-// intercept bounds every gRPC call by the concurrency limit and the request timeout, and records it.
+// intercept bounds every generated query by the concurrency limit and the request timeout, and records it.
 func (c *Client) intercept(
 	ctx context.Context,
 	method string,
@@ -292,6 +326,9 @@ func (c *Client) intercept(
 
 	began := time.Now()
 	err := invoker(ctx, method, req, reply, cc, opts...)
+	if _, legacy := c.queries.(*abciConn); legacy {
+		err = sanitizeLegacyHTTP(err)
+	}
 	c.metrics.RecordRPC(metricsChain, method, time.Since(began), err)
 
 	return err
@@ -304,12 +341,15 @@ func (c *Client) comet(ctx context.Context, method string, call func(context.Con
 
 	began := time.Now()
 	err := call(ctx)
+	if _, legacy := c.queries.(*abciConn); legacy {
+		err = sanitizeLegacyHTTP(err)
+	}
 	c.metrics.RecordRPC(metricsChain, method, time.Since(began), err)
 
 	return err
 }
 
-// pinned runs a gRPC read at height and requires the response header to repeat it.
+// pinned runs a generated query at height and requires the response header to repeat it.
 func (c *Client) pinned(ctx context.Context, height int64, mismatch error, call func(context.Context, ...grpc.CallOption) error) error {
 	want := strconv.FormatInt(height, 10)
 
@@ -362,30 +402,95 @@ func (c *Client) Transfer(ctx context.Context, height int64, id sinkid.ID) (sink
 
 // AccountNumber reads the account number of addr at the node's latest state.
 func (c *Client) AccountNumber(ctx context.Context, addr sdk.AccAddress) (uint64, error) {
-	address, err := bech32.ConvertAndEncode(sdkutil.Bech32PrefixAccAddr, addr)
+	acc, err := c.account(ctx, addr, 0)
 	if err != nil {
-		return 0, err
-	}
-
-	res, err := c.auth.Account(ctx, &authtypes.QueryAccountRequest{Address: address})
-	if status.Code(err) == codes.NotFound {
-		return 0, ErrAccountNotFound
-	}
-	if err != nil {
-		return 0, err
-	}
-
-	var acc sdk.AccountI
-	if err := c.registry.UnpackAny(res.Account, &acc); err != nil {
 		return 0, err
 	}
 
 	return acc.GetAccountNumber(), nil
 }
 
+// AccountPublicKey reads and validates the reporter's on-chain secp256k1 public key.
+// It pins the lookup to the current validated snapshot. Preview and offline check never call it.
+func (c *Client) AccountPublicKey(ctx context.Context, addr sdk.AccAddress) (cryptotypes.PubKey, error) {
+	state, err := c.Latest(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	acc, err := c.account(ctx, addr, state.Height)
+	if err != nil {
+		return nil, err
+	}
+
+	if !acc.GetAddress().Equals(addr) {
+		return nil, errors.New("account query returned another address")
+	}
+
+	key := acc.GetPubKey()
+	if key == nil {
+		return nil, errors.New("reporter account has no public key; set externalSigner.publicKeyBase64")
+	}
+
+	pub, ok := key.(*sdksecp.PubKey)
+	if !ok || pub == nil || len(pub.Key) != secp256k1.PubKeyBytesLenCompressed {
+		return nil, errors.New("account public key must be compressed secp256k1")
+	}
+
+	if _, err := secp256k1.ParsePubKey(pub.Key); err != nil {
+		return nil, errors.New("account public key is not on secp256k1")
+	}
+
+	if !sdk.AccAddress(pub.Address()).Equals(addr) {
+		return nil, errors.New("account public key does not derive reporter")
+	}
+
+	return pub, nil
+}
+
+func (c *Client) account(ctx context.Context, addr sdk.AccAddress, height int64) (sdk.AccountI, error) {
+	address, err := bech32.ConvertAndEncode(sdkutil.Bech32PrefixAccAddr, addr)
+	if err != nil {
+		return nil, err
+	}
+
+	var res *authtypes.QueryAccountResponse
+	query := func(ctx context.Context, opts ...grpc.CallOption) error {
+		var err error
+		res, err = c.auth.Account(ctx, &authtypes.QueryAccountRequest{Address: address}, opts...)
+		return err
+	}
+	if height > 0 {
+		err = c.pinned(ctx, height, errors.New("Akash account query height mismatch"), query)
+	} else {
+		err = query(ctx)
+	}
+	if status.Code(err) == codes.NotFound {
+		return nil, ErrAccountNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	if res == nil || res.Account == nil {
+		return nil, errors.New("account query returned no account")
+	}
+
+	var acc sdk.AccountI
+	if err := c.registry.UnpackAny(res.Account, &acc); err != nil {
+		return nil, err
+	}
+
+	if acc == nil {
+		return nil, errors.New("account query returned no account")
+	}
+
+	return acc, nil
+}
+
 // BlockMaxGas reads the consensus block max gas at the node's latest state; -1 or 0 means unlimited.
 func (c *Client) BlockMaxGas(ctx context.Context) (int64, error) {
-	res, err := consensustypes.NewQueryClient(c.conn).Params(ctx, &consensustypes.QueryParamsRequest{})
+	res, err := consensustypes.NewQueryClient(c.queries).Params(ctx, &consensustypes.QueryParamsRequest{})
 	if err != nil {
 		return 0, err
 	}
@@ -421,7 +526,10 @@ func (c *Client) BroadcastSync(ctx context.Context, txBytes []byte) (BroadcastRe
 		if err != nil {
 			if strings.Contains(err.Error(), errInCache) {
 				sum := sha256.Sum256(txBytes)
-				out = BroadcastResult{Hash: sum[:], InCache: true}
+				out = BroadcastResult{
+					Hash:    sum[:],
+					InCache: true,
+				}
 
 				return nil
 			}
@@ -429,7 +537,12 @@ func (c *Client) BroadcastSync(ctx context.Context, txBytes []byte) (BroadcastRe
 			return err
 		}
 
-		out = BroadcastResult{Code: res.Code, Codespace: res.Codespace, Log: res.Log, Hash: res.Hash}
+		out = BroadcastResult{
+			Code:      res.Code,
+			Codespace: res.Codespace,
+			Log:       res.Log,
+			Hash:      res.Hash,
+		}
 
 		return nil
 	})
@@ -450,7 +563,12 @@ func (c *Client) Tx(ctx context.Context, hash []byte) (*TxResult, error) {
 			return err
 		}
 
-		out = &TxResult{Height: res.Height, Code: res.TxResult.Code, Codespace: res.TxResult.Codespace, Log: res.TxResult.Log}
+		out = &TxResult{
+			Height:    res.Height,
+			Code:      res.TxResult.Code,
+			Codespace: res.TxResult.Codespace,
+			Log:       res.TxResult.Log,
+		}
 
 		return nil
 	})

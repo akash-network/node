@@ -89,7 +89,10 @@ func runReporter(cmd *cobra.Command, once bool) (err error) {
 		return err
 	}
 
-	r := &reporter{cfg: cfg, log: zerolog.Ctx(ctx)}
+	r := &reporter{
+		cfg: cfg,
+		log: zerolog.Ctx(ctx),
+	}
 	logStartup(r.log, cfg)
 
 	if err := r.connect(ctx, cmd); err != nil {
@@ -148,6 +151,7 @@ func (r *reporter) connect(ctx context.Context, cmd *cobra.Command) (err error) 
 
 	a, err := akash.Dial(ctx, akash.Options{
 		Node:           cfg.Node,
+		ABCI:           cfg.Legacy != nil,
 		GRPCAddr:       cfg.GRPCAddr,
 		GRPCInsecure:   cfg.GRPCInsecure,
 		ChainID:        cfg.ChainID,
@@ -166,7 +170,7 @@ func (r *reporter) connect(ctx context.Context, cmd *cobra.Command) (err error) 
 		}
 	}()
 
-	r.log.Info().Str("node", cfg.Node).Str("grpc-addr", cfg.GRPCAddr).Bool("tx-index", a.TxIndexEnabled()).
+	r.log.Info().Str("node", legacyLogEndpoint(cfg, cfg.Node)).Str("grpc-addr", cfg.GRPCAddr).Bool("tx-index", a.TxIndexEnabled()).
 		Msg("connected to Akash")
 
 	var accountNumber uint64
@@ -178,6 +182,7 @@ func (r *reporter) connect(ctx context.Context, cmd *cobra.Command) (err error) 
 
 	rpc := aktsolana.NewRPC(aktsolana.RPCOptions{
 		URL:              cfg.Solana.RPC,
+		LegacyRedirects:  cfg.Legacy != nil,
 		Timeout:          cfg.RequestTimeout,
 		Concurrency:      cfg.Scan.SolanaConcurrency,
 		BlockConcurrency: cfg.Scan.BlockConcurrency,
@@ -236,7 +241,30 @@ func (r *reporter) prepareBroadcast(ctx context.Context, cmd *cobra.Command) (ui
 	}
 
 	kind := "keyring"
-	if cfg.From != "" {
+	if cfg.Legacy != nil && cfg.Legacy.ExternalSigner != nil {
+		kind = "command"
+		external := cfg.Legacy.ExternalSigner
+		pub := external.PublicKey
+		var err error
+		if pub == nil {
+			pub, err = r.akash.AccountPublicKey(ctx, cfg.Reporter)
+			if err != nil {
+				return 0, fmt.Errorf("read reporter public key: %w", err)
+			}
+		}
+
+		r.signer, err = signer.NewCommand(external.Options, cfg.Reporter, cfg.ChainID, pub)
+		if err != nil {
+			return 0, err
+		}
+	} else if cfg.Legacy != nil {
+		kind = "raw-file"
+		var err error
+		r.signer, err = signer.NewRawFile(cfg.Legacy.KeyFile, cfg.Reporter)
+		if err != nil {
+			return 0, err
+		}
+	} else if cfg.From != "" {
 		kr, err := newKeyring(cfg.KeyringBackend, cfg.KeyringDir, cmd.InOrStdin(), sdkutil.MakeEncodingConfig().Codec)
 		if err != nil {
 			return 0, err
@@ -282,9 +310,13 @@ func (r *reporter) prepareBroadcast(ctx context.Context, cmd *cobra.Command) (ui
 	return accountNumber, nil
 }
 
-// signerTimeout is the remote signer's timeout, which lengthens the send cutoff, or 0 for the keyring.
+// signerTimeout lengthens the send cutoff for command or remote custody; local custody returns 0.
 func (r *reporter) signerTimeout() time.Duration {
-	if r.cfg.From != "" {
+	if r.cfg.Legacy != nil && r.cfg.Legacy.ExternalSigner != nil {
+		return r.cfg.Legacy.ExternalSigner.Options.Timeout
+	}
+
+	if r.cfg.Legacy != nil || r.cfg.From != "" {
 		return 0
 	}
 
@@ -495,9 +527,9 @@ func logStartup(log *zerolog.Logger, cfg config.Resolved) {
 		Str("network", cfg.Network).
 		Str("chain-id", cfg.ChainID).
 		Str("reporter", cfg.Config.Reporter).
-		Str("node", cfg.Node).
+		Str("node", legacyLogEndpoint(cfg, cfg.Node)).
 		Str("grpc-addr", cfg.GRPCAddr).
-		Str("solana.rpc", cfg.Solana.RPC).
+		Str("solana.rpc", legacyLogEndpoint(cfg, cfg.Solana.RPC)).
 		Str("solana.program-id", cfg.Solana.ProgramID).
 		Str("solana.light-client-program", lightClient).
 		Stringer("max-age", cfg.MaxAge).

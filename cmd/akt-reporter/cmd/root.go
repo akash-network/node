@@ -48,7 +48,18 @@ votes, vetoes and refunds on Akash. Events go to stdout as JSON lines; logs go t
 		SilenceErrors:     true,
 		SilenceUsage:      true,
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error { return setupLogger(cmd) },
+		Args:              cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			showVersion, _ := cmd.Flags().GetBool("version")
+			if showVersion {
+				return writeVersion(cmd.OutOrStdout())
+			}
+
+			return cmd.Help()
+		},
 	}
+
+	root.Flags().Bool("version", false, "Print the service build version")
 
 	pf := root.PersistentFlags()
 	pf.String(config.FlagHome, "", "home directory (default $HOME/.akt-reporter; env "+config.EnvPrefix+"_HOME)")
@@ -62,6 +73,7 @@ votes, vetoes and refunds on Akash. Events go to stdout as JSON lines; logs go t
 		newInitCmd(),
 		newStartCmd(),
 		newScanCmd(),
+		newLegacyRunCmd(),
 		newCheckCmd(),
 		newKeysCmd(),
 		newVersionCmd(),
@@ -152,7 +164,11 @@ func setupLogger(cmd *cobra.Command) error {
 	switch format {
 	case logFormatJSON:
 	case logFormatPlain, "":
-		cw := zerolog.ConsoleWriter{Out: out, NoColor: !color, TimeFormat: timeFormat}
+		cw := zerolog.ConsoleWriter{
+			Out:        out,
+			NoColor:    !color,
+			TimeFormat: timeFormat,
+		}
 		if timeFormat == "" {
 			cw.PartsExclude = []string{zerolog.TimestampFieldName}
 		}
@@ -188,6 +204,9 @@ func parseTimestampFormat(val string) (string, error) {
 
 // loadConfig loads the configuration of cmd and logs the unknown environment variables it ignored.
 func loadConfig(cmd *cobra.Command) (config.Config, error) {
+	if cmd.Flags().Changed("config") {
+		return loadLegacyConfig(cmd)
+	}
 	return loadConfigWith(cmd, config.Load)
 }
 

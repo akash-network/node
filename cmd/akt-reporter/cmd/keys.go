@@ -26,8 +26,8 @@ const envDBusSession = "DBUS_SESSION_BUS_ADDRESS"
 
 var errInvalidHexKey = errors.New("the private key must be hex-encoded")
 
-// newKeysCmd returns the cosmos-sdk keyring commands. Their own --keyring-backend and --keyring-dir shadow the root
-// flags; unless set on the command line, the configured keyring-backend and keyring-dir apply.
+// newKeysCmd returns the Cosmos keyring commands and packaged raw-file helpers. The Cosmos commands
+// shadow the root keyring flags; unless set on the command line, the configured backend and directory apply.
 func newKeysCmd() *cobra.Command {
 	cmd := keys.Commands()
 
@@ -44,6 +44,8 @@ func newKeysCmd() *cobra.Command {
 			sanitizeHexErrors(sub)
 		}
 	}
+
+	cmd.AddCommand(newRawKeysCreateCmd(), newRawKeysAddressCmd())
 
 	return cmd
 }
@@ -121,7 +123,10 @@ func checkOSKeyring() error {
 		allowed = []osring.BackendType{osring.SecretServiceBackend, osring.KWalletBackend}
 	}
 
-	if _, err := osring.Open(osring.Config{AllowedBackends: allowed, ServiceName: sdk.KeyringServiceName()}); err != nil {
+	if _, err := osring.Open(osring.Config{
+		AllowedBackends: allowed,
+		ServiceName:     sdk.KeyringServiceName(),
+	}); err != nil {
 		if runtime.GOOS == "darwin" {
 			return osKeyringError("the macOS keychain needs a build with CGO")
 		}
