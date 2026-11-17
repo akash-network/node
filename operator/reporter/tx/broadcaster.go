@@ -237,7 +237,12 @@ func (b *Broadcaster) post(f func()) { b.send(op{f: f}) }
 func (b *Broadcaster) call(f func()) bool { return b.run(op{f: f}) }
 
 // query runs f, which must not change the owner's state, on the owner goroutine and waits for it.
-func (b *Broadcaster) query(f func()) bool { return b.run(op{f: f, query: true}) }
+func (b *Broadcaster) query(f func()) bool {
+	return b.run(op{
+		f:     f,
+		query: true,
+	})
+}
 
 func (b *Broadcaster) run(o op) bool {
 	ran := make(chan struct{})
@@ -464,13 +469,22 @@ func (b *Broadcaster) pump() {
 
 // startBuild hands e's queued messages to a worker as one transaction.
 func (b *Broadcaster) startBuild(e *slotEntry) {
-	tx := &liveTx{msgs: e.queued, phase: building, busy: true, inFlight: true}
+	tx := &liveTx{
+		msgs:     e.queued,
+		phase:    building,
+		busy:     true,
+		inFlight: true,
+	}
 	e.tx = tx
 	e.clearQueue()
 	b.st.inFlight++
 	b.o.Metrics.AddTxInFlight(1)
 
-	job := buildJob{msgs: tx.msgs, timeout: e.timeout, chainTime: b.st.chainTime}
+	job := buildJob{
+		msgs:      tx.msgs,
+		timeout:   e.timeout,
+		chainTime: b.st.chainTime,
+	}
 	b.spawn(func() {
 		res := b.build(job)
 		b.post(func() { b.applyBuild(e, tx, res) })
@@ -534,7 +548,10 @@ func (b *Broadcaster) startFollowUp() {
 	}
 
 	if s.refundAt > 0 && !s.refundHeld {
-		b.startJob(followJob{refund: true, minHeight: s.refundAt})
+		b.startJob(followJob{
+			refund:    true,
+			minHeight: s.refundAt,
+		})
 		s.refundAt = 0
 		return
 	}
@@ -543,7 +560,10 @@ func (b *Broadcaster) startFollowUp() {
 		return
 	}
 
-	job := followJob{window: s.window, minHeight: s.windowHeight}
+	job := followJob{
+		window:    s.window,
+		minHeight: s.windowHeight,
+	}
 	seen := map[string]bool{}
 	for key, d := range s.deferred {
 		if d.window >= s.window {
@@ -578,7 +598,10 @@ func (b *Broadcaster) followUps(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case job := <-b.follow:
-			r, queued := b.getReviewer(), scan.WithQueuer(ctx, followQueuer{b: b, job: job.id})
+			r, queued := b.getReviewer(), scan.WithQueuer(ctx, followQueuer{
+				b:   b,
+				job: job.id,
+			})
 
 			var err error
 			if job.refund {
@@ -687,13 +710,19 @@ type buildResult struct {
 
 func (r *buildResult) fail(ps []policy.Planned, text string) {
 	for _, p := range ps {
-		r.failed = append(r.failed, msgFailure{planned: p, text: text})
+		r.failed = append(r.failed, msgFailure{
+			planned: p,
+			text:    text,
+		})
 	}
 }
 
 func (r *buildResult) deferAll(ps []policy.Planned, reason string) {
 	for _, p := range ps {
-		r.deferred = append(r.deferred, msgDeferral{planned: p, reason: reason})
+		r.deferred = append(r.deferred, msgDeferral{
+			planned: p,
+			reason:  reason,
+		})
 	}
 }
 
@@ -753,6 +782,11 @@ func (b *Broadcaster) build(job buildJob) (res buildResult) {
 		if addr := b.b.signer.Address().String(); addr != b.o.Reporter {
 			res.fail(msgs, fmt.Sprintf("signer %s is not reporter %s", addr, b.o.Reporter))
 			return res
+		}
+
+		if over := b.knownOverCap(len(msgs)); over != "" {
+			msgs = b.halve(&res, msgs, over)
+			continue
 		}
 
 		pr := Prune(b.simulator(job.timeout), msgs)
@@ -840,7 +874,12 @@ func (b *Broadcaster) halve(res *buildResult, msgs []policy.Planned, over string
 
 // firstSend broadcasts a signed transaction for the first time and classifies the answer (spec §6.5).
 func (b *Broadcaster) firstSend(msgs []policy.Planned, raw, hash []byte, fee sdk.Coins) *firstSend {
-	out := &firstSend{msgs: msgs, raw: raw, hash: hash, fee: fee}
+	out := &firstSend{
+		msgs: msgs,
+		raw:  raw,
+		hash: hash,
+		fee:  fee,
+	}
 
 	r, err := b.chain.BroadcastSync(b.work, raw)
 	switch {
@@ -924,6 +963,20 @@ func EffectiveMaxGas(maxGas uint64, blockMaxGas int64) uint64 {
 	}
 
 	return min(maxGas, uint64(blockMaxGas)) //nolint:gosec // positive
+}
+
+// knownOverCap checks manual gas and fixed fees before simulation can reject a whole batch in ante.
+func (b *Broadcaster) knownOverCap(n int) string {
+	var gas uint64
+	if b.o.GasPerMessage > 0 {
+		if uint64(n) > math.MaxUint64/b.o.GasPerMessage { //nolint:gosec // n is a batch size
+			return fmt.Sprintf("gas limit for %d messages at %d gas per message overflows uint64", n, b.o.GasPerMessage)
+		}
+
+		gas = b.gasLimit(0, n)
+	}
+
+	return b.overCap(gas, FeeFor(gas, b.o.GasPrices, b.o.Fees))
 }
 
 // overCap describes a gas limit or fee above its cap, or returns "".
