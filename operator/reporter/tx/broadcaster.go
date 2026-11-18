@@ -409,7 +409,8 @@ func (b *Broadcaster) observe(height int64, t time.Time) {
 	s.height = max(s.height, height)
 }
 
-// tick refreshes the snapshot while anything is pending and re-sends transactions whose last broadcast failed.
+// tick refreshes the snapshot while anything is pending, re-sends transactions whose last broadcast failed and lets
+// failed lookups run again.
 func (b *Broadcaster) tick() {
 	s := &b.st
 	if !s.refreshing && (len(s.entries) > 0 || len(s.deferred) > 0 || s.followBusy) {
@@ -426,7 +427,13 @@ func (b *Broadcaster) tick() {
 	}
 
 	for _, e := range s.entries {
-		if tx := e.tx; tx != nil && tx.phase == sent && tx.resend && !tx.busy && !s.chainTime.After(e.timeout) {
+		tx := e.tx
+		if tx == nil {
+			continue
+		}
+
+		tx.lookupFailed = false
+		if tx.phase == sent && tx.resend && !tx.busy && !s.chainTime.After(e.timeout) {
 			b.resend(e, tx)
 		}
 	}
@@ -448,7 +455,7 @@ func (b *Broadcaster) pump() {
 	}
 
 	for _, e := range s.entries {
-		if tx := e.tx; tx != nil && tx.phase == sent && tx.observed && !tx.busy && tx.looked < s.height {
+		if tx := e.tx; tx != nil && tx.phase == sent && tx.observed && !tx.busy && !tx.lookupFailed && tx.looked < s.height {
 			b.lookup(e, tx)
 		}
 	}
@@ -747,12 +754,7 @@ func (b *Broadcaster) build(job buildJob) (res buildResult) {
 		}
 	}
 
-	for len(msgs) > 0 {
-		if b.stop.Err() != nil {
-			res.released = append(res.released, msgs...)
-			return res
-		}
-
+	refresh := func() (*akash.State, error) {
 		st, err := b.chain.Latest(b.work)
 		if err == nil {
 			res.see(st)
@@ -760,6 +762,17 @@ func (b *Broadcaster) build(job buildJob) (res buildResult) {
 				chainTime = st.Time
 			}
 		}
+
+		return st, err
+	}
+
+	for len(msgs) > 0 {
+		if b.stop.Err() != nil {
+			res.released = append(res.released, msgs...)
+			return res
+		}
+
+		st, err := refresh()
 
 		if job.timeout.Sub(chainTime) < cutoff {
 			res.deferAll(msgs, reasonCutoff)
@@ -836,6 +849,19 @@ func (b *Broadcaster) build(job buildJob) (res buildResult) {
 				msgs = msgs[:fit]
 				continue
 			}
+		}
+
+		// Once stopping, release the batch as after Build: a cutoff deferral would re-enter the deferrals shutdown clears.
+		if b.stop.Err() != nil {
+			res.released = append(res.released, msgs...)
+			return res
+		}
+
+		// Simulation can outlast the cutoff. If this snapshot fails, the last chain time seen stands.
+		_, _ = refresh()
+		if job.timeout.Sub(chainTime) < cutoff {
+			res.deferAll(msgs, reasonCutoff)
+			return res
 		}
 
 		raw, hash, err := b.b.Build(b.stop, sdkMsgs(msgs), gas, fee, job.timeout)

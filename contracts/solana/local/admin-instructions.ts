@@ -648,11 +648,17 @@ export interface DecodedEvent {
 // A multisig executes admin instructions by CPI, and Anchor's EventParser
 // ignores events emitted inside a CPI. Attribute each `Program data:` line to
 // its invocation frame instead, with the reporters' parser, and keep the
-// events this program emitted at any depth.
+// events this program emitted at any depth. That parser keeps only top-level
+// frames of truncated logs, which would hide events inside a CPI, so
+// truncated logs fail.
 export function decodeEvents(
   logs: readonly string[],
   program: IdlProgram,
 ): DecodedEvent[] {
+  assert.ok(
+    !logs.includes("Log truncated"),
+    "logs are truncated, so their events cannot be decoded",
+  );
   return programEvents(logs, program.programId, (data) =>
     program.coder.events.decode(data),
   ).map((event) => ({ name: event.name, data: plain(event.data) }));

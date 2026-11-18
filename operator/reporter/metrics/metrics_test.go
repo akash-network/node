@@ -145,14 +145,13 @@ func TestServe(t *testing.T) {
 	require.NoError(t, err)
 
 	addr := lis.Addr().String()
-	require.NoError(t, lis.Close())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	done := make(chan error, 1)
 
-	go func() { done <- metrics.Serve(ctx, addr, reg) }()
+	go func() { done <- metrics.Serve(ctx, lis, reg) }()
 
 	var body []byte
 
@@ -181,12 +180,11 @@ func TestServe(t *testing.T) {
 	}
 }
 
-func TestServeListenError(t *testing.T) {
+func TestServeAcceptError(t *testing.T) {
 	lis, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
+	require.NoError(t, lis.Close())
 
-	defer func() { _ = lis.Close() }()
-
-	err = metrics.Serve(context.Background(), lis.Addr().String(), prometheus.NewRegistry())
-	require.Error(t, err)
+	err = metrics.Serve(context.Background(), lis, prometheus.NewRegistry())
+	require.ErrorIs(t, err, net.ErrClosed)
 }

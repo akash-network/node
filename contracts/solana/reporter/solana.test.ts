@@ -588,6 +588,53 @@ test("log truncation keeps only top-level AKT frames that already succeeded", as
       false,
     ],
     [
+      "lines after the marker keep a closed AKT frame",
+      (p, e) => [
+        `Program ${budget} invoke [1]`,
+        `Program ${budget} success`,
+        `Program ${p} invoke [1]`,
+        e,
+        `Program ${p} consumed 1 of 2 compute units`,
+        `Program ${p} success`,
+        `Program ${other} invoke [1]`,
+        "Log truncated",
+        `Program ${other} consumed 3 of 4 compute units`,
+        `Program ${other} success`,
+      ],
+      true,
+    ],
+    [
+      "AKT frame closing between two markers",
+      (p, e) => [
+        `Program ${p} invoke [1]`,
+        e,
+        "Log truncated",
+        `Program ${p} success`,
+        "Log truncated",
+      ],
+      false,
+    ],
+    [
+      "AKT frame closing after the marker",
+      (p, e) => [
+        `Program ${p} invoke [1]`,
+        e,
+        "Log truncated",
+        `Program ${p} success`,
+      ],
+      false,
+    ],
+    [
+      "AKT event after the marker",
+      (p, e) => [
+        `Program ${p} invoke [1]`,
+        "Log truncated",
+        e,
+        `Program ${p} success`,
+      ],
+      false,
+    ],
+    [
       "completed AKT frame without the event",
       (p) => [
         `Program ${p} invoke [1]`,

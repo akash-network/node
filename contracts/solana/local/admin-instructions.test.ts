@@ -829,6 +829,10 @@ test("events are read by invocation frame, also inside a CPI", () => {
     () => decodeEvents(cpi.slice(0, -1), AKT),
     /inconsistent program log stack/,
   );
+  // Truncated logs keep only the top-level frames closed before the marker,
+  // which hides the event inside the CPI: they fail instead of decoding to [].
+  const truncated = [...cpi.slice(0, 7), "Log truncated", ...cpi.slice(7)];
+  assert.throws(() => decodeEvents(truncated, AKT), /logs are truncated/);
 });
 
 test("checkpoints come from agreeing CometBFT commits", () => {

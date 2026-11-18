@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"math"
 	"strconv"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -26,6 +28,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/tx/signing"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/gagliardetto/solana-go"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -1140,4 +1143,50 @@ func TestBlockIntervalAndLatency(t *testing.T) {
 	fake.Advance(time.Minute)
 	n.CommitBlock()
 	require.Equal(t, h, latestHeight(t, rpc))
+}
+
+func TestGRPCRepliesAreSnapshots(t *testing.T) {
+	c := newChain(t)
+	sc := c.scenario(t)
+	sc.Akash.Params.Reporters = []string{"0", "r1", "r2"} // Enabled is true and 0 is even: consistent
+	n, _ := startAkash(t, sc, simnode.Options{})
+	q := sinkv1.NewQueryClient(grpcConn(t, n))
+	stop := make(chan struct{})
+	var (
+		wg      sync.WaitGroup
+		replies atomic.Int64
+	)
+	for range 4 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				select {
+				case <-stop:
+					return
+				default:
+				}
+				res, err := q.Params(t.Context(), &sinkv1.QueryParamsRequest{})
+				if !assert.NoError(t, err) {
+					return
+				}
+				replies.Add(1)
+				i, err := strconv.Atoi(res.Params.Reporters[0])
+				assert.NoError(t, err)
+				assert.Equal(t, i%2 == 0, res.Params.Enabled, "a reply mixes the old and the new state")
+			}
+		}()
+	}
+	// Mutate in place, as any Mutate callback may edit, until enough replies have completed meanwhile.
+	base, deadline := replies.Load(), time.Now().Add(10*time.Second)
+	for i := 0; replies.Load()-base < 200 && time.Now().Before(deadline); i++ {
+		n.Mutate(func(sc *simnode.Scenario) {
+			sc.Akash.Params.Enabled = i%2 == 0
+			sc.Akash.Params.Reporters[0] = strconv.Itoa(i)
+		})
+	}
+	during := replies.Load() - base
+	close(stop)
+	wg.Wait()
+	require.GreaterOrEqual(t, during, int64(200), "too few replies completed during 10 s of mutations")
 }

@@ -239,11 +239,11 @@ The pass-start snapshot (section 5.2) runs the same checks without status accoun
 
 **Absent path** (port of `absent` and `showsReported`).
 
-- slotLimit = context slot + lead. The lead is `solana.max-slot-lead`, or (max-age + 60 s) × 5 slots per second when that key is 0.
+- slotLimit = context slot + lead. The lead is `solana.max-slot-lead`, or (max-age + 60 s, rounded up to whole seconds) × 5 slots per second when that key is 0.
 - A reported slot in (context slot, slotLimit] gives `Solana node is behind reported evidence; absence cannot authorize a veto`.
 - Each reported observation at or below the context slot is looked up with `getTransaction` (finalized). If the transaction exists at that slot with that first signature, and resolves the status with the reported outcome, the result is `reported Solana transaction contradicts missing status`.
 
-**Program logs** (port of `programEvents`). The invoke and exit patterns and the invoke-depth checks are the same as in TS. `Program data:` lines are attributed to the executing frame, including CPI frames. When `Log truncated` is the last line, only top-level AKT frames that closed with `success` count. Unbalanced logs supply no evidence.
+**Program logs** (port of `programEvents`). The invoke and exit patterns and the invoke-depth checks are the same as in TS. `Program data:` lines are attributed to the executing frame, including CPI frames. Agave writes `Log truncated` once and keeps logging later messages that still fit, so parsing stops at the first `Log truncated`: only top-level AKT frames that closed with `success` before it count, and the lines after it are ignored. Unbalanced logs supply no evidence.
 
 **Decoders.**
 
@@ -298,7 +298,7 @@ Each HTTP endpoint gets one keep-alive connection pool sized to its concurrency.
 3. A light-client pin mismatch stops the pass.
    - No new chunk starts, and running chunks are cancelled; events they already wrote stand.
    - The `light-client-mismatch` alert and an error are written once every running chunk has stopped, so no review event follows them. No summary is written.
-   - From the moment a chunk finds the mismatch until the next pass begins, follow-up reviews (section 6.6) are skipped. A follow-up that finds the same change writes no alert of its own, so the pass writes exactly one mismatch alert, followed by its error.
+   - From the moment a chunk finds the mismatch until the next pass begins, follow-up reviews (section 6.6) are skipped. One already running stops before its next review or `{id, error}` event, counting nothing more, and never resumes, even after the next pass begins. A follow-up that finds the same change writes no alert of its own, so the pass writes exactly one mismatch alert, followed by its error.
    - A deferred message whose follow-up review is skipped gets `{id, error: "sink message not sent: deferred (<reason>) until <time>"}`, counts as a failure and is released, so `scan` does not wait for it window after window.
    - Messages already planned are still sent; TS had sent them before it reached the mismatch.
 4. Pass-start identity and freshness failures, and listing errors, end the pass with an error line and no summary. During reviews, snapshot and observation errors fail only the affected transfers (`{id, error}`), and the pass continues.
@@ -457,7 +457,7 @@ Older snapshots only defer messages; they never affect safety.
 - **Re-sends.** For a transaction already sent once, `failed to add unordered nonce` also means an earlier copy may be pending or included. The transaction stays sent.
 - **Slot taken.** `failed to add unordered nonce` on a first send means another transaction holds the slot's replay key: an earlier attempt by this process or another one. The slot is closed for the window, and its messages are deferred.
 - **Rejection.** Any other CheckTx rejection of a first send is final. Each message gets `{id, error: "sink transaction rejected: <HASH> code <n>: <log>"}`, and the slot stays usable in that window. A rejection of a re-send is not final; the transaction stays sent.
-- **Confirmation.** While any transaction is unconfirmed, the broadcaster refreshes the height tracker once a second, including between passes. On every new height, each unconfirmed transaction is looked up with `tx(hash)`:
+- **Confirmation.** While any transaction is unconfirmed, the broadcaster refreshes the height tracker once a second, including between passes. On every new height, and at the next refresh after a failed lookup, each unconfirmed transaction is looked up with `tx(hash)`:
   - code 0 gives `{id, transactionHash}` for each message, with the hash in uppercase hex as cosmjs printed it;
   - a replay-key failure (codespace `sdk`, code 18, a log containing `failed to add unordered nonce`) means another transaction took the slot first, and its messages are deferred;
   - any other code gives `{id, error: "sink transaction failed: <HASH> code <n>"}`, the TS text.
@@ -548,14 +548,14 @@ This follows `cmd/akash` and chain-sdk's `InterceptConfigsPreRunHandler`. It is 
 
 | Command   | Behavior                                                                                                                                                                       | TS equivalent                 |
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------- |
-| `init`    | Writes `<home>/config/reporter.toml` rendered from the effective configuration (defaults plus any flags and environment). Refuses to overwrite without `--overwrite`.           | None                          |
+| `init`    | Writes `<home>/config/reporter.toml` rendered from the effective configuration (defaults plus any flags and environment). Refuses to overwrite without `--overwrite`. With `--overwrite`, renames a synced temporary file over the target, so a failed write keeps the old file. Keeps the existing file's mode, owner and group where it may, and a new file is 0600; without the privilege to keep the owner, the file belongs to the user who runs `init`. Through a symlink, replaces the link's target, and refuses a target that is not a regular file. Where no temporary file can be created or renamed into place (a single-file bind mount), writes in place, and there a failed write can leave a partial file. Through a dangling symlink, creates the link's target in place. | None                          |
 | `start`   | Runs a pass, waits `scan.interval`, and repeats. This is the image's default command.                                                                                          | `run --watch`                 |
 | `scan`    | Runs one pass, then waits for its transactions and follow-up reviews (section 6.5). Exits 1 if anything failed.                                                                | `run`                         |
 | `check`   | Validates offline, including the network guard and signer selection, with no RPC, keyring or signer access. Prints `Configuration valid. No RPC request or transaction sent.` | `check`                       |
 | `keys`    | The cosmos-sdk keyring commands: `add`, `import`, `import-hex`, `export`, `list`, `show`, `delete` and the rest.                                                               | `keys create`, `keys address` |
 | `version` | Prints the service name, version, commit, platform and Go version.                                                                                                             | `--version`                   |
 
-`start` and `scan` first run the `check` validation. They then connect to both Akash endpoints and run the node-ID check, plus the transaction-index check in broadcast mode. In broadcast mode they load the signer, check its address, read the account number and read the consensus block max gas (section 6.4). Finally they start the metrics listener, if configured.
+`start` and `scan` first run the `check` validation. They then connect to both Akash endpoints and run the node-ID check, plus the transaction-index check in broadcast mode. In broadcast mode they load the signer, check its address, read the account number and read the consensus block max gas (section 6.4). Finally they bind the metrics listener, if configured; a bind failure ends the command before any pass.
 
 ### 8.3 Keys
 
@@ -636,7 +636,7 @@ This follows `cmd/akash` and chain-sdk's `InterceptConfigsPreRunHandler`. It is 
 
 Akash-style zerolog. Logs cover:
 
-- a startup summary of the effective configuration, without key material;
+- a startup summary of the effective configuration, without key material and with RPC endpoints shown as `scheme://host`;
 - retries;
 - per-pass cache and RPC statistics;
 - signer and node identity.

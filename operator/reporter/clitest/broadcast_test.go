@@ -660,6 +660,54 @@ func TestStartSigtermOrdering(t *testing.T) {
 	requireVotedOnce(t, n, len(broadcasts)-1)
 }
 
+// TestScanSigtermJoinsFollowUp signals scan while a follow-up review waits on evidence. In refund-queue, R1's inclusion
+// starts a refund-head review of R2. The pass reviews R2 using its stored vote, so it calls no getBlock; after the test
+// drops that vote, the follow-up's evidence read is slow and fails. That failure precedes the summary and counts in it.
+func TestScanSigtermJoinsFollowUp(t *testing.T) {
+	sc := simnode.Scenarios()["refund-queue"]()
+	sc.Solana.Failures = map[string]simnode.Failure{"getBlock": {Code: -32004, Message: "block not available"}}
+	rec, err := sinkid.DecodeRecord(sc.Akash.Transfers[1].Transfer)
+	require.NoError(t, err)
+
+	// Blocks come only when the test commits one, so R1's refund is included after the pass.
+	n, err := simnode.Start(t.Context(), sc, simnode.Options{AlignWindow: true, BlockFetchLatency: 3 * time.Second})
+	require.NoError(t, err)
+	t.Cleanup(n.Close)
+
+	home := withKey(t)
+	var stdout, stderr syncBuffer
+	done := make(chan int, 1)
+	go func() {
+		done <- run(t.Context(), &stdout, &stderr, reporterArgs(n, home, "scan", keyringBroadcast...)...)
+	}()
+
+	require.Eventually(t, func() bool {
+		return strings.Count(stdout.String(), `"observed"`) >= 3
+	}, 60*time.Second, 5*time.Millisecond, stderr.String())
+	n.Mutate(func(sc *simnode.Scenario) { sc.Akash.Transfers[1].Transfer.Settlement.Votes = nil })
+
+	require.Eventually(t, func() bool {
+		n.CommitBlock()
+		return n.Calls("getBlock") > 0
+	}, 60*time.Second, 200*time.Millisecond, stderr.String())
+	sigterm(t) // the follow-up now waits on getBlock, and no transaction is in flight
+
+	require.Equal(t, 1, exitCodeOf(t, done), stderr.String())
+
+	events := lines(t, stdout.String())
+	last := len(events) - 1
+	require.Equal(t, []int{last}, summaryIndexes(events), "the summary is the last line")
+	require.EqualValues(t, 1, events[last]["failures"], "the follow-up's failure counts")
+
+	failed := -1
+	for i, ev := range events {
+		if ev["id"] == rec.ID.String() && ev["error"] != nil {
+			failed = i
+		}
+	}
+	require.True(t, failed >= 0 && failed < last, "R2's follow-up error precedes the summary")
+}
+
 // sigterm sends SIGTERM to the test process, which the running CLI handles.
 func sigterm(t *testing.T) {
 	t.Helper()

@@ -52,21 +52,21 @@ akt-reporter init --home ~/.akt-reporter \
   --solana.program-id <program> --solana.mint <mint>
 ```
 
-`init` renders the effective configuration: defaults plus any flags and environment variables. It refuses to overwrite a file without `--overwrite`. It writes the file even when it breaks a rule, because a fresh file has its required keys empty, and it prints every rule the file does not yet satisfy. [`reporter.example.toml`](../../../_run/akt-reporter/reporter.example.toml) is the output of `init` on an empty home, and every release archive contains it.
+`init` renders the effective configuration: defaults plus any flags and environment variables. It refuses to overwrite a file without `--overwrite`. With `--overwrite`, it renames a synced temporary file over the target, so a failed write keeps the old file. It keeps the existing file's mode, owner and group where it may, and a new file is 0600; without the privilege to keep the owner, the file belongs to the user who runs `init`. Through a symlink, it replaces the link's target, and it refuses a target that is not a regular file. Where no temporary file can be created or renamed into place (a single-file bind mount), it writes in place, and there a failed write can leave a partial file. Through a dangling symlink, it creates the link's target in place. It writes the file even when it breaks a rule, because a fresh file has its required keys empty, and it prints every rule the file does not yet satisfy. [`reporter.example.toml`](../../../_run/akt-reporter/reporter.example.toml) is the output of `init` on an empty home, and every release archive contains it.
 
 Every key is also a flag, such as `--solana.rpc`, and an environment variable: add the prefix `AKT_REPORTER_` and replace `.` and `-` with `_`, as in `AKT_REPORTER_SOLANA_RPC`. Precedence is flag, environment, file, default. Unknown keys in the file are errors. Unknown `AKT_REPORTER_*` variables are logged as warnings and ignored. The [configuration reference](operator-configuration.md#reporter-configuration) lists every key, its default and its rules. The ones you must set:
 
-| Key                   | Meaning                                                                                 |
-| --------------------- | --------------------------------------------------------------------------------------- |
-| `reporter`            | Your reporter account: a lowercase 20-byte `akash` address                              |
-| `chain-id`            | Akash chain ID; also checked against the bridge account                                 |
-| `node`, `grpc-addr`   | Your Akash node's CometBFT RPC and gRPC addresses, on one node                          |
-| `solana.rpc`          | Your Solana node. Credentials in URLs are refused; use a local authenticated proxy      |
-| `solana.genesis-hash` | From your own node: `solana --url <node> genesis-hash`. A validator reset changes it    |
-| `solana.program-id`   | The compatible AKT program                                                              |
-| `solana.mint`         | The program's canonical mint PDA. Set it in the configuration; no IDL rebuild is needed |
+| Key                   | Meaning                                                                                                                                                            |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `reporter`            | Your reporter account: a lowercase 20-byte `akash` address                                                                                                         |
+| `chain-id`            | Akash chain ID; also checked against the bridge account                                                                                                            |
+| `node`, `grpc-addr`   | Your Akash node's CometBFT RPC and gRPC addresses, on one node                                                                                                     |
+| `solana.rpc`          | Your Solana node. Keep credentials out of the URL and use a local authenticated proxy: `user:password@` is refused, and a key in the path or query is not detected |
+| `solana.genesis-hash` | From your own node: `solana --url <node> genesis-hash`. A validator reset changes it                                                                               |
+| `solana.program-id`   | The compatible AKT program                                                                                                                                         |
+| `solana.mint`         | The program's canonical mint PDA. Set it in the configuration; no IDL rebuild is needed                                                                            |
 
-The chain compares `reporter` with the listed members as exact strings, so governance must list it in that lowercase form; x/sink also rejects a module account as a reporter. `solana.light-client-program` is an optional pin; leave it empty to follow the bridge account (see [light client](#light-client)). `max-age` is the freshness bound for both nodes, at most `10m`. `solana.max-slot-lead` is optional, and defaults to `(max-age + 60 s) × 5` slots (see [scanning](#scanning)).
+The chain compares `reporter` with the listed members as exact strings, so governance must list it in that lowercase form; x/sink also rejects a module account as a reporter. `solana.light-client-program` is an optional pin; leave it empty to follow the bridge account (see [light client](#light-client)). `max-age` is the freshness bound for both nodes, at most `10m`. `solana.max-slot-lead` is optional, and defaults to `(max-age + 60 s) × 5` slots, with the sum rounded up to whole seconds (see [scanning](#scanning)).
 
 For production installation, supervision and rollback use [service deployment](deploy-services.md). [Independent downloads and Docker Compose](operator-releases.md) include the binary and the image. The commands below also support explicitly configured development networks.
 
@@ -79,7 +79,7 @@ For production installation, supervision and rollback use [service deployment](d
 | `keys`    | The cosmos-sdk keyring commands: `add`, `import`, `import-hex`, `export`, `list`, `show`, `delete` and the rest                               |
 | `version` | Prints the service name, version, commit, platform and Go version                                                                             |
 
-`start` and `scan` first run the `check` validation. They then connect to both Akash endpoints and run the node-ID check, plus the transaction-index check in broadcast mode. In broadcast mode they load the signer, check its address and read the account number. Finally they start the metrics listener, if configured.
+`start` and `scan` first run the `check` validation. They then connect to both Akash endpoints and run the node-ID check, plus the transaction-index check in broadcast mode. In broadcast mode they load the signer, check its address and read the account number. Finally they bind the metrics listener, if configured; a bind failure ends the command before any pass.
 
 Preview one pass without loading a key, then run continuously once the output looks right:
 
@@ -224,7 +224,7 @@ A governance resolution starts a new round, so a veto after it is a new decision
 
 ### Confirmation
 
-The reporter broadcasts with `broadcast_tx_sync`, and re-sends the same signed bytes after a transport error until the timeout passes. While a transaction is unconfirmed it refreshes its view of the chain once a second, including between passes, and looks the transaction up on every new height. Outcomes are events on stdout:
+The reporter broadcasts with `broadcast_tx_sync`, and re-sends the same signed bytes after a transport error until the timeout passes. While a transaction is unconfirmed it refreshes its view of the chain once a second, including between passes, and looks the transaction up on every new height and at the next refresh after a failed lookup. Outcomes are events on stdout:
 
 | Outcome                                   | Event                                                                    |
 | ----------------------------------------- | ------------------------------------------------------------------------ |
@@ -265,7 +265,7 @@ On the first SIGINT or SIGTERM no new chunk starts and no new transaction is sig
 
 Events go to stdout as JSON lines: per-transfer observations, proposed messages, alerts, transaction hashes, errors and one summary per pass. Amounts and slots are decimal strings; signature bytes are base64; transaction hashes are uppercase hex. The schema is the TypeScript reporter's, so existing alert routing keeps working. Only the order across transfers differs: a transfer's review comes before its transaction events, a `light-client-changed` alert comes before every event decided under the new client, and the summary is the last event of a pass, except that in `start` transaction outcomes and follow-up reviews may follow it.
 
-Logs go to stderr as akash-style zerolog: `--log_level`, `--log_format plain|json`, `--log_color` and `--log_timestamp`. They cover a startup summary of the effective configuration without key material, retries, per-pass cache and RPC statistics, and signer and node identity. Events and logs never contain key material.
+Logs go to stderr as akash-style zerolog: `--log_level`, `--log_format plain|json`, `--log_color` and `--log_timestamp`. They cover a startup summary of the effective configuration without key material, retries, per-pass cache and RPC statistics, and signer and node identity. Startup logs show RPC endpoints as `scheme://host`. Events and logs never contain key material.
 
 When `metrics.listen` is set, `/metrics` serves Prometheus metrics. Bind it to a private interface.
 

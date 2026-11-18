@@ -534,15 +534,17 @@ async function goReporterHome(
     exec(REPORTER_GO_BIN, ["keys", ...args, "--home", home], {
       maxBuffer: 1024 * 1024,
     });
-  try {
-    await keys(["show", "reporter", "-a"]);
-  } catch {
-    const imported = keys(["import-hex", "reporter"]);
-    imported.child.stdin?.end(
-      await readFile(join(ROOT, `reporter${index}.key`), "utf8"),
-    );
-    await imported;
-  }
+  const { stdout } = await keys(["list", "--output", "json"]);
+  if (
+    (JSON.parse(stdout) as { name: string }[]).some(
+      (k) => k.name === "reporter",
+    )
+  )
+    return;
+  const secret = await readFile(join(ROOT, `reporter${index}.key`), "utf8");
+  const imported = keys(["import-hex", "reporter"]);
+  imported.child.stdin?.end(secret);
+  await imported;
 }
 function ledgerShreds() {
   const value = process.env.AKT_SOLANA_LEDGER_SHREDS ?? "1000000";

@@ -925,6 +925,105 @@ func TestOneMismatchAlertPerPass(t *testing.T) {
 	require.Contains(t, decode(t, lines[len(lines)-1])["error"], "differs from pinned")
 }
 
+func TestFollowUpStopsOnPassMismatch(t *testing.T) {
+	pin := simnode.LightClient
+	for name, later := range map[string]bool{"no review or queue after the pass's error": false, "a later pass does not resume it": true} {
+		t.Run(name, func(t *testing.T) {
+			sc := simnode.Scenarios()["votes"]()
+			ids := idsOf(t, sc)
+			h := newHarness(t, sc, setup{pin: &pin, queue: &recorder{}})
+			// The follow-up pauses in its first Queue call: its snapshot passed the pin and its first review is written.
+			own, entered, release, done := &recorder{}, make(chan struct{}), make(chan struct{}), make(chan error, 1)
+			var once sync.Once
+			own.onQueue = func(policy.Planned) {
+				once.Do(func() {
+					close(entered)
+					select {
+					case <-release:
+					case <-time.After(10 * time.Second):
+					}
+				})
+			}
+			go func() { done <- h.scanner.Review(scan.WithQueuer(t.Context(), own), ids[:2], 0) }()
+			select {
+			case <-entered:
+			case <-time.After(10 * time.Second):
+				t.Fatal("the follow-up never queued")
+			}
+
+			setBridge(h.node, other)
+			require.Equal(t, 1, h.scanner.Pass(t.Context(), nil), "as in start, settle does not wait for follow-ups")
+			lines := h.lines()
+			require.Contains(t, decode(t, lines[len(lines)-1])["error"], "differs from pinned")
+			if later {
+				setBridge(h.node, pin)
+				h.clock.Advance(time.Second)
+				require.Equal(t, 0, h.scanner.Pass(t.Context(), nil))
+				h.lines()
+			}
+
+			close(release)
+			require.ErrorIs(t, <-done, scan.ErrPassAborted)
+			require.Empty(t, h.lines(), "nothing follows")
+			require.Len(t, own.all(), 1, "only the Queue call that began before the mismatch")
+		})
+	}
+}
+
+func TestFollowUpFailureAfterPassMismatch(t *testing.T) {
+	pin := simnode.LightClient
+	sc := simnode.Scenarios()["votes"]()
+	ids := idsOf(t, sc)
+	// The follow-up's evidence read waits in the proxy until released, and getBlock fails until the pin is back.
+	entered, release := make(chan struct{}), make(chan struct{})
+	var (
+		once    sync.Once
+		failing atomic.Bool
+	)
+	failing.Store(true)
+	h := newHarness(t, sc, setup{pin: &pin, queue: &recorder{}, solana: func(_ *http.Request, method string, _ int) bool {
+		if method != "getBlock" || !failing.Load() {
+			return false
+		}
+		once.Do(func() {
+			close(entered)
+			select {
+			case <-release:
+			case <-time.After(10 * time.Second):
+			}
+		})
+		return true
+	}})
+	// The follow-up's only transfer is also its last, so no later review would stop it.
+	done := make(chan error, 1)
+	go func() { done <- h.scanner.Review(t.Context(), ids[:1], 0) }()
+	select {
+	case <-entered:
+	case <-time.After(10 * time.Second):
+		t.Fatal("the follow-up never read its evidence")
+	}
+
+	setBridge(h.node, other)
+	require.Equal(t, 1, h.scanner.Pass(t.Context(), nil), "as in start, settle does not wait for follow-ups")
+	lines := h.lines()
+	require.Contains(t, decode(t, lines[len(lines)-1])["error"], "differs from pinned")
+
+	close(release)
+	select {
+	case err := <-done:
+		require.ErrorIs(t, err, scan.ErrPassAborted)
+	case <-time.After(10 * time.Second):
+		t.Fatal("the follow-up never returned")
+	}
+	require.Empty(t, h.lines(), "nothing follows the pass's error")
+
+	// The next pass, under the pinned light client again, counts no failure of the stopped follow-up.
+	failing.Store(false)
+	setBridge(h.node, pin)
+	h.clock.Advance(time.Second)
+	require.Equal(t, 0, h.scanner.Pass(t.Context(), nil))
+}
+
 func TestChunkErrorsArePerTransfer(t *testing.T) {
 	ids, transfers := pending(t, 150)
 	h := newHarness(t, scenario(transfers...), setup{solana: chunkCalls(func(_ *http.Request, call int) bool { return call == 1 })})

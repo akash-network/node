@@ -94,8 +94,9 @@ const DATA = "Program data: ";
 // Anchor's EventParser ignores events emitted inside a CPI. Attribute each
 // `Program data:` line to the executing frame from the invoke/exit lines
 // instead. Unbalanced logs cannot be attributed and throw. A later instruction
-// can exhaust the log limit; then only top-level AKT frames that already closed
-// with success count.
+// can exhaust the log limit. The runtime then writes `Log truncated` once and
+// keeps logging the messages that still fit, so parsing stops at the first
+// marker: only top-level AKT frames that closed with success before it count.
 export function programEvents<E>(
   logs: readonly string[],
   programId: web3.PublicKey,
@@ -105,9 +106,8 @@ export function programEvents<E>(
   const stack: string[] = [];
   const closed: { root: string; events: E[] }[] = [];
   let events: E[] = [];
-  for (const [index, line] of logs.entries()) {
+  for (const line of logs) {
     if (line === "Log truncated") {
-      assert.equal(index, logs.length - 1, "inconsistent truncated logs");
       return closed
         .filter((frame) => frame.root === id)
         .flatMap((frame) => frame.events);

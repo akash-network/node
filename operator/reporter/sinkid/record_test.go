@@ -64,7 +64,7 @@ func TestDecodeRecord(t *testing.T) {
 		},
 		"noncanonical recipient": {
 			state: func(t *testing.T) sinkv1.TransferState {
-				return transfer(t, recipient.String()+"1", sdk.NewInt64Coin(denomUakt, 1))
+				return transfer(t, recipient.String()+"0", sdk.NewInt64Coin(denomUakt, 1))
 			},
 			err: errRecipient,
 		},

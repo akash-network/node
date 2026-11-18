@@ -13,6 +13,7 @@ import (
 	"time"
 
 	abci "github.com/cometbft/cometbft/abci/types"
+	cmtjson "github.com/cometbft/cometbft/libs/json"
 	ctypes "github.com/cometbft/cometbft/rpc/core/types"
 	rpctypes "github.com/cometbft/cometbft/rpc/jsonrpc/types"
 	grpctypes "github.com/cosmos/cosmos-sdk/types/grpc"
@@ -308,15 +309,34 @@ func TestLegacySimulationCancellationAndQueue(t *testing.T) {
 }
 
 func TestLegacySimulationBounds(t *testing.T) {
+	// Marshal once, outside the request deadline: under -race this takes seconds.
+	raw, err := cmtjson.Marshal(&ctypes.ResultABCIQuery{Response: abci.ResponseQuery{
+		Height: 42,
+		Value:  []byte(strings.Repeat(" ", maxRecvBytes+1)),
+	}})
+	require.NoError(t, err)
 	var calls atomic.Int64
-	c := mockABCI(t, func(_ *http.Request, _ abciWireRequest) abci.ResponseQuery {
-		calls.Add(1)
-		return abci.ResponseQuery{
-			Height: 42,
-			Value:  []byte(strings.Repeat(" ", maxRecvBytes+1)),
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req rpctypes.RPCRequest
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&req))
+		if req.Method == "status" {
+			data, err := json.Marshal(rpctypes.NewRPCSuccessResponse(req.ID, &ctypes.ResultStatus{}))
+			require.NoError(t, err)
+			_, _ = w.Write(data)
+			return
 		}
-	})
-	_, err := c.Simulate(t.Context(), make([]byte, maxRecvBytes+1))
+		calls.Add(1)
+		id, err := json.Marshal(req.ID)
+		require.NoError(t, err)
+		_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":` + string(id) + `,"result":`))
+		_, _ = w.Write(raw)
+		_, _ = w.Write([]byte(`}`))
+	}))
+	defer server.Close()
+	c, err := Dial(t.Context(), Options{ABCI: true, Node: server.URL, RequestTimeout: time.Second})
+	require.NoError(t, err)
+	defer func() { require.NoError(t, c.Close()) }()
+	_, err = c.Simulate(t.Context(), make([]byte, maxRecvBytes+1))
 	require.Equal(t, codes.ResourceExhausted, status.Code(err))
 	require.Zero(t, calls.Load())
 	c.timeout = 10 * time.Second

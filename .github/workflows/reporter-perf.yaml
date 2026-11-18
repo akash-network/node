@@ -33,7 +33,7 @@ jobs:
           REPORTER_PERF=1 REPORTER_PERF_OUT="$RUNNER_TEMP/perf" GOWORK=off \
             go test ./operator/reporter/scan/ ./operator/reporter/tx/ ./x/sink/ \
             -run 'TestSteady100k|TestReporterNodeLoad|TestNoVoteExecutesTwice' \
-            -timeout 60m -v -p 1
+            -count=1 -timeout 60m -v -p 1
       - name: Upload profiles and node-load report
         if: always()
         uses: actions/upload-artifact@v4

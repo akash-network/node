@@ -48,7 +48,7 @@ type Resolved struct {
 	// LightClientPin is nil when solana.light-client-program is empty, which follows the bridge account.
 	LightClientPin *solana.PublicKey
 	Reporter       sdk.AccAddress
-	// SlotLead is solana.max-slot-lead, or (max-age + 60 s) x 5 when that is 0.
+	// SlotLead is solana.max-slot-lead or, when that is 0, (max-age + 60 s) rounded up to whole seconds, x 5.
 	SlotLead uint64
 	// GasPerMessage is 0 for gas = auto.
 	GasPerMessage uint64

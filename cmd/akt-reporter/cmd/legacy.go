@@ -3,7 +3,6 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"net/url"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -76,16 +75,4 @@ func loadLegacyConfig(cmd *cobra.Command) (config.Config, error) {
 	}
 
 	return cfg, nil
-}
-
-// legacyLogEndpoint omits operator routing tokens from startup logs.
-func legacyLogEndpoint(cfg config.Resolved, raw string) string {
-	if cfg.Legacy == nil {
-		return raw
-	}
-	endpoint, err := url.Parse(raw)
-	if err != nil {
-		return "legacy RPC"
-	}
-	return endpoint.Scheme + "://" + endpoint.Host
 }

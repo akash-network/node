@@ -4,10 +4,15 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"crypto/tls"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"math"
 	"net"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"sync"
 	"testing"
 	"time"
@@ -513,12 +518,14 @@ func TestTrackerRefreshAtMostOncePerInterval(t *testing.T) {
 	require.Equal(t, 2, n.Calls("status")-before)
 }
 
-// hungSink answers no transfer query: each waits until its call ends.
+// hungSink answers no transfer query: each signals entered, then waits until its call ends.
 type hungSink struct {
 	sinkv1.UnimplementedQueryServer
+	entered chan struct{}
 }
 
-func (*hungSink) Transfer(ctx context.Context, _ *sinkv1.QueryTransferRequest) (*sinkv1.QueryTransferResponse, error) {
+func (s *hungSink) Transfer(ctx context.Context, _ *sinkv1.QueryTransferRequest) (*sinkv1.QueryTransferResponse, error) {
+	s.entered <- struct{}{}
 	<-ctx.Done()
 	return nil, status.FromContextError(ctx.Err()).Err()
 }
@@ -530,12 +537,16 @@ func TestShutdownCancelsQueuedReads(t *testing.T) {
 	opts.RequestTimeout = 500 * time.Millisecond
 	c := dial(t, opts)
 
+	// Ten times the concurrency limit: two calls run, the others wait for a permit.
+	const calls = 20
+
 	// The sink queries now reach a node that never answers.
 	var lc net.ListenConfig
 	l, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	srv := grpc.NewServer(grpc.ForceServerCodec(codec.NewProtoCodec(c.registry).GRPCCodec()))
-	sinkv1.RegisterQueryServer(srv, &hungSink{})
+	sink := &hungSink{entered: make(chan struct{}, calls)}
+	sinkv1.RegisterQueryServer(srv, sink)
 	go func() { _ = srv.Serve(l) }()
 	t.Cleanup(srv.Stop)
 	conn, err := grpc.NewClient(l.Addr().String(),
@@ -547,8 +558,6 @@ func TestShutdownCancelsQueuedReads(t *testing.T) {
 	t.Cleanup(func() { _ = conn.Close() })
 	c.sink = sinkv1.NewQueryClient(conn)
 
-	// Ten times the concurrency limit: two calls run, the others wait for a permit.
-	const calls = 20
 	stop, shutdown := context.WithCancel(t.Context())
 	ctx := WithStop(context.WithoutCancel(stop), stop)
 	id := newID(t, 1, 10, 1)
@@ -559,7 +568,14 @@ func TestShutdownCancelsQueuedReads(t *testing.T) {
 			errs <- err
 		}()
 	}
-	time.Sleep(100 * time.Millisecond)
+	// Both permits are held once two reads reach the node; the others wait for a permit.
+	for range opts.Concurrency {
+		select {
+		case <-sink.entered:
+		case <-time.After(5 * time.Second):
+			t.Fatal("the reads holding the permits never reached the node")
+		}
+	}
 
 	began := time.Now()
 	shutdown()
@@ -721,6 +737,63 @@ func TestPlaintextForLoopback(t *testing.T) {
 		require.Equal(t, want, plaintext(addr, false), addr)
 		require.True(t, plaintext(addr, true), addr)
 	}
+}
+
+func TestRedactURL(t *testing.T) {
+	for raw, origin := range map[string]string{
+		"http://127.0.0.1:26657/SECRET?token=SECRET": "http://127.0.0.1:26657",
+		"http://[::1]:26657/SECRET":                  "http://[::1]:26657",
+		// Unparsable, or no host: the raw URL never stays in the text.
+		"http://SECRET:%Q/": "invalid URL",
+		"http:///SECRET":    "invalid URL",
+	} {
+		// CometBFT renders the transport error into its own text.
+		err := redactURL(fmt.Errorf("post failed: %w", &url.Error{Op: "Post", URL: raw, Err: context.Canceled}))
+		require.EqualError(t, err, `post failed: Post "`+origin+`": context canceled`, raw)
+		require.ErrorIs(t, err, context.Canceled, raw)
+		var ue *url.Error
+		require.False(t, errors.As(err, &ue), "the raw URL stays reachable: %s", raw)
+	}
+
+	// Only a cause known to hold no URL text keeps its text and stays reachable.
+	for _, tc := range []struct {
+		cause     error
+		text      string
+		reachable bool
+	}{
+		{context.DeadlineExceeded, "context deadline exceeded", true},
+		{&net.OpError{Op: "dial", Net: "tcp", Err: errors.New("connect: connection refused")}, "dial tcp: connect: connection refused", true},
+		{&net.DNSError{Err: "no such host", Name: "node.example"}, "lookup node.example: no such host", true},
+		{&tls.CertificateVerificationError{Err: errors.New("x509: unknown authority")}, "tls: failed to verify certificate: x509: unknown authority", true},
+		{errors.New(`failed to parse Location header "/SECRET"`), "HTTP request failed", false},
+	} {
+		err := redactURL(fmt.Errorf("post failed: %w", &url.Error{Op: "Post", URL: "http://node.example/SECRET", Err: tc.cause}))
+		require.EqualError(t, err, `post failed: Post "http://node.example": `+tc.text)
+		require.Equal(t, tc.reachable, errors.Is(err, tc.cause), tc.text)
+	}
+
+	// Of the text around the url.Error, only a prefix stays, with the URL cut down.
+	ue := &url.Error{Op: "Post", URL: "http://node.example/SECRET", Err: context.Canceled}
+	require.EqualError(t, redactURL(fmt.Errorf("query %q: %w", ue.URL, ue)), `query "http://node.example": Post "http://node.example": context canceled`)
+	require.EqualError(t, redactURL(fmt.Errorf("%w; retried %q", ue, "/SECRET")), `Post "http://node.example": context canceled`)
+
+	other := errors.New("RPC error -32603 - Internal error")
+	require.Same(t, other, redactURL(other))
+	require.NoError(t, redactURL(nil))
+}
+
+func TestServerSentURLTextRedacted(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Location", "/SECRET/%zz") // net/http quotes a Location it cannot parse in its error
+		w.WriteHeader(http.StatusFound)
+	}))
+	t.Cleanup(server.Close)
+
+	_, err := Dial(t.Context(), Options{Node: server.URL + "/SECRET", GRPCAddr: "127.0.0.1:1", RequestTimeout: 5 * time.Second})
+	for e := err; e != nil; e = errors.Unwrap(e) {
+		require.NotContains(t, e.Error(), "SECRET")
+	}
+	require.EqualError(t, err, `post failed: Post "`+server.URL+`": HTTP request failed`)
 }
 
 func TestBroadcastInCache(t *testing.T) {

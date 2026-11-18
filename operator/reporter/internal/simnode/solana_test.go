@@ -426,8 +426,12 @@ func TestSolanaMethods(t *testing.T) {
 	})
 
 	t.Run("calls are counted per method", func(t *testing.T) {
-		require.Positive(t, n.Calls("getGenesisHash"))
-		require.Positive(t, n.Calls("getBlock"))
+		hashes, blocks := n.Calls("getGenesisHash"), n.Calls("getBlock")
+		_, err := rpc.GenesisHash(ctx)
+		require.NoError(t, err)
+		require.NoError(t, rpc.StreamBlock(ctx, legacyOnly, func(aktsolana.Tx) error { return nil }))
+		require.Equal(t, hashes+1, n.Calls("getGenesisHash"))
+		require.Equal(t, blocks+1, n.Calls("getBlock"))
 		require.Zero(t, n.Calls("getSlot"))
 	})
 }

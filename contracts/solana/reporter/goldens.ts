@@ -55,15 +55,22 @@ async function serve(scenario: string, run: (ready: Ready) => Promise<void>) {
     stdio: ["pipe", "pipe", "inherit"],
   });
   const exited = once(child, "exit");
+  const failed = (code: number | null) =>
+    `simnode serve --scenario ${scenario} failed with exit code ${code}`;
   try {
     const lines = createInterface({ input: child.stdout });
-    const [first] = (await once(lines, "line")) as [string];
+    const first = await Promise.race([
+      once(lines, "line").then(([line]) => line as string),
+      exited.then(([code]) => {
+        throw new Error(failed(code));
+      }),
+    ]);
     lines.close();
     await run(JSON.parse(first) as Ready);
   } finally {
     child.stdin.end();
     const [code] = (await exited) as [number | null];
-    assert.equal(code, 0, `simnode serve --scenario ${scenario} failed`);
+    assert.equal(code, 0, failed(code));
   }
 }
 

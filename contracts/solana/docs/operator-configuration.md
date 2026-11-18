@@ -82,7 +82,7 @@ for the mapping from the TypeScript reporter's JSON fields.
 | `solana.program-id`                                 | required                    | Canonical base58                                                                                        |
 | `solana.mint`                                       | required                    | Must equal `PDA("mint")` of the program                                                                 |
 | `solana.light-client-program`                       | empty, meaning follow       | Canonical base58                                                                                        |
-| `solana.max-slot-lead`                              | `0`, meaning derive         | At most 100,000. Derived as `(max-age + 60 s) × 5` slots                                                |
+| `solana.max-slot-lead`                              | `0`, meaning derive         | At most 100,000. Derived as `(max-age + 60 s) × 5` slots, with the sum rounded up to whole seconds      |
 | `scan.interval`                                     | `15s`                       | `1s` to `60s`                                                                                           |
 | `scan.audit-per-scan`                               | `100`                       | 1 to 10,000                                                                                             |
 | `scan.page-size`                                    | `500`                       | 1 to 5,000                                                                                              |

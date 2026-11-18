@@ -164,7 +164,7 @@ var usages = map[string]string{
 	"solana.program-id":           "sink program ID, canonical base58 (required)",
 	"solana.mint":                 "mint address; must equal the program's \"mint\" PDA (required)",
 	"solana.light-client-program": "light client program ID; empty follows the bridge account",
-	"solana.max-slot-lead":        "slots the cursor may lead, at most 100000; 0 derives (max-age + 60s) x 5",
+	"solana.max-slot-lead":        "slots the cursor may lead, at most 100000; 0 derives (max-age + 60s, rounded up to whole seconds) x 5",
 	"scan.interval":               "wait between passes, 1s to 60s",
 	"scan.audit-per-scan":         "transfer IDs the terminal audit rechecks per pass, 1 to 10000",
 	"scan.page-size":              "page size for list requests, 1 to 5000",

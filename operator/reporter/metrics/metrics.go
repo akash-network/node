@@ -15,10 +15,19 @@ import (
 const (
 	namespace       = "akt_reporter"
 	shutdownTimeout = 5 * time.Second
-	headerTimeout   = 10 * time.Second
 
 	labelResult = "result"
 )
+
+type timeouts struct{ header, read, write, idle time.Duration }
+
+// serverTimeouts keeps a client from holding a connection; tests shorten it.
+var serverTimeouts = timeouts{
+	header: 10 * time.Second,
+	read:   10 * time.Second,
+	write:  30 * time.Second,
+	idle:   2 * time.Minute,
+}
 
 // Metrics holds the collectors of spec section 9.3. Every method is safe on a nil *Metrics and records nothing.
 type Metrics struct {
@@ -221,21 +230,18 @@ func (m *Metrics) RecordDeferred(reason string) {
 	m.DeferredMessages.WithLabelValues(reason).Inc()
 }
 
-// Serve exposes g at /metrics on addr until ctx is cancelled, then shuts down gracefully.
-func Serve(ctx context.Context, addr string, g prometheus.Gatherer) error {
+// Serve exposes g at /metrics on lis until ctx is cancelled, then shuts down gracefully. It closes lis before it
+// returns.
+func Serve(ctx context.Context, lis net.Listener, g prometheus.Gatherer) error {
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.HandlerFor(g, promhttp.HandlerOpts{}))
 
 	srv := &http.Server{
 		Handler:           mux,
-		ReadHeaderTimeout: headerTimeout,
-	}
-
-	lc := net.ListenConfig{}
-
-	lis, err := lc.Listen(ctx, "tcp", addr)
-	if err != nil {
-		return err
+		ReadHeaderTimeout: serverTimeouts.header,
+		ReadTimeout:       serverTimeouts.read,
+		WriteTimeout:      serverTimeouts.write,
+		IdleTimeout:       serverTimeouts.idle,
 	}
 
 	errc := make(chan error, 1)

@@ -72,6 +72,8 @@ type liveTx struct {
 	busy bool
 	// looked is the highest height whose lookup has answered.
 	looked int64
+	// lookupFailed is set after a failed lookup: the next one waits for a refresh tick, not a new height.
+	lookupFailed bool
 	// observed means lookups await the outcome; it is false without a transaction index, and once Wait gave up.
 	observed bool
 	// inFlight means the transaction counts against MaxInFlight.
@@ -383,8 +385,13 @@ func (b *Broadcaster) applyAbandoned(e *slotEntry, tx *liveTx, res buildResult) 
 // lookup started, so a transaction still missing can never be included.
 func (b *Broadcaster) applyLookup(e *slotEntry, tx *liveTx, h int64, final bool, r *akash.TxResult, err error) {
 	tx.busy = false
+	if err != nil {
+		tx.lookupFailed = true
+		return
+	}
+
 	tx.looked = max(tx.looked, h)
-	if e.tx != tx || !tx.observed || err != nil {
+	if e.tx != tx || !tx.observed {
 		return
 	}
 

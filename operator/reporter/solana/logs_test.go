@@ -12,7 +12,6 @@ import (
 )
 
 const (
-	errTruncated  = "inconsistent truncated logs"
 	errStack      = "inconsistent program log stack"
 	dataPrefix    = "Program data: "
 	truncatedLine = "Log truncated"
@@ -110,33 +109,34 @@ func TestProgramEvents(t *testing.T) {
 			name     string
 			logs     []string
 			accepted bool
-			err      string
 		}{
 			{"after a completed AKT frame", []string{
 				inv(budget, 1), ok(budget),
 				inv(p, 1), inv(other, 2), ok(other), e,
 				"Program " + p + " consumed 1 of 2 compute units", ok(p),
 				inv(other, 1), "Program log: padding", truncatedLine,
-			}, true, ""},
-			{"inside the AKT frame", []string{inv(p, 1), e, inv(other, 2), truncatedLine}, false, ""},
-			{"before the AKT frame", []string{inv(budget, 1), ok(budget), inv(other, 1), truncatedLine}, false, ""},
+			}, true},
+			{"inside the AKT frame", []string{inv(p, 1), e, inv(other, 2), truncatedLine}, false},
+			{"before the AKT frame", []string{inv(budget, 1), ok(budget), inv(other, 1), truncatedLine}, false},
 			{"lines after the truncation marker", []string{
 				inv(budget, 1), ok(budget), inv(other, 1), truncatedLine, inv(p, 1), e, ok(p),
-			}, false, errTruncated},
-			{"completed AKT frame without the event", []string{inv(p, 1), ok(p), truncatedLine}, false, ""},
+			}, false},
+			{"lines after the marker keep a closed AKT frame", []string{
+				inv(budget, 1), ok(budget), inv(p, 1), e, "Program " + p + " consumed 1 of 2 compute units", ok(p),
+				inv(other, 1), truncatedLine, "Program " + other + " consumed 3 of 4 compute units", ok(other),
+			}, true},
+			{"AKT frame closing between two markers", []string{
+				inv(p, 1), e, truncatedLine, ok(p), truncatedLine,
+			}, false},
+			{"AKT frame closing after the marker", []string{inv(p, 1), e, truncatedLine, ok(p)}, false},
+			{"AKT event after the marker", []string{inv(p, 1), truncatedLine, e, ok(p)}, false},
+			{"completed AKT frame without the event", []string{inv(p, 1), ok(p), truncatedLine}, false},
 			{"AKT event inside a completed wrapper frame", []string{
 				inv(other, 1), inv(p, 2), e, ok(p), ok(other), truncatedLine,
-			}, false, ""},
+			}, false},
 		} {
 			t.Run(tc.name, func(t *testing.T) {
 				got, err := aktsolana.ProgramEvents(tc.logs, program)
-				if tc.err != "" {
-					require.EqualError(t, err, tc.err)
-					require.Empty(t, got)
-
-					return
-				}
-
 				require.NoError(t, err)
 
 				if tc.accepted {

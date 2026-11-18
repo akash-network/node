@@ -216,6 +216,30 @@ func TestLogsOnStderrEventsOnStdout(t *testing.T) {
 	require.NotContains(t, r.stderr, `"scanned"`, "an event reached stderr")
 }
 
+func TestCanonicalEndpointsRedacted(t *testing.T) {
+	n := startNode(t, "clean")
+	t.Run("startup logs", func(t *testing.T) {
+		r := runToEnd(t, reporterArgs(n, t.TempDir(), "scan",
+			"--node", n.CometURL+"?token=SOURCE", "--solana.rpc", n.SolanaURL+"/SECRET?api-key=SECRET")...)
+		require.Equal(t, 0, r.code, r.stderr)
+		require.Contains(t, r.stderr, "solana.rpc="+n.SolanaURL)
+		for _, out := range []string{r.stdout, r.stderr} {
+			require.NotContains(t, out, "SOURCE")
+			require.NotContains(t, out, "SECRET")
+		}
+	})
+	t.Run("CometBFT transport error", func(t *testing.T) {
+		l, err := net.Listen("tcp", "127.0.0.1:0")
+		require.NoError(t, err)
+		origin := "http://" + l.Addr().String()
+		require.NoError(t, l.Close()) // the dial is refused
+		r := runToEnd(t, reporterArgs(n, t.TempDir(), "scan", "--node", origin+"/SOURCE")...)
+		require.Equal(t, 1, r.code, r.stderr)
+		require.Contains(t, r.stderr, `connect to Akash: post failed: Post "`+origin+`": dial tcp`)
+		require.NotContains(t, r.stderr, "SOURCE")
+	})
+}
+
 func TestMetricsInPreview(t *testing.T) {
 	n := startNode(t, "clean")
 
@@ -251,4 +275,66 @@ func TestMetricsInPreview(t *testing.T) {
 
 	cancel()
 	require.Equal(t, 0, <-done, stderr.String())
+}
+
+func TestMetricsBindFailureStopsBeforeScanning(t *testing.T) {
+	n := startNode(t, "clean")
+	taken, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = taken.Close() })
+	r := runToEnd(t, command(t, n, "scan", "--metrics.listen", taken.Addr().String())...)
+	require.Equal(t, 1, r.code, r.stderr)
+	require.Contains(t, r.stderr, "metrics listener: listen tcp "+taken.Addr().String())
+	require.NotContains(t, r.stderr, "serving metrics")
+	require.Empty(t, r.stdout, "no pass started")
+	require.Zero(t, n.Calls("getGenesisHash"), "no Solana read before the bind")
+}
+
+func TestStartStopsDuringMetricsBind(t *testing.T) {
+	n := startNode(t, "clean")
+
+	// The bind resolves metrics.listen through net.DefaultResolver. This resolver holds every DNS exchange until the
+	// lookup is cancelled. No test in this package runs in parallel, so no other lookup uses it.
+	resolving := make(chan struct{}, 1)
+	saved := net.DefaultResolver
+	net.DefaultResolver = &net.Resolver{
+		PreferGo: true,
+		Dial: func(ctx context.Context, _, _ string) (net.Conn, error) {
+			select {
+			case resolving <- struct{}{}:
+			default:
+			}
+			<-ctx.Done()
+
+			return nil, ctx.Err()
+		},
+	}
+	t.Cleanup(func() { net.DefaultResolver = saved })
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	var stdout, stderr syncBuffer
+	args := command(t, n, "start", "--metrics.listen", "metrics.invalid:9100")
+	done := make(chan int, 1)
+	go func() { done <- run(ctx, &stdout, &stderr, args...) }()
+
+	select {
+	case <-resolving:
+	case <-time.After(30 * time.Second):
+		t.Fatalf("the metrics bind did not resolve its host: %s", stderr.String())
+	}
+
+	cancel()
+
+	select {
+	case code := <-done:
+		require.Equal(t, 0, code, stderr.String())
+	case <-time.After(30 * time.Second):
+		t.Fatal("start did not stop after cancellation")
+	}
+
+	require.Contains(t, stderr.String(), "connected to Akash")
+	require.Contains(t, stderr.String(), "stopped during startup")
+	require.Empty(t, stdout.String(), "no pass started")
 }

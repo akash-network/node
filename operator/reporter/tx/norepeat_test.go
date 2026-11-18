@@ -409,7 +409,11 @@ func noRepeatRound(t *testing.T, rng *rand.Rand) {
 		}
 	}
 	require.Equal(t, mixVotes, votes, "every vote executed")
-	require.GreaterOrEqual(t, len(ex), headRefund, "every vote and veto executed")
+	// Round 2 exists only for the resolved transfer.
+	for i := firstVeto; i < headRefund; i++ {
+		id := h.ids[i]
+		require.Positive(t, ex[executedVeto(id, 1)]+ex[executedVeto(id, 2)], "veto %d", i)
+	}
 
 	consumed, fired := 0, 0
 	h.node.Mutate(func(sc *simnode.Scenario) { consumed = len(faults) - len(sc.Akash.BroadcastFaults) })

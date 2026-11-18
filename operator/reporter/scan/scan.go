@@ -47,8 +47,9 @@ const (
 var errNotReporter = errors.New("not a current reporter")
 
 // ErrPassAborted is what Review and ReviewRefundHead return, without writing an alert or counting anything, once a
-// pass has found a light-client pin mismatch and until the next pass begins. The pass's own alert and error stay its
-// last output (spec §5.6).
+// pass has found a light-client pin mismatch: at once until the next pass begins, and before the next review or
+// {id, error} event of a follow-up already running, which never resumes. The pass's own alert and error stay its last
+// output (spec §5.6).
 var ErrPassAborted = errors.New("follow-up review skipped: the pass ended on a light-client pin mismatch")
 
 // Queuer takes the messages a review planned. Queue reports whether the message was taken; false means it was skipped
@@ -99,13 +100,46 @@ type Scanner struct {
 	// ends on a mismatch writes the only alert from then on.
 	abortMu sync.Mutex
 	aborted atomic.Bool
+	// abortGen counts the pin mismatches that aborted a pass; a follow-up stops once it moves past the value it began
+	// with, so the next pass, which clears aborted, cannot resume it.
+	abortGen atomic.Uint64
 }
 
 func (s *Scanner) setAborted(v bool) {
 	s.abortMu.Lock()
 	defer s.abortMu.Unlock()
 
+	if v {
+		s.abortGen.Add(1)
+	}
 	s.aborted.Store(v)
+}
+
+// beginFollowUp returns the abort generation a follow-up runs under; false means it is skipped.
+func (s *Scanner) beginFollowUp() (uint64, bool) {
+	s.abortMu.Lock()
+	defer s.abortMu.Unlock()
+
+	return s.abortGen.Load(), !s.aborted.Load()
+}
+
+// abortedSince reports a pin mismatch that a pass found after the follow-up of r began.
+func (s *Scanner) abortedSince(r reviewRun) bool { return r.followUp && s.abortGen.Load() != r.gen }
+
+// emitReview writes ev unless abortedSince(r). Holding abortMu puts the event before the aborting pass's alert;
+// its messages are then queued as already planned (spec §5.6).
+func (s *Scanner) emitReview(r reviewRun, ev events.Review) bool {
+	if r.followUp {
+		s.abortMu.Lock()
+		defer s.abortMu.Unlock()
+
+		if s.abortGen.Load() != r.gen {
+			return false
+		}
+	}
+
+	s.events.Emit(ev)
+	return true
 }
 
 // New returns a scanner. q is nil in preview.
@@ -143,6 +177,8 @@ type reviewRun struct {
 	tally *tally
 	// followUp skips transfers that are no longer open.
 	followUp bool
+	// gen is the abortGen a follow-up began under.
+	gen uint64
 }
 
 // OnChange writes the light-client-changed alert. The observer calls it under its follow lock, before any review
@@ -345,7 +381,7 @@ func (s *Scanner) reviewChunk(stop, req context.Context, chunk []entry, t *tally
 	st, err := s.akash.Latest(req)
 	if err != nil {
 		for _, e := range chunk {
-			s.fail(r, e.id, err)
+			_ = s.fail(r, e.id, err) // a pass's failure is never muted
 		}
 
 		return nil
@@ -356,7 +392,8 @@ func (s *Scanner) reviewChunk(stop, req context.Context, chunk []entry, t *tally
 }
 
 // reviewAt re-reads the chunk's transfers at the snapshot height, takes one Solana snapshot of their status accounts
-// and reviews them in order. Errors fail single transfers; only a pin mismatch is returned.
+// and reviews them in order. Errors fail single transfers; only a pin mismatch is returned. A follow-up may also
+// return ErrPassAborted.
 func (s *Scanner) reviewAt(r reviewRun, chunk []entry) error {
 	transfers := make([]sinkv1.TransferState, len(chunk))
 	errs := make([]error, len(chunk))
@@ -401,6 +438,9 @@ func (s *Scanner) reviewAt(r reviewRun, chunk []entry) error {
 		if r.stop.Err() != nil || r.req.Err() != nil {
 			return nil
 		}
+		if s.abortedSince(r) {
+			return ErrPassAborted
+		}
 		if skip[i] {
 			continue
 		}
@@ -412,8 +452,13 @@ func (s *Scanner) reviewAt(r reviewRun, chunk []entry) error {
 		if err == nil {
 			err = s.review(r, snapshot, transfers[i], e.audit)
 		}
+		if errors.Is(err, ErrPassAborted) {
+			return err
+		}
 		if err != nil {
-			s.fail(r, e.id, err)
+			if err := s.fail(r, e.id, err); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -467,14 +512,16 @@ func (s *Scanner) review(r reviewRun, chunk *observe.Chunk, t sinkv1.TransferSta
 		}
 	}
 
-	s.events.Emit(events.Review{
+	if !s.emitReview(r, events.Review{
 		ID:       id,
 		Mode:     s.mode(),
 		Audit:    audit,
 		Observed: observedEvent(observed),
 		Messages: messages,
 		Alerts:   plan.Alerts,
-	})
+	}) {
+		return ErrPassAborted
+	}
 	s.reviewed(r, reviewOK)
 	for _, alert := range plan.Alerts {
 		s.opts.Metrics.RecordAlert(alert)
@@ -505,18 +552,31 @@ func (s *Scanner) review(r reviewRun, chunk *observe.Chunk, t sinkv1.TransferSta
 }
 
 // fail writes a transfer's error, unless a pin mismatch cancelled its requests: the pass then stops without further
-// events. A Solana evidence error is the transfer's own, even when it wraps a request timeout.
-func (s *Scanner) fail(r reviewRun, id sinkid.ID, err error) {
+// events. A Solana evidence error is the transfer's own, even when it wraps a request timeout. A follow-up's error is
+// written and counted under abortMu, as emitReview writes a review; once abortedSince(r), nothing is written or
+// counted, and fail returns ErrPassAborted.
+func (s *Scanner) fail(r reviewRun, id sinkid.ID, err error) error {
 	evidence := errors.Is(err, aktsolana.ErrBlockMissing) ||
 		errors.Is(err, aktsolana.ErrNotInBlock) ||
 		errors.Is(err, aktsolana.ErrMultipleInBlock)
 	if !evidence && r.req.Err() != nil {
-		return
+		return nil
+	}
+
+	if r.followUp {
+		s.abortMu.Lock()
+		defer s.abortMu.Unlock()
+
+		if s.abortGen.Load() != r.gen {
+			return ErrPassAborted
+		}
 	}
 
 	r.tally.failures.Add(1)
 	s.events.Emit(events.TransferError{ID: id.String(), Error: err.Error()})
 	s.reviewed(r, reviewError)
+
+	return nil
 }
 
 func (s *Scanner) reviewed(r reviewRun, result string) {
@@ -562,7 +622,8 @@ func (s *Scanner) ownVote(t sinkv1.TransferState) *sinkv1.Observation {
 // ReviewRefundHead reviews the refund head of a snapshot at least minHeight high as a one-transfer chunk. A snapshot
 // without a refund head reviews nothing. After a pass that ended on a pin mismatch, it returns ErrPassAborted.
 func (s *Scanner) ReviewRefundHead(ctx context.Context, minHeight int64) error {
-	if s.aborted.Load() {
+	gen, ok := s.beginFollowUp()
+	if !ok {
 		return ErrPassAborted
 	}
 
@@ -573,24 +634,29 @@ func (s *Scanner) ReviewRefundHead(ctx context.Context, minHeight int64) error {
 	if st.RefundHead == nil {
 		return nil
 	}
-	if s.aborted.Load() {
+	if s.abortGen.Load() != gen {
 		return ErrPassAborted
 	}
 
-	return s.followUp(ctx, st, []entry{{id: *st.RefundHead}})
+	return s.followUp(ctx, st, gen, []entry{{id: *st.RefundHead}})
 }
 
 // Review reviews ids in chunks of up to 96, each from a snapshot at least minHeight high, writing the normal review
 // events and queuing what it plans. IDs that are no longer open are skipped. After a pass that ended on a pin
 // mismatch, it returns ErrPassAborted.
 func (s *Scanner) Review(ctx context.Context, ids []sinkid.ID, minHeight int64) error {
+	gen, ok := s.beginFollowUp()
+	if !ok {
+		return ErrPassAborted
+	}
+
 	entries := make([]entry, len(ids))
 	for i, id := range ids {
 		entries[i] = entry{id: id}
 	}
 
 	for start := 0; start < len(entries); start += chunkSize {
-		if s.aborted.Load() {
+		if s.abortGen.Load() != gen {
 			return ErrPassAborted
 		}
 
@@ -598,11 +664,11 @@ func (s *Scanner) Review(ctx context.Context, ids []sinkid.ID, minHeight int64) 
 		if err != nil {
 			return err
 		}
-		if s.aborted.Load() {
+		if s.abortGen.Load() != gen {
 			return ErrPassAborted
 		}
 
-		if err := s.followUp(ctx, st, entries[start:min(start+chunkSize, len(entries))]); err != nil {
+		if err := s.followUp(ctx, st, gen, entries[start:min(start+chunkSize, len(entries))]); err != nil {
 			return err
 		}
 	}
@@ -612,11 +678,14 @@ func (s *Scanner) Review(ctx context.Context, ids []sinkid.ID, minHeight int64) 
 
 // followUp reviews one chunk of a follow-up from st. Its failures, and a pin mismatch, count in the next pass's
 // failures. A pin mismatch writes its alert and is returned; a ctx that ended during the reviews returns its error.
-func (s *Scanner) followUp(ctx context.Context, st *akash.State, chunk []entry) error {
+func (s *Scanner) followUp(ctx context.Context, st *akash.State, gen uint64, chunk []entry) error {
 	var t tally
 	req := akash.WithStop(context.WithoutCancel(ctx), ctx)
-	err := s.reviewAt(reviewRun{stop: ctx, req: req, state: st, tally: &t, followUp: true}, chunk)
+	err := s.reviewAt(reviewRun{stop: ctx, req: req, state: st, tally: &t, followUp: true, gen: gen}, chunk)
 	s.followUpFailures.Add(t.failures.Load())
+	if errors.Is(err, ErrPassAborted) {
+		return err
+	}
 
 	var mismatch *observe.MismatchError
 	if errors.As(err, &mismatch) {
@@ -624,7 +693,7 @@ func (s *Scanner) followUp(ctx context.Context, st *akash.State, chunk []entry) 
 		defer s.abortMu.Unlock()
 
 		// A pass that found the mismatch meanwhile writes the one alert.
-		if s.aborted.Load() {
+		if s.abortGen.Load() != gen {
 			return ErrPassAborted
 		}
 

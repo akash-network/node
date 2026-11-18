@@ -51,10 +51,10 @@ func SlotOf(id sinkid.ID, k policy.Key) int {
 	h := binary.BigEndian.Uint64(sum[:8])
 
 	if k.Kind == policy.MsgVote {
-		return int(h % VoteSlots)
+		return int(h % VoteSlots) //nolint:gosec // h % VoteSlots is below 128
 	}
 
-	return VoteSlots + int(h%SingleSlots)
+	return VoteSlots + int(h%SingleSlots) //nolint:gosec // h % SingleSlots is below 1024
 }
 
 // WindowOf returns the window that contains blockTime: ⌊t / W⌋ with t in Unix nanoseconds.

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"math"
 	"net"
+	"reflect"
 	"slices"
 	"sort"
 	"strconv"
@@ -138,7 +139,33 @@ func (n *Node) intercept(ctx context.Context, req any, info *grpc.UnaryServerInf
 
 	t, _ := n.akashBlockTime(h)
 
-	return handler(withView(ctx, view{height: h, time: t}), req)
+	res, err := handler(withView(ctx, view{height: h, time: t}), req)
+	if err != nil {
+		return nil, err
+	}
+
+	return detach(res)
+}
+
+// detach copies a reply through its encoding; the caller holds n.mu for reading. gRPC encodes the reply only after
+// intercept returns and releases the lock, and replies alias scenario memory that a Mutate callback may edit in place.
+func detach(res any) (any, error) {
+	m, ok := res.(gogoproto.Message)
+	if !ok {
+		return nil, status.Errorf(codes.Internal, "simnode: reply %T is not a gogoproto message", res)
+	}
+
+	raw, err := gogoproto.Marshal(m)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	out, _ := reflect.New(reflect.TypeOf(m).Elem()).Interface().(gogoproto.Message)
+	if err := gogoproto.Unmarshal(raw, out); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return out, nil
 }
 
 // grpcErrorToSDK maps a query error to an SDK error as baseapp/abci.go gRPCErrorToSDKError does.

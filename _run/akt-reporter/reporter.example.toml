@@ -66,7 +66,7 @@ mint = ""
 # light client program ID; empty follows the bridge account
 light-client-program = ""
 
-# slots the cursor may lead, at most 100000; 0 derives (max-age + 60s) x 5
+# slots the cursor may lead, at most 100000; 0 derives (max-age + 60s, rounded up to whole seconds) x 5
 max-slot-lead = 0
 
 [scan]

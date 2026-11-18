@@ -1015,6 +1015,84 @@ func TestCutoff(t *testing.T) {
 	}
 }
 
+func TestCutoffRecheckedBeforeSigning(t *testing.T) {
+	for _, c := range []struct {
+		name string
+		sim  time.Duration
+		sent bool
+	}{
+		{"cutoff passes during simulation", 12 * time.Second, false},
+		{"cutoff still holds after simulation", time.Second, true},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			s := &recordingSigner{Signer: reporterSigner(t)}
+			timeout := start.Add(time.Minute)
+			st := &akash.State{Height: 42, Time: timeout.Add(-21 * time.Second), Policy: sinkv1.ReporterPolicy{Members: []string{s.Address().String()}}}
+			msg := voteMsg(s).(*sinkv1.MsgReportOutcome)
+			id, err := sinkid.FromProto(msg.ID)
+			require.NoError(t, err)
+			vote := plannedAt(st, id, msg)
+
+			chain := &capBuildChain{state: st}
+			chain.sim = func([]byte) (uint64, error) {
+				later := *chain.state
+				later.Time = later.Time.Add(c.sim) // the chain moves on while simulation runs
+				chain.state = &later
+				return 100_000, nil
+			}
+			opts := Options{Reporter: s.Address().String(), GasAdjustment: 1.3, GasPrices: testPrices, MaxGas: 20_000_000}
+			b := New(opts, chain, NewBuilder(testTxConfig(), testChainID, testAccountNumber, s), nil)
+			b.stop, b.work = t.Context(), t.Context()
+			logger := zerolog.Nop()
+			b.log = &logger
+
+			res := b.build(buildJob{msgs: []policy.Planned{vote}, timeout: timeout, chainTime: st.Time})
+			if c.sent {
+				require.NotNil(t, res.sent, "20 s left: still signed")
+				return
+			}
+			require.Nil(t, res.sent, "not signed past the cutoff")
+			require.Empty(t, s.got)
+			require.Empty(t, chain.broadcasts)
+			require.Len(t, res.deferred, 1)
+			require.Equal(t, reasonCutoff, res.deferred[0].reason)
+			require.True(t, res.seen.Time.Equal(timeout.Add(-9*time.Second)), "the owner sees the later block")
+		})
+	}
+}
+
+func TestStopBeforeSigningReleases(t *testing.T) {
+	s := &recordingSigner{Signer: reporterSigner(t)}
+	timeout := start.Add(time.Minute)
+	st := &akash.State{Height: 42, Time: timeout.Add(-21 * time.Second), Policy: sinkv1.ReporterPolicy{Members: []string{s.Address().String()}}}
+	msg := voteMsg(s).(*sinkv1.MsgReportOutcome)
+	id, err := sinkid.FromProto(msg.ID)
+	require.NoError(t, err)
+	vote := plannedAt(st, id, msg)
+
+	stop, shutdown := context.WithCancel(t.Context())
+	chain := &capBuildChain{state: st}
+	chain.sim = func([]byte) (uint64, error) {
+		later := *chain.state
+		later.Time = later.Time.Add(12 * time.Second) // the cutoff passes while simulation runs
+		chain.state = &later
+		shutdown() // and so does the stop
+		return 100_000, nil
+	}
+	opts := Options{Reporter: s.Address().String(), GasAdjustment: 1.3, GasPrices: testPrices, MaxGas: 20_000_000}
+	b := New(opts, chain, NewBuilder(testTxConfig(), testChainID, testAccountNumber, s), nil)
+	b.stop, b.work = stop, t.Context()
+	logger := zerolog.Nop()
+	b.log = &logger
+
+	res := b.build(buildJob{msgs: []policy.Planned{vote}, timeout: timeout, chainTime: st.Time})
+	require.Empty(t, res.deferred, "a deferral would outlive shutdown")
+	require.Equal(t, []policy.Planned{vote}, res.released)
+	require.Nil(t, res.sent)
+	require.Empty(t, s.got)
+	require.Empty(t, chain.broadcasts)
+}
+
 func TestEarlierWindowNeverSent(t *testing.T) {
 	h := newHarness(t, setup{})
 	s := &gatedSigner{Signer: h.signer}
@@ -1551,6 +1629,49 @@ func TestConfirmationEvents(t *testing.T) {
 	})
 }
 
+// failingLookups fails every transaction lookup while down is set.
+type failingLookups struct {
+	Chain
+	down  *atomic.Bool
+	calls atomic.Int64
+}
+
+func (c *failingLookups) Tx(ctx context.Context, hash []byte) (*akash.TxResult, error) {
+	c.calls.Add(1)
+	if c.down.Load() {
+		return nil, status.Error(codes.Unavailable, "connection refused")
+	}
+
+	return c.Chain.Tx(ctx, hash)
+}
+
+func TestFailedLookupRetriedAtSameHeight(t *testing.T) {
+	h := newHarness(t, setup{})
+	var down atomic.Bool
+	down.Store(true)
+	lookups := &failingLookups{down: &down}
+	p := h.start(h.options(), h.signer, nil, func(c Chain) Chain { lookups.Chain = c; return lookups })
+	veto := h.plan(h.snapshot(), firstVeto)
+
+	require.True(t, p.b.Queue(veto))
+	h.waitBroadcasts(1)
+	h.commit() // includes the veto; no later block follows
+	height := h.snapshot().Height
+	h.eventually(func() bool { return lookups.calls.Load() >= 2 }, "looked up at the inclusion height")
+
+	time.Sleep(50 * time.Millisecond)
+	n := lookups.calls.Load()
+	time.Sleep(50 * time.Millisecond)
+	require.Equal(t, n, lookups.calls.Load(), "no retry without a refresh tick")
+
+	down.Store(false)
+	h.eventually(func() bool { return p.count() == 1 }, "confirmed at the same height")
+	require.Equal(t, height, h.snapshot().Height, "no new block")
+	hashes, errs := outcomes(t, p.lines())
+	require.Contains(t, hashes, veto.ID.String())
+	require.Empty(t, errs)
+}
+
 func TestExpiryByChainTime(t *testing.T) {
 	faults := make([]simnode.BroadcastFault, 500)
 	for i := range faults {
@@ -1768,6 +1889,31 @@ func TestAbortedScanReportsDeferred(t *testing.T) {
 	require.JSONEq(t, `{"alert":"light-client-mismatch","pinned":"`+pin.String()+`","current":"`+other.String()+`"}`, lines[1])
 	require.Contains(t, lines[2], "differs from pinned")
 	require.Empty(t, p.deferred())
+}
+
+func TestAbortedFollowUpReportsOnlyWhatItSkipped(t *testing.T) {
+	h := newHarness(t, setup{})
+	p := h.start(h.options(), h.signer, nil)
+	st := h.snapshot()
+	w := WindowOf(st.Time)
+	a, b := h.plan(st, 0), h.plan(st, 1)
+	until := func(pl policy.Planned) time.Time { return SlotTimeout(w, slotOf(pl)) }
+	p.state(func(s *ownerState) {
+		for _, pl := range []policy.Planned{a, b} {
+			s.deferred[pl.Key] = &deferral{planned: pl, reason: reasonSlotBusy, window: w, until: until(pl)}
+		}
+	})
+
+	// In window w+1 the follow-up queues a again, then a pass's pin mismatch stops it before b.
+	h.blockAt(WindowStart(w + 1).Add(time.Second))
+	h.tick()
+	job := followJob{id: 9, window: w + 1, ids: []sinkid.ID{a.ID, b.ID}, keys: []policy.Key{a.Key, b.Key}}
+	require.True(t, followQueuer{b: p.b, job: job.id}.Queue(h.plan(h.snapshot(), 0)))
+	require.True(t, p.b.call(func() { p.b.followDone(job, scan.ErrPassAborted) }))
+
+	_, errs := outcomes(t, p.lines())
+	require.Equal(t, map[string]string{b.ID.String(): "sink message not sent: deferred (slot_busy) until " + rfc3339(until(b))}, errs)
+	require.Equal(t, []string{a.ID.String()}, h.waitBroadcasts(1)[0].ids)
 }
 
 func TestWaitDoesNotSpin(t *testing.T) {

@@ -17,8 +17,7 @@ const (
 )
 
 var (
-	errTruncatedLogs = errors.New("inconsistent truncated logs")
-	errLogStack      = errors.New("inconsistent program log stack")
+	errLogStack = errors.New("inconsistent program log stack")
 
 	logInvoke = regexp.MustCompile(`^Program (` + logKey + `) invoke \[([1-9][0-9]*)\]$`)
 	logExit   = regexp.MustCompile(`^Program (` + logKey + `) (success|failed: .*)$`)
@@ -33,8 +32,10 @@ type closedFrame struct {
 //
 // Anchor's event parser ignores events emitted inside a CPI, so each "Program data:" line is attributed to the
 // executing frame from the invoke and exit lines instead. Unbalanced logs cannot be attributed and are an error.
-// A later instruction can exhaust the log limit; then only top-level program frames that already closed with
-// success count. Data lines with other discriminators are ignored; a TransferResolved that does not decode is an error.
+// A later instruction can exhaust the log limit. The runtime then writes `Log truncated` once and keeps logging the
+// messages that still fit, so parsing stops at the first marker: only top-level program frames that closed with
+// success before it count. Data lines with other discriminators are ignored; a TransferResolved that does not decode
+// is an error.
 func ProgramEvents(logs []string, program solana.PublicKey) ([]TransferResolved, error) {
 	id := program.String()
 
@@ -44,12 +45,8 @@ func ProgramEvents(logs []string, program solana.PublicKey) ([]TransferResolved,
 		events []TransferResolved
 	)
 
-	for index, line := range logs {
+	for _, line := range logs {
 		if line == logTruncated {
-			if index != len(logs)-1 {
-				return nil, errTruncatedLogs
-			}
-
 			return flatten(closed, id), nil
 		}
 

@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
+	"net/url"
 	"sync"
 	"time"
 
@@ -34,8 +36,8 @@ const (
 
 	// shutdownGrace is how long the broadcaster waits for sent transactions after a signal (spec §5.7).
 	shutdownGrace = 30 * time.Second
-	// settleMargin keeps scan's settle waiting past the broadcaster's grace, so that the broadcaster ends the wait
-	// and no outcome is written after the summary.
+	// settleMargin lets scan's settle wait outlast the broadcaster's grace after a signal; it only bounds that wait.
+	// Settle then joins the broadcaster, and the join keeps every outcome before the summary.
 	settleMargin = 5 * time.Second
 
 	modePreview   = "preview"
@@ -114,7 +116,14 @@ func runReporter(cmd *cobra.Command, once bool) (err error) {
 	runCtx, cancel := context.WithCancelCause(ctx)
 	defer cancel(nil)
 
-	stopMetrics := r.serveMetrics(runCtx, cancel)
+	stopMetrics, err := r.serveMetrics(runCtx, cancel)
+	if err != nil {
+		if !once && ctx.Err() != nil {
+			r.log.Info().Err(err).Msg("stopped during startup")
+			return nil
+		}
+		return err
+	}
 	defer stopMetrics()
 
 	// Deferred last, so it runs first: the broadcaster stops before the signer, the clients and the events close.
@@ -122,7 +131,7 @@ func runReporter(cmd *cobra.Command, once bool) (err error) {
 	defer stopBroadcaster()
 
 	if once {
-		failures := r.scanOnce(runCtx)
+		failures := r.scanOnce(runCtx, stopBroadcaster)
 		if cause := listenerFailure(ctx, runCtx); cause != nil {
 			return cause
 		}
@@ -170,7 +179,7 @@ func (r *reporter) connect(ctx context.Context, cmd *cobra.Command) (err error) 
 		}
 	}()
 
-	r.log.Info().Str("node", legacyLogEndpoint(cfg, cfg.Node)).Str("grpc-addr", cfg.GRPCAddr).Bool("tx-index", a.TxIndexEnabled()).
+	r.log.Info().Str("node", logEndpoint(cfg.Node)).Str("grpc-addr", cfg.GRPCAddr).Bool("tx-index", a.TxIndexEnabled()).
 		Msg("connected to Akash")
 
 	var accountNumber uint64
@@ -377,9 +386,10 @@ func (r *reporter) startBroadcaster(ctx context.Context) func() {
 }
 
 // scanOnce runs scan's pass. In broadcast mode its settle waits for the pass's transactions and follow-up reviews.
-// Once a signal ends ctx, the broadcaster's shutdown grace ends the wait when it returns; settleCtx outlasts that
-// grace and only bounds a broadcaster that never returns (spec §5.7).
-func (r *reporter) scanOnce(ctx context.Context) int {
+// Once a signal ends ctx, the wait ends when the broadcaster's shutdown grace does, and settleCtx only bounds it
+// (spec §5.7). Settle then joins the broadcaster: the join, not settleCtx, puts every outcome, and the events of a
+// follow-up review still running, before the summary, and counts their failures (spec §6.6).
+func (r *reporter) scanOnce(ctx context.Context, stopBroadcaster func()) int {
 	b := r.broadcaster
 	if b == nil {
 		return r.scanner.Pass(ctx, nil)
@@ -388,7 +398,16 @@ func (r *reporter) scanOnce(ctx context.Context) int {
 	settleCtx, cancel := graceContext(ctx, shutdownGrace+settleMargin)
 	defer cancel()
 
-	return r.scanner.Pass(ctx, func() int { b.Flush(); return b.Wait(settleCtx) })
+	return r.scanner.Pass(ctx, func() int {
+		b.Flush()
+		failures := b.Wait(settleCtx)
+		// Wait returns once Run closes done, which is before Run joins its follow-up review.
+		if ctx.Err() != nil {
+			stopBroadcaster()
+			failures += b.TakeFailures()
+		}
+		return failures
+	})
 }
 
 // graceContext returns a context that ends grace after ctx does, or when cancel is called.
@@ -412,32 +431,39 @@ func graceContext(ctx context.Context, grace time.Duration) (context.Context, co
 	}
 }
 
-// serveMetrics starts the metrics listener when metrics.listen is set. A listener error cancels ctx with its cause.
-// The returned function stops the listener and waits for it.
-func (r *reporter) serveMetrics(ctx context.Context, fail context.CancelCauseFunc) func() {
+// serveMetrics binds metrics.listen, when it is set, and serves the metrics on it. It binds before it returns and
+// returns a bind error; a later listener error cancels ctx with its cause. The returned function stops the listener
+// and waits for it; it does nothing when nothing was bound.
+func (r *reporter) serveMetrics(ctx context.Context, fail context.CancelCauseFunc) (stop func(), err error) {
 	addr := r.cfg.Metrics.Listen
 	if addr == "" {
-		return func() {}
+		return func() {}, nil
 	}
 
-	ctx, stop := context.WithCancel(ctx)
+	var lc net.ListenConfig
+	lis, err := lc.Listen(ctx, "tcp", addr)
+	if err != nil {
+		return func() {}, &listenerError{err: err}
+	}
+
+	ctx, cancel := context.WithCancel(ctx)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 
-		if err := metrics.Serve(ctx, addr, r.gather); err != nil {
+		if err := metrics.Serve(ctx, lis, r.gather); err != nil {
 			fail(&listenerError{err: err})
 		}
 	}()
 
-	r.log.Info().Str("listen", addr).Msg("serving metrics")
+	r.log.Info().Stringer("listen", lis.Addr()).Msg("serving metrics")
 
 	return func() {
-		stop()
+		cancel()
 		wg.Wait()
-	}
+	}, nil
 }
 
 // loop runs passes until ctx ends, waiting interval between them. It never begins a pass once ctx is done. In
@@ -527,9 +553,9 @@ func logStartup(log *zerolog.Logger, cfg config.Resolved) {
 		Str("network", cfg.Network).
 		Str("chain-id", cfg.ChainID).
 		Str("reporter", cfg.Config.Reporter).
-		Str("node", legacyLogEndpoint(cfg, cfg.Node)).
+		Str("node", logEndpoint(cfg.Node)).
 		Str("grpc-addr", cfg.GRPCAddr).
-		Str("solana.rpc", legacyLogEndpoint(cfg, cfg.Solana.RPC)).
+		Str("solana.rpc", logEndpoint(cfg.Solana.RPC)).
 		Str("solana.program-id", cfg.Solana.ProgramID).
 		Str("solana.light-client-program", lightClient).
 		Stringer("max-age", cfg.MaxAge).
@@ -537,4 +563,14 @@ func logStartup(log *zerolog.Logger, cfg config.Resolved) {
 		Int("scan.workers", cfg.Scan.Workers).
 		Str("metrics.listen", cfg.Metrics.Listen).
 		Msg("starting reporter")
+}
+
+// logEndpoint gives an RPC URL as scheme://host, because providers put API keys in URL paths and queries.
+func logEndpoint(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" {
+		return "invalid URL"
+	}
+
+	return u.Scheme + "://" + u.Host
 }

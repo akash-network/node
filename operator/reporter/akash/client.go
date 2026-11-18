@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -343,11 +344,64 @@ func (c *Client) comet(ctx context.Context, method string, call func(context.Con
 	err := call(ctx)
 	if _, legacy := c.queries.(*abciConn); legacy {
 		err = sanitizeLegacyHTTP(err)
+	} else {
+		err = redactURL(err)
 	}
 	c.metrics.RecordRPC(metricsChain, method, time.Since(began), err)
 
 	return err
 }
+
+// redactURL cuts the URL of a transport error down to scheme://host, because providers put API keys in URL paths and
+// queries. CometBFT has already rendered the URL into its own text, so the text is rebuilt from parts the reporter
+// controls: the text before the transport error, its operation and the origin. The cause's text is kept, and the
+// cause unwrapped, only when it is known to hold no URL text, which keeps cancellation detectable. Any other cause,
+// such as net/http's quote of a Location header it cannot parse, reads "HTTP request failed".
+func redactURL(err error) error {
+	var ue *url.Error
+	if !errors.As(err, &ue) {
+		return err
+	}
+
+	origin := "invalid URL"
+	if u, perr := url.Parse(ue.URL); perr == nil && u.Host != "" {
+		origin = u.Scheme + "://" + u.Host
+	}
+
+	prefix, ok := strings.CutSuffix(err.Error(), ue.Error())
+	if !ok {
+		prefix = ""
+	}
+	prefix = strings.ReplaceAll(prefix, strconv.Quote(ue.URL), strconv.Quote(origin))
+
+	var cause error
+	text := "HTTP request failed"
+	if urlFree(ue.Err) {
+		cause, text = ue.Err, ue.Err.Error()
+	}
+
+	return &redactedError{msg: prefix + ue.Op + " " + strconv.Quote(origin) + ": " + text, cause: cause}
+}
+
+// urlFree reports whether a transport cause is known to hold no URL text.
+func urlFree(err error) bool {
+	var (
+		opErr   *net.OpError
+		dnsErr  *net.DNSError
+		certErr *tls.CertificateVerificationError
+	)
+
+	return errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) ||
+		errors.As(err, &opErr) || errors.As(err, &dnsErr) || errors.As(err, &certErr)
+}
+
+type redactedError struct {
+	msg   string
+	cause error
+}
+
+func (e *redactedError) Error() string { return e.msg }
+func (e *redactedError) Unwrap() error { return e.cause }
 
 // pinned runs a generated query at height and requires the response header to repeat it.
 func (c *Client) pinned(ctx context.Context, height int64, mismatch error, call func(context.Context, ...grpc.CallOption) error) error {
