@@ -49,6 +49,16 @@ type Akash struct {
 	// NoTxIndex reports tx_index "off", and tx then fails as on a node without an index.
 	NoTxIndex  bool `json:"noTxIndex,omitempty"`
 	CatchingUp bool `json:"catchingUp,omitempty"`
+	// IndexLag keeps the transaction and block indexes that many blocks below the served height, as CometBFT indexes a
+	// block only after committing it: tx, tx_search and block_search find nothing above.
+	IndexLag int64 `json:"indexLag,omitempty"`
+	// TxIndexBehind keeps the transaction index one block below the block index, as between CometBFT indexing a block's
+	// events and writing its transactions.
+	TxIndexBehind bool `json:"txIndexBehind,omitempty"`
+	// RefuseBatches answers a JSON-RPC batch with a single error, as a gateway without batch support does.
+	RefuseBatches bool `json:"refuseBatches,omitempty"`
+	// ReverseBatches answers a JSON-RPC batch with its responses in reverse order, which JSON-RPC allows.
+	ReverseBatches bool `json:"reverseBatches,omitempty"`
 
 	// Height is the latest block. BlockTimes holds each block's time; its lowest key is the earliest retained height,
 	// and state below it is pruned.

@@ -1,12 +1,19 @@
 package simnode
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"net/http/httptest"
+	"slices"
 	"strconv"
+	"strings"
 
 	errorsmod "cosmossdk.io/errors"
 	abci "github.com/cometbft/cometbft/abci/types"
@@ -50,14 +57,63 @@ func (n *Node) cometHandler() http.Handler {
 		"abci_query":        rpcserver.NewRPCFunc(n.abciQuery, "path,data,height,prove"),
 		"broadcast_tx_sync": rpcserver.NewRPCFunc(n.broadcastTxSync, "tx"),
 		"tx":                rpcserver.NewRPCFunc(n.tx, "hash,prove"),
+		"tx_search":         rpcserver.NewRPCFunc(n.txSearch, "query,prove,page,per_page,order_by"),
+		"block_search":      rpcserver.NewRPCFunc(n.blockSearch, "query,page,per_page,order_by"),
 	}, log.NewNopLogger())
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if delay(r.Context(), n.opts.AkashLatency) != nil {
 			return
 		}
-		mux.ServeHTTP(w, r)
+		n.serveBatchFaults(mux, w, r)
 	})
+}
+
+// serveBatchFaults serves r through mux, refusing or reversing a JSON-RPC batch as RefuseBatches and ReverseBatches
+// ask.
+func (n *Node) serveBatchFaults(mux http.Handler, w http.ResponseWriter, r *http.Request) {
+	n.mu.RLock()
+	refuse, reverse := n.sc.Akash.RefuseBatches, n.sc.Akash.ReverseBatches
+	n.mu.RUnlock()
+	if !refuse && !reverse {
+		mux.ServeHTTP(w, r)
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	r.Body = io.NopCloser(bytes.NewReader(body))
+	if !bytes.HasPrefix(bytes.TrimSpace(body), []byte("[")) {
+		mux.ServeHTTP(w, r)
+		return
+	}
+
+	if refuse {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":-1,"error":{"code":-32600,"message":"Invalid Request","data":"batch requests are not supported"}}`))
+		return
+	}
+
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, r)
+	out := rec.Body.Bytes()
+	var answers []json.RawMessage
+	if json.Unmarshal(out, &answers) == nil {
+		slices.Reverse(answers)
+		if raw, err := json.Marshal(answers); err == nil {
+			out = raw
+		}
+	}
+	for k, v := range rec.Header() {
+		if k != "Content-Length" {
+			w.Header()[k] = v
+		}
+	}
+	w.WriteHeader(rec.Code)
+	_, _ = w.Write(out)
 }
 
 func digest(kind string, h int64) cmtbytes.HexBytes {
@@ -147,6 +203,11 @@ func (n *Node) block(_ *rpctypes.Context, heightPtr *int64) (*ctypes.ResultBlock
 		return nil, fmt.Errorf("height %d must be less than or equal to the current blockchain height %d", h, served)
 	}
 
+	return n.blockAt(h)
+}
+
+// blockAt builds the block at height h; the caller holds n.mu for reading.
+func (n *Node) blockAt(h int64) (*ctypes.ResultBlock, error) {
 	t, ok := n.akashBlockTime(h)
 	if !ok || h < n.ak.earliest {
 		return nil, fmt.Errorf("height %d is not available, lowest height is %d", h, n.ak.earliest)
@@ -280,9 +341,81 @@ func (n *Node) tx(_ *rpctypes.Context, hash []byte, _ bool) (*ctypes.ResultTx, e
 		return nil, errors.New("transaction indexing is disabled")
 	}
 
-	r := n.ak.results[string(hash)]
-	if r == nil || r.height > n.servedHeight() {
+	r := n.indexedTx(hash)
+	if r == nil {
 		return nil, fmt.Errorf("tx (%X) not found", hash)
+	}
+
+	return r, nil
+}
+
+// txSearch serves the one tx_search query the reporter sends, tx.hash = '<HEX>'.
+func (n *Node) txSearch(_ *rpctypes.Context, query string, _ bool, _, _ *int, _ string) (*ctypes.ResultTxSearch, error) {
+	n.count("tx_search")
+
+	text, ok := strings.CutPrefix(query, "tx.hash = '")
+	text, quoted := strings.CutSuffix(text, "'")
+	hash, err := hex.DecodeString(text)
+	if !ok || !quoted || err != nil {
+		return nil, fmt.Errorf("simnode: unsupported tx_search query %q", query)
+	}
+
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+
+	if n.sc.Akash.NoTxIndex {
+		return nil, errors.New("transaction indexing is disabled")
+	}
+
+	res := &ctypes.ResultTxSearch{Txs: []*ctypes.ResultTx{}}
+	if r := n.indexedTx(hash); r != nil {
+		res.Txs, res.TotalCount = append(res.Txs, r), 1
+	}
+
+	return res, nil
+}
+
+// blockSearch serves the one block_search query the reporter sends, block.height = <H>.
+func (n *Node) blockSearch(_ *rpctypes.Context, query string, _, _ *int, _ string) (*ctypes.ResultBlockSearch, error) {
+	n.count("block_search")
+
+	text, ok := strings.CutPrefix(query, "block.height = ")
+	h, err := strconv.ParseInt(text, 10, 64)
+	if !ok || err != nil {
+		return nil, fmt.Errorf("simnode: unsupported block_search query %q", query)
+	}
+
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+
+	if n.sc.Akash.NoTxIndex {
+		return nil, errors.New("block indexing is disabled")
+	}
+
+	res := &ctypes.ResultBlockSearch{Blocks: []*ctypes.ResultBlock{}}
+	if h <= n.indexedHeight() {
+		if b, err := n.blockAt(h); err == nil {
+			res.Blocks, res.TotalCount = append(res.Blocks, b), 1
+		}
+	}
+
+	return res, nil
+}
+
+// indexedHeight is the highest block the block index holds, IndexLag blocks below the served height; the caller holds
+// n.mu for reading. A pruned height is not found, where CometBFT counts it with no block, which reads the same.
+func (n *Node) indexedHeight() int64 { return n.servedHeight() - max(n.sc.Akash.IndexLag, 0) }
+
+// indexedTx is the indexed result of the transaction hash, or nil; the caller holds n.mu for reading.
+func (n *Node) indexedTx(hash []byte) *ctypes.ResultTx {
+	txIndexed := n.indexedHeight()
+	if n.sc.Akash.TxIndexBehind {
+		txIndexed--
+	}
+
+	r := n.ak.results[string(hash)]
+	if r == nil || r.height > txIndexed {
+		return nil
 	}
 
 	return &ctypes.ResultTx{
@@ -297,5 +430,5 @@ func (n *Node) tx(_ *rpctypes.Context, hash []byte, _ bool) (*ctypes.ResultTx, e
 			GasUsed:   r.result.gasUsed,
 		},
 		Tx: r.raw,
-	}, nil
+	}
 }

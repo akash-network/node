@@ -127,6 +127,13 @@ func (c *nativeReporterChain) Tx(_ context.Context, hash []byte) (*akash.TxResul
 	return c.receipts[string(hash)], nil
 }
 
+// TxIndexedBelow answers as Tx does. Receipts are recorded as each block commits, so every committed height is indexed.
+func (c *nativeReporterChain) TxIndexedBelow(_ context.Context, hash []byte, height int64) (*akash.TxResult, bool, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.receipts[string(hash)], height <= c.h.height, nil
+}
+
 func (*nativeReporterChain) TxIndexEnabled() bool { return true }
 
 func (c *nativeReporterChain) nextWindow(t *testing.T) (int64, time.Time) {

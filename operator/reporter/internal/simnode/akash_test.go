@@ -3,8 +3,11 @@ package simnode_test
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"math"
+	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -477,6 +480,106 @@ func TestCommitBlockIncludesBroadcasts(t *testing.T) {
 	require.False(t, st.TxIndexEnabled())
 	_, err = rpc.Tx(t.Context(), cmttypes.Tx(raw).Hash(), false)
 	require.ErrorContains(t, err, "transaction indexing is disabled")
+}
+
+func TestIndexLag(t *testing.T) {
+	c := newChain(t)
+	sc := c.scenario(t)
+	sc.Akash.IndexLag = 1
+	n, _ := startAkash(t, sc, simnode.Options{})
+	rpc := comet(t, n)
+
+	raw := c.tx(t, start.Add(latestOffset+time.Minute), "", c.voteMsg(c.vote, 1))
+	code, _, log := broadcast(t, rpc, raw)
+	require.Zero(t, code, log)
+	n.CommitBlock()
+	require.Equal(t, latest+1, latestHeight(t, rpc))
+
+	page, perPage := 1, 1
+	byHash := "tx.hash = '" + cmtbytes.HexBytes(cmttypes.Tx(raw).Hash()).String() + "'"
+	blocks := func(h int64) int {
+		res, err := rpc.BlockSearch(t.Context(), "block.height = "+strconv.FormatInt(h, 10), &page, &perPage, "")
+		require.NoError(t, err)
+		return res.TotalCount
+	}
+
+	// The node has committed the block, but its indexes stop one below it.
+	_, err := rpc.Tx(t.Context(), cmttypes.Tx(raw).Hash(), false)
+	require.ErrorContains(t, err, "not found")
+	txs, err := rpc.TxSearch(t.Context(), byHash, false, &page, &perPage, "")
+	require.NoError(t, err)
+	require.Zero(t, txs.TotalCount)
+	require.Equal(t, 1, blocks(latest))
+	require.Zero(t, blocks(latest+1))
+
+	// Caught up, the indexes hold the block and its transaction.
+	n.Mutate(func(sc *simnode.Scenario) { sc.Akash.IndexLag = 0 })
+	require.Equal(t, 1, blocks(latest+1))
+	txs, err = rpc.TxSearch(t.Context(), byHash, false, &page, &perPage, "")
+	require.NoError(t, err)
+	require.Equal(t, 1, txs.TotalCount)
+	require.Equal(t, latest+1, txs.Txs[0].Height)
+	h, code, _, log := txResult(t, rpc, raw)
+	require.Zero(t, code, log)
+	require.Equal(t, latest+1, h)
+
+	// Between indexing a block's events and writing its transactions, the block is found and its transaction is not.
+	n.Mutate(func(sc *simnode.Scenario) { sc.Akash.TxIndexBehind = true })
+	require.Equal(t, 1, blocks(latest+1))
+	txs, err = rpc.TxSearch(t.Context(), byHash, false, &page, &perPage, "")
+	require.NoError(t, err)
+	require.Zero(t, txs.TotalCount)
+	n.Mutate(func(sc *simnode.Scenario) { sc.Akash.TxIndexBehind = false })
+
+	// Without an index, both searches fail.
+	n.Mutate(func(sc *simnode.Scenario) { sc.Akash.NoTxIndex = true })
+	_, err = rpc.TxSearch(t.Context(), byHash, false, &page, &perPage, "")
+	require.ErrorContains(t, err, "transaction indexing is disabled")
+	_, err = rpc.BlockSearch(t.Context(), "block.height = 1", &page, &perPage, "")
+	require.ErrorContains(t, err, "block indexing is disabled")
+}
+
+func TestBatchFaults(t *testing.T) {
+	c := newChain(t)
+	n, _ := startAkash(t, c.scenario(t), simnode.Options{})
+	batch := func() []json.RawMessage { // status then abci_info in one batch; the answers in the order received
+		t.Helper()
+
+		body := `[{"jsonrpc":"2.0","id":1,"method":"status"},{"jsonrpc":"2.0","id":2,"method":"abci_info"}]`
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, n.CometURL, strings.NewReader(body))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/json")
+		res, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer func() { _ = res.Body.Close() }()
+		raw, err := io.ReadAll(res.Body)
+		require.NoError(t, err)
+
+		var answers []json.RawMessage
+		if err := json.Unmarshal(raw, &answers); err != nil {
+			return []json.RawMessage{raw} // a single object
+		}
+		return answers
+	}
+	id := func(answer json.RawMessage) int {
+		var a struct{ ID int }
+		require.NoError(t, json.Unmarshal(answer, &a))
+		return a.ID
+	}
+
+	got := batch()
+	require.Len(t, got, 2)
+	require.Equal(t, []int{1, 2}, []int{id(got[0]), id(got[1])})
+
+	n.Mutate(func(sc *simnode.Scenario) { sc.Akash.ReverseBatches = true })
+	got = batch()
+	require.Len(t, got, 2)
+	require.Equal(t, []int{2, 1}, []int{id(got[0]), id(got[1])})
+
+	n.Mutate(func(sc *simnode.Scenario) { sc.Akash.RefuseBatches = true })
+	got = batch()
+	require.Len(t, got, 1)
+	require.Contains(t, string(got[0]), `"error"`)
 }
 
 func TestBroadcastInjection(t *testing.T) {

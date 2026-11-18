@@ -1672,6 +1672,57 @@ func TestFailedLookupRetriedAtSameHeight(t *testing.T) {
 	require.Empty(t, errs)
 }
 
+func TestExpiryWaitsForTheIndex(t *testing.T) {
+	transport := make([]simnode.BroadcastFault, 500)
+	for i := range transport {
+		transport[i] = simnode.BroadcastFault{Kind: simnode.FaultTransport}
+	}
+
+	for _, c := range []struct {
+		name string
+		// faults keep every send from the node; without them the block before the timeout includes the transaction.
+		faults []simnode.BroadcastFault
+		// lag and txBehind place the indexes: the block index lag blocks below the node, the transaction index one more
+		// when txBehind is set.
+		lag      int64
+		txBehind bool
+	}{
+		{"an included transaction is confirmed", nil, 2, false},
+		{"a missing transaction expires", transport, 2, false},
+		// The block index holds the block that includes the transaction, the transaction index does not yet.
+		{"the last block that could include it does not decide", nil, 1, true},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			h := newHarness(t, setup{change: func(sc *simnode.Scenario) {
+				sc.Akash.IndexLag, sc.Akash.TxIndexBehind = c.lag, c.txBehind
+				sc.Akash.BroadcastFaults = c.faults
+			}})
+			p := h.start(h.options(), h.signer, nil)
+			veto := h.plan(h.snapshot(), firstVeto)
+			timeout := SlotTimeout(WindowOf(veto.PlanTime), slotOf(veto))
+
+			require.True(t, p.b.Queue(veto))
+			d := h.waitBroadcasts(1)[0]
+			h.blockAt(timeout.Add(-time.Second))
+			h.blockAt(timeout.Add(50 * time.Millisecond))
+			h.eventually(func() bool { return h.node.Calls("block_search") >= 2 }, "looked up again past the timeout")
+			require.Empty(t, p.lines(), "nothing is decided before the index reaches the first block past the timeout")
+
+			// The index catches up without a new block; the next refresh decides.
+			h.node.Mutate(func(sc *simnode.Scenario) { sc.Akash.IndexLag, sc.Akash.TxIndexBehind = 0, false })
+			h.eventually(func() bool { return p.count() == 1 }, "resolved")
+			hashes, errs := outcomes(t, p.lines())
+			if c.faults == nil {
+				require.Equal(t, map[string]string{veto.ID.String(): d.hash()}, hashes)
+				require.Empty(t, errs)
+				return
+			}
+			require.Empty(t, hashes)
+			require.Equal(t, map[string]string{veto.ID.String(): "sink transaction expired: " + d.hash()}, errs)
+		})
+	}
+}
+
 func TestExpiryByChainTime(t *testing.T) {
 	faults := make([]simnode.BroadcastFault, 500)
 	for i := range faults {

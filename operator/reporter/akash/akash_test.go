@@ -518,34 +518,33 @@ func TestTrackerRefreshAtMostOncePerInterval(t *testing.T) {
 	require.Equal(t, 2, n.Calls("status")-before)
 }
 
-// hungSink answers no transfer query: each signals entered, then waits until its call ends.
+// hungSink answers no transfer query until release is closed: each signals entered, then waits for release, which
+// answers that the node has no such transfer, or for its call to end.
 type hungSink struct {
 	sinkv1.UnimplementedQueryServer
 	entered chan struct{}
+	release chan struct{}
 }
 
 func (s *hungSink) Transfer(ctx context.Context, _ *sinkv1.QueryTransferRequest) (*sinkv1.QueryTransferResponse, error) {
 	s.entered <- struct{}{}
-	<-ctx.Done()
-	return nil, status.FromContextError(ctx.Err()).Err()
+	select {
+	case <-s.release:
+		return nil, status.Error(codes.NotFound, "transfer not found")
+	case <-ctx.Done():
+		return nil, status.FromContextError(ctx.Err()).Err()
+	}
 }
 
-func TestShutdownCancelsQueuedReads(t *testing.T) {
-	n, fake := startNode(t, clean(), simnode.Options{})
-	opts := options(n, fake)
-	opts.Concurrency = 2
-	opts.RequestTimeout = 500 * time.Millisecond
-	c := dial(t, opts)
+// hangTransfers sends c's sink queries to a hungSink with room for calls entries.
+func hangTransfers(t *testing.T, c *Client, calls int) *hungSink {
+	t.Helper()
 
-	// Ten times the concurrency limit: two calls run, the others wait for a permit.
-	const calls = 20
-
-	// The sink queries now reach a node that never answers.
 	var lc net.ListenConfig
 	l, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	srv := grpc.NewServer(grpc.ForceServerCodec(codec.NewProtoCodec(c.registry).GRPCCodec()))
-	sink := &hungSink{entered: make(chan struct{}, calls)}
+	sink := &hungSink{entered: make(chan struct{}, calls), release: make(chan struct{})}
 	sinkv1.RegisterQueryServer(srv, sink)
 	go func() { _ = srv.Serve(l) }()
 	t.Cleanup(srv.Stop)
@@ -557,6 +556,21 @@ func TestShutdownCancelsQueuedReads(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = conn.Close() })
 	c.sink = sinkv1.NewQueryClient(conn)
+
+	return sink
+}
+
+func TestShutdownCancelsQueuedReads(t *testing.T) {
+	n, fake := startNode(t, clean(), simnode.Options{})
+	opts := options(n, fake)
+	opts.Concurrency = 2
+	// No request deadline passes during the test, so the reads holding the permits stay in flight until released.
+	opts.RequestTimeout = time.Minute
+	c := dial(t, opts)
+
+	// Ten times the concurrency limit: two calls run, the others wait for a permit.
+	const calls = 20
+	sink := hangTransfers(t, c, calls)
 
 	stop, shutdown := context.WithCancel(t.Context())
 	ctx := WithStop(context.WithoutCancel(stop), stop)
@@ -577,28 +591,62 @@ func TestShutdownCancelsQueuedReads(t *testing.T) {
 		}
 	}
 
-	began := time.Now()
+	// Shutdown cancels the reads waiting for a permit while the two in flight still hold theirs.
 	shutdown()
-	timedOut, cancelled := 0, 0
-	for range calls {
+	for range calls - opts.Concurrency {
 		select {
 		case err := <-errs:
-			switch {
-			case status.Code(errors.Unwrap(err)) == codes.DeadlineExceeded:
-				timedOut++
-			case errors.Is(err, context.Canceled):
-				cancelled++
-			default:
-				t.Fatalf("unexpected error: %v", err)
-			}
+			require.ErrorIs(t, err, context.Canceled, "the reads waiting for a permit are cancelled")
 		case <-time.After(10 * time.Second):
 			t.Fatal("the queued reads did not end")
 		}
 	}
 
+	// The reads in flight finish: the node answers them.
+	close(sink.release)
+	for range opts.Concurrency {
+		select {
+		case err := <-errs:
+			require.ErrorIs(t, err, ErrRecordNotFound, "the reads in flight get the node's answer")
+		case <-time.After(10 * time.Second):
+			t.Fatal("the reads in flight did not finish")
+		}
+	}
+	require.Empty(t, sink.entered, "no read that waited for a permit reached the node")
+}
+
+func TestShutdownLetsReadsInFlightTimeOut(t *testing.T) {
+	n, fake := startNode(t, clean(), simnode.Options{})
+	opts := options(n, fake)
+	opts.Concurrency = 1
+	opts.RequestTimeout = 500 * time.Millisecond
+	c := dial(t, opts)
+	sink := hangTransfers(t, c, 1)
+
+	stop, shutdown := context.WithCancel(t.Context())
+	ctx := WithStop(context.WithoutCancel(stop), stop)
+	id := newID(t, 1, 10, 1)
+	errs := make(chan error, 1)
+	go func() {
+		_, err := c.Transfer(ctx, head, id)
+		errs <- err
+	}()
+	select {
+	case <-sink.entered:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the read never reached the node")
+	}
+
+	// The node never answers; shutdown does not cancel the read in flight, and its request timeout ends it.
+	began := time.Now()
+	shutdown()
+	select {
+	case err := <-errs:
+		require.Equal(t, codes.DeadlineExceeded, status.Code(errors.Unwrap(err)), "the read in flight times out: %v", err)
+	case <-time.After(10 * time.Second):
+		t.Fatal("the read in flight did not end")
+	}
 	require.Less(t, time.Since(began), 2*opts.RequestTimeout, "shutdown takes about one request timeout")
-	require.Equal(t, opts.Concurrency, timedOut, "the reads in flight finish or time out")
-	require.Equal(t, calls-opts.Concurrency, cancelled, "the reads waiting for a permit are cancelled")
 }
 
 func TestBlockMaxGas(t *testing.T) {
@@ -872,6 +920,45 @@ func TestTxResultCodespace(t *testing.T) {
 	require.False(t, d.TxIndexEnabled())
 	_, err = d.Tx(t.Context(), sdkTx.Hash)
 	require.ErrorContains(t, err, "transaction indexing is disabled")
+}
+
+func TestTxIndexedBelow(t *testing.T) {
+	sc := clean()
+	sc.Akash.IndexLag = 1
+	n, fake := startNode(t, sc, simnode.Options{})
+	c := dial(t, options(n, fake))
+
+	sent, err := c.BroadcastSync(t.Context(), voteTx(t, sc.Akash.Transfers[0].Transfer.ID, start.Add(time.Minute)))
+	require.NoError(t, err)
+	require.Zero(t, sent.Code, sent.Log)
+	n.CommitBlock() // includes the vote at head+1; the indexes stop at head
+
+	got, indexed, err := c.TxIndexedBelow(t.Context(), sent.Hash, head+1)
+	require.NoError(t, err)
+	require.Nil(t, got)
+	require.False(t, indexed, "block head+1 is not indexed yet")
+
+	got, indexed, err = c.TxIndexedBelow(t.Context(), sent.Hash, head)
+	require.NoError(t, err)
+	require.Nil(t, got, "the vote lies above the index")
+	require.True(t, indexed, "every block below head is indexed")
+
+	n.Mutate(func(sc *simnode.Scenario) { sc.Akash.IndexLag = 0 })
+	got, indexed, err = c.TxIndexedBelow(t.Context(), sent.Hash, head+1)
+	require.NoError(t, err)
+	require.Equal(t, &TxResult{Height: head + 1}, got)
+	require.True(t, indexed)
+
+	// Answers in reverse order, which JSON-RPC allows, fail the lookup rather than read as an indexed block without
+	// the vote.
+	n.Mutate(func(sc *simnode.Scenario) { sc.Akash.ReverseBatches = true })
+	_, _, err = c.TxIndexedBelow(t.Context(), sent.Hash, head+1)
+	require.Error(t, err)
+
+	// A gateway's refusal of the batch fails the lookup rather than read as an index not there yet.
+	n.Mutate(func(sc *simnode.Scenario) { sc.Akash.ReverseBatches, sc.Akash.RefuseBatches = false, true })
+	_, _, err = c.TxIndexedBelow(t.Context(), sent.Hash, head+1)
+	require.ErrorContains(t, err, "batch requests are not supported")
 }
 
 func TestSimulate(t *testing.T) {

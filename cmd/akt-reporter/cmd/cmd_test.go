@@ -200,6 +200,18 @@ func TestInitOverwriteReplacesSafely(t *testing.T) {
 		require.Equal(t, "old = 1\n", string(data))
 		only(t, filepath.Dir(path))
 	})
+	t.Run("an access ACL that cannot be kept keeps the old file", func(t *testing.T) {
+		home, path := seed(t, 0o640)
+		t.Cleanup(cmd.SetACLKeeper(func(*os.File, string) error { return errors.New("operation not supported") }))
+		code, _, stderr := execute(t, "", "init", "--home", home, "--overwrite")
+		require.Equal(t, 1, code)
+		require.Contains(t, stderr, "access ACL")
+		require.Contains(t, stderr, "operation not supported")
+		data, err := os.ReadFile(path) //nolint:gosec // a test directory
+		require.NoError(t, err)
+		require.Equal(t, "old = 1\n", string(data))
+		only(t, filepath.Dir(path))
+	})
 	t.Run("keeps the file's mode", func(t *testing.T) {
 		home, path := seed(t, 0o644)
 		code, _, stderr := execute(t, "", "init", "--home", home, "--overwrite")
@@ -304,6 +316,47 @@ func TestInitOverwriteReplacesSafely(t *testing.T) {
 		require.Equal(t, os.ModeNamedPipe, info.Mode().Type())
 		require.Contains(t, stderr, "not a regular file")
 	})
+}
+
+// ownedBy is a file's info whose owner is st's.
+type ownedBy struct {
+	os.FileInfo
+	st *syscall.Stat_t
+}
+
+func (o ownedBy) Sys() any { return o.st }
+
+func TestOverwriteKeepsGroupWithoutOwnerPrivilege(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root keeps any owner")
+	}
+
+	f, err := os.CreateTemp(t.TempDir(), ".reporter.toml.*")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = f.Close() })
+	info, err := f.Stat()
+	require.NoError(t, err)
+	st, ok := info.Sys().(*syscall.Stat_t)
+	require.True(t, ok)
+
+	groups, err := os.Getgroups()
+	require.NoError(t, err)
+	i := slices.IndexFunc(groups, func(g int) bool { return g != int(st.Gid) })
+	if i < 0 {
+		t.Skip("the user is in no group but the file's")
+	}
+
+	// The old file belongs to root, in a group of the user who runs init: the owner cannot be kept, the group can.
+	old := *st
+	old.Uid, old.Gid = 0, uint32(groups[i]) //nolint:gosec // a group ID
+	cmd.KeepOwnerAndMode(f, ownedBy{FileInfo: info, st: &old})
+
+	info, err = f.Stat()
+	require.NoError(t, err)
+	got, ok := info.Sys().(*syscall.Stat_t)
+	require.True(t, ok)
+	require.Equal(t, groups[i], int(got.Gid), "the group is kept")
+	require.Equal(t, os.Geteuid(), int(got.Uid), "the file stays the user's")
 }
 
 func TestKeysUseConfiguredBackend(t *testing.T) {

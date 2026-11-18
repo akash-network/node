@@ -84,6 +84,9 @@ func errExists(path string) error {
 // writeFileData writes every reporter.toml; only tests replace it.
 var writeFileData = (*os.File).Write
 
+// keepACL gives a temporary file the access ACL of the reporter.toml at path that it replaces; only tests replace it.
+var keepACL = keepAccessACL
+
 func writeConfig(path string, data []byte, overwrite bool) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
@@ -105,10 +108,10 @@ func writeConfig(path string, data []byte, overwrite bool) error {
 }
 
 // replaceConfig renames a synced temporary file over path, or over the target of a symlink at path, so a
-// failed write keeps the old file; the temporary file takes the old file's mode and, where it may, its owner.
-// It refuses a target that is not a regular file. It writes in place where no temporary file can be created or
-// renamed into place, as with a single-file bind mount, and through a dangling symlink, whose target O_CREATE
-// creates.
+// failed write keeps the old file; the temporary file takes the old file's mode, on Linux its POSIX access ACL, and,
+// where it may, its owner and group. It keeps the old file when that ACL cannot be copied, and refuses a
+// target that is not a regular file. It writes in place where no temporary file can be created or renamed into
+// place, as with a single-file bind mount, and through a dangling symlink, whose target O_CREATE creates.
 func replaceConfig(path string, data []byte) (err error) {
 	var old fs.FileInfo
 
@@ -144,6 +147,10 @@ func replaceConfig(path string, data []byte) (err error) {
 
 	if old != nil {
 		keepOwnerAndMode(tmp, old)
+		if err = keepACL(tmp, path); err != nil {
+			_ = tmp.Close()
+			return fmt.Errorf("copy the access ACL of %s: %w", path, err)
+		}
 	}
 
 	if err = writeSynced(tmp, data); err != nil {
@@ -166,10 +173,13 @@ func isSymlink(path string) bool {
 }
 
 // keepOwnerAndMode gives f the owner and permission bits of the file old describes. Both are best effort: keeping
-// another user's ownership takes privilege, and without it f stays owned by the user who runs init.
+// another user's ownership takes privilege, and without it f stays owned by the user who runs init and keeps the
+// old group where that user may set it.
 func keepOwnerAndMode(f *os.File, old fs.FileInfo) {
 	if uid, gid, ok := fileOwner(old); ok {
-		_ = f.Chown(uid, gid)
+		if f.Chown(uid, gid) != nil {
+			_ = f.Chown(-1, gid)
+		}
 	}
 	_ = f.Chmod(old.Mode().Perm())
 }

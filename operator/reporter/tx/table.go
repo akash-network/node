@@ -72,8 +72,11 @@ type liveTx struct {
 	busy bool
 	// looked is the highest height whose lookup has answered.
 	looked int64
-	// lookupFailed is set after a failed lookup: the next one waits for a refresh tick, not a new height.
+	// lookupFailed is set after a lookup that failed, or that missed the transaction past its timeout before the index
+	// reached pastAt: the next one waits for a refresh tick, not a new height.
 	lookupFailed bool
+	// pastAt is the height at which chain time was first seen past the timeout; zero before.
+	pastAt int64
 	// observed means lookups await the outcome; it is false without a transaction index, and once Wait gave up.
 	observed bool
 	// inFlight means the transaction counts against MaxInFlight.
@@ -381,11 +384,12 @@ func (b *Broadcaster) applyAbandoned(e *slotEntry, tx *liveTx, res buildResult) 
 	}
 }
 
-// applyLookup records the answer of tx(hash) at height h. final means chain time had passed the timeout when the
-// lookup started, so a transaction still missing can never be included.
-func (b *Broadcaster) applyLookup(e *slotEntry, tx *liveTx, h int64, final bool, r *akash.TxResult, err error) {
+// applyLookup records the answer of a lookup at height h. past means chain time had passed the timeout when the lookup
+// started. final means the node had then also indexed every block below pastAt, so a transaction still missing can
+// never be included; a missing one is looked up again at the next refresh until then.
+func (b *Broadcaster) applyLookup(e *slotEntry, tx *liveTx, h int64, past, final bool, r *akash.TxResult, err error) {
 	tx.busy = false
-	if err != nil {
+	if err != nil || (r == nil && past && !final) {
 		tx.lookupFailed = true
 		return
 	}

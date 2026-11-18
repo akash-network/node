@@ -16,6 +16,7 @@ import (
 	"time"
 
 	rpchttp "github.com/cometbft/cometbft/rpc/client/http"
+	rpctypes "github.com/cometbft/cometbft/rpc/jsonrpc/types"
 	"github.com/cosmos/cosmos-sdk/client/grpc/cmtservice"
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -628,6 +629,63 @@ func (c *Client) Tx(ctx context.Context, hash []byte) (*TxResult, error) {
 	})
 
 	return out, err
+}
+
+// TxIndexedBelow looks up an included transaction by hash, as Tx does, and reports whether the answering node had
+// indexed every block below height: CometBFT indexes a block's transactions before the next block's events, so it had
+// once block height is in its block index, unless it failed to write a block, which it logs and does not retry. One
+// batched request asks the block index first, so a node, or a proxy that passes the batch on whole, answers both and
+// looks up the hash with an index at least that far along.
+func (c *Client) TxIndexedBelow(ctx context.Context, hash []byte, height int64) (*TxResult, bool, error) {
+	var (
+		out     *TxResult
+		indexed bool
+	)
+	err := c.comet(ctx, "tx_search", func(ctx context.Context) error {
+		page, perPage := 1, 1
+		batch := c.rpc.NewBatch()
+		blocks, err := batch.BlockSearch(ctx, fmt.Sprintf("block.height = %d", height), &page, &perPage, "")
+		if err != nil {
+			return err
+		}
+		txs, err := batch.TxSearch(ctx, fmt.Sprintf("tx.hash = '%X'", hash), false, &page, &perPage, "")
+		if err != nil {
+			return err
+		}
+		res, err := batch.Send(ctx)
+		if err != nil {
+			return err
+		}
+		// A reply that is not one answer per query, such as a gateway's single error, fails the lookup.
+		for _, r := range res {
+			if e, ok := r.(*rpctypes.RPCError); ok {
+				return e
+			}
+		}
+		if len(res) != 2 {
+			return fmt.Errorf("batch answered %d of 2 queries", len(res))
+		}
+		// The client matches answers by position. An answer to the other query does not fit and fails the lookup, so a
+		// reordered reply never reads as an indexed block without the transaction.
+		if txs.TotalCount != len(txs.Txs) {
+			return errors.New("tx_search answer does not fit its query")
+		}
+
+		indexed = len(blocks.Blocks) == 1 && blocks.Blocks[0].Block != nil && blocks.Blocks[0].Block.Height == height
+		if len(txs.Txs) > 0 {
+			r := txs.Txs[0]
+			out = &TxResult{
+				Height:    r.Height,
+				Code:      r.TxResult.Code,
+				Codespace: r.TxResult.Codespace,
+				Log:       r.TxResult.Log,
+			}
+		}
+
+		return nil
+	})
+
+	return out, indexed, err
 }
 
 // TxIndexEnabled reports whether the node indexed transactions when Dial read its status.

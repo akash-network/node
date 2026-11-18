@@ -45,6 +45,7 @@ type Chain interface {
 	Simulate(ctx context.Context, txBytes []byte) (uint64, error)
 	BroadcastSync(ctx context.Context, txBytes []byte) (akash.BroadcastResult, error)
 	Tx(ctx context.Context, hash []byte) (*akash.TxResult, error)
+	TxIndexedBelow(ctx context.Context, hash []byte, height int64) (*akash.TxResult, bool, error)
 	TxIndexEnabled() bool
 }
 
@@ -498,16 +499,30 @@ func (b *Broadcaster) startBuild(e *slotEntry) {
 	})
 }
 
+// lookup asks for tx's outcome. Once chain time has passed its timeout, it also asks whether the node has indexed every
+// block below the first height seen past it, which holds every block that could include tx.
 func (b *Broadcaster) lookup(e *slotEntry, tx *liveTx) {
 	tx.busy = true
-	h, final, hash := b.st.height, b.st.chainTime.After(e.timeout), tx.hash
+	if tx.pastAt == 0 && b.st.chainTime.After(e.timeout) {
+		tx.pastAt = b.st.height
+	}
+	h, at, hash := b.st.height, tx.pastAt, tx.hash
 
 	b.spawn(func() {
-		r, err := b.chain.Tx(b.work, hash)
+		var (
+			r     *akash.TxResult
+			final bool
+			err   error
+		)
+		if at > 0 {
+			r, final, err = b.chain.TxIndexedBelow(b.work, hash, at)
+		} else {
+			r, err = b.chain.Tx(b.work, hash)
+		}
 		if err != nil {
 			b.log.Debug().Err(err).Str("hash", fmt.Sprintf("%X", hash)).Msg("transaction lookup failed")
 		}
-		b.post(func() { b.applyLookup(e, tx, h, final, r, err) })
+		b.post(func() { b.applyLookup(e, tx, h, at > 0, final, r, err) })
 	})
 }
 

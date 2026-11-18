@@ -117,14 +117,21 @@ func TestRestartNoDoubleExecution(t *testing.T) {
 		sc.Akash.BroadcastFaults = []simnode.BroadcastFault{{Kind: simnode.FaultLostResponse}}
 	})
 
-	// A sends both votes in one transaction, which is admitted while its response is lost; then A is discarded.
+	// A sends both votes in one transaction, which is admitted while its response is lost; then A is discarded. Until a
+	// re-send is answered, A re-sends those bytes on its refresh ticks (spec §6.5), so every broadcast A makes is that
+	// transaction.
 	a := h.start(o, h.signer, h.dial())
 	require.NoError(t, a.wire(nil).Review(t.Context(), ids, 0))
 	a.b.Flush()
-	sentA := h.waitBroadcasts(1)[0]
+	require.Eventually(t, func() bool { return len(h.node.Broadcasts()) > 0 }, 10*time.Second, time.Millisecond)
+	a.stop()
+	sent := h.broadcasts()
+	sentA := sent[0]
+	for _, d := range sent[1:] {
+		require.Equal(t, sentA.hash(), d.hash(), "A re-sends only its one transaction")
+	}
 	require.ElementsMatch(t, []string{ids[0].String(), ids[1].String()}, sentA.ids)
 	require.Equal(t, w, WindowOf(sentA.timeout))
-	a.stop()
 
 	// B, with its own scanner, plans one of those votes in the same window.
 	b := h.start(o, h.signer, h.dial())
