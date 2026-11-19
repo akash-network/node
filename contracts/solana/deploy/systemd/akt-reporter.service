@@ -1,5 +1,5 @@
 [Unit]
-Description=Akash Sink reporter (preview until explicitly activated)
+Description=Akash Sink reporter (preview until broadcast is enabled)
 Wants=network-online.target
 After=network-online.target
 StartLimitIntervalSec=300
@@ -9,9 +9,7 @@ StartLimitBurst=5
 Type=simple
 User=akt-reporter
 Group=akt-reporter
-WorkingDirectory=/opt/akt-bridge/current/contracts/solana
-Environment=PATH=/usr/local/bin:/usr/bin:/bin
-ExecStart=/bin/bash /opt/akt-bridge/current/contracts/solana/deploy/service.sh reporter-preview /etc/akt-reporter/config.json
+ExecStart=/usr/local/bin/akt-reporter start --home /var/lib/akt-reporter
 Restart=on-failure
 RestartSec=10
 TimeoutStopSec=120

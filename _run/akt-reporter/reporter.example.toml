@@ -1,0 +1,131 @@
+# akt-reporter configuration.
+# Every key can also be set with a flag (--<key>) or an AKT_REPORTER_<KEY> environment variable
+# ("." and "-" become "_"). Precedence: flag, environment, this file, default.
+
+# mainnet or testnet; each refuses the other's identities
+network = "mainnet"
+
+# send transactions; false previews only
+broadcast = false
+
+# reporter akash1... address (required)
+reporter = ""
+
+# Akash chain ID (required)
+chain-id = ""
+
+# Akash RPC URL: tcp, http or https, no credentials
+node = "tcp://localhost:26657"
+
+# Akash gRPC host:port
+grpc-addr = "localhost:9090"
+
+# use plaintext gRPC for a non-loopback address; loopback always uses plaintext
+grpc-insecure = false
+
+# oldest accepted snapshot, above 0 and at most 10m; with broadcast, max-age plus the signer timeout is at most 80s
+max-age = "1m0s"
+
+# per-request timeout, 1s to 60s
+request-timeout = "15s"
+
+# keyring key name or address that signs in-process
+from = ""
+
+# keyring backend: os, file or test
+keyring-backend = "test"
+
+# keyring directory; empty means the home directory
+keyring-dir = ""
+
+# auto, or gas per message; the transaction limit is that times the message count, at most tx.max-gas
+gas = "auto"
+
+# simulation gas multiplier, 1.0 to 10.0
+gas-adjustment = 2.0
+
+# gas price in uakt, for example 0.025uakt
+gas-prices = "0.025uakt"
+
+# fixed fee in uakt, at most tx.max-fee; overrides gas-prices
+fees = ""
+
+[solana]
+# Solana JSON-RPC URL: http or https, no credentials
+rpc = "http://localhost:8899"
+
+# Solana genesis hash, canonical base58 (required)
+genesis-hash = ""
+
+# sink program ID, canonical base58 (required)
+program-id = ""
+
+# mint address; must equal the program's "mint" PDA (required)
+mint = ""
+
+# light client program ID; empty follows the bridge account
+light-client-program = ""
+
+# slots the cursor may lead, at most 100000; 0 derives (max-age + 60s, rounded up to whole seconds) x 5
+max-slot-lead = 0
+
+[scan]
+# wait between passes, 1s to 60s
+interval = "15s"
+
+# transfer IDs the terminal audit rechecks per pass, 1 to 10000
+audit-per-scan = 100
+
+# page size for list requests, 1 to 5000
+page-size = 500
+
+# pass workers, 1 to 256
+workers = 16
+
+# concurrent Akash requests, 1 to 256
+akash-concurrency = 32
+
+# concurrent Solana requests, 1 to 64
+solana-concurrency = 8
+
+# concurrent Solana block fetches, 1 to 16
+block-concurrency = 2
+
+[tx]
+# gas limit cap for a transaction, 1 to 20000000
+max-gas = 20000000
+
+# fee cap for a transaction in uakt, above 0, at most 1000000uakt
+max-fee = "1000000uakt"
+
+# messages per transaction, 1 to 100
+max-msgs = 25
+
+# transactions in flight, 1 to 64
+max-in-flight = 8
+
+[signer.remote]
+# remote signer host:port; set it or from when broadcasting, not both
+address = ""
+
+# remote signer key ID; required with signer.remote.address
+key-id = ""
+
+# CA file for the remote signer; empty uses system roots
+ca-file = ""
+
+# TLS server name for the remote signer
+server-name = ""
+
+# client certificate for the remote signer; set with signer.remote.key-file
+cert-file = ""
+
+# client key for the remote signer; set with signer.remote.cert-file
+key-file = ""
+
+# remote signer request timeout, 1s to 120s
+timeout = "10s"
+
+[metrics]
+# metrics host:port; empty disables the listener
+listen = ""

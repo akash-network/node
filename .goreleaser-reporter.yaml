@@ -1,0 +1,68 @@
+version: 2
+project_name: akt-reporter
+dist: ./.cache/goreleaser/reporter
+
+builds:
+  - id: akt-reporter
+    main: ./cmd/akt-reporter
+    binary: akt-reporter
+    env:
+      - CGO_ENABLED=0
+      - GOWORK=off
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+      - -mod=readonly
+    ldflags:
+      - -s -w
+      - -X github.com/cosmos/cosmos-sdk/version.Name=akt-reporter
+      - -X github.com/cosmos/cosmos-sdk/version.AppName=akt-reporter
+      - -X github.com/cosmos/cosmos-sdk/version.Version={{ .Version }}
+      - -X github.com/cosmos/cosmos-sdk/version.Commit={{ .FullCommit }}
+
+archives:
+  - id: akt-reporter
+    formats: [tar.gz]
+    name_template: "akt-reporter_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - src: _run/akt-reporter/reporter.example.toml
+        dst: reporter.example.toml
+
+checksum:
+  name_template: "akt-reporter_{{ .Version }}_checksums.txt"
+
+dockers_v2:
+  - id: akt-reporter
+    dockerfile: _build/akt-reporter.Dockerfile
+    images:
+      - '{{ envOrDefault "REPORTER_IMAGE" "ghcr.io/akash-network/akt-reporter" }}'
+    tags:
+      - "{{ .Version }}"
+      - "{{ if not .Prerelease }}latest{{ end }}"
+    platforms:
+      - linux/amd64
+      - linux/arm64
+    labels:
+      "org.opencontainers.image.title": "akt-reporter"
+      "org.opencontainers.image.description": "Akash sink reporter: reviews Akash-to-Solana transfers and reports the result on Akash"
+      "org.opencontainers.image.source": "https://github.com/akash-network/node"
+      "org.opencontainers.image.revision": "{{ .FullCommit }}"
+      "org.opencontainers.image.version": "{{ .Version }}"
+      "org.opencontainers.image.created": "{{ .Date }}"
+    annotations:
+      "org.opencontainers.image.title": "akt-reporter"
+      "org.opencontainers.image.description": "Akash sink reporter: reviews Akash-to-Solana transfers and reports the result on Akash"
+      "org.opencontainers.image.source": "https://github.com/akash-network/node"
+      "org.opencontainers.image.revision": "{{ .FullCommit }}"
+      "org.opencontainers.image.version": "{{ .Version }}"
+      "org.opencontainers.image.created": "{{ .Date }}"
+
+# GoReleaser OSS does not understand tag prefixes, so the release workflow
+# publishes the reporter/vX release itself.
+changelog:
+  disable: true
+
+release:
+  disable: true

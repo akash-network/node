@@ -4,7 +4,6 @@ on:
   push:
     tags:
       - relayer/v*
-      - reporter/v*
 
 permissions:
   contents: read
@@ -31,7 +30,7 @@ jobs:
         env:
           TAG: ${{ github.ref_name }}
         run: |
-          [[ "$TAG" =~ ^(relayer|reporter)/v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[a-zA-Z0-9.-]+)?$ ]]
+          [[ "$TAG" =~ ^relayer/v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[a-zA-Z0-9.-]+)?$ ]]
           test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/$TAG^{commit}")"
           git merge-base --is-ancestor HEAD origin/main
           if draft=$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null); then
@@ -119,9 +118,6 @@ jobs:
           cp "_run/akt-$OPERATOR_ROLE/docker-compose.yaml" "$dist/akt-$OPERATOR_ROLE-compose.yaml"
           cp .cache/operator-image/package/deploy/.env.example "$dist/akt-$OPERATOR_ROLE.env.example"
           cp .cache/operator-image/package/deploy/config.example.json "$dist/akt-$OPERATOR_ROLE-config.example.json"
-          if [[ "$OPERATOR_ROLE" == reporter ]]; then
-            cp _run/akt-reporter/broadcast.yaml "$dist/akt-reporter-broadcast.yaml"
-          fi
           cd "$dist"
           sha256sum ./*.yaml ./*.example ./*config.example.json >> "akt-${OPERATOR_ROLE}_${OPERATOR_VERSION}_checksums.txt"
           sha256sum --check "akt-${OPERATOR_ROLE}_${OPERATOR_VERSION}_checksums.txt"

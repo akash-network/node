@@ -7,6 +7,8 @@ configuration before starting the relayer. Start each reporter in preview.
 
 For independent downloads and Docker Compose, use [operator releases](operator-releases.md).
 The manifest-based source build below remains available for deployment ceremonies.
+It builds the relayer. The reporter is the separate Go binary `akt-reporter`, which
+is not part of this archive: see [reporter hosts](#reporter-hosts).
 
 ## Build one reviewed release
 
@@ -49,10 +51,10 @@ archive is checksummed, not claimed to be reproducible across platforms.
 
 ## Install on each operator's host
 
-Use separate hosts and Unix accounts for the relayer and each reporter. Install
-Node 24 at `/usr/local/bin/node` (or adjust the unit's root-owned PATH). Verify
-the archive hash against the release record before extracting it. Keep release
-files owned by root and unwritable by service accounts.
+Use separate hosts and Unix accounts for the relayer and each reporter. For the
+relayer, install Node 24 at `/usr/local/bin/node` (or adjust the unit's root-owned
+PATH). Verify the archive hash against the release record before extracting it.
+Keep release files owned by root and unwritable by service accounts.
 
 Example for a relayer, as the host administrator:
 
@@ -70,14 +72,11 @@ mv -Tf /opt/akt-bridge/current.next /opt/akt-bridge/current
 Replace `RELEASE` with the reviewed commit or your immutable release identifier.
 Create the user once; a subsequent release uses a new directory. Before a
 replacement, stop the service and back up its configuration and durable state.
-Use the same layout for `akt-reporter` on each reporter host.
 
-Copy the appropriate [relayer](../relayer/config.example.json) or
-[reporter](../reporter/config.example.json) example to `/etc/akt-ROLE/config.json`.
-Replace every placeholder with the deployed program/mint and operator identity.
-RPCs may be loopback proxies to private nodes. The full mainnet genesis hash is
-pinned independently of the RPC endpoint. Each reporter needs independent
-sources and a private key file or external signer as described in [reporter custody](reporter.md#key-custody).
+Copy the [relayer example](../relayer/config.example.json) to
+`/etc/akt-relayer/config.json`. Replace every placeholder with the deployed
+program/mint and operator identity. RPCs may be loopback proxies to private nodes.
+The full mainnet genesis hash is pinned independently of the RPC endpoint.
 
 For the relayer, explicitly set:
 
@@ -86,27 +85,60 @@ For the relayer, explicitly set:
 - `payerKeyFile`: the operator-provisioned key file, owned by `akt-relayer`, mode
   `0600`. Use a separate funded payer per relayer. Keys are never release assets.
 
-Check configuration without reading a payer or calling a signer:
+Check configuration without reading a payer:
 
 ```bash
 cd /opt/akt-bridge/current/contracts/solana
 node --import tsx deploy/service-config.ts relayer /etc/akt-relayer/config.json
-# on a reporter host
-node --import tsx deploy/service-config.ts reporter-preview /etc/akt-reporter/config.json
 ```
 
-These checks reject local network identities, development program IDs, implicit
+This check rejects local network identities, development program IDs, implicit
 encoder paths and cache-based relayer state. The services additionally check
 live network identity, program state and freshness at startup.
+
+### Reporter hosts
+
+Each reporter runs `akt-reporter` on its own host and Unix account, with its own
+Akash and Solana nodes. Its Akash node needs gRPC and a transaction index (see
+[node requirements](reporter.md#akash-node)). Download and verify the binary as
+[operator releases](operator-releases.md#download-without-docker) describes, then,
+as the host administrator:
+
+```bash
+useradd --system --home-dir /var/lib/akt-reporter --shell /usr/sbin/nologin akt-reporter
+install -m 0755 -o root -g root akt-reporter /usr/local/bin/akt-reporter
+install -d -o akt-reporter -g akt-reporter -m 0700 /var/lib/akt-reporter /var/lib/akt-reporter/config
+install -o akt-reporter -g akt-reporter -m 0600 reporter.toml /var/lib/akt-reporter/config/reporter.toml
+```
+
+Start from `reporter.example.toml` in the release archive. Replace every required
+key with the deployed program, mint and operator identity (the
+[configuration reference](operator-configuration.md#reporter-configuration) lists
+them). RPCs may be loopback proxies to private nodes. The full mainnet genesis
+hash is pinned independently of the RPC endpoint. Provide the signer as
+[reporter custody](reporter.md#key-custody) describes: import a key into the
+keyring with `keys import-hex` as the service account, or configure
+`signer.remote.*`. Then validate offline, without opening the keyring or calling a
+signer:
+
+```bash
+sudo -u akt-reporter /usr/local/bin/akt-reporter check --home /var/lib/akt-reporter
+```
+
+The check rejects local network identities, development program IDs and invalid
+signer settings. The service additionally checks live network identity, program
+state and freshness at startup.
 
 ## Supervise and activate
 
 Install the matching unit from [`deploy/systemd`](../deploy/systemd). The units
 run as service users, allow writes only to their state directories, and restart
-failed processes with bounded restart attempts. Review any external signer's
-socket, credentials and filesystem needs against the reporter unit's sandbox;
-add only the required paths in a drop-in. Private systemd `/tmp` and signer-owned
-paths are separate from the repository scratch policy.
+failed processes with bounded restart attempts. The reporter unit runs
+`/usr/local/bin/akt-reporter start --home /var/lib/akt-reporter`. Review a remote
+signer's CA and certificate files and the `file` keyring backend's passphrase input
+against the unit's sandbox; add only the required paths or settings in a drop-in.
+Private systemd `/tmp` and signer-owned paths are separate from the repository
+scratch policy.
 
 ```bash
 install -m 0644 deploy/systemd/akt-relayer.service /etc/systemd/system/
@@ -116,22 +148,27 @@ journalctl -u akt-relayer -f
 ```
 
 On a reporter host install `akt-reporter.service` instead. It starts in preview
-and neither reads signing keys nor invokes the configured signer. Until
+and neither opens the keyring nor calls the configured signer. Until
 governance lists this reporter, each pass stops with `not a current reporter`,
 so preview confirms only configuration and connectivity. After
-governance adds this reporter and the preview/alert gates pass, install a
+governance adds this reporter and the preview/alert gates pass, set
+`broadcast = true` in `/var/lib/akt-reporter/config/reporter.toml`, or install a
 reviewed drop-in:
 
 ```ini
 [Service]
-ExecStart=
-ExecStart=/bin/bash /opt/akt-bridge/current/contracts/solana/deploy/service.sh reporter-broadcast /etc/akt-reporter/config.json
+Environment=AKT_REPORTER_BROADCAST=true
 ```
 
-Run `systemctl daemon-reload` and restart the reporter. The broadcast entry point
-requires `keyFile` or `externalSigner`. Run exactly
-one signing process per reporter account. Validate real signer access and fees
-before activation; config validation alone does not prove either.
+When replacing the TypeScript reporter, first follow the
+[switch-over step](reporter-migration.md#steps): stop it, wait 21 blocks and two
+more minutes, and never run both on one key. Run `systemctl daemon-reload` and
+restart the reporter. Broadcast requires exactly one signer: `from` or
+`signer.remote.address`. Run one active signing process per reporter account. A
+warm standby is safe but wastes signatures and node load. Validate real signer
+access and fees before activation; config validation alone does not prove either.
+The unit gives the process `TimeoutStopSec=120`, which covers its 30-second
+confirmation wait.
 
 Route JSON alerts to paging and verify delivery. Inspect light-client age,
 relayer progress and spend, reporter observations, finalized resolution history,

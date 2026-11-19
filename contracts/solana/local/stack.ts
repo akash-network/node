@@ -37,6 +37,7 @@ import {
 } from "./common";
 
 const exec = promisify(execFile);
+const REPORTER_GO_BIN = process.env.REPORTER_GO_BIN;
 type ProcessEntry = { name: string; pid: number; marker: string };
 export async function processes(): Promise<ProcessEntry[]> {
   if (!existsSync(join(ROOT, "processes.json"))) return [];
@@ -438,6 +439,17 @@ export async function up(signal?: AbortSignal) {
     const reporter = (
       await (await cosmosWallet(`reporter${i}`)).getAccounts()
     )[0].address;
+    if (REPORTER_GO_BIN) {
+      const home = join(ROOT, `reporter${i}`);
+      await goReporterHome(home, i, reporter, genesisHash);
+      await start(
+        `reporter${i}`,
+        REPORTER_GO_BIN,
+        ["start", "--home", home],
+        home,
+      );
+      continue;
+    }
     const config = join(ROOT, `reporter${i}.json`);
     await save(config, {
       akashRpc: AKASH_RPC,
@@ -484,6 +496,55 @@ export async function up(signal?: AbortSignal) {
     marker,
   );
   await status();
+}
+async function goReporterHome(
+  home: string,
+  index: number,
+  reporter: string,
+  genesisHash: string,
+) {
+  assert.ok(REPORTER_GO_BIN);
+  await mkdir(join(home, "config"), { recursive: true, mode: 0o700 });
+  const quote = (value: string) => JSON.stringify(value);
+  await writeFile(
+    join(home, "config/reporter.toml"),
+    [
+      // The local chain ID is not akashnet-2, so mainnet identities do not apply.
+      'network = "testnet"',
+      "broadcast = true",
+      `reporter = ${quote(reporter)}`,
+      `chain-id = ${quote(CHAIN)}`,
+      `node = ${quote(`tcp://127.0.0.1:${AKASH_RPC_PORT}`)}`,
+      `grpc-addr = ${quote(`127.0.0.1:${AKASH_GRPC_PORT}`)}`,
+      'from = "reporter"',
+      "",
+      "[solana]",
+      `rpc = ${quote(SOLANA_RPC)}`,
+      `genesis-hash = ${quote(genesisHash)}`,
+      `program-id = ${quote(PROGRAM_ID.toBase58())}`,
+      `mint = ${quote(pda("mint").toBase58())}`,
+      "",
+      "[scan]",
+      'interval = "3s"',
+      "",
+    ].join("\n"),
+    { mode: 0o600 },
+  );
+  const keys = (args: string[]) =>
+    exec(REPORTER_GO_BIN, ["keys", ...args, "--home", home], {
+      maxBuffer: 1024 * 1024,
+    });
+  const { stdout } = await keys(["list", "--output", "json"]);
+  if (
+    (JSON.parse(stdout) as { name: string }[]).some(
+      (k) => k.name === "reporter",
+    )
+  )
+    return;
+  const secret = await readFile(join(ROOT, `reporter${index}.key`), "utf8");
+  const imported = keys(["import-hex", "reporter"]);
+  imported.child.stdin?.end(secret);
+  await imported;
 }
 function ledgerShreds() {
   const value = process.env.AKT_SOLANA_LEDGER_SHREDS ?? "1000000";

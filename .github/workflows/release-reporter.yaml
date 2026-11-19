@@ -1,0 +1,256 @@
+name: release-reporter
+
+on:
+  push:
+    tags:
+      - reporter/v*
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-reporter-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Spec §7.2: a release enables a remote-signer scheme only after it passes against a real kms binary.
+  kms-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      # 4.14.0 is the last LocalStack image that starts without an auth token; pinned by its multi-arch index digest.
+      localstack:
+        image: localstack/localstack:4.14.0@sha256:3ebc37595918b8accb852f8048fef2aff047d465167edd655528065b07bc364a
+        env:
+          SERVICES: kms
+        ports:
+          - 4566:4566
+        options: >-
+          --health-cmd "curl -fsS http://localhost:4566/_localstack/health"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
+    env:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_REGION: us-east-1
+      KMS_ENDPOINT: http://127.0.0.1:4566
+      KMS_COMMIT: e3dbb2736910f0f07de71d618238928bf706df88
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Build kms
+        run: |
+          src="$RUNNER_TEMP/kms-src"
+          git init -q "$src"
+          git -C "$src" fetch -q --depth 1 https://github.com/cosmos/kms.git "$KMS_COMMIT"
+          git -C "$src" checkout -q FETCH_HEAD
+          cd "$src"
+          GOWORK=off go build -o "$RUNNER_TEMP/kms" ./cmd/kms
+      - name: Configure kms with a LocalStack key and a file key
+        run: |
+          umask 077
+          home="$RUNNER_TEMP/kms-home"
+          mkdir "$home"
+          cd "$home"
+          key_id=$(aws --endpoint-url "$KMS_ENDPOINT" kms create-key \
+            --key-spec ECC_SECG_P256K1 --key-usage SIGN_VERIFY \
+            --query KeyMetadata.KeyId --output text)
+          openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes -days 1 \
+            -subj '/CN=akt-reporter kms gate CA' -keyout ca-key.pem -out ca.pem \
+            -addext 'basicConstraints=critical,CA:TRUE' -addext 'keyUsage=critical,keyCertSign'
+          openssl req -newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes \
+            -subj '/CN=127.0.0.1' -keyout server-key.pem -out server.csr
+          printf '%s\n' 'basicConstraints=critical,CA:FALSE' 'keyUsage=critical,digitalSignature' \
+            'extendedKeyUsage=serverAuth' 'subjectAltName=IP:127.0.0.1' > server.ext
+          openssl x509 -req -in server.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -days 1 \
+            -extfile server.ext -out server.pem
+          openssl rand -hex 32 > secp-eth.hex
+          cat > kms.yaml <<EOF
+          grpc:
+            listen: 127.0.0.1:9443
+            tls_cert: server.pem
+            tls_key: server-key.pem
+            keys:
+              - id: secp-eth
+                backend: file
+                algorithm: secp256k1eth
+                key_file: secp-eth.hex
+              - id: secp
+                backend: awskms
+                algorithm: secp256k1
+                key_id: $key_id
+                region: $AWS_REGION
+                endpoint: $KMS_ENDPOINT
+          EOF
+          echo "KMS_HOME=$home" >> "$GITHUB_ENV"
+      - name: Run the remote signer against kms
+        run: |
+          "$RUNNER_TEMP/kms" start --home "$KMS_HOME" > "$RUNNER_TEMP/kms.log" 2>&1 &
+          kms_pid=$!
+          trap 'kill "$kms_pid" 2>/dev/null || true' EXIT
+          for _ in $(seq 60); do
+            kill -0 "$kms_pid"
+            (: < /dev/tcp/127.0.0.1/9443) 2>/dev/null && break
+            sleep 1
+          done
+          set -o pipefail
+          log="$RUNNER_TEMP/kms-gate.log"
+          REPORTER_KMS_REQUIRED=1 REPORTER_KMS_ADDR=127.0.0.1:9443 REPORTER_KMS_CA="$KMS_HOME/ca.pem" \
+            REPORTER_KMS_KEYS=secp-eth:ECDSA_SECP256K1ETH,secp:ECDSA_SECP256K1 GOWORK=off \
+            go test ./operator/reporter/signer/ -run TestRemoteAgainstKMS -count=1 -v 2>&1 | tee "$log"
+          # A renamed or skipped test must not pass the gate with "no tests to run".
+          for name in TestRemoteAgainstKMS TestRemoteAgainstKMS/secp-eth TestRemoteAgainstKMS/secp; do
+            grep -Eq "^ *--- PASS: ${name} \(" "$log" || { echo "::error::no PASS line for $name"; exit 1; }
+          done
+      - name: Show the kms log
+        if: failure()
+        run: cat "$RUNNER_TEMP/kms.log" || true
+
+  perf-gate:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/reporter-perf.yaml
+
+  release:
+    needs: [kms-gate, perf-gate]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check release identity
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          [[ "$TAG" =~ ^reporter/v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[a-zA-Z0-9.-]+)?$ ]]
+          test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/$TAG^{commit}")"
+          if [[ "$TAG" == reporter/v0.2.0-rc0 ]]; then
+            test "$GITHUB_REPOSITORY" = akash-network/node
+            branch_tip=$(git show-ref --verify --hash 'refs/remotes/origin/jc/reporter-go')
+            test "$(git rev-parse HEAD)" = "$branch_tip"
+          else
+            git merge-base --is-ancestor HEAD origin/main
+          fi
+          if draft=$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null); then
+            test "$draft" = true
+          fi
+          version=${TAG#*/v}
+          prerelease=false
+          [[ "$version" != *-* ]] || prerelease=true
+          {
+            echo "VERSION=$version"
+            echo "RELEASE_TAG=$TAG"
+            echo "PRERELEASE=$prerelease"
+            echo "RELEASE_IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/akt-reporter"
+          } >> "$GITHUB_ENV"
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Test the reporter
+        run: GOWORK=off go test ./operator/... ./cmd/akt-reporter/...
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+        with:
+          driver-opts: image=moby/buildkit:v0.34.2@sha256:c5f8862f52499773af85bc07695b2379ef08e8002352b0df2c4864c91d78dabe
+      # GoReleaser OSS cannot read the reporter/ tag prefix, so the version comes from GORELEASER_CURRENT_TAG
+      # (spec §14). If a release refuses it, fall back to a snapshot build, docker buildx imagetools create
+      # and a gh upload.
+      - name: Build a snapshot
+        uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6.4.0
+        env:
+          GORELEASER_CURRENT_TAG: v${{ env.VERSION }}
+        with:
+          distribution: goreleaser
+          version: v2.17.1
+          args: release --snapshot --clean -f .goreleaser-reporter.yaml
+      - name: Smoke-test the amd64 image
+        run: |
+          dist=.cache/goreleaser/reporter
+          image=$(jq -r --arg v "$VERSION" '[.[] | select(.type == "Docker Image") | .name
+            | select(test(":" + $v + "-SNAPSHOT-[0-9a-f]+-amd64$"))]
+            | if length == 1 then .[0] else error("want one amd64 snapshot image, got \(length)") end' "$dist/artifacts.json")
+          bin=$(jq -r '.[] | select(.type == "Binary" and .goos == "linux" and .goarch == "amd64") | .path' "$dist/artifacts.json")
+          run=(docker run --rm --platform linux/amd64 --network none --read-only)
+          "${run[@]}" "$image" version
+          "${run[@]}" --env-file _build/akt-reporter-smoke.env "$image" check --network testnet
+          # A throwaway key in a read-only home owned by the image's user, as Compose mounts it.
+          home=$(mktemp -d "$RUNNER_TEMP/reporter-home.XXXXXX")
+          trap 'sudo rm -rf "$home"' EXIT
+          openssl rand -hex 32 | "$bin" keys import-hex smoke --keyring-backend test --home "$home"
+          want=$("$bin" keys show smoke -a --keyring-backend test --home "$home")
+          user=$(docker image inspect "$image" --format '{{.Config.User}}')
+          sudo chown -R "$user" "$home"
+          got=$("${run[@]}" --user "$user" --mount "type=bind,src=$home,dst=/home/akt-reporter,readonly" \
+            "$image" keys show smoke -a --keyring-backend test)
+          test "$got" = "$want"
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build the archives and push the multi-arch image
+        uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6.4.0
+        env:
+          GORELEASER_CURRENT_TAG: v${{ env.VERSION }}
+          REPORTER_IMAGE: ${{ env.RELEASE_IMAGE }}
+        with:
+          distribution: goreleaser
+          version: v2.17.1
+          args: release --clean --skip=validate -f .goreleaser-reporter.yaml
+      - name: Add the Compose file and examples to the checksums
+        run: |
+          dist=.cache/goreleaser/reporter
+          cp _run/akt-reporter/docker-compose.yaml "$dist/akt-reporter-compose.yaml"
+          cp _run/akt-reporter/.env.example "$dist/akt-reporter.env.example"
+          sed -i "s|^OPERATOR_IMAGE=.*|OPERATOR_IMAGE=$RELEASE_IMAGE:$VERSION|" "$dist/akt-reporter.env.example"
+          cp _run/akt-reporter/reporter.env.example _run/akt-reporter/reporter.example.toml "$dist/"
+          cd "$dist"
+          sha256sum akt-reporter-compose.yaml akt-reporter.env.example reporter.env.example reporter.example.toml \
+            >> "akt-reporter_${VERSION}_checksums.txt"
+          sha256sum --check "akt-reporter_${VERSION}_checksums.txt"
+      - name: Create a draft reporter release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          dist=.cache/goreleaser/reporter
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --verify-tag --draft --latest=false --prerelease="$PRERELEASE" \
+              --title "akt-reporter v$VERSION" \
+              --notes "Linux and macOS downloads and the multi-arch Docker image for akt-reporter. Configuration selects the deployment; verify its published addresses before starting. See contracts/solana/docs/operator-releases.md at this tag."
+          fi
+          gh release upload "$RELEASE_TAG" "$dist"/*.tar.gz "$dist/akt-reporter_${VERSION}_checksums.txt" \
+            "$dist/akt-reporter-compose.yaml" "$dist/akt-reporter.env.example" \
+            "$dist/reporter.env.example" "$dist/reporter.example.toml" --clobber
+      - name: Check the published image
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          image="$RELEASE_IMAGE:$VERSION"
+          docker buildx imagetools inspect "$image" --format '{{json .Manifest}}' | jq -r .digest \
+            | sed "s|^|$RELEASE_IMAGE@|" > .cache/goreleaser/reporter/image-digest.txt
+          gh release upload "$RELEASE_TAG" .cache/goreleaser/reporter/image-digest.txt --clobber
+          mkdir -p .cache/anonymous-docker
+          manifest=$(docker --config "$PWD/.cache/anonymous-docker" manifest inspect "$image") || {
+            echo 'Set this GHCR package visibility to Public, then rerun. The GitHub release remains a draft.' >&2
+            exit 1
+          }
+          for platform in linux/amd64 linux/arm64; do
+            jq -e --arg p "$platform" 'any(.manifests[]; "\(.platform.os)/\(.platform.architecture)" == $p)' \
+              <<< "$manifest" >/dev/null
+          done
+      - name: Publish the reporter release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "$RELEASE_TAG" --draft=false --latest=false --prerelease="$PRERELEASE"

@@ -56,6 +56,21 @@ jobs:
       - run: make build-contracts test-coverage
       - uses: codecov/codecov-action@v4
 
+  reporter:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup environment
+        uses: ./.github/actions/setup-ubuntu
+      - run: make test-reporter
+      - run: make akt-reporter
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: v2.17.1
+          args: check -f .goreleaser-reporter.yaml
+
   lint-go:
     runs-on: ubuntu-latest
     steps:
