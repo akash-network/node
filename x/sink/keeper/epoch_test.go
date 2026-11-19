@@ -90,13 +90,8 @@ func TestQuotaEpochFailureIsAtomic(t *testing.T) {
 			pub := ed25519.NewKeyFromSeed(bytes.Repeat([]byte{8}, 32)).Public().(ed25519.PublicKey)
 			var recipient types.SolanaAddress
 			copy(recipient[:], pub)
-			msg := &types.MsgSink{
-				Sender:   testOwner(6).String(),
-				DestType: types.DestTypeSolana,
-				Dest:     recipient.String(),
-				Amount:   testCoin(1),
-			}
-			_, err = k.Deposit(depositContext(ctx, msg), msg)
+
+			_, err = k.Deposit(ctx, testOwner(6), recipient, testCoin(1))
 			expected := epoch.err
 			if expected == nil {
 				expected = types.ErrInvalidClock
@@ -124,7 +119,7 @@ func TestQuotaEpochFailureIsAtomic(t *testing.T) {
 			sequence, err := k.sequence.Peek(ctx)
 			require.NoError(t, err)
 			require.Zero(t, sequence)
-			id, err := k.Deposit(depositContext(ctx, msg), msg)
+			id, err := k.Deposit(ctx, testOwner(6), recipient, testCoin(1))
 			require.NoError(t, err)
 			require.Equal(t, uint64(1), id.Sequence)
 
@@ -207,7 +202,7 @@ func TestGenesisPreservesEpochCounters(t *testing.T) {
 	exported, err := k.ExportGenesis(ctx)
 	require.NoError(t, err)
 	requireGenesisEqual(t, g, exported)
-	epoch, err := k.quotaEpoch(ctx)
+	epoch, err := k.getEpochID(ctx)
 	require.NoError(t, err)
 	require.Equal(t, uint64(50000), epoch)
 }

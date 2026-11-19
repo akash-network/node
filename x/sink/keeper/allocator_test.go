@@ -14,16 +14,6 @@ import (
 	types "pkg.akt.dev/go/node/sink/v1"
 )
 
-func depositContext(ctx sdk.Context, msg *types.MsgSink) sdk.Context {
-	return ctx.WithValue(sinkRequestContextKey{}, sinkRequest{
-		sender:   msg.Sender,
-		destType: msg.DestType,
-		dest:     msg.Dest,
-		denom:    msg.Amount.Denom,
-		amount:   msg.Amount.Amount.String(),
-	})
-}
-
 func TestAllocatorAtomicDepositAndReset(t *testing.T) {
 	k, ctx, bank := testStore(t)
 	g := types.DefaultGenesis()
@@ -71,39 +61,65 @@ func TestAllocatorAtomicDepositAndReset(t *testing.T) {
 			require.NoError(t, err)
 			events := ctx.EventManager().Events()
 			balance := bank.GetAllBalances(ctx, testOwner(6))
-			_, err = k.Deposit(depositContext(ctx, &m), &m)
+
+			from, err := sdk.AccAddressFromBech32(m.Sender)
+			require.NoError(t, err)
+			to, err := types.ParseSolanaAddress(m.Dest)
+			require.NoError(t, err)
+
+			_, err = k.Deposit(ctx, from, to, m.Amount)
 			require.Error(t, err)
+
 			after, err := k.ExportGenesis(ctx)
 			require.NoError(t, err)
 			require.Equal(t, before, after)
 			require.Equal(t, events, ctx.EventManager().Events())
 			require.Equal(t, balance, bank.GetAllBalances(ctx, testOwner(6)))
+
 			n, err := k.sequence.Peek(ctx)
 			require.NoError(t, err)
 			require.Zero(t, n)
+
 			bank.fail = false
 			bank.redirect = nil
 		})
 	}
 
-	id, err := k.Deposit(depositContext(ctx, msg), msg)
+	from, err := sdk.AccAddressFromBech32(msg.Sender)
+	require.NoError(t, err)
+	to, err := types.ParseSolanaAddress(msg.Dest)
+	require.NoError(t, err)
+
+	id, err := k.Deposit(ctx, from, to, msg.Amount)
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), id.Sequence)
+
 	msg.Sender = testOwner(7).String()
-	id2, err := k.Deposit(depositContext(ctx, msg), msg)
+	from, err = sdk.AccAddressFromBech32(msg.Sender)
+	require.NoError(t, err)
+
+	id2, err := k.Deposit(ctx, from, to, msg.Amount)
 	require.NoError(t, err)
 	require.Equal(t, uint64(2), id2.Sequence)
-	require.NoError(t, k.sequence.Set(ctx, math.MaxUint64))
-	_, err = k.Deposit(depositContext(ctx, msg), msg)
+
+	err = k.sequence.Set(ctx, math.MaxUint64)
+	require.NoError(t, err)
+
+	_, err = k.Deposit(ctx, from, to, msg.Amount)
 	require.ErrorIs(t, err, types.ErrOverflow)
-	require.NoError(t, k.BeginBlocker(ctx))
+
+	err = k.BeginBlocker(ctx)
+	require.NoError(t, err)
+
 	ctx = ctx.WithBlockHeight(101)
-	id3, err := k.Deposit(depositContext(ctx, msg), msg)
+	id3, err := k.Deposit(ctx, from, to, msg.Amount)
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), id3.Sequence)
 	require.Equal(t, int64(101), id3.Height)
-	require.NoError(t, k.BeginBlocker(ctx))
-	_, err = k.Deposit(depositContext(ctx, msg), msg)
+
+	err = k.BeginBlocker(ctx)
+	require.NoError(t, err)
+	_, err = k.Deposit(ctx, from, to, msg.Amount)
 	require.ErrorIs(t, err, types.ErrTransferExists)
 }
 
@@ -134,13 +150,21 @@ func TestSenderAndPolicyEligibility(t *testing.T) {
 		Dest:     types.SolanaAddress{1}.String(),
 		Amount:   testCoin(1),
 	}
-	_, err := k.Deposit(depositContext(ctx, msg), msg)
+
+	from, err := sdk.AccAddressFromBech32(msg.Sender)
+	require.NoError(t, err)
+	to, err := types.ParseSolanaAddress(msg.Dest)
+	require.NoError(t, err)
+
+	_, err = k.Deposit(ctx, from, to, msg.Amount)
 	require.ErrorIs(t, err, types.ErrSenderNotSigningAccount)
 	accounts[testOwner(6).String()] = base
-	_, err = k.Deposit(depositContext(ctx, msg), msg)
+
+	_, err = k.Deposit(ctx, from, to, msg.Amount)
 	require.ErrorIs(t, err, types.ErrSenderNotSigningAccount)
 	delete(accounts, testOwner(6).String())
-	_, err = k.Deposit(depositContext(ctx, msg), msg)
+
+	_, err = k.Deposit(ctx, from, to, msg.Amount)
 	require.ErrorIs(t, err, types.ErrSenderNotSigningAccount)
 	p := g.Params
 	p.Reporters = []string{g.Params.Reporters[3], g.Params.Reporters[2], g.Params.Reporters[1], g.Params.Reporters[0]}

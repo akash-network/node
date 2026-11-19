@@ -124,7 +124,7 @@ func (h *testSuite) checkSettlementExport(t *testing.T) {
 	require.NoError(t, k.CheckBalance(h.ctx()))
 	g, err := k.ExportGenesis(h.ctx())
 	require.NoError(t, err)
-	require.NoError(t, g.Validate())
+	require.NoError(t, g.ValidateBasic())
 	cache, _ := h.ctx().CacheContext()
 	cache = cache.WithBlockHeight(h.height + 1)
 	before := storeEntries(t, cache.KVStore(h.a.GetKey(types.StoreKey)), nil)

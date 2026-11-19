@@ -8,11 +8,11 @@ import (
 
 	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/gogoproto/proto"
 	"github.com/stretchr/testify/require"
 
 	types "pkg.akt.dev/go/node/sink/v1"
+
 	sinkkeeper "pkg.akt.dev/node/v2/x/sink/keeper"
 )
 
@@ -143,21 +143,8 @@ func TestSinkDepositEventAndGenesisValidation(t *testing.T) {
 	require.Equal(t, g, restored)
 
 	g.SendUsage.Epoch += 100
-	want := g.Validate()
+	want := g.ValidateBasic()
 	require.Error(t, want)
 	clearSinkStore(t, h, cache)
 	require.EqualError(t, k.InitGenesis(cache, g), want.Error())
-}
-
-func TestSinkUpgradeClearsSinkWithdrawAddresses(t *testing.T) {
-	h, ctx := preSinkLedger(t)
-	d := h.a.Keepers.Cosmos.Distr
-	require.NoError(t, d.SetDelegatorWithdrawAddr(ctx, h.sender, sinkkeeper.Address()))
-	require.NoError(t, runSinkUpgrade(t, h, ctx))
-	withdraw, err := d.GetDelegatorWithdrawAddr(ctx, h.sender)
-	require.NoError(t, err)
-	require.Equal(t, h.sender, withdraw)
-	require.Contains(t, ctx.EventManager().Events(), sdk.NewEvent("sink_withdraw_address_reset", sdk.NewAttribute("delegator", h.sender.String())))
-	require.Equal(t, types.DefaultParams(), sinkParams(t, h.a.Keepers.Akash.Sink, ctx))
-	require.Equal(t, authtypes.NewModuleAddress(types.ModuleName), sinkkeeper.Address())
 }

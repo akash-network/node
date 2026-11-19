@@ -33,7 +33,10 @@ func (s msgServer) Sink(ctx context.Context, msg *types.MsgSink) (*types.MsgSink
 
 	sctx := sdk.UnwrapSDKContext(ctx)
 
-	id, err := s.keeper.Deposit(sctx, msg)
+	from, _ := sdk.AccAddressFromBech32(msg.Sender)
+	to, _ := types.ParseSolanaAddress(msg.Dest)
+
+	id, err := s.keeper.Deposit(sctx, from, to, msg.Amount)
 	if err != nil {
 		return nil, err
 	}

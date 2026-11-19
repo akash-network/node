@@ -125,8 +125,14 @@ func (s *testSuite) deposit(amount int64) types.ID {
 	}
 	tx := s.App().TxConfig().NewTxBuilder()
 	require.NoError(s.t, tx.SetMsgs(msg))
-	ctx, err := keeper.NewDepositDecorator().AnteHandle(s.ctx, tx.GetTx(), false,
-		func(ctx sdk.Context, _ sdk.Tx, _ bool) (sdk.Context, error) { return ctx, nil })
+
+	ctx, err := keeper.NewDepositDecorator(s.App().Keepers.Akash.Sink).AnteHandle(
+		s.ctx,
+		tx.GetTx(),
+		false,
+		func(ctx sdk.Context, _ sdk.Tx, _ bool) (sdk.Context, error) { return ctx, nil },
+	)
+
 	require.NoError(s.t, err)
 	result, err := s.server.Sink(ctx, msg)
 	require.NoError(s.t, err)

@@ -179,7 +179,7 @@ func (settlementIDCodec) Decode(buffer []byte) (int, types.SettlementID, error) 
 		return 0, types.SettlementID{}, err
 	}
 
-	return offset + n, *types.NewSettlementID(status, id), nil
+	return offset + n, types.NewSettlementID(status, id), nil
 }
 
 func (settlementIDCodec) Size(key types.SettlementID) int { return 1 + RecordIDKey.Size(*key.GetID()) }

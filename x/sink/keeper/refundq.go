@@ -33,22 +33,26 @@ func (k *keeper) validateSettlement(ctx context.Context, t types.TransferState) 
 		return err
 	}
 
-	if !k.governanceVetoAuthorized(t.Settlement) {
+	if !t.Settlement.IsVetoAuthorized(k.authority) {
 		return types.ErrInvalidSettlement.Wrap("governance veto signer differs from authority")
 	}
 
 	return nil
 }
 
-// governanceVetoAuthorized reports whether a governance-scope veto was signed
-// by the configured authority. SettlementData.Validate checks reporter-scope
-// vetoes against their policy but cannot know the authority. Settlement writes
-// and genesis import and export all apply this one rule.
-func (k *keeper) governanceVetoAuthorized(s types.SettlementData) bool {
-	return s.VetoBy == "" || s.VetoPolicyVersion != types.GovernanceRefundScope || s.VetoBy == k.authority
+func (k *keeper) isSettlementExist(ctx context.Context, id types.ID) bool {
+	for status := types.StatusTransferPending; status <= types.StatusRefunded; status++ {
+		exists, _ := k.settlements.Has(ctx, types.NewSettlementID(status, id))
+
+		if exists {
+			return true
+		}
+	}
+
+	return false
 }
 
-func (k *keeper) put(ctx sdk.Context, before *types.TransferState, after types.TransferState) error {
+func (k *keeper) storeTransfer(ctx sdk.Context, before *types.TransferState, after types.TransferState) error {
 	if err := k.validateSettlement(ctx, after); err != nil {
 		return err
 	}
@@ -65,15 +69,8 @@ func (k *keeper) put(ctx sdk.Context, before *types.TransferState, after types.T
 			}
 		}
 	} else {
-		for status := types.StatusTransferPending; status <= types.StatusRefunded; status++ {
-			exists, err := k.settlements.Has(ctx, *types.NewSettlementID(status, after.ID))
-			if err != nil {
-				return err
-			}
-
-			if exists {
-				return types.ErrInternal.Wrap("canonical settlement already exists")
-			}
+		if k.isSettlementExist(ctx, after.ID) {
+			return types.ErrInternal.Wrap("canonical settlement already exists")
 		}
 	}
 
@@ -92,7 +89,7 @@ func (k *keeper) put(ctx sdk.Context, before *types.TransferState, after types.T
 				return types.ErrInternal.Wrap("invalid settlement accounting")
 			}
 
-			if err = k.settlements.Remove(ctx, *types.NewSettlementID(before.Status, after.ID)); err != nil {
+			if err = k.settlements.Remove(ctx, types.NewSettlementID(before.Status, after.ID)); err != nil {
 				return err
 			}
 		}
@@ -102,37 +99,6 @@ func (k *keeper) put(ctx sdk.Context, before *types.TransferState, after types.T
 		}
 
 		if err = k.totals.Set(ctx, totals); err != nil {
-			return err
-		}
-
-		epoch, err := k.quotaEpoch(ctx)
-		if err != nil {
-			return err
-		}
-
-		usage, err := k.refundUsage.Get(ctx)
-		if err != nil {
-			return err
-		}
-
-		usage, err = usage.At(epoch)
-		if err != nil {
-			return err
-		}
-
-		if err = ctx.EventManager().EmitTypedEvent(&types.EventTotalsUpdated{
-			PendingAmount:       totals.PendingAmount,
-			PendingCount:        totals.PendingCount,
-			MintedAmount:        totals.MintedAmount,
-			MintedCount:         totals.MintedCount,
-			VoidedAmount:        totals.VoidedAmount,
-			VoidedCount:         totals.VoidedCount,
-			RefundPendingAmount: totals.RefundPendingAmount,
-			RefundPendingCount:  totals.RefundPendingCount,
-			RefundedAmount:      totals.RefundedAmount,
-			RefundedCount:       totals.RefundedCount,
-			RefundedInEpoch:     usage.Amount,
-		}); err != nil {
 			return err
 		}
 	}
@@ -149,6 +115,7 @@ func (k *keeper) setSettlement(ctx context.Context, before *types.TransferState,
 
 	oldDispute := before != nil && before.Settlement.Hold != types.HoldNone
 	newDispute := after.Settlement.Hold != types.HoldNone
+
 	if oldDispute != newDispute {
 		var err error
 		if newDispute {
@@ -169,6 +136,7 @@ func (k *keeper) setSettlement(ctx context.Context, before *types.TransferState,
 
 	newKey, newQueued := refundKey(after)
 	same := oldQueued && newQueued && oldKey.K1() == newKey.K1() && oldKey.K2() == newKey.K2()
+
 	if oldQueued && !same {
 		if err := k.refunds.Remove(ctx, oldKey); err != nil {
 			return err
@@ -181,7 +149,7 @@ func (k *keeper) setSettlement(ctx context.Context, before *types.TransferState,
 		}
 	}
 
-	return k.settlements.Set(ctx, *types.NewSettlementID(after.Status, after.ID), after.Settlement)
+	return k.settlements.Set(ctx, after.SettlementID(), after.Settlement)
 }
 
 func (k *keeper) refundHead(ctx context.Context, current uint64) (types.ID, bool, error) {

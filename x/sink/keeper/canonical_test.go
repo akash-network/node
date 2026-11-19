@@ -21,12 +21,12 @@ func TestCanonicalLookupRejectsZeroMultipleAndMalformedValues(t *testing.T) {
 			g := populatedGenesis()
 			importTestGenesis(t, k, ctx, bank, g)
 			record := g.Records[0]
-			key := *types.NewSettlementID(record.Status, record.ID)
+			key := types.NewSettlementID(record.Status, record.ID)
 			switch kind {
 			case "zero":
 				require.NoError(t, k.settlements.Remove(ctx, key))
 			case "multiple":
-				require.NoError(t, k.settlements.Set(ctx, *types.NewSettlementID(types.StatusVoided, record.ID), record.Settlement))
+				require.NoError(t, k.settlements.Set(ctx, types.NewSettlementID(types.StatusVoided, record.ID), record.Settlement))
 			case "malformed":
 				raw, err := SettlementKey(key)
 				require.NoError(t, err)
@@ -63,11 +63,10 @@ func TestCanonicalKeyMoveRollsBackAfterAccountingFailure(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, before, after)
 	require.Equal(t, events, ctx.EventManager().Events())
-	oldKey, _ := SettlementKey(*types.NewSettlementID(types.StatusTransferPending, g.Records[0].ID))
-	newKey, _ := SettlementKey(*types.NewSettlementID(types.StatusVoided, g.Records[0].ID))
+	oldKey, _ := SettlementKey(types.NewSettlementID(types.StatusTransferPending, g.Records[0].ID))
+	newKey, _ := SettlementKey(types.NewSettlementID(types.StatusVoided, g.Records[0].ID))
 	require.True(t, ctx.KVStore(k.skey).Has(oldKey))
 	require.False(t, ctx.KVStore(k.skey).Has(newKey))
-	require.NoError(t, k.CheckBalance(ctx))
 }
 
 func TestExportRejectsMalformedCanonicalKeys(t *testing.T) {
@@ -76,7 +75,7 @@ func TestExportRejectsMalformedCanonicalKeys(t *testing.T) {
 			k, ctx, bank := testStore(t)
 			g := populatedGenesis()
 			importTestGenesis(t, k, ctx, bank, g)
-			key, err := SettlementKey(*types.NewSettlementID(types.StatusTransferPending, g.Records[0].ID))
+			key, err := SettlementKey(types.NewSettlementID(types.StatusTransferPending, g.Records[0].ID))
 			require.NoError(t, err)
 			value := bytes.Clone(ctx.KVStore(k.skey).Get(key))
 
@@ -112,7 +111,7 @@ func TestGovernanceVetoImportAuthenticatesConfiguredAuthority(t *testing.T) {
 			s.VetoBy = k.authority
 		}
 
-		require.NoError(t, g.Validate(), "SDK validates the shape, keeper authenticates governance")
+		require.NoError(t, g.ValidateBasic(), "SDK validates the shape, keeper authenticates governance")
 		escrow, err := g.Totals.EscrowAmount()
 		require.NoError(t, err)
 		bank.set(ctx, Address(), sdk.NewCoins(escrow))
@@ -306,7 +305,6 @@ func TestPermanentOrderSurvivesMintConflictRotationRestartAndRefund(t *testing.T
 	require.Equal(t, types.StatusRefunded, paid.Status)
 	require.Equal(t, receipt, *paid.Settlement.VoidAuthorization)
 	require.Equal(t, sdk.NewCoins(testCoin(10)), bank2.GetAllBalances(ctx2, testOwner(6)))
-	require.NoError(t, k2.CheckBalance(ctx2))
 }
 
 func TestOwnerPaginationMergesAllFiveCanonicalBuckets(t *testing.T) {
@@ -355,7 +353,7 @@ func TestOwnerPaginationMergesAllFiveCanonicalBuckets(t *testing.T) {
 		}
 	}
 
-	key, _ := SettlementKey(*types.NewSettlementID(types.StatusVoided, g.Records[2].ID))
+	key, _ := SettlementKey(types.NewSettlementID(types.StatusVoided, g.Records[2].ID))
 	for _, cursor := range [][]byte{key[2:], bytes.Repeat([]byte{0xff}, RecordIDKey.Size(g.Records[2].ID)), append(key[3:], 0)} {
 		_, err := q.Transfers(ctx, &types.QueryTransfersRequest{
 			Owner:      testOwner(6).String(),

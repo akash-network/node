@@ -1,4 +1,14 @@
 {
+    "v2.3.0": {
+        "migrations": {
+            "sink": [
+                {
+                    "from": 2,
+                    "to": 3
+                }
+            ]
+        }
+    },
     "v2.2.0": {
         "modules": {
             "added": [

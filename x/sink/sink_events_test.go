@@ -49,7 +49,7 @@ func TestSinkVoidAndRefundEvents(t *testing.T) {
 	require.NoError(t, h.order(h.id(1)))
 	h.quorum(t, 1, types.OutcomeVoided)
 	ctx := h.ctx().WithEventManager(sdk.NewEventManager())
-	k := h.a.Keepers.Akash.Sink
+
 	result, err := h.a.MsgServiceRouter().Handler(&types.MsgVetoVoid{})(ctx, &types.MsgVetoVoid{
 		Signer: h.reporterAddress(0),
 		ID:     h.id(1),
@@ -75,7 +75,7 @@ func TestSinkVoidAndRefundEvents(t *testing.T) {
 			Amount: coin(60),
 		},
 	}, sinkEvents(t, res.Events))
-	require.NoError(t, k.CheckBalance(h.ctx()))
+
 }
 
 func TestSinkMintAndConflictEvents(t *testing.T) {

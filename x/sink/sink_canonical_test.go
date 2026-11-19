@@ -37,7 +37,7 @@ func TestSinkCanonicalSettlementMembershipProofs(t *testing.T) {
 			require.Equal(t, receipt, entry.Settlement.VoidAuthorization)
 		}
 
-		key, err := sinkkeeper.SettlementKey(*types.NewSettlementID(status, entry.ID))
+		key, err := sinkkeeper.SettlementKey(types.NewSettlementID(status, entry.ID))
 		require.NoError(t, err)
 		value, err := entry.Settlement.Marshal()
 		require.NoError(t, err)

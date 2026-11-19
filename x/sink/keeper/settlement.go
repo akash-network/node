@@ -41,38 +41,40 @@ func challengeDeadline(ctx sdk.Context, p types.Params) (int64, error) {
 // The order cannot release escrow without a separate final void authorization.
 func (k *keeper) RequestVoid(ctx sdk.Context, msg *types.MsgRequestVoid) error {
 	cache, write := ctx.CacheContext()
-	t, err := k.GetTransfer(cache, msg.ID)
+
+	transfer, err := k.GetTransfer(cache, msg.ID)
 	if err != nil {
 		return err
 	}
 
-	if t.Settlement.VoidAuthorization != nil {
+	if transfer.Settlement.VoidAuthorization != nil {
 		return nil
 	}
 
-	if msg.ExpectedRound != t.Settlement.Round {
+	if msg.ExpectedRound != transfer.Settlement.Round {
 		return types.ErrStaleReport.Wrap("expected_round differs from settlement")
 	}
 
-	if t.Status == types.StatusRefunded || t.Status == types.StatusMinted && t.Settlement.Hold != types.HoldConflict {
+	if transfer.Status == types.StatusRefunded || transfer.Status == types.StatusMinted && transfer.Settlement.Hold != types.HoldConflict {
 		return types.ErrTransferClosed
 	}
 
-	if cache.BlockHeight() < t.ID.Height {
+	if cache.BlockHeight() < transfer.ID.Height {
 		return types.ErrInvalidClock.Wrap("void request precedes deposit")
 	}
 
-	before := t
-	t.Settlement.VoidAuthorization = &types.VoidAuthorization{
+	newTransfer := transfer
+
+	newTransfer.Settlement.VoidAuthorization = &types.VoidAuthorization{
 		RequestedHeight: cache.BlockHeight(),
-		RequestedRound:  t.Settlement.Round,
+		RequestedRound:  transfer.Settlement.Round,
 	}
 
-	if t.Status == types.StatusTransferPending {
-		t.Status = types.StatusVoided
+	if transfer.Status == types.StatusTransferPending {
+		newTransfer.Status = types.StatusVoided
 	}
 
-	if err = k.put(cache, &before, t); err != nil {
+	if err = k.storeTransfer(cache, &transfer, newTransfer); err != nil {
 		return err
 	}
 
@@ -184,7 +186,7 @@ func (k *keeper) ReportOutcome(ctx sdk.Context, msg *types.MsgReportOutcome) err
 		}
 	}
 
-	if err = k.put(cache, &before, t); err != nil {
+	if err = k.storeTransfer(cache, &before, t); err != nil {
 		return err
 	}
 
@@ -239,7 +241,7 @@ func (k *keeper) VetoVoid(ctx sdk.Context, msg *types.MsgVetoVoid) error {
 		s.VetoPolicyVersion = types.GovernanceRefundScope
 	}
 
-	if err = k.put(cache, &before, t); err != nil {
+	if err = k.storeTransfer(cache, &before, t); err != nil {
 		return err
 	}
 
@@ -363,7 +365,7 @@ func (k *keeper) Resolve(ctx sdk.Context, msg types.Resolution) error {
 		}
 	}
 
-	if err = k.put(cache, &before, t); err != nil {
+	if err = k.storeTransfer(cache, &before, t); err != nil {
 		return err
 	}
 
@@ -436,7 +438,7 @@ func (k *keeper) FinalizeRefund(ctx sdk.Context, msg *types.MsgFinalizeRefund) e
 		return types.ErrRefundOutOfOrder
 	}
 
-	epoch, err := k.quotaEpoch(cache)
+	epoch, err := k.getEpochID(cache)
 	if err != nil {
 		return err
 	}
@@ -464,10 +466,6 @@ func (k *keeper) FinalizeRefund(ctx sdk.Context, msg *types.MsgFinalizeRefund) e
 		return types.ErrRefundCapReached
 	}
 
-	if err = k.CheckBalance(cache); err != nil {
-		return err
-	}
-
 	if err = k.refundUsage.Set(cache, usage); err != nil {
 		return err
 	}
@@ -475,7 +473,7 @@ func (k *keeper) FinalizeRefund(ctx sdk.Context, msg *types.MsgFinalizeRefund) e
 	t.Status = types.StatusRefunded
 	s.ChallengeEnd = 0
 
-	if err = k.put(cache, &before, t); err != nil {
+	if err = k.storeTransfer(cache, &before, t); err != nil {
 		return err
 	}
 
@@ -492,10 +490,6 @@ func (k *keeper) FinalizeRefund(ctx sdk.Context, msg *types.MsgFinalizeRefund) e
 
 	if !k.bank.GetAllBalances(cache, owner).Equal(balance.Add(coins...)) {
 		return types.ErrBalanceMismatch.Wrap("refund did not reach original sender")
-	}
-
-	if err = k.CheckBalance(cache); err != nil {
-		return err
 	}
 
 	if err = cache.EventManager().EmitTypedEvent(&types.EventTransferRefunded{

@@ -13,8 +13,9 @@ import (
 // HandlerOptions extends the SDK's AnteHandler options
 type HandlerOptions struct {
 	ante.HandlerOptions
-	CDC       codec.BinaryCodec
-	GovKeeper *govkeeper.Keeper
+	CDC        codec.BinaryCodec
+	GovKeeper  *govkeeper.Keeper
+	SinkKeeper sinkkeeper.Keeper
 }
 
 // NewAnteHandler returns an AnteHandler that checks and increments sequence
@@ -50,7 +51,7 @@ func NewAnteHandler(options HandlerOptions) (sdk.AnteHandler, error) {
 		ante.NewValidateBasicDecorator(),
 		ante.NewTxTimeoutHeightDecorator(),
 		ante.NewValidateMemoDecorator(options.AccountKeeper),
-		sinkkeeper.NewDepositDecorator(),
+		sinkkeeper.NewDepositDecorator(options.SinkKeeper),
 		ante.NewConsumeGasForTxSizeDecorator(options.AccountKeeper),
 		ante.NewDeductFeeDecorator(options.AccountKeeper, options.BankKeeper, options.FeegrantKeeper, nil),
 		ante.NewSetPubKeyDecorator(options.AccountKeeper), // SetPubKeyDecorator must be called before all signature verification decorators

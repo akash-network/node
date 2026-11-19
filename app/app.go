@@ -8,6 +8,13 @@ import (
 	"path/filepath"
 	"time"
 
+	"cosmossdk.io/x/feegrant"
+	vestingtypes "github.com/cosmos/cosmos-sdk/x/auth/vesting/types"
+	"github.com/cosmos/cosmos-sdk/x/authz"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	consensustypes "github.com/cosmos/cosmos-sdk/x/consensus/types"
+	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
+	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	"github.com/gorilla/mux"
 	"github.com/rakyll/statik/fs"
 	"github.com/spf13/cast"
@@ -63,9 +70,16 @@ import (
 	apptypes "pkg.akt.dev/node/v2/app/types"
 	utypes "pkg.akt.dev/node/v2/upgrades/types"
 	"pkg.akt.dev/node/v2/util/partialord"
+	"pkg.akt.dev/node/v2/x/audit"
 	"pkg.akt.dev/node/v2/x/bme"
+	"pkg.akt.dev/node/v2/x/cert"
+	"pkg.akt.dev/node/v2/x/deployment"
+	"pkg.akt.dev/node/v2/x/epochs"
 	"pkg.akt.dev/node/v2/x/escrow"
+	"pkg.akt.dev/node/v2/x/market"
 	"pkg.akt.dev/node/v2/x/oracle"
+	"pkg.akt.dev/node/v2/x/provider"
+	"pkg.akt.dev/node/v2/x/sink"
 	awasm "pkg.akt.dev/node/v2/x/wasm"
 	// unnamed import of statik for swagger UI support
 	_ "pkg.akt.dev/node/v2/client/docs/statik"
@@ -275,8 +289,9 @@ func NewApp(
 			SignModeHandler: encodingConfig.TxConfig.SignModeHandler(),
 			SigGasConsumer:  ante.DefaultSigVerificationGasConsumer,
 		},
-		CDC:       app.cdc,
-		GovKeeper: app.Keepers.Cosmos.Gov,
+		CDC:        app.cdc,
+		GovKeeper:  app.Keepers.Cosmos.Gov,
+		SinkKeeper: app.Keepers.Akash.Sink,
 	}
 
 	anteHandler, err := NewAnteHandler(anteOpts)
@@ -373,7 +388,83 @@ func orderBeginBlockers(modules []string) []string {
 	return ord.TotalOrdering()
 }
 
-// orderEndBlockers returns EndBlockers (crisis, govtypes, staking) with no relative order.
+// orderInitGenesis returns module names in order for init genesis calls.
+// NOTE: The genutils module must occur after staking so that pools are
+// properly initialized with tokens from genesis accounts.
+// NOTE: Capability module must occur first so that it can initialize any capabilities
+// so that other modules that want to create or claim capabilities afterward in InitChain
+// can do so safely.
+//
+//	authtypes.ModuleName,
+//	authz.ModuleName,
+//	banktypes.ModuleName,
+//	epochs.ModuleName,
+//	distrtypes.ModuleName,
+//	stakingtypes.ModuleName,
+//	slashingtypes.ModuleName,
+//	govtypes.ModuleName,
+//	vestingtypes.ModuleName,
+//	paramstypes.ModuleName,
+//	audittypes.ModuleName,
+//	upgradetypes.ModuleName,
+//	minttypes.ModuleName,
+//	ibchost.ModuleName,
+//	evidencetypes.ModuleName,
+//	transfertypes.ModuleName,
+//	consensustypes.ModuleName,
+//	feegrant.ModuleName,
+//	cert.ModuleName,
+//	oracle.ModuleName,
+//	deployment.ModuleName,
+//	provider.ModuleName,
+//	market.ModuleName,
+//	genutiltypes.ModuleName,
+//	bme.ModuleName,
+//	escrow.ModuleName,
+//	awasm.ModuleName,
+//	wasmtypes.ModuleName,
+//	sink.ModuleName,
+func orderInitGenesis(modules []string) []string {
+	ord := partialord.NewPartialOrdering(modules)
+
+	ord.FirstElements(
+		authtypes.ModuleName,
+		authz.ModuleName,
+		banktypes.ModuleName,
+		epochs.ModuleName,
+		distrtypes.ModuleName,
+		stakingtypes.ModuleName,
+		slashingtypes.ModuleName,
+		govtypes.ModuleName,
+		vestingtypes.ModuleName,
+		paramstypes.ModuleName,
+		audit.ModuleName,
+		upgradetypes.ModuleName,
+		minttypes.ModuleName,
+		ibchost.ModuleName,
+		evidencetypes.ModuleName,
+		transfertypes.ModuleName,
+		consensustypes.ModuleName,
+		feegrant.ModuleName,
+		cert.ModuleName,
+		oracle.ModuleName,
+		deployment.ModuleName,
+		provider.ModuleName,
+		market.ModuleName,
+		genutiltypes.ModuleName,
+		bme.ModuleName,
+		escrow.ModuleName,
+		awasm.ModuleName,
+		wasmtypes.ModuleName,
+		sink.ModuleName)
+
+	ord.Sequence(stakingtypes.ModuleName, genutiltypes.ModuleName)
+	ord.Sequence(epochstypes.ModuleName, sink.ModuleName)
+
+	return ord.TotalOrdering()
+}
+
+// orderEndBlockers returns EndBlockers (govtypes, staking) with no relative order.
 // original ordering for reference
 //
 //	govtypes.ModuleName,
@@ -411,7 +502,6 @@ func orderEndBlockers(modules []string) []string {
 
 	// Staking must be after gov.
 	ord.FirstElements(govtypes.ModuleName, stakingtypes.ModuleName)
-	//ord.Before(govtypes.ModuleName, )
 
 	return ord.TotalOrdering()
 }

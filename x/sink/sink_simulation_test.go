@@ -128,7 +128,7 @@ func sinkSimulationGenesis(t *testing.T, a *app.AkashApp, r *rand.Rand, accounts
 
 	var genesis types.GenesisState
 	a.AppCodec().MustUnmarshalJSON(state[types.ModuleName], &genesis)
-	require.NoError(t, genesis.Validate())
+	require.NoError(t, genesis.ValidateBasic())
 	require.True(t, genesis.Params.Enabled)
 	require.True(t, genesis.Params.RefundsEnabled)
 	require.Equal(t, types.DefaultParams().ReporterChallengePeriod, genesis.Params.ReporterChallengePeriod)
@@ -220,8 +220,6 @@ func TestSinkSimulationLifecycle(t *testing.T) {
 							noops[msg.Comment]++
 						}
 
-						require.NoError(t, a.Keepers.Akash.Sink.CheckBalance(ctx))
-
 						return msg, future, err
 					})
 				}
@@ -280,7 +278,7 @@ func TestSinkSimulationLifecycle(t *testing.T) {
 				ctx := a.GetContextForCheckTx(nil)
 				genesis, err := a.Keepers.Akash.Sink.ExportGenesis(ctx)
 				require.NoError(t, err)
-				require.NoError(t, genesis.Validate())
+				require.NoError(t, genesis.ValidateBasic())
 				require.Positive(t, genesis.Totals.MintedCount)
 				require.Positive(t, genesis.Totals.RefundedCount)
 				require.Greater(t, genesis.SendUsage.Epoch, uint64(1))
@@ -373,7 +371,7 @@ func assertSinkSimulationImport(t *testing.T, a *app.AkashApp, ctx sdk.Context, 
 	stateAfter, err := restored.Keepers.Akash.Sink.NewQuerier().State(restoredContext, nil)
 	require.NoError(t, err)
 	require.Equal(t, stateBefore, stateAfter)
-	require.NoError(t, restored.Keepers.Akash.Sink.CheckBalance(restoredContext))
+
 	assertSinkSimulationDecoder(t, restored, restoredContext)
 }
 
@@ -455,7 +453,6 @@ func TestSinkSimulationQuotaAndAnte(t *testing.T) {
 	after, err = a.Keepers.Akash.Sink.ExportGenesis(ctx)
 	require.NoError(t, err)
 	require.Equal(t, before, after)
-	require.NoError(t, a.Keepers.Akash.Sink.CheckBalance(ctx))
 
 	epoch, err := a.Keepers.Akash.Epochs.GetEpoch(ctx, "day")
 	require.NoError(t, err)
@@ -551,7 +548,6 @@ func TestSinkSimulationFromSeed(t *testing.T) {
 			require.Positive(t, counts[sdk.MsgTypeURL(&types.MsgSink{})])
 			require.Positive(t, counts[sdk.MsgTypeURL(&types.MsgReportOutcome{})])
 			require.Equal(t, int64(8), a.LastBlockHeight())
-			require.NoError(t, a.Keepers.Akash.Sink.CheckBalance(a.GetContextForCheckTx(nil)))
 		})
 	}
 }

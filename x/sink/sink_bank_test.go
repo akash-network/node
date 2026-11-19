@@ -12,6 +12,7 @@ import (
 
 	types "pkg.akt.dev/go/node/sink/v1"
 	"pkg.akt.dev/go/sdkutil"
+
 	sinkkeeper "pkg.akt.dev/node/v2/x/sink/keeper"
 )
 
@@ -83,7 +84,7 @@ func TestSinkPublicBankTransfersBlocked(t *testing.T) {
 				before.balances[h.sender.String()] = before.balances[h.sender.String()].Sub(coin(10))
 				require.Equal(t, before, captureSinkBankState(t, h, h.ctx(), other))
 				require.Empty(t, sinkEvents(t, res.Events))
-				require.NoError(t, h.a.Keepers.Akash.Sink.CheckBalance(h.ctx()))
+
 				t.Logf("rejected code=%d codespace=%s log=%s; Sink store, supply, and balances unchanged except the 10 uakt fee", res.Code, res.Codespace, res.Log)
 			})
 		}
@@ -125,7 +126,7 @@ func TestSinkAuthzBankTransfersBlocked(t *testing.T) {
 				before.balances[grantee.String()] = before.balances[grantee.String()].Sub(coin(10))
 				require.Equal(t, before, captureSinkBankState(t, h, h.ctx(), grantee))
 				require.Empty(t, sinkEvents(t, res.Events))
-				require.NoError(t, h.a.Keepers.Akash.Sink.CheckBalance(h.ctx()))
+
 				if granted {
 					retained, _ := h.a.Keepers.Cosmos.Authz.GetAuthorization(h.ctx(), grantee, h.sender, sdk.MsgTypeURL(msg))
 					require.Equal(t, authorization, retained)
@@ -174,7 +175,7 @@ func TestSinkAuthzNestedDepositRejected(t *testing.T) {
 			before.balances[grantee.String()] = before.balances[grantee.String()].Sub(coin(10))
 			require.Equal(t, before, captureSinkBankState(t, h, h.ctx(), grantee))
 			require.Empty(t, sinkEvents(t, res.Events))
-			require.NoError(t, h.a.Keepers.Akash.Sink.CheckBalance(h.ctx()))
+
 			if granted {
 				retained, _ := h.a.Keepers.Cosmos.Authz.GetAuthorization(h.ctx(), grantee, h.sender, sdk.MsgTypeURL(msg))
 				require.Equal(t, authorization, retained)

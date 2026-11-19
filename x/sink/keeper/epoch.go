@@ -8,7 +8,7 @@ import (
 
 const quotaEpochIdentifier = "day"
 
-func (k *keeper) quotaEpoch(ctx sdk.Context) (uint64, error) {
+func (k *keeper) getEpochID(ctx sdk.Context) (uint64, error) {
 	epoch, err := k.epochs.GetEpoch(ctx, quotaEpochIdentifier)
 	if err != nil {
 		return 0, err

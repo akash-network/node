@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"math"
 
 	"cosmossdk.io/collections"
 	"cosmossdk.io/collections/corecompat"
@@ -47,7 +46,7 @@ type Keeper interface {
 	GetAccountUsage(context.Context, sdk.AccAddress) (types.AccountUsage, error)
 	GetTransfer(context.Context, types.ID) (types.TransferState, error)
 
-	Deposit(sdk.Context, *types.MsgSink) (types.ID, error)
+	Deposit(sdk.Context, sdk.AccAddress, types.SolanaAddress, sdk.Coin) (types.ID, error)
 
 	GuardianPause(sdk.Context, *types.MsgGuardianPause) error
 	RequestVoid(sdk.Context, *types.MsgRequestVoid) error
@@ -56,8 +55,6 @@ type Keeper interface {
 	Resolve(sdk.Context, types.Resolution) error
 	FinalizeRefund(sdk.Context, *types.MsgFinalizeRefund) error
 
-	CheckBalance(sdk.Context) error
-	PrepareInstall(sdk.Context, Distribution) (sdk.Coins, error)
 	InitGenesis(sdk.Context, *types.GenesisState) error
 	ExportGenesis(sdk.Context) (*types.GenesisState, error)
 	ValidateExportHeight(sdk.Context, int64) error
@@ -73,6 +70,7 @@ type keeper struct {
 	schema         collections.Schema
 	params         collections.Item[types.Params]
 	totals         collections.Item[types.Totals]
+	totalsCurr     collections.Item[types.Totals]
 	policies       collections.Map[uint64, types.ReporterPolicy]
 	policySequence collections.Sequence
 	sendUsage      collections.Item[types.EpochUsage]
@@ -109,6 +107,7 @@ func NewKeeper(
 		authority:      authority,
 		params:         collections.NewItem(sb, ParamsKey, "params", codec.CollValue[types.Params](cdc)),
 		totals:         collections.NewItem(sb, TotalsKey, "totals", codec.CollValue[types.Totals](cdc)),
+		totalsCurr:     collections.NewItem(tsb, TotalsCurrKey, "totals_curr", codec.CollValue[types.Totals](cdc)),
 		policies:       collections.NewMap(sb, PoliciesKey, "policies", collections.Uint64Key, codec.CollValue[types.ReporterPolicy](cdc)),
 		policySequence: collections.NewSequence(sb, PolicySequenceKey, "policy_sequence"),
 		sendUsage:      collections.NewItem(sb, SendUsageKey, "send_usage", codec.CollValue[types.EpochUsage](cdc)),
@@ -175,6 +174,25 @@ func (k *keeper) GetAccountUsage(ctx context.Context, owner sdk.AccAddress) (typ
 	return u, err
 }
 
+func (k *keeper) findSettlement(ctx context.Context, id types.ID) (types.Status, types.SettlementData, error) {
+	for status := types.StatusTransferPending; status <= types.StatusRefunded; status++ {
+		sid := types.NewSettlementID(status, id)
+
+		value, err := k.settlements.Get(ctx, sid)
+		if errors.Is(err, collections.ErrNotFound) {
+			continue
+		}
+
+		if err != nil {
+			return types.StatusInvalid, types.SettlementData{}, err
+		}
+
+		return status, value, nil
+	}
+
+	return types.StatusInvalid, types.SettlementData{}, types.ErrInternal.Wrapf("settlement not found for %s", id.String())
+}
+
 func (k *keeper) GetTransfer(ctx context.Context, id types.ID) (types.TransferState, error) {
 	data, err := k.transfers.Get(ctx, id)
 	if errors.Is(err, collections.ErrNotFound) {
@@ -184,33 +202,16 @@ func (k *keeper) GetTransfer(ctx context.Context, id types.ID) (types.TransferSt
 		return types.TransferState{}, err
 	}
 
-	var settlement types.SettlementData
-	status := types.StatusInvalid
-	for candidate := types.StatusTransferPending; candidate <= types.StatusRefunded; candidate++ {
-		value, err := k.settlements.Get(ctx, *types.NewSettlementID(candidate, id))
-		if errors.Is(err, collections.ErrNotFound) {
-			continue
-		}
-		if err != nil {
-			return types.TransferState{}, err
-		}
-
-		if status != types.StatusInvalid {
-			return types.TransferState{}, types.ErrInternal.Wrapf("multiple canonical settlements for %s", id.String())
-		}
-
-		status, settlement = candidate, value
-	}
-
-	if status == types.StatusInvalid {
-		return types.TransferState{}, types.ErrInternal.Wrapf("missing canonical settlement for %s", id.String())
+	sStatus, sData, err := k.findSettlement(ctx, id)
+	if err != nil {
+		return types.TransferState{}, err
 	}
 
 	return types.TransferState{
 		ID:         id,
 		Data:       data,
-		Settlement: settlement,
-		Status:     status,
+		Settlement: sData,
+		Status:     sStatus,
 	}, nil
 }
 
@@ -235,6 +236,7 @@ func (k *keeper) GetCurrentPolicy(ctx context.Context) (types.ReporterPolicy, er
 func (k *keeper) referencedPolicies(ctx context.Context, s types.SettlementData) (map[uint64]types.ReporterPolicy, error) {
 	policies := make(map[uint64]types.ReporterPolicy, 1)
 	versions := append(make([]uint64, 0, 1+len(s.Votes)), s.Policy.Version)
+
 	if s.VetoPolicyVersion != 0 {
 		versions = append(versions, s.VetoPolicyVersion)
 	}
@@ -278,50 +280,20 @@ func (k *keeper) allPolicies(ctx context.Context) ([]types.ReporterPolicy, error
 }
 
 func (k *keeper) nextID(ctx sdk.Context, owner sdk.AccAddress) (types.ID, error) {
-	n, err := k.sequence.Peek(ctx)
+	seq, err := k.sequence.Next(ctx)
 	if err != nil {
 		return types.ID{}, err
-	}
-
-	if n == math.MaxUint64 {
-		return types.ID{}, types.ErrOverflow.Wrap("per-block sequence")
 	}
 
 	id := types.ID{
 		Owner:    owner.String(),
 		Height:   ctx.BlockHeight(),
-		Sequence: n + 1,
+		Sequence: seq,
 	}
+
 	if err = id.ValidateBasic(); err != nil {
 		return types.ID{}, err
 	}
 
-	if err = k.sequence.Set(ctx, n+1); err != nil {
-		return types.ID{}, err
-	}
-
 	return id, nil
-}
-
-func (k *keeper) CheckBalance(ctx sdk.Context) error {
-	t, err := k.totals.Get(ctx)
-	if err != nil {
-		return err
-	}
-
-	if err = t.Validate(); err != nil {
-		return err
-	}
-
-	escrow, err := t.EscrowAmount()
-	if err != nil {
-		return err
-	}
-
-	expected := sdk.NewCoins(escrow)
-	if !k.bank.GetAllBalances(ctx, Address()).Equal(expected) {
-		return types.ErrBalanceMismatch
-	}
-
-	return nil
 }

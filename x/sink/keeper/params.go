@@ -104,7 +104,7 @@ func (k *keeper) SetParams(ctx sdk.Context, p types.Params) error {
 		}
 	}
 
-	if version == 0 || !policyMatches(currPolicy, p) {
+	if version == 0 || !currPolicy.WithinThreshold(p.ReportersThreshold, p.Reporters) {
 		if version == math.MaxUint64 {
 			return types.ErrOverflow.Wrap("policy version")
 		}
@@ -131,19 +131,4 @@ func (k *keeper) SetParams(ctx sdk.Context, p types.Params) error {
 	write()
 
 	return nil
-}
-
-// policyMatches reports whether policy is the reporter policy that params
-// describe: the same members in any order and an equal threshold ratio.
-func policyMatches(policy types.ReporterPolicy, p types.Params) bool {
-	if policy.Threshold.IsNil() || p.ReportersThreshold.IsNil() || !p.ReportersThreshold.Equal(policy.Threshold) {
-		return false
-	}
-
-	current := slices.Clone(policy.Members)
-	next := slices.Clone(p.Reporters)
-	slices.Sort(current)
-	slices.Sort(next)
-
-	return slices.Equal(current, next)
 }

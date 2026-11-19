@@ -90,7 +90,7 @@ func TestStrictSettlementIDCodec(t *testing.T) {
 		{types.StatusRefundPending, "04"},
 		{types.StatusRefunded, "05"},
 	} {
-		key := *types.NewSettlementID(fixture.status, id)
+		key := types.NewSettlementID(fixture.status, id)
 		b := make([]byte, 38)
 		n, err := SettlementIDKey.Encode(b, key)
 		require.NoError(t, err)
@@ -129,7 +129,7 @@ func TestStrictSettlementIDCodec(t *testing.T) {
 		require.Error(t, err, malformed)
 	}
 
-	maximum := *types.NewSettlementID(types.StatusRefunded, types.ID{
+	maximum := types.NewSettlementID(types.StatusRefunded, types.ID{
 		Owner:    testOwner(255).String(),
 		Height:   math.MaxInt64,
 		Sequence: math.MaxUint64,
@@ -298,7 +298,7 @@ func TestSettlementProofVectors(t *testing.T) {
 	add := func(name string, id types.ID, status types.Status, settlement types.SettlementData, policies map[uint64]types.ReporterPolicy) {
 		t.Helper()
 		require.NoError(t, settlement.Validate(id, status, policies))
-		key, err := SettlementKey(*types.NewSettlementID(status, id))
+		key, err := SettlementKey(types.NewSettlementID(status, id))
 		require.NoError(t, err)
 		require.Len(t, key, 40)
 		value, err := codec.CollValue[types.SettlementData](cdc).Encode(settlement)
@@ -428,7 +428,7 @@ func TestProofStorageAndChronologicalCodecs(t *testing.T) {
 	value, err := record.Data.Marshal()
 	require.NoError(t, err)
 	require.Equal(t, value, ctx.KVStore(k.skey).Get(key))
-	key, err = SettlementKey(*types.NewSettlementID(record.Status, record.ID))
+	key, err = SettlementKey(types.NewSettlementID(record.Status, record.ID))
 	require.NoError(t, err)
 	value, err = record.Settlement.Marshal()
 	require.NoError(t, err)
@@ -541,11 +541,11 @@ func TestIDPrefixRanges(t *testing.T) {
 			require.Equal(t, matches, bytes.Compare(encoded, prefix) >= 0 && (end == nil || bytes.Compare(encoded, end) < 0))
 
 			for status := types.StatusTransferPending; status <= types.StatusRefunded; status++ {
-				filter := *types.NewSettlementID(types.StatusMinted, partial)
+				filter := types.NewSettlementID(types.StatusMinted, partial)
 				prefix, err := SettlementIDKey.ToPrefix(filter)
 				require.NoError(t, err)
 				require.Equal(t, append([]byte{2}, full[:len(prefix)-1]...), prefix)
-				key := *types.NewSettlementID(status, other)
+				key := types.NewSettlementID(status, other)
 				encoded := make([]byte, SettlementIDKey.Size(key))
 				_, err = SettlementIDKey.Encode(encoded, key)
 				require.NoError(t, err)
@@ -663,7 +663,7 @@ func TestStorageKeyOrdering(t *testing.T) {
 	var previous []byte
 	for status := types.StatusTransferPending; status <= types.StatusRefunded; status++ {
 		for _, id := range []types.ID{first, last} {
-			key, err := SettlementKey(*types.NewSettlementID(status, id))
+			key, err := SettlementKey(types.NewSettlementID(status, id))
 			require.NoError(t, err)
 			require.Negative(t, bytes.Compare(previous, key))
 			previous = key
@@ -705,7 +705,7 @@ func TestStorageKeyOrdering(t *testing.T) {
 	} {
 		_, err := TransferKey(bad)
 		require.Error(t, err)
-		_, err = SettlementKey(*types.NewSettlementID(types.StatusMinted, bad))
+		_, err = SettlementKey(types.NewSettlementID(types.StatusMinted, bad))
 		require.Error(t, err)
 	}
 }
@@ -775,7 +775,7 @@ func TestIDCodecsUseNativeAddressSemantics(t *testing.T) {
 			key, err := TransferKey(id)
 			require.NoError(t, err)
 			require.Equal(t, append(bytes.Clone(TransfersKey.Bytes()), record...), key)
-			key, err = SettlementKey(*types.NewSettlementID(types.StatusTransferPending, id))
+			key, err = SettlementKey(types.NewSettlementID(types.StatusTransferPending, id))
 			require.NoError(t, err)
 			require.Equal(t, append(append(bytes.Clone(SettlementsKey.Bytes()), 1), record...), key)
 		}

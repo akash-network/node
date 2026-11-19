@@ -9,32 +9,33 @@ import (
 
 // DepositDecorator records transaction shape, never ledger state or bank access.
 // A nested MsgSink receives no capability, even if it authenticates the sender.
-type DepositDecorator struct{}
+type DepositDecorator struct {
+	keeper Keeper
+}
 
-func NewDepositDecorator() DepositDecorator { return DepositDecorator{} }
+func NewDepositDecorator(k Keeper) DepositDecorator {
+	return DepositDecorator{
+		keeper: k,
+	}
+}
 
 func (d DepositDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simulate bool, next sdk.AnteHandler) (sdk.Context, error) {
-	ctx = ctx.WithValue(sinkRequestContextKey{}, nil)
 	msgs := tx.GetMsgs()
+
+	params, err := d.keeper.GetParams(ctx)
+	if err != nil {
+		return ctx, err
+	}
+
+	if !params.Enabled {
+		return ctx, types.ErrDepositsDisabled
+	}
+
 	for _, msg := range msgs {
-		sink, ok := msg.(*types.MsgSink)
-		if !ok {
-			continue
-		}
-		if sink == nil || len(msgs) != 1 {
+		if _, ok := msg.(*types.MsgSink); !ok {
 			return ctx, sdkerrors.ErrInvalidRequest.Wrap("sink deposit must be the only transaction message")
 		}
-		amount := ""
-		if !sink.Amount.Amount.IsNil() {
-			amount = sink.Amount.Amount.String()
-		}
-		ctx = ctx.WithValue(sinkRequestContextKey{}, sinkRequest{
-			sender:   sink.Sender,
-			destType: sink.DestType,
-			dest:     sink.Dest,
-			denom:    sink.Amount.Denom,
-			amount:   amount,
-		})
 	}
+
 	return next(ctx, tx, simulate)
 }

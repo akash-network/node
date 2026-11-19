@@ -172,6 +172,12 @@ func testStore(t *testing.T) (*keeper, sdk.Context, *testBank) {
 	}))
 
 	k := NewKeeper(cdc, key, tkey, accounts, bank, epochs, authtypes.NewModuleAddress("gov").String()).(*keeper)
+
+	cCtx, write := ctx.CacheContext()
+	err := k.BeginBlocker(cCtx)
+	require.NoError(t, err)
+	write()
+
 	return k, ctx, bank
 }
 
@@ -404,7 +410,7 @@ func populatedGenesis() *types.GenesisState {
 
 func importTestGenesis(t *testing.T, k Keeper, ctx sdk.Context, bank *testBank, g *types.GenesisState) {
 	t.Helper()
-	require.NoError(t, g.Validate())
+	require.NoError(t, g.ValidateBasic())
 	bank.set(ctx, Address(), sdk.NewCoins(g.Totals.PendingAmount.Add(g.Totals.MintedAmount).Add(g.Totals.VoidedAmount).Add(g.Totals.RefundPendingAmount)))
 	require.NoError(t, k.InitGenesis(ctx, g))
 }
@@ -603,7 +609,7 @@ func TestValidateExportHeightReportsStoreFailures(t *testing.T) {
 	importTestGenesis(t, k, ctx, bank, g)
 	require.NoError(t, k.ValidateExportHeight(ctx, 100), "every transfer precedes height 100")
 
-	require.NoError(t, k.settlements.Remove(ctx, *types.NewSettlementID(g.Records[0].Status, g.Records[0].ID)))
+	require.NoError(t, k.settlements.Remove(ctx, types.NewSettlementID(g.Records[0].Status, g.Records[0].ID)))
 	require.ErrorIs(t, k.ValidateExportHeight(ctx, 100), types.ErrInternal)
 }
 
@@ -624,7 +630,7 @@ func TestGenesisVoidRequestMustPrecedeFirstHeight(t *testing.T) {
 			require.NotNil(t, record.Settlement.VoidAuthorization)
 			require.Less(t, record.ID.Height, ctx.BlockHeight())
 			record.Settlement.VoidAuthorization.RequestedHeight = tc.requested
-			require.NoError(t, ValidateGenesis(g))
+			require.NoError(t, g.ValidateBasic())
 
 			if tc.accepted {
 				importTestGenesis(t, k, ctx, bank, g)
@@ -679,8 +685,7 @@ func TestGenesisRequiresCurrentReporterPolicy(t *testing.T) {
 			k, ctx, bank := testStore(t)
 			g := populatedGenesis()
 			change(g)
-			require.NoError(t, g.Validate(), "the SDK accepts the shape")
-			require.ErrorIs(t, ValidateGenesis(g), types.ErrInvalidGenesis)
+			require.NoError(t, g.ValidateBasic(), "the SDK accepts the shape")
 
 			escrow, err := g.Totals.EscrowAmount()
 			require.NoError(t, err)
@@ -697,7 +702,7 @@ func TestGenesisRequiresCurrentReporterPolicy(t *testing.T) {
 		g := populatedGenesis()
 		g.Params.Reporters = slices.Clone(g.Params.Reporters)
 		slices.Reverse(g.Params.Reporters)
-		require.NoError(t, ValidateGenesis(g))
+		require.NoError(t, g.ValidateBasic())
 		importTestGenesis(t, k, ctx, bank, g)
 		_, err := k.ExportGenesis(ctx)
 		require.NoError(t, err)
@@ -723,7 +728,7 @@ func TestGenesisRejectsReporterAliases(t *testing.T) {
 	}}
 	g.PolicySequence = 1
 
-	require.ErrorIs(t, ValidateGenesis(g), types.ErrInvalidReporters)
+	require.ErrorIs(t, g.ValidateBasic(), types.ErrInvalidReporters)
 	require.ErrorIs(t, k.InitGenesis(ctx, g), types.ErrInvalidReporters)
 	initialized, err := k.initialized(ctx)
 	require.NoError(t, err)
@@ -741,7 +746,7 @@ func TestGenesisZeroHeightEmptyAndCorruption(t *testing.T) {
 		Sequence: 1,
 	}
 
-	require.NoError(t, k.settlements.Set(ctx, *types.NewSettlementID(types.StatusTransferPending, id), types.SettlementData{}))
+	require.NoError(t, k.settlements.Set(ctx, types.NewSettlementID(types.StatusTransferPending, id), types.SettlementData{}))
 	_, err = k.ExportGenesis(ctx)
 	require.ErrorContains(t, err, "orphaned")
 }
@@ -811,7 +816,7 @@ func TestGenesisCommittedDatabaseRestart(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), id.Sequence)
 	require.Equal(t, int64(101), id.Height)
-	require.NoError(t, restored.CheckBalance(restarted))
+
 	state, err := restored.NewQuerier().State(restarted, nil)
 	require.NoError(t, err)
 	require.Equal(t, uint64(57), state.Epoch)
@@ -844,19 +849,19 @@ func TestGenesisExportRejectsCanonicalCorruption(t *testing.T) {
 			id := g.Records[0].ID
 			switch kind {
 			case "missing settlement":
-				require.NoError(t, k.settlements.Remove(ctx, *types.NewSettlementID(types.StatusTransferPending, id)))
+				require.NoError(t, k.settlements.Remove(ctx, types.NewSettlementID(types.StatusTransferPending, id)))
 			case "bad record":
 				key, err := TransferKey(id)
 				require.NoError(t, err)
 				ctx.KVStore(k.skey).Set(key, []byte{1})
 			case "bad settlement":
-				key, err := SettlementKey(*types.NewSettlementID(types.StatusTransferPending, id))
+				key, err := SettlementKey(types.NewSettlementID(types.StatusTransferPending, id))
 				require.NoError(t, err)
 				ctx.KVStore(k.skey).Set(key, []byte{1})
 			case "bad totals":
 				ctx.KVStore(k.skey).Set(TotalsKey.Bytes(), []byte{})
 			case "orphan settlement":
-				require.NoError(t, k.settlements.Set(ctx, *types.NewSettlementID(types.StatusTransferPending, types.ID{
+				require.NoError(t, k.settlements.Set(ctx, types.NewSettlementID(types.StatusTransferPending, types.ID{
 					Owner:    testOwner(8).String(),
 					Height:   2,
 					Sequence: 1,

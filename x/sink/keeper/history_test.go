@@ -125,7 +125,7 @@ func TestSettlementWritesRejectMissingPolicies(t *testing.T) {
 	require.NoError(t, err)
 	missing := transfer
 	missing.Settlement.Policy.Version = 2
-	err = k.put(ctx, &transfer, missing)
+	err = k.storeTransfer(ctx, &transfer, missing)
 	require.ErrorIs(t, err, types.ErrInvalidSettlement)
 	require.ErrorContains(t, err, "missing policy version 2")
 	outsider := transfer
@@ -138,7 +138,7 @@ func TestSettlementWritesRejectMissingPolicies(t *testing.T) {
 			TransactionSignature: testEvidence().TransactionSignature,
 		},
 	}}
-	err = k.put(ctx, &transfer, outsider)
+	err = k.storeTransfer(ctx, &transfer, outsider)
 	require.ErrorIs(t, err, types.ErrInvalidSettlement)
 	require.ErrorContains(t, err, "missing policy version 2")
 	unchanged, err := k.GetTransfer(ctx, transfer.ID)

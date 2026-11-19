@@ -40,12 +40,12 @@ func TestSettlementWriteAuthenticatesGovernanceVeto(t *testing.T) {
 	after := before
 	after.Settlement.VetoPolicyVersion = types.GovernanceRefundScope
 	after.Settlement.VetoBy = testOwner(1).String()
-	err = k.put(ctx, &before, after)
+	err = k.storeTransfer(ctx, &before, after)
 	require.ErrorIs(t, err, types.ErrInvalidSettlement)
 	require.ErrorContains(t, err, "governance veto signer differs from authority")
 
 	after.Settlement.VetoBy = k.authority
-	require.NoError(t, k.put(ctx, &before, after))
+	require.NoError(t, k.storeTransfer(ctx, &before, after))
 	stored, err := k.GetTransfer(ctx, g.Records[8].ID)
 	require.NoError(t, err)
 	require.Equal(t, k.authority, stored.Settlement.VetoBy)
