@@ -137,6 +137,49 @@ func TestCertificateKey(t *testing.T) {
 	}
 }
 
+func TestFilterToPrefixSerial(t *testing.T) {
+	owner := sdk.AccAddress(ed25519.GenPrivKey().PubKey().Address()).String()
+
+	for _, tc := range []struct {
+		name    string
+		serial  string
+		wantErr bool
+	}{
+		{name: "empty serial", serial: ""},
+		{name: "numeric serial", serial: "123"},
+		{name: "zero serial", serial: "0"},
+		{name: "non-numeric serial", serial: "abc", wantErr: true},
+		{name: "underscore serial", serial: "1_0", wantErr: true},
+		{name: "hex serial", serial: "0x10", wantErr: true},
+		{name: "trailing characters", serial: "12abc", wantErr: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var (
+				prefix []byte
+				err    error
+			)
+
+			// A serial that is not base-10 must be rejected rather than dereferenced.
+			require.NotPanics(t, func() {
+				prefix, err = filterToPrefix(types.CertificateFilter{
+					State:  types.CertificateValid.String(),
+					Owner:  owner,
+					Serial: tc.serial,
+				})
+			})
+
+			if tc.wantErr {
+				require.Error(t, err)
+				require.Nil(t, prefix)
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotEmpty(t, prefix)
+		})
+	}
+}
+
 func TestCertificateKeyRaw(t *testing.T) {
 	owner := sdk.AccAddress(ed25519.GenPrivKey().PubKey().Address())
 	serial := big.NewInt(123)
