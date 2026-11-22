@@ -47,3 +47,4 @@ Ref: https://keepachangelog.com/en/1.0.0/
 ### Bug Fixes
 
 * Fix bug in ditribution and querying rewards
+* (x/cert) Reject a non-numeric serial in the certificate query filter instead of panicking

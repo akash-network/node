@@ -82,7 +82,10 @@ func filterToPrefix(filter types.CertificateFilter) ([]byte, error) {
 		return buf.Bytes(), nil
 	}
 
-	s, _ := big.NewInt(0).SetString(filter.Serial, 10)
+	s, ok := big.NewInt(0).SetString(filter.Serial, 10)
+	if !ok {
+		return nil, errorsmod.Wrapf(sdkerrors.ErrInvalidRequest, "serial is not a base-10 integer: %q", filter.Serial)
+	}
 
 	sPrefix, err := serialPrefix(s.Bytes())
 	if err != nil {
