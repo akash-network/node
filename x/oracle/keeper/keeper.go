@@ -691,8 +691,13 @@ func (k *keeper) setPriceHealth(ctx sdk.Context, params types.Params, dataIDs []
 		))
 	}
 
-	// Check 2: Deviation within the acceptable range
-	health.DeviationOk = aggregatedPrice.DeviationBps <= params.MaxPriceDeviationBps
+	// Check 2: Deviation within the acceptable range.
+	// calculateDeviationBps saturates to math.MaxUint64 when the true deviation
+	// overflows (an extreme source price). Reserve that as an always-unhealthy
+	// sentinel so it is flagged regardless of the configured threshold, which
+	// params validation permits to be as high as math.MaxUint64.
+	health.DeviationOk = aggregatedPrice.DeviationBps != math.MaxUint64 &&
+		aggregatedPrice.DeviationBps <= params.MaxPriceDeviationBps
 	if !health.DeviationOk {
 		health.FailureReason = append(health.FailureReason, fmt.Sprintf(
 			"price deviation too high: %dbps > %dbps",
