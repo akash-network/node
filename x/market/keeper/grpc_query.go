@@ -62,7 +62,7 @@ func (k Querier) Orders(c context.Context, req *types.QueryOrdersRequest) (*type
 
 		_, pk, err := k.orders.KeyCodec().Decode(pkBytes)
 		if err != nil {
-			return nil, status.Error(codes.Internal, err.Error())
+			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
 		resumePK = &pk
 
