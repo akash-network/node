@@ -691,8 +691,13 @@ func (k *keeper) setPriceHealth(ctx sdk.Context, params types.Params, dataIDs []
 		))
 	}
 
-	// Check 2: Deviation within the acceptable range
-	health.DeviationOk = aggregatedPrice.DeviationBps <= params.MaxPriceDeviationBps
+	// Check 2: Deviation within the acceptable range.
+	// calculateDeviationBps saturates to math.MaxUint64 when the true deviation
+	// overflows (an extreme source price). Reserve that as an always-unhealthy
+	// sentinel so it is flagged regardless of the configured threshold, which
+	// params validation permits to be as high as math.MaxUint64.
+	health.DeviationOk = aggregatedPrice.DeviationBps != math.MaxUint64 &&
+		aggregatedPrice.DeviationBps <= params.MaxPriceDeviationBps
 	if !health.DeviationOk {
 		health.FailureReason = append(health.FailureReason, fmt.Sprintf(
 			"price deviation too high: %dbps > %dbps",
@@ -770,13 +775,28 @@ func calculateMedian(prices []types.PriceData) sdkmath.LegacyDec {
 	return sortedPrices[mid].State.Price
 }
 
-func calculateDeviationBps(minPrice, maxPrice sdkmath.LegacyDec) uint64 {
+func calculateDeviationBps(minPrice, maxPrice sdkmath.LegacyDec) (bps uint64) {
 	if minPrice.IsZero() {
 		return 0
 	}
 
-	diff := maxPrice.Sub(minPrice)
-	deviation := diff.Mul(sdkmath.LegacyNewDec(10000)).Quo(minPrice)
+	// An authorized source can report an extreme (near-zero or very large)
+	// positive price. The deviation ratio then exceeds uint64 -- or even the
+	// LegacyDec range -- and the conversion/arithmetic panics. Because this
+	// runs in EndBlocker with no recover, that panic halts the chain. Saturate
+	// so the price-health check flags the source instead; any value this large
+	// is already far beyond MaxPriceDeviationBps.
+	defer func() {
+		if r := recover(); r != nil {
+			bps = math.MaxUint64
+		}
+	}()
 
-	return deviation.TruncateInt().Abs().Uint64()
+	diff := maxPrice.Sub(minPrice)
+	deviation := diff.Mul(sdkmath.LegacyNewDec(10000)).Quo(minPrice).TruncateInt().Abs()
+	if !deviation.IsUint64() {
+		return math.MaxUint64
+	}
+
+	return deviation.Uint64()
 }
