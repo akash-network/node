@@ -46,4 +46,5 @@ Ref: https://keepachangelog.com/en/1.0.0/
 
 ### Bug Fixes
 
+* (market) Reject undecodable orders pagination keys as invalid requests so providers can restart catch-up.
 * Fix bug in ditribution and querying rewards
